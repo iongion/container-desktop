@@ -1,0 +1,83 @@
+{
+    "editor.suggestSelection": "first",
+    "editor.insertSpaces": true,
+    "editor.renderWhitespace": "all",
+    "files.eol": "\n",
+    "files.exclude": {
+        "**/__pycache__/**": true,
+        "**/.git/**": true,
+        "**/.DS_Store": true,
+        "**/*.egg-info": true,
+        ".pytest_cache": true
+    },
+    "files.watcherExclude": {
+        "**/build/**": true,
+        "**/dist/**": true,
+        "**/__pycache__/**": true,
+        "**/.git/**": true,
+        "**/.docker/**": true,
+        "**/.venv/**": true,
+        "**/.DS_Store": true,
+        ".pytest_cache": true
+    },
+    "files.associations": {
+        "*.env": "ini",
+        "*.env.local": "ini",
+        "*.runtime": "ini",
+        "*.mk": "makefile",
+        "docker-compose.override.yml.template": "dockercompose"
+    },
+    "search.exclude": {
+        "**/build/**": true,
+        "**/dist/**": true,
+        "**/.git/**": true,
+        "**/__pycache__/**": true,
+        "**/.venv/**": true,
+        "**/.DS_Store": true,
+        ".pytest_cache": true
+    },
+    "cSpell.words": [
+        "autofocus",
+        "blkio",
+        "blueprintjs",
+        "browserslist",
+        "devpts",
+        "Healthcheck",
+        "hookform",
+        "icns",
+        "inited",
+        "kernelmode",
+        "libpod",
+        "Minimizable",
+        "Mountpoint",
+        "noconflict",
+        "noheading",
+        "noninteractive",
+        "nsis",
+        "peasy",
+        "percpu",
+        "pids",
+        "podman",
+        "portmappings",
+        "precpu",
+        "preread",
+        "procs",
+        "rcedit",
+        "tabindex",
+        "TLDR",
+        "tmpfs",
+        "usehooks",
+        "usermode",
+        "wslg"
+    ],
+    "jshint.enable": false,
+    "yaml.customTags": [
+        "!Secret scalar",
+        "!Env scalar"
+    ],
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.markdownlint": true
+    },
+    "search.followSymlinks": false
+}

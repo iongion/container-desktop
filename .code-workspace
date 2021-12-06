@@ -1,0 +1,20 @@
+{
+  "folders": [
+    {
+      "name": "Backend",
+      "path": "${workspaceFolder}/api"
+    },
+    {
+      "name": "Application",
+      "path": "${workspaceFolder}/app"
+    },
+    {
+      "name": "Shell",
+      "path": "${workspaceFolder}/shell"
+    },
+    {
+      "name": "Container client",
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/container-client"
+    }
+  ]
+}

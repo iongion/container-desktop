@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+# shellcheck disable=SC2164
+SCRIPT_HOME="$(dirname "$([ -L $0 ] && readlink -f $0 || echo $0)")"
+PROJECT_HOME="$(dirname "$SCRIPT_HOME")"
+
+PATH=$PROJECT_HOME/temp/bin:$PATH
+LD_LIBRARY_PATH=$PROJECT_HOME/temp/bin:$LD_LIBRARY_PATH
+export PATH=$PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+
+"$PROJECT_HOME/temp/bin/podman" $@

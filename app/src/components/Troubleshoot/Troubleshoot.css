@@ -1,0 +1,28 @@
+[data-table="troubleshoot.actions"] tr td {
+  vertical-align: middle;
+}
+[data-table="troubleshoot.actions"] tr td:first-child {
+  width: 100%;
+}
+[data-table="troubleshoot.actions"] tr td h6 {
+  padding-top: 5px;
+}
+[data-table="troubleshoot.actions"] tr td p {
+  margin: 0;
+  padding: 0;
+  color: #aaa;
+}
+[data-screen="troubleshoot"] .ActionButton {
+  display: inline-block;
+  width: 200px;
+  text-align: left;
+}
+[data-screen="troubleshoot"] .ActionButtonGroup {
+  display: inline-flex;
+  width: 200px;
+  vertical-align: middle;
+}
+[data-screen="troubleshoot"] .ActionButtonInternal {
+  text-align: left;
+  display: inline-block;
+}
