@@ -66,11 +66,9 @@ h1 {
   margin-right: 15px;
   margin-bottom: 20px;
 }
-
 .downloadSection .download:last-child {
   margin-right: 0px;
 }
-
 .download a.downloadButton {
   padding: 14px 10px 14px 10px;
   border-radius: 5px;
@@ -81,11 +79,29 @@ h1 {
   text-align: center;
 }
 
+ul.downloadBundles,
+ul.downloadBundles li {
+  margin: 0;
+  padding: 0;
+}
+ul.downloadBundles li {
+  display: inline-block;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+ul.downloadBundles li a {
+  text-decoration: underline;
+}
+ul.downloadBundles {
+  padding: 10px;
+}
+
 .content {
   margin-left: 15%;
   margin-right: 15%;
   padding-top: 40px;
 }
+
 .content h2,
 p,
 ul {
