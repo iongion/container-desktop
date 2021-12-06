@@ -2,9 +2,7 @@
 
 A familiar desktop graphical interface to the free and open container manager, [podman!](https://podman.io/)
 
-<video controls poster="docs/img/001-Dashboard.png?raw=true" width="70%">
-  <source src="docs/videos/demo.mp4" type="video/mp4" />
-</video>
+![Podman Desktop Companion Dashboard](docs/img/001-Dashboard.png?raw=true)
 
 Main goals
 
