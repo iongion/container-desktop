@@ -1,0 +1,59 @@
+name: CDPipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: 'Git ref'
+        required: true
+        default: 'latest'
+      stage:
+        description: 'Stage'
+        required: true
+        default: 'production'
+      target:
+        description: 'Target'
+        required: true
+        default: 'linux'
+
+jobs:
+  bundle:
+
+    timeout-minutes: 15
+
+    runs-on: ubuntu-latest
+
+    env:
+      CI: true
+      CD: true
+      NODE_ENV: ${{github.event.inputs.stage}}
+      REACT_APP_ENV: ${{github.event.inputs.stage}}
+
+    steps:
+      - name: Clone Repository (latest)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == 'latest'
+      - name: Clone Repository (custom ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != 'latest'
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16.11.1'
+          registry-url: 'https://npm.pkg.github.com'
+      - name: Prepare api ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
+        run: make prepare
+      - name: Build ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
+        run: make build
+        env:
+          TARGET: ${{github.event.inputs.target}}
+      - name: Bundle ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
+        run: make bundle
+        env:
+          TARGET: ${{github.event.inputs.target}}
+      - name: Publish ${{github.event.inputs.stage}} ${{github.event.inputs.target}} artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          path: shell/dist/podman-desktop-companion*
