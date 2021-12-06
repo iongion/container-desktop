@@ -11,9 +11,10 @@ const is_ip_private = require("private-ip");
 // project
 const { launchTerminal } = require("@podman-desktop-companion/container-client").terminal;
 // locals
-const DOMAINS_ALLOW_LIST = ["podman.io", "docs.podman.io"];
+const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
 
+const isDebug = false;
 const isDevelopment = () => {
   return !app.isPackaged;
 };
@@ -28,7 +29,7 @@ function createWindow() {
     height: 768,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
-      devTools: true, // isDevelopment(),
+      devTools: isDevelopment() || isDebug,
       nodeIntegration: true,
       nodeIntegrationInWorker: true,
       // nativeWindowOpen: true,
@@ -88,14 +89,14 @@ function createWindow() {
   // Application window
   window = electronConfig.window().create(windowOptions);
   // Automatically open Chrome's DevTools in development mode.
-  if (isDevelopment()) {
+  if (isDevelopment() || isDebug) {
     window.webContents.openDevTools();
   }
   window.webContents.setWindowOpenHandler((event) => {
     const info = new URL(event.url);
     if (!is_ip_private(info.hostname)) {
       if (!DOMAINS_ALLOW_LIST.includes(info.hostname)) {
-        console.error("Security issue - attempt to open a domain that is not allowed", info);
+        console.error("Security issue - attempt to open a domain that is not allowed", info.hostname);
         return { action: "deny" };
       }
     }
@@ -125,7 +126,7 @@ let mainWindow;
 (async () => {
   logger.debug("Starting main process");
   contextMenu({
-    showInspectElement: true // isDevelopment()
+    showInspectElement: isDevelopment() || isDebug
   });
   app.commandLine.appendSwitch("ignore-certificate-errors");
   app.whenReady().then(() => {
