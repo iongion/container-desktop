@@ -1,0 +1,110 @@
+html,
+body {
+  background: rgb(26, 6, 28);
+  background: linear-gradient(
+    160deg,
+    rgba(26, 6, 28, 1) 0%,
+    rgb(76, 25, 82, 1) 50%,
+    rgba(7, 15, 41, 1) 100%
+  );
+}
+
+h1 {
+  color: #ffffff;
+}
+
+.intro p {
+  color: #ffffff;
+}
+.intro a {
+  color: #ffffff;
+}
+.intro a:hover {
+  color: #892ca0;
+}
+
+.download a {
+  background-color: #892ca0;
+  border: 1px solid #892ca0;
+  color: #ffffff;
+}
+.download a:hover {
+  background-color: rgba(0, 0, 0, 0);
+  color: #892ca0;
+}
+
+.content h2,
+p,
+ul {
+  color: #ffffff;
+}
+
+.sectionHighlightContainer {
+  background: rgb(57, 130, 125);
+  background: linear-gradient(
+    150deg,
+    rgba(57, 130, 125, 1) 0%,
+    rgba(125, 43, 139, 1) 33%,
+    rgba(16, 89, 94, 1) 100%
+  );
+}
+
+.sectionHighlight h2,
+p {
+  color: #ffffff;
+}
+
+.beta p {
+  color: #4f1a5a;
+}
+
+.mailme a {
+  background-color: #892ca0;
+  border: 1px solid #892ca0;
+  color: #ffffff;
+}
+.mailme a:hover {
+  background-color: rgba(0, 0, 0, 0);
+  color: #892ca0;
+}
+
+.mode span {
+  color: #ffffff;
+}
+
+.slider {
+  background-color: #2e1640;
+}
+
+.slider:before {
+  background-color: #882da0;
+}
+
+input:checked + .slider {
+  background-color: #b7cbcc;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2e1640;
+}
+
+.footer {
+  border-top: 1px solid #667394;
+}
+
+.footer p,
+ul.footerMenu li {
+  color: #667394;
+}
+
+.footer a {
+  color: #667394;
+}
+
+.footer a:hover {
+  color: #892ca0;
+}
+
+.downloadSection .soon {
+  color: #fff;
+}
