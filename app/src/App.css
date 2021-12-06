@@ -1,0 +1,264 @@
+.App {
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+.AppLoadingSplash {
+  background-image: url('images/podman-logo.svg');
+  width: 256px;
+  height: 256px;
+  display: flex;
+  align-items: flex-end;
+}
+.AppLoadingSplashContent {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+.AppContent {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.AppContentDocument {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.AppScreen {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  flex-direction: column;
+}
+.AppScreenContent {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding-top: 10px;
+  overflow: auto;
+}
+.AppScreenContent[data-loaded="no"] {
+  align-items: center;
+  justify-content: center;
+}
+.AppScreenHeader > .bp3-navbar {
+  display: flex;
+}
+.AppScreenHeader .NavbarCenter,
+.AppScreenHeader .NavbarCenterContent {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.AppScreenHeader .NavbarCenterContent span {
+  max-width: 200px;
+  text-overflow: ellipsis;
+  display: inline-block;
+  overflow: hidden;
+}
+.AppNotificationOutput pre {
+  margin-bottom: 0;
+  font-size: 12px;
+  overflow: auto;
+}
+.AppScreenContentLoaderProgressBar {
+  width: 320px;
+}
+.AppToaster .bp3-toast {
+  top: 40px;
+}
+
+.AppDrawer {
+  background-color: #341c42 !important;
+}
+.AppDrawer .bp3-drawer-body .bp3-dialog-body {
+  padding: 5px;
+  margin: 0;
+}
+.AppDrawer .AppDataTable {
+  width: 100%;
+  margin-bottom: 20px;
+}
+.AppDrawer .AppDataForm {
+  margin: 0;
+  margin-top: 10px;
+}
+.AppDrawerPendingIndicator {
+  margin-top: 10px;
+  height: 10px;
+  overflow: hidden;;
+}
+.AppDataTable thead th {
+  font-size: 11px;
+}
+.AppDataTable thead th,
+.AppDataTable tbody td {
+  width: 120px;
+  text-align: center;
+  font-size: 11px;
+  vertical-align: middle;
+}
+.AppDataTable thead th:first-child,
+.AppDataTable tbody td:first-child {
+  width: auto;
+  text-align: left;
+}
+.AppDataTable thead th:last-child,
+.AppDataTable tbody td:last-child {
+  width: 1px !important;
+}
+.AppDataTable thead th[data-column="Actions"] {
+  width: 1px;
+}
+.AppDataTable thead th[data-column="Created"] {
+  min-width: 120px;
+}
+.AppDataTable thead th[data-column="Size"] {
+  min-width: 60px;
+}
+.AppDataFormTable {
+  width: 100%;
+  font-size: 11px !important;
+}
+.AppDataFormTable tr th {
+  margin: 0;
+  padding: 0 !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+}
+.AppDataFormTableHeader {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.AppDataFormTableHeader h5 {
+  padding: 0;
+  padding-left: 5px;
+  margin: 0;
+}
+.AppDataFormTable tr td {
+  vertical-align: middle;
+  padding: 0 !important;
+  padding-top: 3px !important;
+  padding-right: 3px !important;
+}
+.AppDataFormTable tr td:first-child {
+  padding-left: 3px !important;
+  padding-right: 3px !important;
+  min-width: 80px;
+}
+.AppDataFormTable tr td:last-child {
+  padding-bottom: 3px !important;
+}
+.AppDataFormTable tr td.AppDataFormTableActionCell {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.AppDataFormTable tr td.AppDataFormTableIndexCell {
+  width: 1px !important;
+  min-width: 1px;
+  background: #3a294b;
+  table-layout: fixed;
+  vertical-align: top;
+  border-left: 1px solid #463153;
+  border-right: 1px solid #463153;
+}
+.AppDataFormTable tr label {
+  padding-left: 5px !important;
+}
+.AppDataFormTable tr[data-is-even="no"] td.AppDataFormTableIndexCell {
+  background: #2b1339;
+}
+.AppDataFormTableInputCell select {
+  background-color: #2c233b !important;
+  color: #57a1ce !important;
+}
+
+.AppFormFieldMeasureUnit {
+  height: 30px;
+  background: #0b020c;
+  width: 30px;
+  display: flex;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  color: #ae69d6;
+}
+.bp3-disabled .AppFormFieldMeasureUnit {
+  color: #798192;
+  background-color: #36334d;
+}
+
+[data-running="no"] .AppContentDocument {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-environment="development"] .App-projectNameVersion {
+  color: yellow;
+}
+[data-environment="development"] .envIndicator {
+  background-color: yellow;
+}
+
+[data-environment="staging"] .App-projectNameVersion {
+  color: orange;
+}
+[data-environment="staging"] .envIndicator {
+  background-color: orange;
+}
+
+[data-environment="production"] .App-projectNameVersion {
+  color: #4db98c;
+}
+[data-environment="production"] .envIndicator {
+  background-color: #4db98c;
+}
+
+.AppScreen .bp3-navbar {
+  background: #4f175b;
+}
+
+.bp3-menu {
+  background: #300734 !important;
+}
+.bp3-popover2-arrow-fill {
+  fill: #300734 !important;
+}
+
+/*
+:not(input):not(textarea),
+:not(input):not(textarea)::after,
+:not(input):not(textarea)::before {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+a:not([draggable=true]), img:not([draggable=true]) {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+a[href^="http://"],
+a[href^="https://"],
+a[href^="ftp://"] {
+  -webkit-user-drag: auto;
+  user-drag: auto;
+}
+*/

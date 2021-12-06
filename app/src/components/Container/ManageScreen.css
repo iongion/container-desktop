@@ -1,0 +1,20 @@
+[data-screen="containers"] .AppScreenContent th:nth-child(3),
+[data-screen="containers"] .AppScreenContent td:nth-child(3),
+[data-screen="containers"] .AppScreenContent th:nth-child(4),
+[data-screen="containers"] .AppScreenContent td:nth-child(4) {
+  width: 70px;
+}
+[data-screen="containers"] .AppScreenContent th:nth-child(5),
+[data-screen="containers"] .AppScreenContent td:nth-child(5),
+[data-screen="containers"] .AppScreenContent th:nth-child(7),
+[data-screen="containers"] .AppScreenContent td:nth-child(7) {
+  width: 140px;
+}
+[data-table="containers"] thead th:nth-child(2),
+[data-table="containers"] tbody td:nth-child(2) {
+  text-align: left;
+}
+[data-table="containers"] thead th:last-child,
+[data-table="containers"] tbody td:last-child {
+  width: 1px;
+}

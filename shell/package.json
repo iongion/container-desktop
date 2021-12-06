@@ -1,0 +1,96 @@
+{
+  "name": "podman-desktop-companion",
+  "version": "3.4.2-alpha.1",
+  "author": "Ionut Stoica <stoica.ionut@gmail.com>",
+  "description": "Podman CLI desktop companion tool",
+  "keywords": [],
+  "homepage": ".",
+  "main": "./public/main.js",
+  "dependencies": {
+    "@podman-desktop-companion/container-client": "file:../packages/@podman-desktop-companion/container-client",
+    "ajv": "8.8.2",
+    "axios": "^0.24.0",
+    "electron-cfg": "^1.2.7",
+    "electron-context-menu": "^3.1.1",
+    "electron-log": "^4.4.1",
+    "node-pty": "^0.10.1",
+    "private-ip": "^2.3.3",
+    "uuid": "8.3.2"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.61",
+    "cross-env": "^7.0.3",
+    "electron": "^16.0.4",
+    "electron-builder": "^22.14.5",
+    "electron-packager": "^15.4.0",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.5.0",
+    "prettier-eslint": "^13.0.0"
+  },
+  "workspaces": [
+    "../packages/*"
+  ],
+  "engines": {
+    "node": "~16.11.1"
+  },
+  "scripts": {
+    "start": "electron .",
+    "electron": "electron",
+    "electron-builder": "electron-builder",
+    "electron:package:mac": "electron-builder -m -c.extraMetadata.main=build/main.js",
+    "electron:package:win": "electron-builder -w -c.extraMetadata.main=build/main.js",
+    "electron:package:linux": "electron-builder -l -c.extraMetadata.main=build/main.js"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ],
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest",
+      "plugin:jsx-a11y/recommended"
+    ],
+    "plugins": [
+      "jsx-a11y"
+    ],
+    "rules": {
+      "react-hooks/exhaustive-deps": "error",
+      "jsx-a11y/no-autofocus": "off",
+      "jsx-a11y/click-events-have-key-events": "off",
+      "jsx-a11y/no-noninteractive-tabindex": "off",
+      "jsx-a11y/no-noninteractive-element-interactions": "off"
+    }
+  },
+  "build": {
+    "appId": "com.electron.pdc",
+    "productName": "podman-desktop-companion",
+    "files": [
+      "build/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "mac": {
+      "icon": "icons/appIcon.icns",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "icons/appIcon.svg",
+      "target": [
+        "AppImage",
+        "snap",
+        "rpm",
+        "deb"
+      ],
+      "category": "Utility"
+    }
+  },
+  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+}

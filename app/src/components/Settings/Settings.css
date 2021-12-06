@@ -1,0 +1,22 @@
+.AppSettingsCallout {
+  text-align: center;
+  padding-left: 0 !important;
+}
+.AppSettingsForm {
+  padding: 2px;
+}
+.AppSettingsFieldProgramHelper {
+  padding-left: 5px;
+}
+.AppSettingsField[data-field="engine"] {
+  padding-left: 10px;
+}
+.AppSettingsField[data-field="engine"] label .RadioLabel {
+  min-width: 100px;
+  display: inline-block;
+}
+.AppSettingsField .bp3-control {
+  display: flex;
+  vertical-align: middle;
+  align-items: center;
+}

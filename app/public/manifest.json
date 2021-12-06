@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "manifest_version": 2,
+  "name": "Podman desktop",
+  "description": "Podman desktop",
+  "icons": [
+    {
+      "src": "images/icon.svg",
+      "sizes": "any",
+      "type": "image/svg"
+    }
+  ],
+  "default_locale": "en",
+  "permissions": [
+    "webNavigation"
+  ]
+}

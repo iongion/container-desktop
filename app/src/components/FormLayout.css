@@ -1,0 +1,10 @@
+.FormLayout {
+  display: flex;
+}
+
+.FormLayout > div {
+  margin-right: 5px;
+}
+.FormLayout > div:last-child {
+  margin-right: 0;
+}

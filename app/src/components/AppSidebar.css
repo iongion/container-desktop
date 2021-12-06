@@ -1,0 +1,19 @@
+.AppSidebar {
+  background: #0b020c;
+  display: flex;
+  height: 100%;
+  width: 250px;
+  flex-direction: column;
+}
+.AppSidebarActions {
+  width: 100%;
+  padding: 10px;
+}
+.AppSidebarActions > .bp3-button-group {
+  width: 100%;
+  color: #60605b;
+}
+.AppSidebarContent {
+  display: flex;
+  flex: 1;
+}
