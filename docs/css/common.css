@@ -71,7 +71,7 @@ h1 {
   margin-right: 0px;
 }
 
-.download a {
+.download a.downloadButton {
   padding: 14px 10px 14px 10px;
   border-radius: 5px;
   text-decoration: none;
