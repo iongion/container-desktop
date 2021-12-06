@@ -27,9 +27,6 @@
     "prettier": "^2.5.0",
     "prettier-eslint": "^13.0.0"
   },
-  "workspaces": [
-    "../packages/*"
-  ],
   "engines": {
     "node": "~16.11.1"
   },
@@ -37,9 +34,9 @@
     "start": "electron .",
     "electron": "electron",
     "electron-builder": "electron-builder",
-    "electron:package:mac": "electron-builder -m -c.extraMetadata.main=build/main.js",
-    "electron:package:win": "electron-builder -w -c.extraMetadata.main=build/main.js",
-    "electron:package:linux": "electron-builder -l -c.extraMetadata.main=build/main.js"
+    "electron:package:mac": "electron-builder --publish never -m -c.extraMetadata.main=build/main.js",
+    "electron:package:win": "electron-builder --publish never -w -c.extraMetadata.main=build/main.js",
+    "electron:package:linux": "electron-builder --publish never -l -c.extraMetadata.main=build/main.js"
   },
   "browserslist": [
     ">0.2%",

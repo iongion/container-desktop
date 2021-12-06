@@ -23,8 +23,5 @@
   "engines": {
     "node": "~16.11"
   },
-  "workspaces": [
-    "../packages/*"
-  ],
   "repository": "https://github.com/iongion/podman-desktop-companion.git"
 }

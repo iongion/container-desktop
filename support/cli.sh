@@ -5,7 +5,9 @@ SCRIPT_HOME="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 PROJECT_HOME="$( dirname "$SCRIPT_HOME" )"
 PROJECT_CODE="$( dirname "$PROJECT_HOME" )"
 PROJECT_VERSION="$(cat "$PROJECT_HOME/VERSION")"
-REACT_APP_PROJECT_VERSION=$PROJECT_VERSION
+NODE_ENV="${NODE_ENV:-development}"
+REACT_APP_ENV="${REACT_APP_ENV:-$NODE_ENV}"
+REACT_APP_PROJECT_VERSION="$PROJECT_VERSION"
 
 function fn_exists() { [[ "$(type -t "$1")" = function ]]; }
 
@@ -58,43 +60,57 @@ function cmd.start {
 }
 
 function cmd.prepare {
-  echo "Preparing infrastructure"
+  echo "Preparing dependencies CI: $CI, CD: $CD"
+
   # shellcheck disable=SC1091
-  source "$HOME/.nvm/nvm.sh" \
-  && echo "Preparing api" \
-  && cd "$PROJECT_HOME/api" \
-  && nvm use \
-  && npm install \
-  && echo "Preparing application" \
-  && cd "$PROJECT_HOME/app" \
-  && nvm use \
-  && npm install \
-  && echo "Preparing packages" \
+  echo "Preparing packages" \
+  && source "$HOME/.nvm/nvm.sh" \
   && cd "$PROJECT_HOME/packages/@podman-desktop-companion/container-client" \
+  && nvm install \
   && nvm use \
-  && npm install \
-  && echo "Preparing shell" \
+  && NODE_ENV=development npm install
+
+  # shellcheck disable=SC1091
+  echo "Preparing api" \
+  && source "$HOME/.nvm/nvm.sh" \
+  && cd "$PROJECT_HOME/api" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install
+
+  # shellcheck disable=SC1091
+  echo "Preparing app" \
+  && source "$HOME/.nvm/nvm.sh" \
+  && cd "$PROJECT_HOME/app" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install
+
+  # shellcheck disable=SC1091
+  echo "Preparing shell" \
+  && source "$HOME/.nvm/nvm.sh" \
   && cd "$PROJECT_HOME/shell" \
+  && nvm install \
   && nvm use \
-  && npm install
+  && NODE_ENV=development npm install
+
+  echo "Preparing complete"
 }
 
 function cmd.build {
-  export NODE_ENV=production
-  export REACT_APP_ENV="$NODE_ENV"
-  export REACT_APP_PROJECT_VERSION="$REACT_APP_PROJECT_VERSION"
+  echo "Building CI: $CI, CD: $CD"
   echo "Building $PROJECT_VERSION app for linux desktop ($NODE_ENV, $REACT_APP_ENV, $REACT_APP_PROJECT_VERSION)"
   # shellcheck disable=SC1091
   source "$HOME/.nvm/nvm.sh" \
   && cd "$PROJECT_HOME/app" \
+  && nvm install \
   && nvm use \
-  && npm run react-scripts build
+  && npm run build
+  echo "Building complete"
 }
 
 function cmd.bundle {
-  export NODE_ENV=production
-  export REACT_APP_ENV="$NODE_ENV"
-  export REACT_APP_PROJECT_VERSION="$REACT_APP_PROJECT_VERSION"
+  echo "Bundling CI: $CI, CD: $CD"
   echo "Bundling $PROJECT_VERSION app for $TARGET desktop ($NODE_ENV, $REACT_APP_ENV, $REACT_APP_PROJECT_VERSION)"
   # Copy build assets
   rm -fr "$PROJECT_HOME/shell/build"
@@ -127,6 +143,13 @@ function cmd.help {
 
 # Entry point
 function main {
+  # Export
+  export PROJECT_HOME="$PROJECT_HOME"
+  export PROJECT_CODE="$PROJECT_CODE"
+  export PROJECT_VERSION="$PROJECT_VERSION"
+  export NODE_ENV="$NODE_ENV"
+  export REACT_APP_ENV="$REACT_APP_ENV"
+  export REACT_APP_PROJECT_VERSION="$REACT_APP_PROJECT_VERSION"
   # Pre-check
   COMMAND="$1"
   if [[ -z $COMMAND ]] || [[ $COMMAND = "help" ]] || [[ $COMMAND = "--help" ]]; then
@@ -139,8 +162,10 @@ function main {
     echo "Command not found $CMD_NAME"
     exit 1
   fi
-  trap "exit" INT TERM
-  trap "kill 0" EXIT
+  if [[ -z "$CD" ]]; then
+    trap "exit" INT TERM
+    trap "kill 0" EXIT
+  fi
   $CMD_NAME
 }
 
