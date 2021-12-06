@@ -53,7 +53,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         clearInterval(pollerID.current);
       } finally {
         isPending.current = false;
-        console.debug("Poller cycle complete");
+        // console.debug("Poller cycle complete");
         if (!Environment.features.polling?.enabled) {
           console.debug("Polling disabled - stopping after first cycle");
           clearInterval(pollerID.current);
