@@ -5,9 +5,10 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 import { AppScreen, Container } from "../../Types";
-import { useStoreActions } from "../../Domain";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../ScreenLoader";
+
+import { useStoreActions } from "./Model";
 
 import "./StatsScreen.css";
 

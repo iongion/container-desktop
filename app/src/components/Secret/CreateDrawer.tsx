@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import isEqual from "react-fast-compare";
 
 // project
-import { useStoreActions } from "../../Domain";
+import { useStoreActions } from "./Model";
 
 // Secret drawer
 export interface CreateDrawerProps {

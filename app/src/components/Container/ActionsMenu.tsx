@@ -8,10 +8,10 @@ import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 // project
 import { ConfirmMenu } from "../ConfirmMenu";
 import { Notification } from "../../Notification";
-import { useStoreActions } from "../../Domain";
 import { Container } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
+import { useStoreActions } from "./Model";
 import { getContainerUrl, getContainerServiceUrl } from "./Navigation";
 
 // Actions menu

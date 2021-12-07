@@ -8,10 +8,10 @@ import { mdiPlayCircle } from "@mdi/js";
 // project
 import { ConfirmMenu } from "../ConfirmMenu";
 import { Notification } from "../../Notification";
-import { useStoreActions } from "../../Domain";
 import { ContainerImage } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
+import { useStoreActions } from "./Model";
 import { CreateDrawer } from "./CreateDrawer";
 import { getImageUrl } from "./Navigation";
 

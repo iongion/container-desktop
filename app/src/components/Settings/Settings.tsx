@@ -6,12 +6,13 @@ import * as ReactIcon from "@mdi/react";
 import { mdiEmoticonSad } from "@mdi/js";
 
 import Environment from "../../Environment";
-import { useStoreActions, useStoreState } from "../../Domain";
 import { AppScreen } from "../../Types";
 import { Native } from "../../Native";
 import { Notification } from "../../Notification";
 import { SystemServiceEngineManager } from "./EngineManager";
 import { CodeEditor } from "../CodeEditor";
+
+import { useStoreActions, useStoreState } from "./Model";
 
 import "./Settings.css";
 

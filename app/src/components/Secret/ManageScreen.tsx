@@ -6,9 +6,10 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 
 import { AppScreen } from "../../Types";
-import { useStoreActions, useStoreState } from "../../Domain";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../AppScreenHeader";
+
+import { useStoreActions, useStoreState } from "./Model";
 
 import "./ManageScreen.css";
 

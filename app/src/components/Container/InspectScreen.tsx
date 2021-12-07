@@ -6,10 +6,11 @@ import { useParams } from "react-router-dom";
 import ClipboardJS from "clipboard";
 
 import { AppScreen, Container } from "../../Types";
-import { useStoreActions } from "../../Domain";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../ScreenLoader";
 import { Notification } from "../../Notification";
+
+import { useStoreActions } from "./Model";
 
 import "./InspectScreen.css";
 

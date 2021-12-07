@@ -6,9 +6,10 @@ import { FitAddon } from "xterm-addon-fit";
 import { useParams } from "react-router-dom";
 
 import { AppScreen, Container } from "../../Types";
-import { useStoreActions } from "../../Domain";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../ScreenLoader";
+
+import { useStoreActions } from "./Model";
 
 import "xterm/css/xterm.css";
 import "./TerminalScreen.css";

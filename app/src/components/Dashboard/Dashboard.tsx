@@ -7,7 +7,7 @@ import ClipboardJS from "clipboard";
 import { useTranslation } from "react-i18next";
 
 import { AppScreen } from "../../Types";
-import { useStoreActions, useStoreState } from "../../Domain";
+import { useStoreActions, useStoreState } from "../../App.store";
 import { usePoller } from "../../Hooks";
 import { Notification } from "../../Notification";
 

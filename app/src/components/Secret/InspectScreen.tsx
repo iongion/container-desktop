@@ -5,10 +5,11 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 import { AppScreen, Secret } from "../../Types";
-import { useStoreActions } from "../../Domain";
 import { SecretActionsMenu } from ".";
 import { AppScreenHeader } from "../AppScreenHeader";
 import { CodeEditor } from "../CodeEditor";
+
+import { useStoreActions } from "./Model";
 
 import "./InspectScreen.css";
 

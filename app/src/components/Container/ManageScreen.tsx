@@ -8,11 +8,12 @@ import { useMediaQuery } from "react-responsive";
 import dayjs from "dayjs";
 
 import { AppScreen, Container } from "../../Types";
-import { useStoreActions, useStoreState } from "../../Domain";
 import { usePoller } from "../../Hooks";
 import { ActionsMenu } from ".";
 import { AppScreenHeader } from "../AppScreenHeader";
 import { pathTo } from "../../Navigator";
+
+import { useStoreActions, useStoreState } from "./Model";
 
 import "./ManageScreen.css";
 

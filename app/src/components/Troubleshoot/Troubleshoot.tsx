@@ -2,13 +2,14 @@ import { useCallback, useState } from "react";
 import { AnchorButton, HTMLTable, Button, Intent, H6, ButtonProps, ButtonGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
+import { useTimeout } from "usehooks-ts";
 
 import { AppScreen } from "../../Types";
-import { useStoreActions } from "../../Domain";
 import { Notification } from "../../Notification";
 
+import { useStoreActions } from "./Model";
+
 import "./Troubleshoot.css";
-import { useTimeout } from "usehooks-ts";
 
 interface ScreenProps {}
 

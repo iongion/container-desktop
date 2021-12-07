@@ -3,11 +3,12 @@ import { IconNames } from "@blueprintjs/icons";
 import { useParams } from "react-router-dom";
 
 import { AppScreen, Volume } from "../../Types";
-import { useStoreActions } from "../../Domain";
-import { VolumeActionsMenu } from ".";
 import { AppScreenHeader } from "../AppScreenHeader";
 import { CodeEditor } from "../CodeEditor";
 import { ScreenLoader } from "../ScreenLoader";
+
+import { VolumeActionsMenu } from ".";
+import { useStoreActions } from "./Model";
 
 import "./InspectScreen.css";
 

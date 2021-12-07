@@ -8,10 +8,11 @@ import ClipboardJS from "clipboard";
 import { useParams } from "react-router-dom";
 
 import { AppScreen, ContainerImage } from "../../Types";
-import { useStoreActions } from "../../Domain";
 import { Notification } from "../../Notification";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../ScreenLoader";
+
+import { useStoreActions } from "./Model";
 
 import "./LayersScreen.css";
 

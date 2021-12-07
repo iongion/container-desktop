@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { HashRouter as Router, Switch, Route, useLocation } from "react-router-dom";
 
-import { useStoreActions, useStoreState, createAppStore, StoreProvider } from "./Domain";
+import { createAppStore, StoreProvider } from "./App.store";
+import { useStoreActions, useStoreState } from "./App.model";
 import { AppScreen, Program } from "./Types";
 
 import "./App.i18n";

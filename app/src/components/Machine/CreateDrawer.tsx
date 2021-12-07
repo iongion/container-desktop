@@ -18,7 +18,8 @@ import isEqual from "react-fast-compare";
 
 // project
 import { FormLayout } from "../FormLayout";
-import { useStoreActions } from "../../Domain";
+
+import { useStoreActions } from "./Model";
 
 // Machine drawer
 export interface CreateDrawerProps {

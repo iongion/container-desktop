@@ -9,16 +9,16 @@ import {
   DrawerSize,
   ProgressBar,
   Classes,
-  HTMLTable,
+  HTMLTable
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import isEqual from "react-fast-compare";
 
 // project
-import { useStoreActions } from "../../Domain";
 import { ContainerImage, ContainerImagePortMapping } from "../../Types";
 
+import { useStoreActions } from "./Model";
 import { MountsForm, MountFormContainerImageMount, createMount } from "./MountsForm";
 import { PortMappingsForm } from "./PortMappingsForm";
 

@@ -6,12 +6,12 @@ import { useTranslation } from "react-i18next";
 // project
 import { ConfirmMenu } from "../ConfirmMenu";
 import { Notification } from "../../Notification";
-import { useStoreActions } from "../../Domain";
 import { Secret } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
 import { CreateDrawer } from "./CreateDrawer";
 import { getSecretUrl } from "./Navigation";
+import { useStoreActions } from "./Model";
 
 // Secret actions menu
 

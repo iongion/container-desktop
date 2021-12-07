@@ -8,11 +8,11 @@ import { useTranslation } from "react-i18next";
 // project
 import { ConfirmMenu } from "../ConfirmMenu";
 import { Notification } from "../../Notification";
-import { useStoreActions, useStoreState } from "../../Domain";
 import { Machine } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
 import { CreateDrawer } from "./CreateDrawer";
+import { useStoreActions, useStoreState } from "./Model";
 
 // Machine actions menu
 

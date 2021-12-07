@@ -7,10 +7,11 @@ import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
 
 import { AppScreen, ContainerImage } from "../../Types";
-import { useStoreActions, useStoreState } from "../../Domain";
 import { usePoller } from "../../Hooks";
 import { getImageUrl, ActionsMenu } from ".";
 import { AppScreenHeader } from "../AppScreenHeader";
+
+import { useStoreActions, useStoreState } from "./Model";
 
 import "./ManageScreen.css";
 

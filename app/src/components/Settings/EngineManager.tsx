@@ -2,9 +2,10 @@ import { useCallback, useState } from "react";
 import { RadioGroup, Radio, HTMLSelect } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
-import { useStoreState } from "../../Domain";
 import { SystemServiceEngineType } from "../../Types";
 import { Platforms } from "../../Native";
+
+import { useStoreState } from "./Model";
 
 const RadioLabel: React.FC<{ text: string }> = ({ text }) => {
   return <span className="RadioLabel">{text}</span>;

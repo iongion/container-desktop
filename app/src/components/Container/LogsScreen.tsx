@@ -4,10 +4,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useParams } from "react-router-dom";
 
 import { AppScreen, Container } from "../../Types";
-import { useStoreActions } from "../../Domain";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../ScreenLoader";
 import { CodeEditor } from "../CodeEditor";
+
+import { useStoreActions } from "./Model";
 
 import "./LogsScreen.css";
 

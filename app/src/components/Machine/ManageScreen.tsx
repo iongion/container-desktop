@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next";
 import { IconNames } from "@blueprintjs/icons";
 
 import { AppScreen } from "../../Types";
-import { useStoreActions, useStoreState } from "../../Domain";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../AppScreenHeader";
+
+import { useStoreActions, useStoreState } from "./Model";
 
 import "./ManageScreen.css";
 import { MachineActionsMenu } from ".";

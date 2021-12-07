@@ -7,8 +7,9 @@ import { v4 } from "uuid";
 // project
 import Environment from "../../Environment";
 import { Native } from "../../Native";
-import { useStoreState } from "../../Domain";
 import { ContainerImageMount, MOUNT_ACCESS, MOUNT_TYPES } from "../../Types";
+
+import { useStoreState } from "./Model";
 
 // Mount
 export interface MountFormContainerImageMount extends ContainerImageMount {
