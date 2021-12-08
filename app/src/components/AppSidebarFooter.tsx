@@ -2,7 +2,7 @@ import { Alignment, Navbar, NavbarGroup, NavbarHeading, Spinner, SpinnerSize, In
 
 import { useTranslation } from "react-i18next";
 
-import { useStoreState } from "../App.store";
+import { useStoreState } from "../domain/types";
 
 import "./AppSidebarFooter.css";
 
