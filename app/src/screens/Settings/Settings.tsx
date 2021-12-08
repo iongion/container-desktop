@@ -26,13 +26,16 @@ export const ID = "settings";
 export const Title = "Settings";
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const { t } = useTranslation();
   const native = useStoreState((state) => state.native);
   const running = useStoreState((state) => state.running);
-  const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
-  const program = useStoreState((state) => state.program);
   const system = useStoreState((state) => state.system);
+  const program = useStoreState((state) =>
+    state.settings.environment ? state.settings.environment.program : state.program
+  );
   const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
+
   const isValid = program.path && program.currentVersion;
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {

@@ -37,7 +37,7 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
     //   console.debug("Connection broken");
     //   state.setRunning(false);
     // }
-    console.debug("Forwarding error", { result, error });
+    console.debug("Forwarding error", { result, error, operation });
     throw error;
   } finally {
     store.getActions().setPending(false);

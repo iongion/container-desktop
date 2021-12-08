@@ -84,7 +84,3 @@ export const createModel = (registry: AppRegistry): VolumesModel => ({
     })
   )
 });
-
-const Factory = { create: (registry: AppRegistry) => createModel(registry) };
-
-export default Factory;

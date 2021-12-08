@@ -88,6 +88,7 @@ async function main() {
       containerApiConfig: config,
       containerApiDriver: getApiDriver(config)
     };
+    // Expose to application
     contextBridge.exposeInMainWorld("nativeBridge", context);
   });
   // Wait for window to bbe ready

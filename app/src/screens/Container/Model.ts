@@ -62,7 +62,6 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
 
   // Thunks
   containersFetch: thunk(async (actions) => {
-    console.debug(">>>>>>>>>>>> Fetching containers");
     return registry.withPending(async () => {
       const containers = await registry.api.getContainers();
       actions.setContainers(containers);

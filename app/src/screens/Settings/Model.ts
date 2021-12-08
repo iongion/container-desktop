@@ -2,58 +2,36 @@
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
-import { SystemInfo, Program, SystemConnection } from "../../Types";
-import { Native, Platforms } from "../../Native";
-import { PROGRAM_PODMAN, PROGRAM_DEFAULT } from "../../Environment";
+import { SystemEnvironment } from "../../Types";
 
 export interface SettingsModelState {
-  native: boolean;
-  running: boolean;
-  platform: Platforms;
-  currentProgram: string;
-  system: SystemInfo;
-  program: Program;
-  connections: SystemConnection[];
+  environment?: SystemEnvironment;
 }
 
 export interface SettingsModel extends SettingsModelState {
   // actions
-  setProgram: Action<SettingsModel, Program>;
+  setEnvironment: Action<SettingsModel, SystemEnvironment>;
   // thunks
+  fetchEnvironment: Thunk<SettingsModel>;
   programSetPath: Thunk<SettingsModel, string>;
 }
 
 export const createModel = (registry: AppRegistry): SettingsModel => {
-  const native = Native.getInstance().isNative();
-  const platform = Native.getInstance().getPlatform();
-  const PROGRAMS = {
-    podman: PROGRAM_PODMAN
-  };
   return {
-    native,
-    running: false,
-    platform,
-    currentProgram: PROGRAM_DEFAULT,
-    program: {
-      ...PROGRAMS[PROGRAM_DEFAULT],
-      path: undefined,
-      currentVersion: undefined,
-      platform: Platforms.Unknown
-    },
-    system: {} as any,
-    connections: [],
-    setProgram: action((state, program) => {
-      state.program = program;
+    setEnvironment: action((state, environment) => {
+      state.environment = environment;
+    }),
+    fetchEnvironment: thunk(async (actions) => {
+      return registry.withPending(async () => {
+        const environment = await registry.api.getSystemEnvironment();
+        actions.setEnvironment(environment);
+      });
     }),
     programSetPath: thunk(async (actions, program) => {
       return registry.withPending(async () => {
-        const newProgram = await registry.api.setProgramPath(program);
-        actions.setProgram(newProgram);
+        await registry.api.setProgramPath(program);
+        await actions.fetchEnvironment();
       });
     })
   };
 };
-
-const Factory = { create: (registry: AppRegistry) => createModel(registry) };
-
-export default Factory;

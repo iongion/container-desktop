@@ -86,7 +86,3 @@ export const createModel = (registry: AppRegistry): SecretsModel => ({
     };
   })
 });
-
-const Factory = { create: (registry: AppRegistry) => createModel(registry) };
-
-export default Factory;

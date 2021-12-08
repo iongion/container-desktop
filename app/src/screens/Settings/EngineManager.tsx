@@ -23,7 +23,6 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
   const onSystemServiceConnection = useCallback((e) => {
     setSystemServiceConnection(e.currentTarget.value);
   }, []);
-  console.debug(systemServiceConnection);
   const virtualizationEngines = [
     { engine: "wsl", title: t("WSL"), description: t("Windows Subsystem for Linux") },
     { engine: "lima", title: t("Lima"), description: t("MacOS Subsystem for Linux") }

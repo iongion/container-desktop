@@ -39,7 +39,3 @@ export const createModel = (registry: AppRegistry): TroubleshootModel => {
     )
   };
 };
-
-const Factory = { create: (registry: AppRegistry) => createModel(registry) };
-
-export default Factory;

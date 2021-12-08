@@ -177,6 +177,47 @@ export const coerceImage = (image: ContainerImage) => {
   return image;
 };
 
+export function axiosConfigToCURL(config: AxiosRequestConfig<any>) {
+  let requestUrl = `http://d${config.baseURL}${config.url}`;
+  if (Object.keys(config.params || {}).length) {
+    const searchParams = new URLSearchParams();
+    Object.entries(config.params).forEach(([key, value]) => searchParams.set(key, `${value}`));
+    requestUrl = `${requestUrl}?${searchParams}`;
+  }
+  const command = [
+    "curl",
+    "-v",
+    "-X",
+    config.method?.toUpperCase(),
+    "--unix-socket",
+    `"${config.socketPath}"`,
+    `"${requestUrl}"`
+  ];
+  const exclude = ["common", "delete", "get", "head", "patch", "post", "put"];
+  const extractHeaders = (bag: any) => {
+    const headers: { [key: string]: string } = {};
+    Object.entries(bag || {}).forEach(([key, value]) => {
+      if (exclude.includes(key)) {
+        return;
+      }
+      headers[key] = `${value}`;
+    });
+    return headers;
+  };
+  const commonHeaders = extractHeaders(config.headers?.common);
+  const userHeaders = extractHeaders(config.headers);
+  const headers = { ...commonHeaders, ...userHeaders };
+  Object.entries(headers).forEach(([key, value]) => {
+    command.push(`-H "${key}: ${value}"`);
+  });
+  if (config.method !== "get" && config.method !== "head") {
+    if (typeof config.data !== "undefined") {
+      command.push("-d", `'${JSON.stringify(config.data)}'`);
+    }
+  }
+  return command.join(" ");
+}
+
 export abstract class PodmanRestApiClient extends BaseContainerClient implements IContainerClient {
   protected dataApiDriver;
   constructor(opts: AxiosRequestConfig) {
@@ -196,8 +237,31 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
     } else {
       config.baseURL = opts.baseURL;
     }
-    console.error("REST API config", config);
+    console.debug("REST API config", config);
     this.dataApiDriver = axios.create(config);
+    // Configure http client logging
+    // Add a request interceptor
+    this.dataApiDriver.interceptors.request.use(
+      function (config) {
+        console.debug("HTTP request", axiosConfigToCURL(config));
+        return config;
+      },
+      function (error) {
+        console.error("HTTP request error", error);
+        return Promise.reject(error);
+      }
+    );
+    // Add a response interceptor
+    this.dataApiDriver.interceptors.response.use(
+      function (response) {
+        // console.debug("HTTP response", response);
+        return response;
+      },
+      function (error) {
+        console.error("HTTP response error", error);
+        return Promise.reject(error);
+      }
+    );
   }
   async invoke<T, D = undefined>(invocation: InvocationOptions<D>) {
     return this.withResult<T>(async () => {
@@ -267,13 +331,13 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   }
   async pushImage(id: string, opts?: PushImageOptions) {
     return this.withResult<boolean>(async () => {
-      const params = new URLSearchParams();
+      const params: { [key: string]: string } = {};
       if (opts) {
         if (opts.destination) {
-          params.set("destination", opts.destination);
+          params.destination = opts.destination;
         }
         if (opts.tlsVerify === false) {
-          params.set("tslVerify", "false");
+          params.tslVerify = "false";
         }
       }
       const result = await this.dataApiDriver.post<boolean>(`/images/${id}/push`, undefined, {
@@ -450,10 +514,9 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
       const creator = {
         Secret: opts.Secret
       };
-      const params = new URLSearchParams();
-      params.append("name", opts.name);
+      const params: { name: string; driver?: string } = { name: opts.name };
       if (opts.driver) {
-        params.append("driver", opts.driver);
+        params.driver = opts.driver;
       }
       const result = await this.dataApiDriver.post<Secret>("/secrets/create", creator, {
         params
@@ -535,7 +598,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
   }
   async createMachine(opts: CreateMachineOptions) {
     return this.withResult<Machine>(async () => {
-      const params = new URLSearchParams();
+      const params = {};
       const result = await this.dataApiDriver.post<Machine>("/machines/create", opts, {
         params
       });
@@ -554,7 +617,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
   }
   async stopMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const params = new URLSearchParams();
+      const params = {};
       const result = await this.dataApiDriver.post<Machine>(`/machines/${Name}/stop`, undefined, {
         params
       });
@@ -563,7 +626,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
   }
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const params = new URLSearchParams();
+      const params = {};
       const result = await this.dataApiDriver.post<Machine>(`/machines/${Name}/connect`, undefined, {
         params
       });

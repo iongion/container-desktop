@@ -74,7 +74,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
           connections: environment.connections,
           system: system,
           inited: true,
-          running: true
+          running: true,
+          program: environment.program
         });
       });
     })
