@@ -13,4 +13,3 @@
 * Support more terminal shells
 * Mass operations
 * Consistent error management
-* Split `easy-peasy` model

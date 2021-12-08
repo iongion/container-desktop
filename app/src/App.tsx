@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { HashRouter as Router, Switch, Route, useLocation } from "react-router-dom";
 
-import { useStoreActions, useStoreState, createAppStore, StoreProvider } from "./Domain";
+import { createAppStore, StoreProvider } from "./domain/store";
+import { useStoreActions, useStoreState } from "./domain/types";
 import { AppScreen, Program } from "./Types";
 
 import "./App.i18n";
@@ -17,22 +18,22 @@ import { CURRENT_ENVIRONMENT } from "./Environment";
 
 import { AppHeader } from "./components/AppHeader";
 import { AppSidebar } from "./components/AppSidebar";
-import { Screen as DashboardScreen } from "./components/Dashboard";
-import { Screen as ContainersScreen } from "./components/Container/ManageScreen";
-import { Screen as ContainerLogsScreen } from "./components/Container/LogsScreen";
-import { Screen as ContainerInspectScreen } from "./components/Container/InspectScreen";
-import { Screen as ContainerStatsScreen } from "./components/Container/StatsScreen";
-import { Screen as ContainerTerminalScreen } from "./components/Container/TerminalScreen";
-import { Screen as ImagesScreen } from "./components/Image/ManageScreen";
-import { Screen as ImageLayersScreen } from "./components/Image/LayersScreen";
-import { Screen as ImageInspectScreen } from "./components/Image/InspectScreen";
-import { Screen as VolumesScreen } from "./components/Volume/ManageScreen";
-import { Screen as VolumeInspectScreen } from "./components/Volume/InspectScreen";
-import { Screen as MachinesScreen } from "./components/Machine/ManageScreen";
-import { Screen as SettingsScreen } from "./components/Settings";
-import { Screen as SecretsScreen } from "./components/Secret/ManageScreen";
-import { Screen as SecretInspectScreen } from "./components/Secret/InspectScreen";
-import { Screen as TroubleshootScreen } from "./components/Troubleshoot/Troubleshoot";
+import { Screen as DashboardScreen } from "./screens/Dashboard";
+import { Screen as ContainersScreen } from "./screens/Container/ManageScreen";
+import { Screen as ContainerLogsScreen } from "./screens/Container/LogsScreen";
+import { Screen as ContainerInspectScreen } from "./screens/Container/InspectScreen";
+import { Screen as ContainerStatsScreen } from "./screens/Container/StatsScreen";
+import { Screen as ContainerTerminalScreen } from "./screens/Container/TerminalScreen";
+import { Screen as ImagesScreen } from "./screens/Image/ManageScreen";
+import { Screen as ImageLayersScreen } from "./screens/Image/LayersScreen";
+import { Screen as ImageInspectScreen } from "./screens/Image/InspectScreen";
+import { Screen as VolumesScreen } from "./screens/Volume/ManageScreen";
+import { Screen as VolumeInspectScreen } from "./screens/Volume/InspectScreen";
+import { Screen as MachinesScreen } from "./screens/Machine/ManageScreen";
+import { Screen as SettingsScreen } from "./screens/Settings";
+import { Screen as SecretsScreen } from "./screens/Secret/ManageScreen";
+import { Screen as SecretInspectScreen } from "./screens/Secret/InspectScreen";
+import { Screen as TroubleshootScreen } from "./screens/Troubleshoot/Troubleshoot";
 
 const Screens = [
   DashboardScreen,
@@ -211,7 +212,7 @@ export function AppMain() {
 }
 
 export default function App() {
-  const store = createAppStore();
+  const store = createAppStore(CURRENT_ENVIRONMENT);
   return (
     <StoreProvider store={store}>
       <AppMain />

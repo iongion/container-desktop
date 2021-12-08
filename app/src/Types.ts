@@ -1,6 +1,10 @@
 import React from "react";
 import { Platforms } from "./Native";
 
+export interface ConnectOptions {
+  autoStart: boolean;
+}
+
 export enum Environments {
   DEVELOPMENT = "development",
   PRODUCTION = "production"

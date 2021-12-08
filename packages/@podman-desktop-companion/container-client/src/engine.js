@@ -84,9 +84,73 @@ function getApiConfig() {
   };
 }
 
+function axiosConfigToCURL(config) {
+  let requestUrl = `http://d${config.baseURL}${config.url}`;
+  if (Object.keys(config.params || {}).length) {
+    const searchParams = new URLSearchParams();
+    Object.entries(config.params).forEach(([key, value]) => searchParams.set(key, `${value}`));
+    requestUrl = `${requestUrl}?${searchParams}`;
+  }
+  const command = [
+    "curl",
+    "-v",
+    "-X",
+    config.method?.toUpperCase(),
+    "--unix-socket",
+    `"${config.socketPath}"`,
+    `"${requestUrl}"`
+  ];
+  const exclude = ["common", "delete", "get", "head", "patch", "post", "put"];
+  const extractHeaders = (bag) => {
+    const headers = {};
+    Object.entries(bag || {}).forEach(([key, value]) => {
+      if (exclude.includes(key)) {
+        return;
+      }
+      headers[key] = `${value}`;
+    });
+    return headers;
+  };
+  const commonHeaders = extractHeaders(config.headers?.common);
+  const userHeaders = extractHeaders(config.headers);
+  const headers = { ...commonHeaders, ...userHeaders };
+  Object.entries(headers).forEach(([key, value]) => {
+    command.push(`-H "${key}: ${value}"`);
+  });
+  if (config.method !== "get" && config.method !== "head") {
+    if (typeof config.data !== "undefined") {
+      command.push("-d", `'${JSON.stringify(config.data)}'`);
+    }
+  }
+  return command.join(" ");
+}
+
 function getApiDriver(cfg) {
   const config = cfg || getApiConfig();
   const driver = axios.create(config);
+  // Configure http client logging
+  // Add a request interceptor
+  driver.interceptors.request.use(
+    function (config) {
+      logger.debug("HTTP request", axiosConfigToCURL(config));
+      return config;
+    },
+    function (error) {
+      logger.error("HTTP request error", error);
+      return Promise.reject(error);
+    }
+  );
+  // Add a response interceptor
+  driver.interceptors.response.use(
+    function (response) {
+      // logger.debug("HTTP response", response);
+      return response;
+    },
+    function (error) {
+      logger.error("HTTP response error", error);
+      return Promise.reject(error);
+    }
+  );
   return driver;
 }
 
