@@ -425,7 +425,7 @@ async function resetSystem() {
 }
 
 async function getWSLDistributions() {
-  const result = await exec_launcher("cmd.exe", ["/c", JSON.stringify(["chcp", "850", ">> nul", "&&", "wsl.exe", "--list", "--quiet"].join(" "))]);
+  const result = await exec_launcher("cmd.exe", ["/c", ["chcp", "850", ">> nul", "&&", "wsl.exe", "--list", "--quiet"].join(" ")]);
   let items = [];
   logger.debug("WSL distributions list", result);
   if (result.success) {
