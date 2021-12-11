@@ -678,11 +678,13 @@ export class BrowserContainerClient extends PodmanRestApiClient {
 export class NativeContainerClient extends PodmanRestApiClient {
   // Containers
   async connectToContainer(Id: string) {
-    const result = await Native.getInstance().proxyRequest<boolean>({
-      method: "/container/connect",
-      params: { Id }
+    return this.withResult<boolean>(async () => {
+      const result = await Native.getInstance().proxyRequest<boolean>({
+        method: "/container/connect",
+        params: { Id }
+      });
+      return result.body;
     });
-    return result.body;
   }
 
   // Machines
@@ -731,18 +733,22 @@ export class NativeContainerClient extends PodmanRestApiClient {
     });
   }
   async stopMachine(Name: string) {
-    const result = await Native.getInstance().proxyRequest<boolean>({
-      method: "/machine/stop",
-      params: { Name }
+    return this.withResult<boolean>(async () => {
+      const result = await Native.getInstance().proxyRequest<boolean>({
+        method: "/machine/stop",
+        params: { Name }
+      });
+      return result.body;
     });
-    return result.body;
   }
   async connectToMachine(Name: string) {
-    const result = await Native.getInstance().proxyRequest<boolean>({
-      method: "/machine/connect",
-      params: { Name }
+    return this.withResult<boolean>(async () => {
+      const result = await Native.getInstance().proxyRequest<boolean>({
+        method: "/machine/connect",
+        params: { Name }
+      });
+      return result.body;
     });
-    return result.body;
   }
 
   // System

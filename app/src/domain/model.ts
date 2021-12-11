@@ -3,7 +3,7 @@ import { action, thunk } from "easy-peasy";
 // project
 import { v4 } from "uuid";
 // project
-import { SystemInfo } from "../Types";
+import { Program, SystemConnection, SystemInfo } from "../Types";
 import { Native } from "../Native";
 import { AppModel, AppModelState, AppRegistry } from "./types";
 
@@ -60,22 +60,26 @@ export const createModel = (registry: AppRegistry): AppModel => {
       if (native) {
         Native.getInstance().setup();
       }
+      let connections: SystemConnection[] = [];
+      let system: SystemInfo | undefined;
+      let program: Program;
       return registry.withPending(async () => {
-        const environment = await registry.api.getSystemEnvironment();
-        let system: SystemInfo | undefined;
         try {
+          const environment = await registry.api.getSystemEnvironment();
           const startup = await registry.api.startSystemService();
+          connections = environment.connections;
+          program = environment.program;
           system = startup.system;
         } catch (error) {
           console.error("Error during system startup", error);
         }
-        console.debug("System startup info is", environment, system);
+        console.debug("System startup info is", { connections, system, program });
         actions.domainUpdate({
-          connections: environment.connections,
-          system: system,
+          connections,
+          system,
           inited: true,
           running: true,
-          program: environment.program
+          program,
         });
       });
     })

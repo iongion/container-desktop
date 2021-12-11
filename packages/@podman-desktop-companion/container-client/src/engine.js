@@ -33,6 +33,9 @@ async function setProgramPath(nextProgramPath) {
 
 async function execProgram(args) {
   const program = await getProgramPath();
+  if (!program) {
+    throw new Error("No program specified");
+  }
   const output = await exec(program, args);
   return output;
 }
