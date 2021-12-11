@@ -425,15 +425,17 @@ async function resetSystem() {
 }
 
 async function getWSLDistributions() {
-  const result = await exec_launcher("cmd.exe", ["/c", ["chcp", "850", ">> nul", "&&", "wsl.exe", "--list", "--quiet"].join(" ")]);
+  // const result = await exec_launcher("cmd.exe", ["/c", ["chcp", "65001", ">> nul", "&&", "wsl.exe", "--list", "--quiet"].join(" ")]);
+  // see https://stackoverflow.com/questions/67746179/how-do-i-match-on-wsl-output-in-powershell
+  const result = await exec_launcher("powershell.exe", ["-command", '(wsl --list --running --quiet) -replace \"`0\" | Select-String -Pattern "."']);
   let items = [];
   logger.debug("WSL distributions list", result);
   if (result.success) {
-    items = `${result.output}`.split("\n").map((it) => {
+    items = `${result.stdout}`.split("\r\n").map((it) => {
       return {
-        name: it,
+        name: it.trim(),
       };
-    });
+    }).filter(it => it.length > 0);
   }
   return items;
 }
