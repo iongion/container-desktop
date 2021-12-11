@@ -81,5 +81,6 @@
     "editor.codeActionsOnSave": {
         "source.fixAll.markdownlint": true
     },
-    "search.followSymlinks": false
+    "search.followSymlinks": false,
+    "python.formatting.provider": "black"
 }
