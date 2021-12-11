@@ -153,7 +153,8 @@ const AppLoaded: React.FC<AppLoadedProps> = ({ program, running }) => {
   }
   // Program exists
   let widget;
-  if (program && program.path && running) {
+  const provisioned = program && program.path;
+  if (provisioned && running) {
     widget = <AppProvisioned screens={Screens} currentScreen={currentScreen} />;
   } else {
     widget = <SettingsScreen />;

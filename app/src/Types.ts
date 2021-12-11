@@ -39,19 +39,6 @@ export interface Environment {
   settings: EnvironmentSettings;
 }
 
-export type AppScreen<P> = React.FunctionComponent<P> & {
-  ID: string;
-  Title: string;
-  Route: {
-    Path: string;
-  };
-  Metadata?: {
-    ExcludeFromSidebar?: boolean;
-    LeftIcon?: any;
-    RightIcon?: any;
-  };
-};
-
 export interface SystemStore {
   configFile: string;
   containerStore: {
@@ -396,3 +383,20 @@ export const MOUNT_ACCESS = [
   { title: "Read only", type: "ro" },
   { title: "Read / Write", type: "rw" }
 ];
+
+export interface WSLDistribution {
+  name: string;
+}
+
+export type AppScreen<P> = React.FunctionComponent<P> & {
+  ID: string;
+  Title: string;
+  Route: {
+    Path: string;
+  };
+  Metadata?: {
+    ExcludeFromSidebar?: boolean;
+    LeftIcon?: any;
+    RightIcon?: any;
+  };
+};

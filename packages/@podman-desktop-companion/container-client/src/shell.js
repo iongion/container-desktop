@@ -1,6 +1,7 @@
 const os = require("os");
 const { spawn } = require("child_process");
 const events = require("events");
+// vendors
 
 function wrapLauncher(program, args, opts = { useWSL: false, useLima: false }) {
   const osType = os.type();
@@ -17,10 +18,10 @@ function wrapLauncher(program, args, opts = { useWSL: false, useLima: false }) {
 }
 
 // project
-async function exec(program, args, opts) {
-  const [launcher, launcherArgs] = wrapLauncher(program, args);
+async function exec_launcher(launcher, launcherArgs, opts) {
+  const osType = os.type();
   const launcherOpts = {
-    encoding: "utf-8",
+    encoding: "utf-8", // TODO: cNot working for spawn - find alternative
     cwd: opts?.cwd,
     env: opts?.env
   };
@@ -35,7 +36,7 @@ async function exec(program, args, opts) {
       stderr: "",
       command
     };
-    console.debug(`Spawning started: "${command}"`);
+    console.debug("Spawning started", command);
     const child = spawn(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
@@ -48,22 +49,25 @@ async function exec(program, args, opts) {
       }
     };
     process.pid = child.pid;
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
     child.on("exit", (code) => processResolve("exit", code));
     child.on("close", (code) => processResolve("close", code));
     child.on("error", (error) => processResolve("error", error));
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (data) => (process.stdout += data.toString()));
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (data) => (process.stderr += data.toString()));
+    child.stdout.on("data", (data) => (process.stdout += `${data}`));
+    child.stderr.on("data", (data) => (process.stderr += `${data}`));
     if (typeof child.pid === "undefined") {
       process.success = false;
-      // console.error('Child process exec failure', process);
     } else {
       process.success = true;
-      // console.debug('Child process exec success', process);
     }
   });
   return result;
+}
+
+async function exec(program, args, opts) {
+  const [launcher, launcherArgs] = wrapLauncher(program, args);
+  return exec_launcher(launcher, launcherArgs, opts);
 }
 
 async function which(program) {
@@ -183,6 +187,7 @@ async function withClient(opts) {
 
 module.exports = {
   exec,
+  exec_launcher,
   which,
   withClient
 };

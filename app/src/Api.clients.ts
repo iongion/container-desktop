@@ -22,7 +22,9 @@ import {
   SystemInfo,
   SystemPruneReport,
   SystemResetReport,
-  Machine
+  Machine,
+  //
+  WSLDistribution
 } from "./Types";
 
 import { Native } from "./Native";
@@ -138,6 +140,8 @@ export interface IContainerClient {
 
   getProgram: () => Promise<Program>;
   setProgramPath: (path: string) => Promise<Program>;
+
+  getWSLDistributions: () => Promise<WSLDistribution[]>;
 }
 
 export abstract class BaseContainerClient {
@@ -561,6 +565,8 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   abstract isSystemServiceRunning(): Promise<boolean>;
   abstract getProgram(): Promise<Program>;
   abstract setProgramPath(path: string): Promise<Program>;
+
+  abstract getWSLDistributions(): Promise<WSLDistribution[]>;
 }
 
 export class BrowserContainerClient extends PodmanRestApiClient {
@@ -670,6 +676,13 @@ export class BrowserContainerClient extends PodmanRestApiClient {
       const result = await this.dataApiDriver.post<Program>("/program", {
         path
       });
+      return result.data;
+    });
+  }
+
+  async getWSLDistributions() {
+    return this.withResult<WSLDistribution[]>(async () => {
+      const result = await this.dataApiDriver.get<WSLDistribution[]>("/wsl.distributions");
       return result.data;
     });
   }
@@ -799,6 +812,15 @@ export class NativeContainerClient extends PodmanRestApiClient {
         params: {
           path
         }
+      });
+      return result.body;
+    });
+  }
+
+  async getWSLDistributions() {
+    return this.withResult<WSLDistribution[]>(async () => {
+      const result = await Native.getInstance().proxyRequest<WSLDistribution[]>({
+        method: "/wsl.distributions"
       });
       return result.body;
     });

@@ -6,7 +6,7 @@ const axios = require("axios");
 const logger = require("electron-log");
 const electronConfig = require("electron-cfg");
 // project
-const { exec, which, withClient } = require("./shell");
+const { exec, exec_launcher, which, withClient } = require("./shell");
 const { launchTerminal } = require("./terminal");
 
 async function getProgramPath() {
@@ -424,6 +424,20 @@ async function resetSystem() {
   return report;
 }
 
+async function getWSLDistributions() {
+  const result = await exec_launcher("cmd.exe", ["/c", JSON.stringify(["chcp", "850", ">> nul", "&&", "wsl.exe", "--list", "--quiet"].join(" "))]);
+  let items = [];
+  logger.debug("WSL distributions list", result);
+  if (result.success) {
+    items = `${result.output}`.split("\n").map((it) => {
+      return {
+        name: it,
+      };
+    });
+  }
+  return items;
+}
+
 module.exports = {
   getProgramPath,
   setProgramPath,
@@ -448,5 +462,6 @@ module.exports = {
   startSystemService,
   getSystemEnvironment,
   isSystemServiceRunning,
-  resetSystem
+  resetSystem,
+  getWSLDistributions
 };

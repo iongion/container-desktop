@@ -15,7 +15,8 @@ const {
   stopMachine,
   removeMachine,
   getProgram,
-  setProgramPath
+  setProgramPath,
+  getWSLDistributions,
 } = require("@podman-desktop-companion/container-client").engine;
 
 const servicesMap = {
@@ -64,6 +65,9 @@ const servicesMap = {
   },
   "/machine/create": async function (opts) {
     return await createMachine(opts);
+  },
+  "/wsl.distributions": async function (opts) {
+    return await getWSLDistributions(opts);
   }
 };
 

@@ -35,8 +35,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     state.settings.environment ? state.settings.environment.program : state.program
   );
   const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
-
-  const isValid = program.path && program.currentVersion;
+  const provisioned = program && program.path;
+  const isValid = provisioned && program.currentVersion;
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const sender = e.currentTarget as HTMLElement;
@@ -73,7 +73,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [programPaths]
   );
 
-  const contentWidget = running ? null : (
+  const contentWidget = provisioned && running ? null : (
     <Callout
       className="AppSettingsCallout"
       title={t("Automatic detection failed")}
@@ -90,6 +90,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
       </div>
     </div>
   ) : null;
+
+  const systemDetailsViewer = provisioned && running ? (<CodeEditor value={JSON.stringify(system, null, 2)} />) : null;
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -154,7 +156,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </div>
         </div>
         {engineSwitcher}
-        <CodeEditor value={JSON.stringify(system, null, 2)} />
+        {systemDetailsViewer}
       </div>
     </div>
   );
