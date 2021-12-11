@@ -435,7 +435,7 @@ async function getWSLDistributions() {
       return {
         name: it.trim(),
       };
-    }).filter(it => it.length > 0);
+    }).filter(it => !!it.name);
   }
   return items;
 }
