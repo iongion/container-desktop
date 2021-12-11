@@ -28,7 +28,7 @@
     "prettier-eslint": "^13.0.0"
   },
   "engines": {
-    "node": "~16.11.1"
+    "node": "~16"
   },
   "scripts": {
     "start": "electron .",

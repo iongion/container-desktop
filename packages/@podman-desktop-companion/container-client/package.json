@@ -16,7 +16,7 @@
     "uuid": "^8.3.2"
   },
   "engines": {
-    "node": "~16.11"
+    "node": "~16"
   },
   "repository": "https://github.com/iongion/podman-desktop-companion.git"
 }
