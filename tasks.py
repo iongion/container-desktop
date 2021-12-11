@@ -1,5 +1,7 @@
 import os
-from invoke import task
+from pathlib import Path
+
+from invoke import task, Collection
 
 PROJECT_HOME = os.path.dirname(__file__)
 PROJECT_CODE = "podman-desktop-companion"
@@ -9,6 +11,27 @@ REACT_APP_ENV = os.environ.get("REACT_APP_ENV", NODE_ENV)
 REACT_APP_PROJECT_VERSION = PROJECT_VERSION
 TARGET = os.environ.get("TARGET", "linux")
 PORT = 5000
+
+
+def run_env(ctx, cmd, env=None):
+    cmd_env = {**get_env(), **({} if env is None else env)}
+    nvm_dir = os.getenv("NVM_DIR", str(Path.home().joinpath(".nvm")))
+    nvm_sh = os.path.join(nvm_dir, "nvm.sh")
+    if os.path.exists(nvm_sh):
+        with ctx.prefix(f'source "{nvm_dir}/nvm.sh"'):
+            nvm_rc = os.path.join(ctx.cwd, ".nvmrc")
+            if os.path.exists(nvm_rc):
+                with ctx.prefix("nvm use"):
+                    ctx.run(cmd, env=cmd_env, pty=os.name != "nt")
+            else:
+                ctx.run(cmd, env=cmd_env, pty=os.name != "nt")
+    else:
+        ctx.run(cmd, env=cmd_env, pty=os.name != "nt")
+
+
+@task(default=True)
+def help(c):
+    c.run("invoke --list")
 
 
 def get_env():
@@ -27,39 +50,61 @@ def get_env():
 
 @task
 def prepare(c, docs=False):
-    c.run("npm install -g nodemon")
-    c.run("npm install -g concurrently")
+    # run_env(c, "npm install -g nodemon")
+    # run_env(c, "npm install -g concurrently")
+    # run_env(c, "npm install -g wait-on")
     with c.cd("packages/@podman-desktop-companion/container-client"):
-        c.run("npm install")
+        run_env(c, "npm install")
     with c.cd("api"):
-        c.run("npm install")
+        run_env(c, "npm install")
     with c.cd("app"):
-        c.run("npm install")
+        run_env(c, "npm install")
     with c.cd("shell"):
-        c.run("npm install")
+        run_env(c, "npm install")
 
 
 @task
 def build(c, docs=False):
     with c.cd("app"):
-        c.run("npm run build", env=get_env())
+        run_env(c, "npm run build")
     with c.cd("shell"):
-        c.run("npm run build", env=get_env())
+        run_env(c, "npm run build")
 
 
 @task
-def startapi(c, docs=False):
+def api_start(c, docs=False):
     with c.cd("api"):
-        c.run("npm start", env=get_env())
+        run_env(c, "npm start")
 
 
 @task
-def startapp(c, docs=False):
+def app_start(c, docs=False):
     with c.cd("app"):
-        c.run("npm start", env=get_env())
+        run_env(c, "npm start")
 
 
 @task
-def startshell(c, docs=False):
+def shell_start(c, docs=False):
+    run_env(c, f'wait-on "http://127.0.0.1:{PORT}/index.html"')
     with c.cd("shell"):
-        c.run("npm start", env=get_env())
+        run_env(c, f"npm start")
+
+
+@task
+def start(c, docs=False):
+    run_env(
+        c,
+        'concurrently "inv api.api-start" "inv app.app-start" "inv shell.shell-start"',
+    )
+
+
+api = Collection("api")
+api.add_task(api_start)
+
+app = Collection("app")
+app.add_task(app_start)
+
+shell = Collection("shell")
+shell.add_task(shell_start)
+
+namespace = Collection(prepare, build, api, app, shell, start)
