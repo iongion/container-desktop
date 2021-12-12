@@ -68,6 +68,22 @@ function cmd.prepare {
   && cd "$PROJECT_HOME/packages/@podman-desktop-companion/container-client" \
   && nvm install \
   && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/executor" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/rpc" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/terminal" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/utils" \
+  && nvm install \
+  && nvm use \
   && NODE_ENV=development npm install
 
   # shellcheck disable=SC1091

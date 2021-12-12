@@ -1,4 +1,5 @@
 const os = require("os");
+const path = require("path");
 // vendors
 const { contextBridge, ipcRenderer } = require("electron");
 const logger = require("electron-log");
@@ -68,7 +69,7 @@ const application = {
       logger.debug(">> proxy to client", result);
       return result;
     }
-    process.env.WORKER_PROCESS_DIR = __dirname;
+    process.env.WORKER_PROCESS_FILE = path.join(__dirname, "ipc.js");
     const result = await withWorkerRPC((rpc) => rpc.invoke(req));
     logger.debug(">> proxy to client", result);
     return result;
