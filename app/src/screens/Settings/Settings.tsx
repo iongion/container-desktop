@@ -47,7 +47,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         const filePath = result?.filePaths[0];
         if (!result.canceled && filePath && program) {
           try {
-            const newProgram = await programSetPath(filePath);
+            const newProgram = await programSetPath({ name: "podman", path: filePath });
             console.debug("Program updated", newProgram);
             setProgramPaths((prev) => ({ ...prev, [program]: filePath }));
           } catch (error) {

@@ -39,7 +39,7 @@ async function exec_launcher(launcher, launcherArgs, opts) {
     const child = spawn(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
-        console.warn("Spawning already resolved", { command, from, data });
+        // console.warn("Spawning already resolved", { command, from, data });
       } else {
         console.debug(`Spawning complete: "${command}"`, { from, data });
         process.code = child.exitCode;

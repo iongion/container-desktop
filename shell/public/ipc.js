@@ -20,12 +20,12 @@ const {
 } = require("@podman-desktop-companion/container-client");
 
 const servicesMap = {
-  "/system/program/get": async function () {
-    return await getProgram();
+  "/system/program/get": async function ({ name }) {
+    return await getProgram(name);
   },
-  "/system/program/set": async function ({ path }) {
-    await setProgramPath(path);
-    return await getProgram();
+  "/system/program/set": async function ({ name, path }) {
+    await setProgramPath(name, path);
+    return await getProgram(name);
   },
   "/system/running": async function () {
     return await isSystemServiceRunning();

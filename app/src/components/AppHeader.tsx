@@ -14,8 +14,8 @@ import "./AppHeader.css";
 interface AppHeaderProps {
   screens: AppScreen<any>[];
   currentScreen?: AppScreen<any>;
-  program?: Program;
-  running?: boolean;
+  program: Program;
+  running: boolean;
 }
 
 const WINDOW_ACTIONS_MAP = {

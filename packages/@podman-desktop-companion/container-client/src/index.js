@@ -293,7 +293,7 @@ async function getVolumes() {
   return items;
 }
 
-async function getProgram(customPath) {
+async function getPodmanProgram(customPath) {
   let programVersion;
   let programName = "podman";
   let programTitle = "Podman";
@@ -319,11 +319,21 @@ async function getProgram(customPath) {
   return program;
 }
 
+async function getProgram(name) {
+  switch (name) {
+    case 'podman':
+      return getPodmanProgram();
+    case 'lima':
+      return getLimaProgram();
+    default: break;
+  }
+}
+
 // Container engine specific
 async function startSystemService(opts) {
   const clientOpts = {
     socketPath: getApiUnixSocketPath(),
-    retry: { count: 5, wait: 250 },
+    retry: { count: 2, wait: 1000 },
     checkStatus: isSystemServiceRunning,
     programPath: await getProgramPath()
   };
@@ -338,7 +348,7 @@ async function startSystemService(opts) {
     });
     client.on("ready", async ({ process }) => {
       try {
-        const program = await getProgram();
+        const program = await getProgram("podman");
         const systemApiResult = await getApiDriver().get("/info");
         resolve({
           program,
@@ -377,7 +387,7 @@ async function getSystemEnvironment() {
   }
   let program;
   try {
-    program = await getProgram();
+    program = await getProgram("podman");
   } catch (error) {
     logger.error("Unable to obtain program information", error);
   }

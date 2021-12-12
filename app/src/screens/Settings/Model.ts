@@ -16,7 +16,7 @@ export interface SettingsModel extends SettingsModelState {
   // thunks
   fetchEnvironment: Thunk<SettingsModel>;
   fetchWSLDistributions: Thunk<SettingsModel>;
-  programSetPath: Thunk<SettingsModel, string>;
+  programSetPath: Thunk<SettingsModel, { name: string; path: string }>;
 }
 
 export const createModel = (registry: AppRegistry): SettingsModel => {
@@ -42,11 +42,11 @@ export const createModel = (registry: AppRegistry): SettingsModel => {
         return distributions;
       });
     }),
-    programSetPath: thunk(async (actions, program) => {
+    programSetPath: thunk(async (actions, { name, path }) => {
       return registry.withPending(async () => {
-        await registry.api.setProgramPath(program);
+        await registry.api.setProgramPath(name, path);
         await actions.fetchEnvironment();
-        return program;
+        return path;
       });
     })
   };

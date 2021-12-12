@@ -139,8 +139,8 @@ export interface IContainerClient {
   startSystemService: () => Promise<SystemStartInfo>;
   isSystemServiceRunning: () => Promise<boolean>;
 
-  getProgram: () => Promise<Program>;
-  setProgramPath: (path: string) => Promise<Program>;
+  getProgram: (name?: string) => Promise<Program>;
+  setProgramPath: (name: string, path: string) => Promise<Program>;
 
   getWSLDistributions: () => Promise<WSLDistribution[]>;
 }
@@ -523,8 +523,8 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   abstract startSystemService(): Promise<SystemStartInfo>;
   abstract getSystemEnvironment(): Promise<SystemEnvironment>;
   abstract isSystemServiceRunning(): Promise<boolean>;
-  abstract getProgram(): Promise<Program>;
-  abstract setProgramPath(path: string): Promise<Program>;
+  abstract getProgram(name?: string): Promise<Program>;
+  abstract setProgramPath(name: string, path: string): Promise<Program>;
 
   abstract getWSLDistributions(): Promise<WSLDistribution[]>;
 }
@@ -533,7 +533,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
   // Containers
   async connectToContainer(id: string) {
     return this.withResult<boolean>(async () => {
-      const params = new URLSearchParams();
+      const params = {};
       const result = await this.dataApiDriver.post<Machine>(`/container/${id}/connect`, undefined, {
         params
       });
@@ -549,7 +549,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
   }
   async restartMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const params = new URLSearchParams();
+      const params = {};
       const result = await this.dataApiDriver.post<Machine>(`/machines/${Name}/restart`, undefined, {
         params
       });
@@ -625,15 +625,22 @@ export class BrowserContainerClient extends PodmanRestApiClient {
       return result.data;
     });
   }
-  async getProgram() {
+  async getProgram(name: string | undefined) {
     return this.withResult<Program>(async () => {
-      const result = await this.dataApiDriver.get<Program>("/program");
+      const params = new URLSearchParams();
+      if (name) {
+        params.set("name", name);
+      }
+      const result = await this.dataApiDriver.get<Program>("/program", {
+        params
+      });
       return result.data;
     });
   }
-  async setProgramPath(path: string) {
+  async setProgramPath(name: string, path: string) {
     return this.withResult<Program>(async () => {
       const result = await this.dataApiDriver.post<Program>("/program", {
+        name,
         path
       });
       return result.data;
@@ -757,19 +764,23 @@ export class NativeContainerClient extends PodmanRestApiClient {
       return result.body;
     });
   }
-  async getProgram() {
+  async getProgram(name: string | undefined) {
     return this.withResult<Program>(async () => {
       const result = await Native.getInstance().proxyRequest<Program>({
-        method: "/system/program/get"
+        method: "/system/program/get",
+        params: {
+          name
+        }
       });
       return result.body;
     });
   }
-  async setProgramPath(path: string) {
+  async setProgramPath(name: string, path: string) {
     return this.withResult<Program>(async () => {
       const result = await Native.getInstance().proxyRequest<Program>({
         method: "/system/program/set",
         params: {
+          name,
           path
         }
       });

@@ -73,7 +73,8 @@ export interface SystemInfo {
 export enum SystemServiceEngineType {
   native = "native",
   remote = "remote",
-  virtualized = "virtualized"
+  wsl = "virtualized.wsl",
+  lima = "virtualized.lima"
 }
 export interface SystemConnection {
   Identity: string;
@@ -81,8 +82,9 @@ export interface SystemConnection {
   URI: string;
 }
 export interface SystemEnvironment {
-  program: Program;
   connections: SystemConnection[];
+  program: Program;
+  running: boolean;
   info: SystemInfo;
 }
 export interface SystemStartInfo {

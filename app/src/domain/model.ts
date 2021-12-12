@@ -63,22 +63,33 @@ export const createModel = (registry: AppRegistry): AppModel => {
       let connections: SystemConnection[] = [];
       let system: SystemInfo | undefined;
       let program: Program;
+      let running = false;
       return registry.withPending(async () => {
         try {
           const environment = await registry.api.getSystemEnvironment();
-          const startup = await registry.api.startSystemService();
           connections = environment.connections;
           program = environment.program;
-          system = startup.system;
+          system = environment.info;
+          running = environment.running;
+          if (program.path) {
+            if (!running) {
+              try {
+                const startup = await registry.api.startSystemService();
+                system = startup.system;
+              } catch (error) {
+                console.error("Error during system startup", error);
+              }
+            }
+          }
         } catch (error) {
-          console.error("Error during system startup", error);
+          console.error("Error during system environment reading", error);
         }
         console.debug("System startup info is", { connections, system, program });
         actions.domainUpdate({
           connections,
           system,
           inited: true,
-          running: true,
+          running,
           program,
         });
       });
