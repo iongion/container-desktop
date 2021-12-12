@@ -22,11 +22,11 @@ def run_env(ctx, cmd, env=None):
             nvm_rc = os.path.join(ctx.cwd, ".nvmrc")
             if os.path.exists(nvm_rc):
                 with ctx.prefix("nvm use"):
-                    ctx.run(cmd, env=cmd_env, pty=os.name != "nt")
+                    ctx.run(cmd, env=cmd_env)
             else:
-                ctx.run(cmd, env=cmd_env, pty=os.name != "nt")
+                ctx.run(cmd, env=cmd_env)
     else:
-        ctx.run(cmd, env=cmd_env, pty=os.name != "nt")
+        ctx.run(cmd, env=cmd_env)
 
 
 @task(default=True)
@@ -54,6 +54,14 @@ def prepare(c, docs=False):
     # run_env(c, "npm install -g concurrently")
     # run_env(c, "npm install -g wait-on")
     with c.cd("packages/@podman-desktop-companion/container-client"):
+        run_env(c, "npm install")
+    with c.cd("packages/@podman-desktop-companion/executor"):
+        run_env(c, "npm install")
+    with c.cd("packages/@podman-desktop-companion/rpc"):
+        run_env(c, "npm install")
+    with c.cd("packages/@podman-desktop-companion/terminal"):
+        run_env(c, "npm install")
+    with c.cd("packages/@podman-desktop-companion/utils"):
         run_env(c, "npm install")
     with c.cd("api"):
         run_env(c, "npm install")

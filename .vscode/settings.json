@@ -55,6 +55,7 @@
         "noheading",
         "noninteractive",
         "nsis",
+        "nvmrc",
         "peasy",
         "percpu",
         "pids",

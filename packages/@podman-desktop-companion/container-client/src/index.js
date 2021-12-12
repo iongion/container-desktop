@@ -58,7 +58,7 @@ async function getSystemConnections() {
     return items;
   }
   try {
-    items = JSON.parse(output.stdout);
+    items = output.stdout ? JSON.parse(output.stdout) : items;
   } catch (error) {
     logger.error("Unable to decode list of podman connections", error);
   }
@@ -66,14 +66,14 @@ async function getSystemConnections() {
 }
 
 async function getSystemInfo() {
-  let items = [];
+  let items = {};
   const output = await execProgram(["system", "info", "--format", "{{json .}}"]);
   if (!output.success) {
     logger.error("Unable to get podman system information", output);
     return items;
   }
   try {
-    items = JSON.parse(output.stdout);
+    items = output.stdout ? JSON.parse(output.stdout) : items;
   } catch (error) {
     logger.error("Unable to decode podman system information", error);
   }
@@ -357,10 +357,30 @@ async function startSystemService(opts) {
 }
 
 async function getSystemEnvironment() {
-  const connections = await getSystemConnections();
-  const running = await isSystemServiceRunning();
-  const info = await getSystemInfo();
-  const program = await getProgram();
+  let connections = [];
+  try {
+    connections = await getSystemConnections();
+  } catch (error) {
+    logger.error("Unable to obtain system connections list", error);
+  }
+  let running = false;
+  try {
+    running = await isSystemServiceRunning();
+  } catch (error) {
+    logger.error("Unable to obtain running status", error);
+  }
+  let info = {};
+  try {
+    info = await getSystemInfo();
+  } catch (error) {
+    logger.error("Unable to obtain system info", error);
+  }
+  let program;
+  try {
+    program = await getProgram();
+  } catch (error) {
+    logger.error("Unable to obtain program information", error);
+  }
   return { connections, program, running, info };
 }
 

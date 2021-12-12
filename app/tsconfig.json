@@ -15,6 +15,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite/client", "vite-plugin-svgr/client"]
   }
 }
