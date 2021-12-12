@@ -170,8 +170,8 @@ const AppLoaded: React.FC<AppLoadedProps> = ({ program, running }) => {
 
 export const AppMainContent = () => {
   const inited = useStoreState((state) => state.inited);
-  const running = useStoreState((state) => state.running);
-  const program = useStoreState((state) => state.program);
+  const running = useStoreState((state) => state.environment.running);
+  const program = useStoreState((state) => state.environment.program);
   let content;
   console.debug("AppMainContent", { inited });
   if (inited) {
@@ -185,9 +185,9 @@ export const AppMainContent = () => {
 export function AppMain() {
   const inited = useStoreState((state) => state.inited);
   const native = useStoreState((state) => state.native);
-  const running = useStoreState((state) => state.running);
-  const platform = useStoreState((state) => state.platform);
-  const program = useStoreState((state) => state.program);
+  const running = useStoreState((state) => state.environment.running);
+  const platform = useStoreState((state) => state.environment.platform);
+  const program = useStoreState((state) => state.environment.program);
   const connect = useStoreActions((actions) => actions.connect);
   useEffect(() => {
     console.debug("AppMain changed", { inited, running, connect });
@@ -197,7 +197,7 @@ export function AppMain() {
       connect({ autoStart: true });
     }
   }, [inited, running, connect]);
-  console.debug("AppMain rendering", { inited, native, running, platform, program });
+  // console.debug("AppMain rendering", { inited, native, running, platform, program });
   return (
     <div
       className="App"

@@ -32,7 +32,7 @@ export const createModel = (registry: AppRegistry): TroubleshootModel => {
         const report = await registry.api.resetSystem();
         if (report) {
           console.debug("Report is here", report);
-          store.getActions().domainUpdate({ connections: [] });
+          // store.getActions().domainUpdate({ connections: [] });
         }
         return report;
       })

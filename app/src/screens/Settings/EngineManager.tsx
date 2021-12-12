@@ -6,7 +6,7 @@ import * as ReactIcon from "@mdi/react";
 import { mdiLinux, mdiMicrosoftWindows, mdiApple } from '@mdi/js';
 
 // project
-import { SystemServiceEngineType } from "../../Types";
+import { ServiceEngineType } from "../../Types";
 import { Native, Platforms } from "../../Native";
 import { Notification } from "../../Notification";
 import { useStoreActions, useStoreState } from "../../domain/types";
@@ -39,7 +39,7 @@ const RadioLabel: React.FC<{ text: string }> = ({ text }) => {
 };
 
 const WSLVirtualizationEngineSettings: React.FC<{disabled?: boolean}> = ({ disabled }) => {
-  const platform = useStoreState((state) => state.platform);
+  const platform = useStoreState((state) => state.environment.platform);
   const wslDistributions = useStoreState((state) =>
     state.settings.wslDistributions ? state.settings.wslDistributions : []
   );
@@ -72,7 +72,7 @@ const WSLVirtualizationEngineSettings: React.FC<{disabled?: boolean}> = ({ disab
 const LIMAVirtualizationEngineSettings: React.FC<{disabled?: boolean}> = ({ disabled }) => {
   const { t } = useTranslation();
   const native = useStoreState((state) => state.native);
-  const platform = useStoreState((state) => state.platform);
+  const platform = useStoreState((state) => state.environment.platform);
   const isMac = platform === Platforms.Mac;
   const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
@@ -152,13 +152,11 @@ export interface SystemServiceEngineManagerProps {}
 
 export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProps> = () => {
   const { t } = useTranslation();
-  const platform = useStoreState((state) => state.platform);
-  const connections = useStoreState((state) => state.connections);
-  const [systemServiceConnection, setSystemServiceConnection] = useState<SystemServiceEngineType>(
-    platform === Platforms.Linux ? SystemServiceEngineType.native : SystemServiceEngineType.remote
-  );
-  const onSystemServiceConnection = useCallback((e) => {
-    setSystemServiceConnection(e.currentTarget.value);
+  const platform = useStoreState((state) => state.environment.platform);
+  const connections = useStoreState((state) => state.environment.connections);
+  const engine = useStoreState((state) => state.environment.engine);
+  const onEngineChange = useCallback((e) => {
+    // setEngine(e.currentTarget.value);
   }, []);
   return (
     <div className="AppSettingsForm" data-form="engine">
@@ -166,16 +164,16 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
         className="AppSettingsFormContent"
         data-form="engine"
         label={t("System service API client")}
-        onChange={onSystemServiceConnection}
-        selectedValue={systemServiceConnection}
+        onChange={onEngineChange}
+        selectedValue={engine}
       >
         <Radio
           className="AppSettingsField"
           labelElement={<RadioLabel text={t("Remote with")} />}
           value="remote"
-          checked={systemServiceConnection === SystemServiceEngineType.remote}
+          checked={engine === ServiceEngineType.remote}
         >
-          <HTMLSelect disabled={systemServiceConnection !== SystemServiceEngineType.remote}>
+          <HTMLSelect disabled={engine !== ServiceEngineType.remote}>
             {connections.map((connection) => {
               return (
                 <option key={connection.Name} value={connection.Name}>
@@ -190,7 +188,7 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
           disabled={platform !== Platforms.Linux}
           labelElement={<RadioLabel text={t("Native")} />}
           value="native"
-          checked={systemServiceConnection === SystemServiceEngineType.native}
+          checked={engine === ServiceEngineType.native}
         >
           <RestrictedTo platform={Platforms.Linux} />
         </Radio>
@@ -199,18 +197,18 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
           disabled={platform !== Platforms.Windows}
           labelElement={<RadioLabel text={t("WSL")} />}
           value="virtualized.wsl"
-          checked={systemServiceConnection === SystemServiceEngineType.wsl}
+          checked={engine === ServiceEngineType.wsl}
         >
-          <WSLVirtualizationEngineSettings disabled={systemServiceConnection !== SystemServiceEngineType.wsl} />
+          <WSLVirtualizationEngineSettings disabled={engine !== ServiceEngineType.wsl} />
         </Radio>
         <Radio
           className="AppSettingsField"
           disabled={platform !== Platforms.Mac}
           labelElement={<RadioLabel text={t("Lima")} />}
           value="virtualized.lima"
-          checked={systemServiceConnection === SystemServiceEngineType.lima}
+          checked={engine === ServiceEngineType.lima}
         >
-          <LIMAVirtualizationEngineSettings disabled={systemServiceConnection !== SystemServiceEngineType.lima} />
+          <LIMAVirtualizationEngineSettings disabled={engine !== ServiceEngineType.lima} />
         </Radio>
       </RadioGroup>
     </div>

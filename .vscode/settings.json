@@ -41,6 +41,7 @@
         "blkio",
         "blueprintjs",
         "browserslist",
+        "Callout",
         "devpts",
         "Healthcheck",
         "hookform",

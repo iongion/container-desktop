@@ -8,8 +8,11 @@ const electronConfig = require("electron-cfg");
 // project
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 // local
-const { exec, exec_launcher, which, withClient } = require("@podman-desktop-companion/executor");
+const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/executor");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
+
+const isWSL = () => electronConfig.get('engine', '') ===  "virtualized.wsl";
+const isLIMA = () => electronConfig.get('engine', '') ===  "virtualized.lima";
 
 class ResultError extends Error {
   constructor(message, data, warnings) {
@@ -19,15 +22,51 @@ class ResultError extends Error {
   }
 }
 
+function getEngine() {
+  let engine = "remote";
+  if (os.type() === 'Linux') {
+    engine = 'native';
+  } else if (isWSL()) {
+    engine = 'virtualized.wsl';
+  } else if (isLIMA()) {
+    engine = 'virtualized.lima';
+  }
+  return electronConfig.get('engine', engine);
+}
+
+function setEngine(value) {
+  const engine = value || getEngine();
+  electronConfig.set('engine', engine);
+  return engine;
+}
+
 async function getProgramPath() {
-  let programPath = electronConfig.get("program.path");
-  if (!programPath) {
+  let programPath; // = electronConfig.get("program.path");
+  if (programPath) {
+    logger.debug("Configured program found", programPath);
+  } else {
     logger.debug("No configured program found - detecting");
-    programPath = await which("podman");
+    let result = { success: false, stdout: '' };
+    switch (os.type()) {
+      case 'Linux':
+        result = await exec("which", ["podman"]);
+        break;
+      case 'Windows_NT':
+        result = isWSL() ? await exec("which", ["podman"], { useWSL: true }) : await exec_launcher("where", ["podman.exe"]);
+        break;
+      case 'Darwin':
+        result = isLIMA() ? await exec("which", ["podman"], { useLIMA: true }) : await exec_launcher("which", ["podman"]);
+        break;
+      default:
+        break;
+    }
+    if (result.success) {
+      programPath = result.stdout.trim();
+    }
     // Cache if found
     if (programPath) {
       logger.debug("Program found in", programPath);
-      await setProgramPath(programPath);
+      // await setProgramPath(programPath);
     } else {
       logger.error("No program at all");
     }
@@ -46,7 +85,7 @@ async function execProgram(args) {
   if (!program) {
     throw new Error("No program specified");
   }
-  const output = await exec(program, args);
+  const output = await exec(program, args, { useWSL: isWSL(), useLIMA: isLIMA() });
   return output;
 }
 
@@ -336,7 +375,12 @@ async function startSystemService(opts) {
     socketPath: getApiUnixSocketPath(),
     retry: { count: 2, wait: 1000 },
     checkStatus: isSystemServiceRunning,
-    programPath: await getProgramPath()
+    programPath: await getProgramPath(),
+    ...({
+      useWSL: isWSL(),
+      useLIMA: isLIMA(),
+    }),
+    ...(opts || {}),
   };
   logger.debug("Client opts", clientOpts);
   const client = await withClient(clientOpts);
@@ -382,9 +426,9 @@ async function getSystemEnvironment() {
   } catch (error) {
     logger.error("Unable to obtain running status", error);
   }
-  let info = {};
+  let system = {};
   try {
-    info = await getSystemInfo();
+    system = await getSystemInfo();
   } catch (error) {
     logger.error("Unable to obtain system info", error);
   }
@@ -394,7 +438,16 @@ async function getSystemEnvironment() {
   } catch (error) {
     logger.error("Unable to obtain program information", error);
   }
-  return { connections, program, running, info };
+  const platform = os.type();
+  return {
+    platform,
+    connections,
+    program,
+    running,
+    system,
+    // connection type of client
+    engine: getEngine()
+  };
 }
 
 async function isSystemServiceRunning(driver) {
@@ -450,6 +503,8 @@ async function getWSLDistributions() {
 
 module.exports = {
   ResultError,
+  getEngine,
+  setEngine,
   getProgramPath,
   setProgramPath,
   getGithubRepoTags,

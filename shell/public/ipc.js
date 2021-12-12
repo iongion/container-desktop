@@ -80,10 +80,10 @@ module.exports = {
         warnings: []
       };
       const service = servicesMap[method];
-      logger.debug("Creating invocation", method, params);
+      // logger.debug("Creating invocation", method, params);
       if (service) {
         try {
-          logger.debug("Invoking", method, params);
+          // logger.debug("Invoking", method, params);
           result.success = true;
           result.body = await service(params);
         } catch (error) {

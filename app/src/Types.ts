@@ -70,7 +70,7 @@ export interface SystemInfo {
   version: SystemVersion;
 }
 
-export enum SystemServiceEngineType {
+export enum ServiceEngineType {
   native = "native",
   remote = "remote",
   wsl = "virtualized.wsl",
@@ -82,10 +82,13 @@ export interface SystemConnection {
   URI: string;
 }
 export interface SystemEnvironment {
+  platform: Platforms;
   connections: SystemConnection[];
   program: Program;
   running: boolean;
-  info: SystemInfo;
+  system: SystemInfo;
+
+  engine: ServiceEngineType;
 }
 export interface SystemStartInfo {
   system: SystemInfo;

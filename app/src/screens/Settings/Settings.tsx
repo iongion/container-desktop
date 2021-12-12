@@ -29,10 +29,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const { t } = useTranslation();
   const native = useStoreState((state) => state.native);
-  const running = useStoreState((state) => state.running);
-  const system = useStoreState((state) => state.system);
+  const running = useStoreState((state) => state.environment.running);
+  const system = useStoreState((state) => state.environment.system);
   const program = useStoreState((state) =>
-    state.settings.environment ? state.settings.environment.program : state.program
+    state.settings.environment ? state.settings.environment.program : state.environment.program
   );
   const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
   const provisioned = program && program.path;

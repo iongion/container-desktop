@@ -5,7 +5,7 @@
   "description": "Container desktop helper client",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "license": "ISC",
   "dependencies": {
@@ -19,5 +19,8 @@
   "engines": {
     "node": "~16"
   },
-  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+  "repository": "https://github.com/iongion/podman-desktop-companion.git",
+  "devDependencies": {
+    "jest": "^27.4.4"
+  }
 }

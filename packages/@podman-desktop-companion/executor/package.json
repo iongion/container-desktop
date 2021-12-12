@@ -9,7 +9,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "electron-log": "^4.4.1"
+  },
   "peerDependencies": {},
   "engines": {
     "node": "~16"
