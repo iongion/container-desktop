@@ -84,11 +84,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   );
 
   const engineSwitcher = Environment.features.engineSwitcher?.enabled ? (
-    <div className="AppSettingsForm" data-form="engine">
-      <div className="AppSettingsField" data-field="engine">
-        <SystemServiceEngineManager />
-      </div>
-    </div>
+    <SystemServiceEngineManager />
   ) : null;
 
   const systemDetailsViewer = provisioned && running ? (<CodeEditor value={JSON.stringify(system, null, 2)} />) : null;

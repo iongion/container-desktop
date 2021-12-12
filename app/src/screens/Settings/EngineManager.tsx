@@ -158,6 +158,7 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
         </HTMLSelect>
       </Radio>
       <Radio
+        disabled={platform !== Platforms.Linux}
         labelElement={<RadioLabel text={t("Native")} />}
         value="native"
         checked={systemServiceConnection === SystemServiceEngineType.native}
