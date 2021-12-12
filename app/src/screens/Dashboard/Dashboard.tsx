@@ -5,7 +5,7 @@ import ClipboardJS from "clipboard";
 import { useTranslation } from "react-i18next";
 
 // project
-import { AppScreen } from "../../Types";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { Notification } from "../../Notification";
 import { CONTAINER_DOCS_URL, CONTAINER_DOCS_EXAMPLE_CODE } from "../../Environment";
@@ -14,9 +14,10 @@ import { useStoreActions, useStoreState } from "../../domain/types";
 // module
 import "./Dashboard.css";
 
-interface ScreenProps {}
 
 export const ID = "dashboard";
+
+export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();

@@ -33,7 +33,7 @@ const WSLVirtualizationEngineSettings: React.FC = () => {
   return (
     <div className="VirtualizationEngineSettings" data-engine="wsl">
       {isWindows ? (
-        <HTMLSelect fill onChange={onVirtualizationEngineChange} value={wslDistribution}>
+        <HTMLSelect onChange={onVirtualizationEngineChange} value={wslDistribution}>
           {wslDistributions.map((distribution) => {
             return <option key={distribution.name}>{distribution.name}</option>;
           })}
@@ -94,7 +94,7 @@ const LIMAVirtualizationEngineSettings: React.FC = () => {
   return (
     <div className="VirtualizationEngineSettings" data-engine="lima">
       {isMac ? (
-        <ControlGroup fill={true} vertical={false}>
+        <ControlGroup vertical={false}>
           <InputGroup
             fill
             id={`${program.name}_path`}
@@ -136,6 +136,8 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
   }, []);
   return (
     <RadioGroup
+      className="AppSettingsForm"
+      data-form="engine"
       label={t("System service")}
       onChange={onSystemServiceConnection}
       selectedValue={systemServiceConnection}
@@ -145,7 +147,7 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
         value="remote"
         checked={systemServiceConnection === SystemServiceEngineType.remote}
       >
-        <HTMLSelect disabled={systemServiceConnection !== SystemServiceEngineType.remote} fill>
+        <HTMLSelect disabled={systemServiceConnection !== SystemServiceEngineType.remote}>
           {connections.map((connection) => {
             return (
               <option key={connection.Name} value={connection.Name}>

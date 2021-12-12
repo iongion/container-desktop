@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ClipboardJS from "clipboard";
 
-import { AppScreen, Container } from "../../Types";
+import { AppScreenProps, AppScreen, Container } from "../../Types";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { Notification } from "../../Notification";
@@ -28,7 +28,8 @@ interface InspectGroup {
 
 export const ID = "container.inspect";
 
-interface ScreenProps {}
+interface ScreenProps extends AppScreenProps {}
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [container, setContainer] = useState<Container>();

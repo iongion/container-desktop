@@ -105,19 +105,9 @@ interface AppContentProps {
 }
 
 const AppContent: React.FC<AppContentProps> = ({ provisioned, screens, currentScreen }) => {
-  const { t } = useTranslation();
-  if (!currentScreen) {
-    return (
-      <NonIdealState
-        icon={IconNames.WARNING_SIGN}
-        title={t("There is no such container")}
-        description={<p>{t("The container was not found")}</p>}
-      />
-    );
-  }
-  return (
+  const content = provisioned ? (
     <>
-      {provisioned && <AppSidebar screens={screens} currentScreen={currentScreen} />}
+      <AppSidebar screens={screens} currentScreen={currentScreen} />
       <div className="AppContentDocument">
         <HotkeysProvider>
           <Switch>
@@ -132,6 +122,17 @@ const AppContent: React.FC<AppContentProps> = ({ provisioned, screens, currentSc
         </HotkeysProvider>
       </div>
     </>
+  ) : (
+    <div className="AppContentDocument">
+      <HotkeysProvider>
+        <SettingsScreen navigator={navigator} />
+      </HotkeysProvider>
+    </div>
+  );
+  return (
+    <div className="AppContent">
+      {content}
+    </div>
   );
 };
 
@@ -162,9 +163,7 @@ const AppLoaded: React.FC<AppLoadedProps> = ({ program, running }) => {
   return (
     <>
       <AppHeader program={program} running={running} screens={Screens} currentScreen={currentScreen} />
-      <div className="AppContent">
-        <AppContent provisioned={!!program.path && running} screens={Screens} currentScreen={currentScreen} />
-      </div>
+      <AppContent provisioned={!!program.path && running} screens={Screens} currentScreen={currentScreen} />
     </>
   );
 };

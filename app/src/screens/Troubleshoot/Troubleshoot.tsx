@@ -5,17 +5,18 @@ import { useTranslation } from "react-i18next";
 import { useTimeout } from "usehooks-ts";
 
 // project
-import { AppScreen } from "../../Types";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { Notification } from "../../Notification";
 import { useStoreActions } from "../../domain/types";
 
 // module
 import "./Troubleshoot.css";
 
-interface ScreenProps {}
 
 export const ID = "troubleshoot";
 export const Title = "Troubleshoot";
+
+export interface ScreenProps extends AppScreenProps {}
 
 interface ConfirmButtonProps extends ButtonProps {
   onConfirm?: (event: React.MouseEvent<HTMLElement, MouseEvent>) => void;

@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
 
 // project
-import { AppScreen, ContainerImage } from "../../Types";
+import { AppScreenProps, AppScreen, ContainerImage } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -19,7 +19,8 @@ import "./ManageScreen.css";
 
 export const ID = "images";
 
-interface ScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();

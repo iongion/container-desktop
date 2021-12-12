@@ -1,4 +1,4 @@
-import { AnchorButton, Intent, HTMLTable } from "@blueprintjs/core";
+import { AnchorButton, Intent, HTMLTable, Code } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import { useMediaQuery } from "react-responsive";
@@ -6,7 +6,7 @@ import { useMediaQuery } from "react-responsive";
 import dayjs from "dayjs";
 
 // project
-import { AppScreen, Container } from "../../Types";
+import { AppScreenProps, AppScreen, Container } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -18,7 +18,7 @@ import { ActionsMenu } from ".";
 
 import "./ManageScreen.css";
 
-interface ScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "containers";
 
@@ -95,7 +95,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </>
                   )}
                   <td>
-                    <code>{container.Pid}</code>
+                    <Code>{container.Pid}</Code>
                   </td>
                   <td>{typeof container.State === "string" ? container.State : container.State.Status}</td>
                   <td>{container.Status || t("- n/a -")}</td>

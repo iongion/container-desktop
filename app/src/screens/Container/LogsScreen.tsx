@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 
 import { useParams } from "react-router-dom";
 
-import { AppScreen, Container } from "../../Types";
+import { AppScreenProps, AppScreen, Container } from "../../Types";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { CodeEditor } from "../../components/CodeEditor";
@@ -12,7 +12,7 @@ import { useStoreActions } from "../../domain/types";
 
 import "./LogsScreen.css";
 
-interface ScreenProps {}
+interface ScreenProps extends AppScreenProps {}
 
 export const ID = "container.logs";
 

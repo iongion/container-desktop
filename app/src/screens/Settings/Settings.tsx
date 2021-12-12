@@ -7,7 +7,7 @@ import { mdiEmoticonSad } from "@mdi/js";
 
 // project
 import Environment from "../../Environment";
-import { AppScreen } from "../../Types";
+import { AppScreen, AppScreenProps } from "../../Types";
 import { Native } from "../../Native";
 import { Notification } from "../../Notification";
 import { CodeEditor } from "../../components/CodeEditor";
@@ -20,7 +20,7 @@ import "./Settings.css";
 
 // Screen
 
-interface ScreenProps {}
+interface ScreenProps extends AppScreenProps {}
 
 export const ID = "settings";
 export const Title = "Settings";

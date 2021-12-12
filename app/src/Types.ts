@@ -391,7 +391,10 @@ export interface WSLDistribution {
   name: string;
 }
 
-export type AppScreen<P> = React.FunctionComponent<P> & {
+export interface AppScreenProps {
+  navigator: Navigator;
+}
+export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> & {
   ID: string;
   Title: string;
   Route: {

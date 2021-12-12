@@ -88,10 +88,11 @@
       "react-app",
       "react-app/jest",
       "plugin:jsx-a11y/recommended",
-      "@blueprintjs/eslint-plugin"
+      "plugin:@blueprintjs/recommended"
     ],
     "plugins": [
-      "jsx-a11y"
+      "jsx-a11y",
+      "@blueprintjs"
     ],
     "rules": {
       "react-hooks/exhaustive-deps": "error",

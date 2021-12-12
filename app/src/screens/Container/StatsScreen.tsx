@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
-
 import { useParams } from "react-router-dom";
 
 // project
-import { AppScreen, Container } from "../../Types";
+import { AppScreenProps, AppScreen, Container } from "../../Types";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { useStoreActions } from "../../domain/types";
 
@@ -14,7 +14,7 @@ import { ScreenHeader } from ".";
 
 import "./StatsScreen.css";
 
-interface ScreenProps {}
+interface ScreenProps extends AppScreenProps {}
 
 export const ID = "container.stats";
 
@@ -51,7 +51,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} />
       <div className="AppScreenContent">
-        <table className="AppContainerStatsView">
+        <HTMLTable className="AppContainerStatsView">
           <tbody>
             <tr className="AppContainerStatsViewPortRow">
               <td className="AppContainerStatsViewPort" data-view="view.cpu">
@@ -74,7 +74,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </td>
             </tr>
           </tbody>
-        </table>
+        </HTMLTable>
       </div>
     </div>
   );

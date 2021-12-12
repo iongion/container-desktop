@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 // project
-import { AppScreen, Secret } from "../../Types";
+import { AppScreenProps, AppScreen, Secret } from "../../Types";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { CodeEditor } from "../../components/CodeEditor";
 import { useStoreActions } from "../../domain/types";
@@ -15,7 +15,7 @@ import { SecretActionsMenu } from ".";
 
 import "./InspectScreen.css";
 
-interface ScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "secret.inspect";
 export const Title = "Secret Inspect";
