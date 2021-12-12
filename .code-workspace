@@ -15,6 +15,22 @@
     {
       "name": "Container client",
       "path": "${workspaceFolder}/packages/@podman-desktop-companion/container-client"
+    },
+    {
+      "name": "Executor",
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/executor"
+    },
+    {
+      "name": "RPC",
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/rpc"
+    },
+    {
+      "name": "Terminal",
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/terminal"
+    },
+    {
+      "name": "Utils",
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/utils"
     }
   ]
 }

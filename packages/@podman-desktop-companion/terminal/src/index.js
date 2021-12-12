@@ -1,6 +1,6 @@
 // vendors
 // project
-const { exec, which, withClient } = require("./shell");
+const { exec } = require("@podman-desktop-companion/executor");
 
 async function launchTerminal(command, params) {
   console.debug("Launching terminal", command, params);

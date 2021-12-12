@@ -13,7 +13,7 @@ const {
   getApiDriver,
   getApiUnixSocketPath,
   isSystemServiceRunning
-} = require("@podman-desktop-companion/container-client").engine;
+} = require("@podman-desktop-companion/container-client");
 // locals
 const main = () => {
   const app = express();

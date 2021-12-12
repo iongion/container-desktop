@@ -13,6 +13,7 @@
     "@blueprintjs/select": "3.18.10",
     "@mdi/js": "^6.5.95",
     "@mdi/react": "^1.5.0",
+    "@podman-desktop-companion/utils": "file:../packages/@podman-desktop-companion/utils",
     "ace-builds": "^1.4.13",
     "ajv": "8.8.2",
     "axios": "^0.24.0",

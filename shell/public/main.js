@@ -9,7 +9,7 @@ const logger = require("electron-log");
 const electronConfig = require("electron-cfg");
 const is_ip_private = require("private-ip");
 // project
-const { launchTerminal } = require("@podman-desktop-companion/container-client").terminal;
+const { launchTerminal } = require("@podman-desktop-companion/terminal");
 // locals
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");

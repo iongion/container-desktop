@@ -16,8 +16,8 @@ const {
   removeMachine,
   getProgram,
   setProgramPath,
-  getWSLDistributions,
-} = require("@podman-desktop-companion/container-client").engine;
+  getWSLDistributions
+} = require("@podman-desktop-companion/container-client");
 
 const servicesMap = {
   "/system/program/get": async function () {
@@ -87,9 +87,11 @@ module.exports = {
           result.success = true;
           result.body = await service(params);
         } catch (error) {
-          logger.error("Invoking error", error);
+          logger.error("Invoking error", error.message, error.stack, error.response);
           result.success = false;
           result.body = error.message;
+          result.stack = error.stack;
+          result.response = error.response;
         }
       } else {
         logger.error("No such IPC method", { method, params });

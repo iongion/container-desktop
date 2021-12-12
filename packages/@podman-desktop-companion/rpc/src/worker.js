@@ -1,9 +1,7 @@
 // node
-const path = require("path");
 // vendors
 const logger = require("electron-log");
 // project
-const { invoker } = require(path.join(process.env.WORKER_PROCESS_DIR, "ipc.js"));
 
 self.onmessage = async function (e) {
   const msg = e.data;
@@ -14,6 +12,7 @@ self.onmessage = async function (e) {
       return;
     }
     const req = msg.payload;
+    const { invoker } = require(process.env.WORKER_PROCESS_FILE);
     const result = await invoker.invoke(req.method, req.params);
     response = {
       success: true,

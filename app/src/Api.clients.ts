@@ -1,6 +1,7 @@
 // vendors
 import axios, { AxiosRequestConfig } from "axios";
 // project
+import { axiosConfigToCURL } from "@podman-desktop-companion/utils";
 import {
   ContainerClientResponse,
   //
@@ -180,47 +181,6 @@ export const coerceImage = (image: ContainerImage) => {
   image.History = [];
   return image;
 };
-
-export function axiosConfigToCURL(config: AxiosRequestConfig<any>) {
-  let requestUrl = `http://d${config.baseURL}${config.url}`;
-  if (Object.keys(config.params || {}).length) {
-    const searchParams = new URLSearchParams();
-    Object.entries(config.params).forEach(([key, value]) => searchParams.set(key, `${value}`));
-    requestUrl = `${requestUrl}?${searchParams}`;
-  }
-  const command = [
-    "curl",
-    "-v",
-    "-X",
-    config.method?.toUpperCase(),
-    "--unix-socket",
-    `"${config.socketPath}"`,
-    `"${requestUrl}"`
-  ];
-  const exclude = ["common", "delete", "get", "head", "patch", "post", "put"];
-  const extractHeaders = (bag: any) => {
-    const headers: { [key: string]: string } = {};
-    Object.entries(bag || {}).forEach(([key, value]) => {
-      if (exclude.includes(key)) {
-        return;
-      }
-      headers[key] = `${value}`;
-    });
-    return headers;
-  };
-  const commonHeaders = extractHeaders(config.headers?.common);
-  const userHeaders = extractHeaders(config.headers);
-  const headers = { ...commonHeaders, ...userHeaders };
-  Object.entries(headers).forEach(([key, value]) => {
-    command.push(`-H "${key}: ${value}"`);
-  });
-  if (config.method !== "get" && config.method !== "head") {
-    if (typeof config.data !== "undefined") {
-      command.push("-d", `'${JSON.stringify(config.data)}'`);
-    }
-  }
-  return command.join(" ");
-}
 
 export abstract class PodmanRestApiClient extends BaseContainerClient implements IContainerClient {
   protected dataApiDriver;

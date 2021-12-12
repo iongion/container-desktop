@@ -19,7 +19,6 @@ function wrapLauncher(program, args, opts = { useWSL: false, useLima: false }) {
 
 // project
 async function exec_launcher(launcher, launcherArgs, opts) {
-  const osType = os.type();
   const launcherOpts = {
     encoding: "utf-8", // TODO: cNot working for spawn - find alternative
     cwd: opts?.cwd,
@@ -44,6 +43,7 @@ async function exec_launcher(launcher, launcherArgs, opts) {
       } else {
         console.debug(`Spawning complete: "${command}"`, { from, data });
         process.code = child.exitCode;
+        process.stderr = process.stderr || data;
         resolved = true;
         resolve(process);
       }
