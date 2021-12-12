@@ -37,6 +37,7 @@
     "xterm-addon-fit": "^0.5.0"
   },
   "devDependencies": {
+    "@blueprintjs/eslint-plugin": "^0.3.5",
     "@hookform/devtools": "^4.0.1",
     "@types/lodash": "4.14.177",
     "@types/react": "17.0.37",
@@ -86,7 +87,8 @@
     "extends": [
       "react-app",
       "react-app/jest",
-      "plugin:jsx-a11y/recommended"
+      "plugin:jsx-a11y/recommended",
+      "@blueprintjs/eslint-plugin"
     ],
     "plugins": [
       "jsx-a11y"

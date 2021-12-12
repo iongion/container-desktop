@@ -14,7 +14,8 @@ const RadioLabel: React.FC<{ text: string }> = ({ text }) => {
 };
 
 const WSLVirtualizationEngineSettings: React.FC = () => {
-  // const { t } = useTranslation();
+  const { t } = useTranslation();
+  const platform = useStoreState((state) => state.platform);
   const wslDistributions = useStoreState((state) =>
     state.settings.wslDistributions ? state.settings.wslDistributions : []
   );
@@ -23,21 +24,32 @@ const WSLVirtualizationEngineSettings: React.FC = () => {
   const onVirtualizationEngineChange = useCallback((e) => {
     setWSLDistribution(e.currentTarget.value);
   }, []);
+  const isWindows = platform === Platforms.Windows;
   useEffect(() => {
-    fetchWSLDistributions();
-  }, [fetchWSLDistributions]);
-  return (<div className="VirtualizationEngineSettings" data-engine="wsl">
-    <HTMLSelect fill onChange={onVirtualizationEngineChange} value={wslDistribution}>
-      {wslDistributions.map((distribution) => {
-        return <option key={distribution.name}>{distribution.name}</option>;
-      })}
-    </HTMLSelect>
-  </div>);
+    if (isWindows) {
+      fetchWSLDistributions();
+    }
+  }, [isWindows, fetchWSLDistributions]);
+  return (
+    <div className="VirtualizationEngineSettings" data-engine="wsl">
+      {isWindows ? (
+        <HTMLSelect fill onChange={onVirtualizationEngineChange} value={wslDistribution}>
+          {wslDistributions.map((distribution) => {
+            return <option key={distribution.name}>{distribution.name}</option>;
+          })}
+        </HTMLSelect>
+      ) : (
+        <div>{t("Only on Windows")}</div>
+      )}
+    </div>
+  );
 };
 
 const LIMAVirtualizationEngineSettings: React.FC = () => {
   const { t } = useTranslation();
   const native = useStoreState((state) => state.native);
+  const platform = useStoreState((state) => state.platform);
+  const isMac = platform === Platforms.Mac;
   const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
   const program = {
@@ -79,29 +91,35 @@ const LIMAVirtualizationEngineSettings: React.FC = () => {
     },
     [programPaths]
   );
-  return (<div className="VirtualizationEngineSettings" data-engine="lima">
-    <ControlGroup fill={true} vertical={false}>
-      <InputGroup
-        fill
-        id={`${program.name}_path`}
-        readOnly={native}
-        placeholder={"..."}
-        value={programPaths[program.name] || program.path}
-        onChange={onProgramPathChange}
-      />
-      {native ? (
-        <Button
-          icon={IconNames.LOCATE}
-          text={t("Select")}
-          title={t("Select program")}
-          intent={Intent.PRIMARY}
-          onClick={onProgramSelectClick}
-        />
+  return (
+    <div className="VirtualizationEngineSettings" data-engine="lima">
+      {isMac ? (
+        <ControlGroup fill={true} vertical={false}>
+          <InputGroup
+            fill
+            id={`${program.name}_path`}
+            readOnly={native}
+            placeholder={"..."}
+            value={programPaths[program.name] || program.path}
+            onChange={onProgramPathChange}
+          />
+          {native ? (
+            <Button
+              icon={IconNames.LOCATE}
+              text={t("Select")}
+              title={t("Select program")}
+              intent={Intent.PRIMARY}
+              onClick={onProgramSelectClick}
+            />
+          ) : (
+            <Button icon={IconNames.TICK} title={t("Accept")} />
+          )}
+        </ControlGroup>
       ) : (
-        <Button icon={IconNames.TICK} title={t("Accept")} />
+        <div>{t("Only on MacOS")}</div>
       )}
-    </ControlGroup>
-  </div>);
+    </div>
+  );
 };
 
 export interface SystemServiceEngineManagerProps {}
@@ -123,20 +141,26 @@ export const SystemServiceEngineManager: React.FC<SystemServiceEngineManagerProp
       selectedValue={systemServiceConnection}
     >
       <Radio
-        labelElement={<RadioLabel text={t("Native")} />}
-        value="native"
-        checked={systemServiceConnection === SystemServiceEngineType.native}
-      />
-      <Radio
         labelElement={<RadioLabel text={t("Remote with")} />}
         value="remote"
         checked={systemServiceConnection === SystemServiceEngineType.remote}
       >
         <HTMLSelect disabled={systemServiceConnection !== SystemServiceEngineType.remote} fill>
           {connections.map((connection) => {
-            return <option key={connection.Name} value={connection.Name}>{connection.Name}</option>;
+            return (
+              <option key={connection.Name} value={connection.Name}>
+                {connection.Name}
+              </option>
+            );
           })}
         </HTMLSelect>
+      </Radio>
+      <Radio
+        labelElement={<RadioLabel text={t("Native")} />}
+        value="native"
+        checked={systemServiceConnection === SystemServiceEngineType.native}
+      >
+        <div>{t('Only on Linux')}</div>
       </Radio>
       <Radio
         disabled={platform !== Platforms.Windows}

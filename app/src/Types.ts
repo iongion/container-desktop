@@ -89,6 +89,7 @@ export interface SystemEnvironment {
 }
 export interface SystemStartInfo {
   system: SystemInfo;
+  running: boolean;
 }
 
 export interface SystemPruneReport {

@@ -321,11 +321,12 @@ async function getPodmanProgram(customPath) {
 
 async function getProgram(name) {
   switch (name) {
-    case 'podman':
+    case "podman":
       return getPodmanProgram();
-    case 'lima':
+    case "lima":
       return getLimaProgram();
-    default: break;
+    default:
+      break;
   }
 }
 
@@ -350,9 +351,11 @@ async function startSystemService(opts) {
       try {
         const program = await getProgram("podman");
         const systemApiResult = await getApiDriver().get("/info");
+        const running = await isSystemServiceRunning();
         resolve({
           program,
-          system: systemApiResult.data
+          system: systemApiResult.data,
+          running
         });
       } catch (error) {
         logger.error("System service ready error", error.message, error.stack);

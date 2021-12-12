@@ -76,6 +76,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
               try {
                 const startup = await registry.api.startSystemService();
                 system = startup.system;
+                running = startup.running;
               } catch (error) {
                 console.error("Error during system startup", error);
               }
@@ -90,7 +91,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
           system,
           inited: true,
           running,
-          program,
+          program
         });
       });
     })
