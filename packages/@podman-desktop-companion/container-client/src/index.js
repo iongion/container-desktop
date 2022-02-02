@@ -22,6 +22,8 @@ class ResultError extends Error {
   }
 }
 
+// electronConfig.set('engine', 'virtualized.lima');
+
 function getEngine() {
   let engine = "remote";
   if (os.type() === 'Linux') {
@@ -120,6 +122,9 @@ async function getSystemInfo() {
 }
 
 function getApiUnixSocketPath() {
+  if (isLIMA()) {
+    return path.join(process.env.HOME, ".lima/podman/sock/podman.sock");
+  }
   return "/tmp/podman.sock";
 }
 
@@ -158,7 +163,7 @@ function getApiDriver(cfg) {
       return response;
     },
     function (error) {
-      logger.error("HTTP response error", error);
+      logger.error("HTTP response error", error.message, error.stack);
       return Promise.reject(error);
     }
   );

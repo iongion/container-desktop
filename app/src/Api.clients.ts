@@ -222,7 +222,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
         return response;
       },
       function (error) {
-        console.error("HTTP response error", error);
+        console.error("HTTP response error", error.message, error.stack);
         return Promise.reject(error);
       }
     );

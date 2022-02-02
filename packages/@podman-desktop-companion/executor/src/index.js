@@ -13,8 +13,9 @@ function wrapLauncher(program, args, opts = { useWSL: false, useLIMA: false }) {
     launcher = "wsl.exe";
     launcherArgs = [program].concat(args);
   } else if (osType === "Darwin" && opts?.useLIMA) {
-    launcher = "lima";
-    launcherArgs = [program].concat(args);
+    launcher = "limactl";
+    const machine = "podman";
+    launcherArgs = ["shell", machine, program].concat(args);
   }
   return [launcher, launcherArgs];
 }
@@ -94,7 +95,7 @@ async function withClient(opts) {
   } else {
     // Handle
     const onProcessError = (child, error) => {
-      // logger.error('Child process error', error.code, error.message);
+      logger.error('Child process error', error.code, error.message);
       em.emit("error", { type: "process.error", code: error.code });
     };
     const onProcessExit = (child, code) => {

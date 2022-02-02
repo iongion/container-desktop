@@ -8,6 +8,8 @@ PROJECT_VERSION="$(cat "$PROJECT_HOME/VERSION")"
 NODE_ENV="${NODE_ENV:-development}"
 REACT_APP_ENV="${REACT_APP_ENV:-$NODE_ENV}"
 REACT_APP_PROJECT_VERSION="$PROJECT_VERSION"
+BROWSER=none
+PORT=5000
 
 function fn_exists() { [[ "$(type -t "$1")" = function ]]; }
 
@@ -166,6 +168,8 @@ function main {
   export NODE_ENV="$NODE_ENV"
   export REACT_APP_ENV="$REACT_APP_ENV"
   export REACT_APP_PROJECT_VERSION="$REACT_APP_PROJECT_VERSION"
+  export BROWSER=$BROWSER
+  export PORT=$PORT
   # Pre-check
   COMMAND="$1"
   if [[ -z $COMMAND ]] || [[ $COMMAND = "help" ]] || [[ $COMMAND = "--help" ]]; then
