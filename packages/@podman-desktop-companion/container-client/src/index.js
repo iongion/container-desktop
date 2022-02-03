@@ -10,7 +10,6 @@ const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 // local
 const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/executor");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
-
 const isWSL = () => electronConfig.get('engine', '') ===  "virtualized.wsl";
 const isLIMA = () => electronConfig.get('engine', '') ===  "virtualized.lima";
 
@@ -21,8 +20,6 @@ class ResultError extends Error {
     this.response = { data: data || message, warnings: warnings || [] };
   }
 }
-
-// electronConfig.set('engine', 'virtualized.lima');
 
 function getEngine() {
   let engine = "remote";

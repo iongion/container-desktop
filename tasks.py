@@ -92,8 +92,15 @@ def app_start(c, docs=False):
 
 
 @task
+def docs_start(c, docs=False):
+    with c.cd("docs"):
+        run_env(c, "python3 -m http.server --bind 127.0.0.1 8888")
+
+
+@task
 def shell_start(c, docs=False):
-    run_env(c, f'wait-on "http://127.0.0.1:{PORT}/index.html"')
+    print(f"Wait on http://127.0.0.1:{PORT}/index.html")
+    # run_env(c, f'wait-on "http://127.0.0.1:{PORT}/index.html"')
     with c.cd("shell"):
         run_env(c, f"npm start")
 
@@ -102,7 +109,7 @@ def shell_start(c, docs=False):
 def start(c, docs=False):
     run_env(
         c,
-        'concurrently "inv api.api-start" "inv app.app-start" "inv shell.shell-start"',
+        'concurrently "inv api.api-start" "inv app.app-start" "inv shell.shell-start" "inv docs.docs-start"',
     )
 
 
@@ -115,4 +122,7 @@ app.add_task(app_start)
 shell = Collection("shell")
 shell.add_task(shell_start)
 
-namespace = Collection(prepare, build, api, app, shell, start)
+docs = Collection("docs")
+docs.add_task(docs_start)
+
+namespace = Collection(prepare, build, api, app, shell, docs, start)

@@ -1,6 +1,7 @@
 const os = require("os");
 const path = require("path");
 // vendors
+require('fix-path')();
 const { contextBridge, ipcRenderer } = require("electron");
 const logger = require("electron-log");
 // locals

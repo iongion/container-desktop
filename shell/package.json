@@ -1,6 +1,6 @@
 {
   "name": "podman-desktop-companion",
-  "version": "3.4.2-alpha.2",
+  "version": "3.4.2-alpha.3",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman CLI desktop companion tool",
   "keywords": [],
@@ -15,6 +15,7 @@
     "electron-cfg": "^1.2.7",
     "electron-context-menu": "^3.1.1",
     "electron-log": "^4.4.1",
+    "fix-path": "^3.0.0",
     "node-pty": "^0.10.1",
     "private-ip": "^2.3.3",
     "uuid": "8.3.2"
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@electron-forge/cli": "^6.0.0-beta.61",
     "cross-env": "^7.0.3",
+    "dmg-license": "^1.0.10",
     "electron": "^16.0.4",
     "electron-builder": "^22.14.5",
     "electron-packager": "^15.4.0",
@@ -64,8 +66,8 @@
     }
   },
   "build": {
-    "appId": "com.electron.pdc",
-    "productName": "podman-desktop-companion",
+    "appId": "iongion.podman-desktop-companion",
+    "productName": "Podman Desktop Companion",
     "files": [
       "build/**/*",
       "node_modules/**/*"
@@ -74,8 +76,19 @@
       "buildResources": "public"
     },
     "mac": {
+      "category": "public.app-category.developer-tools",
       "icon": "icons/appIcon.icns",
-      "target": "dmg"
+      "target": "dmg",
+      "type": "development",
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.inherit.plist",
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "~",
+        "NSMicrophoneUsageDescription": "~"
+      }
     },
     "win": {
       "target": "nsis"
