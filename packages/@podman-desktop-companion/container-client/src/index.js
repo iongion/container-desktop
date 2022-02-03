@@ -205,7 +205,7 @@ async function getContainers() {
 
 async function connectToContainer(nameOrId, shell) {
   const program = await getProgramPath();
-  const output = await launchTerminal(program, ["exec", "-it", nameOrId, shell || "/bin/sh"]);
+  const output = await launchTerminal(program, ["exec", "-it", nameOrId, shell || "/bin/sh"], { isLIMA: isLIMA(), isWSL: isWSL() });
   if (!output.success) {
     logger.error("Unable to connect to container", nameOrId, output);
   }
@@ -277,7 +277,7 @@ async function createMachine(opts) {
 
 async function connectToMachine(name) {
   const program = await getProgramPath();
-  const output = await launchTerminal(program, ["machine", "ssh", name]);
+  const output = await launchTerminal(program, ["machine", "ssh", name], { isLIMA: isLIMA(), isWSL: isWSL() });
   if (!output.success) {
     logger.error("Unable to connect to machine", name, output);
   }
