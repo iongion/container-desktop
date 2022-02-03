@@ -1,10 +1,12 @@
 const os = require("os");
+const path = require("path");
 // vendors
+require('fix-path')();
 const { contextBridge, ipcRenderer } = require("electron");
 const logger = require("electron-log");
 // locals
-const { getApiConfig, getApiDriver } = require("@podman-desktop-companion/container-client").engine;
-const { withWorkerRPC } = require("./rpc");
+const { getApiConfig, getApiDriver } = require("@podman-desktop-companion/container-client");
+const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
 
 const application = {
   setup: function () {
@@ -67,12 +69,11 @@ const application = {
       const result = await ipcRenderer.invoke("proxy", req);
       logger.debug(">> proxy to client", result);
       return result;
-    } else {
-      process.env.WORKER_PROCESS_DIR = __dirname;
-      const result = await withWorkerRPC((rpc) => rpc.invoke(req));
-      logger.debug(">> proxy to client", result);
-      return result;
     }
+    process.env.WORKER_PROCESS_FILE = path.join(__dirname, "ipc.js");
+    const result = await withWorkerRPC((rpc) => rpc.invoke(req));
+    logger.debug(">> proxy to client", result);
+    return result;
   }
 };
 

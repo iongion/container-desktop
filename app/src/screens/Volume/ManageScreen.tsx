@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 
 // project
-import { AppScreen, Volume } from "../../Types";
+import { AppScreenProps, AppScreen, Volume } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -17,7 +17,7 @@ import "./ManageScreen.css";
 
 export const ID = "volumes";
 
-interface ScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();

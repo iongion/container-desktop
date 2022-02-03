@@ -41,11 +41,13 @@
         "blkio",
         "blueprintjs",
         "browserslist",
+        "Callout",
         "devpts",
         "Healthcheck",
         "hookform",
         "icns",
         "inited",
+        "Ionut",
         "kernelmode",
         "libpod",
         "markdownlint",
@@ -55,6 +57,7 @@
         "noheading",
         "noninteractive",
         "nsis",
+        "nvmrc",
         "peasy",
         "percpu",
         "pids",
@@ -64,12 +67,16 @@
         "preread",
         "procs",
         "rcedit",
+        "Stoica",
+        "svgr",
         "tabindex",
         "themelink",
         "TLDR",
         "tmpfs",
         "usehooks",
         "usermode",
+        "vite",
+        "vitejs",
         "wslg"
     ],
     "jshint.enable": false,
@@ -81,5 +88,6 @@
     "editor.codeActionsOnSave": {
         "source.fixAll.markdownlint": true
     },
-    "search.followSymlinks": false
+    "search.followSymlinks": false,
+    "python.formatting.provider": "black"
 }

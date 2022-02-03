@@ -3,24 +3,27 @@ import { action, thunk } from "easy-peasy";
 // project
 import { v4 } from "uuid";
 // project
-import { SystemInfo } from "../Types";
+import { ServiceEngineType, SystemEnvironment } from "../Types";
 import { Native } from "../Native";
 import { AppModel, AppModelState, AppRegistry } from "./types";
 
 export const createModel = (registry: AppRegistry): AppModel => {
   const native = Native.getInstance().isNative();
   const platform = Native.getInstance().getPlatform();
-  return {
+  const model: AppModel = {
     hash: v4(),
     revision: 0,
     inited: false,
     pending: false,
-    running: false,
     native,
-    platform,
-    system: {} as any,
-    connections: [],
-    program: {} as any,
+    environment: {
+      platform,
+      system: {} as any,
+      connections: [],
+      program: {} as any,
+      running: false,
+      engine: ServiceEngineType.native, // default
+    },
     // Actions
     setInited: action((state, inited) => {
       state.inited = inited;
@@ -28,31 +31,18 @@ export const createModel = (registry: AppRegistry): AppModel => {
     setPending: action((state, pending) => {
       state.pending = pending;
     }),
-    setRunning: action((state, running) => {
-      state.running = running;
-    }),
-    setProgram: action((state, program) => {
-      state.program = program;
-    }),
-    setSystem: action((state, system) => {
-      state.system = system;
-    }),
-    domainReset: action((state, { inited, pending, running }) => {
+    domainReset: action((state, { inited, pending }) => {
       state.inited = inited || false;
       state.pending = pending || false;
-      state.running = running || false;
     }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
-      const { inited, pending, running, system, connections, program } = opts;
+      const { inited, pending, environment } = opts;
       state.hash = v4();
       state.revision += 1;
       console.debug("Updating domain", opts, state.hash, state.revision);
       state.inited = inited === undefined ? state.inited : inited;
       state.pending = pending === undefined ? state.pending : pending;
-      state.running = running === undefined ? state.running : running;
-      state.system = system === undefined ? state.system : system;
-      state.connections = connections === undefined ? state.connections : connections;
-      state.program = program === undefined ? state.program : program;
+      state.environment = environment === undefined ? state.environment : environment;
     }),
     // Thunks
     connect: thunk(async (actions, options) => {
@@ -60,24 +50,31 @@ export const createModel = (registry: AppRegistry): AppModel => {
       if (native) {
         Native.getInstance().setup();
       }
+      let environment: SystemEnvironment = { ...model.environment };
       return registry.withPending(async () => {
-        const environment = await registry.api.getSystemEnvironment();
-        let system: SystemInfo | undefined;
         try {
-          const startup = await registry.api.startSystemService();
-          system = startup.system;
+          environment = await registry.api.getSystemEnvironment();
+          if (environment.program.path) {
+            if (!environment.running) {
+              try {
+                const startup = await registry.api.startSystemService();
+                environment.system = startup.system;
+                environment.running = startup.running;
+              } catch (error) {
+                console.error("Error during system startup", error);
+              }
+            }
+          }
         } catch (error) {
-          console.error("Error during system startup", error);
+          console.error("Error during system environment reading", error);
         }
-        console.debug("System startup info is", environment, system);
+        console.debug("System environment is", environment);
         actions.domainUpdate({
-          connections: environment.connections,
-          system: system,
           inited: true,
-          running: true,
-          program: environment.program
+          environment
         });
       });
     })
   };
+  return model;
 };

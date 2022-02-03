@@ -1,26 +1,29 @@
 const os = require("os");
 const { spawn } = require("child_process");
 const events = require("events");
+// vendors
+const logger = require("electron-log");
 
-function wrapLauncher(program, args, opts = { useWSL: false, useLima: false }) {
+function wrapLauncher(program, args, opts = { useWSL: false, useLIMA: false }) {
   const osType = os.type();
   let launcher = program;
   let launcherArgs = args;
+  logger.debug('Wrapping launcher', [program].concat(args).join(' '), opts);
   if (osType === "Windows_NT" && opts?.useWSL) {
     launcher = "wsl.exe";
     launcherArgs = [program].concat(args);
-  } else if (osType === "Darwin" && opts?.useLima) {
-    launcher = "lima";
-    launcherArgs = [program].concat(args);
+  } else if (osType === "Darwin" && opts?.useLIMA) {
+    launcher = "limactl";
+    const machine = "podman";
+    launcherArgs = ["shell", machine, program].concat(args);
   }
   return [launcher, launcherArgs];
 }
 
 // project
-async function exec(program, args, opts) {
-  const [launcher, launcherArgs] = wrapLauncher(program, args);
+async function exec_launcher(launcher, launcherArgs, opts) {
   const launcherOpts = {
-    encoding: "utf-8",
+    encoding: "utf-8", // TODO: cNot working for spawn - find alternative
     cwd: opts?.cwd,
     env: opts?.env
   };
@@ -35,48 +38,39 @@ async function exec(program, args, opts) {
       stderr: "",
       command
     };
-    console.debug(`Spawning started: "${command}"`);
+    logger.debug("Spawning started", command);
     const child = spawn(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
-        console.warn("Spawning already resolved", { command, from, data });
+        // logger.warn("Spawning already resolved", { command, from, data });
       } else {
-        console.debug(`Spawning complete: "${command}"`, { from, data });
+        logger.debug(`Spawning complete: "${command}"`, { from, data });
         process.code = child.exitCode;
+        process.stderr = process.stderr || data;
         resolved = true;
         resolve(process);
       }
     };
     process.pid = child.pid;
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
     child.on("exit", (code) => processResolve("exit", code));
     child.on("close", (code) => processResolve("close", code));
     child.on("error", (error) => processResolve("error", error));
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (data) => (process.stdout += data.toString()));
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (data) => (process.stderr += data.toString()));
+    child.stdout.on("data", (data) => (process.stdout += `${data}`));
+    child.stderr.on("data", (data) => (process.stderr += `${data}`));
     if (typeof child.pid === "undefined") {
       process.success = false;
-      // console.error('Child process exec failure', process);
     } else {
       process.success = true;
-      // console.debug('Child process exec success', process);
     }
   });
   return result;
 }
 
-async function which(program) {
-  let output;
-  const finder = os.type() === "Windows_NT" ? "where" : "which";
-  const result = await exec(finder, [program]);
-  if (result.success) {
-    output = `${result.stdout}`.trim();
-    console.debug("Program located", program, result, output);
-  } else {
-    console.error("Unable to locate program", program, result);
-  }
-  return output;
+async function exec(program, args, opts) {
+  const [launcher, launcherArgs] = wrapLauncher(program, args, opts);
+  return exec_launcher(launcher, launcherArgs, opts);
 }
 
 async function withClient(opts) {
@@ -93,7 +87,7 @@ async function withClient(opts) {
   // Check
   const running = await checkStatus();
   if (running) {
-    console.debug("Already running - reusing");
+    logger.debug("Already running - reusing");
     process.success = true;
     setImmediate(() => {
       em.emit("ready", { process });
@@ -101,37 +95,37 @@ async function withClient(opts) {
   } else {
     // Handle
     const onProcessError = (child, error) => {
-      // console.error('Child process error', error.code, error.message);
+      logger.error('Child process error', error.code, error.message);
       em.emit("error", { type: "process.error", code: error.code });
     };
     const onProcessExit = (child, code) => {
-      // console.debug('Child process exit', code);
+      // logger.debug('Child process exit', code);
       em.emit("exit", { code, managed: isManagedExit });
       isManagedExit = false;
     };
     const onProcessClose = (child, code) => {
-      // console.debug('Child process close', code);
+      // logger.debug('Child process close', code);
       em.emit("close", { code });
     };
     const onProcessData = (child, from, data) => {
-      // console.debug('Child process data', from, data);
+      // logger.debug('Child process data', from, data);
       em.emit("data", { from, data });
     };
     const waitForProcess = (child) => {
       let retries = retry?.count || 5;
       const wait = retry?.wait || 1000;
       const IID = setInterval(async () => {
-        // console.debug('Remaining', retries, 'of', retry?.count);
+        // logger.debug('Remaining', retries, 'of', retry?.count);
         if (retries === 0) {
           clearInterval(IID);
-          // console.error('Max retries reached');
+          // logger.error('Max retries reached');
           em.emit("error", { type: "domain.max-retries", code: undefined });
         } else {
           const running = await checkStatus();
-          // console.debug('Checking running first time after start', running);
+          // logger.debug('Checking running first time after start', running);
           if (running) {
             clearInterval(IID);
-            // console.debug('Sending SIGHUP', process.pid);
+            // logger.debug('Sending SIGHUP', process.pid);
             isManagedExit = true;
             child.kill("SIGHUP");
             const configured = await checkStatus();
@@ -142,7 +136,7 @@ async function withClient(opts) {
               em.emit("error", { type: "domain.not-configured", code: undefined });
             }
           } else {
-            console.debug("Move to next retry", retries);
+            logger.debug("Move to next retry", retries);
           }
         }
         retries -= 1;
@@ -150,13 +144,13 @@ async function withClient(opts) {
     };
     const onStart = () => {
       const args = ["system", "service", "--time=0", `unix://${socketPath}`, "--log-level=debug"];
-      const [launcher, launcherArgs] = wrapLauncher(programPath, args);
+      const [launcher, launcherArgs] = wrapLauncher(programPath, args, opts);
       const launcherOpts = {
         encoding: "utf-8",
         cwd: opts?.cwd,
         env: opts?.env
       };
-      console.debug("Spawning launcher", [launcher].concat(launcherArgs).join(" "), launcherOpts);
+      logger.debug("Spawning launcher", [launcher].concat(launcherArgs).join(" "), launcherOpts);
       const child = spawn(launcher, launcherArgs, launcherOpts);
       process.pid = child.pid;
       child.on("exit", (code) => onProcessExit(child, code));
@@ -168,10 +162,10 @@ async function withClient(opts) {
       child.stderr.on("data", (data) => onProcessData(child, "stderr", data.toString()));
       if (typeof child.pid === "undefined") {
         process.success = false;
-        // console.error('Child process spawn failure', process);
+        // logger.error('Child process spawn failure', process);
       } else {
         process.success = true;
-        // console.debug('Child process spawn success', process);
+        // logger.debug('Child process spawn success', process);
         waitForProcess(child);
       }
     };
@@ -183,6 +177,6 @@ async function withClient(opts) {
 
 module.exports = {
   exec,
-  which,
+  exec_launcher,
   withClient
 };

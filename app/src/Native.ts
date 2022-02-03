@@ -147,12 +147,12 @@ export class Native {
     console.debug("Result is here", result);
     if (result.success) {
       return result;
-    } else {
-      const error = new Error("Proxy result error");
-      (error as any).data = result.body;
-      (error as any).warnings = result.warnings;
-      console.error("Proxy result error", error);
-      throw error;
     }
+    // TODO: Improve error flow
+    console.error("Proxy result error", result);
+    const response = (result as any).response || { data: result.body, warnings: result.warnings };
+    const error = new Error(`${result.body}` || "Proxy result error");
+    (error as any).response = response;
+    throw error;
   }
 }

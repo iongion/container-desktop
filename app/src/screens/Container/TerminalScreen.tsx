@@ -6,7 +6,7 @@ import { FitAddon } from "xterm-addon-fit";
 import { useParams } from "react-router-dom";
 
 // project
-import { AppScreen, Container } from "../../Types";
+import { AppScreenProps, AppScreen, Container } from "../../Types";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { useStoreActions } from "../../domain/types";
 
@@ -54,7 +54,7 @@ export const TerminalView = () => {
   );
 };
 
-interface ScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "container.terminal";
 

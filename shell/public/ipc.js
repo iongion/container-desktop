@@ -15,16 +15,17 @@ const {
   stopMachine,
   removeMachine,
   getProgram,
-  setProgramPath
-} = require("@podman-desktop-companion/container-client").engine;
+  setProgramPath,
+  getWSLDistributions
+} = require("@podman-desktop-companion/container-client");
 
 const servicesMap = {
-  "/system/program/get": async function () {
-    return await getProgram();
+  "/system/program/get": async function ({ name }) {
+    return await getProgram(name);
   },
-  "/system/program/set": async function ({ path }) {
-    await setProgramPath(path);
-    return await getProgram();
+  "/system/program/set": async function ({ name, path }) {
+    await setProgramPath(name, path);
+    return await getProgram(name);
   },
   "/system/running": async function () {
     return await isSystemServiceRunning();
@@ -64,6 +65,9 @@ const servicesMap = {
   },
   "/machine/create": async function (opts) {
     return await createMachine(opts);
+  },
+  "/wsl.distributions": async function (opts) {
+    return await getWSLDistributions(opts);
   }
 };
 
@@ -76,16 +80,18 @@ module.exports = {
         warnings: []
       };
       const service = servicesMap[method];
-      logger.debug("Creating invocation", method, params);
+      // logger.debug("Creating invocation", method, params);
       if (service) {
         try {
-          logger.debug("Invoking", method, params);
+          // logger.debug("Invoking", method, params);
           result.success = true;
           result.body = await service(params);
         } catch (error) {
-          logger.error("Invoking error", error);
+          logger.error("Invoking error", error.message, error.stack, error.response);
           result.success = false;
           result.body = error.message;
+          result.stack = error.stack;
+          result.response = error.response;
         }
       } else {
         logger.error("No such IPC method", { method, params });

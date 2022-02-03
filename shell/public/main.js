@@ -2,6 +2,7 @@
 const os = require("os");
 const path = require("path");
 const url = require("url");
+require('fix-path')();
 // vendors
 const { app, dialog, BrowserWindow, shell, ipcMain, protocol } = require("electron");
 const contextMenu = require("electron-context-menu");
@@ -9,7 +10,7 @@ const logger = require("electron-log");
 const electronConfig = require("electron-cfg");
 const is_ip_private = require("private-ip");
 // project
-const { launchTerminal } = require("@podman-desktop-companion/container-client").terminal;
+const { launchTerminal } = require("@podman-desktop-companion/terminal");
 // locals
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");

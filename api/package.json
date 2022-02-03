@@ -21,7 +21,7 @@
     "prettier-eslint": "^13.0.0"
   },
   "engines": {
-    "node": "~16.11"
+    "node": "~16"
   },
   "repository": "https://github.com/iongion/podman-desktop-companion.git"
 }

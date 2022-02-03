@@ -39,19 +39,6 @@ export interface Environment {
   settings: EnvironmentSettings;
 }
 
-export type AppScreen<P> = React.FunctionComponent<P> & {
-  ID: string;
-  Title: string;
-  Route: {
-    Path: string;
-  };
-  Metadata?: {
-    ExcludeFromSidebar?: boolean;
-    LeftIcon?: any;
-    RightIcon?: any;
-  };
-};
-
 export interface SystemStore {
   configFile: string;
   containerStore: {
@@ -83,10 +70,11 @@ export interface SystemInfo {
   version: SystemVersion;
 }
 
-export enum SystemServiceEngineType {
+export enum ServiceEngineType {
   native = "native",
   remote = "remote",
-  virtualized = "virtualized"
+  wsl = "virtualized.wsl",
+  lima = "virtualized.lima"
 }
 export interface SystemConnection {
   Identity: string;
@@ -94,12 +82,17 @@ export interface SystemConnection {
   URI: string;
 }
 export interface SystemEnvironment {
-  program: Program;
+  platform: Platforms;
   connections: SystemConnection[];
-  info: SystemInfo;
+  program: Program;
+  running: boolean;
+  system: SystemInfo;
+
+  engine: ServiceEngineType;
 }
 export interface SystemStartInfo {
   system: SystemInfo;
+  running: boolean;
 }
 
 export interface SystemPruneReport {
@@ -396,3 +389,23 @@ export const MOUNT_ACCESS = [
   { title: "Read only", type: "ro" },
   { title: "Read / Write", type: "rw" }
 ];
+
+export interface WSLDistribution {
+  name: string;
+}
+
+export interface AppScreenProps {
+  navigator: Navigator;
+}
+export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> & {
+  ID: string;
+  Title: string;
+  Route: {
+    Path: string;
+  };
+  Metadata?: {
+    ExcludeFromSidebar?: boolean;
+    LeftIcon?: any;
+    RightIcon?: any;
+  };
+};

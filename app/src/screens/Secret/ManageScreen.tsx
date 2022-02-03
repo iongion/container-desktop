@@ -5,7 +5,7 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 
 // project
-import { AppScreen, Secret } from "../../Types";
+import { AppScreenProps, AppScreen, Secret } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -18,7 +18,8 @@ import "./ManageScreen.css";
 
 export const ID = "secrets";
 
-interface ScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();

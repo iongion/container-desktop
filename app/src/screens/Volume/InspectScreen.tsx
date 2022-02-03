@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useParams } from "react-router-dom";
 
 // project
-import { AppScreen, Volume } from "../../Types";
+import { AppScreenProps, AppScreen, Volume } from "../../Types";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { CodeEditor } from "../../components/CodeEditor";
 import { ScreenLoader } from "../../components/ScreenLoader";
@@ -14,11 +14,10 @@ import { VolumeActionsMenu } from ".";
 
 import "./InspectScreen.css";
 
-interface ScreenProps {}
-
 export const ID = "volume.inspect";
 export const Title = "Volume Inspect";
 
+export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const [volume, setVolume] = useState<Volume>();
   const { id } = useParams<{ id: string }>();

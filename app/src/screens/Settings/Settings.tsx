@@ -7,7 +7,7 @@ import { mdiEmoticonSad } from "@mdi/js";
 
 // project
 import Environment from "../../Environment";
-import { AppScreen } from "../../Types";
+import { AppScreen, AppScreenProps } from "../../Types";
 import { Native } from "../../Native";
 import { Notification } from "../../Notification";
 import { CodeEditor } from "../../components/CodeEditor";
@@ -20,7 +20,7 @@ import "./Settings.css";
 
 // Screen
 
-interface ScreenProps {}
+interface ScreenProps extends AppScreenProps {}
 
 export const ID = "settings";
 export const Title = "Settings";
@@ -29,14 +29,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const { t } = useTranslation();
   const native = useStoreState((state) => state.native);
-  const running = useStoreState((state) => state.running);
-  const system = useStoreState((state) => state.system);
+  const running = useStoreState((state) => state.environment.running);
+  const system = useStoreState((state) => state.environment.system);
   const program = useStoreState((state) =>
-    state.settings.environment ? state.settings.environment.program : state.program
+    state.settings.environment ? state.settings.environment.program : state.environment.program
   );
   const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
-
-  const isValid = program.path && program.currentVersion;
+  const provisioned = program && program.path;
+  const isValid = provisioned && program.currentVersion;
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const sender = e.currentTarget as HTMLElement;
@@ -47,7 +47,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         const filePath = result?.filePaths[0];
         if (!result.canceled && filePath && program) {
           try {
-            const newProgram = await programSetPath(filePath);
+            const newProgram = await programSetPath({ name: "podman", path: filePath });
             console.debug("Program updated", newProgram);
             setProgramPaths((prev) => ({ ...prev, [program]: filePath }));
           } catch (error) {
@@ -73,7 +73,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [programPaths]
   );
 
-  const contentWidget = running ? null : (
+  const contentWidget = provisioned && running ? null : (
     <Callout
       className="AppSettingsCallout"
       title={t("Automatic detection failed")}
@@ -84,12 +84,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   );
 
   const engineSwitcher = Environment.features.engineSwitcher?.enabled ? (
-    <div className="AppSettingsForm" data-form="engine">
-      <div className="AppSettingsField" data-field="engine">
-        <SystemServiceEngineManager />
-      </div>
-    </div>
+    <SystemServiceEngineManager />
   ) : null;
+
+  const systemDetailsViewer = provisioned && running ? (<CodeEditor value={JSON.stringify(system, null, 2)} />) : null;
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -154,7 +152,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </div>
         </div>
         {engineSwitcher}
-        <CodeEditor value={JSON.stringify(system, null, 2)} />
+        {systemDetailsViewer}
       </div>
     </div>
   );

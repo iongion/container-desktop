@@ -1,6 +1,7 @@
 // vendors
 import axios, { AxiosRequestConfig } from "axios";
 // project
+import { axiosConfigToCURL } from "@podman-desktop-companion/utils";
 import {
   ContainerClientResponse,
   //
@@ -22,7 +23,9 @@ import {
   SystemInfo,
   SystemPruneReport,
   SystemResetReport,
-  Machine
+  Machine,
+  //
+  WSLDistribution
 } from "./Types";
 
 import { Native } from "./Native";
@@ -136,8 +139,10 @@ export interface IContainerClient {
   startSystemService: () => Promise<SystemStartInfo>;
   isSystemServiceRunning: () => Promise<boolean>;
 
-  getProgram: () => Promise<Program>;
-  setProgramPath: (path: string) => Promise<Program>;
+  getProgram: (name?: string) => Promise<Program>;
+  setProgramPath: (name: string, path: string) => Promise<Program>;
+
+  getWSLDistributions: () => Promise<WSLDistribution[]>;
 }
 
 export abstract class BaseContainerClient {
@@ -176,47 +181,6 @@ export const coerceImage = (image: ContainerImage) => {
   image.History = [];
   return image;
 };
-
-export function axiosConfigToCURL(config: AxiosRequestConfig<any>) {
-  let requestUrl = `http://d${config.baseURL}${config.url}`;
-  if (Object.keys(config.params || {}).length) {
-    const searchParams = new URLSearchParams();
-    Object.entries(config.params).forEach(([key, value]) => searchParams.set(key, `${value}`));
-    requestUrl = `${requestUrl}?${searchParams}`;
-  }
-  const command = [
-    "curl",
-    "-v",
-    "-X",
-    config.method?.toUpperCase(),
-    "--unix-socket",
-    `"${config.socketPath}"`,
-    `"${requestUrl}"`
-  ];
-  const exclude = ["common", "delete", "get", "head", "patch", "post", "put"];
-  const extractHeaders = (bag: any) => {
-    const headers: { [key: string]: string } = {};
-    Object.entries(bag || {}).forEach(([key, value]) => {
-      if (exclude.includes(key)) {
-        return;
-      }
-      headers[key] = `${value}`;
-    });
-    return headers;
-  };
-  const commonHeaders = extractHeaders(config.headers?.common);
-  const userHeaders = extractHeaders(config.headers);
-  const headers = { ...commonHeaders, ...userHeaders };
-  Object.entries(headers).forEach(([key, value]) => {
-    command.push(`-H "${key}: ${value}"`);
-  });
-  if (config.method !== "get" && config.method !== "head") {
-    if (typeof config.data !== "undefined") {
-      command.push("-d", `'${JSON.stringify(config.data)}'`);
-    }
-  }
-  return command.join(" ");
-}
 
 export abstract class PodmanRestApiClient extends BaseContainerClient implements IContainerClient {
   protected dataApiDriver;
@@ -258,7 +222,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
         return response;
       },
       function (error) {
-        console.error("HTTP response error", error);
+        console.error("HTTP response error", error.message, error.stack);
         return Promise.reject(error);
       }
     );
@@ -559,15 +523,17 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   abstract startSystemService(): Promise<SystemStartInfo>;
   abstract getSystemEnvironment(): Promise<SystemEnvironment>;
   abstract isSystemServiceRunning(): Promise<boolean>;
-  abstract getProgram(): Promise<Program>;
-  abstract setProgramPath(path: string): Promise<Program>;
+  abstract getProgram(name?: string): Promise<Program>;
+  abstract setProgramPath(name: string, path: string): Promise<Program>;
+
+  abstract getWSLDistributions(): Promise<WSLDistribution[]>;
 }
 
 export class BrowserContainerClient extends PodmanRestApiClient {
   // Containers
   async connectToContainer(id: string) {
     return this.withResult<boolean>(async () => {
-      const params = new URLSearchParams();
+      const params = {};
       const result = await this.dataApiDriver.post<Machine>(`/container/${id}/connect`, undefined, {
         params
       });
@@ -583,7 +549,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
   }
   async restartMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const params = new URLSearchParams();
+      const params = {};
       const result = await this.dataApiDriver.post<Machine>(`/machines/${Name}/restart`, undefined, {
         params
       });
@@ -659,17 +625,31 @@ export class BrowserContainerClient extends PodmanRestApiClient {
       return result.data;
     });
   }
-  async getProgram() {
+  async getProgram(name: string | undefined) {
     return this.withResult<Program>(async () => {
-      const result = await this.dataApiDriver.get<Program>("/program");
+      const params = new URLSearchParams();
+      if (name) {
+        params.set("name", name);
+      }
+      const result = await this.dataApiDriver.get<Program>("/program", {
+        params
+      });
       return result.data;
     });
   }
-  async setProgramPath(path: string) {
+  async setProgramPath(name: string, path: string) {
     return this.withResult<Program>(async () => {
       const result = await this.dataApiDriver.post<Program>("/program", {
+        name,
         path
       });
+      return result.data;
+    });
+  }
+
+  async getWSLDistributions() {
+    return this.withResult<WSLDistribution[]>(async () => {
+      const result = await this.dataApiDriver.get<WSLDistribution[]>("/wsl.distributions");
       return result.data;
     });
   }
@@ -678,11 +658,13 @@ export class BrowserContainerClient extends PodmanRestApiClient {
 export class NativeContainerClient extends PodmanRestApiClient {
   // Containers
   async connectToContainer(Id: string) {
-    const result = await Native.getInstance().proxyRequest<boolean>({
-      method: "/container/connect",
-      params: { Id }
+    return this.withResult<boolean>(async () => {
+      const result = await Native.getInstance().proxyRequest<boolean>({
+        method: "/container/connect",
+        params: { Id }
+      });
+      return result.body;
     });
-    return result.body;
   }
 
   // Machines
@@ -731,18 +713,22 @@ export class NativeContainerClient extends PodmanRestApiClient {
     });
   }
   async stopMachine(Name: string) {
-    const result = await Native.getInstance().proxyRequest<boolean>({
-      method: "/machine/stop",
-      params: { Name }
+    return this.withResult<boolean>(async () => {
+      const result = await Native.getInstance().proxyRequest<boolean>({
+        method: "/machine/stop",
+        params: { Name }
+      });
+      return result.body;
     });
-    return result.body;
   }
   async connectToMachine(Name: string) {
-    const result = await Native.getInstance().proxyRequest<boolean>({
-      method: "/machine/connect",
-      params: { Name }
+    return this.withResult<boolean>(async () => {
+      const result = await Native.getInstance().proxyRequest<boolean>({
+        method: "/machine/connect",
+        params: { Name }
+      });
+      return result.body;
     });
-    return result.body;
   }
 
   // System
@@ -778,21 +764,34 @@ export class NativeContainerClient extends PodmanRestApiClient {
       return result.body;
     });
   }
-  async getProgram() {
+  async getProgram(name: string | undefined) {
     return this.withResult<Program>(async () => {
       const result = await Native.getInstance().proxyRequest<Program>({
-        method: "/system/program/get"
+        method: "/system/program/get",
+        params: {
+          name
+        }
       });
       return result.body;
     });
   }
-  async setProgramPath(path: string) {
+  async setProgramPath(name: string, path: string) {
     return this.withResult<Program>(async () => {
       const result = await Native.getInstance().proxyRequest<Program>({
         method: "/system/program/set",
         params: {
+          name,
           path
         }
+      });
+      return result.body;
+    });
+  }
+
+  async getWSLDistributions() {
+    return this.withResult<WSLDistribution[]>(async () => {
+      const result = await Native.getInstance().proxyRequest<WSLDistribution[]>({
+        method: "/wsl.distributions"
       });
       return result.body;
     });

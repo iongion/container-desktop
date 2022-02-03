@@ -5,18 +5,22 @@
   "description": "Container desktop helper client",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "license": "ISC",
   "dependencies": {
+    "@podman-desktop-companion/executor": "file:../executor",
+    "@podman-desktop-companion/terminal": "file:../terminal",
+    "@podman-desktop-companion/utils": "file:../utils",
     "axios": "^0.24.0",
     "electron-cfg": "^1.2.7",
-    "electron-log": "^4.4.1",
-    "threads": "^1.7.0",
-    "uuid": "^8.3.2"
+    "electron-log": "^4.4.1"
   },
   "engines": {
-    "node": "~16.11"
+    "node": "~16"
   },
-  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+  "repository": "https://github.com/iongion/podman-desktop-companion.git",
+  "devDependencies": {
+    "jest": "^27.4.4"
+  }
 }

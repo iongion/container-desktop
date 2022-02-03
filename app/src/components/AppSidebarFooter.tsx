@@ -9,7 +9,7 @@ import "./AppSidebarFooter.css";
 export function AppSidebarFooter() {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
-  const running = useStoreState((state) => state.running);
+  const running = useStoreState((state) => state.environment.running);
   const pendingIndicatorStyle: React.CSSProperties = {
     visibility: pending ? "visible" : "hidden"
   };

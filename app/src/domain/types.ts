@@ -1,8 +1,7 @@
 // vendors
 import { Action, Thunk, Store, EasyPeasyConfig, createTypedHooks } from "easy-peasy";
 // project
-import { ConnectOptions, SystemInfo, SystemConnection, Program } from "../Types";
-import { Platforms } from "../Native";
+import { ConnectOptions, SystemEnvironment } from "../Types";
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -19,26 +18,18 @@ export interface AppModelState {
 
   inited: boolean;
   pending: boolean;
-  running: boolean;
   native: boolean;
 
-  platform: Platforms;
-  program: Program;
-
-  system: SystemInfo;
-  connections: SystemConnection[];
+  environment: SystemEnvironment;
 }
 
 export interface AppModel extends AppModelState {
   // actions
   setInited: Action<AppModel, boolean>;
   setPending: Action<AppModel, boolean>;
-  setRunning: Action<AppModel, boolean>;
-  setSystem: Action<AppModel, SystemInfo>;
+
   domainReset: Action<AppModel, Partial<AppModelState>>;
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
-
-  setProgram: Action<AppModel, Program>;
 
   // thunks
   connect: Thunk<AppModel, ConnectOptions>;

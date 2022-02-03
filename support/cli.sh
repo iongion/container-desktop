@@ -8,6 +8,8 @@ PROJECT_VERSION="$(cat "$PROJECT_HOME/VERSION")"
 NODE_ENV="${NODE_ENV:-development}"
 REACT_APP_ENV="${REACT_APP_ENV:-$NODE_ENV}"
 REACT_APP_PROJECT_VERSION="$PROJECT_VERSION"
+BROWSER=none
+PORT=5000
 
 function fn_exists() { [[ "$(type -t "$1")" = function ]]; }
 
@@ -66,6 +68,22 @@ function cmd.prepare {
   echo "Preparing packages" \
   && source "$HOME/.nvm/nvm.sh" \
   && cd "$PROJECT_HOME/packages/@podman-desktop-companion/container-client" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/executor" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/rpc" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/terminal" \
+  && nvm install \
+  && nvm use \
+  && NODE_ENV=development npm install \
+  && cd "$PROJECT_HOME/packages/@podman-desktop-companion/utils" \
   && nvm install \
   && nvm use \
   && NODE_ENV=development npm install
@@ -150,6 +168,8 @@ function main {
   export NODE_ENV="$NODE_ENV"
   export REACT_APP_ENV="$REACT_APP_ENV"
   export REACT_APP_PROJECT_VERSION="$REACT_APP_PROJECT_VERSION"
+  export BROWSER=$BROWSER
+  export PORT=$PORT
   # Pre-check
   COMMAND="$1"
   if [[ -z $COMMAND ]] || [[ $COMMAND = "help" ]] || [[ $COMMAND = "--help" ]]; then

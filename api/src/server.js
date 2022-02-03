@@ -13,7 +13,7 @@ const {
   getApiDriver,
   getApiUnixSocketPath,
   isSystemServiceRunning
-} = require("@podman-desktop-companion/container-client").engine;
+} = require("@podman-desktop-companion/container-client");
 // locals
 const main = () => {
   const app = express();
@@ -23,7 +23,7 @@ const main = () => {
   app.use(cors());
   // api emulation
   app.get("/v3.0.0/libpod/system/program", async (req, res) => {
-    const program = await getProgram();
+    const program = await getProgram(req.query.podman || "podman");
     res.status(200);
     res.set({ "Content-Type": "application/json" });
     res.send(JSON.stringify(program, null, 2));

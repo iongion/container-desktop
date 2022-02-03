@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IconNames } from "@blueprintjs/icons";
 
 // project
-import { AppScreen, Machine } from "../../Types";
+import { AppScreenProps, AppScreen, Machine } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -16,7 +16,7 @@ import "./ManageScreen.css";
 
 export const ID = "machines";
 
-interface ScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();

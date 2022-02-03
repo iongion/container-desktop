@@ -16,3 +16,6 @@ neutralino.js
 # Neutralinojs related files
 .storage
 *.log
+
+scripts/*.p12
+scripts/*.pem
