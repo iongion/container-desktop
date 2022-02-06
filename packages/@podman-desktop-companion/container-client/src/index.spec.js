@@ -1,11 +1,23 @@
-const { getEngine, getProgramPath } = require('./');
+const electronConfig = require("electron-cfg");
 
-test('getEngine', async () => {
-  const engine = await getEngine();
-  expect(engine).toBe('virtualized.wsl');
+const { isLIMA, isWSL, isNATIVE, getEngine, getProgramPath } = require("./");
+
+test("getEngine", async () => {
+  electronConfig.set('engine', '');
+  // TODO: Mock OS type and test methods directly
+  let expected = "remote";
+  if (isNATIVE()) {
+    expected = "native";
+  } else if (isWSL()) {
+    expected = "virtualized.wsl";
+  } else if (isLIMA()) {
+    expected = "virtualized.lima";
+  }
+  const detected = await getEngine();
+  expect(detected).toBe(expected);
 });
 
-test('getProgramPath', async () => {
+test("getProgramPath", async () => {
   const location = await getProgramPath();
-  expect(location).toBe('/usr/bin/podman');
+  expect(location).toBe("/usr/bin/podman");
 });

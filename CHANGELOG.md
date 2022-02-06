@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.2-alpha.4] - 2021-02-06
+
+### Fixed
+
+* 14: Automatic detection failed (macOs Catalina)
+
 ## [3.4.2-alpha.3] - 2021-12-08
 
 Support MacOS using lima, native read write mounts and terminal console

@@ -14,7 +14,8 @@
     "@podman-desktop-companion/utils": "file:../utils",
     "axios": "^0.24.0",
     "electron-cfg": "^1.2.7",
-    "electron-log": "^4.4.1"
+    "electron-log": "^4.4.1",
+    "fix-path": "^3.0.0"
   },
   "engines": {
     "node": "~16"
