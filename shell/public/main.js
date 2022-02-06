@@ -125,7 +125,7 @@ function createWindow() {
 
 let mainWindow;
 (async () => {
-  logger.debug("Starting main process");
+  logger.debug("Starting main process - user configuration from", app.getPath('userData'));
   contextMenu({
     showInspectElement: isDevelopment() || isDebug
   });

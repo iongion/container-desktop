@@ -2,6 +2,7 @@ const os = require("os");
 const { spawn } = require("child_process");
 const events = require("events");
 // vendors
+require('fix-path')();
 const logger = require("electron-log");
 
 function wrapLauncher(program, args, opts = { useWSL: false, useLIMA: false }) {

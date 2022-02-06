@@ -1,4 +1,5 @@
 // vendors
+require('fix-path')();
 // project
 const { exec } = require("@podman-desktop-companion/executor");
 

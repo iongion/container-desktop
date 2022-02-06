@@ -1,7 +1,9 @@
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
+const { spawnSync } = require("child_process");
 // vendors
+require('fix-path')();
 const axios = require("axios");
 const logger = require("electron-log");
 const electronConfig = require("electron-cfg");
@@ -10,8 +12,32 @@ const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 // local
 const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/executor");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
+const isREMOTE = () => electronConfig.get('engine', '') ===  "remote";
+const isNATIVE = () => electronConfig.get('engine', '') ===  "native";
 const isWSL = () => electronConfig.get('engine', '') ===  "virtualized.wsl";
-const isLIMA = () => electronConfig.get('engine', '') ===  "virtualized.lima";
+const isLIMA = (skipCache) => {
+  const preferred = electronConfig.get('engine', '');
+  if (preferred) {
+    logger.debug('LIMA environment preferred from user configuration, path is:', preferred);
+    return preferred === "virtualized.lima";
+  }
+  // Detect if lima is available
+  if (os.type() === 'Darwin') {
+    const info = spawnSync('which', ['lima'], { encoding: 'utf8' });
+    if (info.error) {
+      logger.error("`lima` detection failed, error:", info.stderr);
+    } else {
+      logger.debug("`lima` detection finished, path is:", info.stdout);
+      const hasLima = !!info.stdout;
+      if (hasLima && !skipCache) {
+        logger.debug("`lima` detection - path cached in:", info.stdout);
+        electronConfig.set('engine', 'virtualized.lima');
+      }
+      return hasLima;
+    }
+  }
+  return false;
+};
 
 class ResultError extends Error {
   constructor(message, data, warnings) {
@@ -505,6 +531,10 @@ async function getWSLDistributions() {
 
 module.exports = {
   ResultError,
+  isREMOTE,
+  isNATIVE,
+  isWSL,
+  isLIMA,
   getEngine,
   setEngine,
   getProgramPath,
