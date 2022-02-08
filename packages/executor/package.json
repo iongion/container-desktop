@@ -1,0 +1,19 @@
+{
+  "name": "@podman-desktop-companion/executor",
+  "version": "1.0.0",
+  "author": "Ionut Stoica <stoica.ionut@gmail.com>",
+  "description": "Container desktop helper executor",
+  "main": "src/index.js",
+  "typings": "./src/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "electron-log": "^4.4.6"
+  },
+  "engines": {
+    "node": "~16"
+  },
+  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+}
