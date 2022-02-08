@@ -44,13 +44,13 @@ jobs:
           node-version: '16.11.1'
           registry-url: 'https://npm.pkg.github.com'
       - name: Prepare api ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
-        run: make prepare
+        run: inv prepare
       - name: Build ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
-        run: make build
+        run: inv build
         env:
           TARGET: ${{github.event.inputs.target}}
       - name: Bundle ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
-        run: make bundle
+        run: inv bundle
         env:
           TARGET: ${{github.event.inputs.target}}
       - name: Publish ${{github.event.inputs.stage}} ${{github.event.inputs.target}} artifacts

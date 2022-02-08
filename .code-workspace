@@ -2,35 +2,35 @@
   "folders": [
     {
       "name": "Backend",
-      "path": "${workspaceFolder}/api"
+      "path": "${workspaceFolder}/src/api"
     },
     {
       "name": "Application",
-      "path": "${workspaceFolder}/app"
+      "path": "${workspaceFolder}/src/app"
     },
     {
       "name": "Shell",
-      "path": "${workspaceFolder}/shell"
+      "path": "${workspaceFolder}/src/shell"
     },
     {
       "name": "Container client",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/container-client"
+      "path": "${workspaceFolder}/packages/container-client"
     },
     {
       "name": "Executor",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/executor"
+      "path": "${workspaceFolder}/packages/executor"
     },
     {
       "name": "RPC",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/rpc"
+      "path": "${workspaceFolder}/packages/rpc"
     },
     {
       "name": "Terminal",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/terminal"
+      "path": "${workspaceFolder}/packages/terminal"
     },
     {
       "name": "Utils",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/utils"
+      "path": "${workspaceFolder}/packages/utils"
     }
   ]
 }

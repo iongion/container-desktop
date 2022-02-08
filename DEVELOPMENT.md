@@ -4,28 +4,67 @@
 
 ### Requirements
 
-* node
-* nvm to activate and manage multiple node versions
+* nodejs & [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) to activate and manage multiple node versions
+* python 3+ and [invoke](https://www.pyinvoke.org/)
 * bash friendly terminal
 * tmux
 * make
 
 ### TLDR
 
-* `make start` to start development web server and the react application
-* `make shell.start` to start the native shell integration
+#### Prepare development environment
 
-Start API as socket (`socketPath` for axios)
+1. Install development tools for your OS
 
-* `podman system service --time=0 unix:///tmp/podman.sock --log-level=debug`
+    * `sudo pacman -Sy base-devel` - Arch flavors
+    * `sudo yum groupinstall "Development Tools" "Legacy Software Development"` - Fedora
+    * `sudo apt-get install build-essential` - Debian / Ubuntu & friends
+    * Get [homebrew](https://brew.sh/) - for MacOS
+    * Native Windows - on your own, for WSL, use any of the Linux guides above!
 
-Test socket with `curl --unix-socket /run/podman/podman.sock http://d/v3.0.0/libpod/info`
+2. Install [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) - for managing multiple node versions, this project uses version pinning, because OS package-manager provided nodejs is usually not proper for development.
 
-Start API as http server - HTTP api is only for development!
+    * `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`
 
-* `podman system service tcp:localhost:8081 --time=0 --log-level=debug --cors="*"`
+    Don't forget to setup your shell environment as described by nvm.
 
-Test http api with `curl -X GET http://localhost:8081/v3.0.0/libpod/info`
+3. Install the PM tool [invoke](https://www.pyinvoke.org/) - this is to support automation and fast REPL development environment.
+
+    * `pip install -r support/requirements.txt`
+
+#### Prepare project infrastructure
+
+`inv prepare` - Fetch all dependencies using
+
+#### Live development with hot reloading
+
+`inv start` - To start development servers
+
+#### Build the project assets
+
+`inv build` - Compiles assets
+
+#### Bundle the project assets
+
+`inv bundle` - Creates application bundles
+
+### Other useful info
+
+* Start API as socket (`socketPath` for axios)
+
+    `podman system service --time=0 unix:///tmp/podman.sock --log-level=debug`
+
+* Test socket api
+
+    `curl --unix-socket /tmp/podman.sock http://d/v3.0.0/libpod/info`
+
+* Start API as http server - HTTP api is only for development - insecure!
+
+    `podman system service tcp:localhost:8081 --time=0 --log-level=debug --cors="*"`
+
+* Test http api
+
+    `curl -X GET http://localhost:8081/v3.0.0/libpod/info`
 
 ## Deployment
 
@@ -42,7 +81,3 @@ podman system connection add default "//wsl.localhost/Ubuntu-20.04/home/$USER/.s
 ## Export socket location
 
 > export DOCKER_HOST='/tmp/podman.sock'
-
-## Set executable icon on windows
-
-rcedit-x64.exe YourExe.exe --set-icon icon.ico
