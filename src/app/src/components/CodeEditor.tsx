@@ -1,27 +1,43 @@
-import "ace-builds";
-import AceEditor from "react-ace";
-import "ace-builds/webpack-resolver";
-import "ace-builds/src-noconflict/mode-json";
-import "ace-builds/src-noconflict/mode-text";
-import "ace-builds/src-noconflict/theme-solarized_dark";
+import { useEffect } from "react";
+import Editor, { useMonaco } from "@monaco-editor/react";
+
+import "./CodeEditor.css";
+
+export const DEFAULT_THEME = "vs-dark";
 
 export interface CodeEditorProps {
   value: string;
   mode?: string;
+  theme?: string;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ value, mode }) => {
+export const CodeEditor: React.FC<CodeEditorProps> = ({ value, mode, theme }) => {
+  const monaco = useMonaco();
+  useEffect(() => {
+    // or make sure that it exists by other ways
+    if (monaco) {
+      monaco.editor.setTheme(theme || DEFAULT_THEME);
+    }
+  }, [monaco, theme]);
   return (
-    <AceEditor
-      readOnly
-      mode={mode || "json"}
-      theme={"solarized_dark"}
-      width="100%"
-      height="100%"
-      fontSize={11}
-      editorProps={{ $blockScrolling: true }}
-      showPrintMargin={false}
-      value={value}
-    />
+    <div className="CodeEditor">
+      <Editor
+        height="100%"
+        language={mode || "json"}
+        value={value}
+        theme={theme || DEFAULT_THEME}
+        options={{
+          readOnly: true,
+          automaticLayout: true,
+          minimap: {
+            enabled: false
+          },
+          fontSize: 11,
+          cursorStyle: "block",
+          wordWrap: "on",
+          theme: theme || DEFAULT_THEME
+        }}
+      />
+    </div>
   );
 };
