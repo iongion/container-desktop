@@ -92,5 +92,6 @@
         "source.fixAll.markdownlint": true
     },
     "search.followSymlinks": false,
-    "python.formatting.provider": "black"
+    "python.formatting.provider": "black",
+    "python.languageServer": "Default"
 }

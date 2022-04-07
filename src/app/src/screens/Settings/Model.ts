@@ -2,31 +2,26 @@
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
-import { SystemEnvironment, WSLDistribution } from "../../Types";
+import { SystemEnvironment, ContainerEngine } from "../../Types";
 
 export interface SettingsModelState {
-  wslDistributions: WSLDistribution[];
   environment?: SystemEnvironment;
+  engine?: ContainerEngine;
 }
 
 export interface SettingsModel extends SettingsModelState {
   // actions
   setEnvironment: Action<SettingsModel, SystemEnvironment>;
-  setWSLDistributions: Action<SettingsModel, WSLDistribution[]>;
   // thunks
   fetchEnvironment: Thunk<SettingsModel>;
-  fetchWSLDistributions: Thunk<SettingsModel>;
   programSetPath: Thunk<SettingsModel, { name: string; path: string }>;
+  programSetEngine: Thunk<any, ContainerEngine>;
 }
 
 export const createModel = (registry: AppRegistry): SettingsModel => {
   return {
-    wslDistributions: [],
     setEnvironment: action((state, environment) => {
       state.environment = environment;
-    }),
-    setWSLDistributions: action((state, wslDistributions) => {
-      state.wslDistributions = wslDistributions;
     }),
     fetchEnvironment: thunk(async (actions) => {
       return registry.withPending(async () => {
@@ -35,18 +30,17 @@ export const createModel = (registry: AppRegistry): SettingsModel => {
         return environment;
       });
     }),
-    fetchWSLDistributions: thunk((actions) => {
-      return registry.withPending(async () => {
-        const distributions = await registry.api.getWSLDistributions();
-        actions.setWSLDistributions(distributions);
-        return distributions;
-      });
-    }),
     programSetPath: thunk(async (actions, { name, path }) => {
       return registry.withPending(async () => {
         await registry.api.setProgramPath(name, path);
         await actions.fetchEnvironment();
         return path;
+      });
+    }),
+    programSetEngine: thunk(async (actions, engine) => {
+      return registry.withPending(async () => {
+        await registry.api.setEngine(engine);
+        return engine;
       });
     })
   };

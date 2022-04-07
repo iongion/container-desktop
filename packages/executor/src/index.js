@@ -1,23 +1,10 @@
-const os = require("os");
 const { spawn } = require("child_process");
 const events = require("events");
 // vendors
 const logger = require("electron-log");
 
-function wrapLauncher(program, args, opts = { useWSL: false, useLIMA: false }) {
-  const osType = os.type();
-  let launcher = program;
-  let launcherArgs = args;
-  logger.debug("Wrapping launcher", [program].concat(args).join(" "), opts);
-  if (osType === "Windows_NT" && opts?.useWSL) {
-    launcher = "wsl.exe";
-    launcherArgs = [program].concat(args);
-  } else if (osType === "Darwin" && opts?.useLIMA) {
-    launcher = "limactl";
-    const machine = "podman";
-    launcherArgs = ["shell", machine, program].concat(args);
-  }
-  return [launcher, launcherArgs];
+function wrapLauncher(program, args) {
+  return [program, args];
 }
 
 // project
@@ -38,13 +25,13 @@ async function exec_launcher(launcher, launcherArgs, opts) {
       stderr: "",
       command
     };
-    logger.debug("Spawning started", command);
+    // logger.debug("Spawning started", command);
     const child = spawn(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
         // logger.warn("Spawning already resolved", { command, from, data });
       } else {
-        logger.debug(`Spawning complete: "${command}"`, { from, data });
+        // logger.debug(`Spawning complete: "${command}"`, { from, data });
         process.code = child.exitCode;
         process.stderr = process.stderr || data;
         resolved = true;
@@ -86,6 +73,7 @@ async function withClient(opts) {
   const em = new events.EventEmitter();
   // Check
   const running = await checkStatus();
+  let isStartedMarkerPresent = false;
   if (running) {
     logger.debug("Already running - reusing");
     process.success = true;
@@ -99,17 +87,21 @@ async function withClient(opts) {
       em.emit("error", { type: "process.error", code: error.code });
     };
     const onProcessExit = (child, code) => {
-      // logger.debug('Child process exit', code);
+      logger.debug("Child process exit", code);
       em.emit("exit", { code, managed: isManagedExit });
       isManagedExit = false;
     };
     const onProcessClose = (child, code) => {
-      // logger.debug('Child process close', code);
+      logger.debug("Child process close", code);
       em.emit("close", { code });
     };
     const onProcessData = (child, from, data) => {
-      // logger.debug('Child process data', from, data);
+      // logger.debug("Child process data", from, data);
       em.emit("data", { from, data });
+      if (data.indexOf("waiting for SIGHUP to reload configuration") !== -1) {
+        isStartedMarkerPresent = true;
+        logger.debug("Found started marker");
+      }
     };
     const waitForProcess = (child) => {
       let retries = retry?.count || 5;
@@ -121,22 +113,24 @@ async function withClient(opts) {
           // logger.error('Max retries reached');
           em.emit("error", { type: "domain.max-retries", code: undefined });
         } else {
-          const running = await checkStatus();
-          // logger.debug('Checking running first time after start', running);
-          if (running) {
-            clearInterval(IID);
-            // logger.debug('Sending SIGHUP', process.pid);
-            isManagedExit = true;
-            child.kill("SIGHUP");
-            const configured = await checkStatus();
-            if (configured) {
-              process.success = true;
-              em.emit("ready", { process });
+          if (isStartedMarkerPresent) {
+            const running = await checkStatus();
+            // logger.debug('Checking running first time after start', running);
+            if (running) {
+              clearInterval(IID);
+              isManagedExit = true;
+              const configured = await checkStatus();
+              if (configured) {
+                process.success = true;
+                em.emit("ready", { process });
+              } else {
+                em.emit("error", { type: "domain.not-configured", code: undefined });
+              }
             } else {
-              em.emit("error", { type: "domain.not-configured", code: undefined });
+              logger.debug("Move to next retry", retries);
             }
           } else {
-            logger.debug("Move to next retry", retries);
+            logger.debug("Waiting for started marker");
           }
         }
         retries -= 1;

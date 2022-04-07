@@ -1,10 +1,10 @@
-.AppDataFormFields .bp3-form-group {
+.AppDataFormFields .bp4-form-group {
   margin-bottom: 5px;
 }
-.AppDataFormFields .bp3-form-group label {
+.AppDataFormFields .bp4-form-group label {
   width: 100px;
 }
-.AppDataFormFields .bp3-form-group .bp3-form-content {
+.AppDataFormFields .bp4-form-group .bp4-form-content {
   width: 100%;
 }
 .AppDataFormHeader {
@@ -21,25 +21,25 @@
   font-weight: bold;
 }
 
-.AppDrawer .ContainerPortMappingPort .bp3-input {
+.AppDrawer .ContainerPortMappingPort .bp4-input {
   width: 70px;
   margin-left: 3px;
 }
 .AppDrawer .ContainerFileSystemSize,
-.AppDrawer .ContainerFileSystemSize .bp3-input-group {
+.AppDrawer .ContainerFileSystemSize .bp4-input-group {
   flex-grow: inherit !important;
   flex-shrink: inherit !important;
 }
 .VolumeTypeInput {
   vertical-align: middle;
 }
-.VolumeTypeInput .bp3-checkbox {
+.VolumeTypeInput .bp4-checkbox {
   margin-bottom: 0;
   margin-right: 10px;
   display: flex;
   align-items: center;
 }
-.VolumeTypeInput .bp3-divider {
+.VolumeTypeInput .bp4-divider {
   border-color: #4c3d5c;
 }
 .ContainerMount {
@@ -53,10 +53,10 @@
   vertical-align: middle;
 }
 
-.ContainerPortMappings .bp3-label {
+.ContainerPortMappings .bp4-label {
   text-transform: uppercase;
   margin-right: 7px !important;
 }
-.ContainerPortMappings .bp3-form-content {
+.ContainerPortMappings .bp4-form-content {
   display: flex;
 }

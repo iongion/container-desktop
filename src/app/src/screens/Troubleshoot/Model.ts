@@ -31,7 +31,6 @@ export const createModel = (registry: AppRegistry): TroubleshootModel => {
       registry.withPending(async (store) => {
         const report = await registry.api.resetSystem();
         if (report) {
-          console.debug("Report is here", report);
           // store.getActions().domainUpdate({ connections: [] });
         }
         return report;

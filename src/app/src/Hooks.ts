@@ -20,7 +20,6 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
   }, [poller]);
   // Clears old interval if rate changes, allowing new poller to be created
   useLayoutEffect(() => {
-    console.debug("Cleared poller on rate changed");
     clearInterval(pollerID.current);
   }, [rate]);
   // Poller effect
@@ -36,17 +35,16 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
     function poll() {
       if (pollerCallback.current) {
         if (isPending.current) {
-          console.warn("Skip poll cycle - still pending");
+          // console.warn("Skip poll cycle - still pending");
           return;
         }
         isPending.current = true;
         return pollerCallback.current();
       }
     }
-    console.debug("Started polling", frequency);
     pollerID.current = setInterval(async () => {
       try {
-        console.debug("Polling cycle started");
+        // console.debug("Polling cycle started");
         await poll();
       } catch (error) {
         console.error("Polling cycle error, stopping - error must be handled", error);
@@ -61,14 +59,12 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
       }
     }, frequency);
     return () => {
-      console.debug("Clearing continuous poller");
       clearInterval(pollerID.current);
       isPending.current = false;
       pollerCallback.current = undefined;
     };
   }, [rate]);
   useEffect(() => {
-    console.debug("Poller being used once");
     if (pollerCallback.current) {
       isPending.current = true;
       pollerCallback.current().finally(() => {
@@ -76,7 +72,6 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
       });
     }
     return () => {
-      console.debug("Clearing first time poller");
       clearInterval(pollerID.current);
       isPending.current = false;
       pollerCallback.current = undefined;

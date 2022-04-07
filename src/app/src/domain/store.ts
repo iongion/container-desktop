@@ -33,11 +33,6 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
     };
     console.error("Pending operation error", result, error);
     store.getActions().setPending(false);
-    // if (error?.message.indexOf("connect ECONNREFUSED") !== -1) {
-    //   console.debug("Connection broken");
-    //   state.setRunning(false);
-    // }
-    console.debug("Forwarding error", { result, error, operation });
     // throw error;
   } finally {
     store.getActions().setPending(false);
@@ -66,14 +61,6 @@ export const createAppStore = (env: Environments) => {
   store.addModel("settings", createSettingsModel(registry));
   store.addModel("troubleshoot", createTroubleshootModel(registry));
   store.addModel("volume", createVolumesModel(registry));
-  // if (process.env.NODE_ENV === "development") {
-  //   const { hot } = (module as any).hot;
-  //   if (hot) {
-  //     hot.accept("./domain/model", () => {
-  //       store.reconfigure(model); // 👈 Hot reload magic
-  //     });
-  //   }
-  // }
   return store;
 };
 

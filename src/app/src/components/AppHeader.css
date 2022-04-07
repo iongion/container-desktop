@@ -4,19 +4,19 @@
   background: #1a051c;
   -webkit-app-region: drag;
 }
-.AppHeader .bp3-navbar {
+.AppHeader .bp4-navbar {
   display: flex;
   background: #1a051c url("../images/podman.svg") no-repeat 0 center;
   background-size: contain;
 }
-.AppHeader .bp3-navbar-heading {
+.AppHeader .bp4-navbar-heading {
   height: 100%;
 }
 .App-companyLogoBrand {
   width: 130px;
   height: 100%;
 }
-[data-platform="Darwin"] .AppHeader .bp3-navbar {
+[data-platform="Darwin"] .AppHeader .bp4-navbar {
   background-position-x: center;
 }
 .AppHeaderActions {

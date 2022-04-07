@@ -39,10 +39,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
       }
     });
   }, [t]);
+
   // Change hydration
   usePoller({ poller: containersFetchCount });
-
-  console.debug("Screen is rendering");
 
   return (
     <div className="AppScreen" data-screen={ID}>

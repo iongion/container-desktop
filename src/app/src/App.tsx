@@ -65,10 +65,8 @@ const AppLoading: React.FC<AppLoadingProps> = ({ program, running }) => {
   const connect = useStoreActions((actions) => actions.connect);
   const pending = useStoreState((state) => state.pending);
   const onConnectClick = useCallback(
-    async (e) => {
-      console.debug("connecting");
+    async () => {
       const result = await connect({ autoStart: true });
-      console.debug(">> result", result);
     },
     [connect]
   );
@@ -173,7 +171,6 @@ export const AppMainContent = () => {
   const running = useStoreState((state) => state.environment.running);
   const program = useStoreState((state) => state.environment.program);
   let content;
-  console.debug("AppMainContent", { inited });
   if (inited) {
     content = <AppLoaded program={program} running={running} />;
   } else {
@@ -190,14 +187,10 @@ export function AppMain() {
   const program = useStoreState((state) => state.environment.program);
   const connect = useStoreActions((actions) => actions.connect);
   useEffect(() => {
-    console.debug("AppMain changed", { inited, running, connect });
-    if (inited) {
-      console.debug("No more connections to retry - already inited");
-    } else {
+    if (!inited) {
       connect({ autoStart: true });
     }
   }, [inited, running, connect]);
-  // console.debug("AppMain rendering", { inited, native, running, platform, program });
   return (
     <div
       className="App"

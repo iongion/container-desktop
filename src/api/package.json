@@ -11,14 +11,14 @@
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^2.0.15",
-    "prettier": "^2.5.1",
+    "prettier": "^2.6.2",
     "prettier-eslint": "^13.0.0"
   },
   "dependencies": {
     "@podman-desktop-companion/container-client": "file:../../packages/container-client",
-    "axios": "^0.25.0",
+    "axios": "^0.26.1",
     "cors": "^2.8.5",
-    "express": "^4.17.2"
+    "express": "^4.17.3"
   },
   "engines": {
     "node": "~16"

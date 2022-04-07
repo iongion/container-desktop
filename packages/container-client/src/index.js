@@ -1,7 +1,6 @@
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
-const { spawnSync } = require("child_process");
 // vendors
 const axios = require("axios");
 const logger = require("electron-log");
@@ -11,32 +10,6 @@ const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 // local
 const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/executor");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
-const isREMOTE = () => electronConfig.get('engine', '') ===  "remote";
-const isNATIVE = () => electronConfig.get('engine', '') ===  "native";
-const isWSL = () => electronConfig.get('engine', '') ===  "virtualized.wsl";
-const isLIMA = (skipCache) => {
-  const preferred = electronConfig.get('engine', '');
-  if (preferred) {
-    logger.debug('LIMA environment preferred from user configuration, path is:', preferred);
-    return preferred === "virtualized.lima";
-  }
-  // Detect if lima is available
-  if (os.type() === 'Darwin') {
-    const info = spawnSync('which', ['lima'], { encoding: 'utf8' });
-    if (info.error) {
-      logger.error("`lima` detection failed, error:", info.stderr);
-    } else {
-      logger.debug("`lima` detection finished, path is:", info.stdout);
-      const hasLima = !!info.stdout;
-      if (hasLima && !skipCache) {
-        logger.debug("`lima` detection - path cached in:", info.stdout);
-        electronConfig.set('engine', 'virtualized.lima');
-      }
-      return hasLima;
-    }
-  }
-  return false;
-};
 
 class ResultError extends Error {
   constructor(message, data, warnings) {
@@ -46,40 +19,60 @@ class ResultError extends Error {
   }
 }
 
-function getEngine() {
+function detectEngine() {
   let engine = "remote";
-  if (os.type() === 'Linux') {
-    engine = 'native';
-  } else if (isWSL()) {
-    engine = 'virtualized.wsl';
-  } else if (isLIMA()) {
-    engine = 'virtualized.lima';
+  switch (os.type()) {
+    case "Linux":
+      engine = "native";
+      break;
+    case "Windows_NT":
+      engine = "virtualized";
+      break;
+    case "Darwin":
+      engine = "virtualized";
+      break;
+    default:
+      break;
   }
-  return electronConfig.get('engine', engine);
+  return engine;
+}
+
+function getEngine() {
+  return electronConfig.get("engine", detectEngine());
 }
 
 function setEngine(value) {
   const engine = value || getEngine();
-  electronConfig.set('engine', engine);
+  electronConfig.set("engine", engine);
   return engine;
 }
 
+function getProgramName() {
+  return "podman";
+}
+
+function getProgramKey(program) {
+  return `program.${program}.path`;
+}
+
 async function getProgramPath() {
-  let programPath; // = electronConfig.get("program.path");
+  const program = getProgramName();
+  const programKey = getProgramKey(program);
+  let programPath = electronConfig.get(programKey);
   if (programPath) {
-    logger.debug("Configured program found", programPath);
+    // logger.debug(`Program ${program} found in ${programPath} - cache hit`);
   } else {
-    logger.debug("No configured program found - detecting");
-    let result = { success: false, stdout: '' };
+    logger.debug(`Program ${program} not found in ${programPath} - cache miss(detecting)`);
+    let result = { success: false, stdout: "" };
     switch (os.type()) {
-      case 'Linux':
-        result = await exec("which", ["podman"]);
+      case "Linux":
+        result = await exec("which", [program]);
         break;
-      case 'Windows_NT':
-        result = isWSL() ? await exec("which", ["podman"], { useWSL: true }) : await exec_launcher("where", ["podman.exe"]);
+      case "Windows_NT":
+        result = await exec_launcher("where", [`${program}.exe`]);
         break;
-      case 'Darwin':
-        result = isLIMA() ? await exec("which", ["podman"], { useLIMA: true }) : await exec_launcher("which", ["podman"]);
+      case "Darwin":
+        result = await exec_launcher("which", [program]);
         break;
       default:
         break;
@@ -89,18 +82,19 @@ async function getProgramPath() {
     }
     // Cache if found
     if (programPath) {
-      logger.debug("Program found in", programPath);
-      // await setProgramPath(programPath);
+      logger.debug(`Program ${program} found in ${programPath} - cache miss(storing)`);
+      await setProgramPath(program, programPath);
     } else {
-      logger.error("No program at all");
+      logger.error(`Program ${program} not found - missing dependency`);
     }
   }
   return programPath;
 }
 
-async function setProgramPath(nextProgramPath) {
+async function setProgramPath(program, programPath) {
   // TODO: Validate the program before configuring it
-  electronConfig.set("program.path", nextProgramPath);
+  const programKey = getProgramKey(program);
+  electronConfig.set(programKey, programPath);
   return true;
 }
 
@@ -109,7 +103,7 @@ async function execProgram(args) {
   if (!program) {
     throw new Error("No program specified");
   }
-  const output = await exec(program, args, { useWSL: isWSL(), useLIMA: isLIMA() });
+  const output = await exec(program, args);
   return output;
 }
 
@@ -143,17 +137,47 @@ async function getSystemInfo() {
   return items;
 }
 
-function getApiUnixSocketPath() {
-  if (isLIMA()) {
-    return path.join(process.env.HOME, ".lima/podman/sock/podman.sock");
+function getCurrentMachine() {
+  // TODO: Choose machine
+  let machine;
+  machine = "podman-machine-default";
+  return machine;
+}
+
+function getCurrentMachineNamedPipeApiSocketPath() {
+  return `//./pipe/${getCurrentMachine()}`;
+}
+
+function getCurrentMachineUnixApiSocketPath() {
+  return path.join(process.env.HOME, ".local/share/containers/podman/machine", getCurrentMachine(), "podman.sock");
+}
+
+function getNativeUnixApiSocketFile() {
+  return "/tmp/podman-desktop-companion-podman-rest-api.sock";
+}
+
+function getApiSocketPath() {
+  let socketPath = getNativeUnixApiSocketFile();
+  if (getEngine() === "virtualized") {
+    switch (os.type()) {
+      case "Linux":
+      case "Darwin":
+        socketPath = getCurrentMachineUnixApiSocketPath();
+        break;
+      case "Windows_NT":
+        socketPath = getCurrentMachineNamedPipeApiSocketPath();
+        break;
+      default:
+        break;
+    }
   }
-  return "/tmp/podman.sock";
+  return socketPath;
 }
 
 function getApiConfig() {
-  return {
+  const config = {
     timeout: 30000,
-    socketPath: getApiUnixSocketPath(),
+    socketPath: getApiSocketPath(),
     baseURL: "/v3.0.0/libpod",
     headers: {
       Accept: "application/json",
@@ -161,6 +185,8 @@ function getApiConfig() {
     },
     adapter: require("axios/lib/adapters/http")
   };
+  console.debug("API configuration", config);
+  return config;
 }
 
 function getApiDriver(cfg) {
@@ -170,7 +196,7 @@ function getApiDriver(cfg) {
   // Add a request interceptor
   driver.interceptors.request.use(
     function (config) {
-      logger.debug("HTTP request", axiosConfigToCURL(config));
+      // logger.debug("HTTP request", axiosConfigToCURL(config));
       return config;
     },
     function (error) {
@@ -227,7 +253,7 @@ async function getContainers() {
 
 async function connectToContainer(nameOrId, shell) {
   const program = await getProgramPath();
-  const output = await launchTerminal(program, ["exec", "-it", nameOrId, shell || "/bin/sh"], { isLIMA: isLIMA(), isWSL: isWSL() });
+  const output = await launchTerminal(program, ["exec", "-it", nameOrId, shell || "/bin/sh"]);
   if (!output.success) {
     logger.error("Unable to connect to container", nameOrId, output);
   }
@@ -299,7 +325,7 @@ async function createMachine(opts) {
 
 async function connectToMachine(name) {
   const program = await getProgramPath();
-  const output = await launchTerminal(program, ["machine", "ssh", name], { isLIMA: isLIMA(), isWSL: isWSL() });
+  const output = await launchTerminal(program, ["machine", "ssh", name]);
   if (!output.success) {
     logger.error("Unable to connect to machine", name, output);
   }
@@ -389,27 +415,44 @@ async function getProgram(name) {
   switch (name) {
     case "podman":
       return getPodmanProgram();
-    case "lima":
-      return getLimaProgram();
     default:
       break;
   }
 }
 
 // Container engine specific
+async function startApi(opts) {
+  if (getEngine() === "native") {
+    logger.debug("Starting native engine with system service");
+    return startSystemService(opts);
+  }
+  const machine = getCurrentMachine();
+  logger.debug("Starting virtualized engine with machine", machine);
+  const success = await startMachine(machine);
+  if (success) {
+    logger.debug("API virtualized engine started with machine", machine);
+    const program = await getProgram("podman");
+    const systemApiResult = { data: null }; //await getApiDriver().get("/info");
+    const running = await isApiRunning();
+    return {
+      program,
+      system: systemApiResult.data,
+      running
+    };
+  }
+  logging.error("API virtualized engine startup failure with machine", machine);
+  throw new ResultError("Unable to start machine", machine);
+}
+
 async function startSystemService(opts) {
   const clientOpts = {
-    socketPath: getApiUnixSocketPath(),
+    socketPath: getApiSocketPath(),
     retry: { count: 2, wait: 1000 },
-    checkStatus: isSystemServiceRunning,
+    checkStatus: isApiRunning,
     programPath: await getProgramPath(),
-    ...({
-      useWSL: isWSL(),
-      useLIMA: isLIMA(),
-    }),
-    ...(opts || {}),
+    ...(opts || {})
   };
-  logger.debug("Client opts", clientOpts);
+  logger.debug("System service start requested", clientOpts);
   const client = await withClient(clientOpts);
   return new Promise((resolve, reject) => {
     client.on("close", ({ code, connect }) => {
@@ -420,9 +463,10 @@ async function startSystemService(opts) {
     });
     client.on("ready", async ({ process }) => {
       try {
+        logger.debug("System service start read", process);
         const program = await getProgram("podman");
         const systemApiResult = await getApiDriver().get("/info");
-        const running = await isSystemServiceRunning();
+        const running = await isApiRunning();
         resolve({
           program,
           system: systemApiResult.data,
@@ -449,7 +493,7 @@ async function getSystemEnvironment() {
   }
   let running = false;
   try {
-    running = await isSystemServiceRunning();
+    running = await isApiRunning();
   } catch (error) {
     logger.error("Unable to obtain running status", error);
   }
@@ -477,14 +521,16 @@ async function getSystemEnvironment() {
   };
 }
 
-async function isSystemServiceRunning(driver) {
+async function isApiRunning(driver) {
+  logger.debug("Checking if API is running - init");
   let running = false;
   const apiDriver = driver || getApiDriver();
   try {
     const result = await apiDriver.get("/_ping");
     running = result?.data === "OK";
+    logger.debug("Checking if API is running - done", running);
   } catch (error) {
-    logger.error("Unable to get status", error.message);
+    logger.error("Checking if API is running - fail", error.message);
   }
   return running;
 }
@@ -530,10 +576,6 @@ async function getWSLDistributions() {
 
 module.exports = {
   ResultError,
-  isREMOTE,
-  isNATIVE,
-  isWSL,
-  isLIMA,
   getEngine,
   setEngine,
   getProgramPath,
@@ -541,7 +583,7 @@ module.exports = {
   getGithubRepoTags,
   getSystemConnections,
   getSystemInfo,
-  getApiUnixSocketPath,
+  getApiSocketPath,
   getApiConfig,
   getApiDriver,
   getContainers,
@@ -556,9 +598,10 @@ module.exports = {
   removeMachine,
   getVolumes,
   getProgram,
+  startApi,
   startSystemService,
   getSystemEnvironment,
-  isSystemServiceRunning,
+  isApiRunning,
   resetSystem,
   getWSLDistributions
 };

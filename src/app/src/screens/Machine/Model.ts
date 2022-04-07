@@ -66,7 +66,6 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
         let stopped = false;
         if (options.Name) {
           const result = await registry.api.stopMachine(options.Name);
-          console.debug("Stop result", result);
           stopped = true;
         }
         return stopped;
@@ -77,7 +76,6 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
         let restarted = false;
         if (options.Name) {
           const result = await registry.api.restartMachine(options.Name);
-          console.debug("Restart result", result);
           restarted = true;
         }
         return restarted;
@@ -88,7 +86,6 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
         let connected = false;
         if (options.Name) {
           const result = await registry.api.connectToMachine(options.Name);
-          console.debug("Connect result", result);
           connected = true;
         }
         return connected;

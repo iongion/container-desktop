@@ -14,7 +14,7 @@ import { CodeEditor } from "../../components/CodeEditor";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
 // module
-import { SystemServiceEngineManager } from "./EngineManager";
+import { ContainerEngineManager } from "./EngineManager";
 
 import "./Settings.css";
 
@@ -48,7 +48,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
         if (!result.canceled && filePath && program) {
           try {
             const newProgram = await programSetPath({ name: "podman", path: filePath });
-            console.debug("Program updated", newProgram);
             setProgramPaths((prev) => ({ ...prev, [program]: filePath }));
           } catch (error) {
             console.error("Unable to change program path", error);
@@ -73,21 +72,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [programPaths]
   );
 
-  const contentWidget = provisioned && running ? null : (
-    <Callout
-      className="AppSettingsCallout"
-      title={t("Automatic detection failed")}
-      icon={<ReactIcon.Icon path={mdiEmoticonSad} size={3} />}
-    >
-      <p>{t("To be able to continue, all required programs need to be installed")}</p>
-    </Callout>
-  );
+  const contentWidget =
+    provisioned && running ? null : (
+      <Callout
+        className="AppSettingsCallout"
+        title={t("Automatic detection failed")}
+        icon={<ReactIcon.Icon path={mdiEmoticonSad} size={3} />}
+      >
+        <p>{t("To be able to continue, all required programs need to be installed")}</p>
+      </Callout>
+    );
 
-  const engineSwitcher = Environment.features.engineSwitcher?.enabled ? (
-    <SystemServiceEngineManager />
-  ) : null;
+  const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager /> : null;
 
-  const systemDetailsViewer = provisioned && running ? (<CodeEditor value={JSON.stringify(system, null, 2)} />) : null;
+  const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(system, null, 2)} /> : null;
 
   return (
     <div className="AppScreen" data-screen={ID}>

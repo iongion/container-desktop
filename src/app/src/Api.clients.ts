@@ -4,6 +4,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { axiosConfigToCURL } from "@podman-desktop-companion/utils";
 import {
   ContainerClientResponse,
+  ContainerEngine,
   //
   Domain,
   Program,
@@ -136,11 +137,12 @@ export interface IContainerClient {
 
   // Special
   getSystemEnvironment: () => Promise<SystemEnvironment>;
-  startSystemService: () => Promise<SystemStartInfo>;
-  isSystemServiceRunning: () => Promise<boolean>;
+  startApi: () => Promise<SystemStartInfo>;
+  isApiRunning: () => Promise<boolean>;
 
   getProgram: (name?: string) => Promise<Program>;
   setProgramPath: (name: string, path: string) => Promise<Program>;
+  setEngine: (engine: ContainerEngine) => Promise<ContainerEngine>;
 
   getWSLDistributions: () => Promise<WSLDistribution[]>;
 }
@@ -201,13 +203,12 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
     } else {
       config.baseURL = opts.baseURL;
     }
-    console.debug("REST API config", config);
     this.dataApiDriver = axios.create(config);
     // Configure http client logging
     // Add a request interceptor
     this.dataApiDriver.interceptors.request.use(
       function (config) {
-        console.debug("HTTP request", axiosConfigToCURL(config as any));
+        // console.debug("HTTP request", axiosConfigToCURL(config as any));
         return config;
       },
       function (error) {
@@ -218,7 +219,6 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
     // Add a response interceptor
     this.dataApiDriver.interceptors.response.use(
       function (response) {
-        // console.debug("HTTP response", response);
         return response;
       },
       function (error) {
@@ -230,7 +230,6 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   async invoke<T, D = undefined>(invocation: InvocationOptions<D>) {
     return this.withResult<T>(async () => {
       const result = await this.dataApiDriver.post<T>("/invoke", invocation);
-      console.debug("Invoke result is", result.data);
       return result.data;
     });
   }
@@ -248,7 +247,6 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
         machines,
         volumes
       };
-      console.debug("Domain is", domain);
       return domain;
     });
   }
@@ -280,7 +278,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   async removeImage(id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.delete<boolean>(`/images/${id}`);
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   async pullImage(name: string) {
@@ -290,7 +288,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
           reference: name
         }
       });
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   async pushImage(id: string, opts?: PushImageOptions) {
@@ -307,7 +305,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
       const result = await this.dataApiDriver.post<boolean>(`/images/${id}/push`, undefined, {
         params
       });
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   // container
@@ -355,13 +353,13 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   async stopContainer(id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.post<boolean>(`/containers/${id}/stop`);
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   async restartContainer(id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.post<boolean>(`/containers/${id}/restart`);
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   async removeContainer(id: string) {
@@ -372,7 +370,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
           v: true
         }
       });
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   async createContainer(opts: CreateContainerOptions) {
@@ -401,7 +399,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
         if (opts.Start) {
           const { Id } = createResult.data;
           const startResult = await this.dataApiDriver.post(`/containers/${Id}/start`);
-          if (startResult.status === 204) {
+          if (startResult.statusText === "OK") {
             success = true;
           }
         } else {
@@ -445,7 +443,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
           force: true
         }
       });
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   async pruneVolumes(filters: any) {
@@ -495,7 +493,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
           force: true
         }
       });
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   // Machines
@@ -520,11 +518,12 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
     });
   }
   abstract resetSystem(): Promise<SystemResetReport>;
-  abstract startSystemService(): Promise<SystemStartInfo>;
+  abstract startApi(): Promise<SystemStartInfo>;
   abstract getSystemEnvironment(): Promise<SystemEnvironment>;
-  abstract isSystemServiceRunning(): Promise<boolean>;
+  abstract isApiRunning(): Promise<boolean>;
   abstract getProgram(name?: string): Promise<Program>;
   abstract setProgramPath(name: string, path: string): Promise<Program>;
+  abstract setEngine(engine: ContainerEngine): Promise<ContainerEngine>;
 
   abstract getWSLDistributions(): Promise<WSLDistribution[]>;
 }
@@ -578,7 +577,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
           force: true
         }
       });
-      return result.status === 204;
+      return result.statusText === "OK";
     });
   }
   async stopMachine(Name: string) {
@@ -607,9 +606,9 @@ export class BrowserContainerClient extends PodmanRestApiClient {
       return result.data;
     });
   }
-  async startSystemService() {
+  async startApi() {
     return this.withResult<SystemStartInfo>(async () => {
-      const result = await this.dataApiDriver.post<SystemStartInfo>("/system/start");
+      const result = await this.dataApiDriver.post<SystemStartInfo>("/system/api/start");
       return result.data;
     });
   }
@@ -619,7 +618,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
       return result.data;
     });
   }
-  async isSystemServiceRunning() {
+  async isApiRunning() {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.get<boolean>("/system/running");
       return result.data;
@@ -643,6 +642,12 @@ export class BrowserContainerClient extends PodmanRestApiClient {
         name,
         path
       });
+      return result.data;
+    });
+  }
+  async setEngine(engine: ContainerEngine) {
+    return this.withResult<ContainerEngine>(async () => {
+      const result = await this.dataApiDriver.post<ContainerEngine>("/engine", { engine });
       return result.data;
     });
   }
@@ -740,10 +745,10 @@ export class NativeContainerClient extends PodmanRestApiClient {
       return result.body;
     });
   }
-  async startSystemService() {
+  async startApi() {
     return this.withResult<SystemStartInfo>(async () => {
       const result = await Native.getInstance().proxyRequest<SystemStartInfo>({
-        method: "/system/start"
+        method: "/system/api/start"
       });
       return result.body;
     });
@@ -756,7 +761,7 @@ export class NativeContainerClient extends PodmanRestApiClient {
       return result.body;
     });
   }
-  async isSystemServiceRunning() {
+  async isApiRunning() {
     return this.withResult<boolean>(async () => {
       const result = await Native.getInstance().proxyRequest<boolean>({
         method: "/system/running"
@@ -764,24 +769,35 @@ export class NativeContainerClient extends PodmanRestApiClient {
       return result.body;
     });
   }
-  async getProgram(name: string | undefined) {
+  async getProgram(program: string | undefined) {
     return this.withResult<Program>(async () => {
       const result = await Native.getInstance().proxyRequest<Program>({
         method: "/system/program/get",
         params: {
-          name
+          program
         }
       });
       return result.body;
     });
   }
-  async setProgramPath(name: string, path: string) {
+  async setProgramPath(program: string, path: string) {
     return this.withResult<Program>(async () => {
       const result = await Native.getInstance().proxyRequest<Program>({
         method: "/system/program/set",
         params: {
-          name,
+          program,
           path
+        }
+      });
+      return result.body;
+    });
+  }
+  async setEngine(engine: ContainerEngine) {
+    return this.withResult<ContainerEngine>(async () => {
+      const result = await Native.getInstance().proxyRequest<ContainerEngine>({
+        method: "/system/engine/set",
+        params: {
+          engine
         }
       });
       return result.body;

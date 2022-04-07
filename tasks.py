@@ -1,3 +1,4 @@
+import platform
 import os
 from pathlib import Path
 
@@ -76,9 +77,16 @@ def build(c, docs=False):
 
 @task
 def bundle(c, docs=False):
+    system = platform.system()
     with c.cd("src/shell"):
-        run_env(c, "npm run electron:package:linux_x86")
-        run_env(c, "npm run electron:package:linux_arm")
+        if system == "Darwin":
+            run_env(c, "npm run electron:package:mac")
+        elif system == "Linux":
+            run_env(c, "npm run electron:package:win")
+            run_env(c, "npm run electron:package:linux_x86")
+            run_env(c, "npm run electron:package:linux_arm")
+        else:
+            run_env(c, "npm run electron:package:win")
 
 
 @task
@@ -121,16 +129,17 @@ def shell_start(c, docs=False):
 
 @task
 def start(c, docs=False):
-    run_env(
-        c,
-        """
-        concurrently -k \
-            "inv api.api-start" \
-            "inv app.app-start" \
-            "inv shell.shell-start" \
-            "inv docs.docs-start"
-        """,
+    launcher = " ".join(
+        [
+            "concurrently",
+            "-k",
+            '"inv api.api-start"',
+            '"inv app.app-start"',
+            '"inv shell.shell-start"',
+            '"inv docs.docs-start"',
+        ]
     )
+    run_env(c, launcher)
 
 
 api = Collection("api")

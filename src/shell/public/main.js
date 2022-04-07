@@ -2,7 +2,7 @@
 const os = require("os");
 const path = require("path");
 const url = require("url");
-require('fix-path')();
+require("fix-path")();
 // vendors
 const { app, dialog, BrowserWindow, shell, ipcMain, protocol } = require("electron");
 const contextMenu = require("electron-context-menu");
@@ -63,6 +63,12 @@ function createWindow() {
   });
   ipcMain.on("window.close", () => {
     window.close();
+  });
+  ipcMain.on("application.exit", () => {
+    app.exit();
+  });
+  ipcMain.on("application.relaunch", () => {
+    app.relaunch();
   });
   ipcMain.on("register.process", (p) => {
     logger.debug("Must register", p);
@@ -125,7 +131,7 @@ function createWindow() {
 
 let mainWindow;
 (async () => {
-  logger.debug("Starting main process - user configuration from", app.getPath('userData'));
+  logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   contextMenu({
     showInspectElement: isDevelopment() || isDebug
   });

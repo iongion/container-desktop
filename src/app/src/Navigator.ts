@@ -11,7 +11,6 @@ export function pathTo<S extends string>(
   } else {
     clean = `${window.location.origin}/#${clean}`;
   }
-  // console.debug("Clean", clean, window.location.pathname, window.location.protocol);
   return clean;
 }
 

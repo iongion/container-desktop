@@ -5,10 +5,16 @@
 .AppSettingsForm {
   padding: 2px;
 }
+.AppSettingsFormColumn {
+  display: inline-flex;
+}
 .AppSettingsFieldProgramHelper {
   padding-left: 5px;
 }
-.AppSettingsField .bp3-control,
+.AppSettingsForm[data-form="engine"] {
+  display: flex;
+}
+.AppSettingsField .bp4-control,
 .AppSettingsForm[data-form="engine"] .AppSettingsField {
   display: flex;
   vertical-align: middle;
@@ -17,14 +23,24 @@
 }
 .AppSettingsForm[data-form="engine"] .AppSettingsField {
   padding-left: 30px;
+  width: 100%;
 }
 .AppSettingsForm[data-form="engine"] .AppSettingsField .RadioLabel {
   min-width: 100px;
   display: inline-block;
 }
-.AppSettingsForm[data-form="engine"] .AppSettingsField .bp3-html-select {
+.AppSettingsForm[data-form="engine"] .AppSettingsField .bp4-html-select {
   min-width: 200px;
 }
+.AppSettingsForm[data-form="engine"] .AppSettingsFormColumn:first-child {
+  flex: 1;
+}
+.AppSettingsForm[data-form="engine"] .AppSettingsFormColumn:last-child {
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+}
+
 .EngineRestrictedTo {
   display: flex;
   vertical-align: middle;

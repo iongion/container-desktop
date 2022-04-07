@@ -5,14 +5,14 @@ const cors = require("cors");
 // project
 const {
   getSystemEnvironment,
-  startSystemService,
+  startApi,
   getMachines,
   createMachine,
   removeMachine,
   getProgram,
   getApiDriver,
-  getApiUnixSocketPath,
-  isSystemServiceRunning
+  getApiSocketPath,
+  isApiRunning
 } = require("@podman-desktop-companion/container-client");
 // locals
 const main = () => {
@@ -30,7 +30,7 @@ const main = () => {
     res.end();
   });
   app.get("/v3.0.0/libpod/system/running", async (req, res) => {
-    const flag = await isSystemServiceRunning();
+    const flag = await isApiRunning();
     res.status(200);
     res.set({ "Content-Type": "application/json" });
     res.send(JSON.stringify(flag, null, 2));
@@ -43,9 +43,9 @@ const main = () => {
     res.send(JSON.stringify(environment, null, 2));
     res.end();
   });
-  app.post("/v3.0.0/libpod/system/start", async (req, res) => {
+  app.post("/v3.0.0/libpod/system/api/start", async (req, res) => {
     try {
-      const program = await startSystemService({ http: true });
+      const program = await startApi({ http: true });
       res.status(200);
       res.set({ "Content-Type": "application/json" });
       res.send(JSON.stringify(program, null, 2));
@@ -110,7 +110,7 @@ const main = () => {
       "-X",
       method.toUpperCase(),
       "--unix-socket",
-      getApiUnixSocketPath(),
+      getApiSocketPath(),
       `"http://d${req.url}"`,
       "-H",
       '"Content-Type: application/json"'
@@ -119,7 +119,6 @@ const main = () => {
       const result = await api[method](serviceUrl, req.body);
       res.status(result.status);
       res.send(JSON.stringify(result.data, null, 2));
-      console.error("Request complete", curl.join(" "));
     } catch (error) {
       if (["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase())) {
         if (typeof req.body !== "undefined") {

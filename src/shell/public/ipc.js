@@ -2,9 +2,9 @@
 const logger = require("electron-log");
 // project
 const {
-  isSystemServiceRunning,
+  isApiRunning,
   resetSystem,
-  startSystemService,
+  startApi,
   getSystemEnvironment,
   getSystemInfo,
   getMachines,
@@ -14,21 +14,30 @@ const {
   restartMachine,
   stopMachine,
   removeMachine,
+  getEngine,
+  setEngine,
   getProgram,
   setProgramPath,
   getWSLDistributions
 } = require("@podman-desktop-companion/container-client");
 
 const servicesMap = {
-  "/system/program/get": async function ({ name }) {
-    return await getProgram(name);
+  "/system/engine/get": async function () {
+    return await getEngine();
   },
-  "/system/program/set": async function ({ name, path }) {
-    await setProgramPath(name, path);
-    return await getProgram(name);
+  "/system/engine/set": async function ({ engine }) {
+    await setEngine(engine);
+    return await getEngine();
+  },
+  "/system/program/get": async function ({ program }) {
+    return await getProgram(program);
+  },
+  "/system/program/set": async function ({ program, path }) {
+    await setProgramPath(program, path);
+    return await getProgram(program);
   },
   "/system/running": async function () {
-    return await isSystemServiceRunning();
+    return await isApiRunning();
   },
   "/system/connections": async function () {
     return await getSystemConnections();
@@ -39,8 +48,8 @@ const servicesMap = {
   "/system/environment": async function () {
     return await getSystemEnvironment();
   },
-  "/system/start": async function () {
-    return await startSystemService();
+  "/system/api/start": async function () {
+    return await startApi();
   },
   "/system/reset": async function () {
     return await resetSystem();
