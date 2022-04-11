@@ -3,6 +3,7 @@ import { Alignment, Navbar, NavbarGroup, NavbarHeading, Spinner, SpinnerSize, In
 import { useTranslation } from "react-i18next";
 
 import { useStoreState } from "../domain/types";
+import CurrentEnvironment, { PROJECT_VERSION } from "../Environment";
 
 import "./AppSidebarFooter.css";
 
@@ -18,11 +19,12 @@ export function AppSidebarFooter() {
       <Spinner intent={Intent.PRIMARY} size={SpinnerSize.SMALL} />
     </div>
   );
+  const versionString = `${PROJECT_VERSION}[${CurrentEnvironment.name[0]}]`;
   return (
     <div className="AppSidebarFooter">
       <Navbar>
         <NavbarGroup align={Alignment.LEFT}>
-          <NavbarHeading>{running ? t("System service is running") : t("System service is not running")}</NavbarHeading>
+          <NavbarHeading>{running ? t("System service is running") : t("System service is not running")} - <span className="AppSidebarVersionString">{versionString}</span> </NavbarHeading>
         </NavbarGroup>
         <NavbarGroup align={Alignment.RIGHT}>{pendingIndicator}</NavbarGroup>
       </Navbar>

@@ -4,6 +4,9 @@
   padding: 0;
   background: #4f175b;
   height: 32px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .AppSidebarFooter .bp4-navbar {
   margin: 0;
@@ -22,4 +25,9 @@
 }
 .AppSidebarFooterPendingIndicator {
   margin-right: 10px;
+}
+.AppSidebarVersionString {
+  font-size: 10px;
+  white-space: nowrap;
+  color: #fff;
 }
