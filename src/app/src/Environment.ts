@@ -57,12 +57,6 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
     ...{
       features: {
         ...ENV_DEFAULT.features,
-        customizeMounts: {
-          enabled: false
-        },
-        engineSwitcher: {
-          enabled: false
-        }
       }
     }
   }
@@ -71,7 +65,5 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
 const CurrentEnvironment = EnvironmentsMap[CURRENT_ENVIRONMENT];
 
 export const API = CurrentEnvironment.settings.api.baseUrl;
-
-// console.debug(CurrentEnvironment);
 
 export default CurrentEnvironment;

@@ -18,7 +18,6 @@ export function findAPI(env: Environments): IContainerClient {
       APIRegistry[env] = new BrowserContainerClient({ baseURL: API });
     } else {
       const opts = Native.getInstance().getContainerApiConfig();
-      console.debug("Creating native container client", opts);
       APIRegistry[env] = new NativeContainerClient(opts);
     }
   }

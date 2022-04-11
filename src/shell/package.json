@@ -1,6 +1,6 @@
 {
   "name": "podman-desktop-companion",
-  "version": "3.4.2-alpha.4",
+  "version": "4.0.0-b.1",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman CLI desktop companion tool",
   "keywords": [],
@@ -8,10 +8,10 @@
   "main": "./public/main.js",
   "devDependencies": {
     "@electron-forge/cli": "^6.0.0-beta.63",
-    "electron": "^17.0.0",
-    "electron-builder": "^22.14.13",
+    "electron": "^18.0.3",
+    "electron-builder": "^23.0.3",
     "electron-packager": "^15.4.0",
-    "prettier": "^2.5.1",
+    "prettier": "^2.6.2",
     "prettier-eslint": "^13.0.0"
   },
   "dependencies": {
@@ -19,15 +19,17 @@
     "@podman-desktop-companion/executor": "file:../../packages/executor",
     "@podman-desktop-companion/rpc": "file:../../packages/rpc",
     "@podman-desktop-companion/terminal": "file:../../packages/terminal",
-    "ajv": "8.10.0",
-    "axios": "^0.25.0",
+    "ajv": "8.11.0",
+    "axios": "^0.26.1",
     "electron-cfg": "^1.2.7",
-    "electron-context-menu": "^3.1.1",
+    "electron-context-menu": "^3.1.2",
     "electron-log": "^4.4.6",
     "fix-path": "^3.0.0",
-    "node-pty": "^0.10.1",
     "private-ip": "^2.3.3",
     "uuid": "8.3.2"
+  },
+  "optionalDependencies": {
+    "dmg-license": "^1.0.10"
   },
   "engines": {
     "node": "~16"
@@ -75,6 +77,11 @@
     "directories": {
       "buildResources": "public"
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "icons/appIcon.icns",
@@ -91,14 +98,17 @@
       }
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        "nsis"
+      ],
+      "icon": "icons/icon.png"
     },
     "linux": {
       "icon": "icons/appIcon.svg",
       "target": [
         "AppImage",
-        "rpm",
-        "deb"
+        "deb",
+        "rpm"
       ],
       "category": "Utility"
     }

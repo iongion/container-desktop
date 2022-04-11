@@ -73,7 +73,6 @@ export const MachineActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withou
           default:
             break;
         }
-        console.debug("Command execution completed", action, result);
         if (confirm?.success) {
           Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
         }

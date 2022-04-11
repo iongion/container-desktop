@@ -4,22 +4,30 @@
   padding: 0;
   background: #4f175b;
   height: 32px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
 }
-.AppSidebarFooter .bp3-navbar {
+.AppSidebarFooter .bp4-navbar {
   margin: 0;
   padding: 0;
   background: #4f175b url("../images/podman-logo.svg") no-repeat center left;
   background-size: 28px;
   height: 32px;
 }
-.AppSidebarFooter .bp3-navbar-group {
+.AppSidebarFooter .bp4-navbar-group {
   height: 32px;
   padding-left: 32px;
 }
-.AppSidebarFooter .bp3-navbar-heading {
+.AppSidebarFooter .bp4-navbar-heading {
   font-size: 12px;
   color: #aaa;
 }
 .AppSidebarFooterPendingIndicator {
   margin-right: 10px;
+}
+.AppSidebarVersionString {
+  font-size: 10px;
+  white-space: nowrap;
+  color: #fff;
 }

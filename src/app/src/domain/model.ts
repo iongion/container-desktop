@@ -3,7 +3,7 @@ import { action, thunk } from "easy-peasy";
 // project
 import { v4 } from "uuid";
 // project
-import { ServiceEngineType, SystemEnvironment } from "../Types";
+import { ContainerEngine, SystemEnvironment } from "../Types";
 import { Native } from "../Native";
 import { AppModel, AppModelState, AppRegistry } from "./types";
 
@@ -22,7 +22,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
       connections: [],
       program: {} as any,
       running: false,
-      engine: ServiceEngineType.native, // default
+      engine: ContainerEngine.NATIVE // default
     },
     // Actions
     setInited: action((state, inited) => {
@@ -39,14 +39,12 @@ export const createModel = (registry: AppRegistry): AppModel => {
       const { inited, pending, environment } = opts;
       state.hash = v4();
       state.revision += 1;
-      console.debug("Updating domain", opts, state.hash, state.revision);
       state.inited = inited === undefined ? state.inited : inited;
       state.pending = pending === undefined ? state.pending : pending;
       state.environment = environment === undefined ? state.environment : environment;
     }),
     // Thunks
     connect: thunk(async (actions, options) => {
-      console.debug("Connecting to system service", options);
       if (native) {
         Native.getInstance().setup();
       }
@@ -55,9 +53,11 @@ export const createModel = (registry: AppRegistry): AppModel => {
         try {
           environment = await registry.api.getSystemEnvironment();
           if (environment.program.path) {
-            if (!environment.running) {
+            if (environment.running) {
+              environment.running = true;
+            } else {
               try {
-                const startup = await registry.api.startSystemService();
+                const startup = await registry.api.startApi();
                 environment.system = startup.system;
                 environment.running = startup.running;
               } catch (error) {
@@ -68,7 +68,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
         } catch (error) {
           console.error("Error during system environment reading", error);
         }
-        console.debug("System environment is", environment);
         actions.domainUpdate({
           inited: true,
           environment

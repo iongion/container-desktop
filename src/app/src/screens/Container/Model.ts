@@ -136,7 +136,6 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
       let connected = false;
       if (options.Id) {
         const result = await registry.api.connectToContainer(options.Id);
-        console.debug("Connect result", result);
         connected = true;
       } else {
         console.warn("Unable to connect to container without name", options);

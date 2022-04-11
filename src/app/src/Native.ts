@@ -43,6 +43,8 @@ interface NativeBridge {
     maximize: () => void;
     restore: () => void;
     close: () => void;
+    exit: () => void;
+    relaunch: () => void;
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
     proxy: <T>(request: any) => Promise<T>;
@@ -69,6 +71,8 @@ export class Native {
         maximize: () => console.error("Not bridged"),
         restore: () => console.error("Not bridged"),
         close: () => console.error("Not bridged"),
+        exit: () => console.error("Not bridged"),
+        relaunch: () => console.error("Not bridged"),
         openFileSelector: (options?: OpenFileSelectorOptions) => console.error("Not bridged", options),
         openTerminal: (options?: OpenTerminalOptions) => console.error("Not bridged", options),
         proxy: (request: any) => console.error("Not bridged")
@@ -100,6 +104,12 @@ export class Native {
   }
   public close() {
     return this.bridge.application.close();
+  }
+  public exit() {
+    return this.bridge.application.exit();
+  }
+  public relaunch() {
+    return this.bridge.application.relaunch();
   }
   public isNative() {
     return this.bridge.available === true;
@@ -144,7 +154,6 @@ export class Native {
       console.error("Proxy response error", { request, error });
       throw error;
     }
-    console.debug("Result is here", result);
     if (result.success) {
       return result;
     }

@@ -45,7 +45,6 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
           default:
             break;
         }
-        console.debug("Command execution completed", result);
         Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
         if (action === "volume.remove") {
           goToScreen("/screens/volumes");

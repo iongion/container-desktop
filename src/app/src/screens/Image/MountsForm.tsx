@@ -86,7 +86,6 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
   );
 
   const onActionClick = useCallback(() => {
-    console.debug("Action", action, mount);
     action.handler(action, mount);
   }, [action, mount]);
 

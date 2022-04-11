@@ -1,7 +1,7 @@
 const os = require("os");
 const path = require("path");
 // vendors
-require('fix-path')();
+require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 const logger = require("electron-log");
 // locals
@@ -45,6 +45,22 @@ const application = {
       logger.error("Unable to close", error);
     }
   },
+  exit: () => {
+    logger.debug("Application exit");
+    try {
+      ipcRenderer.send("application.exit");
+    } catch (error) {
+      logger.error("Unable to exit", error);
+    }
+  },
+  relaunch: () => {
+    logger.debug("Application relaunch");
+    try {
+      ipcRenderer.send("application.relaunch");
+    } catch (error) {
+      logger.error("Unable to relaunch", error);
+    }
+  },
   openFileSelector: async (options) => {
     logger.debug("Application openFileSelector", options);
     try {
@@ -67,12 +83,12 @@ const application = {
     if (os.type() === "Darwin") {
       // const result = await invoker.invoke(req.method, req.params);
       const result = await ipcRenderer.invoke("proxy", req);
-      logger.debug(">> proxy to client", result);
+      // logger.debug(">> proxy to client", result);
       return result;
     }
     process.env.WORKER_PROCESS_FILE = path.join(__dirname, "ipc.js");
     const result = await withWorkerRPC((rpc) => rpc.invoke(req));
-    logger.debug(">> proxy to client", result);
+    // logger.debug(">> proxy to client", result);
     return result;
   }
 };

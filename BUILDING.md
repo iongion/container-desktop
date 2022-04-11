@@ -3,19 +3,19 @@
 1. Preparing the infrastructure
 
     ```bash
-    make prepare
+    inv prepare
     ```
 
 2. Build the application
 
     ```bash
-    make build
+    NODE_ENV=production REACT_APP_ENV=production inv build
     ```
 
 3. Create bundles (snap, deb, rpm, appImage, dmg, exe)
 
     ```bash
-    TARGET=linux make bundle
+    NODE_ENV=production REACT_APP_ENV=production inv bundle
     ```
 
 Then see `shell/dist` for the output assets.

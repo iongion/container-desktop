@@ -46,7 +46,6 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
           default:
             break;
         }
-        console.debug("Command execution completed", result);
         Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
         if (action === "secret.remove") {
           goToScreen("/screens/secrets");

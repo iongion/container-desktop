@@ -1,0 +1,4 @@
+FROM alpine:3.15
+RUN apk add --no-cache flatpak-builder
+RUN apk add --no-cache bash
+ENTRYPOINT ["/bin/bash"]

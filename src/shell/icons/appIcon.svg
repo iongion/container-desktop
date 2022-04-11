@@ -2,14 +2,36 @@
 <svg
    id="svg8"
    version="1.1"
-   viewBox="0 0 49.119536 47.997475"
-   height="181.40778"
-   width="185.64864"
+   viewBox="0 0 67.733335 67.733335"
+   height="256"
+   width="256"
+   sodipodi:docname="appIcon.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04, custom)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview99"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     showgrid="false"
+     inkscape:zoom="1.7750066"
+     inkscape:cx="-10.704186"
+     inkscape:cy="98.027804"
+     inkscape:window-width="1920"
+     inkscape:window-height="1007"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg8" />
   <defs
      id="defs2">
     <marker
@@ -72,7 +94,7 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(-1175.737,509.6827)"
+     transform="matrix(1.3278731,0,0,1.3278731,-1559.7964,679.27754)"
      id="layer1">
     <g
        id="g163426" />

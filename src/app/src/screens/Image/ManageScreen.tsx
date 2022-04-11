@@ -58,7 +58,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </thead>
           <tbody>
             {images.map((image) => {
-              console.debug(image);
               const imageLayersButton = (
                 <AnchorButton
                   minimal

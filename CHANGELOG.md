@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.4.2-alpha.4] - 2021-02-06
+## [4.0.0-b.1] - 2022-04-09
+
+* Upgrade to support podman `4.0.x`
+* Upgrade to blueprint 4.x
+* Support Windows
+* Support MacOS
+* Dropped Lima temporarily until better configuration exists
+
+## [3.4.2-alpha.4] - 2022-02-06
 
 ### Fixed
 

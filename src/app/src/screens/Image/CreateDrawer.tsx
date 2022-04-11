@@ -109,7 +109,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
       >
         <div className={Classes.DRAWER_BODY}>
           <div className={Classes.DIALOG_BODY}>
-            <HTMLTable condensed striped small className="AppDataTable">
+            <HTMLTable condensed striped className="AppDataTable">
               <tbody>
                 <tr>
                   <td>{t("Name")}</td>
