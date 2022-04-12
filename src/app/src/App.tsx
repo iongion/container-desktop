@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
@@ -6,8 +6,8 @@ import { matchPath } from "react-router";
 import { HashRouter as Router, Switch, Route, useLocation } from "react-router-dom";
 
 import { StoreProvider } from "./domain/store";
-import { AppStore, useStoreActions, useStoreState } from "./domain/types";
-import { Program } from "./Types";
+import { AppBootstrapPhase, AppStore, useStoreActions, useStoreState } from "./domain/types";
+import { Program, UserConfiguration } from "./Types";
 import { pathTo } from "./Navigator";
 
 import "./App.i18n";
@@ -58,17 +58,43 @@ const Screens = [
 ];
 
 interface AppMainScreenContentProps {
+  phase: AppBootstrapPhase;
   program: Program;
-  inited: boolean;
-  provisioned: boolean;
   running: boolean;
 }
-export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, inited, provisioned, running }) => {
+export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, phase, running }) => {
   const { t } = useTranslation();
   const location = useLocation();
+  const ready = phase === AppBootstrapPhase.READY;
   const currentScreen = Screens.find((screen) =>
     matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true })
   );
+  const content = useMemo(() => {
+    let content;
+    if (ready) {
+      content = (
+        <Switch>
+          {Screens.map((Screen) => {
+            return (
+              <Route path={Screen.Route.Path} key={Screen.ID} exact>
+                <Screen navigator={navigator} />
+              </Route>
+            );
+          })}
+        </Switch>
+      );
+    } else if (phase === AppBootstrapPhase.FAILED) {
+      content = (
+        <SettingsScreen navigator={navigator} />
+      );
+    } else {
+      content = <AppLoading />;
+    }
+    return content;
+  }, [ready, phase]);
+
+  // console.debug({ phase, ready });
+
   if (!currentScreen) {
     return (
       <NonIdealState
@@ -83,31 +109,12 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
       />
     );
   }
-  const ready = inited && running && provisioned;
+
   let sidebar;
   if (ready) {
     sidebar = <AppSidebar screens={Screens} currentScreen={currentScreen} />;
   }
-  let content;
-  if (ready) {
-    content = (
-      <Switch>
-        {Screens.map((Screen) => {
-          return (
-            <Route path={Screen.Route.Path} key={Screen.ID} exact>
-              <Screen navigator={navigator} />
-            </Route>
-          );
-        })}
-      </Switch>
-    );
-  } else if (inited) {
-    content = (
-      <SettingsScreen navigator={navigator} />
-    );
-  } else {
-    content = <AppLoading />;
-  }
+
   return (
     <>
       <AppHeader program={program} running={running} screens={Screens} currentScreen={currentScreen} />
@@ -122,30 +129,44 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
 };
 
 export function AppMainScreen() {
-  const inited = useStoreState((state) => state.inited);
+  const phase = useStoreState((state) => state.phase);
   const native = useStoreState((state) => state.native);
   const running = useStoreState((state) => state.environment.running);
   const platform = useStoreState((state) => state.environment.platform);
   const connect = useStoreActions((actions) => actions.connect);
-  const program = useStoreState((state) => state.environment.userConfiguration.program);
-  const provisioned = !!program?.path;
+  const getUserConfiguration = useStoreActions((actions) => actions.getUserConfiguration);
+  const setPhase = useStoreActions((actions) => actions.setPhase);
+  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
+  const provisioned = !!userConfiguration.program.path;
   useEffect(() => {
-    if (!inited) {
-      connect({ startApi: false });
+    switch (phase) {
+      case AppBootstrapPhase.INITIAL:
+        getUserConfiguration().then((configuration: UserConfiguration) => {
+          setPhase(AppBootstrapPhase.CONFIGURED);
+        });
+        break;
+      case AppBootstrapPhase.CONFIGURED:
+        const connector = { startApi: userConfiguration.autoStartApi };
+        console.debug("Application connecting", connector, userConfiguration);
+        connect(connector);
+        break;
+      default:
+        break;
     }
-  }, [inited, running, connect]);
+  }, [phase, running, connect, getUserConfiguration, setPhase, userConfiguration]);
+
   return (
     <div
       className="App"
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
       data-platform={platform}
-      data-inited={inited ? "yes" : "no"}
+      data-phase={phase}
       data-running={running ? "yes" : "no"}
       data-provisioned={provisioned ? "yes" : "no"}
     >
       <Router>
-        <AppMainScreenContent inited={inited} provisioned={provisioned} running={running} program={program} />
+        <AppMainScreenContent phase={phase} running={running} program={userConfiguration.program} />
       </Router>
     </div>
   );

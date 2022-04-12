@@ -19,9 +19,3 @@
   justify-content: center;
   align-items: center;
 }
-.AppLoadingActions {
-  width: 100%;
-}
-.AppLoadingActions .bp4-button {
-  width: 50%;
-}

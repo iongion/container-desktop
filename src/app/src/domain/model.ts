@@ -3,13 +3,13 @@ import { action, thunk } from "easy-peasy";
 // project
 import { ContainerEngine, SystemEnvironment } from "../Types";
 import { Native } from "../Native";
-import { AppModel, AppModelState, AppRegistry } from "./types";
+import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types";
 
 export const createModel = (registry: AppRegistry): AppModel => {
   const native = Native.getInstance().isNative();
   const platform = Native.getInstance().getPlatform();
   const model: AppModel = {
-    inited: false,
+    phase: AppBootstrapPhase.INITIAL,
     pending: false,
     native,
     environment: {
@@ -21,11 +21,12 @@ export const createModel = (registry: AppRegistry): AppModel => {
         program: {} as any,
         engine: ContainerEngine.NATIVE, // default
         autoStartApi: false,
+        path: '',
       },
     },
     // Actions
-    setInited: action((state, flag) => {
-      state.inited = flag;
+    setPhase: action((state, phase) => {
+      state.phase = phase;
     }),
     setPending: action((state, flag) => {
       state.pending = flag;
@@ -36,14 +37,18 @@ export const createModel = (registry: AppRegistry): AppModel => {
         ...value
       };
     }),
-    domainReset: action((state, { inited, pending }) => {
-      state.inited = inited || false;
-      state.pending = pending || false;
+    domainReset: action((state, { phase, pending }) => {
+      if (phase !== undefined) {
+        state.phase = phase;
+      }
+      if (pending !== undefined) {
+        state.pending = pending;
+      }
     }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
-      const { inited, pending, environment } = opts;
-      if (inited !== undefined) {
-        state.inited = inited;
+      const { phase, pending, environment } = opts;
+      if (phase !== undefined) {
+        state.phase = phase;
       }
       if (pending !== undefined) {
         state.pending = pending;
@@ -54,12 +59,13 @@ export const createModel = (registry: AppRegistry): AppModel => {
     }),
     // Thunks
     connect: thunk(async (actions, options) => {
+      actions.setPhase(AppBootstrapPhase.CONNECTING);
       if (native) {
         Native.getInstance().setup();
       }
-      console.debug("connecting");
       let environment: SystemEnvironment = { ...model.environment };
       return registry.withPending(async () => {
+        let nextPhase = AppBootstrapPhase.CONNECTED;
         try {
           environment = await registry.api.getSystemEnvironment();
           if (environment.userConfiguration.program.path) {
@@ -74,11 +80,22 @@ export const createModel = (registry: AppRegistry): AppModel => {
               }
             }
           }
+          if (environment.running) {
+            const { program } = environment.userConfiguration;
+            const provisioned = program && program.path;
+            if (provisioned) {
+              nextPhase = AppBootstrapPhase.READY;
+            }
+          } else {
+            nextPhase = AppBootstrapPhase.FAILED;
+          }
         } catch (error) {
           console.error("Error during system environment reading", error);
+          nextPhase = AppBootstrapPhase.FAILED;
         }
+        // console.debug("Next phase", nextPhase);
         actions.domainUpdate({
-          inited: true,
+          phase: nextPhase,
           environment
         });
       });

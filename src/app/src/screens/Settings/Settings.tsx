@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { AnchorButton, Button, Callout, Checkbox, ControlGroup, FormGroup, InputGroup, Intent } from "@blueprintjs/core";
+import { AnchorButton, Button, Callout, Checkbox, ControlGroup, FormGroup, Icon, InputGroup, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
-import { mdiEmoticonSad } from "@mdi/js";
+import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
 import Environment from "../../Environment";
@@ -28,6 +28,7 @@ export const Title = "Settings";
 export const Screen: AppScreen<ScreenProps> = () => {
   const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const { t } = useTranslation();
+  const phase = useStoreState((state) => state.phase);
   const pending = useStoreState((state) => state.pending);
   const native = useStoreState((state) => state.native);
   const running = useStoreState((state) => state.environment.running);
@@ -76,26 +77,40 @@ export const Screen: AppScreen<ScreenProps> = () => {
   );
   const onConnectClick = useCallback(
     async () => {
-      await connect({ startApi: !!userConfiguration.autoStartApi });
+      await connect({ startApi: true });
     },
-    [connect, userConfiguration]
+    [connect]
   );
   const onAutoStartApiChange = useCallback(async (e) => {
     await setUserConfiguration({ autoStartApi: !!e.currentTarget.checked });
   }, [setUserConfiguration]);
 
+  let title = "";
+  let errorMessage = "";
+  let icon = mdiEmoticonSad;
+  let reconnectActionText = t("Connect");
+  if (program?.path) {
+    title = t("The API is not running");
+    errorMessage = t("Check the logs from application data path if this is not intended behavior");
+    icon = mdiEmoticonWink;
+    reconnectActionText = t("Connect and try to start the api");
+  } else {
+    title = t("Automatic detection failed");
+    errorMessage = t("To be able to continue, all required programs need to be installed");
+  }
+
   const contentWidget =
     provisioned && running ? null : (
       <Callout
         className="AppSettingsCallout"
-        title={t("Automatic detection failed")}
-        icon={<ReactIcon.Icon path={mdiEmoticonSad} size={3} />}
+        title={title}
+        icon={<ReactIcon.Icon path={icon} size={3} />}
       >
-        <p>{t("To be able to continue, all required programs need to be installed")}</p>
-        <Button disabled={pending} fill text={t("Reconnect")} icon={IconNames.REFRESH} onClick={onConnectClick} />
+        <p>{errorMessage}</p>
+        <Button disabled={pending} fill text={reconnectActionText} icon={IconNames.REFRESH} onClick={onConnectClick} />
       </Callout>
     );
-  const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager disabled={pending} /> : null;
+  const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager /> : null;
   const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(system, null, 2)} /> : null;
 
   return (
@@ -109,6 +124,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
             data-program-name={program?.name}
             data-program-present={isValid ? "yes" : "no"}
           >
+            <div className="AppSettingUserConfigurationPath">
+              <Icon icon={IconNames.INFO_SIGN} />
+              <strong>{t('Application settings and logs path')}</strong>
+              <code>{userConfiguration.path}</code>
+            </div>
             <FormGroup
               helperText={
                 <div className="AppSettingsFieldProgramHelper">
@@ -125,7 +145,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
               label={
                 <AnchorButton
                   minimal
-                  disabled={pending}
                   icon={isValid ? IconNames.THUMBS_UP : IconNames.THUMBS_DOWN}
                   intent={isValid ? Intent.SUCCESS : Intent.DANGER}
                   text={program.name}
@@ -140,7 +159,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <ControlGroup fill={true} vertical={false}>
                 <InputGroup
                   fill
-                  disabled={pending}
                   id={`${program.name}_path`}
                   readOnly={native}
                   placeholder={"..."}
@@ -149,7 +167,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 />
                 {native ? (
                   <Button
-                    disabled={pending}
                     icon={IconNames.LOCATE}
                     text={t("Select")}
                     title={t("Select program")}
@@ -157,7 +174,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     onClick={onProgramSelectClick}
                   />
                 ) : (
-                  <Button disabled={pending} icon={IconNames.TICK} title={t("Accept")} />
+                  <Button icon={IconNames.TICK} title={t("Accept")} />
                 )}
               </ControlGroup>
             </FormGroup>

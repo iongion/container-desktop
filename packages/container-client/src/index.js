@@ -38,6 +38,10 @@ function detectEngine() {
   return engine;
 }
 
+function getConfigurationPath() {
+  return electronConfig.resolveUserDataPath(".");
+}
+
 function getEngine() {
   return electronConfig.get("engine", detectEngine());
 }
@@ -57,7 +61,8 @@ async function getUserConfiguration() {
     engine: getEngine(),
     program: await getProgram(getProgramName()),
     autoStartApi: getAutoStartApi(),
-  }
+    path: getConfigurationPath()
+  };
   return options;
 }
 
@@ -547,7 +552,7 @@ async function getSystemEnvironment() {
     running,
     system,
     // User configuration
-    userConfiguration,
+    userConfiguration
   };
 }
 
@@ -606,6 +611,7 @@ async function getWSLDistributions() {
 
 module.exports = {
   ResultError,
+  getConfigurationPath,
   getEngine,
   setEngine,
   getUserConfiguration,

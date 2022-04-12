@@ -9,6 +9,7 @@ export interface UserConfiguration {
   program: Program;
   engine: ContainerEngine, // default
   autoStartApi: boolean;
+  path: string;
 }
 
 export interface UserConfigurationOptions {

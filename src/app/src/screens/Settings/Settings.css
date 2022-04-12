@@ -41,6 +41,30 @@
   display: flex;
   align-items: center;
 }
+.AppSettingUserConfigurationPath {
+  width: 100%;
+  display: block;
+  text-align: right;
+  background: #111;
+  padding: 2px;
+  text-align: center;
+}
+.AppSettingUserConfigurationPath strong {
+  font-size: 12px;
+  font-weight: normal;
+  display: inline-block;
+  color: #ccc;
+  padding-left: 10px;
+  padding-right: 10px;
+  cursor: default;
+}
+.AppSettingUserConfigurationPath code {
+  display: inline-block;
+  background: #000;
+  font-size: 11px;
+  border: 1px solid #333;
+  padding: 4px;
+}
 
 .EngineRestrictedTo {
   display: flex;
