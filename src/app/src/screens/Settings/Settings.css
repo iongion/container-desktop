@@ -1,6 +1,7 @@
 .AppSettingsCallout {
   text-align: center;
-  padding-left: 0 !important;
+  padding: 5px !important;
+  margin: 0;
 }
 .AppSettingsForm {
   padding: 2px;
@@ -39,6 +40,42 @@
   vertical-align: middle;
   display: flex;
   align-items: center;
+}
+.AppSettingUserConfigurationPath {
+  width: 100%;
+  display: flex;
+  text-align: right;
+  background: #111;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2px;
+  padding-left: 8px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.AppSettingUserConfigurationPath strong {
+  font-size: 12px;
+  font-weight: normal;
+  display: block;
+  color: #ccc;
+  padding-left: 10px;
+  padding-right: 10px;
+  cursor: default;
+  user-select: none;
+}
+.AppSettingUserConfigurationPath input {
+  background: #000;
+  font-size: 11px;
+  border: 1px solid #333;
+  padding: 4px;
+  display: flex;
+  flex: 1;
+  color: #fff;
+  font-family: monospace;
+  border-radius: 4px;
 }
 
 .EngineRestrictedTo {

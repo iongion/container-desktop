@@ -7,18 +7,6 @@
   overflow: hidden;
   position: relative;
 }
-.AppLoadingSplash {
-  background-image: url('images/podman-logo.svg');
-  width: 256px;
-  height: 256px;
-  display: flex;
-  align-items: flex-end;
-}
-.AppLoadingSplashContent {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-}
 .AppContent {
   display: flex;
   flex: 1;
@@ -48,7 +36,6 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding-top: 10px;
   overflow: auto;
 }
 .AppScreenContent[data-loaded="no"] {
@@ -76,9 +63,6 @@
   margin-bottom: 0;
   font-size: 12px;
   overflow: auto;
-}
-.AppScreenContentLoaderProgressBar {
-  width: 320px;
 }
 .AppToaster .bp4-toast {
   top: 40px;
@@ -118,6 +102,7 @@
 .AppDataTable tbody td:first-child {
   width: auto;
   text-align: left;
+  white-space: nowrap;
 }
 .AppDataTable thead th:last-child,
 .AppDataTable tbody td:last-child {

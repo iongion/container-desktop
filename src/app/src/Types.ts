@@ -2,7 +2,20 @@ import React from "react";
 import { Platforms } from "./Native";
 
 export interface ConnectOptions {
-  autoStart: boolean;
+  startApi: boolean;
+}
+
+export interface UserConfiguration {
+  program: Program;
+  engine: ContainerEngine, // default
+  autoStartApi: boolean;
+  path: string;
+}
+
+export interface UserConfigurationOptions {
+  program: Partial<Program>;
+  engine: Partial<ContainerEngine>;
+  autoStartApi: boolean;
 }
 
 export enum Environments {
@@ -83,10 +96,9 @@ export interface SystemConnection {
 export interface SystemEnvironment {
   platform: Platforms;
   connections: SystemConnection[];
-  program: Program;
   running: boolean;
   system: SystemInfo;
-  engine: ContainerEngine;
+  userConfiguration: UserConfiguration;
 }
 export interface SystemStartInfo {
   system: SystemInfo;
@@ -110,7 +122,6 @@ export interface Program {
   currentVersion?: string;
   title: string;
   homepage: string;
-  platform: Platforms;
 }
 
 export interface ContainerClientResponse<T = unknown> {
@@ -395,15 +406,19 @@ export interface WSLDistribution {
 export interface AppScreenProps {
   navigator: Navigator;
 }
+export interface AppScreenMetadata {
+  ExcludeFromSidebar: boolean;
+  WithoutSidebar: boolean;
+  LeftIcon: any;
+  RightIcon: any;
+  RequiresProvisioning: boolean;
+  RequiresConnection: boolean;
+}
 export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> & {
   ID: string;
   Title: string;
   Route: {
     Path: string;
   };
-  Metadata?: {
-    ExcludeFromSidebar?: boolean;
-    LeftIcon?: any;
-    RightIcon?: any;
-  };
+  Metadata?: Partial<AppScreenMetadata>;
 };

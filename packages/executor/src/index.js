@@ -1,7 +1,9 @@
 const { spawn } = require("child_process");
 const events = require("events");
 // vendors
-const logger = require("electron-log");
+const { createLogger } = require("@podman-desktop-companion/logger");
+// locals
+const logger = createLogger(__filename);
 
 function wrapLauncher(program, args) {
   return [program, args];

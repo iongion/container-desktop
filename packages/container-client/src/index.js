@@ -3,13 +3,14 @@ const fs = require("fs");
 const path = require("path");
 // vendors
 const axios = require("axios");
-const logger = require("electron-log");
 const electronConfig = require("electron-cfg");
 // project
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
+const { createLogger } = require("@podman-desktop-companion/logger");
 // local
 const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/executor");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
+const logger = createLogger(__filename);
 
 class ResultError extends Error {
   constructor(message, data, warnings) {
@@ -37,6 +38,10 @@ function detectEngine() {
   return engine;
 }
 
+function getConfigurationPath() {
+  return electronConfig.resolveUserDataPath(".");
+}
+
 function getEngine() {
   return electronConfig.get("engine", detectEngine());
 }
@@ -45,6 +50,27 @@ function setEngine(value) {
   const engine = value || getEngine();
   electronConfig.set("engine", engine);
   return engine;
+}
+
+function getAutoStartApi() {
+  return electronConfig.get("autoStartApi", false);
+}
+
+async function getUserConfiguration() {
+  const options = {
+    engine: getEngine(),
+    program: await getProgram(getProgramName()),
+    autoStartApi: getAutoStartApi(),
+    path: getConfigurationPath()
+  };
+  return options;
+}
+
+async function setUserConfiguration(options) {
+  Object.keys(options).forEach((key) => {
+    electronConfig.set(key, options[key]);
+  });
+  return await getUserConfiguration();
 }
 
 function getProgramName() {
@@ -145,7 +171,11 @@ function getCurrentMachine() {
 }
 
 function getCurrentMachineNamedPipeApiSocketPath() {
-  return `//./pipe/${getCurrentMachine()}`;
+  let name = getCurrentMachine();
+  if (os.type() === "Windows_NT") {
+    name = "docker_engine";
+  }
+  return `//./pipe/${name}`;
 }
 
 function getCurrentMachineUnixApiSocketPath() {
@@ -185,7 +215,7 @@ function getApiConfig() {
     },
     adapter: require("axios/lib/adapters/http")
   };
-  console.debug("API configuration", config);
+  // console.debug("API configuration", config);
   return config;
 }
 
@@ -211,7 +241,7 @@ function getApiDriver(cfg) {
       return response;
     },
     function (error) {
-      logger.error("HTTP response error", error.message, error.stack);
+      logger.error("HTTP response error", error.message);
       return Promise.reject(error);
     }
   );
@@ -395,7 +425,7 @@ async function getPodmanProgram(customPath) {
     if (programVersionInfo.success) {
       const parts = programVersionInfo.stdout.split(",")[0].split(" ");
       programVersion = parts[2] ? parts[2].trim() : undefined;
-      programName = programPath.split(path.sep).pop() || programName;
+      programName = path.basename(programPath, path.extname(programPath));
       programTitle = parts[0] || programTitle;
     }
   }
@@ -404,8 +434,7 @@ async function getPodmanProgram(customPath) {
     path: programPath,
     currentVersion: programVersion,
     title: programTitle,
-    homepage: `https://${programName}.io`,
-    platform: os.type()
+    homepage: `https://${programName}.io`
   };
   logger.debug("Detected program", program);
   return program;
@@ -416,35 +445,49 @@ async function getProgram(name) {
     case "podman":
       return getPodmanProgram();
     default:
-      break;
+      throw new Error(`Program ${program} not recognized`);
   }
 }
 
 // Container engine specific
 async function startApi(opts) {
-  if (getEngine() === "native") {
-    logger.debug("Starting native engine with system service");
-    return startSystemService(opts);
+  const engine = getEngine();
+  switch (engine) {
+    case "native":
+      return startNativeApi(opts);
+    case "virtualized":
+      return startVirtualizedApi(opts);
+    default:
+      throw new Error(`Engine ${engine} is not supported`);
   }
+}
+
+async function getApi() {
+  const systemApiResult = await getApiDriver().get("/info");
+  const running = await isApiRunning();
+  const platform = os.type();
+  const api = {
+    platform,
+    system: systemApiResult.data,
+    running,
+    connectionString: getApiSocketPath()
+  };
+  return api;
+}
+
+async function startVirtualizedApi(opts) {
   const machine = getCurrentMachine();
   logger.debug("Starting virtualized engine with machine", machine);
   const success = await startMachine(machine);
   if (success) {
     logger.debug("API virtualized engine started with machine", machine);
-    const program = await getProgram("podman");
-    const systemApiResult = { data: null }; //await getApiDriver().get("/info");
-    const running = await isApiRunning();
-    return {
-      program,
-      system: systemApiResult.data,
-      running
-    };
+    return getApi();
   }
   logging.error("API virtualized engine startup failure with machine", machine);
   throw new ResultError("Unable to start machine", machine);
 }
 
-async function startSystemService(opts) {
+async function startNativeApi(opts) {
   const clientOpts = {
     socketPath: getApiSocketPath(),
     retry: { count: 2, wait: 1000 },
@@ -464,14 +507,7 @@ async function startSystemService(opts) {
     client.on("ready", async ({ process }) => {
       try {
         logger.debug("System service start read", process);
-        const program = await getProgram("podman");
-        const systemApiResult = await getApiDriver().get("/info");
-        const running = await isApiRunning();
-        resolve({
-          program,
-          system: systemApiResult.data,
-          running
-        });
+        resolve(getApi());
       } catch (error) {
         logger.error("System service ready error", error.message, error.stack);
         reject(error);
@@ -503,21 +539,20 @@ async function getSystemEnvironment() {
   } catch (error) {
     logger.error("Unable to obtain system info", error);
   }
-  let program;
+  let userConfiguration = {};
   try {
-    program = await getProgram("podman");
+    userConfiguration = await getUserConfiguration();
   } catch (error) {
-    logger.error("Unable to obtain program information", error);
+    logger.error("Unable to obtain user configuration info", error);
   }
   const platform = os.type();
   return {
     platform,
     connections,
-    program,
     running,
     system,
-    // connection type of client
-    engine: getEngine()
+    // User configuration
+    userConfiguration
   };
 }
 
@@ -576,8 +611,11 @@ async function getWSLDistributions() {
 
 module.exports = {
   ResultError,
+  getConfigurationPath,
   getEngine,
   setEngine,
+  getUserConfiguration,
+  setUserConfiguration,
   getProgramPath,
   setProgramPath,
   getGithubRepoTags,
@@ -599,7 +637,8 @@ module.exports = {
   getVolumes,
   getProgram,
   startApi,
-  startSystemService,
+  startNativeApi,
+  startVirtualizedApi,
   getSystemEnvironment,
   isApiRunning,
   resetSystem,

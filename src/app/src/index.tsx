@@ -3,11 +3,14 @@ import dayjs from "dayjs";
 
 import "./index.css";
 
-import App from "./App";
+import { store } from "./App.store";
+import { App } from "./App";
 
-(() => {
+export function renderApplication() {
   const relativeTime = require("dayjs/plugin/relativeTime");
   dayjs.extend(relativeTime);
   const rootElement = document.getElementById("root");
-  render(<App />, rootElement);
-})();
+  render(<App store={store} />, rootElement);
+}
+
+renderApplication();

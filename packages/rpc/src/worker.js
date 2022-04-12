@@ -1,7 +1,9 @@
 // node
 // vendors
-const logger = require("electron-log");
+const { createLogger } = require("@podman-desktop-companion/logger");
 // project
+// locals
+const logger = createLogger("worker");
 
 self.onmessage = async function (e) {
   const msg = e.data;
@@ -21,7 +23,7 @@ self.onmessage = async function (e) {
       created: new Date().getTime() / 1000,
       payload: result
     };
-    logger.debug("Invocation done", response);
+    logger.debug("Invocation done", response, req);
   } catch (error) {
     logger.error("Invocation error", error);
     response = {

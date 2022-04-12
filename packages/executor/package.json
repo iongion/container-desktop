@@ -10,7 +10,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "electron-log": "^4.4.6"
+    "@podman-desktop-companion/logger": "file:../logger"
   },
   "engines": {
     "node": "~16"

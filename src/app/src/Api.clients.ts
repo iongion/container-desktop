@@ -4,7 +4,6 @@ import axios, { AxiosRequestConfig } from "axios";
 import { axiosConfigToCURL } from "@podman-desktop-companion/utils";
 import {
   ContainerClientResponse,
-  ContainerEngine,
   //
   Domain,
   Program,
@@ -26,7 +25,9 @@ import {
   SystemResetReport,
   Machine,
   //
-  WSLDistribution
+  WSLDistribution,
+  UserConfiguration,
+  UserConfigurationOptions
 } from "./Types";
 
 import { Native } from "./Native";
@@ -140,9 +141,8 @@ export interface IContainerClient {
   startApi: () => Promise<SystemStartInfo>;
   isApiRunning: () => Promise<boolean>;
 
-  getProgram: (name?: string) => Promise<Program>;
-  setProgramPath: (name: string, path: string) => Promise<Program>;
-  setEngine: (engine: ContainerEngine) => Promise<ContainerEngine>;
+  getUserConfiguration: () => Promise<UserConfiguration>;
+  setUserConfiguration: (options: Partial<UserConfigurationOptions>) => Promise<UserConfiguration>;
 
   getWSLDistributions: () => Promise<WSLDistribution[]>;
 }
@@ -222,7 +222,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
         return response;
       },
       function (error) {
-        console.error("HTTP response error", error.message, error.stack);
+        console.error("HTTP response error", error.message);
         return Promise.reject(error);
       }
     );
@@ -504,6 +504,8 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   abstract removeMachine(Name: string): Promise<boolean>;
   abstract stopMachine(Name: string): Promise<boolean>;
   abstract connectToMachine(Name: string): Promise<boolean>;
+  abstract getUserConfiguration(): Promise<UserConfiguration>;
+  abstract setUserConfiguration(options: Partial<UserConfigurationOptions>): Promise<UserConfiguration>;
   // System
   async getSystem() {
     return this.withResult<SystemInfo>(async () => {
@@ -521,9 +523,6 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
   abstract startApi(): Promise<SystemStartInfo>;
   abstract getSystemEnvironment(): Promise<SystemEnvironment>;
   abstract isApiRunning(): Promise<boolean>;
-  abstract getProgram(name?: string): Promise<Program>;
-  abstract setProgramPath(name: string, path: string): Promise<Program>;
-  abstract setEngine(engine: ContainerEngine): Promise<ContainerEngine>;
 
   abstract getWSLDistributions(): Promise<WSLDistribution[]>;
 }
@@ -636,25 +635,23 @@ export class BrowserContainerClient extends PodmanRestApiClient {
       return result.data;
     });
   }
-  async setProgramPath(name: string, path: string) {
-    return this.withResult<Program>(async () => {
-      const result = await this.dataApiDriver.post<Program>("/program", {
-        name,
-        path
-      });
-      return result.data;
-    });
-  }
-  async setEngine(engine: ContainerEngine) {
-    return this.withResult<ContainerEngine>(async () => {
-      const result = await this.dataApiDriver.post<ContainerEngine>("/engine", { engine });
+  async getWSLDistributions() {
+    return this.withResult<WSLDistribution[]>(async () => {
+      const result = await this.dataApiDriver.get<WSLDistribution[]>("/wsl.distributions");
       return result.data;
     });
   }
 
-  async getWSLDistributions() {
-    return this.withResult<WSLDistribution[]>(async () => {
-      const result = await this.dataApiDriver.get<WSLDistribution[]>("/wsl.distributions");
+  async setUserConfiguration(options: Partial<UserConfigurationOptions>) {
+    return this.withResult<UserConfiguration>(async () => {
+      const result = await this.dataApiDriver.post<UserConfiguration>("/user/configuration", options);
+      return result.data;
+    });
+  }
+
+  async getUserConfiguration() {
+    return this.withResult<UserConfiguration>(async () => {
+      const result = await this.dataApiDriver.get<UserConfiguration>("/user/configuration");
       return result.data;
     });
   }
@@ -769,45 +766,32 @@ export class NativeContainerClient extends PodmanRestApiClient {
       return result.body;
     });
   }
-  async getProgram(program: string | undefined) {
-    return this.withResult<Program>(async () => {
-      const result = await Native.getInstance().proxyRequest<Program>({
-        method: "/system/program/get",
-        params: {
-          program
-        }
-      });
-      return result.body;
-    });
-  }
-  async setProgramPath(program: string, path: string) {
-    return this.withResult<Program>(async () => {
-      const result = await Native.getInstance().proxyRequest<Program>({
-        method: "/system/program/set",
-        params: {
-          program,
-          path
-        }
-      });
-      return result.body;
-    });
-  }
-  async setEngine(engine: ContainerEngine) {
-    return this.withResult<ContainerEngine>(async () => {
-      const result = await Native.getInstance().proxyRequest<ContainerEngine>({
-        method: "/system/engine/set",
-        params: {
-          engine
-        }
-      });
-      return result.body;
-    });
-  }
 
   async getWSLDistributions() {
     return this.withResult<WSLDistribution[]>(async () => {
       const result = await Native.getInstance().proxyRequest<WSLDistribution[]>({
         method: "/wsl.distributions"
+      });
+      return result.body;
+    });
+  }
+
+  async getUserConfiguration() {
+    return this.withResult<UserConfiguration>(async () => {
+      const result = await Native.getInstance().proxyRequest<UserConfiguration>({
+        method: "/user/configuration/get",
+      });
+      return result.body;
+    });
+  }
+
+  async setUserConfiguration(options: Partial<UserConfigurationOptions>) {
+    return this.withResult<UserConfiguration>(async () => {
+      const result = await Native.getInstance().proxyRequest<UserConfiguration>({
+        method: "/user/configuration/set",
+        params: {
+          options
+        }
       });
       return result.body;
     });

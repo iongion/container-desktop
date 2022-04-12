@@ -1,16 +1,13 @@
 import { Alignment, Navbar, NavbarGroup, NavbarHeading, Spinner, SpinnerSize, Intent } from "@blueprintjs/core";
 
-import { useTranslation } from "react-i18next";
-
 import { useStoreState } from "../domain/types";
 import CurrentEnvironment, { PROJECT_VERSION } from "../Environment";
 
 import "./AppSidebarFooter.css";
 
 export function AppSidebarFooter() {
-  const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
-  const running = useStoreState((state) => state.environment.running);
+  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
   const pendingIndicatorStyle: React.CSSProperties = {
     visibility: pending ? "visible" : "hidden"
   };
@@ -19,14 +16,20 @@ export function AppSidebarFooter() {
       <Spinner intent={Intent.PRIMARY} size={SpinnerSize.SMALL} />
     </div>
   );
-  const versionString = `${PROJECT_VERSION}[${CurrentEnvironment.name[0]}]`;
+  const versionString = `GUI v${PROJECT_VERSION}.${CurrentEnvironment.name[0]}`;
+  const programString = `CLI ${userConfiguration.program.name} ${userConfiguration.program.currentVersion}`;
   return (
     <div className="AppSidebarFooter">
       <Navbar>
         <NavbarGroup align={Alignment.LEFT}>
-          <NavbarHeading>{running ? t("System service is running") : t("System service is not running")} - <span className="AppSidebarVersionString">{versionString}</span> </NavbarHeading>
+          <NavbarHeading>
+            <span className="AppSidebarVersionString">{versionString}</span> &nbsp; / &nbsp;
+            <span className="AppSidebarProgramString">{programString}</span>
+          </NavbarHeading>
         </NavbarGroup>
-        <NavbarGroup align={Alignment.RIGHT}>{pendingIndicator}</NavbarGroup>
+        <NavbarGroup align={Alignment.RIGHT}>
+          {pendingIndicator}
+        </NavbarGroup>
       </Navbar>
     </div>
   );

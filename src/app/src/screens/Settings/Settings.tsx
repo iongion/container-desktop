@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { AnchorButton, Button, Callout, ControlGroup, FormGroup, InputGroup, Intent } from "@blueprintjs/core";
+import { AnchorButton, Button, Callout, Checkbox, ControlGroup, FormGroup, Icon, InputGroup, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
-import { mdiEmoticonSad } from "@mdi/js";
+import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
 import Environment from "../../Environment";
@@ -28,14 +28,16 @@ export const Title = "Settings";
 export const Screen: AppScreen<ScreenProps> = () => {
   const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const { t } = useTranslation();
+  const phase = useStoreState((state) => state.phase);
+  const pending = useStoreState((state) => state.pending);
   const native = useStoreState((state) => state.native);
   const running = useStoreState((state) => state.environment.running);
   const system = useStoreState((state) => state.environment.system);
-  const program = useStoreState((state) =>
-    state.settings.environment ? state.settings.environment.program : state.environment.program
-  );
-  const programSetPath = useStoreActions((actions) => actions.settings.programSetPath);
-  const provisioned = program && program.path;
+  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
+  const connect = useStoreActions((actions) => actions.connect);
+  const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
+  const program = userConfiguration.program;
+  const provisioned = !!program.path;
   const isValid = provisioned && program.currentVersion;
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -47,7 +49,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
         const filePath = result?.filePaths[0];
         if (!result.canceled && filePath && program) {
           try {
-            const newProgram = await programSetPath({ name: "podman", path: filePath });
+            await setUserConfiguration({
+              program: { name: "podman", path: filePath }
+            });
             setProgramPaths((prev) => ({ ...prev, [program]: filePath }));
           } catch (error) {
             console.error("Unable to change program path", error);
@@ -58,7 +62,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         console.error("Unable to open file dialog");
       }
     },
-    [programSetPath, setProgramPaths, t]
+    [setUserConfiguration, setProgramPaths, t]
   );
   const onProgramPathChange = useCallback(
     (event: React.FormEvent<HTMLInputElement>) => {
@@ -71,20 +75,42 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [programPaths]
   );
+  const onConnectClick = useCallback(
+    async () => {
+      await connect({ startApi: true });
+    },
+    [connect]
+  );
+  const onAutoStartApiChange = useCallback(async (e) => {
+    await setUserConfiguration({ autoStartApi: !!e.currentTarget.checked });
+  }, [setUserConfiguration]);
+
+  let title = "";
+  let errorMessage = "";
+  let icon = mdiEmoticonSad;
+  let reconnectActionText = t("Connect");
+  if (program?.path) {
+    title = t("The API is not running");
+    errorMessage = t("Check the logs from application data path if this is not intended behavior");
+    icon = mdiEmoticonWink;
+    reconnectActionText = t("Connect and try to start the api");
+  } else {
+    title = t("Automatic detection failed");
+    errorMessage = t("To be able to continue, all required programs need to be installed");
+  }
 
   const contentWidget =
     provisioned && running ? null : (
       <Callout
         className="AppSettingsCallout"
-        title={t("Automatic detection failed")}
-        icon={<ReactIcon.Icon path={mdiEmoticonSad} size={3} />}
+        title={title}
+        icon={<ReactIcon.Icon path={icon} size={3} />}
       >
-        <p>{t("To be able to continue, all required programs need to be installed")}</p>
+        <p>{errorMessage}</p>
+        <Button disabled={pending} fill text={reconnectActionText} icon={IconNames.REFRESH} onClick={onConnectClick} />
       </Callout>
     );
-
   const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager /> : null;
-
   const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(system, null, 2)} /> : null;
 
   return (
@@ -95,17 +121,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <div
             className="AppSettingsField"
             data-field="program.path"
-            data-program-name={program.name}
+            data-program-name={program?.name}
             data-program-present={isValid ? "yes" : "no"}
           >
+            <div className="AppSettingUserConfigurationPath">
+              <Icon icon={IconNames.INFO_SIGN} />
+              <strong>{t('Application settings and logs path')}</strong>
+              <input type="text" value={userConfiguration.path} readOnly/>
+            </div>
             <FormGroup
               helperText={
                 <div className="AppSettingsFieldProgramHelper">
                   &nbsp;
                   {isValid ? (
                     <span>{t("Detected version {{currentVersion}}", program)}</span>
-                  ) : program.currentVersion ? (
-                    t("The location of the {{program}} executable binary", { program: program.name })
+                  ) : program?.currentVersion ? (
+                    t("The location of the {{program}} executable binary", { program: program?.name })
                   ) : (
                     t("Could not detect current version")
                   )}
@@ -116,10 +147,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   minimal
                   icon={isValid ? IconNames.THUMBS_UP : IconNames.THUMBS_DOWN}
                   intent={isValid ? Intent.SUCCESS : Intent.DANGER}
-                  text={program.title}
-                  title={t("Go to {{title}} homepage", program)}
+                  text={program.name}
+                  title={t("Go to {{name}} homepage", program)}
                   target="_blank"
-                  href={program.homepage}
+                  href={program.homepage || ""}
                 />
               }
               labelFor={`${program.name}_path`}
@@ -131,7 +162,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   id={`${program.name}_path`}
                   readOnly={native}
                   placeholder={"..."}
-                  value={programPaths[program.name] || program.path}
+                  value={programPaths[program.name || ""] || program.path}
                   onChange={onProgramPathChange}
                 />
                 {native ? (
@@ -150,6 +181,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </div>
         </div>
         {engineSwitcher}
+        <div className="AppSettingsForm" data-form="flags">
+          <FormGroup
+            label={t("Startup")}
+            labelFor="autoStartApi"
+            helperText={t('Not needed if container engine is already running as a service')}
+          >
+            <ControlGroup fill={true}>
+              <Checkbox
+                id="autoStartApi"
+                disabled={pending}
+                label={t("Automatically start the Api")}
+                checked={!!userConfiguration.autoStartApi}
+                onChange={onAutoStartApiChange}
+              />
+            </ControlGroup>
+          </FormGroup>
+        </div>
         {systemDetailsViewer}
       </div>
     </div>

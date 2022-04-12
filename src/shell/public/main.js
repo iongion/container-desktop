@@ -6,14 +6,15 @@ require("fix-path")();
 // vendors
 const { app, dialog, BrowserWindow, shell, ipcMain, protocol } = require("electron");
 const contextMenu = require("electron-context-menu");
-const logger = require("electron-log");
 const electronConfig = require("electron-cfg");
 const is_ip_private = require("private-ip");
 // project
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
+const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
+const logger = createLogger(__filename);
 
 const isDebug = false;
 const isDevelopment = () => {
@@ -37,7 +38,8 @@ function createWindow() {
       sandbox: false
     },
     icon: iconPath,
-    ...windowConfigOptions.options()
+    ...windowConfigOptions.options(),
+    show: false,
   };
   const osType = os.type();
   if (osType === "Linux" || osType === "Windows_NT") {
@@ -114,6 +116,9 @@ function createWindow() {
     // open url in a browser and prevent default
     shell.openExternal(event.url);
     return { action: "deny" };
+  });
+  window.once('ready-to-show', () => {
+    window.show();
   });
   const appURL = isDevelopment()
     ? "http://localhost:5000"

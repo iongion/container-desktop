@@ -3,10 +3,12 @@ const path = require("path");
 // vendors
 require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
-const logger = require("electron-log");
-// locals
+// project
+const { createLogger } = require("@podman-desktop-companion/logger");
 const { getApiConfig, getApiDriver } = require("@podman-desktop-companion/container-client");
 const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
+// locals
+const logger = createLogger(__filename);
 
 const application = {
   setup: function () {

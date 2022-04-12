@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Store, EasyPeasyConfig, createTypedHooks } from "easy-peasy";
 // project
-import { ConnectOptions, SystemEnvironment } from "../Types";
+import { ConnectOptions, SystemEnvironment, UserConfigurationOptions } from "../Types";
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -12,27 +12,36 @@ import { SettingsModel } from "../screens/Settings/Model";
 import { TroubleshootModel } from "../screens/Troubleshoot/Model";
 import { IContainerClient } from "../Api.clients";
 
-export interface AppModelState {
-  revision: number;
-  hash: string;
 
-  inited: boolean;
+export enum AppBootstrapPhase {
+  INITIAL = "initial",
+  CONFIGURED = "configured",
+  CONNECTED = "connected",
+  CONNECTING = "connecting",
+  READY = "ready",
+  FAILED = "failed"
+}
+
+export interface AppModelState {
+  phase: AppBootstrapPhase;
   pending: boolean;
   native: boolean;
-
   environment: SystemEnvironment;
 }
 
 export interface AppModel extends AppModelState {
   // actions
-  setInited: Action<AppModel, boolean>;
+  setPhase: Action<AppModel, AppBootstrapPhase>;
   setPending: Action<AppModel, boolean>;
+  setEnvironment: Action<AppModel, Partial<SystemEnvironment>>;
 
   domainReset: Action<AppModel, Partial<AppModelState>>;
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
 
   // thunks
   connect: Thunk<AppModel, ConnectOptions>;
+  setUserConfiguration: Thunk<AppModel, Partial<UserConfigurationOptions>>;
+  getUserConfiguration: Thunk<AppModel>;
 }
 
 export type AppStore = Store<AppModel, EasyPeasyConfig<object | undefined, object>>;
