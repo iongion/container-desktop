@@ -127,7 +127,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             <div className="AppSettingUserConfigurationPath">
               <Icon icon={IconNames.INFO_SIGN} />
               <strong>{t('Application settings and logs path')}</strong>
-              <code>{userConfiguration.path}</code>
+              <input type="text" value={userConfiguration.path} readOnly/>
             </div>
             <FormGroup
               helperText={
