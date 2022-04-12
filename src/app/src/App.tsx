@@ -85,7 +85,7 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
   }
   const ready = inited && running && provisioned;
   let sidebar;
-  if (ready && !currentScreen.Metadata?.WithoutSidebar) {
+  if (ready) {
     sidebar = <AppSidebar screens={Screens} currentScreen={currentScreen} />;
   }
   let content;
@@ -103,11 +103,7 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
     );
   } else if (inited) {
     content = (
-      <Switch>
-        <Route path={SettingsScreen.Route.Path} key={SettingsScreen.ID} exact>
-          <SettingsScreen navigator={navigator} />
-        </Route>
-      </Switch>
+      <SettingsScreen navigator={navigator} />
     );
   } else {
     content = <AppLoading />;
