@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0-b.2] - 2022-04-13
+
+* Exposed application configuration storage path for the user to be informed
+* Ability to turn auto-start on or off
+* Ability to re-connect
+* Changed bootstrap procedure using phases/states to improve detection
+* Improved bootstrap failure reasons
+* Use a single configuration source
+* Wrapped logging into its own module to support switching
+* Clean-up of old artifacts
+
 ## [4.0.0-b.1] - 2022-04-09
 
 * Upgrade to support podman `4.0.x`
