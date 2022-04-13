@@ -6,11 +6,11 @@ require("fix-path")();
 // vendors
 const { app, dialog, BrowserWindow, shell, ipcMain, protocol } = require("electron");
 const contextMenu = require("electron-context-menu");
-const electronConfig = require("electron-cfg");
 const is_ip_private = require("private-ip");
 // project
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { createLogger } = require("@podman-desktop-companion/logger");
+const userSettings = require("@podman-desktop-companion/user-settings");
 // locals
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
@@ -24,7 +24,7 @@ const isDevelopment = () => {
 function createWindow() {
   let window;
   const iconPath = isDevelopment() ? path.join(__dirname, "../icons/appIcon.png") : path.join(__dirname, "appIcon.png");
-  const windowConfigOptions = electronConfig.window();
+  const windowConfigOptions = userSettings.window();
   const windowOptions = {
     backgroundColor: "#261b26",
     width: 1024,
@@ -39,7 +39,7 @@ function createWindow() {
     },
     icon: iconPath,
     ...windowConfigOptions.options(),
-    show: false,
+    show: false
   };
   const osType = os.type();
   if (osType === "Linux" || osType === "Windows_NT") {
@@ -96,7 +96,7 @@ function createWindow() {
     return result;
   });
   // Application window
-  window = electronConfig.window().create(windowOptions);
+  window = userSettings.window().create(windowOptions);
   // Automatically open Chrome's DevTools in development mode.
   if (isDevelopment() || isDebug) {
     window.webContents.openDevTools();
@@ -117,7 +117,7 @@ function createWindow() {
     shell.openExternal(event.url);
     return { action: "deny" };
   });
-  window.once('ready-to-show', () => {
+  window.once("ready-to-show", () => {
     window.show();
   });
   const appURL = isDevelopment()

@@ -1,8 +1,8 @@
 {
-  "name": "@podman-desktop-companion/logger",
+  "name": "@podman-desktop-companion/user-settings",
   "version": "1.0.0",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
-  "description": "Container desktop logging utils",
+  "description": "Container desktop settings utils",
   "main": "src/index.js",
   "typings": "./src/index.d.ts",
   "scripts": {
@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@podman-desktop-companion/user-settings": "file:../user-settings",
-    "electron-log": "^4.4.6"
+    "electron-cfg": "^1.2.7"
   },
   "engines": {
     "node": "~16"

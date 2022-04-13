@@ -3,10 +3,10 @@ const fs = require("fs");
 const path = require("path");
 // vendors
 const axios = require("axios");
-const electronConfig = require("electron-cfg");
 // project
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
-const { createLogger } = require("@podman-desktop-companion/logger");
+const { createLogger, getLevel } = require("@podman-desktop-companion/logger");
+const userSettings = require("@podman-desktop-companion/user-settings");
 // local
 const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/executor");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
@@ -39,21 +39,21 @@ function detectEngine() {
 }
 
 function getConfigurationPath() {
-  return electronConfig.resolveUserDataPath(".");
+  return userSettings.getPath();
 }
 
 function getEngine() {
-  return electronConfig.get("engine", detectEngine());
+  return userSettings.get("engine", detectEngine());
 }
 
 function setEngine(value) {
   const engine = value || getEngine();
-  electronConfig.set("engine", engine);
+  userSettings.set("engine", engine);
   return engine;
 }
 
 function getAutoStartApi() {
-  return electronConfig.get("autoStartApi", false);
+  return userSettings.get("autoStartApi", false);
 }
 
 async function getUserConfiguration() {
@@ -68,7 +68,7 @@ async function getUserConfiguration() {
 
 async function setUserConfiguration(options) {
   Object.keys(options).forEach((key) => {
-    electronConfig.set(key, options[key]);
+    userSettings.set(key, options[key]);
   });
   return await getUserConfiguration();
 }
@@ -84,7 +84,7 @@ function getProgramKey(program) {
 async function getProgramPath() {
   const program = getProgramName();
   const programKey = getProgramKey(program);
-  let programPath = electronConfig.get(programKey);
+  let programPath = userSettings.get(programKey);
   if (programPath) {
     // logger.debug(`Program ${program} found in ${programPath} - cache hit`);
   } else {
@@ -120,7 +120,7 @@ async function getProgramPath() {
 async function setProgramPath(program, programPath) {
   // TODO: Validate the program before configuring it
   const programKey = getProgramKey(program);
-  electronConfig.set(programKey, programPath);
+  userSettings.set(programKey, programPath);
   return true;
 }
 
@@ -208,15 +208,17 @@ function getApiConfig() {
   const config = {
     timeout: 30000,
     socketPath: getApiSocketPath(),
-    baseURL: "/v3.0.0/libpod",
+    baseURL: "http://d/v3.0.0/libpod",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json"
-    },
+    }
+  };
+  console.debug("API configuration", config);
+  return {
+    ...config,
     adapter: require("axios/lib/adapters/http")
   };
-  // console.debug("API configuration", config);
-  return config;
 }
 
 function getApiDriver(cfg) {
@@ -226,22 +228,26 @@ function getApiDriver(cfg) {
   // Add a request interceptor
   driver.interceptors.request.use(
     function (config) {
-      // logger.debug("HTTP request", axiosConfigToCURL(config));
+      if (getLevel() === "debug") {
+        logger.debug("[container-client] HTTP request", axiosConfigToCURL(config));
+      }
       return config;
     },
     function (error) {
-      logger.error("HTTP request error", error);
+      logger.error("[container-client] HTTP request error", error);
       return Promise.reject(error);
     }
   );
   // Add a response interceptor
   driver.interceptors.response.use(
     function (response) {
-      // logger.debug("HTTP response", response);
+      if (getLevel() === "debug") {
+        logger.debug("HTTP response", response);
+      }
       return response;
     },
     function (error) {
-      logger.error("HTTP response error", error.message);
+      logger.error("[container-client] HTTP response error", error.message);
       return Promise.reject(error);
     }
   );
