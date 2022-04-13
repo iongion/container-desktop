@@ -89,14 +89,16 @@ module.exports = {
           result.success = true;
           result.body = await service(params);
         } catch (error) {
-          logger.error("Invoking error", error.message, {
+          const response = {
             statusText: error.response?.statusText,
-            code: error.response?.code
-          });
+            status: error.response?.status,
+            data: error.response?.data,
+          };
+          logger.error("Invoking error", error.message, response, "when invoking", { method, params });
           result.success = false;
           result.body = error.message;
           result.stack = error.stack;
-          result.response = error.response;
+          result.response = response;
         }
       } else {
         logger.error("No such IPC method", { method, params });

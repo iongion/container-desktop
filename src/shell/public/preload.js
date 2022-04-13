@@ -63,6 +63,14 @@ const application = {
       logger.error("Unable to relaunch", error);
     }
   },
+  openDevTools: () => {
+    logger.debug("Application openDevTools");
+    try {
+      ipcRenderer.send("openDevTools");
+    } catch (error) {
+      logger.error("Unable to openDevTools", error);
+    }
+  },
   openFileSelector: async (options) => {
     logger.debug("Application openFileSelector", options);
     try {

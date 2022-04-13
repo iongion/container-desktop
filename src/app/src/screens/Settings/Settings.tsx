@@ -89,6 +89,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
     configuration["logging.level"] = e.currentTarget.value;
     await setUserConfiguration(configuration);
   }, [setUserConfiguration]);
+  const onToggleInspectorClick = useCallback(async (e) => {
+    Native.getInstance().openDevTools();
+  }, []);
 
   let title = "";
   let errorMessage = "";
@@ -215,6 +218,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   return <option key={key} value={level}>{level}</option>;
                 })}
               </HTMLSelect>
+              <Button icon={IconNames.SEARCH} text={t('Toggle inspector')} onClick={onToggleInspectorClick} />
             </ControlGroup>
           </FormGroup>
         </div>

@@ -1,5 +1,5 @@
 function axiosConfigToCURL(config) {
-  let requestUrl = `http://d${config.baseURL}${config.url}`;
+  let requestUrl = `${config.baseURL}${config.url}`;
   if (Object.keys(config.params || {}).length) {
     const searchParams = new URLSearchParams();
     Object.entries(config.params).forEach(([key, value]) => searchParams.set(key, `${value}`));

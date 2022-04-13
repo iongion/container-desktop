@@ -75,6 +75,9 @@ function createWindow() {
   ipcMain.on("register.process", (p) => {
     logger.debug("Must register", p);
   });
+  ipcMain.on("openDevTools", () => {
+    window.webContents.openDevTools();
+  });
   ipcMain.handle("openFileSelector", async function (event, options) {
     logger.debug("IPC - openFileSelector - start", options);
     const selection = await dialog.showOpenDialog(window, {

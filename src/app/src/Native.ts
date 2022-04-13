@@ -45,6 +45,7 @@ interface NativeBridge {
     close: () => void;
     exit: () => void;
     relaunch: () => void;
+    openDevTools: () => void;
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
     proxy: <T>(request: any) => Promise<T>;
@@ -125,6 +126,9 @@ export class Native {
   }
   public withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());
+  }
+  public openDevTools() {
+    return this.bridge.application.openDevTools();
   }
   public async openFileSelector(options?: OpenFileSelectorOptions) {
     let result: FileSelection;

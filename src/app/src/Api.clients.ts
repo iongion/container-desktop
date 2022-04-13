@@ -96,6 +96,10 @@ export type IContainerClientInvoke = <T, D = undefined>(
 
 export interface IContainerClient {
   invoke: IContainerClientInvoke;
+
+  setLogLevel: (level: string) => void,
+  getLogLevel: () => string,
+
   getDomain: () => Promise<Domain>;
   getImages: () => Promise<ContainerImage[]>;
   getImage: (id: string, opts?: FetchImageOptions) => Promise<ContainerImage>;
@@ -148,6 +152,15 @@ export interface IContainerClient {
 }
 
 export abstract class BaseContainerClient {
+  private logLevel: string = "error";
+  public setLogLevel(level: string) {
+    this.logLevel = level;
+    return level;
+  }
+  public getLogLevel() {
+    return this.logLevel;
+  }
+
   protected async withResult<T>(handler: () => Promise<T>) {
     const response = await handler();
     return response;
@@ -196,6 +209,7 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
       timeout: 30000,
       headers
     };
+    const getLogLevel = () => this.getLogLevel();
     if (opts.socketPath) {
       config.socketPath = opts.socketPath;
       config.baseURL = opts.baseURL;
@@ -208,21 +222,26 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
     // Add a request interceptor
     this.dataApiDriver.interceptors.request.use(
       function (config) {
-        // console.debug("HTTP request", axiosConfigToCURL(config as any));
+        if (getLogLevel() === "debug") {
+          console.debug("[api.client] HTTP request", axiosConfigToCURL(config as any));
+        }
         return config;
       },
       function (error) {
-        console.error("HTTP request error", error);
+        console.error("[api.client] HTTP request error", error);
         return Promise.reject(error);
       }
     );
     // Add a response interceptor
     this.dataApiDriver.interceptors.response.use(
       function (response) {
+        if (getLogLevel() === "debug") {
+          console.debug("[api.client] HTTP response", response);
+        }
         return response;
       },
       function (error) {
-        console.error("HTTP response error", error.message);
+        console.error("[api.client] HTTP response error", error.message);
         return Promise.reject(error);
       }
     );
@@ -655,6 +674,7 @@ export class BrowserContainerClient extends PodmanRestApiClient {
       return result.data;
     });
   }
+
 }
 
 export class NativeContainerClient extends PodmanRestApiClient {
@@ -796,4 +816,5 @@ export class NativeContainerClient extends PodmanRestApiClient {
       return result.body;
     });
   }
+
 }

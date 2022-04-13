@@ -179,9 +179,9 @@ function getCurrentMachine() {
 
 function getCurrentMachineNamedPipeApiSocketPath() {
   let name = getCurrentMachine();
-  if (os.type() === "Windows_NT") {
-    name = "docker_engine";
-  }
+  // if (os.type() === "Windows_NT") {
+  //   name = "docker_engine";
+  // }
   return `//./pipe/${name}`;
 }
 
