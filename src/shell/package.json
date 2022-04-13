@@ -1,6 +1,6 @@
 {
   "name": "podman-desktop-companion",
-  "version": "4.0.0-b.2",
+  "version": "4.0.3-b.1",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman CLI desktop companion tool",
   "keywords": [],

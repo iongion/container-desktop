@@ -10,7 +10,6 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@podman-desktop-companion/user-settings": "file:../user-settings",
     "electron-cfg": "^1.2.7"
   },
   "engines": {
