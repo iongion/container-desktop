@@ -30,6 +30,27 @@ def run_env(ctx, cmd, env=None):
         ctx.run(cmd, env=cmd_env)
 
 
+def build_apps(ctx, env=None):
+    with ctx.cd("src/app"):
+        run_env(ctx, "npm run build", env)
+        run_env(ctx, "cp -R build ../shell/build", env)
+    with ctx.cd("src/shell"):
+        run_env(ctx, "cp -R public/* build", env)
+        run_env(ctx, "cp -R icons/appIcon.* build", env)
+
+
+def bundle_apps(c, env=None):
+    system = platform.system()
+    with c.cd("src/shell"):
+        if system == "Darwin":
+            run_env(c, "npm run electron:package:mac", env)
+        elif system == "Linux":
+            run_env(c, "npm run electron:package:linux_x86", env)
+            run_env(c, "npm run electron:package:linux_arm", env)
+        else:
+            run_env(c, "npm run electron:package:win", env)
+
+
 @task(default=True)
 def help(c):
     c.run("invoke --list")
@@ -67,26 +88,20 @@ def prepare(c, docs=False):
 
 @task
 def build(c, docs=False):
-    with c.cd("src/app"):
-        run_env(c, "npm run build")
-        run_env(c, "cp -R build ../shell/build")
-    with c.cd("src/shell"):
-        run_env(c, "cp -R public/* build")
-        run_env(c, "cp -R icons/appIcon.* build")
+    build_apps(c)
 
 
 @task
 def bundle(c, docs=False):
+    bundle_apps(c)
+
+
+@task
+def release(c, docs=False):
     system = platform.system()
-    with c.cd("src/shell"):
-        if system == "Darwin":
-            run_env(c, "npm run electron:package:mac")
-        elif system == "Linux":
-            run_env(c, "npm run electron:package:win")
-            run_env(c, "npm run electron:package:linux_x86")
-            run_env(c, "npm run electron:package:linux_arm")
-        else:
-            run_env(c, "npm run electron:package:win")
+    env = {NODE_ENV: "production", REACT_APP_ENV: "production"}
+    build_apps(c, env)
+    bundle_apps(c, env)
 
 
 @task
@@ -144,4 +159,4 @@ shell.add_task(shell_start)
 docs = Collection("docs")
 docs.add_task(docs_start)
 
-namespace = Collection(clean, prepare, build, bundle, app, shell, docs, start)
+namespace = Collection(clean, prepare, build, bundle, release, app, shell, docs, start)

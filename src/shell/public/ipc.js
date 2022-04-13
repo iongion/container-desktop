@@ -89,7 +89,7 @@ module.exports = {
           result.success = true;
           result.body = await service(params);
         } catch (error) {
-          logger.error("Invoking error", error.message, error.response, error);
+          logger.error("Invoking error", error.message, error.response);
           result.success = false;
           result.body = error.message;
           result.stack = error.stack;
