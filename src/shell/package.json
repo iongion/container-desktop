@@ -17,13 +17,13 @@
   "dependencies": {
     "@podman-desktop-companion/container-client": "file:../../packages/container-client",
     "@podman-desktop-companion/executor": "file:../../packages/executor",
+    "@podman-desktop-companion/logger": "file:../../packages/logger",
     "@podman-desktop-companion/rpc": "file:../../packages/rpc",
     "@podman-desktop-companion/terminal": "file:../../packages/terminal",
     "ajv": "8.11.0",
     "axios": "^0.26.1",
     "electron-cfg": "^1.2.7",
     "electron-context-menu": "^3.1.2",
-    "electron-log": "^4.4.6",
     "fix-path": "^3.0.0",
     "private-ip": "^2.3.3",
     "uuid": "8.3.2"

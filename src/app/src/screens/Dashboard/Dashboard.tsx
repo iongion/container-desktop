@@ -14,8 +14,8 @@ import { useStoreActions, useStoreState } from "../../domain/types";
 // module
 import "./Dashboard.css";
 
-
 export const ID = "dashboard";
+export const Title = "Dashboard";
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -76,7 +76,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Dashboard";
+Screen.Title = Title;
 Screen.Route = {
   Path: "/"
 };

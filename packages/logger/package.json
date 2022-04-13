@@ -1,16 +1,17 @@
 {
-  "name": "@podman-desktop-companion/terminal",
+  "name": "@podman-desktop-companion/logger",
   "version": "1.0.0",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
-  "description": "Container desktop helper terminal",
+  "description": "Container desktop logging utils",
   "main": "src/index.js",
   "typings": "./src/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "license": "ISC",
-  "dependencies": {
-    "@podman-desktop-companion/executor": "file:../executor"
+  "dependencies": {},
+  "peerDependencies": {
+    "electron-log": "^4.4.6"
   },
   "engines": {
     "node": "~16"

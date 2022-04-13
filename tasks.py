@@ -103,12 +103,6 @@ def clean(c, docs=False):
 
 
 @task
-def api_start(c, docs=False):
-    with c.cd("src/api"):
-        run_env(c, "npm start")
-
-
-@task
 def app_start(c, docs=False):
     with c.cd("src/app"):
         run_env(c, "npm start")
@@ -133,7 +127,6 @@ def start(c, docs=False):
         [
             "concurrently",
             "-k",
-            '"inv api.api-start"',
             '"inv app.app-start"',
             '"inv shell.shell-start"',
             '"inv docs.docs-start"',
@@ -141,9 +134,6 @@ def start(c, docs=False):
     )
     run_env(c, launcher)
 
-
-api = Collection("api")
-api.add_task(api_start)
 
 app = Collection("app")
 app.add_task(app_start)
@@ -154,4 +144,4 @@ shell.add_task(shell_start)
 docs = Collection("docs")
 docs.add_task(docs_start)
 
-namespace = Collection(clean, prepare, build, bundle, api, app, shell, docs, start)
+namespace = Collection(clean, prepare, build, bundle, app, shell, docs, start)

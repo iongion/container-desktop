@@ -1,6 +1,6 @@
 // vendors
-const logger = require("electron-log");
 // project
+const { createLogger } = require("@podman-desktop-companion/logger");
 const {
   isApiRunning,
   resetSystem,
@@ -14,27 +14,20 @@ const {
   restartMachine,
   stopMachine,
   removeMachine,
-  getEngine,
-  setEngine,
-  getProgram,
-  setProgramPath,
+  getUserConfiguration,
+  setUserConfiguration,
   getWSLDistributions
 } = require("@podman-desktop-companion/container-client");
+// locals
+const logger = createLogger(__filename);
 
 const servicesMap = {
-  "/system/engine/get": async function () {
-    return await getEngine();
+  "/user/configuration/get": async function () {
+    return await getUserConfiguration();
   },
-  "/system/engine/set": async function ({ engine }) {
-    await setEngine(engine);
-    return await getEngine();
-  },
-  "/system/program/get": async function ({ program }) {
-    return await getProgram(program);
-  },
-  "/system/program/set": async function ({ program, path }) {
-    await setProgramPath(program, path);
-    return await getProgram(program);
+  "/user/configuration/set": async function ({ options }) {
+    await setUserConfiguration(options);
+    return await getUserConfiguration();
   },
   "/system/running": async function () {
     return await isApiRunning();
@@ -96,7 +89,7 @@ module.exports = {
           result.success = true;
           result.body = await service(params);
         } catch (error) {
-          logger.error("Invoking error", error.message, error.stack, error.response);
+          logger.error("Invoking error", error.message, error.response, error);
           result.success = false;
           result.body = error.message;
           result.stack = error.stack;

@@ -1,6 +1,7 @@
 .AppSettingsCallout {
   text-align: center;
-  padding-left: 0 !important;
+  padding: 5px !important;
+  margin: 0;
 }
 .AppSettingsForm {
   padding: 2px;

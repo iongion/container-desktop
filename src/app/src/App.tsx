@@ -1,13 +1,13 @@
-import { useCallback, useEffect } from "react";
-import { AnchorButton, Button, ButtonGroup, HotkeysProvider, Intent, NonIdealState, ProgressBar } from "@blueprintjs/core";
+import React, { useEffect } from "react";
+import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { HashRouter as Router, Switch, Route, useLocation } from "react-router-dom";
 
-import { createAppStore, StoreProvider } from "./domain/store";
-import { useStoreActions, useStoreState } from "./domain/types";
-import { AppScreen, Program } from "./Types";
+import { StoreProvider } from "./domain/store";
+import { AppStore, useStoreActions, useStoreState } from "./domain/types";
+import { Program } from "./Types";
 import { pathTo } from "./Navigator";
 
 import "./App.i18n";
@@ -18,7 +18,9 @@ import "./App.css";
 import { CURRENT_ENVIRONMENT } from "./Environment";
 
 import { AppHeader } from "./components/AppHeader";
+import { AppLoading } from "./components/AppLoading";
 import { AppSidebar } from "./components/AppSidebar";
+
 import { Screen as DashboardScreen } from "./screens/Dashboard";
 import { Screen as ContainersScreen } from "./screens/Container/ManageScreen";
 import { Screen as ContainerLogsScreen } from "./screens/Container/LogsScreen";
@@ -55,90 +57,13 @@ const Screens = [
   TroubleshootScreen
 ];
 
-interface AppLoadingProps {
+interface AppMainScreenContentProps {
   program: Program;
-  running: boolean;
-}
-const AppLoading: React.FC<AppLoadingProps> = ({ program, running }) => {
-  const { t } = useTranslation();
-  const connected = program.path && running;
-  const connect = useStoreActions((actions) => actions.connect);
-  const pending = useStoreState((state) => state.pending);
-  const onConnectClick = useCallback(
-    async () => {
-      const result = await connect({ autoStart: true });
-    },
-    [connect]
-  );
-  const callToAction = !connected ? (
-    <ButtonGroup>
-      <Button disabled={pending} fill text={t("Reconnect")} icon={IconNames.REFRESH} onClick={onConnectClick} />
-      <AnchorButton
-        href={pathTo("/screens/settings")}
-        icon={IconNames.COG}
-        text={t("Change settings")}
-        intent={Intent.PRIMARY}
-      />
-    </ButtonGroup>
-  ) : null;
-  const splashContent = pending ? <ProgressBar intent={Intent.PRIMARY} /> : callToAction;
-  return (
-    <>
-      <AppHeader program={program} running={running} screens={Screens} />
-      <div className="AppContent">
-        <div className="AppContentDocument">
-          <div className="AppLoadingSplash">
-            <div className="AppLoadingSplashContent">{splashContent}</div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-};
-
-interface AppContentProps {
+  inited: boolean;
   provisioned: boolean;
-  screens: AppScreen<any>[];
-  currentScreen: AppScreen<any>;
-}
-
-const AppContent: React.FC<AppContentProps> = ({ provisioned, screens, currentScreen }) => {
-  const content = provisioned ? (
-    <>
-      <AppSidebar screens={screens} currentScreen={currentScreen} />
-      <div className="AppContentDocument">
-        <HotkeysProvider>
-          <Switch>
-            {screens.map((Screen) => {
-              return (
-                <Route path={Screen.Route.Path} key={Screen.ID} exact>
-                  <Screen navigator={navigator} />
-                </Route>
-              );
-            })}
-          </Switch>
-        </HotkeysProvider>
-      </div>
-    </>
-  ) : (
-    <div className="AppContentDocument">
-      <HotkeysProvider>
-        <SettingsScreen navigator={navigator} />
-      </HotkeysProvider>
-    </div>
-  );
-  return (
-    <div className="AppContent">
-      {content}
-    </div>
-  );
-};
-
-interface AppLoadedProps {
-  program: Program;
   running: boolean;
 }
-const AppLoaded: React.FC<AppLoadedProps> = ({ program, running }) => {
+export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, inited, provisioned, running }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const currentScreen = Screens.find((screen) =>
@@ -148,47 +73,69 @@ const AppLoaded: React.FC<AppLoadedProps> = ({ program, running }) => {
     return (
       <NonIdealState
         icon={IconNames.WARNING_SIGN}
-        title={t("There is no such screen")}
+        title={t("There is no such screen {{pathname}}", location)}
         description={
           <>
             <p>{t("The screen was not found")}</p>
-            <a href="/">{t("Go to dashboard")}</a>
+            <a href={pathTo('/')}>{t("Go to dashboard")}</a>
           </>
         }
       />
     );
   }
+  const ready = inited && running && provisioned;
+  let sidebar;
+  if (ready && !currentScreen.Metadata?.WithoutSidebar) {
+    sidebar = <AppSidebar screens={Screens} currentScreen={currentScreen} />;
+  }
+  let content;
+  if (ready) {
+    content = (
+      <Switch>
+        {Screens.map((Screen) => {
+          return (
+            <Route path={Screen.Route.Path} key={Screen.ID} exact>
+              <Screen navigator={navigator} />
+            </Route>
+          );
+        })}
+      </Switch>
+    );
+  } else if (inited) {
+    content = (
+      <Switch>
+        <Route path={SettingsScreen.Route.Path} key={SettingsScreen.ID} exact>
+          <SettingsScreen navigator={navigator} />
+        </Route>
+      </Switch>
+    );
+  } else {
+    content = <AppLoading />;
+  }
   return (
     <>
       <AppHeader program={program} running={running} screens={Screens} currentScreen={currentScreen} />
-      <AppContent provisioned={!!program.path && running} screens={Screens} currentScreen={currentScreen} />
+      <div className="AppContent">
+        {sidebar}
+        <div className="AppContentDocument">
+          {content}
+        </div>
+      </div>
     </>
   );
 };
 
-export const AppMainContent = () => {
-  const inited = useStoreState((state) => state.inited);
-  const running = useStoreState((state) => state.environment.running);
-  const program = useStoreState((state) => state.environment.program);
-  let content;
-  if (inited) {
-    content = <AppLoaded program={program} running={running} />;
-  } else {
-    content = <AppLoading program={program} running={running} />;
-  }
-  return content;
-};
-
-export function AppMain() {
+export function AppMainScreen() {
   const inited = useStoreState((state) => state.inited);
   const native = useStoreState((state) => state.native);
   const running = useStoreState((state) => state.environment.running);
   const platform = useStoreState((state) => state.environment.platform);
-  const program = useStoreState((state) => state.environment.program);
   const connect = useStoreActions((actions) => actions.connect);
+  const program = useStoreState((state) => state.environment.userConfiguration.program);
+  const provisioned = !!program?.path;
   useEffect(() => {
     if (!inited) {
-      connect({ autoStart: true });
+      connect({ startApi: false });
     }
   }, [inited, running, connect]);
   return (
@@ -199,18 +146,25 @@ export function AppMain() {
       data-platform={platform}
       data-inited={inited ? "yes" : "no"}
       data-running={running ? "yes" : "no"}
-      data-provisioned={program?.path ? "yes" : "no"}
+      data-provisioned={provisioned ? "yes" : "no"}
     >
-      <Router>{<AppMainContent />}</Router>
+      <Router>
+        <AppMainScreenContent inited={inited} provisioned={provisioned} running={running} program={program} />
+      </Router>
     </div>
   );
 }
 
-export default function App() {
-  const store = createAppStore(CURRENT_ENVIRONMENT);
+export interface AppProps {
+  store: AppStore;
+}
+
+export const App:React.FC<AppProps> = ({ store }) => {
   return (
     <StoreProvider store={store}>
-      <AppMain />
+      <HotkeysProvider>
+        <AppMainScreen />
+      </HotkeysProvider>
     </StoreProvider>
   );
 }

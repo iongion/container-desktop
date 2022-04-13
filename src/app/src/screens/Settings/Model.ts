@@ -14,8 +14,6 @@ export interface SettingsModel extends SettingsModelState {
   setEnvironment: Action<SettingsModel, SystemEnvironment>;
   // thunks
   fetchEnvironment: Thunk<SettingsModel>;
-  programSetPath: Thunk<SettingsModel, { name: string; path: string }>;
-  programSetEngine: Thunk<any, ContainerEngine>;
 }
 
 export const createModel = (registry: AppRegistry): SettingsModel => {
@@ -30,18 +28,5 @@ export const createModel = (registry: AppRegistry): SettingsModel => {
         return environment;
       });
     }),
-    programSetPath: thunk(async (actions, { name, path }) => {
-      return registry.withPending(async () => {
-        await registry.api.setProgramPath(name, path);
-        await actions.fetchEnvironment();
-        return path;
-      });
-    }),
-    programSetEngine: thunk(async (actions, engine) => {
-      return registry.withPending(async () => {
-        await registry.api.setEngine(engine);
-        return engine;
-      });
-    })
   };
 };

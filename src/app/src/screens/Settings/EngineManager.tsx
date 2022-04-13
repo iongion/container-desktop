@@ -9,12 +9,14 @@ import { useStoreActions, useStoreState } from "../../domain/types";
 import { RadioLabel } from "../../components/RadioLabel";
 import { IconNames } from "@blueprintjs/icons";
 
-export interface ContainerEngineManagerProps {}
+export interface ContainerEngineManagerProps {
+  disabled?: boolean;
+}
 
-export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = () => {
+export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ disabled }) => {
   const { t } = useTranslation();
-  const programSetEngine = useStoreActions((actions) => actions.settings.programSetEngine);
-  const environmentEngine = useStoreState((state) => state.environment.engine);
+  const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
+  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
   const ContainerEngines = useMemo(
     () => [
       { engine: ContainerEngine.NATIVE, label: t("Native"), active: false, enabled: true },
@@ -29,20 +31,21 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = () 
     [t]
   );
   const platform = useStoreState((state) => state.environment.platform);
-  const [selectedEngine, setSelectedEngine] = useState(environmentEngine);
+  const [selectedEngine, setSelectedEngine] = useState(userConfiguration.engine);
   const onContainerEngineChange = useCallback((e) => {
     setSelectedEngine(e.currentTarget.value);
   }, []);
   const onSaveSettingsClick = useCallback((e) => {
-    programSetEngine(selectedEngine).finally(() => {
+    setUserConfiguration({ engine: selectedEngine }).finally(() => {
       Native.getInstance().exit();
       Native.getInstance().relaunch();
     });
-  }, [programSetEngine, selectedEngine]);
+  }, [setUserConfiguration, selectedEngine]);
   return (
     <div className="AppSettingsForm" data-form="engine">
       <div className="AppSettingsFormColumn">
         <RadioGroup
+          disabled={disabled}
           className="AppSettingsFormContent"
           data-form="engine"
           label={t("Container environment")}
@@ -63,7 +66,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = () 
                 key={engine}
                 className="AppSettingsField"
                 disabled={disabled}
-                labelElement={<RadioLabel text={label} highlight={environmentEngine === it.engine} />}
+                labelElement={<RadioLabel text={label} highlight={userConfiguration.engine === it.engine} />}
                 value={engine}
               >
                 {restrict}
@@ -73,7 +76,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = () 
         </RadioGroup>
       </div>
       <div className="AppSettingsFormColumn">
-        <Button icon={IconNames.FLOPPY_DISK} intent={Intent.PRIMARY} text={t('Save')} title={t('Save and restart')} onClick={onSaveSettingsClick} />
+        <Button disabled={disabled} icon={IconNames.FLOPPY_DISK} intent={Intent.PRIMARY} text={t('Save')} title={t('Save and restart')} onClick={onSaveSettingsClick} />
       </div>
     </div>
   );

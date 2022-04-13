@@ -3,9 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const { Blob } = require("buffer");
 // vendors
-const logger = require("electron-log");
 const { v4: uuidv4 } = require("uuid");
 // project
+const { createLogger } = require("@podman-desktop-companion/logger");
+// locals
+const logger = createLogger(__filename);
 
 // POOR man's RPC
 

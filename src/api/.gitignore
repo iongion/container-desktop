@@ -1,7 +1,0 @@
-node_modules
-build
-temp
-.local
-.secrets
-.env.local
-*-cache.json

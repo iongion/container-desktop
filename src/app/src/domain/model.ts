@@ -1,8 +1,6 @@
 // vendors
 import { action, thunk } from "easy-peasy";
 // project
-import { v4 } from "uuid";
-// project
 import { ContainerEngine, SystemEnvironment } from "../Types";
 import { Native } from "../Native";
 import { AppModel, AppModelState, AppRegistry } from "./types";
@@ -11,8 +9,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
   const native = Native.getInstance().isNative();
   const platform = Native.getInstance().getPlatform();
   const model: AppModel = {
-    hash: v4(),
-    revision: 0,
     inited: false,
     pending: false,
     native,
@@ -20,16 +16,25 @@ export const createModel = (registry: AppRegistry): AppModel => {
       platform,
       system: {} as any,
       connections: [],
-      program: {} as any,
       running: false,
-      engine: ContainerEngine.NATIVE // default
+      userConfiguration: {
+        program: {} as any,
+        engine: ContainerEngine.NATIVE, // default
+        autoStartApi: false,
+      },
     },
     // Actions
-    setInited: action((state, inited) => {
-      state.inited = inited;
+    setInited: action((state, flag) => {
+      state.inited = flag;
     }),
-    setPending: action((state, pending) => {
-      state.pending = pending;
+    setPending: action((state, flag) => {
+      state.pending = flag;
+    }),
+    setEnvironment: action((state, value) => {
+      state.environment = {
+        ...state.environment,
+        ...value
+      };
     }),
     domainReset: action((state, { inited, pending }) => {
       state.inited = inited || false;
@@ -37,27 +42,31 @@ export const createModel = (registry: AppRegistry): AppModel => {
     }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
       const { inited, pending, environment } = opts;
-      state.hash = v4();
-      state.revision += 1;
-      state.inited = inited === undefined ? state.inited : inited;
-      state.pending = pending === undefined ? state.pending : pending;
-      state.environment = environment === undefined ? state.environment : environment;
+      if (inited !== undefined) {
+        state.inited = inited;
+      }
+      if (pending !== undefined) {
+        state.pending = pending;
+      }
+      if (environment !== undefined) {
+        state.environment = environment;
+      }
     }),
     // Thunks
     connect: thunk(async (actions, options) => {
       if (native) {
         Native.getInstance().setup();
       }
+      console.debug("connecting");
       let environment: SystemEnvironment = { ...model.environment };
       return registry.withPending(async () => {
         try {
           environment = await registry.api.getSystemEnvironment();
-          if (environment.program.path) {
-            if (environment.running) {
-              environment.running = true;
-            } else {
+          if (environment.userConfiguration.program.path) {
+            if (!environment.running && options.startApi) {
               try {
                 const startup = await registry.api.startApi();
+                console.debug("Startup", startup);
                 environment.system = startup.system;
                 environment.running = startup.running;
               } catch (error) {
@@ -73,7 +82,29 @@ export const createModel = (registry: AppRegistry): AppModel => {
           environment
         });
       });
-    })
+    }),
+    setUserConfiguration: thunk(async (actions, options) => {
+      return registry.withPending(async () => {
+        try {
+          const configuration = await registry.api.setUserConfiguration(options);
+          actions.setEnvironment({ userConfiguration: configuration });
+          return configuration;
+        } catch (error) {
+          console.error("Error during user configuration update", error);
+        }
+      });
+    }),
+    getUserConfiguration: thunk(async (actions) => {
+      return registry.withPending(async () => {
+        try {
+          const configuration = await registry.api.getUserConfiguration();
+          actions.setEnvironment({ userConfiguration: configuration });
+          return configuration;
+        } catch (error) {
+          console.error("Error during user configuration update", error);
+        }
+      });
+    }),
   };
   return model;
 };

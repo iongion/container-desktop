@@ -18,6 +18,10 @@
 .AppSidebarFooter .bp4-navbar-group {
   height: 32px;
   padding-left: 32px;
+  padding-right: 0;
+}
+.AppSidebarFooter .bp4-navbar-group:last-child {
+  padding-left: 0;
 }
 .AppSidebarFooter .bp4-navbar-heading {
   font-size: 12px;
@@ -29,5 +33,8 @@
 .AppSidebarVersionString {
   font-size: 10px;
   white-space: nowrap;
-  color: #fff;
+}
+.AppSidebarProgramString {
+  font-size: 10px;
+  white-space: nowrap;
 }

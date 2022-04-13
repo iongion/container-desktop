@@ -10,11 +10,11 @@
   "license": "ISC",
   "dependencies": {
     "@podman-desktop-companion/executor": "file:../executor",
+    "@podman-desktop-companion/logger": "file:../logger",
     "@podman-desktop-companion/terminal": "file:../terminal",
     "@podman-desktop-companion/utils": "file:../utils",
     "axios": "^0.25.0",
-    "electron-cfg": "^1.2.7",
-    "electron-log": "^4.4.6"
+    "electron-cfg": "^1.2.7"
   },
   "engines": {
     "node": "~16"
