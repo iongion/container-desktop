@@ -14,7 +14,7 @@ const userSettings = require("@podman-desktop-companion/user-settings");
 // locals
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
-const logger = createLogger(__filename);
+const logger = createLogger("shell.main");
 
 const isDebug = false;
 const isDevelopment = () => {

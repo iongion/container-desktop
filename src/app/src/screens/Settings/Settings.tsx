@@ -1,13 +1,13 @@
 import { useCallback, useState } from "react";
-import { AnchorButton, Button, Callout, Checkbox, ControlGroup, FormGroup, Icon, InputGroup, Intent } from "@blueprintjs/core";
+import { AnchorButton, Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect, Icon, InputGroup, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
-import Environment from "../../Environment";
-import { AppScreen, AppScreenProps } from "../../Types";
+import Environment, { LOGGING_LEVELS } from "../../Environment";
+import { AppScreen, AppScreenProps, UserConfigurationOptions } from "../../Types";
 import { Native } from "../../Native";
 import { Notification } from "../../Notification";
 import { CodeEditor } from "../../components/CodeEditor";
@@ -83,6 +83,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
   );
   const onAutoStartApiChange = useCallback(async (e) => {
     await setUserConfiguration({ autoStartApi: !!e.currentTarget.checked });
+  }, [setUserConfiguration]);
+  const onLoggingLevelChange = useCallback(async (e) => {
+    const configuration: Partial<UserConfigurationOptions> = {};
+    configuration["logging.level"] = e.currentTarget.value;
+    await setUserConfiguration(configuration);
   }, [setUserConfiguration]);
 
   let title = "";
@@ -195,6 +200,21 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 checked={!!userConfiguration.autoStartApi}
                 onChange={onAutoStartApiChange}
               />
+            </ControlGroup>
+          </FormGroup>
+        </div>
+        <div className="AppSettingsForm" data-form="logging">
+          <FormGroup
+            label={t("Logging level")}
+            labelFor="loggingLevel"
+          >
+            <ControlGroup>
+              <HTMLSelect id="loggingLevel" disabled={pending} value={userConfiguration.logging.level} onChange={onLoggingLevelChange}>
+                {LOGGING_LEVELS.map((level) => {
+                  const key= `logging.${level}`;
+                  return <option key={key} value={level}>{level}</option>;
+                })}
+              </HTMLSelect>
             </ControlGroup>
           </FormGroup>
         </div>

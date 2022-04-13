@@ -64,6 +64,8 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
 
 const CurrentEnvironment = EnvironmentsMap[CURRENT_ENVIRONMENT];
 
+export const LOGGING_LEVELS = ["error", "warn", "info", "debug"];
+
 export const API = CurrentEnvironment.settings.api.baseUrl;
 
 export default CurrentEnvironment;

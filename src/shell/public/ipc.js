@@ -19,7 +19,7 @@ const {
   getWSLDistributions
 } = require("@podman-desktop-companion/container-client");
 // locals
-const logger = createLogger(__filename);
+const logger = createLogger("shell.ipc");
 
 const servicesMap = {
   "/user/configuration/get": async function () {

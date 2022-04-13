@@ -10,12 +10,16 @@ export interface UserConfiguration {
   engine: ContainerEngine, // default
   autoStartApi: boolean;
   path: string;
+  logging: {
+    level: string;
+  }
 }
 
 export interface UserConfigurationOptions {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
   autoStartApi: boolean;
+  "logging.level": string;
 }
 
 export enum Environments {

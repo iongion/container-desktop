@@ -5,12 +5,12 @@ const path = require("path");
 const axios = require("axios");
 // project
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
-const { createLogger, getLevel } = require("@podman-desktop-companion/logger");
+const { createLogger, getLevel, setLevel } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
 // local
 const { exec, exec_launcher, withClient } = require("@podman-desktop-companion/executor");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
-const logger = createLogger(__filename);
+const logger = createLogger("container-client");
 
 class ResultError extends Error {
   constructor(message, data, warnings) {
@@ -61,14 +61,21 @@ async function getUserConfiguration() {
     engine: getEngine(),
     program: await getProgram(getProgramName()),
     autoStartApi: getAutoStartApi(),
-    path: getConfigurationPath()
+    path: getConfigurationPath(),
+    logging: {
+      level: getLevel()
+    }
   };
   return options;
 }
 
 async function setUserConfiguration(options) {
   Object.keys(options).forEach((key) => {
-    userSettings.set(key, options[key]);
+    if (key === "logging.level") {
+      setLevel(options[key]);
+    } else {
+      userSettings.set(key, options[key]);
+    }
   });
   return await getUserConfiguration();
 }
@@ -242,7 +249,7 @@ function getApiDriver(cfg) {
   driver.interceptors.response.use(
     function (response) {
       if (getLevel() === "debug") {
-        logger.debug("HTTP response", response);
+        logger.debug("[container-client] HTTP response", { status: response.status, statusText: response.statusText });
       }
       return response;
     },

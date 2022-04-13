@@ -8,7 +8,7 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 const { getApiConfig, getApiDriver } = require("@podman-desktop-companion/container-client");
 const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
 // locals
-const logger = createLogger(__filename);
+const logger = createLogger("shell.preload");
 
 const application = {
   setup: function () {

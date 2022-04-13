@@ -3,7 +3,7 @@ const events = require("events");
 // vendors
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
-const logger = createLogger(__filename);
+const logger = createLogger("executor");
 
 function wrapLauncher(program, args) {
   return [program, args];

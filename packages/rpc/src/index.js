@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
-const logger = createLogger(__filename);
+const logger = createLogger("rpc");
 
 // POOR man's RPC
 
