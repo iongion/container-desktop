@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.3-b.3] - 2022-04-13
+
+* Properly respect build environment
+
 ## [4.0.3-b.2] - 2022-04-13
 
 * Enable debug panel for production builds

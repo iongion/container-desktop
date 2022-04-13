@@ -4,7 +4,6 @@
 * Testing
 * More efficient container info than poling
 * Support next podman versions, support multiple versions simultaneously
-* Be cross-platform, support podman remote for linux, windows (wsl or not)
 * Support [podman-compose](https://github.com/containers/podman-compose) integration
 * Finalize the integrated SSH Terminal
   * Connect node-pty to user intent

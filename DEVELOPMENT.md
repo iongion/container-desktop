@@ -52,6 +52,8 @@
 
 `inv release` - Compiles assets and creates application bundles with production settings
 
+* Ensure `flatpak` user repos exist `flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo`
+
 ### Other useful info
 
 * Start API as socket (`socketPath` for axios)

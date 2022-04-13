@@ -31,10 +31,14 @@ def run_env(ctx, cmd, env=None):
 
 
 def build_apps(ctx, env=None):
-    with ctx.cd("src/app"):
-        run_env(ctx, "npm run build", env)
-        run_env(ctx, "cp -R build ../shell/build", env)
     with ctx.cd("src/shell"):
+        run_env(ctx, "rm -fr build", env)
+        run_env(ctx, "rm -fr dist", env)
+    with ctx.cd("src/app"):
+        run_env(ctx, "rm -fr build", env)
+        run_env(ctx, "npm run build", env)
+    with ctx.cd("src/shell"):
+        run_env(ctx, "cp -R ../app/build build", env)
         run_env(ctx, "cp -R public/* build", env)
         run_env(ctx, "cp -R icons/appIcon.* build", env)
 
@@ -98,8 +102,7 @@ def bundle(c, docs=False):
 
 @task
 def release(c, docs=False):
-    system = platform.system()
-    env = {NODE_ENV: "production", REACT_APP_ENV: "production"}
+    env = {"NODE_ENV": "production", "REACT_APP_ENV": "production"}
     build_apps(c, env)
     bundle_apps(c, env)
 

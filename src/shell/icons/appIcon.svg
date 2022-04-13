@@ -2,9 +2,9 @@
 <svg
    id="svg8"
    version="1.1"
-   viewBox="0 0 67.733335 67.733335"
-   height="256"
-   width="256"
+   viewBox="0 0 270.93334 270.93334"
+   height="1024"
+   width="1024"
    sodipodi:docname="appIcon.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04, custom)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -23,9 +23,9 @@
      inkscape:pageopacity="0"
      inkscape:pagecheckerboard="1"
      showgrid="false"
-     inkscape:zoom="1.7750066"
-     inkscape:cx="-10.704186"
-     inkscape:cy="98.027804"
+     inkscape:zoom="0.3137798"
+     inkscape:cx="277.2645"
+     inkscape:cy="290.01229"
      inkscape:window-width="1920"
      inkscape:window-height="1007"
      inkscape:window-x="0"
@@ -94,7 +94,7 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="matrix(1.3278731,0,0,1.3278731,-1559.7964,679.27754)"
+     transform="matrix(5.2301946,0,0,5.2301946,-6142.319,2675.6883)"
      id="layer1">
     <g
        id="g163426" />
