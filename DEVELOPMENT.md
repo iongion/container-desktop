@@ -48,6 +48,10 @@
 
 `inv bundle` - Creates application bundles
 
+#### Release the project binaries
+
+`inv release` - Compiles assets and creates application bundles with production settings
+
 ### Other useful info
 
 * Start API as socket (`socketPath` for axios)
