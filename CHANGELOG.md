@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.3-b.2] - 2022-04-13
+
+* Enable debug panel for production builds
+
 ## [4.0.3-b.1] - 2022-04-13
 
 * Ability to control logging level and debug the application

@@ -31,7 +31,7 @@ function createWindow() {
     height: 768,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
-      devTools: isDevelopment() || isDebug,
+      devTools: true,
       nodeIntegration: true,
       nodeIntegrationInWorker: true,
       // nativeWindowOpen: true,
