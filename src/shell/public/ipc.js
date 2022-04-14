@@ -7,7 +7,9 @@ const {
   startApi,
   getSystemEnvironment,
   getSystemInfo,
+  pruneSystem,
   getMachines,
+  createApiRequest,
   connectToContainer,
   createMachine,
   connectToMachine,
@@ -15,13 +17,33 @@ const {
   stopMachine,
   removeMachine,
   getUserConfiguration,
-  setUserConfiguration,
-  getWSLDistributions
+  setUserConfiguration
 } = require("@podman-desktop-companion/container-client");
 // locals
 const logger = createLogger("shell.ipc");
 
 const servicesMap = {
+  "/container/engine/request": async function (options) {
+    let result = {
+      data: undefined,
+      headers: [],
+      status: 500,
+      statusText: "API request error"
+    };
+    try {
+      const response = await createApiRequest(options);
+      result = {
+        data: response.data,
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText
+      };
+    } catch (error) {
+      logger.error("API request error", error);
+      result.statusText = `API request error: ${error.message}`;
+    }
+    return result;
+  },
   "/user/configuration/get": async function () {
     return await getUserConfiguration();
   },
@@ -37,6 +59,9 @@ const servicesMap = {
   },
   "/system/info": async function () {
     return await getSystemInfo();
+  },
+  "/system/prune": async function () {
+    return await pruneSystem();
   },
   "/system/environment": async function () {
     return await getSystemEnvironment();
@@ -67,9 +92,6 @@ const servicesMap = {
   },
   "/machine/create": async function (opts) {
     return await createMachine(opts);
-  },
-  "/wsl.distributions": async function (opts) {
-    return await getWSLDistributions(opts);
   }
 };
 
@@ -78,7 +100,7 @@ module.exports = {
     invoke: async (method, params) => {
       let result = {
         success: false,
-        body: null,
+        data: null,
         warnings: []
       };
       const service = servicesMap[method];
@@ -87,23 +109,23 @@ module.exports = {
         try {
           // logger.debug("Invoking", method, params);
           result.success = true;
-          result.body = await service(params);
+          result.data = await service(params);
         } catch (error) {
           const response = {
             statusText: error.response?.statusText,
             status: error.response?.status,
-            data: error.response?.data,
+            data: error.response?.data
           };
           logger.error("Invoking error", error.message, response, "when invoking", { method, params });
           result.success = false;
-          result.body = error.message;
+          result.data = error.message;
           result.stack = error.stack;
           result.response = response;
         }
       } else {
         logger.error("No such IPC method", { method, params });
         result.success = false;
-        result.body = "No such IPC method";
+        result.data = "No such IPC method";
       }
       return result;
     }

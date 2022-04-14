@@ -43,8 +43,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
-  const cpu_usage = container.Stats?.cpu_stats.cpu;
-  const mem_usage = 0;
+  const cpu_usage = container.Stats?.cpu_stats?.cpu || 0;
+  const mem_usage = container.Stats?.memory_stats?.usage || 0;
   const disk_io = 0;
   const net_io = 0;
   return (

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+* Add `cli` fallback when `api` is not available
+* Refactor settings UI to allow toggling of `cli` fallback
+
 ## [4.0.3-b.3] - 2022-04-13
 
 * Properly respect build environment

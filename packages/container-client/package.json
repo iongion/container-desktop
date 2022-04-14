@@ -14,7 +14,8 @@
     "@podman-desktop-companion/terminal": "file:../terminal",
     "@podman-desktop-companion/user-settings": "file:../user-settings",
     "@podman-desktop-companion/utils": "file:../utils",
-    "axios": "^0.25.0"
+    "axios": "^0.25.0",
+    "url-pattern": "^1.0.3"
   },
   "engines": {
     "node": "~16"

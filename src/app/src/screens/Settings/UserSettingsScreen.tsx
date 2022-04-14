@@ -8,31 +8,30 @@ import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 // project
 import Environment, { LOGGING_LEVELS } from "../../Environment";
 import { AppScreen, AppScreenProps, UserConfigurationOptions } from "../../Types";
+import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
 import { Notification } from "../../Notification";
-import { CodeEditor } from "../../components/CodeEditor";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
 // module
 import { ContainerEngineManager } from "./EngineManager";
 
-import "./Settings.css";
+import "./UserSettingsScreen.css";
 
 // Screen
 
 interface ScreenProps extends AppScreenProps {}
 
-export const ID = "settings";
+export const ID = "settings.user-settings";
+export const View = "user-settings";
 export const Title = "Settings";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const [programPaths, setProgramPaths] = useState<{ [key: string]: any }>({});
   const { t } = useTranslation();
-  const phase = useStoreState((state) => state.phase);
   const pending = useStoreState((state) => state.pending);
   const native = useStoreState((state) => state.native);
   const running = useStoreState((state) => state.environment.running);
-  const system = useStoreState((state) => state.environment.system);
   const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
   const connect = useStoreActions((actions) => actions.connect);
   const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
@@ -84,6 +83,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onAutoStartApiChange = useCallback(async (e) => {
     await setUserConfiguration({ autoStartApi: !!e.currentTarget.checked });
   }, [setUserConfiguration]);
+  const onCLICommunicationChange = useCallback(async (e) => {
+    const nextCommunication = !!e.currentTarget.checked ? "cli" : "api";
+    await setUserConfiguration({ communication: nextCommunication });
+  }, [setUserConfiguration]);
   const onLoggingLevelChange = useCallback(async (e) => {
     const configuration: Partial<UserConfigurationOptions> = {};
     configuration["logging.level"] = e.currentTarget.value;
@@ -119,10 +122,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
       </Callout>
     );
   const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager /> : null;
-  const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(system, null, 2)} /> : null;
 
   return (
     <div className="AppScreen" data-screen={ID}>
+      <ScreenHeader currentScreen={ID} />
       <div className="AppScreenContent">
         {contentWidget}
         <div className="AppSettingsForm" data-form="paths">
@@ -205,6 +208,21 @@ export const Screen: AppScreen<ScreenProps> = () => {
               />
             </ControlGroup>
           </FormGroup>
+          <FormGroup
+            label={t("Communication")}
+            labelFor="connectionType"
+            helperText={t('NOTE - it will spawn the CLI tool each time and does not support all API features.')}
+          >
+            <ControlGroup fill={true}>
+              <Checkbox
+                id="connectionType"
+                disabled={pending}
+                label={t("Use command line instead of the api")}
+                checked={userConfiguration.communication === "cli"}
+                onChange={onCLICommunicationChange}
+              />
+            </ControlGroup>
+          </FormGroup>
         </div>
         <div className="AppSettingsForm" data-form="logging">
           <FormGroup
@@ -222,7 +240,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </ControlGroup>
           </FormGroup>
         </div>
-        {systemDetailsViewer}
       </div>
     </div>
   );
@@ -231,7 +248,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/${ID}`
+  Path: `/screens/settings/${View}`
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,

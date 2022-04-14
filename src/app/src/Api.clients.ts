@@ -1,13 +1,10 @@
 // vendors
-import axios, { AxiosRequestConfig } from "axios";
 // project
-import { axiosConfigToCURL } from "@podman-desktop-companion/utils";
 import {
-  ContainerClientResponse,
   //
   Domain,
-  Program,
   //
+  ContainerClientResponse,
   Container,
   ContainerStats,
   ContainerImageMount,
@@ -25,7 +22,6 @@ import {
   SystemResetReport,
   Machine,
   //
-  WSLDistribution,
   UserConfiguration,
   UserConfigurationOptions
 } from "./Types";
@@ -90,83 +86,6 @@ export interface InvocationOptions<T = unknown> {
   params?: T;
 }
 
-export type IContainerClientInvoke = <T, D = undefined>(
-  invocation: InvocationOptions<D>
-) => Promise<ContainerClientResponse<T>>;
-
-export interface IContainerClient {
-  invoke: IContainerClientInvoke;
-
-  setLogLevel: (level: string) => void,
-  getLogLevel: () => string,
-
-  getDomain: () => Promise<Domain>;
-  getImages: () => Promise<ContainerImage[]>;
-  getImage: (id: string, opts?: FetchImageOptions) => Promise<ContainerImage>;
-  getImageHistory: (id: string) => Promise<ContainerImageHistory[]>;
-  removeImage: (id: string) => Promise<boolean>;
-  pullImage: (id: string) => Promise<boolean>;
-  pushImage: (id: string, opts?: PushImageOptions) => Promise<boolean>;
-
-  getContainers: () => Promise<Container[]>;
-  getContainer: (id: string, opts?: FetchContainerOptions) => Promise<Container>;
-  getContainerLogs: (id: string) => Promise<string[]>;
-  getContainerStats: (id: string) => Promise<ContainerStats>;
-  stopContainer: (id: string) => Promise<boolean>;
-  restartContainer: (id: string) => Promise<boolean>;
-  removeContainer: (id: string) => Promise<boolean>;
-  createContainer: (opts: CreateContainerOptions) => Promise<boolean>;
-  connectToContainer: (id: string) => Promise<boolean>;
-
-  getVolumes: () => Promise<Volume[]>;
-  getVolume: (id: string, opts?: FetchVolumeOptions) => Promise<Volume>;
-  createVolume: (opts: CreateVolumeOptions) => Promise<Volume>;
-  removeVolume: (id: string) => Promise<boolean>;
-
-  getSecrets: () => Promise<Secret[]>;
-  getSecret: (id: string, opts?: FetchSecretOptions) => Promise<Secret>;
-  createSecret: (opts: CreateSecretOptions) => Promise<Secret>;
-  removeSecret: (id: string) => Promise<boolean>;
-
-  getMachines: () => Promise<Machine[]>;
-  getMachine: (Name: string, opts?: FetchMachineOptions) => Promise<Machine>;
-  createMachine: (opts: CreateMachineOptions) => Promise<Machine>;
-  restartMachine: (Name: string) => Promise<boolean>;
-  stopMachine: (Name: string) => Promise<boolean>;
-  removeMachine: (Name: string) => Promise<boolean>;
-  connectToMachine: (Name: string) => Promise<boolean>;
-
-  pruneSystem: () => Promise<SystemPruneReport>;
-  resetSystem: () => Promise<SystemResetReport>;
-  getSystem: () => Promise<SystemInfo>;
-
-  // Special
-  getSystemEnvironment: () => Promise<SystemEnvironment>;
-  startApi: () => Promise<SystemStartInfo>;
-  isApiRunning: () => Promise<boolean>;
-
-  getUserConfiguration: () => Promise<UserConfiguration>;
-  setUserConfiguration: (options: Partial<UserConfigurationOptions>) => Promise<UserConfiguration>;
-
-  getWSLDistributions: () => Promise<WSLDistribution[]>;
-}
-
-export abstract class BaseContainerClient {
-  private logLevel: string = "error";
-  public setLogLevel(level: string) {
-    this.logLevel = level;
-    return level;
-  }
-  public getLogLevel() {
-    return this.logLevel;
-  }
-
-  protected async withResult<T>(handler: () => Promise<T>) {
-    const response = await handler();
-    return response;
-  }
-}
-
 export const coerceContainer = (container: Container) => {
   if (container.ImageName) {
     container.Image = container.ImageName;
@@ -197,55 +116,67 @@ export const coerceImage = (image: ContainerImage) => {
   return image;
 };
 
-export abstract class PodmanRestApiClient extends BaseContainerClient implements IContainerClient {
-  protected dataApiDriver;
-  constructor(opts: AxiosRequestConfig) {
-    super();
-    const headers: { [key: string]: string } = {
-      Accept: "application/json",
-      "Content-Type": "application/json"
-    };
-    const config: AxiosRequestConfig = {
-      timeout: 30000,
-      headers
-    };
-    const getLogLevel = () => this.getLogLevel();
-    if (opts.socketPath) {
-      config.socketPath = opts.socketPath;
-      config.baseURL = opts.baseURL;
-      config.adapter = opts.adapter;
-    } else {
-      config.baseURL = opts.baseURL;
-    }
-    this.dataApiDriver = axios.create(config);
-    // Configure http client logging
-    // Add a request interceptor
-    this.dataApiDriver.interceptors.request.use(
-      function (config) {
-        if (getLogLevel() === "debug") {
-          console.debug("[api.client] HTTP request", axiosConfigToCURL(config as any));
-        }
-        return config;
+interface ApiDriverConfig<D> {
+  timeout?: number;
+  headers?: { [key: string]: any};
+  params?: URLSearchParams | D;
+}
+export interface IApiDriver {
+  request<T = any, R = ContainerClientResponse<T>, D = any>(method: string, url: string, config?: ApiDriverConfig<D>): Promise<R>;
+  get<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>): Promise<R>;
+  delete<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>): Promise<R>;
+  head<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>): Promise<R>;
+  post<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>): Promise<R>;
+  put<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>): Promise<R>;
+  patch<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>): Promise<R>;
+}
+
+export class ApiDriver implements IApiDriver {
+  public async request<T = any, R = ContainerClientResponse<T>, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
+    const request = {
+      method: "/container/engine/request",
+      params: {
+        method,
+        url,
+        ...config,
       },
-      function (error) {
-        console.error("[api.client] HTTP request error", error);
-        return Promise.reject(error);
-      }
-    );
-    // Add a response interceptor
-    this.dataApiDriver.interceptors.response.use(
-      function (response) {
-        if (getLogLevel() === "debug") {
-          console.debug("[api.client] HTTP response", response);
-        }
-        return response;
-      },
-      function (error) {
-        console.error("[api.client] HTTP response error", error.message);
-        return Promise.reject(error);
-      }
-    );
+      data
+    };
+    // console.debug("requesting", request);
+    const result = await Native.getInstance().proxyService<R>(request);
+    return result.data;
   }
+  public async get<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>) {
+    return this.request<T, R>("GET", url, undefined, config);
+  }
+  public async delete<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>) {
+    return this.request<T, R>("DELETE", url, undefined, config);
+  }
+  public async head<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>) {
+    return this.request<T, R>("HEAD", url, undefined, config);
+  }
+  public async post<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
+    return this.request<T, R>("POST", url, data, config);
+  }
+  public async put<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
+    return this.request<T, R>("PUT", url, data, config);
+  }
+  public async patch<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
+    return this.request<T, R>("PATCH", url, data, config);
+  }
+}
+export class ContainerClient {
+  protected dataApiDriver: ApiDriver;
+
+  constructor() {
+    this.dataApiDriver = new ApiDriver();
+  }
+
+  protected async withResult<T>(handler: () => Promise<T>) {
+    const response = await handler();
+    return response;
+  }
+
   async invoke<T, D = undefined>(invocation: InvocationOptions<D>) {
     return this.withResult<T>(async () => {
       const result = await this.dataApiDriver.post<T>("/invoke", invocation);
@@ -428,7 +359,6 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
       return success;
     });
   }
-  abstract connectToContainer(id: string): Promise<boolean>;
   // Volumes
   async getVolumes() {
     return this.withResult<Volume[]>(async () => {
@@ -515,16 +445,6 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
       return result.statusText === "OK";
     });
   }
-  // Machines
-  abstract getMachines(): Promise<Machine[]>;
-  abstract restartMachine(Name: string): Promise<boolean>;
-  abstract getMachine(Name: string, opts?: FetchMachineOptions): Promise<Machine>;
-  abstract createMachine(opts: CreateMachineOptions): Promise<Machine>;
-  abstract removeMachine(Name: string): Promise<boolean>;
-  abstract stopMachine(Name: string): Promise<boolean>;
-  abstract connectToMachine(Name: string): Promise<boolean>;
-  abstract getUserConfiguration(): Promise<UserConfiguration>;
-  abstract setUserConfiguration(options: Partial<UserConfigurationOptions>): Promise<UserConfiguration>;
   // System
   async getSystem() {
     return this.withResult<SystemInfo>(async () => {
@@ -538,282 +458,136 @@ export abstract class PodmanRestApiClient extends BaseContainerClient implements
       return result.data;
     });
   }
-  abstract resetSystem(): Promise<SystemResetReport>;
-  abstract startApi(): Promise<SystemStartInfo>;
-  abstract getSystemEnvironment(): Promise<SystemEnvironment>;
-  abstract isApiRunning(): Promise<boolean>;
 
-  abstract getWSLDistributions(): Promise<WSLDistribution[]>;
-}
+  // HTTP API
 
-export class BrowserContainerClient extends PodmanRestApiClient {
-  // Containers
-  async connectToContainer(id: string) {
-    return this.withResult<boolean>(async () => {
-      const params = {};
-      const result = await this.dataApiDriver.post<Machine>(`/container/${id}/connect`, undefined, {
-        params
-      });
-      return result.status === 200;
-    });
-  }
-  // Machines
-  async getMachines() {
-    return this.withResult<Machine[]>(async () => {
-      const result = await this.dataApiDriver.get<Machine[]>("/machines/json");
-      return result.data;
-    });
-  }
-  async restartMachine(Name: string) {
-    return this.withResult<boolean>(async () => {
-      const params = {};
-      const result = await this.dataApiDriver.post<Machine>(`/machines/${Name}/restart`, undefined, {
-        params
-      });
-      return result.status === 200;
-    });
-  }
-  async getMachine(Name: string) {
-    return this.withResult<Machine>(async () => {
-      const result = await this.dataApiDriver.get<Machine>(`/machines/${Name}/json`);
-      return result.data;
-    });
-  }
-  async createMachine(opts: CreateMachineOptions) {
-    return this.withResult<Machine>(async () => {
-      const params = {};
-      const result = await this.dataApiDriver.post<Machine>("/machines/create", opts, {
-        params
-      });
-      return result.data;
-    });
-  }
-  async removeMachine(Name: string) {
-    return this.withResult<boolean>(async () => {
-      const result = await this.dataApiDriver.delete<boolean>(`/machines/${Name}`, {
-        params: {
-          force: true
-        }
-      });
-      return result.statusText === "OK";
-    });
-  }
-  async stopMachine(Name: string) {
-    return this.withResult<boolean>(async () => {
-      const params = {};
-      const result = await this.dataApiDriver.post<Machine>(`/machines/${Name}/stop`, undefined, {
-        params
-      });
-      return result.status === 200;
-    });
-  }
-  async connectToMachine(Name: string) {
-    return this.withResult<boolean>(async () => {
-      const params = {};
-      const result = await this.dataApiDriver.post<Machine>(`/machines/${Name}/connect`, undefined, {
-        params
-      });
-      return result.status === 200;
-    });
-  }
-
-  // System
-  async getSystemEnvironment() {
-    return this.withResult<SystemEnvironment>(async () => {
-      const result = await this.dataApiDriver.post<SystemEnvironment>("/system/environment");
-      return result.data;
-    });
-  }
-  async startApi() {
-    return this.withResult<SystemStartInfo>(async () => {
-      const result = await this.dataApiDriver.post<SystemStartInfo>("/system/api/start");
-      return result.data;
-    });
-  }
-  async resetSystem() {
-    return this.withResult<SystemResetReport>(async () => {
-      const result = await this.dataApiDriver.post<SystemResetReport>("/system/reset");
-      return result.data;
-    });
-  }
-  async isApiRunning() {
-    return this.withResult<boolean>(async () => {
-      const result = await this.dataApiDriver.get<boolean>("/system/running");
-      return result.data;
-    });
-  }
-  async getProgram(name: string | undefined) {
-    return this.withResult<Program>(async () => {
-      const params = new URLSearchParams();
-      if (name) {
-        params.set("name", name);
-      }
-      const result = await this.dataApiDriver.get<Program>("/program", {
-        params
-      });
-      return result.data;
-    });
-  }
-  async getWSLDistributions() {
-    return this.withResult<WSLDistribution[]>(async () => {
-      const result = await this.dataApiDriver.get<WSLDistribution[]>("/wsl.distributions");
-      return result.data;
-    });
-  }
-
-  async setUserConfiguration(options: Partial<UserConfigurationOptions>) {
-    return this.withResult<UserConfiguration>(async () => {
-      const result = await this.dataApiDriver.post<UserConfiguration>("/user/configuration", options);
-      return result.data;
-    });
-  }
-
-  async getUserConfiguration() {
-    return this.withResult<UserConfiguration>(async () => {
-      const result = await this.dataApiDriver.get<UserConfiguration>("/user/configuration");
-      return result.data;
-    });
-  }
-
-}
-
-export class NativeContainerClient extends PodmanRestApiClient {
   // Containers
   async connectToContainer(Id: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyRequest<boolean>({
+      const result = await Native.getInstance().proxyService<boolean>({
         method: "/container/connect",
         params: { Id }
       });
-      return result.body;
+      return result.data;
     });
   }
 
   // Machines
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
-      const result = await Native.getInstance().proxyRequest<Machine[]>({
+      const result = await Native.getInstance().proxyService<Machine[]>({
         method: "/machines/list"
       });
-      return result.body;
+      return result.data;
     });
   }
   async restartMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyRequest<boolean>({
+      const result = await Native.getInstance().proxyService<boolean>({
         method: "/machine/restart",
         params: { Name }
       });
-      return result.body;
+      return result.data;
     });
   }
   async getMachine(Name: string) {
     return this.withResult<Machine>(async () => {
-      const result = await Native.getInstance().proxyRequest<Machine>({
+      const result = await Native.getInstance().proxyService<Machine>({
         method: "/machine/inspect",
         params: { Name }
       });
-      return result.body;
+      return result.data;
     });
   }
   async createMachine(opts: CreateMachineOptions) {
     return this.withResult<Machine>(async () => {
-      const result = await Native.getInstance().proxyRequest<Machine>({
+      const result = await Native.getInstance().proxyService<Machine>({
         method: "/machine/create",
         params: opts
       });
-      return result.body;
+      return result.data;
     });
   }
   async removeMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyRequest<boolean>({
+      const result = await Native.getInstance().proxyService<boolean>({
         method: "/machine/remove",
         params: { Name, force: true }
       });
-      return result.body;
+      return result.data;
     });
   }
   async stopMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyRequest<boolean>({
+      const result = await Native.getInstance().proxyService<boolean>({
         method: "/machine/stop",
         params: { Name }
       });
-      return result.body;
+      return result.data;
     });
   }
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyRequest<boolean>({
+      const result = await Native.getInstance().proxyService<boolean>({
         method: "/machine/connect",
         params: { Name }
       });
-      return result.body;
+      return result.data;
     });
   }
 
   // System
   async getSystemEnvironment() {
     return this.withResult<SystemEnvironment>(async () => {
-      const result = await Native.getInstance().proxyRequest<SystemEnvironment>({
+      const result = await Native.getInstance().proxyService<SystemEnvironment>({
         method: "/system/environment"
       });
-      return result.body;
+      return result.data;
     });
   }
   async startApi() {
     return this.withResult<SystemStartInfo>(async () => {
-      const result = await Native.getInstance().proxyRequest<SystemStartInfo>({
+      const result = await Native.getInstance().proxyService<SystemStartInfo>({
         method: "/system/api/start"
       });
-      return result.body;
+      return result.data;
     });
   }
   async resetSystem() {
     return this.withResult<SystemResetReport>(async () => {
-      const result = await Native.getInstance().proxyRequest<SystemResetReport>({
+      const result = await Native.getInstance().proxyService<SystemResetReport>({
         method: "/system/reset"
       });
-      return result.body;
+      return result.data;
     });
   }
   async isApiRunning() {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyRequest<boolean>({
+      const result = await Native.getInstance().proxyService<boolean>({
         method: "/system/running"
       });
-      return result.body;
-    });
-  }
-
-  async getWSLDistributions() {
-    return this.withResult<WSLDistribution[]>(async () => {
-      const result = await Native.getInstance().proxyRequest<WSLDistribution[]>({
-        method: "/wsl.distributions"
-      });
-      return result.body;
+      return result.data;
     });
   }
 
   async getUserConfiguration() {
     return this.withResult<UserConfiguration>(async () => {
-      const result = await Native.getInstance().proxyRequest<UserConfiguration>({
+      const result = await Native.getInstance().proxyService<UserConfiguration>({
         method: "/user/configuration/get",
       });
-      return result.body;
+      return result.data;
     });
   }
 
   async setUserConfiguration(options: Partial<UserConfigurationOptions>) {
     return this.withResult<UserConfiguration>(async () => {
-      const result = await Native.getInstance().proxyRequest<UserConfiguration>({
+      const result = await Native.getInstance().proxyService<UserConfiguration>({
         method: "/user/configuration/set",
         params: {
           options
         }
       });
-      return result.body;
+      return result.data;
     });
   }
 

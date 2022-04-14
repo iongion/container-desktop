@@ -27,7 +27,7 @@ async function exec_launcher(launcher, launcherArgs, opts) {
       stderr: "",
       command
     };
-    // logger.debug("Spawning started", command);
+    logger.debug(command);
     const child = spawn(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {

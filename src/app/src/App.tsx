@@ -33,7 +33,8 @@ import { Screen as ImageInspectScreen } from "./screens/Image/InspectScreen";
 import { Screen as VolumesScreen } from "./screens/Volume/ManageScreen";
 import { Screen as VolumeInspectScreen } from "./screens/Volume/InspectScreen";
 import { Screen as MachinesScreen } from "./screens/Machine/ManageScreen";
-import { Screen as SettingsScreen } from "./screens/Settings";
+import { Screen as UserSettingsScreen } from "./screens/Settings/UserSettingsScreen";
+import { Screen as SystemInfoScreen } from "./screens/Settings/SystemInfoScreen";
 import { Screen as SecretsScreen } from "./screens/Secret/ManageScreen";
 import { Screen as SecretInspectScreen } from "./screens/Secret/InspectScreen";
 import { Screen as TroubleshootScreen } from "./screens/Troubleshoot/Troubleshoot";
@@ -53,7 +54,8 @@ const Screens = [
   SecretInspectScreen,
   VolumesScreen,
   VolumeInspectScreen,
-  SettingsScreen,
+  UserSettingsScreen,
+  SystemInfoScreen,
   TroubleshootScreen
 ];
 
@@ -85,7 +87,7 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
       );
     } else if (phase === AppBootstrapPhase.FAILED) {
       content = (
-        <SettingsScreen navigator={navigator} />
+        <UserSettingsScreen navigator={navigator} />
       );
     } else {
       content = <AppLoading />;
