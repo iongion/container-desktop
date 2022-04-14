@@ -31,9 +31,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
     // Actions
     setPhase: action((state, phase) => {
       state.phase = phase;
-      if (phase === AppBootstrapPhase.CONFIGURED) {
-        registry.api.setLogLevel(state.environment.userConfiguration.logging.level);
-      }
     }),
     setPending: action((state, flag) => {
       state.pending = flag;
@@ -111,7 +108,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
       return registry.withPending(async () => {
         try {
           const configuration = await registry.api.setUserConfiguration(options);
-          registry.api.setLogLevel(configuration.logging.level);
           actions.setEnvironment({ userConfiguration: configuration });
           return configuration;
         } catch (error) {

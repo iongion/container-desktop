@@ -211,7 +211,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <FormGroup
             label={t("Communication")}
             labelFor="connectionType"
-            helperText={t('It will spawn the CLI tool each time')}
+            helperText={t('NOTE - it will spawn the CLI tool each time and does not support all API features.')}
           >
             <ControlGroup fill={true}>
               <Checkbox

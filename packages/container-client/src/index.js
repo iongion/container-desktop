@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 // vendors
 const axios = require("axios");
+const UrlPattern = require("url-pattern");
 // project
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 const { createLogger, getLevel, setLevel } = require("@podman-desktop-companion/logger");
@@ -160,10 +161,9 @@ async function getSystemConnections() {
   return items;
 }
 
-// TODO: Use CLI or API
 async function getSystemInfo() {
   let items = {};
-  const output = await execProgram(["system", "info", "--format", "{{json .}}"]);
+  const output = await execProgram(["system", "info", "--format", "json"]);
   if (!output.success) {
     logger.error("Unable to get podman system information", output);
     return items;
@@ -176,9 +176,33 @@ async function getSystemInfo() {
   return items;
 }
 
-// TODO: Use CLI or API
-async function pruneSystem() {
-  return dataApiDriver.post(`/system/prune`); // returns SystemPruneReport
+async function pruneSystem(all, filter, force, volumes) {
+  let result;
+  const args = ["system", "prune"];
+  if (all) {
+    args.push("-all");
+  }
+  if (filter) {
+    args.push(...Object.keys(filter).map((key) => `label=${key}=${filter[key]}`));
+  }
+  if (force) {
+    args.push("--force");
+  }
+  if (volumes) {
+    args.push("--volumes");
+  }
+  const output = await execProgram(args);
+  if (!output.success) {
+    logger.error("Unable to prune system", output);
+  }
+  // TODO: Implement result as the REST api
+  return {
+    ContainerPruneReports: null,
+    ImagePruneReports: null,
+    PodPruneReport: null,
+    ReclaimedSpace: -1,
+    VolumePruneReports: null
+  };
 }
 
 function getCurrentMachine() {
@@ -276,12 +300,10 @@ function getCliDriver() {
   const driver = {
     request: async (options) => {
       const requestsMap = {
-        "/containers/json": {
+        "/images/json": {
           GET: async (input) => {
             const { method, url, headers, params, body } = input;
-            const result = await getContainers();
-            // logger.debug("Requesting", input);
-            // throw new Error("Mapping found but not implemented");
+            const result = await getImages();
             return {
               data: result,
               headers: [],
@@ -290,12 +312,170 @@ function getCliDriver() {
             };
           }
         },
-        "/images/json": {
+        "/images/:id/json": {
           GET: async (input) => {
             const { method, url, headers, params, body } = input;
-            const result = await getImages();
-            // logger.debug("Requesting", input);
-            // throw new Error("Mapping found but not implemented");
+            const result = await getImage(params.id);
+            return result
+              ? {
+                  data: result,
+                  headers: [],
+                  status: 200,
+                  statusText: "OK"
+                }
+              : {
+                  data: result,
+                  headers: [],
+                  status: 404,
+                  statusText: "NotFound"
+                };
+          }
+        },
+        "/images/:id/history": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getImageHistory(params.id);
+            return result
+              ? {
+                  data: result,
+                  headers: [],
+                  status: 200,
+                  statusText: "OK"
+                }
+              : {
+                  data: result,
+                  headers: [],
+                  status: 404,
+                  statusText: "NotFound"
+                };
+          }
+        },
+        "/containers/json": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getContainers();
+            return {
+              data: result,
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/containers/:id/json": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getContainer(params.id);
+            return result
+              ? {
+                  data: result,
+                  headers: [],
+                  status: 200,
+                  statusText: "OK"
+                }
+              : {
+                  data: result,
+                  headers: [],
+                  status: 404,
+                  statusText: "NotFound"
+                };
+          }
+        },
+        "/containers/:id/logs": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getContainerLogs(params.id);
+            return {
+              data: result || "",
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/containers/:id/stats": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getContainerStats(params.id);
+            return {
+              data: result || [],
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/containers/:id/:action": {
+          POST: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await containerAction(params.id, params.action);
+            return {
+              data: result || [],
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/volumes/json": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getVolumes();
+            return {
+              data: result,
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/secrets/json": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getSecrets();
+            return {
+              data: result,
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/secrets/:id/json": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getSecret(params.id);
+            return result
+              ? {
+                  data: result,
+                  headers: [],
+                  status: 200,
+                  statusText: "OK"
+                }
+              : {
+                  data: result,
+                  headers: [],
+                  status: 404,
+                  statusText: "NotFound"
+                };
+          }
+        },
+        "/system/info": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getSystemInfo();
+            return {
+              data: result,
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/system/prune": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await pruneSystem();
             return {
               data: result,
               headers: [],
@@ -305,12 +485,29 @@ function getCliDriver() {
           }
         }
       };
-      const requestMethod = (options.method || "get").toUpperCase();
-      const requestHandler = requestsMap[options.url]?.[requestMethod];
-      if (requestHandler) {
-        return await requestHandler(options);
+      const routes = Object.keys(requestsMap).map((pattern) => ({
+        pattern,
+        matcher: new UrlPattern(pattern)
+      }));
+      // Find first match
+      const route = routes.find((it) => it.matcher.match(options.url));
+      if (route) {
+        const match = route.matcher.match(options.url);
+        const requestMethod = (options.method || "get").toUpperCase();
+        const requestHandler = requestsMap[route.pattern][requestMethod];
+        if (requestHandler) {
+          return await requestHandler({
+            ...options,
+            params: match,
+            query: options.params,
+            route: route.pattern
+          });
+        } else {
+          logger.warn("Request does not have a CLI mapping for this method - falling back to Api", options);
+          return getApiDriver().request(options);
+        }
       } else {
-        logger.warn("Request does not have a CLI mapping - falling back to Api", options);
+        logger.warn("Request does not have a CLI mapping for this pattern - falling back to Api", options);
         return getApiDriver().request(options);
       }
     }
@@ -351,6 +548,51 @@ async function getContainers() {
   return items;
 }
 
+async function getContainer(id) {
+  let items = [];
+  const output = await execProgram(["container", "list", "--filter", `id=${id}`, "--format", "json"]);
+  if (!output.success) {
+    logger.error("Unable to get podman container", output);
+    return items;
+  }
+  try {
+    items = JSON.parse(output.stdout);
+  } catch (error) {
+    logger.error("Unable to decode podman container", error);
+  }
+  return items[0];
+}
+
+async function getContainerLogs(id) {
+  let items = [];
+  const output = await execProgram(["container", "logs", id]);
+  if (!output.success) {
+    logger.error("Unable to get podman container logs", output);
+    return items;
+  }
+  try {
+    items = output.stdout;
+  } catch (error) {
+    logger.error("Unable to decode podman container logs", error);
+  }
+  return items;
+}
+
+async function getContainerStats(id) {
+  let items = [];
+  const output = await execProgram(["container", "stats", "--no-stream", "--no-reset", id, "--format", "json"]);
+  if (!output.success) {
+    logger.error("Unable to get podman container stats", output);
+    return items;
+  }
+  try {
+    items = JSON.parse(output.stdout);
+  } catch (error) {
+    logger.error("Unable to decode podman container stats", error);
+  }
+  return items[0] || { cpu_stats: {} };
+}
+
 async function connectToContainer(nameOrId, shell) {
   const program = await getProgramPath();
   const output = await launchTerminal(program, ["exec", "-it", nameOrId, shell || "/bin/sh"]);
@@ -360,9 +602,7 @@ async function connectToContainer(nameOrId, shell) {
   return output.success;
 }
 
-// TODO: Use CLI or API
 async function getImages() {
-  // const result = await this.dataApiDriver.get<ContainerImage[]>("/images/json");
   let items = [];
   const output = await execProgram(["image", "list", "--format", "json"]);
   if (!output.success) {
@@ -377,19 +617,32 @@ async function getImages() {
   return items;
 }
 
-// TODO: Use CLI or API
 async function getImage(id) {
-  // const result = await this.dataApiDriver.get<ContainerImage>("/images/${id}/json");
   let items = [];
-  const output = await execProgram(["image", "list", "--format", "json"]);
+  const output = await execProgram(["image", "list", "--filter", `id=${id}`, "--format", "json"]);
   if (!output.success) {
-    logger.error("Unable to get list of podman images", output);
+    logger.error("Unable to get podman image", output);
     return items;
   }
   try {
     items = JSON.parse(output.stdout);
   } catch (error) {
-    logger.error("Unable to decode list of podman images", error);
+    logger.error("Unable to decode podman image", error);
+  }
+  return items[0];
+}
+
+async function getImageHistory(id) {
+  let items = [];
+  const output = await execProgram(["image", "history", id, "--format", "json"]);
+  if (!output.success) {
+    logger.error("Unable to get podman image history", output);
+    return items;
+  }
+  try {
+    items = JSON.parse(output.stdout);
+  } catch (error) {
+    logger.error("Unable to decode podman image history", error);
   }
   return items;
 }
@@ -473,6 +726,14 @@ async function restartMachine(name) {
   return stoppedOutput.success && startedOutput.success;
 }
 
+async function containerAction(id, action) {
+  const output = await execProgram(["podman", "container", action, id]);
+  if (!output.success) {
+    logger.error("Unable to trigger container action", action, id);
+  }
+  return output.success;
+}
+
 async function removeMachine(name, force) {
   const stoppedOutput = await stopMachine(name);
   if (!stoppedOutput.success) {
@@ -502,6 +763,68 @@ async function getVolumes() {
     logger.error("Unable to decode list of podman volumes", error);
   }
   return items;
+}
+
+async function getSecrets() {
+  let items = [];
+  const output = await execProgram(["secret", "ls", "--format", "{{json $}}"]);
+  if (!output.success) {
+    logger.error("Unable to get list of podman secrets", output);
+    return items;
+  }
+  try {
+    items = JSON.parse(output.stdout) || [];
+    items = items.map((it) => {
+      return {
+        ID: it.ID,
+        Spec: {
+          Driver: {
+            Name: it.Driver,
+            Options: {
+              path: undefined
+            }
+          },
+          Name: it.Name
+        },
+        // TODO: Parse from now
+        CreatedAt: it.CreatedAt,
+        UpdatedAt: it.UpdatedAt
+      };
+    });
+  } catch (error) {
+    logger.error("Unable to decode list of podman secrets", error, output);
+  }
+  return items;
+}
+
+async function getSecret(id) {
+  let item;
+  const output = await execProgram(["secret", "ls", "--filter", `ID=${id}`, "--format", "{{json .}}"]);
+  if (!output.success) {
+    logger.error("Unable to get podman secret", output);
+    return item;
+  }
+  try {
+    const it = JSON.parse(output.stdout) || {};
+    item = {
+      ID: it.ID,
+      Spec: {
+        Driver: {
+          Name: it.Driver,
+          Options: {
+            path: undefined
+          }
+        },
+        Name: it.Name
+      },
+      // TODO: Parse from now
+      CreatedAt: it.CreatedAt,
+      UpdatedAt: it.UpdatedAt
+    };
+  } catch (error) {
+    logger.error("Unable to decode list of podman secrets", error, output);
+  }
+  return item;
 }
 
 async function getPodmanProgram(customPath) {
@@ -710,6 +1033,9 @@ module.exports = {
   getApiConfig,
   getApiDriver,
   getContainers,
+  getContainer,
+  getContainerLogs,
+  getContainerStats,
   getImages,
   getImage,
   getMachines,
@@ -720,7 +1046,10 @@ module.exports = {
   stopMachine,
   restartMachine,
   removeMachine,
+  containerAction,
   getVolumes,
+  getSecrets,
+  getSecret,
   getProgram,
   startApi,
   startNativeApi,

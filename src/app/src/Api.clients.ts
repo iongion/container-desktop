@@ -167,19 +167,9 @@ export class ApiDriver implements IApiDriver {
 }
 export class ContainerClient {
   protected dataApiDriver: ApiDriver;
-  protected logLevel: string = "error";
 
   constructor() {
     this.dataApiDriver = new ApiDriver();
-  }
-
-  public setLogLevel(level: string) {
-    this.logLevel = level;
-    return level;
-  }
-
-  public getLogLevel() {
-    return this.logLevel;
   }
 
   protected async withResult<T>(handler: () => Promise<T>) {

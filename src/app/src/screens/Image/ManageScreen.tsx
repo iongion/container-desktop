@@ -73,7 +73,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   {isCondensed ? (
                     <td>
                       {imageLayersButton}
-                      <div>{image.Names[0] || image.Name}</div>
+                      <div>{image.Names?.[0] || image.Name}</div>
                     </td>
                   ) : (
                     <>
