@@ -5,7 +5,6 @@ require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { getApiConfig, getApiDriver } = require("@podman-desktop-companion/container-client");
 const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
 // locals
 const logger = createLogger("shell.preload");
@@ -106,14 +105,10 @@ const application = {
 async function main() {
   logger.debug("Starting renderer process");
   process.once("loaded", () => {
-    const config = getApiConfig();
     const context = {
       available: true,
       platform: os.type(),
-      application,
-      //
-      containerApiConfig: config,
-      containerApiDriver: getApiDriver(config)
+      application
     };
     // Expose to application
     contextBridge.exposeInMainWorld("nativeBridge", context);

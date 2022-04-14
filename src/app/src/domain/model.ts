@@ -24,7 +24,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
         path: "",
         logging: {
           level: "error"
-        }
+        },
+        communication: "api"
       },
     },
     // Actions

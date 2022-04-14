@@ -1,4 +1,6 @@
+// vendors
 import React from "react";
+// project
 import { Platforms } from "./Native";
 
 export interface ConnectOptions {
@@ -12,7 +14,8 @@ export interface UserConfiguration {
   path: string;
   logging: {
     level: string;
-  }
+  };
+  communication: "api" | "cli";
 }
 
 export interface UserConfigurationOptions {
@@ -20,6 +23,7 @@ export interface UserConfigurationOptions {
   engine: Partial<ContainerEngine>;
   autoStartApi: boolean;
   "logging.level": string;
+  communication: "api" | "cli";
 }
 
 export enum Environments {
@@ -130,8 +134,10 @@ export interface Program {
 
 export interface ContainerClientResponse<T = unknown> {
   success: boolean;
-  body: T;
+  data: T;
   warnings: any[];
+  statusText: string;
+  status: number;
 }
 
 export interface ContainerStats {
@@ -402,10 +408,6 @@ export const MOUNT_ACCESS = [
   { title: "Read only", type: "ro" },
   { title: "Read / Write", type: "rw" }
 ];
-
-export interface WSLDistribution {
-  name: string;
-}
 
 export interface AppScreenProps {
   navigator: Navigator;

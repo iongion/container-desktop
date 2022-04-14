@@ -1,5 +1,3 @@
-import { AxiosInstance, AxiosRequestConfig } from "axios";
-
 import { ContainerClientResponse } from "./Types";
 
 export enum Platforms {
@@ -50,8 +48,6 @@ interface NativeBridge {
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
     proxy: <T>(request: any) => Promise<T>;
   };
-  containerApiConfig: AxiosRequestConfig;
-  containerApiDriver: AxiosInstance;
 }
 
 export class Native {
@@ -118,12 +114,6 @@ export class Native {
   public getPlatform() {
     return this.bridge.platform || Platforms.Unknown;
   }
-  public getContainerApiConfig() {
-    return this.bridge.containerApiConfig;
-  }
-  public getContainerApiDriver() {
-    return this.bridge.containerApiDriver;
-  }
   public withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());
   }
@@ -150,7 +140,7 @@ export class Native {
     }
     return result;
   }
-  public async proxyRequest<T>(request: any) {
+  public async proxyService<T>(request: any) {
     let result: ContainerClientResponse<T>;
     try {
       result = await this.bridge.application.proxy<ContainerClientResponse<T>>(request);
@@ -163,8 +153,8 @@ export class Native {
     }
     // TODO: Improve error flow
     console.error("Proxy result error", result);
-    const response = (result as any).response || { data: result.body, warnings: result.warnings };
-    const error = new Error(`${result.body}` || "Proxy result error");
+    const response = (result as any).response || { data: result.data, warnings: result.warnings };
+    const error = new Error(`${result.data}` || "Proxy result error");
     (error as any).response = response;
     throw error;
   }

@@ -83,7 +83,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ currentScreen, program, ru
   const rightSideActions =
     provisioned && running ? (
       <>
-        <AnchorButton href={pathTo("/screens/settings")} icon={IconNames.COG} />
+        <AnchorButton href={pathTo("/screens/settings/user-settings")} icon={IconNames.COG} />
         <AnchorButton href={pathTo("/screens/troubleshoot")} icon={<ReactIcon.Icon path={mdiBug} size={0.75} />} />
       </>
     ) : null;

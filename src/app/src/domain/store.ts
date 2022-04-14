@@ -1,7 +1,7 @@
 // vendors
 import { createStore, StoreProvider } from "easy-peasy";
 // project
-import { findAPI } from "../Api";
+import { ContainerClient } from "../Api.clients";
 import { Environments } from "../Types";
 import { AppModel, AppRegistry, AppStore, AppStorePendingOperation, AppStorePendingOperationResult } from "./types";
 // domain
@@ -41,7 +41,7 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
 };
 
 export const createAppStore = (env: Environments) => {
-  const api = findAPI(env);
+  const api = new ContainerClient();
   if (api === undefined) {
     console.error("No such API environment", env);
     throw new Error("API instance is mandatory");

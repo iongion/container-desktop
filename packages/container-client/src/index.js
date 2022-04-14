@@ -56,11 +56,16 @@ function getAutoStartApi() {
   return userSettings.get("autoStartApi", false);
 }
 
+function getCommunication() {
+  return userSettings.get("communication", "api");
+}
+
 async function getUserConfiguration() {
   const options = {
     engine: getEngine(),
     program: await getProgram(getProgramName()),
     autoStartApi: getAutoStartApi(),
+    communication: getCommunication(),
     path: getConfigurationPath(),
     logging: {
       level: getLevel()
@@ -155,6 +160,7 @@ async function getSystemConnections() {
   return items;
 }
 
+// TODO: Use CLI or API
 async function getSystemInfo() {
   let items = {};
   const output = await execProgram(["system", "info", "--format", "{{json .}}"]);
@@ -168,6 +174,11 @@ async function getSystemInfo() {
     logger.error("Unable to decode podman system information", error);
   }
   return items;
+}
+
+// TODO: Use CLI or API
+async function pruneSystem() {
+  return dataApiDriver.post(`/system/prune`); // returns SystemPruneReport
 }
 
 function getCurrentMachine() {
@@ -261,6 +272,52 @@ function getApiDriver(cfg) {
   return driver;
 }
 
+function getCliDriver() {
+  const driver = {
+    request: async (options) => {
+      const requestsMap = {
+        "/containers/json": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getContainers();
+            // logger.debug("Requesting", input);
+            // throw new Error("Mapping found but not implemented");
+            return {
+              data: result,
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        },
+        "/images/json": {
+          GET: async (input) => {
+            const { method, url, headers, params, body } = input;
+            const result = await getImages();
+            // logger.debug("Requesting", input);
+            // throw new Error("Mapping found but not implemented");
+            return {
+              data: result,
+              headers: [],
+              status: 200,
+              statusText: "OK"
+            };
+          }
+        }
+      };
+      const requestMethod = (options.method || "get").toUpperCase();
+      const requestHandler = requestsMap[options.url]?.[requestMethod];
+      if (requestHandler) {
+        return await requestHandler(options);
+      } else {
+        logger.warn("Request does not have a CLI mapping - falling back to Api", options);
+        return getApiDriver().request(options);
+      }
+    }
+  };
+  return driver;
+}
+
 async function getGithubRepoTags(owner, repo) {
   const url = `https://api.github.com/repos/${owner}/${repo}/tags`;
   let data = [];
@@ -303,7 +360,26 @@ async function connectToContainer(nameOrId, shell) {
   return output.success;
 }
 
+// TODO: Use CLI or API
 async function getImages() {
+  // const result = await this.dataApiDriver.get<ContainerImage[]>("/images/json");
+  let items = [];
+  const output = await execProgram(["image", "list", "--format", "json"]);
+  if (!output.success) {
+    logger.error("Unable to get list of podman images", output);
+    return items;
+  }
+  try {
+    items = JSON.parse(output.stdout);
+  } catch (error) {
+    logger.error("Unable to decode list of podman images", error);
+  }
+  return items;
+}
+
+// TODO: Use CLI or API
+async function getImage(id) {
+  // const result = await this.dataApiDriver.get<ContainerImage>("/images/${id}/json");
   let items = [];
   const output = await execProgram(["image", "list", "--format", "json"]);
   if (!output.success) {
@@ -600,30 +676,25 @@ async function resetSystem() {
   return report;
 }
 
-async function getWSLDistributions() {
-  // const result = await exec_launcher("cmd.exe", ["/c", ["chcp", "65001", ">> nul", "&&", "wsl.exe", "--list", "--quiet"].join(" ")]);
-  // see https://stackoverflow.com/questions/67746179/how-do-i-match-on-wsl-output-in-powershell
-  const result = await exec_launcher("powershell.exe", [
-    "-command",
-    '(wsl --list --running --quiet) -replace "`0" | Select-String -Pattern "."'
-  ]);
-  if (result.success) {
-    const items = `${result.stdout}`
-      .split("\r\n")
-      .map((it) => {
-        return {
-          name: it.trim()
-        };
-      })
-      .filter((it) => !!it.name);
-    return items;
+async function createApiRequest(options) {
+  let result;
+  const adapter = getCommunication();
+  switch (adapter) {
+    case "api":
+      result = await getApiDriver().request(options);
+      break;
+    case "cli":
+      result = await getCliDriver().request(options);
+      break;
+    default:
+      throw new Error(`No such communication possible "${adapter}"`);
   }
-  logger.error("Distributions list error", result);
-  throw new ResultError("Unable to list distributions", result.stderr || result.stdout);
+  return result;
 }
 
 module.exports = {
   ResultError,
+  createApiRequest,
   getConfigurationPath,
   getEngine,
   setEngine,
@@ -634,11 +705,13 @@ module.exports = {
   getGithubRepoTags,
   getSystemConnections,
   getSystemInfo,
+  pruneSystem,
   getApiSocketPath,
   getApiConfig,
   getApiDriver,
   getContainers,
   getImages,
+  getImage,
   getMachines,
   createMachine,
   connectToContainer,
@@ -654,6 +727,5 @@ module.exports = {
   startVirtualizedApi,
   getSystemEnvironment,
   isApiRunning,
-  resetSystem,
-  getWSLDistributions
+  resetSystem
 };

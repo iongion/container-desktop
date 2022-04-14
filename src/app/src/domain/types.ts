@@ -10,7 +10,7 @@ import { VolumesModel } from "../screens/Volume/Model";
 import { SecretsModel } from "../screens/Secret/Model";
 import { SettingsModel } from "../screens/Settings/Model";
 import { TroubleshootModel } from "../screens/Troubleshoot/Model";
-import { IContainerClient } from "../Api.clients";
+import { ContainerClient } from "../Api.clients";
 
 
 export enum AppBootstrapPhase {
@@ -54,7 +54,7 @@ export type AppStorePendingOperation = (store: AppStore) => Promise<any>;
 export type AppStorePendingCallback = (operation: AppStorePendingOperation) => Promise<AppStorePendingOperationResult>;
 
 export interface AppRegistry {
-  api: IContainerClient;
+  api: ContainerClient;
   getStore: () => AppStore;
   withPending: AppStorePendingCallback;
 }
