@@ -1,13 +1,12 @@
 {
   "name": "podman-desktop-companion",
-  "version": "4.0.3-b.4",
+  "version": "4.0.3-b.5",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman CLI desktop companion tool",
   "keywords": [],
   "homepage": ".",
   "main": "./public/main.js",
   "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.63",
     "electron": "^18.0.3",
     "electron-builder": "^23.0.3",
     "electron-packager": "^15.4.0",
@@ -19,8 +18,8 @@
     "@podman-desktop-companion/executor": "file:../../packages/executor",
     "@podman-desktop-companion/logger": "file:../../packages/logger",
     "@podman-desktop-companion/rpc": "file:../../packages/rpc",
-    "@podman-desktop-companion/user-settings": "file:../../packages/user-settings",
     "@podman-desktop-companion/terminal": "file:../../packages/terminal",
+    "@podman-desktop-companion/user-settings": "file:../../packages/user-settings",
     "ajv": "8.11.0",
     "axios": "^0.26.1",
     "electron-context-menu": "^3.1.2",
@@ -38,10 +37,10 @@
     "start": "electron .",
     "electron": "electron",
     "electron-builder": "electron-builder",
-    "electron:package:mac": "electron-builder --publish never -m -c.extraMetadata.main=build/main.js",
-    "electron:package:win": "electron-builder --publish never -w -c.extraMetadata.main=build/main.js",
-    "electron:package:linux_x86": "electron-builder --publish never -l -c.extraMetadata.main=build/main.js",
-    "electron:package:linux_arm": "electron-builder --publish never -l --arm64 -c.extraMetadata.main=build/main.js"
+    "package:mac": "electron-builder --publish never -m -c.extraMetadata.main=build/main.js",
+    "package:win": "electron-builder --publish never -w -c.extraMetadata.main=build/main.js",
+    "package:linux_x86": "electron-builder --publish never -l -c.extraMetadata.main=build/main.js",
+    "package:linux_arm": "electron-builder --publish never -l --arm64 -c.extraMetadata.main=build/main.js"
   },
   "browserslist": [
     ">0.2%",

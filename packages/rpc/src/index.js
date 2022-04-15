@@ -37,7 +37,7 @@ const withWorker = (cb) => {
         return;
       }
       invocation.handled = true;
-      logger.debug("Handler - clear timed-out", response.guid);
+      // logger.debug("Handler - clear timed-out", response.guid);
       clearTimeout(invocation.timeout);
       delete invocations[invocation.guid];
       // invoking the handler

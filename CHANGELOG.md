@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.3-b.5] - 2022-04-15
+
+* Fix improper request body proxy-ing to worker affecting requests methods with body
+* Add BDD initial testing for the client
+
 ## [4.0.3-b.4] - 2022-04-14
 
 * Add `cli` fallback when `api` is not available
