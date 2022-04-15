@@ -139,10 +139,10 @@ export class ApiDriver implements IApiDriver {
         method,
         url,
         ...config,
+        data
       },
-      data
     };
-    // console.debug("requesting", request);
+    console.debug("Proxy-ing request", request);
     const result = await Native.getInstance().proxyService<R>(request);
     return result.data;
   }
