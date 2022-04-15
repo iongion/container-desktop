@@ -37,10 +37,10 @@
     "start": "electron .",
     "electron": "electron",
     "electron-builder": "electron-builder",
-    "electron:package:mac": "electron-builder --publish never -m -c.extraMetadata.main=build/main.js",
-    "electron:package:win": "electron-builder --publish never -w -c.extraMetadata.main=build/main.js",
-    "electron:package:linux_x86": "electron-builder --publish never -l -c.extraMetadata.main=build/main.js",
-    "electron:package:linux_arm": "electron-builder --publish never -l --arm64 -c.extraMetadata.main=build/main.js"
+    "package:mac": "electron-builder --publish never -m -c.extraMetadata.main=build/main.js",
+    "package:win": "electron-builder --publish never -w -c.extraMetadata.main=build/main.js",
+    "package:linux_x86": "electron-builder --publish never -l -c.extraMetadata.main=build/main.js",
+    "package:linux_arm": "electron-builder --publish never -l --arm64 -c.extraMetadata.main=build/main.js"
   },
   "browserslist": [
     ">0.2%",

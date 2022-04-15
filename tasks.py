@@ -47,12 +47,12 @@ def bundle_apps(c, env=None):
     system = platform.system()
     with c.cd("src/shell"):
         if system == "Darwin":
-            run_env(c, "npm run electron:package:mac", env)
+            run_env(c, "npm run package:mac", env)
         elif system == "Linux":
-            run_env(c, "npm run electron:package:linux_x86", env)
-            run_env(c, "npm run electron:package:linux_arm", env)
+            run_env(c, "npm run package:linux_x86", env)
+            run_env(c, "npm run package:linux_arm", env)
         else:
-            run_env(c, "npm run electron:package:win", env)
+            run_env(c, "npm run package:win", env)
 
 
 @task(default=True)
