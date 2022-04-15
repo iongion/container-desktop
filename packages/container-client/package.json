@@ -5,7 +5,8 @@
   "description": "Container desktop helper client",
   "main": "src/index.js",
   "scripts": {
-    "test": "jest"
+    "test.unit": "jest",
+    "test.integration": "cucumber-js"
   },
   "license": "ISC",
   "dependencies": {
@@ -22,6 +23,8 @@
   },
   "repository": "https://github.com/iongion/podman-desktop-companion.git",
   "devDependencies": {
-    "jest": "^27.5.0"
+    "@cucumber/cucumber": "^8.0.0",
+    "jest": "^27.5.0",
+    "jsonpath-plus": "^6.0.1"
   }
 }

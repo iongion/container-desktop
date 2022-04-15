@@ -43,7 +43,7 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
       features: {
         ...ENV_DEFAULT.features,
         customizeMounts: {
-          enabled: false
+          enabled: true
         },
         polling: {
           enabled: false
@@ -57,6 +57,9 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
     ...{
       features: {
         ...ENV_DEFAULT.features,
+        customizeMounts: {
+          enabled: false
+        },
       }
     }
   }

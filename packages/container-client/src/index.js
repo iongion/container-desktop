@@ -256,23 +256,19 @@ function getApiConfig() {
       "Content-Type": "application/json"
     }
   };
-  console.debug("API configuration", config);
-  return {
-    ...config,
-    adapter: require("axios/lib/adapters/http")
-  };
+  logger.debug("API configuration", config);
+  return config;
 }
 
 function getApiDriver(cfg) {
   const config = cfg || getApiConfig();
+  config.adapter = require("axios/lib/adapters/http");
   const driver = axios.create(config);
   // Configure http client logging
   // Add a request interceptor
   driver.interceptors.request.use(
     function (config) {
-      if (getLevel() === "debug") {
-        logger.debug("[container-client] HTTP request", axiosConfigToCURL(config));
-      }
+      logger.debug("[container-client] HTTP request", axiosConfigToCURL(config));
       return config;
     },
     function (error) {
@@ -283,9 +279,7 @@ function getApiDriver(cfg) {
   // Add a response interceptor
   driver.interceptors.response.use(
     function (response) {
-      if (getLevel() === "debug") {
-        logger.debug("[container-client] HTTP response", { status: response.status, statusText: response.statusText });
-      }
+      logger.debug("[container-client] HTTP response", { status: response.status, statusText: response.statusText });
       return response;
     },
     function (error) {
@@ -649,7 +643,7 @@ async function getImageHistory(id) {
 
 async function getMachines() {
   let items = [];
-  const format = "{{.Name}}|{{.VMType}}|{{.Created}}|{{.LastUp}}|{{.CPUs}}|{{.Memory}}|{{.DiskSize}}\\n";
+  const format = "{{.Name}}|{{.VMType}}|{{.Running}}|{{.Created}}|{{.LastUp}}|{{.CPUs}}|{{.Memory}}|{{.DiskSize}}\\n";
   const output = await execProgram(["machine", "list", "--noheading", "--format", format]);
   if (!output.success) {
     logger.error("Unable to get list of podman machines", output);
