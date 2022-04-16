@@ -16,7 +16,7 @@ const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
 const logger = createLogger("shell.main");
 
-const isDebug = false;
+const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
   return !app.isPackaged;
 };
@@ -136,7 +136,6 @@ function createWindow() {
 }
 
 // see https://mmazzarolo.com/blog/2021-08-12-building-an-electron-application-using-create-react-app/
-
 let mainWindow;
 (async () => {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));

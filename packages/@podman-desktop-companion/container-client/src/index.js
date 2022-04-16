@@ -95,23 +95,23 @@ function getProgramKey(program) {
 }
 
 async function getProgramPath() {
-  const program = getProgramName();
-  const programKey = getProgramKey(program);
+  const programName = getProgramName();
+  const programKey = getProgramKey(programName);
   let programPath = userSettings.get(programKey);
   if (programPath) {
-    // logger.debug(`Program ${program} found in ${programPath} - cache hit`);
+    logger.debug(`Program ${programName} found in ${programPath}`);
   } else {
-    logger.debug(`Program ${program} not found in ${programPath} - cache miss(detecting)`);
+    logger.debug(`Program ${programName} not found - cache miss(detecting)`);
     let result = { success: false, stdout: "" };
     switch (os.type()) {
       case "Linux":
-        result = await exec("which", [program]);
+        result = await exec("which", [programName]);
         break;
       case "Windows_NT":
-        result = await exec_launcher("where", [`${program}.exe`]);
+        result = await exec_launcher("where", [`${programName}.exe`]);
         break;
       case "Darwin":
-        result = await exec_launcher("which", [program]);
+        result = await exec_launcher("which", [programName]);
         break;
       default:
         break;
@@ -121,18 +121,18 @@ async function getProgramPath() {
     }
     // Cache if found
     if (programPath) {
-      logger.debug(`Program ${program} found in ${programPath} - cache miss(storing)`);
-      await setProgramPath(program, programPath);
+      await setProgramPath(programName, programPath);
     } else {
-      logger.error(`Program ${program} not found - missing dependency`);
+      logger.error(`Program ${programName} not found on ${os.type()} - missing dependency`);
     }
   }
   return programPath;
 }
 
-async function setProgramPath(program, programPath) {
+async function setProgramPath(programName, programPath) {
   // TODO: Validate the program before configuring it
-  const programKey = getProgramKey(program);
+  logger.debug(`Saving ${programName} path ${programPath}`);
+  const programKey = getProgramKey(programName);
   userSettings.set(programKey, programPath);
   return true;
 }

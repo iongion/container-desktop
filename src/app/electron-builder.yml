@@ -1,5 +1,5 @@
 ---
-appId: iongion.podman-desktop-companion.local
+appId: local.iongion.podman-desktop-companion
 artifactName: podman-desktop-companion-${arch}-${version}.${ext}
 productName: Podman Desktop Companion
 files:
@@ -12,14 +12,22 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
 flatpak:
+  base: org.electronjs.Electron2.BaseApp
+  baseVersion: '21.08'
+  branch: main
+  category: Utils
+  runtime: org.freedesktop.Platform
+  runtimeVersion: '21.08'
+  sdk: org.freedesktop.Sdk
   finishArgs:
     - --share=network
     - --share=ipc
     - --socket=x11
     - --socket=wayland
     - --socket=pulseaudio
+    - --socket=session-bus
     - --device=dri
-    - --device=kvm
+    - --device=kvm # Dunno why
     - --filesystem=host
     - --filesystem=host-os
     - --filesystem=host-etc

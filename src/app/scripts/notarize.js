@@ -16,7 +16,7 @@ exports.default = async function notarizing(context) {
   }
 
   return await notarize({
-    appBundleId: "iongion.podman-desktop-companion.local",
+    appBundleId: "local.iongion.podman-desktop-companion",
     appPath: `${appOutDir}/${appName}.app`,
     appleId,
     appleIdPassword: process.env.AC_PASSWORD

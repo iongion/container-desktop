@@ -1,18 +1,32 @@
+const fs = require("fs");
 const { spawn } = require("child_process");
 const events = require("events");
 // vendors
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
 const logger = createLogger("executor");
+const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
 
 function wrapLauncher(program, args) {
   return [program, args];
 }
 
+function wrapSpawn(launcher, launcherArgs, launcherOpts) {
+  if (isFlatpak) {
+    const hostLauncher = "flatpak-spawn";
+    const hostArgs = ["--host", launcher, ...launcherArgs];
+    logger.debug("Spawning command", [launcher].concat(launcherArgs).join(" "), launcherOpts);
+    return spawn(hostLauncher, hostArgs, launcherOpts);
+  } else {
+    logger.debug("Spawning command", [launcher].concat(launcherArgs).join(" "), launcherOpts);
+    return spawn(launcher, launcherArgs, launcherOpts);
+  }
+}
+
 // project
 async function exec_launcher(launcher, launcherArgs, opts) {
   const launcherOpts = {
-    encoding: "utf-8", // TODO: cNot working for spawn - find alternative
+    encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
     env: opts?.env
   };
@@ -27,15 +41,14 @@ async function exec_launcher(launcher, launcherArgs, opts) {
       stderr: "",
       command
     };
-    logger.debug(command);
-    const child = spawn(launcher, launcherArgs, launcherOpts);
+    const child = wrapSpawn(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
         // logger.warn("Spawning already resolved", { command, from, data });
       } else {
-        // logger.debug(`Spawning complete: "${command}"`, { from, data });
         process.code = child.exitCode;
         process.stderr = process.stderr || data;
+        logger.debug(`Spawning complete`, { from, data, process });
         resolved = true;
         resolve(process);
       }
@@ -146,8 +159,7 @@ async function withClient(opts) {
         cwd: opts?.cwd,
         env: opts?.env
       };
-      logger.debug("Spawning launcher", [launcher].concat(launcherArgs).join(" "), launcherOpts);
-      const child = spawn(launcher, launcherArgs, launcherOpts);
+      const child = wrapSpawn(launcher, launcherArgs, launcherOpts);
       process.pid = child.pid;
       child.on("exit", (code) => onProcessExit(child, code));
       child.on("close", (code) => onProcessClose(child, code));
@@ -166,6 +178,7 @@ async function withClient(opts) {
       }
     };
     em.on("start", onStart);
+    logger.debug("Launching program");
     em.emit("start");
   }
   return em;

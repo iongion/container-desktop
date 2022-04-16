@@ -48,9 +48,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
         const filePath = result?.filePaths[0];
         if (!result.canceled && filePath && program) {
           try {
-            await setUserConfiguration({
-              program: { name: "podman", path: filePath }
-            });
+            const programSettings: any = {};
+            const programKey = `program.${userConfiguration.program.name}.path`;
+            programSettings[programKey] = filePath;
+            await setUserConfiguration(programSettings);
             setProgramPaths((prev) => ({ ...prev, [program]: filePath }));
           } catch (error) {
             console.error("Unable to change program path", error);
@@ -61,7 +62,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         console.error("Unable to open file dialog");
       }
     },
-    [setUserConfiguration, setProgramPaths, t]
+    [userConfiguration, setUserConfiguration, setProgramPaths, t]
   );
   const onProgramPathChange = useCallback(
     (event: React.FormEvent<HTMLInputElement>) => {

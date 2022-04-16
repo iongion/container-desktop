@@ -32,9 +32,10 @@ def run_env(ctx, cmd, env=None):
 
 def build_apps(ctx, env=None):
     with ctx.cd("src/app"):
-        run_env(ctx, "rm -fr build dist", env)
+        run_env(ctx, "rm -fr build ", env)
+        run_env(ctx, "rm -fr dist", env)
         run_env(ctx, "npm run build", env)
-        run_env(ctx, "cp -R icons/appIcon.* build", env)
+        # run_env(ctx, "cp -R icons/appIcon.* build", env)
 
 
 def bundle_apps(c, env=None):
@@ -44,7 +45,7 @@ def bundle_apps(c, env=None):
             run_env(c, "npm run package:mac", env)
         elif system == "Linux":
             run_env(c, "npm run package:linux_x86", env)
-            run_env(c, "npm run package:linux_arm", env)
+            # run_env(c, "npm run package:linux_arm", env)
         else:
             run_env(c, "npm run package:win", env)
 
@@ -65,7 +66,7 @@ def get_env():
         "REACT_APP_ENV": REACT_APP_ENV,
         "REACT_APP_PROJECT_VERSION": REACT_APP_PROJECT_VERSION,
         "TARGET": TARGET,
-        "PUBLIC_URL": "",
+        "PUBLIC_URL": ".",
         # "DEBUG": "electron-builder"
         # "FAST_REFRESH": "false",
     }
