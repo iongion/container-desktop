@@ -71,6 +71,7 @@ def get_env():
         "REACT_APP_ENV": REACT_APP_ENV,
         "REACT_APP_PROJECT_VERSION": REACT_APP_PROJECT_VERSION,
         "TARGET": TARGET,
+        # "FAST_REFRESH": "false",
     }
 
 

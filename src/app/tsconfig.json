@@ -1,5 +1,5 @@
 {
-  "include": ["./src/**/*"],
+  "include": ["src"],
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,
