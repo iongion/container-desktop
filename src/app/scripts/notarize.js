@@ -1,10 +1,10 @@
-require('dotenv').config();
-const { notarize } = require('electron-notarize');
+require("dotenv").config();
+const { notarize } = require("electron-notarize");
 
 exports.default = async function notarizing(context) {
   const { electronPlatformName, appOutDir } = context;
 
-  if (electronPlatformName !== 'darwin') {
+  if (electronPlatformName !== "darwin") {
     return;
   }
 
@@ -16,8 +16,8 @@ exports.default = async function notarizing(context) {
   }
 
   return await notarize({
-    appBundleId:     'iongion.podman-desktop-companion',
-    appPath:         `${ appOutDir }/${ appName }.app`,
+    appBundleId: "iongion.podman-desktop-companion.local",
+    appPath: `${appOutDir}/${appName}.app`,
     appleId,
     appleIdPassword: process.env.AC_PASSWORD
   });

@@ -4,7 +4,7 @@ const path = require("path");
 const url = require("url");
 require("fix-path")();
 // vendors
-const { app, dialog, BrowserWindow, shell, ipcMain, protocol } = require("electron");
+const { app, dialog, BrowserWindow, shell, ipcMain } = require("electron");
 const contextMenu = require("electron-context-menu");
 const is_ip_private = require("private-ip");
 // project

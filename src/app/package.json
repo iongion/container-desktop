@@ -1,10 +1,10 @@
 {
-  "name": "@podman-desktop-companion/app",
-  "version": "1.0.1",
+  "name": "podman-desktop-companion",
+  "version": "4.0.3-rc.1",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
-  "description": "",
+  "description": "Podman Desktop Companion",
   "keywords": [],
-  "homepage": ".",
+  "homepage": "https://iongion.github.io/podman-desktop-companion",
   "main": "src/index.tsx",
   "devDependencies": {
     "@blueprintjs/eslint-plugin": "^1.0.5",
@@ -27,9 +27,22 @@
     "nodemon": "^2.0.15",
     "prettier": "^2.6.2",
     "prettier-eslint": "^13.0.0",
-    "typescript": "^4.6.3"
+    "typescript": "^4.6.3",
+    "electron": "^18.0.3",
+    "electron-builder": "^23.0.3",
+    "electron-packager": "^15.4.0"
   },
   "dependencies": {
+    "@podman-desktop-companion/container-client": "file:../../packages/@podman-desktop-companion/container-client",
+    "@podman-desktop-companion/executor": "file:../../packages/@podman-desktop-companion/executor",
+    "@podman-desktop-companion/logger": "file:../../packages/@podman-desktop-companion/logger",
+    "@podman-desktop-companion/rpc": "file:../../packages/@podman-desktop-companion/rpc",
+    "@podman-desktop-companion/terminal": "file:../../packages/@podman-desktop-companion/terminal",
+    "@podman-desktop-companion/user-settings": "file:../../packages/@podman-desktop-companion/user-settings",
+    "axios": "^0.26.1",
+    "electron-context-menu": "^3.1.2",
+    "fix-path": "^3.0.0",
+    "private-ip": "^2.3.3",
     "@blueprintjs/core": "4.2.0",
     "@blueprintjs/icons": "4.2.3",
     "@blueprintjs/popover2": "^1.1.3",
@@ -57,6 +70,9 @@
     "xterm": "^4.18.0",
     "xterm-addon-fit": "^0.5.0"
   },
+  "optionalDependencies": {
+    "dmg-license": "^1.0.10"
+  },
   "engines": {
     "node": "~16"
   },
@@ -64,7 +80,13 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "start.shell": "electron public/electron.js",
+    "electron-builder": "electron-builder",
+    "package:mac": "electron-builder --publish never -m -c.extraMetadata.main=build/electron.js",
+    "package:win": "electron-builder --publish never -w -c.extraMetadata.main=build/electron.js",
+    "package:linux_x86": "electron-builder --publish never -l -c.extraMetadata.main=build/electron.js",
+    "package:linux_arm": "electron-builder --publish never -l --arm64 -c.extraMetadata.main=build/electron.js"
   },
   "browserslist": [
     "last 1 electron version",

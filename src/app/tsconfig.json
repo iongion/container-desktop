@@ -8,6 +8,7 @@
     "jsx": "react-jsx",
     "target": "es5",
     "allowJs": true,
+    "sourceMap": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
@@ -17,5 +18,10 @@
     "isolatedModules": true,
     "noEmit": true,
     "types": []
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist"
+  ]
 }

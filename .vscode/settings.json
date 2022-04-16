@@ -45,6 +45,7 @@
         "devel",
         "devpts",
         "flathub",
+        "flatpak",
         "groupinstall",
         "Healthcheck",
         "hookform",
@@ -82,6 +83,7 @@
         "tmpfs",
         "usehooks",
         "usermode",
+        "uuidv",
         "vite",
         "vitejs",
         "wslg"

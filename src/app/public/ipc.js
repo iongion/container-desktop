@@ -6,6 +6,7 @@ const {
   resetSystem,
   startApi,
   getSystemEnvironment,
+  getSystemConnections,
   getSystemInfo,
   pruneSystem,
   getMachines,

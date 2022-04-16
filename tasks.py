@@ -31,21 +31,15 @@ def run_env(ctx, cmd, env=None):
 
 
 def build_apps(ctx, env=None):
-    with ctx.cd("src/shell"):
-        run_env(ctx, "rm -fr build", env)
-        run_env(ctx, "rm -fr dist", env)
     with ctx.cd("src/app"):
-        run_env(ctx, "rm -fr build", env)
+        run_env(ctx, "rm -fr build dist", env)
         run_env(ctx, "npm run build", env)
-    with ctx.cd("src/shell"):
-        run_env(ctx, "cp -R ../app/build build", env)
-        run_env(ctx, "cp -R public/* build", env)
         run_env(ctx, "cp -R icons/appIcon.* build", env)
 
 
 def bundle_apps(c, env=None):
     system = platform.system()
-    with c.cd("src/shell"):
+    with c.cd("src/app"):
         if system == "Darwin":
             run_env(c, "npm run package:mac", env)
         elif system == "Linux":
@@ -71,6 +65,8 @@ def get_env():
         "REACT_APP_ENV": REACT_APP_ENV,
         "REACT_APP_PROJECT_VERSION": REACT_APP_PROJECT_VERSION,
         "TARGET": TARGET,
+        "PUBLIC_URL": "",
+        # "DEBUG": "electron-builder"
         # "FAST_REFRESH": "false",
     }
 
@@ -81,7 +77,7 @@ def prepare(c, docs=False):
     with c.cd(PROJECT_HOME):
         run_env(c, "npm install -g concurrently@7.0.0 nodemon@2.0.15 wait-on@6.0.0")
     # Install project dependencies
-    path = Path(os.path.join(PROJECT_HOME, "packages"))
+    path = Path(os.path.join(PROJECT_HOME, "packages/@podman-desktop-companion"))
     for p in path.glob("*/package.json"):
         with c.cd(os.path.dirname(p)):
             run_env(c, "npm install")
@@ -111,7 +107,7 @@ def release(c, docs=False):
 @task
 def clean(c, docs=False):
     # Clean project dependencies
-    path = Path(os.path.join(PROJECT_HOME, "packages"))
+    path = Path(os.path.join(PROJECT_HOME, "packages/@podman-desktop-companion"))
     for p in path.glob("*/package.json"):
         with c.cd(os.path.dirname(p)):
             run_env(c, "rm -fr node_modules")
@@ -136,8 +132,8 @@ def docs_start(c, docs=False):
 @task
 def shell_start(c, docs=False):
     run_env(c, f'wait-on "http://127.0.0.1:{PORT}/index.html"')
-    with c.cd("src/shell"):
-        run_env(c, f"npm start")
+    with c.cd("src/app"):
+        run_env(c, f"npm run start.shell")
 
 
 @task

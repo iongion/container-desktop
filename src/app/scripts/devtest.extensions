@@ -12,7 +12,7 @@ x509_extensions = v3_ca
 
 [req_distinguished_name ]
 
-CN = iongion.podman-desktop-companion
+CN = iongion.podman-desktop-companion.local
 
 [ CA_default ]
 

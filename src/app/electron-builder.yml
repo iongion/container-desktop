@@ -1,0 +1,51 @@
+---
+appId: iongion.podman-desktop-companion.local
+artifactName: podman-desktop-companion-${arch}-${version}.${ext}
+productName: Podman Desktop Companion
+files:
+- build/**/*
+- node_modules/**/*
+directories:
+  buildResources: resources
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+flatpak:
+  finishArgs:
+    - --share=network
+    - --share=ipc
+    - --socket=x11
+    - --socket=wayland
+    - --socket=pulseaudio
+    - --device=dri
+    - --device=kvm
+    - --filesystem=host
+    - --filesystem=host-os
+    - --filesystem=host-etc
+    - --filesystem=home
+    - --filesystem=/tmp
+    - --talk-name=org.freedesktop.Notifications
+mac:
+  category: public.app-category.developer-tools
+  icon: icons/appIcon.icns
+  target: dmg
+  type: development
+  entitlements: entitlements.mac.plist
+  entitlementsInherit: entitlements.mac.inherit.plist
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  extendInfo:
+    NSCameraUsageDescription: "~"
+    NSMicrophoneUsageDescription: "~"
+win:
+  target:
+  - nsis
+  icon: icons/icon.png
+linux:
+  icon: icons/appIcon.svg
+  target:
+    - AppImage
+    - flatpak
+  category: Utility
