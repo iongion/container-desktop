@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.3-rc.2] - 2022-04-16
+
+* initial flatpak support (not yet flathub)
+* solve custom program path setting bug
+
 ## [4.0.3-b.5] - 2022-04-15
 
 * Fix improper request body proxy-ing to worker affecting requests methods with body
