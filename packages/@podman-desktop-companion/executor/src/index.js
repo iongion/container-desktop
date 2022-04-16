@@ -14,7 +14,12 @@ function wrapLauncher(program, args) {
 function wrapSpawn(launcher, launcherArgs, launcherOpts) {
   if (isFlatpak) {
     const hostLauncher = "flatpak-spawn";
-    const hostArgs = ["--host", launcher, ...launcherArgs];
+    const hostArgs = [
+      "--host",
+      // remove flatpak container VFS prefix when executing
+      launcher.replace("/var/run/host", ""),
+      ...launcherArgs
+    ];
     logger.debug("Spawning flatpak command", [hostLauncher].concat(hostArgs).join(" "), launcherOpts);
     return spawn(hostLauncher, hostArgs, launcherOpts);
   } else {
