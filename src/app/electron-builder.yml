@@ -56,4 +56,6 @@ linux:
   target:
     - AppImage
     - flatpak
+    - deb
+    - rpm
   category: Utility
