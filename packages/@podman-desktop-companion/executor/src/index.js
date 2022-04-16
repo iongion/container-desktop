@@ -15,10 +15,10 @@ function wrapSpawn(launcher, launcherArgs, launcherOpts) {
   if (isFlatpak) {
     const hostLauncher = "flatpak-spawn";
     const hostArgs = ["--host", launcher, ...launcherArgs];
-    logger.debug("Spawning command", [launcher].concat(launcherArgs).join(" "), launcherOpts);
+    logger.debug("Spawning flatpak command", [hostLauncher].concat(hostArgs).join(" "), launcherOpts);
     return spawn(hostLauncher, hostArgs, launcherOpts);
   } else {
-    logger.debug("Spawning command", [launcher].concat(launcherArgs).join(" "), launcherOpts);
+    logger.debug("Spawning native command", [launcher].concat(launcherArgs).join(" "), launcherOpts);
     return spawn(launcher, launcherArgs, launcherOpts);
   }
 }
