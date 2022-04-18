@@ -35,7 +35,7 @@ def build_apps(ctx, env=None):
         run_env(ctx, "rm -fr build", env)
         run_env(ctx, "rm -fr dist", env)
         run_env(ctx, "npm run build", env)
-        run_env(ctx, "cp -R icons/appIcon.* build", env)
+        run_env(ctx, "cp -R resources/icons/appIcon.* build", env)
 
 
 def bundle_apps(c, env=None):
