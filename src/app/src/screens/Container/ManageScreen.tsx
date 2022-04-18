@@ -6,7 +6,7 @@ import { useMediaQuery } from "react-responsive";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Container } from "../../Types";
+import { AppScreenProps, AppScreen, Container, ContainerState } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -51,7 +51,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
               )}
               <th data-column="Pid">{t("Pid")}</th>
               <th data-column="State">{t("State")}</th>
-              <th data-column="Status">{t("Status")}</th>
               <th data-column="Digest">{t("Digest")}</th>
               <th data-column="Created">{t("Created")}</th>
               <th data-column="Actions">&nbsp;</th>
@@ -97,8 +96,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <td>
                     <Code>{container.Pid}</Code>
                   </td>
-                  <td>{typeof container.State === "string" ? container.State : container.State.Status}</td>
-                  <td>{container.Status || t("- n/a -")}</td>
+                  <td>{container.DecodedState}</td>
                   <td>{container.Id.substr(0, 12)}</td>
                   <td>{(dayjs(container.Created) as any).fromNow()}</td>
                   <td>

@@ -23,7 +23,8 @@ import {
   Machine,
   //
   UserConfiguration,
-  UserConfigurationOptions
+  UserConfigurationOptions,
+  ContainerStateList
 } from "./Types";
 
 import { Native } from "./Native";
@@ -92,6 +93,11 @@ export const coerceContainer = (container: Container) => {
   }
   container.Logs = container.Logs || [];
   container.Ports = container.Ports || [];
+  if (typeof container.State === "object") {
+    container.DecodedState = container.State.Status as ContainerStateList;
+  } else {
+    container.DecodedState = container.State as ContainerStateList;
+  }
   return container;
 };
 
@@ -144,6 +150,7 @@ export class ApiDriver implements IApiDriver {
     };
     // console.debug("Proxy-ing request", request);
     const result = await Native.getInstance().proxyService<R>(request);
+    result.ok = result.status >= 200 && result.status < 300;
     return result.data;
   }
   public async get<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>) {
@@ -228,7 +235,7 @@ export class ContainerClient {
   async removeImage(id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.delete<boolean>(`/images/${id}`);
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   async pullImage(name: string) {
@@ -238,7 +245,7 @@ export class ContainerClient {
           reference: name
         }
       });
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   async pushImage(id: string, opts?: PushImageOptions) {
@@ -255,7 +262,7 @@ export class ContainerClient {
       const result = await this.dataApiDriver.post<boolean>(`/images/${id}/push`, undefined, {
         params
       });
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   // container
@@ -300,16 +307,28 @@ export class ContainerClient {
       return result.data;
     });
   }
+  async pauseContainer(id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/containers/${id}/pause`);
+      return result.ok;
+    });
+  }
+  async unpauseContainer(id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/containers/${id}/unpause`);
+      return result.ok;
+    });
+  }
   async stopContainer(id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.post<boolean>(`/containers/${id}/stop`);
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   async restartContainer(id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.post<boolean>(`/containers/${id}/restart`);
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   async removeContainer(id: string) {
@@ -320,7 +339,7 @@ export class ContainerClient {
           v: true
         }
       });
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   async createContainer(opts: CreateContainerOptions) {
@@ -349,7 +368,7 @@ export class ContainerClient {
         if (opts.Start) {
           const { Id } = createResult.data;
           const startResult = await this.dataApiDriver.post(`/containers/${Id}/start`);
-          if (startResult.statusText === "OK") {
+          if (startResult.ok) {
             success = true;
           }
         } else {
@@ -392,7 +411,7 @@ export class ContainerClient {
           force: true
         }
       });
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   async pruneVolumes(filters: any) {
@@ -442,7 +461,7 @@ export class ContainerClient {
           force: true
         }
       });
-      return result.statusText === "OK";
+      return result.ok;
     });
   }
   // System

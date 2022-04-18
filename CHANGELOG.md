@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Add builds for `M1` architecture
+* Add counters for `paused` and `exited` on Dashboard screen
+* Add ability to `pause / unpause` a container
+
+### Fixed
+
+* Fix Dashboard wrong counters
+* Fixed icon path in development mode
+
+### Changed
+
+* Added HTTP response `ok` state interpretation
+* Changed build pipeline to be more explicit
+* Added `DecodedState` computed property to `Container` type to avoid miss-match data when requesting lists vs single items
+* Rephrased counters for running containers
+
+### Removed
+
+* Removed extra `Status` column from `Containers` list screen
+
 ## [4.0.3-rc.2] - 2022-04-16
 
 * initial flatpak support (not yet flathub)

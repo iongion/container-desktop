@@ -23,7 +23,10 @@ const isDevelopment = () => {
 
 function createWindow() {
   let window;
-  const iconPath = isDevelopment() ? path.join(__dirname, "../icons/appIcon.png") : path.join(__dirname, "appIcon.png");
+  const iconPath = isDevelopment()
+    ? path.join(__dirname, "../resources/icons/appIcon.png")
+    : path.join(__dirname, "appIcon.png");
+  console.debug(iconPath);
   const windowConfigOptions = userSettings.window();
   const windowOptions = {
     backgroundColor: "#261b26",

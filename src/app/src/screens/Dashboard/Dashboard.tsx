@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { AnchorButton, Button, InputGroup, Icon, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Button, InputGroup, Icon, Intent, NonIdealState, H6, HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import ClipboardJS from "clipboard";
 import { useTranslation } from "react-i18next";
@@ -22,8 +22,8 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const clipboardRef = useRef<ClipboardJS>();
-  const containersFetchCount = useStoreActions((actions) => actions.dashboard.containersFetchCount);
-  const containersCount = useStoreState((state) => state.dashboard.containersCount);
+  const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
+  const containerStats = useStoreState((state) => state.dashboard.containerStats);
   const clipboardButtonRef = useRef<Button>(null);
   useEffect(() => {
     if (!clipboardButtonRef.current?.buttonRef) {
@@ -41,16 +41,28 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, [t]);
 
   // Change hydration
-  usePoller({ poller: containersFetchCount });
+  usePoller({ poller: containersFetchStats });
 
   return (
     <div className="AppScreen" data-screen={ID}>
       <div className="AppScreenContent">
         <NonIdealState
           icon={<Icon icon={IconNames.CUBE} size={120} />}
-          title={t("containersCount", { count: containersCount, context: `${containersCount}` })}
+          title={t("containersRunning", { count: containerStats.running, context: `${containerStats.running}` })}
           description={
             <div className="AppScreenContentViewport">
+              <HTMLTable className="DashboardContainersReportTable" striped condensed bordered>
+                <tbody>
+                  <tr>
+                    <td>{t("Paused")}</td>
+                    <td>{containerStats.paused}</td>
+                  </tr>
+                  <tr>
+                    <td>{t("Exited")}</td>
+                    <td>{containerStats.exited}</td>
+                  </tr>
+                </tbody>
+              </HTMLTable>
               <p>{t("As an example, copy and paste this command into your terminal and then come back")}</p>
               <InputGroup
                 className="DashboardContainerExampleCode"

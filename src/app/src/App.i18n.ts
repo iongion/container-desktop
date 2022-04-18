@@ -10,10 +10,10 @@ i18n
     resources: {
       en: {
         translation: {
-          containersCount: "There are no containers running",
-          containersCount_0: "There are no containers running",
-          containersCount_one: "There is {{count}} container running",
-          containersCount_other: "There are {{count}} containers running"
+          containersRunning: "There are no running containers",
+          containersRunning_0: "There are no running containers",
+          containersRunning_one: "There is {{count}} running container",
+          containersRunning_other: "There are {{count}} running containers",
         }
       }
     },

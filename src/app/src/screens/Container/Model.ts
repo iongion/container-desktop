@@ -19,6 +19,8 @@ export interface ContainersModel extends ContainersModelState {
   // Thunks
   containersFetch: Thunk<ContainersModel>;
   containerFetch: Thunk<ContainersModel, FetchContainerOptions>;
+  containerPause: Thunk<ContainersModel, Partial<Container>>;
+  containerUnpause: Thunk<ContainersModel, Partial<Container>>;
   containerStop: Thunk<ContainersModel, Partial<Container>>;
   containerRestart: Thunk<ContainersModel, Partial<Container>>;
   containerRemove: Thunk<ContainersModel, Partial<Container>>;
@@ -88,16 +90,43 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
       return hydrated;
     })
   ),
-  containerStop: thunk(async (actions, container) =>
+  containerPause: thunk(async (actions, container) =>
     registry.withPending(async () => {
       let removed = false;
       if (container.Id) {
-        removed = await registry.api.stopContainer(container.Id);
-      }
-      if (removed) {
-        actions.containerDelete(container);
+        removed = await registry.api.pauseContainer(container.Id);
+        if (removed) {
+          const freshContainer = await registry.api.getContainer(container.Id);
+          actions.containerUpdate(freshContainer);
+        }
       }
       return removed;
+    })
+  ),
+  containerUnpause: thunk(async (actions, container) =>
+    registry.withPending(async () => {
+      let removed = false;
+      if (container.Id) {
+        removed = await registry.api.unpauseContainer(container.Id);
+        if (removed) {
+          const freshContainer = await registry.api.getContainer(container.Id);
+          actions.containerUpdate(freshContainer);
+        }
+      }
+      return removed;
+    })
+  ),
+  containerStop: thunk(async (actions, container) =>
+    registry.withPending(async () => {
+      let stopped = false;
+      if (container.Id) {
+        stopped = await registry.api.stopContainer(container.Id);
+        if (stopped) {
+          const freshContainer = await registry.api.getContainer(container.Id);
+          actions.containerUpdate(freshContainer);
+        }
+      }
+      return stopped;
     })
   ),
   containerRestart: thunk(async (actions, container) =>

@@ -8,7 +8,7 @@ import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 // project
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
-import { Container } from "../../Types";
+import { Container, ContainerStateList } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
 import { useStoreActions } from "../../domain/types";
@@ -32,6 +32,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
+  const containerPause = useStoreActions((actions) => actions.container.containerPause);
+  const containerUnpause = useStoreActions((actions) => actions.container.containerUnpause);
   const containerStop = useStoreActions((actions) => actions.container.containerStop);
   const containerRestart = useStoreActions((actions) => actions.container.containerRestart);
   const containerRemove = useStoreActions((actions) => actions.container.containerRemove);
@@ -53,6 +55,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
             break;
           case "container.stop":
             result = await containerStop(container);
+            break;
+          case "container.pause":
+            result = await containerPause(container);
+            break;
+          case "container.unpause":
+            result = await containerUnpause(container);
             break;
           case "container.restart":
             result = await containerRestart(container);
@@ -84,7 +92,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
       }
       setDisabledAction(undefined);
     },
-    [container, containerFetch, containerStop, containerRestart, containerRemove, containerConnect, t]
+    [container, containerFetch, containerPause, containerUnpause, containerStop, containerRestart, containerRemove, containerConnect, t]
   );
   const onRemove = useCallback(
     (tag, confirmed) => {
@@ -140,6 +148,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
   );
 
   const containerServiceUrl = getContainerServiceUrl(container);
+  const isRunning = container.DecodedState === ContainerStateList.RUNNING;
+  const isPaused = container.DecodedState === ContainerStateList.PAUSED;
+  const isStopped = container.DecodedState === ContainerStateList.STOPPED;
+  // TODO: State machine - manage transitional states
+  const canPauseUnpause = isRunning;
+  const canStop = isRunning && !isStopped;
+  const canRestart = !isPaused;
 
   return (
     <ButtonGroup>
@@ -148,6 +163,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
         {expandAsMenuItems}
         <MenuItem
           data-container={container.Id}
+          disabled={!isRunning}
           icon={<ReactIcon.Icon path={mdiOpenInApp} size={0.75} />}
           href={containerServiceUrl}
           target="_blank"
@@ -157,14 +173,23 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
         <MenuItem
           data-container={container.Id}
           data-action="container.connect"
+          disabled={!isRunning}
           icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
           text={t("Open terminal console")}
           onClick={onOpenTerminalConsole}
         />
         <MenuItem
           data-container={container.Id}
+          data-action={isPaused ? "container.unpause" : "container.pause"}
+          disabled={!canPauseUnpause}
+          icon={IconNames.PAUSE}
+          text={isPaused ? t("Resume") : t("Pause")}
+          onClick={onActionClick}
+        />
+        <MenuItem
+          data-container={container.Id}
           data-action="container.stop"
-          disabled={disabledAction === "container.stop"}
+          disabled={!canStop}
           icon={IconNames.STOP}
           text={t("Stop")}
           onClick={onActionClick}
@@ -172,7 +197,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
         <MenuItem
           data-container={container.Id}
           data-action="container.restart"
-          disabled={disabledAction === "container.restart"}
+          disabled={!canRestart}
           icon={IconNames.RESET}
           text={t("Restart")}
           onClick={onActionClick}

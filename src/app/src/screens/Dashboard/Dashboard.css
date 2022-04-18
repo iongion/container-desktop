@@ -25,3 +25,16 @@
 .DashboardContainerDocsUrl {
   margin-top: 20px;
 }
+.DashboardContainersReportTable {
+  border: 1px solid;
+  text-align: center;
+  margin: 0 auto;
+  margin-bottom: 10px;
+  font-size: 11px !important;
+  font-family: monospace;
+  min-width: 50%;
+  border: 1px solid #bc59d5;
+}
+.DashboardContainersReportTable tr td:last-child {
+  text-align: center;
+}

@@ -34,6 +34,7 @@ const servicesMap = {
     try {
       const response = await createApiRequest(options);
       result = {
+        ok: response.status >= 200 && response.status < 300,
         data: response.data,
         headers: response.headers,
         status: response.status,

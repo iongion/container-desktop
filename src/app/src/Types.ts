@@ -138,6 +138,7 @@ export interface ContainerClientResponse<T = unknown> {
   warnings: any[];
   statusText: string;
   status: number;
+  ok: boolean;
 }
 
 export interface ContainerStats {
@@ -209,6 +210,17 @@ export interface ContainerStats {
 export interface ContainerInspect {
   Env: string[];
 }
+
+// See libpod/define/podstate.go
+export enum ContainerStateList {
+  CREATED = "created",
+  ERROR = "error",
+  EXITED = "exited",
+  PAUSED = "paused",
+  RUNNING = "running",
+  DEGRADED = "degraded",
+  STOPPED = "stopped",
+}
 export interface ContainerState {
   Dead: boolean;
   Error: string;
@@ -226,7 +238,7 @@ export interface ContainerState {
   Restarting: boolean;
   Running: boolean;
   StartedAt: string;
-  Status: string;
+  Status: ContainerStateList;
 }
 
 export interface ContainerPort {
@@ -292,10 +304,11 @@ export interface Container {
   Ports: ContainerPorts;
   Size: any | null;
   StartedAt: number;
-  State: string | ContainerState;
+  State: ContainerStateList | ContainerState;
   Status: string;
   //
   NetworkSettings?: ContainerNetworkSettings;
+  DecodedState: ContainerStateList;
 }
 
 export interface ContainerImageHistory {
