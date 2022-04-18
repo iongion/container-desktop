@@ -64,7 +64,7 @@ const withWorkerRPC = (cb) =>
               // timeout control
               handled: false,
               timeout: null,
-              maxExecutionTime: 30000
+              maxExecutionTime: 60000
             };
             // logger.debug('Starting response listener', guid);
             invocations[guid] = {

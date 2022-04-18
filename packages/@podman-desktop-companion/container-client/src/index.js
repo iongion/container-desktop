@@ -248,7 +248,7 @@ function getApiSocketPath() {
 
 function getApiConfig() {
   const config = {
-    timeout: 30000,
+    timeout: 60000,
     socketPath: getApiSocketPath(),
     baseURL: "http://d/v3.0.0/libpod",
     headers: {

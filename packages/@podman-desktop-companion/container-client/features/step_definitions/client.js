@@ -176,7 +176,7 @@ When(/^i make an? "(GET|POST|PUT|DELETE|PATCH|HEAD)" request to "(.*)"/i, async 
   if (this.communication === "api") {
     const socketPath = this.environmentConfiguration.socketPath.Unix.replace("$HOME", process.env.HOME);
     driver = client.getApiDriver({
-      timeout: 30000,
+      timeout: 60000,
       socketPath,
       baseURL: "http://d/v3.0.0/libpod",
       headers: {

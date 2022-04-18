@@ -142,7 +142,7 @@ export class ApiDriver implements IApiDriver {
         data
       },
     };
-    console.debug("Proxy-ing request", request);
+    // console.debug("Proxy-ing request", request);
     const result = await Native.getInstance().proxyService<R>(request);
     return result.data;
   }

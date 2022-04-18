@@ -1,7 +1,11 @@
 ---
-appId: local.iongion.podman-desktop-companion
+appId: io.github.iongion.PodmanDesktopCompanion
 artifactName: podman-desktop-companion-${arch}-${version}.${ext}
+copyright: ../LICENSE
 productName: Podman Desktop Companion
+releaseInfo:
+  releaseName: Podman Desktop Companion ${version}
+  releaseDate: Apr 17, 2022
 files:
 - build/**/*
 - node_modules/**/*
