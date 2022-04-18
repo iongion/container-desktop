@@ -84,6 +84,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onAutoStartApiChange = useCallback(async (e) => {
     await setUserConfiguration({ autoStartApi: !!e.currentTarget.checked });
   }, [setUserConfiguration]);
+  const onMinimizeToSystemTray = useCallback(async (e) => {
+    await setUserConfiguration({ minimizeToSystemTray: !!e.currentTarget.checked });
+  }, [setUserConfiguration]);
   const onCLICommunicationChange = useCallback(async (e) => {
     const nextCommunication = !!e.currentTarget.checked ? "cli" : "api";
     await setUserConfiguration({ communication: nextCommunication });
@@ -206,6 +209,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 label={t("Automatically start the Api")}
                 checked={!!userConfiguration.autoStartApi}
                 onChange={onAutoStartApiChange}
+              />
+            </ControlGroup>
+          </FormGroup>
+          <FormGroup>
+            <ControlGroup fill={true}>
+              <Checkbox
+                id="minimizeToSystemTray"
+                disabled={pending}
+                label={t("Minimize to System Tray when closing")}
+                checked={!!userConfiguration.minimizeToSystemTray}
+                onChange={onMinimizeToSystemTray}
               />
             </ControlGroup>
           </FormGroup>

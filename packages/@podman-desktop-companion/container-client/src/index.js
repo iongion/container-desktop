@@ -57,6 +57,10 @@ function getAutoStartApi() {
   return userSettings.get("autoStartApi", false);
 }
 
+function getMinimizeToSystemTray() {
+  return userSettings.get("minimizeToSystemTray", false);
+}
+
 function getCommunication() {
   return userSettings.get("communication", "api");
 }
@@ -66,6 +70,7 @@ async function getUserConfiguration() {
     engine: getEngine(),
     program: await getProgram(getProgramName()),
     autoStartApi: getAutoStartApi(),
+    minimizeToSystemTray: getMinimizeToSystemTray(),
     communication: getCommunication(),
     path: getConfigurationPath(),
     logging: {

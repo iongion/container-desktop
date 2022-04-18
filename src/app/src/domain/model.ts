@@ -21,6 +21,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
         program: {} as any,
         engine: ContainerEngine.NATIVE, // default
         autoStartApi: false,
+        minimizeToSystemTray: false,
         path: "",
         logging: {
           level: "error"

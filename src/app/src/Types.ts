@@ -11,6 +11,7 @@ export interface UserConfiguration {
   program: Program;
   engine: ContainerEngine, // default
   autoStartApi: boolean;
+  minimizeToSystemTray: boolean;
   path: string;
   logging: {
     level: string;
@@ -22,6 +23,7 @@ export interface UserConfigurationOptions {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
   autoStartApi: boolean;
+  minimizeToSystemTray: boolean;
   "logging.level": string;
   communication: "api" | "cli";
 }

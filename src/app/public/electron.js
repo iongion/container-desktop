@@ -4,7 +4,7 @@ const path = require("path");
 const url = require("url");
 require("fix-path")();
 // vendors
-const { app, dialog, BrowserWindow, shell, ipcMain } = require("electron");
+const { app, dialog, BrowserWindow, Menu, Tray, shell, ipcMain } = require("electron");
 const contextMenu = require("electron-context-menu");
 const is_ip_private = require("private-ip");
 // project
@@ -15,18 +15,17 @@ const userSettings = require("@podman-desktop-companion/user-settings");
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
 const logger = createLogger("shell.main");
-
+const isHideToTrayOnClose = () => userSettings.get("minimizeToSystemTray", false);
 const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
   return !app.isPackaged;
 };
+const iconPath = isDevelopment()
+  ? path.join(__dirname, "../resources/icons/appIcon.png")
+  : path.join(__dirname, "appIcon.png");
 
 function createWindow() {
   let window;
-  const iconPath = isDevelopment()
-    ? path.join(__dirname, "../resources/icons/appIcon.png")
-    : path.join(__dirname, "appIcon.png");
-  console.debug(iconPath);
   const windowConfigOptions = userSettings.window();
   const windowOptions = {
     backgroundColor: "#261b26",
@@ -66,7 +65,7 @@ function createWindow() {
   ipcMain.on("window.restore", () => {
     window.restore();
   });
-  ipcMain.on("window.close", () => {
+  ipcMain.on("window.close", (event) => {
     window.close();
   });
   ipcMain.on("application.exit", () => {
@@ -103,6 +102,28 @@ function createWindow() {
   });
   // Application window
   window = userSettings.window().create(windowOptions);
+  window.on("minimize", (event) => {
+    if (isHideToTrayOnClose()) {
+      if (!tray) {
+        createSystemTray();
+      }
+      event.preventDefault();
+      window.hide();
+    }
+  });
+  window.on("close", (event) => {
+    if (isHideToTrayOnClose()) {
+      if (!app.isQuitting) {
+        if (!tray) {
+          createSystemTray();
+        }
+        event.preventDefault();
+        window.hide();
+        event.returnValue = false;
+      }
+    }
+    return false;
+  });
   // Automatically open Chrome's DevTools in development mode.
   if (isDevelopment() || isDebug) {
     window.webContents.openDevTools();
@@ -138,16 +159,44 @@ function createWindow() {
   return window;
 }
 
+function createSystemTray() {
+  tray = new Tray(iconPath);
+  const contextMenu = Menu.buildFromTemplate([
+    { label: "Show main window", click: () => mainWindow.show() },
+    { label: "", type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        mainWindow.destroy();
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+  tray.setToolTip("Podman Desktop Companion");
+  tray.setContextMenu(contextMenu);
+}
+
 // see https://mmazzarolo.com/blog/2021-08-12-building-an-electron-application-using-create-react-app/
 let mainWindow;
+let tray = null;
 (async () => {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   contextMenu({
     showInspectElement: isDevelopment() || isDebug
   });
   app.commandLine.appendSwitch("ignore-certificate-errors");
+  app.on("before-quit", () => {
+    app.isQuitting = true;
+  });
   app.whenReady().then(() => {
+    // setup tray only when
+    if (isHideToTrayOnClose()) {
+      createSystemTray();
+    }
+    // setup window
     mainWindow = createWindow();
+    mainWindow.excludedFromShownWindowsMenu = true;
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         mainWindow = createWindow();
@@ -158,6 +207,7 @@ let mainWindow;
     logger.debug("Can kill processes");
     if (os.type() !== "Darwin") {
       if (mainWindow) {
+        app.isQuitting = true;
         app.quit();
       }
     }

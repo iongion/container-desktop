@@ -10,9 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Add builds for `M1` architecture
-* Add counters for `paused` and `exited` on Dashboard screen
-* Add ability to `pause / unpause` a container
+* Builds for `M1` architecture
+* Counters for `paused` and `exited` on Dashboard screen
+* Ability to `pause / unpause` a container
+* Basic `System Tray` support (restore window & quit - no startup to tray)
 
 ### Fixed
 
