@@ -16,7 +16,7 @@ const osType = os.type();
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
 const logger = createLogger("shell.main");
-let main;
+let window;
 const isHideToTrayOnClose = () => userSettings.get("minimizeToSystemTray", false);
 const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
@@ -25,64 +25,63 @@ const isDevelopment = () => {
 const iconPath = isDevelopment()
   ? path.join(__dirname, "../resources/icons/appIcon.png")
   : path.join(__dirname, "appIcon.png");
-const trayIconPath =  isDevelopment()
-? path.join(__dirname, "../resources/icons/trayIcon.png")
-: path.join(__dirname, "trayIcon.png");
+const trayIconPath = isDevelopment()
+  ? path.join(__dirname, "../resources/icons/trayIcon.png")
+  : path.join(__dirname, "trayIcon.png");
 
-// ipc setup
-  ipcMain.on("window.minimize", () => {
-    if (window.isMinimizable()) {
-      window.minimize();
-    }
-  });
-  ipcMain.on("window.maximize", () => {
-    if (window.isMaximized()) {
-      window.restore();
-    } else {
-      window.maximize();
-    }
-  });
-  ipcMain.on("window.restore", () => {
+// ipc global setup
+ipcMain.on("window.minimize", () => {
+  if (window.isMinimizable()) {
+    window.minimize();
+  }
+});
+ipcMain.on("window.maximize", () => {
+  if (window.isMaximized()) {
     window.restore();
+  } else {
+    window.maximize();
+  }
+});
+ipcMain.on("window.restore", () => {
+  window.restore();
+});
+ipcMain.on("window.close", (event) => {
+  window.close();
+});
+ipcMain.on("application.exit", () => {
+  app.exit();
+});
+ipcMain.on("application.relaunch", () => {
+  app.relaunch();
+});
+ipcMain.on("register.process", (p) => {
+  logger.debug("Must register", p);
+});
+ipcMain.on("openDevTools", () => {
+  window.webContents.openDevTools();
+});
+ipcMain.handle("openFileSelector", async function (event, options) {
+  logger.debug("IPC - openFileSelector - start", options);
+  const selection = await dialog.showOpenDialog(window, {
+    defaultPath: app.getPath("home"),
+    properties: [options?.directory ? "openDirectory" : "openFile"]
   });
-  ipcMain.on("window.close", (event) => {
-    window.close();
-  });
-  ipcMain.on("application.exit", () => {
-    app.exit();
-  });
-  ipcMain.on("application.relaunch", () => {
-    app.relaunch();
-  });
-  ipcMain.on("register.process", (p) => {
-    logger.debug("Must register", p);
-  });
-  ipcMain.on("openDevTools", () => {
-    window.webContents.openDevTools();
-  });
-  ipcMain.handle("openFileSelector", async function (event, options) {
-    logger.debug("IPC - openFileSelector - start", options);
-    const selection = await dialog.showOpenDialog(window, {
-      defaultPath: app.getPath("home"),
-      properties: [options?.directory ? "openDirectory" : "openFile"]
-    });
-    logger.debug("IPC - openFileSelector - result", selection);
-    return selection;
-  });
-  ipcMain.handle("openTerminal", async function (event, options) {
-    logger.debug("IPC - openTerminal - start", options);
-    let success = await launchTerminal(options);
-    logger.debug("IPC - openTerminal - result", options);
-    return success;
-  });
-  ipcMain.handle("proxy", async function (event, req) {
-    const result = await invoker.invoke(req.method, req.params);
-    logger.debug("IPC - proxy", req);
-    return result;
-  });
+  logger.debug("IPC - openFileSelector - result", selection);
+  return selection;
+});
+ipcMain.handle("openTerminal", async function (event, options) {
+  logger.debug("IPC - openTerminal - start", options);
+  let success = await launchTerminal(options);
+  logger.debug("IPC - openTerminal - result", options);
+  return success;
+});
+ipcMain.handle("proxy", async function (event, req) {
+  const result = await invoker.invoke(req.method, req.params);
+  logger.debug("IPC - proxy", req);
+  return result;
+});
 
 function createWindow() {
-  let window;
   const windowConfigOptions = userSettings.window();
   const windowOptions = {
     backgroundColor: "#261b26",
@@ -105,9 +104,7 @@ function createWindow() {
   } else {
     windowOptions.titleBarStyle = "hiddenInset";
   }
-  // Application window
-  window = userSettings.window().create(windowOptions);
-  window.on("minimize", (event) => {
+  const onMinimizeOrClose = (event, source) => {
     if (isHideToTrayOnClose()) {
       if (!tray) {
         createSystemTray();
@@ -119,27 +116,16 @@ function createWindow() {
       if (osType === "Darwin") {
         app.dock.hide();
       }
-    }
-  });
-  window.on("close", (event) => {
-    if (isHideToTrayOnClose()) {
-      if (!app.isQuitting) {
-        if (!tray) {
-          createSystemTray();
-        }
-        event.preventDefault();
-        window.hide();
-        event.returnValue = false;
-        window.setSkipTaskbar(true);
-        if (osType === "Darwin") {
-          app.dock.hide();
-        }
+    } else if (source === "close") {
+      if (osType === "Darwin") {
+        app.quit();
       }
-    } else if (osType === "Darwin") {
-      app.quit();
     }
-    return false;
-  });
+  };
+  // Application window
+  window = userSettings.window().create(windowOptions);
+  window.on("minimize", (event) => onMinimizeOrClose(event, "minimize"));
+  window.on("close", (event) => onMinimizeOrClose(event, "close"));
   // Automatically open Chrome's DevTools in development mode.
   if (isDevelopment() || isDebug) {
     window.webContents.openDevTools();
