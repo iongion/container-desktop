@@ -12,9 +12,11 @@ const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { createLogger } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
 // locals
+const osType = os.type();
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
 const logger = createLogger("shell.main");
+let main;
 const isHideToTrayOnClose = () => userSettings.get("minimizeToSystemTray", false);
 const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
@@ -23,33 +25,11 @@ const isDevelopment = () => {
 const iconPath = isDevelopment()
   ? path.join(__dirname, "../resources/icons/appIcon.png")
   : path.join(__dirname, "appIcon.png");
+const trayIconPath =  isDevelopment()
+? path.join(__dirname, "../resources/icons/trayIcon.png")
+: path.join(__dirname, "trayIcon.png");
 
-function createWindow() {
-  let window;
-  const windowConfigOptions = userSettings.window();
-  const windowOptions = {
-    backgroundColor: "#261b26",
-    width: 1024,
-    height: 768,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      devTools: true,
-      nodeIntegration: true,
-      nodeIntegrationInWorker: true,
-      // nativeWindowOpen: true,
-      sandbox: false
-    },
-    icon: iconPath,
-    ...windowConfigOptions.options(),
-    show: false
-  };
-  const osType = os.type();
-  if (osType === "Linux" || osType === "Windows_NT") {
-    windowOptions.frame = false;
-  } else {
-    windowOptions.titleBarStyle = "hiddenInset";
-  }
-  // events
+// ipc setup
   ipcMain.on("window.minimize", () => {
     if (window.isMinimizable()) {
       window.minimize();
@@ -100,6 +80,31 @@ function createWindow() {
     logger.debug("IPC - proxy", req);
     return result;
   });
+
+function createWindow() {
+  let window;
+  const windowConfigOptions = userSettings.window();
+  const windowOptions = {
+    backgroundColor: "#261b26",
+    width: 1024,
+    height: 768,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      devTools: true,
+      nodeIntegration: true,
+      nodeIntegrationInWorker: true,
+      // nativeWindowOpen: true,
+      sandbox: false
+    },
+    icon: iconPath,
+    ...windowConfigOptions.options(),
+    show: false
+  };
+  if (osType === "Linux" || osType === "Windows_NT") {
+    windowOptions.frame = false;
+  } else {
+    windowOptions.titleBarStyle = "hiddenInset";
+  }
   // Application window
   window = userSettings.window().create(windowOptions);
   window.on("minimize", (event) => {
@@ -108,7 +113,12 @@ function createWindow() {
         createSystemTray();
       }
       event.preventDefault();
+      window.setSkipTaskbar(true);
       window.hide();
+      event.returnValue = false;
+      if (osType === "Darwin") {
+        app.dock.hide();
+      }
     }
   });
   window.on("close", (event) => {
@@ -120,7 +130,13 @@ function createWindow() {
         event.preventDefault();
         window.hide();
         event.returnValue = false;
+        window.setSkipTaskbar(true);
+        if (osType === "Darwin") {
+          app.dock.hide();
+        }
       }
+    } else if (osType === "Darwin") {
+      app.quit();
     }
     return false;
   });
@@ -160,9 +176,22 @@ function createWindow() {
 }
 
 function createSystemTray() {
-  tray = new Tray(iconPath);
+  tray = new Tray(trayIconPath);
   const contextMenu = Menu.buildFromTemplate([
-    { label: "Show main window", click: () => mainWindow.show() },
+    {
+      label: "Show main window",
+      click: () => {
+        mainWindow.excludedFromShownWindowsMenu = true;
+        if (BrowserWindow.getAllWindows().length === 0) {
+          mainWindow = createWindow();
+        }
+        mainWindow.show();
+        mainWindow.setSkipTaskbar(false);
+        if (osType === "Darwin") {
+          app.dock.show();
+        }
+      }
+    },
     { label: "", type: "separator" },
     {
       label: "Quit",
@@ -196,7 +225,6 @@ let tray = null;
     }
     // setup window
     mainWindow = createWindow();
-    mainWindow.excludedFromShownWindowsMenu = true;
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         mainWindow = createWindow();
