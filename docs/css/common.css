@@ -47,6 +47,7 @@ h1 {
   font-weight: 300;
   line-height: 1.8em;
   text-align: center;
+  margin-bottom: 2px;
 }
 .intro a {
   text-decoration: none;
@@ -102,7 +103,8 @@ ul.downloadBundles {
 .content {
   margin-left: 15%;
   margin-right: 15%;
-  padding-top: 40px;
+  padding-top: 20px;
+  margin-top: 0;
 }
 
 .content h2,
@@ -276,6 +278,14 @@ p {
   width: 100%;
 }
 
+
+.imgHighlight2 {
+  border-radius: 15px;
+  opacity: 0.5;
+  overflow: hidden;
+  border: 1px solid #ff03f0;
+}
+
 .contact {
   display: flex;
   flex-direction: row;
@@ -443,4 +453,22 @@ ul.footerMenu {
   color: green;
   padding: 5px;
   display: inline-block;
+}
+
+.installationSection {
+  margin: 0 auto;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.installationSection a {
+  font-weight: normal;
+  text-decoration: underline;
+}
+.installationSection a {
+  margin-right: 40px;
+}
+.installationSection a:last-child {
+  margin-right: 0;
 }
