@@ -7,10 +7,6 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 const logger = createLogger("executor");
 const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
 
-function wrapLauncher(program, args) {
-  return [program, args];
-}
-
 function wrapSpawn(launcher, launcherArgs, launcherOpts) {
   if (isFlatpak) {
     const hostLauncher = "flatpak-spawn";
@@ -20,10 +16,10 @@ function wrapSpawn(launcher, launcherArgs, launcherOpts) {
       launcher.replace("/var/run/host", ""),
       ...launcherArgs
     ];
-    logger.debug("Spawning flatpak command", [hostLauncher].concat(hostArgs).join(" "), launcherOpts);
+    logger.debug("[SC.F][>]", [hostLauncher].concat(hostArgs).join(" "));
     return spawn(hostLauncher, hostArgs, launcherOpts);
   } else {
-    logger.debug("Spawning native command", [launcher].concat(launcherArgs).join(" "), launcherOpts);
+    logger.debug("[SC.N][>]", [launcher].concat(launcherArgs).join(" "));
     return spawn(launcher, launcherArgs, launcherOpts);
   }
 }
@@ -33,10 +29,11 @@ async function exec_launcher(launcher, launcherArgs, opts) {
   const launcherOpts = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
-    env: opts?.env
+    env: opts?.env,
+    detached: opts?.detached
   };
-  let resolved = false;
-  const result = await new Promise((resolve) => {
+  return new Promise((resolve) => {
+    let resolved = false;
     const command = [launcher].concat(launcherArgs).join(" ");
     const process = {
       pid: null,
@@ -46,14 +43,17 @@ async function exec_launcher(launcher, launcherArgs, opts) {
       stderr: "",
       command
     };
-    const child = wrapSpawn(launcher, launcherArgs, launcherOpts);
+    const child = opts?.wrapper
+      ? wrapSpawn(opts.wrapper.launcher, [...opts.wrapper.args, launcher, ...launcherArgs], launcherOpts)
+      : wrapSpawn(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
         // logger.warn("Spawning already resolved", { command, from, data });
       } else {
         process.code = child.exitCode;
         process.stderr = process.stderr || data;
-        logger.debug(`Spawning complete`, { from, data, process });
+        process.success = child.exitCode === 0;
+        logger.debug("[SC.*][<]", { from, data, process });
         resolved = true;
         resolve(process);
       }
@@ -66,21 +66,10 @@ async function exec_launcher(launcher, launcherArgs, opts) {
     child.on("error", (error) => processResolve("error", error));
     child.stdout.on("data", (data) => (process.stdout += `${data}`));
     child.stderr.on("data", (data) => (process.stderr += `${data}`));
-    if (typeof child.pid === "undefined") {
-      process.success = false;
-    } else {
-      process.success = true;
-    }
   });
-  return result;
 }
 
-async function exec(program, args, opts) {
-  const [launcher, launcherArgs] = wrapLauncher(program, args, opts);
-  return exec_launcher(launcher, launcherArgs, opts);
-}
-
-async function withClient(opts) {
+async function exec_service(opts) {
   let isManagedExit = false;
   const process = {
     pid: null,
@@ -89,11 +78,10 @@ async function withClient(opts) {
     stdout: "",
     stderr: ""
   };
-  const { checkStatus, retry, socketPath, programPath } = opts;
+  const { checkStatus, retry, programPath, programArgs } = opts;
   const em = new events.EventEmitter();
   // Check
   const running = await checkStatus();
-  let isStartedMarkerPresent = false;
   if (running) {
     logger.debug("Already running - reusing");
     process.success = true;
@@ -118,10 +106,6 @@ async function withClient(opts) {
     const onProcessData = (child, from, data) => {
       // logger.debug("Child process data", from, data);
       em.emit("data", { from, data });
-      if (data.indexOf("waiting for SIGHUP to reload configuration") !== -1) {
-        isStartedMarkerPresent = true;
-        logger.debug("Found started marker");
-      }
     };
     const waitForProcess = (child) => {
       let retries = retry?.count || 5;
@@ -133,38 +117,32 @@ async function withClient(opts) {
           // logger.error('Max retries reached');
           em.emit("error", { type: "domain.max-retries", code: undefined });
         } else {
-          if (isStartedMarkerPresent) {
-            const running = await checkStatus();
-            // logger.debug('Checking running first time after start', running);
-            if (running) {
-              clearInterval(IID);
-              isManagedExit = true;
-              const configured = await checkStatus();
-              if (configured) {
-                process.success = true;
-                em.emit("ready", { process });
-              } else {
-                em.emit("error", { type: "domain.not-configured", code: undefined });
-              }
+          const running = await checkStatus();
+          // logger.debug('Checking running first time after start', running);
+          if (running) {
+            clearInterval(IID);
+            isManagedExit = true;
+            const configured = await checkStatus();
+            if (configured) {
+              process.success = true;
+              em.emit("ready", { process });
             } else {
-              logger.debug("Move to next retry", retries);
+              em.emit("error", { type: "domain.not-configured", code: undefined });
             }
           } else {
-            logger.debug("Waiting for started marker");
+            logger.debug("Move to next retry", retries);
           }
         }
         retries -= 1;
       }, wait);
     };
     const onStart = () => {
-      const args = ["system", "service", "--time=0", `unix://${socketPath}`, "--log-level=debug"];
-      const [launcher, launcherArgs] = wrapLauncher(programPath, args, opts);
       const launcherOpts = {
         encoding: "utf-8",
         cwd: opts?.cwd,
         env: opts?.env
       };
-      const child = wrapSpawn(launcher, launcherArgs, launcherOpts);
+      const child = wrapSpawn(programPath, programArgs, launcherOpts);
       process.pid = child.pid;
       child.on("exit", (code) => onProcessExit(child, code));
       child.on("close", (code) => onProcessClose(child, code));
@@ -183,14 +161,12 @@ async function withClient(opts) {
       }
     };
     em.on("start", onStart);
-    logger.debug("Launching program");
     em.emit("start");
   }
   return em;
 }
 
 module.exports = {
-  exec,
   exec_launcher,
-  withClient
+  exec_service
 };

@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * 44: Fix Open in Browsers due to schema changes
 
+### Added
+
+* 43: Restore LIMA
+* Ability to switch logging to original console, to avoid losing lines
+* Add more info about the environment where podman is running
+
+### Changed
+
+* Improved detection of locally available podman, podman machine, LIMA
+* Ability to connect without restart when switching engines (from native to machine, from machine to lima and back)
+
+### Removed
+
+* Removed worker PRC - proxy all through Electron IPC
+* CLI backend for communication - it was too limiting
+
+### Fixed
+
+* Bug with pause / resume of containers
+
 ## [4.0.3-rc.3] - 2022-04-18
 
 ### Added

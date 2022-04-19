@@ -16,6 +16,7 @@ interface AppHeaderProps {
   currentScreen?: AppScreen<any>;
   program: Program;
   running: boolean;
+  provisioned: boolean;
 }
 
 const WINDOW_ACTIONS_MAP = {
@@ -25,7 +26,7 @@ const WINDOW_ACTIONS_MAP = {
   "window.close": () => Native.getInstance().close()
 };
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ currentScreen, program, running }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ currentScreen, program, running, provisioned }) => {
   const { t } = useTranslation();
   const withControls = Native.getInstance().withWindowControls();
   const onWindowControlClick = useCallback((e) => {
@@ -79,7 +80,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ currentScreen, program, ru
     );
   }
 
-  const provisioned = program && program.path;
   const rightSideActions =
     provisioned && running ? (
       <>

@@ -27,7 +27,7 @@
   width: 100%;
 }
 .AppSettingsForm[data-form="engine"] .AppSettingsField .RadioLabel {
-  min-width: 100px;
+  min-width: 130px;
   display: inline-block;
 }
 .AppSettingsForm[data-form="engine"] .AppSettingsField .bp4-html-select {
@@ -76,12 +76,4 @@
   color: #fff;
   font-family: monospace;
   border-radius: 4px;
-}
-
-.EngineRestrictedTo {
-  display: flex;
-  vertical-align: middle;
-}
-.EngineTitle {
-  padding-left: 5px;
 }

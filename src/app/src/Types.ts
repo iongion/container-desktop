@@ -85,16 +85,35 @@ export interface SystemPlugin {}
 export interface SystemPluginMap {
   [key: string]: SystemPlugin;
 }
+
+export interface Distribution {
+  distribution: string;
+  variant: string;
+  version: string;
+}
+
+export interface SystemInfoHost {
+  os: string;
+  kernel: string;
+  hostname: string;
+  distribution: Distribution;
+}
+
+export interface SystemInfoRegistries {
+  [key: string]: string[];
+}
 export interface SystemInfo {
-  host: any;
+  host: SystemInfoHost;
   plugins: SystemPluginMap;
-  registries: any;
+  registries: SystemInfoRegistries;
   store: any;
   version: SystemVersion;
 }
 
 export enum ContainerEngine {
   NATIVE = "native",
+  SUBSYSTEM_WSL = "subsystem.wsl",
+  SUBSYSTEM_LIMA = "subsystem.lima",
   VIRTUALIZED = "virtualized",
   REMOTE = "remote"
 }
@@ -104,15 +123,13 @@ export interface SystemConnection {
   URI: string;
 }
 export interface SystemEnvironment {
+  machine?: string;
   platform: Platforms;
   connections: SystemConnection[];
   running: boolean;
-  system: SystemInfo;
+  provisioned: boolean;
+  system?: SystemInfo;
   userConfiguration: UserConfiguration;
-}
-export interface SystemStartInfo {
-  system: SystemInfo;
-  running: boolean;
 }
 
 export interface SystemPruneReport {
@@ -244,15 +261,15 @@ export interface ContainerState {
 }
 
 export interface ContainerPort {
-  hostPort: number;
   containerPort: number;
-  protocol: string;
+  hostPort: number;
   hostIP: string;
   // alternative - why ?!?
   container_port: number;
   host_port: number;
   host_ip: string;
   range: number;
+  protocol: string;
 }
 export interface ContainerPorts {
   [key: string]: ContainerPort;

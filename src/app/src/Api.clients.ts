@@ -16,7 +16,6 @@ import {
   Secret,
   Volume,
   SystemEnvironment,
-  SystemStartInfo,
   SystemInfo,
   SystemPruneReport,
   SystemResetReport,
@@ -465,7 +464,7 @@ export class ContainerClient {
     });
   }
   // System
-  async getSystem() {
+  async getSystemInfo() {
     return this.withResult<SystemInfo>(async () => {
       const result = await this.dataApiDriver.get<SystemInfo>(`/system/info`);
       return result.data;
@@ -565,8 +564,9 @@ export class ContainerClient {
     });
   }
   async startApi() {
-    return this.withResult<SystemStartInfo>(async () => {
-      const result = await Native.getInstance().proxyService<SystemStartInfo>({
+    console.debug("Client - startApi");
+    return this.withResult<boolean>(async () => {
+      const result = await Native.getInstance().proxyService<boolean>({
         method: "/system/api/start"
       });
       return result.data;
@@ -580,7 +580,7 @@ export class ContainerClient {
       return result.data;
     });
   }
-  async isApiRunning() {
+  async getIsApiRunning() {
     return this.withResult<boolean>(async () => {
       const result = await Native.getInstance().proxyService<boolean>({
         method: "/system/running"

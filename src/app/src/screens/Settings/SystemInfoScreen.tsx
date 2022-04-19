@@ -19,11 +19,9 @@ export const View = "system-info";
 export const Title = "System info";
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const provisioned = useStoreState((state) => state.environment.provisioned);
   const running = useStoreState((state) => state.environment.running);
   const system = useStoreState((state) => state.environment.system);
-  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
-  const program = userConfiguration.program;
-  const provisioned = !!program.path;
   const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(system, null, 2)} /> : null;
   return (
     <div className="AppScreen" data-screen={ID}>

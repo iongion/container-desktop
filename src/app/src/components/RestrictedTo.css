@@ -1,0 +1,10 @@
+
+.RestrictedTo {
+  display: flex;
+  vertical-align: middle;
+  margin-left: 20px;
+  color: #999;
+}
+.RestrictedToEngineTitle {
+  padding-left: 5px;
+}

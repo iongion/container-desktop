@@ -7,6 +7,10 @@ const userSettings = require("@podman-desktop-companion/user-settings");
 const loggers = [];
 
 function createLogger(name) {
+  // This flag is useful to avoid missing logging origin(file and number) when developing
+  if (process.env.USE_LOGGING_WITH_NATIVE_CONSOLE) {
+    return console;
+  }
   const level = getLevel();
   let instance = logger;
   if (name) {

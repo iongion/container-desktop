@@ -39,7 +39,9 @@ export interface AppModel extends AppModelState {
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
 
   // thunks
-  connect: Thunk<AppModel, ConnectOptions>;
+  start: Thunk<AppModel>;
+  connect: Thunk<AppModel, ConnectOptions | undefined>;
+  configure: Thunk<AppModel>;
   setUserConfiguration: Thunk<AppModel, Partial<UserConfigurationOptions>>;
   getUserConfiguration: Thunk<AppModel>;
 }

@@ -1,7 +1,8 @@
 // vendors
 import { action, thunk } from "easy-peasy";
+import produce from "immer";
 // project
-import { ContainerEngine, SystemEnvironment } from "../Types";
+import { ContainerEngine } from "../Types";
 import { Native } from "../Native";
 import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types";
 
@@ -16,6 +17,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
       platform,
       system: {} as any,
       connections: [],
+      provisioned: false,
       running: false,
       userConfiguration: {
         program: {} as any,
@@ -37,10 +39,11 @@ export const createModel = (registry: AppRegistry): AppModel => {
       state.pending = flag;
     }),
     setEnvironment: action((state, value) => {
-      state.environment = {
-        ...state.environment,
-        ...value
-      };
+      state.environment = produce(state.environment, (draft) => {
+        Object.keys(value || {}).forEach(key => {
+          (draft as any)[key] = (value as any)[key];
+        })
+      });
     }),
     domainReset: action((state, { phase, pending }) => {
       if (phase !== undefined) {
@@ -63,53 +66,74 @@ export const createModel = (registry: AppRegistry): AppModel => {
       }
     }),
     // Thunks
-    connect: thunk(async (actions, options) => {
-      actions.setPhase(AppBootstrapPhase.CONNECTING);
-      if (native) {
-        Native.getInstance().setup();
-      }
-      let environment: SystemEnvironment = { ...model.environment };
+    start: thunk(async (actions) => {
+      console.debug("Application start");
+      await actions.configure();
+      await actions.connect();
+    }),
+    configure: thunk(async (actions, options, { getState }) => {
+      console.debug("Application configure");
       return registry.withPending(async () => {
-        let nextPhase = AppBootstrapPhase.CONNECTED;
         try {
-          environment = await registry.api.getSystemEnvironment();
-          if (environment.userConfiguration.program.path) {
-            if (!environment.running && options.startApi) {
-              try {
-                const startup = await registry.api.startApi();
-                console.debug("Startup", startup);
-                environment.system = startup.system;
-                environment.running = startup.running;
-              } catch (error) {
-                console.error("Error during system startup", error);
-              }
+          const configuration = await registry.api.getUserConfiguration();
+          await actions.domainUpdate({
+            phase: AppBootstrapPhase.CONFIGURED,
+            environment: {
+              ...getState().environment,
+              userConfiguration: configuration
             }
-          }
-          if (environment.running) {
-            const { program } = environment.userConfiguration;
-            const provisioned = program && program.path;
-            if (provisioned) {
-              nextPhase = AppBootstrapPhase.READY;
-            }
-          } else {
-            nextPhase = AppBootstrapPhase.FAILED;
-          }
+          });
+          return configuration;
         } catch (error) {
-          console.error("Error during system environment reading", error);
+          console.error("Error during user configuration reading", error);
+        }
+      });
+    }),
+    connect: thunk(async (actions, options, { getState }) => {
+      if (native) {
+        await Native.getInstance().setup();
+      }
+      const autoStartApi = options === undefined ? getState().environment.userConfiguration.autoStartApi : options.startApi;
+      console.debug("Application connect", { autoStartApi });
+      await actions.setPhase(AppBootstrapPhase.CONNECTING);
+      return registry.withPending(async () => {
+        // check if API is running and do best effort to start it
+        let isRunning = false;
+        if (autoStartApi) {
+          //
+          isRunning = await registry.api.getIsApiRunning();
+          if (isRunning) {
+            console.debug("Connect - startApi - skipped(already running)");
+          } else {
+            console.debug("Connect - startApi - init");
+            isRunning = await registry.api.startApi();
+            console.debug("Connect - startApi - done", { isRunning });
+          }
+        }
+        let nextPhase = AppBootstrapPhase.CONNECTED;
+        const environment = await registry.api.getSystemEnvironment();
+        if (environment.provisioned) {
+          nextPhase = AppBootstrapPhase.READY;
+        } else {
           nextPhase = AppBootstrapPhase.FAILED;
         }
-        // console.debug("Next phase", nextPhase);
-        actions.domainUpdate({
+        await actions.domainUpdate({
           phase: nextPhase,
           environment
         });
       });
     }),
-    setUserConfiguration: thunk(async (actions, options) => {
+    setUserConfiguration: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
+          const currentEngine = getState().environment.userConfiguration.engine;
           const configuration = await registry.api.setUserConfiguration(options);
-          actions.setEnvironment({ userConfiguration: configuration });
+          await actions.setEnvironment({ userConfiguration: configuration });
+          // If engine is changing - reconnect
+          if (options.engine !== undefined && options.engine !== currentEngine) {
+            console.debug("Engine change detected - reconnecting", { current: currentEngine, next: options.engine });
+            await actions.connect();
+          }
           return configuration;
         } catch (error) {
           console.error("Error during user configuration update", error);
@@ -120,7 +144,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
       return registry.withPending(async () => {
         try {
           const configuration = await registry.api.getUserConfiguration();
-          actions.setEnvironment({ userConfiguration: configuration });
           return configuration;
         } catch (error) {
           console.error("Error during user configuration reading", error);
