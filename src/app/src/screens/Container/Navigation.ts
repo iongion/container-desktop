@@ -9,7 +9,9 @@ export const getContainerServiceUrl = (container: Container) => {
   const port = (container.Ports || [])[0];
   let serviceUrl;
   if (port) {
-    serviceUrl = `http://${port.hostIP || "localhost"}:${port.hostPort}`;
+    const hostIp = port.hostIP || port.host_ip || "localhost";
+    const hostPort = port.hostPort || port.host_port || 80;
+    serviceUrl = `http://${hostIp}:${hostPort}`;
   } else {
     const portFromNetworkSettings = container.NetworkSettings?.Ports || {};
     const servicePorts = Object.values(portFromNetworkSettings);
@@ -18,5 +20,6 @@ export const getContainerServiceUrl = (container: Container) => {
       serviceUrl = `http://${firstPort[0].HostIp || "localhost"}:${firstPort[0].HostPort}`;
     }
   }
+  // console.debug("Obtaining container web server URL", container, { serviceUrl, port });
   return serviceUrl;
 };
