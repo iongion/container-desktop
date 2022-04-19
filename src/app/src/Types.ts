@@ -248,6 +248,11 @@ export interface ContainerPort {
   containerPort: number;
   protocol: string;
   hostIP: string;
+  // alternative - why ?!?
+  container_port: number;
+  host_port: number;
+  host_ip: string;
+  range: number;
 }
 export interface ContainerPorts {
   [key: string]: ContainerPort;
