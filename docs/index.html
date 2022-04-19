@@ -12,9 +12,9 @@
   <link rel="preconnect" href="//fonts.googleapis.com" />
   <link rel="preconnect" href="//fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="//fonts.googleapis.com/css2?family=Montserrat:wght@100;300;500;700&display=swap" />
-  <link rel="stylesheet" href="css/common.css?v=4.0.3-rc.3" />
-  <link rel="stylesheet" href="css/dark-theme.css?v=4.0.3-rc.3" id="themelink" />
-  <link rel="stylesheet" href="css/responsive.css?v=4.0.3-rc.3" />
+  <link rel="stylesheet" href="css/common.css?v=4.0.3-rc.3-v1" />
+  <link rel="stylesheet" href="css/dark-theme.css?v=4.0.3-rc.3-v1" id="themelink" />
+  <link rel="stylesheet" href="css/responsive.css?v=4.0.3-rc.3-v1" />
   <title>Podman Desktop Companion</title>
 </head>
 
@@ -22,8 +22,18 @@
   <div class="navbar">
     <img class="logo" src="img/logo.svg" alt="logo" />
     <div class="header-buttons">
-      <a class="patreon-button" href="https://www.patreon.com/bePatron?u=62928185"
-        data-patreon-widget-type="become-patron-button">Become a Patron!</a>
+      <div class="supporters">
+        <div class="supporter" data-supported="ko-fi">
+          <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+          <script
+            type='text/javascript'>kofiwidget2.init('Support me on Ko-fi', '#3f0b4f', 'G2G4C894W'); kofiwidget2.draw();</script>
+        </div>
+        &nbsp;
+        <div class="supporter" data-supported="patreon">
+          <a class="patreon-button" href="https://www.patreon.com/bePatron?u=62928185"
+            data-patreon-widget-type="become-patron-button">Become a Patron!</a>
+        </div>
+      </div>
       <div class="github-button-container">
         <a class="github-button" href="https://github.com/iongion/podman-desktop-companion"
           data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true"

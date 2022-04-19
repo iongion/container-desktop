@@ -285,7 +285,14 @@ p {
   overflow: hidden;
   border: 1px solid #ff03f0;
 }
-
+.supporters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 368px;
+  overflow: hidden;
+  height: 40px;
+}
 .contact {
   display: flex;
   flex-direction: row;
