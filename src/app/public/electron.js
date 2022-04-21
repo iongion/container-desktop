@@ -75,10 +75,15 @@ ipcMain.handle("openTerminal", async function (event, options) {
   logger.debug("IPC - openTerminal - result", options);
   return success;
 });
-ipcMain.handle("proxy", async function (event, req) {
-  const result = await invoker.invoke(req.method, req.params);
-  logger.debug("IPC - proxy", req);
-  return result;
+ipcMain.handle("proxy", async function (event, invocation) {
+  const { method, params } = invocation;
+  if (typeof params !== "undefined" && typeof params.data === "undefined") {
+    delete params.data;
+  }
+  logger.debug("IPC - proxy invoke >", invocation);
+  const response = await invoker.invoke(method, params);
+  logger.debug("IPC - proxy invoke <", response);
+  return response;
 });
 
 function createWindow() {
@@ -134,7 +139,7 @@ function createWindow() {
     const info = new URL(event.url);
     if (!is_ip_private(info.hostname)) {
       if (!DOMAINS_ALLOW_LIST.includes(info.hostname)) {
-        console.error("Security issue - attempt to open a domain that is not allowed", info.hostname);
+        console.error("Security issue - attempt to open a domain that is not allowed", info);
         return { action: "deny" };
       }
     }
@@ -183,7 +188,6 @@ function createSystemTray() {
       label: "Quit",
       click: () => {
         mainWindow.destroy();
-        app.isQuitting = true;
         app.quit();
       }
     }
@@ -201,9 +205,6 @@ let tray = null;
     showInspectElement: isDevelopment() || isDebug
   });
   app.commandLine.appendSwitch("ignore-certificate-errors");
-  app.on("before-quit", () => {
-    app.isQuitting = true;
-  });
   app.whenReady().then(() => {
     // setup tray only when
     if (isHideToTrayOnClose()) {
@@ -219,11 +220,8 @@ let tray = null;
   });
   app.on("window-all-closed", () => {
     logger.debug("Can kill processes");
-    if (os.type() !== "Darwin") {
-      if (mainWindow) {
-        app.isQuitting = true;
-        app.quit();
-      }
+    if (!isHideToTrayOnClose()) {
+      app.quit();
     }
   });
 })();

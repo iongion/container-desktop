@@ -1,11 +1,9 @@
 const os = require("os");
-const path = require("path");
 // vendors
 require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
 // locals
 const logger = createLogger("shell.preload");
 
@@ -89,14 +87,7 @@ const application = {
     }
   },
   proxy: async (req) => {
-    if (os.type() === "Darwin") {
-      // const result = await invoker.invoke(req.method, req.params);
-      const result = await ipcRenderer.invoke("proxy", req);
-      // logger.debug(">> proxy to client", result);
-      return result;
-    }
-    process.env.WORKER_PROCESS_FILE = path.join(__dirname, "ipc.js");
-    const result = await withWorkerRPC((rpc) => rpc.invoke(req));
+    const result = await ipcRenderer.invoke("proxy", req);
     // logger.debug(">> proxy to client", result);
     return result;
   }

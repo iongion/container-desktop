@@ -143,7 +143,9 @@ export class Native {
   public async proxyService<T>(request: any) {
     let result: ContainerClientResponse<T>;
     try {
+      console.debug("[>]", request);
       result = await this.bridge.application.proxy<ContainerClientResponse<T>>(request);
+      console.debug("[<]", result);
     } catch (error) {
       console.error("Proxy response error", { request, error });
       throw error;

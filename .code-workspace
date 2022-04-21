@@ -9,28 +9,20 @@
       "path": "${workspaceFolder}/src/app"
     },
     {
-      "name": "Shell",
-      "path": "${workspaceFolder}/src/shell"
-    },
-    {
       "name": "Container client",
-      "path": "${workspaceFolder}/packages/container-client"
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/container-client"
     },
     {
       "name": "Executor",
-      "path": "${workspaceFolder}/packages/executor"
-    },
-    {
-      "name": "RPC",
-      "path": "${workspaceFolder}/packages/rpc"
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/executor"
     },
     {
       "name": "Terminal",
-      "path": "${workspaceFolder}/packages/terminal"
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/terminal"
     },
     {
       "name": "Utils",
-      "path": "${workspaceFolder}/packages/utils"
+      "path": "${workspaceFolder}/packages/@podman-desktop-companion/utils"
     }
   ]
 }

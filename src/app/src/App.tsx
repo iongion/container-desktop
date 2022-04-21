@@ -7,7 +7,7 @@ import { HashRouter as Router, Switch, Route, useLocation } from "react-router-d
 
 import { StoreProvider } from "./domain/store";
 import { AppBootstrapPhase, AppStore, useStoreActions, useStoreState } from "./domain/types";
-import { Program, UserConfiguration } from "./Types";
+import { Program } from "./Types";
 import { pathTo } from "./Navigator";
 
 import "./App.i18n";
@@ -63,8 +63,9 @@ interface AppMainScreenContentProps {
   phase: AppBootstrapPhase;
   program: Program;
   running: boolean;
+  provisioned: boolean;
 }
-export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, phase, running }) => {
+export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, phase, provisioned, running }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const ready = phase === AppBootstrapPhase.READY;
@@ -119,7 +120,7 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
 
   return (
     <>
-      <AppHeader program={program} running={running} screens={Screens} currentScreen={currentScreen} />
+      <AppHeader program={program} provisioned={provisioned} running={running} screens={Screens} currentScreen={currentScreen} />
       <div className="AppContent">
         {sidebar}
         <div className="AppContentDocument">
@@ -133,33 +134,20 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
 export function AppMainScreen() {
   const phase = useStoreState((state) => state.phase);
   const native = useStoreState((state) => state.native);
+  const provisioned = useStoreState((state) => state.environment.provisioned);
   const running = useStoreState((state) => state.environment.running);
   const platform = useStoreState((state) => state.environment.platform);
-  const connect = useStoreActions((actions) => actions.connect);
-  const getUserConfiguration = useStoreActions((actions) => actions.getUserConfiguration);
-  const setPhase = useStoreActions((actions) => actions.setPhase);
+  const start = useStoreActions((actions) => actions.start);
   const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
-  const provisioned = !!userConfiguration.program.path;
+
   useEffect(() => {
-    switch (phase) {
-      case AppBootstrapPhase.INITIAL:
-        getUserConfiguration().then((configuration: UserConfiguration) => {
-          setPhase(AppBootstrapPhase.CONFIGURED);
-        });
-        break;
-      case AppBootstrapPhase.CONFIGURED:
-        const connector = { startApi: userConfiguration.autoStartApi };
-        console.debug("Application connecting", connector, userConfiguration);
-        connect(connector);
-        break;
-      default:
-        break;
-    }
-  }, [phase, running, connect, getUserConfiguration, setPhase, userConfiguration]);
+    start();
+  }, [start]);
 
   return (
     <div
       className="App"
+      data-engine={userConfiguration.engine}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
       data-platform={platform}
@@ -168,7 +156,7 @@ export function AppMainScreen() {
       data-provisioned={provisioned ? "yes" : "no"}
     >
       <Router>
-        <AppMainScreenContent phase={phase} running={running} program={userConfiguration.program} />
+        <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={userConfiguration.program} />
       </Router>
     </div>
   );

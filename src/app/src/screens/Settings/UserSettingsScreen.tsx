@@ -31,12 +31,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
   const native = useStoreState((state) => state.native);
+  const provisioned = useStoreState((state) => state.environment.provisioned);
+  const system = useStoreState((state) => state.environment.system);
   const running = useStoreState((state) => state.environment.running);
   const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
   const connect = useStoreActions((actions) => actions.connect);
   const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
   const program = userConfiguration.program;
-  const provisioned = !!program.path;
   const isValid = provisioned && program.currentVersion;
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -87,10 +88,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onMinimizeToSystemTray = useCallback(async (e) => {
     await setUserConfiguration({ minimizeToSystemTray: !!e.currentTarget.checked });
   }, [setUserConfiguration]);
-  const onCLICommunicationChange = useCallback(async (e) => {
-    const nextCommunication = !!e.currentTarget.checked ? "cli" : "api";
-    await setUserConfiguration({ communication: nextCommunication });
-  }, [setUserConfiguration]);
   const onLoggingLevelChange = useCallback(async (e) => {
     const configuration: Partial<UserConfigurationOptions> = {};
     configuration["logging.level"] = e.currentTarget.value;
@@ -125,7 +122,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <Button disabled={pending} fill text={reconnectActionText} icon={IconNames.REFRESH} onClick={onConnectClick} />
       </Callout>
     );
-  const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager /> : null;
+      console.debug(system)
+  const runningDetails = t("Running on {{distribution}} {{distributionVersion}} ({{kernel}})", { currentVersion: program.currentVersion, hostname: system?.host?.hostname || "", distribution: system?.host?.distribution?.distribution || "", distributionVersion: system?.host?.distribution?.version || "", kernel: system?.host?.kernel || "" });
+  const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager helperText={runningDetails} /> : null;
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -200,7 +199,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <FormGroup
             label={t("Startup")}
             labelFor="autoStartApi"
-            helperText={t('Not needed if container engine is already running as a service')}
+            helperText={t("Not needed if container engine is already running as a service")}
           >
             <ControlGroup fill={true}>
               <Checkbox
@@ -223,21 +222,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
               />
             </ControlGroup>
           </FormGroup>
-          <FormGroup
-            label={t("Communication")}
-            labelFor="connectionType"
-            helperText={t('NOTE - it will spawn the CLI tool each time and does not support all API features.')}
-          >
-            <ControlGroup fill={true}>
-              <Checkbox
-                id="connectionType"
-                disabled={pending}
-                label={t("Use command line instead of the api")}
-                checked={userConfiguration.communication === "cli"}
-                onChange={onCLICommunicationChange}
-              />
-            </ControlGroup>
-          </FormGroup>
         </div>
         <div className="AppSettingsForm" data-form="logging">
           <FormGroup
@@ -251,7 +235,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   return <option key={key} value={level}>{level}</option>;
                 })}
               </HTMLSelect>
-              <Button icon={IconNames.SEARCH} text={t('Toggle inspector')} onClick={onToggleInspectorClick} />
+              <Button disabled={pending} icon={IconNames.SEARCH} text={t('Toggle inspector')} onClick={onToggleInspectorClick} />
             </ControlGroup>
           </FormGroup>
         </div>

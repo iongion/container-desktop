@@ -9,6 +9,7 @@
 }
 .AppContainerStatsViewPort {
   width: 50%;
+  vertical-align: middle !important;
 }
 .AppContainerStatsViewPort [data-metric="value"] {
   font-size: 42px;

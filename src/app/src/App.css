@@ -1,3 +1,5 @@
+
+
 .App {
   font-family: sans-serif;
   display: flex;
@@ -52,6 +54,9 @@
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+}
+.AppScreenHeader .NavbarCenterContent[data-position="left"] {
+  justify-content: flex-start;
 }
 .AppScreenHeader .NavbarCenterContent span {
   max-width: 200px;

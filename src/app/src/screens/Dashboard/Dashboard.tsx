@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { AnchorButton, Button, InputGroup, Icon, Intent, NonIdealState, H6, HTMLTable } from "@blueprintjs/core";
+import { AnchorButton, Button, InputGroup, Icon, Intent, NonIdealState, HTMLTable, FormGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import ClipboardJS from "clipboard";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { Notification } from "../../Notification";
+import { Native, Platforms } from "../../Native";
 import { CONTAINER_DOCS_URL, CONTAINER_DOCS_EXAMPLE_CODE } from "../../Environment";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
@@ -22,9 +23,13 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const clipboardRef = useRef<ClipboardJS>();
+  const platform = Native.getInstance().getPlatform();
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
+  const machine = useStoreState((state) => state.environment.machine);
+  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
   const clipboardButtonRef = useRef<Button>(null);
+
   useEffect(() => {
     if (!clipboardButtonRef.current?.buttonRef) {
       return;
@@ -40,6 +45,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
     });
   }, [t]);
 
+  let commandPrefix;
+  if (platform === Platforms.Linux && userConfiguration.engine === "virtualized" && machine) {
+    commandPrefix = `podman machine ssh ${machine}`;
+  }
   // Change hydration
   usePoller({ poller: containersFetchStats });
 
@@ -64,12 +73,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 </tbody>
               </HTMLTable>
               <p>{t("As an example, copy and paste this command into your terminal and then come back")}</p>
-              <InputGroup
-                className="DashboardContainerExampleCode"
-                value={CONTAINER_DOCS_EXAMPLE_CODE}
-                readOnly
-                rightElement={<Button icon={IconNames.CLIPBOARD} ref={clipboardButtonRef} />}
-              />
+              <FormGroup helperText={commandPrefix ? commandPrefix: ""}>
+                <InputGroup
+                  title={commandPrefix ? t("On Linux, to dissociated between commands targeting the native runtime, a prefix must be used.") : ""}
+                  className="DashboardContainerExampleCode"
+                  value={CONTAINER_DOCS_EXAMPLE_CODE}
+                  readOnly
+                  rightElement={<Button icon={IconNames.CLIPBOARD} ref={clipboardButtonRef} />}
+                />
+              </FormGroup>
               <AnchorButton
                 className="DashboardContainerDocsUrl"
                 href={CONTAINER_DOCS_URL}

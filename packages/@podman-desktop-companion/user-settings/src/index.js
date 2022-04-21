@@ -15,9 +15,14 @@ function set(key, value) {
   return electronConfig.set(key, value);
 }
 
+function del(key) {
+  return electronConfig.delete(key);
+}
+
 module.exports = {
   getPath,
   get,
   set,
+  del,
   window: () => electronConfig.window()
 };
