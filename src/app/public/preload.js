@@ -86,6 +86,15 @@ const application = {
       logger.error("Unable to openTerminal", error);
     }
   },
+  getEngine: async (options) => {
+    logger.debug("Application getEngine", options);
+    try {
+      const result = await ipcRenderer.invoke("getEngine", options);
+      return result;
+    } catch (error) {
+      logger.error("Unable to getEngine", error);
+    }
+  },
   proxy: async (req) => {
     const result = await ipcRenderer.invoke("proxy", req);
     // logger.debug(">> proxy to client", result);

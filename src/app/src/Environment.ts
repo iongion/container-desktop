@@ -5,6 +5,11 @@ export const PROJECT_NAME = "Podman Desktop";
 export const CURRENT_ENVIRONMENT: Environments = (process.env.REACT_APP_ENV as any) || Environments.DEVELOPMENT;
 export const CONTAINER_DOCS_URL = "https://docs.podman.io/en/latest/index.html";
 export const CONTAINER_DOCS_EXAMPLE_CODE = "podman run -dt -p 8889:80/tcp docker.io/library/httpd:latest";
+export const PROGRAM_DOCKER = {
+  name: "docker",
+  title: "Docker",
+  homepage: "https://docker.io"
+};
 export const PROGRAM_PODMAN = {
   name: "podman",
   title: "Podman",

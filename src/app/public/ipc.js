@@ -1,39 +1,41 @@
 // vendors
+const os = require("os");
 // project
 const { getLevel, setLevel, createLogger } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
-const { Backend } = require("@podman-desktop-companion/container-client");
+const { Backend, PodmanClient, DockerClient, ENGINE_DOCKER } = require("@podman-desktop-companion/container-client");
 // locals
 const logger = createLogger("shell.ipc");
 const backend = new Backend();
-
-async function getProgram() {
-  const name = await backend.getProgramName();
-  return {
-    name,
-    path: await backend.getProgramPath(),
-    currentVersion: await backend.getProgramVersion(),
-    title: name,
-    homepage: `https://${name}.io`
-  };
-}
+const engineClientMap = {};
+const getClient = async () => {
+  const engine = await backend.findEngine();
+  if (!engineClientMap[engine]) {
+    engineClientMap[engine] = engine === ENGINE_DOCKER ? new DockerClient(backend) : new PodmanClient(backend);
+  }
+  return engineClientMap[engine];
+};
 
 async function getUserConfiguration() {
+  const osType = os.type();
+  const socketPath = await backend.findApiSocketPath();
   const options = {
-    engine: await backend.getEngine(),
-    program: await getProgram(),
+    engine: await backend.findEngine(),
+    program: await backend.findProgram(),
     autoStartApi: userSettings.get("autoStartApi", false),
     minimizeToSystemTray: userSettings.get("minimizeToSystemTray", false),
     communication: "api",
     path: userSettings.getPath(),
     logging: {
       level: getLevel()
-    }
+    },
+    socketPath: osType === "Windows_NT" ? socketPath : `unix://${socketPath}`
   };
   return options;
 }
 
 async function setUserConfiguration(options) {
+  logger.debug("Updating user configuration", options);
   Object.keys(options).forEach(async (key) => {
     if (key === "logging.level") {
       setLevel(options[key]);
@@ -90,49 +92,71 @@ const servicesMap = {
     return await backend.getIsApiRunning();
   },
   "/system/connections": async function () {
-    return await backend.getSystemConnections();
+    const client = await getClient();
+    return client.getSystemConnections();
   },
   "/system/info": async function () {
-    return await backend.getSystemInfo();
+    const client = await getClient();
+    return client.getSystemInfo();
   },
   "/system/prune": async function () {
-    return await backend.pruneSystem();
+    const client = await getClient();
+    return client.pruneSystem();
   },
   "/system/environment": async function () {
-    const program = await getProgram();
-    const system = await backend.getSystemEnvironment();
-    system.userConfiguration = await getUserConfiguration();
-    const hasProgram = program.path && program.currentVersion;
-    const isRunning = await backend.getIsApiRunning();
-    system.provisioned = hasProgram && isRunning;
+    let system;
+    try {
+      const client = await getClient();
+      const program = await backend.findProgram();
+      system = await client.getSystemEnvironment();
+      system.userConfiguration = await getUserConfiguration();
+      const hasProgram = program.path && program.currentVersion;
+      const isRunning = await backend.getIsApiRunning();
+      system.provisioned = hasProgram && isRunning;
+    } catch (error) {
+      logger.error("Unable to access system environment", error);
+    }
     return system;
   },
   "/system/api/start": async function () {
     return await backend.startApi();
   },
   "/system/reset": async function () {
-    return await backend.resetSystem();
+    const client = await getClient();
+    return client.resetSystem();
   },
   "/container/connect": async function ({ Id }) {
-    return await backend.connectToContainer(Id);
+    const client = await getClient();
+    return client.connectToContainer(Id);
   },
   "/machines/list": async function () {
-    return await backend.getMachines();
+    const client = await getClient();
+    return client.getMachines();
   },
   "/machine/restart": async function ({ Name }) {
-    return await backend.restartMachine(Name);
+    const client = await getClient();
+    return client.restartMachine(Name);
   },
   "/machine/stop": async function ({ Name }) {
-    return await backend.stopMachine(Name);
+    const client = await getClient();
+    return client.stopMachine(Name);
   },
   "/machine/connect": async function ({ Name }) {
-    return await backend.connectToMachine(Name);
+    const client = await getClient();
+    return client.connectToMachine(Name);
   },
   "/machine/remove": async function ({ Name, force }) {
-    return await backend.removeMachine(Name, force);
+    const client = await getClient();
+    return client.removeMachine(Name, force);
   },
   "/machine/create": async function (opts) {
-    return await backend.createMachine(opts);
+    const client = await getClient();
+    return client.createMachine(opts);
+  },
+  "/test": async function (opts) {
+    const result = await backend.testApiReachability({ socketPath: opts.payload });
+    result.subject = opts.subject;
+    return result;
   }
 };
 
@@ -160,7 +184,7 @@ module.exports = {
           if (error.response) {
             result.response = error.response;
           }
-          logger.error("Service error", result);
+          logger.error("Service error", result, error.message, error.stack);
           reply.success = false;
           reply.result = result;
         }

@@ -44,6 +44,7 @@ export interface AppModel extends AppModelState {
   configure: Thunk<AppModel>;
   setUserConfiguration: Thunk<AppModel, Partial<UserConfigurationOptions>>;
   getUserConfiguration: Thunk<AppModel>;
+  testSocketPathConnection: Thunk<AppModel, string>;
 }
 
 export type AppStore = Store<AppModel, EasyPeasyConfig<object | undefined, object>>;

@@ -6,7 +6,7 @@ import { useMediaQuery } from "react-responsive";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Container, ContainerState } from "../../Types";
+import { AppScreenProps, AppScreen, Container } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -58,12 +58,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </thead>
           <tbody>
             {containers.map((container) => {
+              const creationDate = typeof container.Created === "string" ? dayjs(container.Created) : dayjs(Number(container.Created) * 1000);
               const image = container.Image;
               const containerLogsButton = (
                 <AnchorButton
                   minimal
                   small
-                  href={pathTo(`/screens/container/${container.Id}/logs`)}
+                  href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`)}
                   text={container.Names[0] || t("- n/a -")}
                   intent={Intent.SUCCESS}
                   icon={IconNames.CUBE}
@@ -72,10 +73,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
               );
               const containerLayersButton = (
                 <AnchorButton
+                  className="ContainerLayersButton"
                   minimal
                   small
-                  href={pathTo(`/screens/image/${container.ImageID}/layers`)}
-                  text={image}
+                  href={pathTo(`/screens/image/${encodeURIComponent(container.ImageID)}/layers`)}
+                  text={image.split("@")[0]}
                   intent={Intent.PRIMARY}
                   icon={IconNames.BOX}
                   title={t("Image layers history")}
@@ -94,11 +96,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </>
                   )}
                   <td>
-                    <Code>{container.Pid}</Code>
+                    <Code title={container.Pid ? "" : t("Not available")}>{container.Pid || "n/a"}</Code>
                   </td>
                   <td>{container.DecodedState}</td>
                   <td>{container.Id.substr(0, 12)}</td>
-                  <td>{(dayjs(container.Created) as any).fromNow()}</td>
+                  <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                   <td>
                     <ActionsMenu container={container} />
                   </td>

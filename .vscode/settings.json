@@ -67,6 +67,7 @@
         "noconflict",
         "noheading",
         "noninteractive",
+        "npipe",
         "nsis",
         "nvmrc",
         "osascript",

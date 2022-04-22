@@ -28,7 +28,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
         logging: {
           level: "error"
         },
-        communication: "api"
+        communication: "api",
+        socketPath: ""
       },
     },
     // Actions
@@ -76,6 +77,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
       return registry.withPending(async () => {
         try {
           const configuration = await registry.api.getUserConfiguration();
+          registry.api.setEngine(configuration.engine);
           await actions.domainUpdate({
             phase: AppBootstrapPhase.CONFIGURED,
             environment: {
@@ -117,6 +119,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
         } else {
           nextPhase = AppBootstrapPhase.FAILED;
         }
+        registry.api.setEngine(environment.userConfiguration.engine);
         await actions.domainUpdate({
           phase: nextPhase,
           environment
@@ -131,7 +134,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
           await actions.setEnvironment({ userConfiguration: configuration });
           // If engine is changing - reconnect
           if (options.engine !== undefined && options.engine !== currentEngine) {
-            console.debug("Engine change detected - reconnecting", { current: currentEngine, next: options.engine });
+            console.debug("Engine change detected - re-starting", { current: currentEngine, next: options.engine });
             await actions.connect();
           }
           return configuration;
@@ -147,6 +150,16 @@ export const createModel = (registry: AppRegistry): AppModel => {
           return configuration;
         } catch (error) {
           console.error("Error during user configuration reading", error);
+        }
+      });
+    }),
+    testSocketPathConnection: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const test = await registry.api.testSocketPathConnection(options);
+          return test;
+        } catch (error) {
+          console.error("Error during socket path test", error);
         }
       });
     }),
