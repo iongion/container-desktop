@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.3-rc.4] - 2022-04-18
+
 ### Fixed
 
 * 44: Fix Open in Browsers due to schema changes

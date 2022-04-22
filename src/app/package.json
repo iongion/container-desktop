@@ -1,6 +1,6 @@
 {
   "name": "podman-desktop-companion",
-  "version": "4.0.3-rc.3",
+  "version": "4.0.3-rc.4",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman Desktop Companion",
   "keywords": [],
