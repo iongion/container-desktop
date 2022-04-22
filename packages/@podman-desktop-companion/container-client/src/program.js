@@ -256,11 +256,14 @@ class Backend {
           }
         }
         // Check if the socket path exists
-        const socketPath = await this.getApiSocketPath();
-        if (!fs.existsSync(socketPath)) {
-          const connector = osType === "Windows_NT" ? "Named pipe" : "Socket file";
-          logger.error(`Checking if ${engine} API is running - fail`, `${connector} not present in ${socketPath}`);
-          return false;
+        // TODO: Check if it makes sense on Windows
+        if (osType !== "Windows_NT") {
+          const socketPath = await this.getApiSocketPath();
+          if (!fs.existsSync(socketPath)) {
+            const connector = osType === "Windows_NT" ? "Named pipe" : "Socket file";
+            logger.error(`Checking if ${engine} API is running - fail`, `${connector} not present in ${socketPath}`);
+            return false;
+          }
         }
       }
       // Call the API _ping service
