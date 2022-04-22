@@ -20,7 +20,7 @@ import { createModel as createVolumesModel } from "../screens/Volume/Model";
 export const withPending = async (store: AppStore, operation: AppStorePendingOperation) => {
   let result: AppStorePendingOperationResult = {
     success: false,
-    body: "",
+    result: undefined,
     warnings: []
   };
   store.getActions().setPending(true);
@@ -29,7 +29,7 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
   } catch (error: any) {
     result = {
       ...result,
-      body: error?.response?.data || error.message
+      result: error?.response?.data || error.message
     };
     console.error("Pending operation error", result, error.message, error.stack);
     store.getActions().setPending(false);

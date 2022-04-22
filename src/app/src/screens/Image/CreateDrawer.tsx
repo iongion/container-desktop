@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, memo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   ButtonGroup,
   Button,
@@ -13,154 +13,179 @@ import {
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
-import isEqual from "react-fast-compare";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 
 // project
 import { ContainerImage, ContainerImagePortMapping } from "../../Types";
-import { useStoreActions } from "../../domain/types";
+import { useStoreActions, useStoreState } from "../../domain/types";
+import { Notification } from "../../Notification";
 
 // module
 import { MountsForm, MountFormContainerImageMount, createMount } from "./MountsForm";
-import { PortMappingsForm } from "./PortMappingsForm";
+import { toPortMappings, PortMappingsForm } from "./PortMappingsForm";
 
-export const toPortMappings = (exposed: { [key: string]: number }) => {
-  const mappings: ContainerImagePortMapping[] = Object.keys(exposed).map((key) => {
-    const [container_port_raw, protocol] = key.split("/");
-    const container_port = Number(container_port_raw);
-    const host_port = container_port < 1000 ? 8000 + container_port : container_port;
-    return {
-      container_port: Number(container_port),
-      host_ip: "127.0.0.1",
-      host_port: host_port,
-      protocol: protocol as any
-    };
-  });
-  return mappings;
-};
-
+export interface CreateFormData {
+  imageContainerName: string;
+  mounts: MountFormContainerImageMount[];
+  mappings: ContainerImagePortMapping[];
+}
 export interface CreateDrawerProps {
   image: ContainerImage;
   onClose: () => void;
 }
-export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
-  ({ image, onClose }) => {
-    const { t } = useTranslation();
-    const [name, setName] = useState("");
-    const [pending, setPending] = useState(false);
-    const [template, setTemplate] = useState<ContainerImage>();
-    const [portMappings, setPortMappings] = useState<ContainerImagePortMapping[]>(
-      toPortMappings(template?.Config?.ExposedPorts || {})
-    );
-    const [mounts, setMounts] = useState<MountFormContainerImageMount[]>([createMount()]);
-    const { Id } = image;
-    const containerCreate = useStoreActions((actions) => actions.container.containerCreate);
-    const fetchOne = useStoreActions((actions) => actions.image.fetchOne);
-    const onCreateClick = useCallback(async () => {
-      setPending(true);
-      try {
-        const creator = {
-          ImageId: image.Id,
-          Name: name,
-          Start: true,
-          Mounts: mounts,
-          PortMappings: portMappings
-        };
-        await containerCreate(creator);
-        setPending(false);
+export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }) => {
+  const { t } = useTranslation();
+  const containerCreate = useStoreActions((actions) => actions.container.containerCreate);
+  const fetchOne = useStoreActions((actions) => actions.image.fetchOne);
+
+  const [state, setState] = useState<{ template?: ContainerImage; pending: boolean }>({
+    template: undefined,
+    pending: true,
+  });
+
+  const { pending, template } = state;
+
+  // Form initial data
+  const mounts = useMemo(() => {
+    return [createMount()];
+  }, []);
+  const mappings = useMemo(() => {
+    return toPortMappings(template?.Config?.ExposedPorts || {});
+  }, [template]);
+
+  // Form setup
+  const methods = useForm<CreateFormData>({
+    defaultValues: {
+      mounts,
+      mappings
+    }
+  });
+  const { reset, control, handleSubmit } = methods;
+  const onSubmit = handleSubmit(async (data) => {
+    try {
+      const creator = {
+        ImageId: image.Id,
+        Name: data.imageContainerName,
+        Start: true,
+        Mounts: data.mounts.filter(it => it.source && it.destination),
+        PortMappings: data.mappings,
+      };
+      setState((prev) => ({ ...prev, pending: true }));
+      const create = await containerCreate(creator);
+      if (create.created) {
+        if (!create.started) {
+          Notification.show({ message: t("Container has been created but could not start"), intent: Intent.WARNING });
+        }
+        setState((prev) => ({ ...prev, pending: false }));
         onClose();
-      } catch (error) {
-        setPending(false);
-        console.error("Unable to create container from image", error);
+      } else {
+        Notification.show({ message: t("Unable to create container from image"), intent: Intent.DANGER });
       }
-    }, [image, name, portMappings, mounts, containerCreate, onClose]);
-    const onNameChange = useCallback((e) => {
-      setName(e.currentTarget.value);
-    }, []);
-    const onPortMappingsChange = useCallback((e) => {
-      setPortMappings(e);
-    }, []);
-    const onMountsChange = useCallback((e) => {
-      setMounts(e);
-    }, []);
-    const pendingIndicator = (
-      <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
-    );
-    useEffect(() => {
-      setPending(true);
-      fetchOne({ Id })
-        .then((template: ContainerImage) => {
-          setTemplate(template);
-          setPortMappings(toPortMappings(template?.Config?.ExposedPorts || {}));
-        })
-        .finally(() => {
-          setPending(false);
-        });
-    }, [fetchOne, Id]);
-    return (
-      <Drawer
-        className="AppDrawer"
-        icon={IconNames.PLUS}
-        title={t("Start a new container")}
-        usePortal
-        size={DrawerSize.SMALL}
-        onClose={onClose}
-        isOpen
-        hasBackdrop={false}
-      >
-        <div className={Classes.DRAWER_BODY}>
-          <div className={Classes.DIALOG_BODY}>
-            <HTMLTable condensed striped className="AppDataTable">
-              <tbody>
-                <tr>
-                  <td>{t("Name")}</td>
-                  <td>{image.Name}</td>
-                </tr>
-                <tr>
-                  <td>{t("Tag")}</td>
-                  <td>{image.Tag}</td>
-                </tr>
-                <tr>
-                  <td>{t("Registry")}</td>
-                  <td>{image.Registry}</td>
-                </tr>
-              </tbody>
-            </HTMLTable>
-            <ButtonGroup fill>
-              <Button
-                disabled={pending}
-                intent={Intent.PRIMARY}
-                icon={IconNames.CUBE_ADD}
-                title={t("Click to launch creation")}
-                text={t("Create")}
-                onClick={onCreateClick}
-              />
-            </ButtonGroup>
-            {pendingIndicator}
-            <div className="AppDataForm">
-              <FormGroup
-                disabled={pending}
-                helperText={t("If not set, it will be automatically generated")}
-                label={t("Container name")}
-                labelFor="imageContainerName"
-                labelInfo="(optional)"
-              >
-                <InputGroup
+    } catch (error) {
+      console.error("Unable to create container from image", error);
+      Notification.show({ message: t("Unable to create container from image"), intent: Intent.DANGER });
+      setState((prev) => ({ ...prev, pending: false }));
+    }
+  });
+
+  const { Id } = image;
+
+  // Initial load
+  useEffect(() => {
+    (async() => {
+      try {
+        const template = await fetchOne({ Id });
+        setState({ template, pending: false });
+      } catch (error) {
+        console.error("Unable to load container image", error);
+        Notification.show({ message: t("Unable to load container image"), intent: Intent.DANGER });
+      }
+    })();
+  }, [t, fetchOne, Id]);
+
+  // Change over time - form fields
+  useEffect(() => {
+    const next = ({ mounts, mappings });
+    reset(next);
+  }, [reset, mounts, mappings]);
+
+  return (
+    <Drawer
+      className="AppDrawer"
+      icon={IconNames.PLUS}
+      title={t("Create and start a new container")}
+      usePortal
+      size={DrawerSize.SMALL}
+      onClose={onClose}
+      isOpen
+      hasBackdrop={false}
+    >
+      <FormProvider {...methods}>
+        <form onSubmit={onSubmit}>
+          <div className={Classes.DRAWER_BODY}>
+            <div className={Classes.DIALOG_BODY}>
+              <HTMLTable condensed striped className="AppDataTable">
+                <tbody>
+                  <tr>
+                    <td>{t("Name")}</td>
+                    <td>{image.Name}</td>
+                  </tr>
+                  <tr>
+                    <td>{t("Tag")}</td>
+                    <td>{image.Tag}</td>
+                  </tr>
+                  <tr>
+                    <td>{t("Registry")}</td>
+                    <td>{image.Registry}</td>
+                  </tr>
+                </tbody>
+              </HTMLTable>
+              <ButtonGroup fill>
+                <Button
+                  type="submit"
                   disabled={pending}
-                  id="imageContainerName"
-                  placeholder={t("Type to set a name")}
-                  value={name}
-                  onInput={onNameChange}
+                  intent={Intent.PRIMARY}
+                  icon={IconNames.CUBE_ADD}
+                  title={t("Click to launch creation")}
+                  text={t("Create and start")}
                 />
-              </FormGroup>
-              <PortMappingsForm portMappings={portMappings} onChange={onPortMappingsChange} />
-              <MountsForm mounts={mounts} onChange={onMountsChange} />
+              </ButtonGroup>
+              <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
+              <div className="AppDataForm">
+                <FormGroup
+                  disabled={pending}
+                  helperText={t("If not set, it will be automatically generated")}
+                  label={t("Container name")}
+                  labelFor="imageContainerName"
+                  labelInfo="(optional)"
+                >
+                  <Controller
+                    control={control}
+                    name="imageContainerName"
+                    defaultValue=""
+                    render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                      return (
+                        <InputGroup
+                          disabled={pending}
+                          name={name}
+                          inputRef={ref}
+                          value={value}
+                          onChange={onChange}
+                          onBlur={onBlur}
+                          placeholder={t("Type to set a name")}
+                          data-invalid={invalid}
+                        />
+                      );
+                    }}
+                  />
+                </FormGroup>
+                <PortMappingsForm portMappings={mappings} disabled={pending} />
+                <MountsForm mounts={mounts} disabled={pending} />
+              </div>
             </div>
           </div>
-        </div>
-      </Drawer>
-    );
-  },
-  (prev, next) => {
-    return isEqual(prev, next);
-  }
-);
+        </form>
+      </FormProvider>
+    </Drawer>
+  );
+};

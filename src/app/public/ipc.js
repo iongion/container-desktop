@@ -15,7 +15,7 @@ async function getProgram() {
     currentVersion: await backend.getProgramVersion(),
     title: name,
     homepage: `https://${name}.io`
-  }
+  };
 }
 
 async function getUserConfiguration() {
@@ -49,6 +49,7 @@ async function setUserConfiguration(options) {
 const servicesMap = {
   "/container/engine/request": async function (options) {
     let result = {
+      ok: false,
       data: undefined,
       headers: [],
       status: 500,
@@ -64,8 +65,17 @@ const servicesMap = {
         statusText: response.statusText
       };
     } catch (error) {
-      logger.error("API request error", error.message);
-      result.statusText = `API request error: ${error.message}`;
+      if (error.response) {
+        result = {
+          ok: false,
+          data: error.response.data,
+          headers: error.response.headers,
+          status: error.response.status,
+          statusText: error.response.statusText
+        };
+      } else {
+        result.statusText = error.message || "API request error";
+      }
     }
     return result;
   },
@@ -129,9 +139,9 @@ const servicesMap = {
 module.exports = {
   invoker: {
     invoke: async (method, params) => {
-      let result = {
+      let reply = {
         success: false,
-        data: undefined,
+        result: undefined,
         warnings: []
       };
       const service = servicesMap[method];
@@ -139,26 +149,30 @@ module.exports = {
       if (service) {
         try {
           // logger.debug("Invoking", method, params);
-          result.success = true;
-          result.data = await service(params);
+          reply.success = true;
+          reply.result = await service(params);
         } catch (error) {
-          const response = {
-            statusText: error.response?.statusText,
-            status: error.response?.status,
-            data: error.response?.data
+          const result = {
+            error: "Service invocation error",
+            method,
+            params
           };
-          logger.error("Invoking error", error.message, response, "when invoking", { method, params });
-          result.success = false;
-          result.data = error.message;
-          result.stack = error.stack;
-          result.response = response;
+          if (error.response) {
+            result.response = error.response;
+          }
+          logger.error("Service error", result);
+          reply.success = false;
+          reply.result = result;
         }
       } else {
-        logger.error("No such IPC method", { method, params });
-        result.success = false;
-        result.data = "No such IPC method";
+        const result = {
+          error: "No such IPC method"
+        };
+        logger.error("Service error", result);
+        reply.success = false;
+        reply.result = result;
       }
-      return result;
+      return reply;
     }
   }
 };

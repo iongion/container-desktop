@@ -23,13 +23,7 @@ export const ENV_DEFAULT: Pick<Environment, "settings" | "features"> = {
     }
   },
   features: {
-    customizeMounts: {
-      enabled: true
-    },
     polling: {
-      enabled: true
-    },
-    engineSwitcher: {
       enabled: true
     }
   }
@@ -42,9 +36,6 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
     ...{
       features: {
         ...ENV_DEFAULT.features,
-        customizeMounts: {
-          enabled: true
-        },
         polling: {
           enabled: false
         }
@@ -56,10 +47,7 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
     ...ENV_DEFAULT,
     ...{
       features: {
-        ...ENV_DEFAULT.features,
-        customizeMounts: {
-          enabled: false
-        },
+        ...ENV_DEFAULT.features
       }
     }
   }

@@ -1,5 +1,6 @@
 const path = require("path");
 const os = require("os");
+const fs = require("fs");
 // vendors
 const axios = require("axios");
 // project
@@ -59,14 +60,15 @@ class Backend {
       [ENGINE_SUBSYSTEM_LIMA]: (opts) => this.startApiSubsystemLIMA(opts),
       [ENGINE_SUBSYSTEM_WSL]: (opts) => this.startApiSubsystemWSL(opts)
     };
-    this.apiDriver = null;
+    this.engineApiDriversMap = {};
   }
   async getApiDriver() {
-    if (!this.apiDriver) {
+    const engine = await this.getEngine();
+    if (!this.engineApiDriversMap[engine]) {
       const config = await this.getApiConfig();
-      this.apiDriver = createApiDriver(config);
+      this.engineApiDriversMap[engine] = createApiDriver(config);
     }
-    return this.apiDriver;
+    return this.engineApiDriversMap[engine];
   }
   async getVirtualizationMachineName() {
     return "podman-machine-default";
@@ -220,6 +222,7 @@ class Backend {
       // TODO: Not implemented
       socketPath = "";
     }
+    logger.debug("API socket path for", engine, "is", socketPath);
     return socketPath;
   }
   async getDescriptor() {
@@ -233,6 +236,7 @@ class Backend {
   }
   // Check if the API is available
   async getIsApiRunning() {
+    const osType = await this.getOperatingSystemType();
     const engine = await this.getEngine();
     logger.debug(`Checking if ${engine} API is running - init`);
     let running = false;
@@ -244,11 +248,19 @@ class Backend {
           try {
             const machine = await this.getVirtualizationMachineInfo();
             if (!machine.Running) {
+              logger.error(`Checking if ${engine} API is running - fail`, "Machine is not running");
               return false;
             }
           } catch (error) {
             logger.error(`Checking if ${engine} API is running - fail`, error.message);
           }
+        }
+        // Check if the socket path exists
+        const socketPath = await this.getApiSocketPath();
+        if (!fs.existsSync(socketPath)) {
+          const connector = osType === "Windows_NT" ? "Named pipe" : "Socket file";
+          logger.error(`Checking if ${engine} API is running - fail`, `${connector} not present in ${socketPath}`);
+          return false;
         }
       }
       // Call the API _ping service
@@ -401,7 +413,7 @@ class Backend {
   }
 
   async getSystemInfo() {
-    let info = {};
+    let info;
     const result = await this.execProgram(["system", "info", "--format", "json"]);
     if (!result.success) {
       logger.error("Unable to get system info", result);
@@ -439,7 +451,7 @@ class Backend {
       platform: await this.getOperatingSystemType(),
       connections,
       running,
-      system,
+      system
       // provisioned
       // userConfiguration
     };

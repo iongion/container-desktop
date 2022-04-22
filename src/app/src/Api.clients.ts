@@ -126,18 +126,9 @@ interface ApiDriverConfig<D> {
   headers?: { [key: string]: any};
   params?: URLSearchParams | D;
 }
-export interface IApiDriver {
-  request<T = any, R = ContainerClientResponse<T>, D = any>(method: string, url: string, config?: ApiDriverConfig<D>): Promise<R>;
-  get<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>): Promise<R>;
-  delete<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>): Promise<R>;
-  head<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>): Promise<R>;
-  post<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>): Promise<R>;
-  put<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>): Promise<R>;
-  patch<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>): Promise<R>;
-}
 
-export class ApiDriver implements IApiDriver {
-  public async request<T = any, R = ContainerClientResponse<T>, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
+export class ApiDriver {
+  public async request<T = any, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
     const request = {
       method: "/container/engine/request",
       params: {
@@ -148,27 +139,27 @@ export class ApiDriver implements IApiDriver {
       },
     };
     // console.debug("Proxy-ing request", request);
-    const result = await Native.getInstance().proxyService<R>(request);
-    result.ok = result.status >= 200 && result.status < 300;
-    return result.data;
+    const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, true);
+    // console.debug(">>>>>> HTTP API RESPONSE", reply);
+    return reply.result;
   }
-  public async get<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>) {
-    return this.request<T, R>("GET", url, undefined, config);
+  public async get<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
+    return this.request<T, D>("GET", url, undefined, config);
   }
-  public async delete<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>) {
-    return this.request<T, R>("DELETE", url, undefined, config);
+  public async delete<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
+    return this.request<T, D>("DELETE", url, undefined, config);
   }
-  public async head<T = any, R = ContainerClientResponse<T>, D = any>(url: string, config?: ApiDriverConfig<D>) {
-    return this.request<T, R>("HEAD", url, undefined, config);
+  public async head<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
+    return this.request<T, D>("HEAD", url, undefined, config);
   }
-  public async post<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
-    return this.request<T, R>("POST", url, data, config);
+  public async post<T = any, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
+    return this.request<T, D>("POST", url, data, config);
   }
-  public async put<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
-    return this.request<T, R>("PUT", url, data, config);
+  public async put<T = any, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
+    return this.request<T, D>("PUT", url, data, config);
   }
-  public async patch<T = any, R = ContainerClientResponse<T>, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
-    return this.request<T, R>("PATCH", url, data, config);
+  public async patch<T = any, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
+    return this.request<T, D>("PATCH", url, data, config);
   }
 }
 export class ContainerClient {
@@ -183,12 +174,6 @@ export class ContainerClient {
     return response;
   }
 
-  async invoke<T, D = undefined>(invocation: InvocationOptions<D>) {
-    return this.withResult<T>(async () => {
-      const result = await this.dataApiDriver.post<T>("/invoke", invocation);
-      return result.data;
-    });
-  }
   async getDomain() {
     return this.withResult<Domain>(async () => {
       const [containers, images, machines, volumes] = await Promise.all([
@@ -272,13 +257,14 @@ export class ContainerClient {
           all: true
         }
       });
+      console.debug("Containers result is", result);
       return result.data.map((it) => coerceContainer(it));
     });
   }
   async getContainer(id: string, opts?: FetchContainerOptions) {
     return this.withResult<Container>(async () => {
-      const { data } = await this.dataApiDriver.get<Container>(`/containers/${id}/json`);
-      const container = coerceContainer(data);
+      const result = await this.dataApiDriver.get<Container>(`/containers/${id}/json`);
+      const container = coerceContainer(result.data);
       if (opts?.withLogs) {
         container.Logs = await this.getContainerLogs(id);
       }
@@ -342,7 +328,7 @@ export class ContainerClient {
     });
   }
   async createContainer(opts: CreateContainerOptions) {
-    return this.withResult<boolean>(async () => {
+    return this.withResult<{ created: boolean; started: boolean; }>(async () => {
       const creator = {
         image: opts.ImageId,
         name: opts.Name,
@@ -355,6 +341,7 @@ export class ContainerClient {
         }),
         portmappings: opts.PortMappings?.map((mapping) => {
           return {
+            protocol: mapping.protocol,
             container_port: mapping.container_port,
             host_ip: mapping.host_ip === "localhost" ? "127.0.0.1" : mapping.host_ip,
             host_port: mapping.host_port
@@ -362,19 +349,20 @@ export class ContainerClient {
         })
       };
       const createResult = await this.dataApiDriver.post<{ Id: string }>("/containers/create", creator);
-      let success = false;
-      if (createResult.status === 201) {
+      const create = { created: false, started: false };
+      if (createResult.ok) {
+        create.created = true;
         if (opts.Start) {
           const { Id } = createResult.data;
           const startResult = await this.dataApiDriver.post(`/containers/${Id}/start`);
           if (startResult.ok) {
-            success = true;
+            create.started = true;
           }
         } else {
-          success = true;
+          create.started = false;
         }
       }
-      return success;
+      return create;
     });
   }
   // Volumes
@@ -416,7 +404,7 @@ export class ContainerClient {
   async pruneVolumes(filters: any) {
     return this.withResult<boolean>(async () => {
       const result = await this.dataApiDriver.post("/volumes/prune", filters);
-      return result.status === 200;
+      return result.ok;
     });
   }
   // Secrets
@@ -482,131 +470,131 @@ export class ContainerClient {
   // Containers
   async connectToContainer(Id: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyService<boolean>({
+      const reply = await Native.getInstance().proxyService<boolean>({
         method: "/container/connect",
         params: { Id }
       });
-      return result.data;
+      return reply.result;
     });
   }
 
   // Machines
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
-      const result = await Native.getInstance().proxyService<Machine[]>({
+      const reply = await Native.getInstance().proxyService<Machine[]>({
         method: "/machines/list"
       });
-      return result.data;
+      return reply.result;
     });
   }
   async restartMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyService<boolean>({
+      const reply = await Native.getInstance().proxyService<boolean>({
         method: "/machine/restart",
         params: { Name }
       });
-      return result.data;
+      return reply.result;
     });
   }
   async getMachine(Name: string) {
     return this.withResult<Machine>(async () => {
-      const result = await Native.getInstance().proxyService<Machine>({
+      const reply = await Native.getInstance().proxyService<Machine>({
         method: "/machine/inspect",
         params: { Name }
       });
-      return result.data;
+      return reply.result;
     });
   }
   async createMachine(opts: CreateMachineOptions) {
     return this.withResult<Machine>(async () => {
-      const result = await Native.getInstance().proxyService<Machine>({
+      const reply = await Native.getInstance().proxyService<Machine>({
         method: "/machine/create",
         params: opts
       });
-      return result.data;
+      return reply.result;
     });
   }
   async removeMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyService<boolean>({
+      const reply = await Native.getInstance().proxyService<boolean>({
         method: "/machine/remove",
         params: { Name, force: true }
       });
-      return result.data;
+      return reply.result;
     });
   }
   async stopMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyService<boolean>({
+      const reply = await Native.getInstance().proxyService<boolean>({
         method: "/machine/stop",
         params: { Name }
       });
-      return result.data;
+      return reply.result;
     });
   }
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyService<boolean>({
+      const reply = await Native.getInstance().proxyService<boolean>({
         method: "/machine/connect",
         params: { Name }
       });
-      return result.data;
+      return reply.result;
     });
   }
 
   // System
   async getSystemEnvironment() {
     return this.withResult<SystemEnvironment>(async () => {
-      const result = await Native.getInstance().proxyService<SystemEnvironment>({
+      const reply = await Native.getInstance().proxyService<SystemEnvironment>({
         method: "/system/environment"
       });
-      return result.data;
+      return reply.result;
     });
   }
   async startApi() {
     console.debug("Client - startApi");
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyService<boolean>({
+      const reply = await Native.getInstance().proxyService<boolean>({
         method: "/system/api/start"
       });
-      return result.data;
+      return reply.result;
     });
   }
   async resetSystem() {
     return this.withResult<SystemResetReport>(async () => {
-      const result = await Native.getInstance().proxyService<SystemResetReport>({
+      const reply = await Native.getInstance().proxyService<SystemResetReport>({
         method: "/system/reset"
       });
-      return result.data;
+      return reply.result;
     });
   }
   async getIsApiRunning() {
     return this.withResult<boolean>(async () => {
-      const result = await Native.getInstance().proxyService<boolean>({
+      const reply = await Native.getInstance().proxyService<boolean>({
         method: "/system/running"
       });
-      return result.data;
+      return reply.result;
     });
   }
 
   async getUserConfiguration() {
     return this.withResult<UserConfiguration>(async () => {
-      const result = await Native.getInstance().proxyService<UserConfiguration>({
+      const reply = await Native.getInstance().proxyService<UserConfiguration>({
         method: "/user/configuration/get",
       });
-      return result.data;
+      return reply.result;
     });
   }
 
   async setUserConfiguration(options: Partial<UserConfigurationOptions>) {
     return this.withResult<UserConfiguration>(async () => {
-      const result = await Native.getInstance().proxyService<UserConfiguration>({
+      const reply = await Native.getInstance().proxyService<UserConfiguration>({
         method: "/user/configuration/set",
         params: {
           options
         }
       });
-      return result.data;
+      return reply.result;
     });
   }
 

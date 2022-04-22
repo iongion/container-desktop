@@ -10,11 +10,16 @@ html, body {
   position: relative;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 :focus {
   outline: rgba(19, 124, 189, 0.404) solid 1px;
   outline-offset: 1px;
+}
+
+#root {
+  overflow: hidden;
 }
 
 .AppBackgroundCheckers {

@@ -70,6 +70,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{t("Exited")}</td>
                     <td>{containerStats.exited}</td>
                   </tr>
+                  <tr>
+                    <td>{t("Created")}</td>
+                    <td>{containerStats.created}</td>
+                  </tr>
                 </tbody>
               </HTMLTable>
               <p>{t("As an example, copy and paste this command into your terminal and then come back")}</p>

@@ -40,42 +40,44 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
   const containerConnect = useStoreActions((actions) => actions.container.containerConnect);
   const performActionCommand = useCallback(
     async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
-      let result = { success: false, message: `No action handler for ${action}` };
       setDisabledAction(action);
       try {
+        // TODO: Improve notifications
+        let success = false;
+        let notifyFailure = true;
         switch (action) {
           case "container.logs":
-            result = await containerFetch(container);
+            await containerFetch(container);
             break;
           case "container.inspect":
-            result = await containerFetch(container);
+            await containerFetch(container);
             break;
           case "container.stats":
-            result = await containerFetch(container);
+            await containerFetch(container);
             break;
           case "container.stop":
-            result = await containerStop(container);
+            success = await containerStop(container);
             break;
           case "container.pause":
-            result = await containerPause(container);
+            success = await containerPause(container);
             break;
           case "container.unpause":
-            result = await containerUnpause(container);
+            success = await containerUnpause(container);
             break;
           case "container.restart":
-            result = await containerRestart(container);
+            success = await containerRestart(container);
             break;
           case "container.remove":
-            result = await containerRemove(container);
+            success = await containerRemove(container);
             break;
           case "container.connect":
-            result = await containerConnect(container);
+            success = await containerConnect(container);
             break;
           default:
             break;
         }
-        if (confirm?.success) {
-          Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+        if (notifyFailure && !success) {
+          Notification.show({ message: t("Command failed"), intent: Intent.DANGER });
         }
         if (action === "container.remove") {
           goToScreen("/screens/containers");
