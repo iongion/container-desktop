@@ -81,9 +81,9 @@ ipcMain.handle("proxy", async function (event, invocation) {
     delete params.data;
   }
   logger.debug("IPC - proxy invoke >", invocation);
-  const response = await invoker.invoke(method, params);
-  logger.debug("IPC - proxy invoke <", response);
-  return response;
+  const reply = await invoker.invoke(method, params);
+  logger.debug("IPC - proxy invoke <", reply);
+  return reply;
 });
 
 function createWindow() {

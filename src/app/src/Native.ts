@@ -1,4 +1,4 @@
-import { ContainerClientResponse } from "./Types";
+import { ContainerClientResult } from "./Types";
 
 export enum Platforms {
   Browser = "browser",
@@ -140,24 +140,25 @@ export class Native {
     }
     return result;
   }
-  public async proxyService<T>(request: any) {
-    let result: ContainerClientResponse<T>;
+  public async proxyService<T>(request: any, http?: boolean) {
+    let reply: ContainerClientResult<T>;
     try {
       console.debug("[>]", request);
-      result = await this.bridge.application.proxy<ContainerClientResponse<T>>(request);
-      console.debug("[<]", result);
+      reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request);
+      if (http) {
+        // TODO: Improve error handling
+        // reply.success = (reply.result as any)?.ok || false;
+      }
+      console.debug("[<]", reply);
     } catch (error) {
       console.error("Proxy response error", { request, error });
       throw error;
     }
-    if (result.success) {
-      return result;
+    if (reply.success) {
+      return reply;
     }
     // TODO: Improve error flow
-    console.error("Proxy result error", result);
-    const response = (result as any).response || { data: result.data, warnings: result.warnings };
-    const error = new Error(`${result.data}` || "Proxy result error");
-    (error as any).response = response;
-    throw error;
+    console.error("Proxy reply error", reply);
+    throw new Error((reply.result as any).error);
   }
 }

@@ -11,26 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * 44: Fix Open in Browsers due to schema changes
+* 49: UI freezes on Start a new container
+* Overflow issues triggering vertical & horizontal scrolling
+* Bug with pause / resume of containers
 
 ### Added
 
 * 43: Restore LIMA
 * Ability to switch logging to original console, to avoid losing lines
 * Add more info about the environment where podman is running
+* Port mappings as array of items - ability to map any port/protocol
+* Add created counter on dashboard
 
 ### Changed
 
 * Improved detection of locally available podman, podman machine, LIMA
 * Ability to connect without restart when switching engines (from native to machine, from machine to lima and back)
+* Improved error handling and notifications
+* Simplified logging
 
 ### Removed
 
 * Removed worker PRC - proxy all through Electron IPC
 * CLI backend for communication - it was too limiting
-
-### Fixed
-
-* Bug with pause / resume of containers
 
 ## [4.0.3-rc.3] - 2022-04-18
 

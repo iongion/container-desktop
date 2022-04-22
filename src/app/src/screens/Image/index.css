@@ -3,6 +3,7 @@
 }
 .AppDataFormFields .bp4-form-group label {
   width: 100px;
+  color: #ccc;
 }
 .AppDataFormFields .bp4-form-group .bp4-form-content {
   width: 100%;
@@ -19,44 +20,4 @@
   padding-left: 2px;
   font-size: 14px;
   font-weight: bold;
-}
-
-.AppDrawer .ContainerPortMappingPort .bp4-input {
-  width: 70px;
-  margin-left: 3px;
-}
-.AppDrawer .ContainerFileSystemSize,
-.AppDrawer .ContainerFileSystemSize .bp4-input-group {
-  flex-grow: inherit !important;
-  flex-shrink: inherit !important;
-}
-.VolumeTypeInput {
-  vertical-align: middle;
-}
-.VolumeTypeInput .bp4-checkbox {
-  margin-bottom: 0;
-  margin-right: 10px;
-  display: flex;
-  align-items: center;
-}
-.VolumeTypeInput .bp4-divider {
-  border-color: #4c3d5c;
-}
-.ContainerMount {
-  display: flex;
-}
-.ContainerMountProperties {
-  flex: 1;
-}
-.ContainerMountActions {
-  display: flex;
-  vertical-align: middle;
-}
-
-.ContainerPortMappings .bp4-label {
-  text-transform: uppercase;
-  margin-right: 7px !important;
-}
-.ContainerPortMappings .bp4-form-content {
-  display: flex;
 }

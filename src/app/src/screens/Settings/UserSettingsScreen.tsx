@@ -122,9 +122,30 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <Button disabled={pending} fill text={reconnectActionText} icon={IconNames.REFRESH} onClick={onConnectClick} />
       </Callout>
     );
-      console.debug(system)
-  const runningDetails = t("Running on {{distribution}} {{distributionVersion}} ({{kernel}})", { currentVersion: program.currentVersion, hostname: system?.host?.hostname || "", distribution: system?.host?.distribution?.distribution || "", distributionVersion: system?.host?.distribution?.version || "", kernel: system?.host?.kernel || "" });
-  const engineSwitcher = Environment.features.engineSwitcher?.enabled ? <ContainerEngineManager helperText={runningDetails} /> : null;
+
+  let runningDetails: any = "";
+  if (system) {
+    runningDetails = t(
+      "Running on {{distribution}} {{distributionVersion}} ({{kernel}})",
+      {
+        currentVersion: program.currentVersion,
+        hostname: system.host?.hostname || "",
+        distribution: system.host?.distribution?.distribution || "",
+        distributionVersion: system.host?.distribution?.version || "",
+        kernel: system.host?.kernel || ""
+      }
+    );
+  } else {
+    runningDetails = t("Unable to detect system - try to connect and start the api");
+    if (program.name === "podman" && userConfiguration.engine === "virtualized" && !running) {
+      runningDetails = (
+        <>
+          <span>{t("Unable to detect system - podman machine may need restart")}</span> &mdash;
+          <code className="DocsCodeBox">podman machine stop &amp;&amp; podman machine start</code>
+        </>
+      );
+    }
+  }
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -194,7 +215,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </FormGroup>
           </div>
         </div>
-        {engineSwitcher}
+        <ContainerEngineManager helperText={runningDetails} />
         <div className="AppSettingsForm" data-form="flags">
           <FormGroup
             label={t("Startup")}

@@ -156,8 +156,8 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
   ),
   containerCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const created = await registry.api.createContainer(options);
-      return created;
+      const create = await registry.api.createContainer(options);
+      return create;
     })
   ),
   containerConnect: thunk(async (actions, options) =>

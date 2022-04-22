@@ -49,7 +49,7 @@ export interface AppModel extends AppModelState {
 export type AppStore = Store<AppModel, EasyPeasyConfig<object | undefined, object>>;
 export interface AppStorePendingOperationResult {
   success: boolean;
-  body: string;
+  result: any;
   warnings: any[];
 }
 export type AppStorePendingOperation = (store: AppStore) => Promise<any>;

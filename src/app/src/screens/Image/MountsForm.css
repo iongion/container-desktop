@@ -1,0 +1,28 @@
+.ContainerFileSystemSize,
+.ContainerFileSystemSize .bp4-input-group {
+  flex-grow: inherit !important;
+  flex-shrink: inherit !important;
+}
+.VolumeTypeInput {
+  vertical-align: middle;
+}
+.VolumeTypeInput .bp4-checkbox {
+  margin-bottom: 0;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+.VolumeTypeInput .bp4-divider {
+  border-color: #4c3d5c;
+}
+
+.ContainerMount {
+  display: flex;
+}
+.ContainerMountProperties {
+  flex: 1;
+}
+.ContainerMountActions {
+  display: flex;
+  vertical-align: middle;
+}

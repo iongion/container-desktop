@@ -34,9 +34,7 @@ export enum Environments {
 }
 
 export enum Features {
-  polling = "polling",
-  customizeMounts = "customizeMounts",
-  engineSwitcher = "engineSwitcher"
+  polling = "polling"
 }
 export interface Feature {
   enabled: boolean;
@@ -151,13 +149,19 @@ export interface Program {
   homepage: string;
 }
 
+
 export interface ContainerClientResponse<T = unknown> {
-  success: boolean;
-  data: T;
-  warnings: any[];
-  statusText: string;
-  status: number;
   ok: boolean;
+  status: number;
+  statusText: string;
+  data: T;
+  headers: {[key: string]: string};
+}
+
+export interface ContainerClientResult<T = unknown> {
+  success: boolean;
+  warnings: any[];
+  result: T;
 }
 
 export interface ContainerStats {
@@ -425,6 +429,7 @@ export interface Domain {
 }
 
 export interface ContainerImagePortMapping {
+  guid: string;
   container_port: number;
   host_ip: string;
   host_port: number;

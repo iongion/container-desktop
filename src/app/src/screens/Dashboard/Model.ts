@@ -8,6 +8,7 @@ export interface ContainerStats {
   paused: number;
   running: number;
   exited: number;
+  created: number;
 }
 export interface DashboardModelState {
   containerStats: ContainerStats;
@@ -25,6 +26,7 @@ export const createModel = (registry: AppRegistry): DashboardModel => ({
     paused: 0,
     running: 0,
     exited: 0,
+    created: 0
   },
   // Actions
   setContainersStats: action((state, value) => {
@@ -37,6 +39,9 @@ export const createModel = (registry: AppRegistry): DashboardModel => ({
     if (value.exited !== undefined) {
       state.containerStats.exited = value.exited;
     }
+    if (value.created !== undefined) {
+      state.containerStats.created = value.created;
+    }
   }),
 
   // Thunks
@@ -47,10 +52,12 @@ export const createModel = (registry: AppRegistry): DashboardModel => ({
       const pausedContainers = containers.filter(c => c.DecodedState === ContainerStateList.PAUSED);
       const runningContainers = containers.filter(c => c.DecodedState === ContainerStateList.RUNNING);
       const exitedContainers = containers.filter(c => c.DecodedState === ContainerStateList.EXITED);
+      const createdContainers = containers.filter(c => c.DecodedState === ContainerStateList.CREATED);
       actions.setContainersStats({
         paused: pausedContainers.length,
         running: runningContainers.length,
         exited: exitedContainers.length,
+        created: createdContainers.length,
       });
       return containers.length;
     })
