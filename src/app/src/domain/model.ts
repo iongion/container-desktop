@@ -135,7 +135,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
           // If engine is changing - reconnect
           if (options.engine !== undefined && options.engine !== currentEngine) {
             console.debug("Engine change detected - re-starting", { current: currentEngine, next: options.engine });
-            await actions.connect();
+            await actions.start();
           }
           return configuration;
         } catch (error) {

@@ -22,26 +22,10 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
   const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
   const testSocketPathConnection = useStoreActions((actions) => actions.testSocketPathConnection);
+  const start = useStoreActions((actions) => actions.start);
   const program = userConfiguration.program;
   const isValid = provisioned && program.currentVersion;
   const [socketPath, setSocketPath] = useState(userConfiguration.socketPath);
-  const onSocketPathChange = useCallback(
-    (event: React.FormEvent<HTMLInputElement>) => {
-      const sender = event.currentTarget;
-      setSocketPath(sender.value);
-    },
-    [setSocketPath]
-  );
-  const onSocketPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    const result: TestResult = await testSocketPathConnection(socketPath);
-    console.debug(result);
-    if (result.success) {
-      Notification.show({ message: t("API was reached successfully"), intent: Intent.SUCCESS });
-    } else {
-      Notification.show({ message: t("API could not be reached"), intent: Intent.DANGER });
-    }
-    console.debug("Test result is", result);
-  }, [socketPath, testSocketPathConnection, t]);
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const result = await Native.getInstance().openFileSelector();
@@ -65,6 +49,40 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     },
     [setUserConfiguration, t]
   );
+  const onSocketPathChange = useCallback(
+    (event: React.FormEvent<HTMLInputElement>) => {
+      const sender = event.currentTarget;
+      setSocketPath(sender.value);
+    },
+    [setSocketPath]
+  );
+  const onSocketPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+    const result: TestResult = await testSocketPathConnection(socketPath);
+    if (result.success) {
+      Notification.show({ message: t("API was reached successfully"), intent: Intent.SUCCESS });
+    } else {
+      Notification.show({ message: t("API could not be reached"), intent: Intent.DANGER });
+    }
+  }, [socketPath, testSocketPathConnection, t]);
+  const onSocketPathAcceptClick = useCallback(async () => {
+    try {
+      const result: TestResult = await testSocketPathConnection(socketPath);
+      if (result.success) {
+        const programSettings: any = {};
+        const programKey = `program.${program.name}.socketPath`;
+        programSettings[programKey] = socketPath.replace("unix://", "").replace("npipe://", "");
+        await setUserConfiguration(programSettings);
+        Notification.show({ message: t("Connection string has been customized"), intent: Intent.SUCCESS });
+        await start();
+      } else {
+        Notification.show({ message: t("Connection string customization failed - API could not be reached"), intent: Intent.DANGER });
+      }
+    } catch (error) {
+      console.error("Unable to change program path", error);
+      Notification.show({ message: t("Connection string customization failed"), intent: Intent.DANGER });
+    }
+
+  }, [socketPath, program, testSocketPathConnection, setUserConfiguration, start, t]);
   const isSocketPathChanged = socketPath !== userConfiguration.socketPath;
   const isLIMA = engine === ContainerEngine.SUBSYSTEM_LIMA;
   const suffix = isLIMA ? <span> - {t("Automatically detected inside LIMA VM")}</span> : "";
@@ -109,7 +127,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         </ControlGroup>
       </FormGroup>
       <FormGroup
-        helperText={t("Using automatic value")}
+        helperText={t("NOTE - Custom path is reset on environment change due to auto-detection.")}
         label={t("Socket path")}
         labelFor={`${program.name}_socket`}
       >
@@ -124,18 +142,25 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
               <Button minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onSocketPathTestClick} />
             }
           />
-          <Button icon={IconNames.TICK} text={t("Accept")} title={isSocketPathChanged ? t("Try to use this path") : t("No change detected")} disabled={!isSocketPathChanged} intent={isSocketPathChanged ? Intent.SUCCESS : Intent.NONE} />
+          <Button
+            icon={IconNames.TICK}
+            text={t("Accept")}
+            title={isSocketPathChanged ? t("Try to use this path") : t("No change detected")}
+            disabled={!isSocketPathChanged}
+            intent={isSocketPathChanged ? Intent.SUCCESS : Intent.NONE}
+            onClick={onSocketPathAcceptClick}
+          />
         </ControlGroup>
       </FormGroup>
     </div>
   );
 }
 
-export const ContainerEngineSettingsPodmanRemote: React.FC<ContainerEngineSettingsProps> = ({}) => {
+export const ContainerEngineSettingsPodmanRemote: React.FC<ContainerEngineSettingsProps> = () => {
   return null;
 }
 
-export const ContainerEngineSettingsPodmanWSL: React.FC<ContainerEngineSettingsProps> = ({}) => {
+export const ContainerEngineSettingsPodmanWSL: React.FC<ContainerEngineSettingsProps> = () => {
   return null;
 }
 
