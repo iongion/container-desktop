@@ -6,6 +6,7 @@ import {
   //
   ContainerClientResponse,
   Container,
+  ContainerEngine,
   ContainerStats,
   ContainerImageMount,
   ContainerImagePortMapping,
@@ -380,7 +381,7 @@ export class ContainerClient {
       const engine = this.getEngine();
       let serviceUrl = "/volumes/json";
       let processData = (input: any) => input as Volume[];
-      if (engine === "docker")  {
+      if (engine === ContainerEngine.DOCKER)  {
         serviceUrl = "/volumes";
         processData = (input: any) => {
           const output = input.Volumes;
@@ -395,7 +396,7 @@ export class ContainerClient {
     return this.withResult<Volume>(async () => {
       const engine = this.getEngine();
       let serviceUrl = `/volumes/${nameOrId}/json`;
-      if (engine === "docker")  {
+      if (engine === ContainerEngine.DOCKER)  {
         serviceUrl = `/volumes/${nameOrId}`;
       }
       const result = await this.dataApiDriver.get<Volume>(serviceUrl);

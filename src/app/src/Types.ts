@@ -477,4 +477,5 @@ export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> 
     Path: string;
   };
   Metadata?: Partial<AppScreenMetadata>;
+  isAvailable?: (context: SystemEnvironment) => boolean;
 };

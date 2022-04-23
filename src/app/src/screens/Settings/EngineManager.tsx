@@ -224,8 +224,8 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
   }, [setUserConfiguration]);
   return (
     <div className="AppSettingsEngineManager">
-      <Label>{t("Container environment")} - {helperText}</Label>
-      <div className="AppSettingsFormView" data-form-view="container-environment">
+      <Label>{t("Container engine")} - {helperText}</Label>
+      <div className="AppSettingsFormView" data-form-view="container-engine">
         <div className="AppSettingsForm" data-form="engine">
           <FormGroup>
             <RadioGroup
