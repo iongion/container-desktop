@@ -2,7 +2,7 @@ import { Container } from "../../Types";
 import { pathTo } from "../../Navigator";
 
 export const getContainerUrl = (id: string, view: string) => {
-  return pathTo(`/screens/container/${id}/${view}`);
+  return pathTo(`/screens/container/${encodeURIComponent(id)}/${encodeURIComponent(view)}`);
 };
 
 export const getContainerServiceUrl = (container: Container) => {

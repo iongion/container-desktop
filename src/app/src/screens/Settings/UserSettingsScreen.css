@@ -1,19 +1,35 @@
+.AppSettingsEngineManager {
+  padding-top: 10px;
+}
+.AppSettingsEngineManager > .bp4-label {
+  margin-bottom: 0;
+  background: #111;
+  line-height: 30px;
+  padding-left: 4px;
+}
 .AppSettingsCallout {
   text-align: center;
   padding: 5px !important;
   margin: 0;
 }
-.AppSettingsForm {
-  padding: 2px;
+.AppSettingsFormView[data-form-view="container-engine"] {
+  display: flex;
+  margin-bottom: 15px;
+  border: 1px solid #111;
+  padding: 5px;
 }
 .AppSettingsFormColumn {
-  display: inline-flex;
+  display: flex;
 }
 .AppSettingsFieldProgramHelper {
   padding-left: 5px;
 }
 .AppSettingsForm[data-form="engine"] {
   display: flex;
+  padding: 0;
+}
+.AppSettingsForm[data-form="engine"] > .bp4-form-group {
+  margin: 0;
 }
 .AppSettingsField .bp4-control,
 .AppSettingsForm[data-form="engine"] .AppSettingsField {
@@ -21,10 +37,17 @@
   vertical-align: middle;
   align-items: center;
   flex: 1;
-}
-.AppSettingsForm[data-form="engine"] .AppSettingsField {
+  margin: 0;
+  padding-top: 7px;
+  padding-bottom: 7px;
   padding-left: 30px;
+  padding-right: 10px;
   width: 100%;
+}
+.AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
+  background: #301e30;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
 }
 .AppSettingsForm[data-form="engine"] .AppSettingsField .RadioLabel {
   min-width: 130px;
@@ -33,13 +56,14 @@
 .AppSettingsForm[data-form="engine"] .AppSettingsField .bp4-html-select {
   min-width: 200px;
 }
-.AppSettingsForm[data-form="engine"] .AppSettingsFormColumn:first-child {
+.AppSettingsForm[data-form="engine.settings"] {
   flex: 1;
-}
-.AppSettingsForm[data-form="engine"] .AppSettingsFormColumn:last-child {
-  vertical-align: middle;
-  display: flex;
-  align-items: center;
+  width: 100%;
+  margin-left: -2px;
+  background: #301e30;
+  padding-top: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 .AppSettingUserConfigurationPath {
   width: 100%;

@@ -53,7 +53,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
           goToScreen("/screens/images");
         }
       } catch (error: any) {
-        console.error("Command execution failed", error);
+        console.error("Command execution failed", error, result);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,

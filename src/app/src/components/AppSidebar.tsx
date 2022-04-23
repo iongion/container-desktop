@@ -5,6 +5,7 @@ import { AppSidebarFooter } from "./AppSidebarFooter";
 
 import { AppScreen } from "../Types";
 import { pathTo } from "../Navigator";
+import { useStoreState } from "../domain/types";
 
 // locals
 import "./AppSidebar.css";
@@ -16,14 +17,18 @@ interface AppSidebarProps {
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ screens, currentScreen }) => {
   const { t } = useTranslation();
+  const environment = useStoreState((state) => state.environment);
   const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
   return (
     <div className="AppSidebar">
       <div className="AppSidebarActions">
         <ButtonGroup vertical>
           {sidebarScreens.map((Screen) => {
+            const isDisabled = Screen.isAvailable ? !Screen.isAvailable(environment) : false;
             return (
               <AnchorButton
+                disabled={isDisabled}
+                title={isDisabled ? t("This screen is not available") : undefined}
                 active={currentScreen?.ID === Screen.ID}
                 href={pathTo(Screen.Route.Path)}
                 text={t(Screen.Title)}

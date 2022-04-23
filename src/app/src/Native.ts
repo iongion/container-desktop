@@ -1,4 +1,4 @@
-import { ContainerClientResult } from "./Types";
+import { ContainerClientResult, ContainerEngine, UserConfiguration } from "./Types";
 
 export enum Platforms {
   Browser = "browser",
@@ -46,7 +46,9 @@ interface NativeBridge {
     openDevTools: () => void;
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
+    getUserConfiguration: () => Promise<UserConfiguration>;
     proxy: <T>(request: any) => Promise<T>;
+    getEngine: () => Promise<ContainerEngine>;
   };
 }
 
@@ -61,18 +63,19 @@ export class Native {
       platform: "browser",
       available: false,
       ipcRenderer: {
-        send: (message: any) => console.error("Not bridged")
+        send: (message: any) => { throw new Error("Not bridged"); }
       },
       application: {
-        minimize: () => console.error("Not bridged"),
-        maximize: () => console.error("Not bridged"),
-        restore: () => console.error("Not bridged"),
-        close: () => console.error("Not bridged"),
-        exit: () => console.error("Not bridged"),
-        relaunch: () => console.error("Not bridged"),
-        openFileSelector: (options?: OpenFileSelectorOptions) => console.error("Not bridged", options),
-        openTerminal: (options?: OpenTerminalOptions) => console.error("Not bridged", options),
-        proxy: (request: any) => console.error("Not bridged")
+        minimize: () => { throw new Error("Not bridged"); },
+        maximize: () => { throw new Error("Not bridged"); },
+        restore: () => { throw new Error("Not bridged"); },
+        close: () => { throw new Error("Not bridged"); },
+        exit: () => { throw new Error("Not bridged"); },
+        relaunch: () => { throw new Error("Not bridged"); },
+        openFileSelector: (options?: OpenFileSelectorOptions) => { throw new Error("Not bridged"); },
+        openTerminal: (options?: OpenTerminalOptions) => { throw new Error("Not bridged"); },
+        proxy: (request: any) => { throw new Error("Not bridged"); },
+        getEngine: () => { throw new Error("Not bridged"); },
       }
     };
     Native.instance = this;
@@ -114,6 +117,9 @@ export class Native {
   public getPlatform() {
     return this.bridge.platform || Platforms.Unknown;
   }
+  public getEngine() {
+    return this.bridge.application.getEngine();
+  }
   public withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());
   }
@@ -145,9 +151,8 @@ export class Native {
     try {
       console.debug("[>]", request);
       reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request);
-      if (http) {
-        // TODO: Improve error handling
-        // reply.success = (reply.result as any)?.ok || false;
+      if (http || request.method === "/container/engine/request") {
+        reply.success = (reply.result as any)?.ok || false;
       }
       console.debug("[<]", reply);
     } catch (error) {

@@ -72,8 +72,14 @@ ipcMain.handle("openFileSelector", async function (event, options) {
 ipcMain.handle("openTerminal", async function (event, options) {
   logger.debug("IPC - openTerminal - start", options);
   let success = await launchTerminal(options);
-  logger.debug("IPC - openTerminal - result", options);
+  logger.debug("IPC - openTerminal - result", options, success);
   return success;
+});
+ipcMain.handle("getEngine", async function (event) {
+  logger.debug("IPC - getEngine - start");
+  let current = userSettings.get("engine", undefined);
+  logger.debug("IPC - getEngine - result", current);
+  return current;
 });
 ipcMain.handle("proxy", async function (event, invocation) {
   const { method, params } = invocation;

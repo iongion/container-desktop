@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Connection system
+* Experimental Docker API
+
+### Changed
+
+* 47: Allow custom connection string
+* Connection UI
+* Various UI improvements
+* Disable screens not making sense when using certain engines
+
 ## [4.0.3-rc.4] - 2022-04-18
 
 ### Fixed

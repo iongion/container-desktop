@@ -17,7 +17,7 @@ import { useForm, FormProvider, Controller } from "react-hook-form";
 
 // project
 import { ContainerImage, ContainerImagePortMapping } from "../../Types";
-import { useStoreActions, useStoreState } from "../../domain/types";
+import { useStoreActions } from "../../domain/types";
 import { Notification } from "../../Notification";
 
 // module

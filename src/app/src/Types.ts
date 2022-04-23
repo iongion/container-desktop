@@ -17,6 +17,13 @@ export interface UserConfiguration {
     level: string;
   };
   communication: "api" | "cli";
+  socketPath: string;
+}
+
+export interface TestResult {
+  subject: string;
+  success: boolean;
+  details?: any;
 }
 
 export interface UserConfigurationOptions {
@@ -113,7 +120,8 @@ export enum ContainerEngine {
   SUBSYSTEM_WSL = "subsystem.wsl",
   SUBSYSTEM_LIMA = "subsystem.lima",
   VIRTUALIZED = "virtualized",
-  REMOTE = "remote"
+  REMOTE = "remote",
+  DOCKER = "docker"
 }
 export interface SystemConnection {
   Identity: string;
@@ -315,7 +323,7 @@ export interface Container {
   Id: string;
   Image: string;
   ImageName?: string;
-  ImageID: string;
+  ImageID: string; // For Docker API it is prefixed by sha256:
   IsInfra: boolean;
   Labels: { [key: string]: string } | null;
   Config: ContainerInspect;
@@ -469,4 +477,5 @@ export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> 
     Path: string;
   };
   Metadata?: Partial<AppScreenMetadata>;
+  isAvailable?: (context: SystemEnvironment) => boolean;
 };

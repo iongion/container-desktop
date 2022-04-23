@@ -51,7 +51,7 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
           goToScreen("/screens/secrets");
         }
       } catch (error: any) {
-        console.error("Command execution failed", error);
+        console.error("Command execution failed", error, result);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,

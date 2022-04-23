@@ -11,7 +11,7 @@ function axiosConfigToCURL(config) {
     "-X",
     config.method?.toUpperCase(),
     "--unix-socket",
-    `"${config.socketPath}"`,
+    `"${config.socketPath.replace("unix://", "").replace("npipe://", "")}"`,
     `"${requestUrl}"`
   ];
   const exclude = ["common", "delete", "get", "head", "patch", "post", "put"];

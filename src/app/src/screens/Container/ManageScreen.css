@@ -18,3 +18,8 @@
 [data-table="containers"] tbody td:last-child {
   width: 1px;
 }
+[data-table="containers"] .ContainerLayersButton {
+  max-width: 260px;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}

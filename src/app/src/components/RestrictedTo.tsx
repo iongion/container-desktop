@@ -8,9 +8,10 @@ import "./RestrictedTo.css";
 
 interface RestrictedToProps {
   engine: ContainerEngine;
+  withTitle?: boolean;
 }
 
-export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine }) => {
+export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine, withTitle }) => {
   const { t } = useTranslation();
   const platformsMap: { [key: string]: { icon?: string; title: string; ignore?: boolean } } = {
     [ContainerEngine.NATIVE]: {
@@ -40,10 +41,10 @@ export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine }) => {
     }
   };
   const info = platformsMap[engine];
-  return info.ignore ? null : (
-    <div className="RestrictedTo" data-platform={engine}>
+  return !info || info.ignore ? null : (
+    <div className="RestrictedTo" data-platform={engine} title={info.title}>
       {info.icon && <ReactIcon.Icon path={info.icon} size={0.75} />}
-      <span className="RestrictedToEngineTitle">{info.title}</span>
+      {withTitle && <span className="RestrictedToEngineTitle">{info.title}</span>}
     </div>
   );
 };

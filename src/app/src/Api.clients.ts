@@ -6,6 +6,7 @@ import {
   //
   ContainerClientResponse,
   Container,
+  ContainerEngine,
   ContainerStats,
   ContainerImageMount,
   ContainerImagePortMapping,
@@ -23,7 +24,8 @@ import {
   //
   UserConfiguration,
   UserConfigurationOptions,
-  ContainerStateList
+  ContainerStateList,
+  TestResult
 } from "./Types";
 
 import { Native } from "./Native";
@@ -164,9 +166,18 @@ export class ApiDriver {
 }
 export class ContainerClient {
   protected dataApiDriver: ApiDriver;
+  protected engine: string = "";
 
   constructor() {
     this.dataApiDriver = new ApiDriver();
+  }
+
+  setEngine(engine: string) {
+    this.engine = engine;
+  }
+
+  getEngine() {
+    return this.engine;
   }
 
   protected async withResult<T>(handler: () => Promise<T>) {
@@ -194,7 +205,7 @@ export class ContainerClient {
   async getImages() {
     return this.withResult<ContainerImage[]>(async () => {
       const result = await this.dataApiDriver.get<ContainerImage[]>("/images/json");
-      return result.data.map((it) => coerceImage(it));
+      return result.ok ? result.data.map((it) => coerceImage(it)) : [];
     });
   }
   async getImage(id: string, opts?: FetchImageOptions) {
@@ -257,8 +268,7 @@ export class ContainerClient {
           all: true
         }
       });
-      console.debug("Containers result is", result);
-      return result.data.map((it) => coerceContainer(it));
+      return result.ok ? result.data.map((it) => coerceContainer(it)) : [];
     });
   }
   async getContainer(id: string, opts?: FetchContainerOptions) {
@@ -368,13 +378,28 @@ export class ContainerClient {
   // Volumes
   async getVolumes() {
     return this.withResult<Volume[]>(async () => {
-      const result = await this.dataApiDriver.get<Volume[]>("/volumes/json");
-      return result.data;
+      const engine = this.getEngine();
+      let serviceUrl = "/volumes/json";
+      let processData = (input: any) => input as Volume[];
+      if (engine === ContainerEngine.DOCKER)  {
+        serviceUrl = "/volumes";
+        processData = (input: any) => {
+          const output = input.Volumes;
+          return output as Volume[];
+        };
+      }
+      const result = await this.dataApiDriver.get<Volume[]>(serviceUrl);
+      return result.ok ? processData(result.data) : [];
     });
   }
   async getVolume(nameOrId: string, opts?: FetchVolumeOptions) {
     return this.withResult<Volume>(async () => {
-      const result = await this.dataApiDriver.get<Volume>(`/volumes/${nameOrId}/json`);
+      const engine = this.getEngine();
+      let serviceUrl = `/volumes/${nameOrId}/json`;
+      if (engine === ContainerEngine.DOCKER)  {
+        serviceUrl = `/volumes/${nameOrId}`;
+      }
+      const result = await this.dataApiDriver.get<Volume>(serviceUrl);
       return result.data;
     });
   }
@@ -411,7 +436,7 @@ export class ContainerClient {
   async getSecrets() {
     return this.withResult<Secret[]>(async () => {
       const result = await this.dataApiDriver.get<Secret[]>("/secrets/json");
-      return result.data;
+      return result.ok ? result.data : [];
     });
   }
   async getSecret(nameOrId: string, opts?: FetchSecretOptions) {
@@ -592,6 +617,19 @@ export class ContainerClient {
         method: "/user/configuration/set",
         params: {
           options
+        }
+      });
+      return reply.result;
+    });
+  }
+
+  async testSocketPathConnection(socketPath: string) {
+    return this.withResult<TestResult>(async () => {
+      const reply = await Native.getInstance().proxyService<TestResult>({
+        method: "/test",
+        params: {
+          subject: "socketPath",
+          payload: socketPath.replace("unix://", "").replace("npipe://", "")
         }
       });
       return reply.result;

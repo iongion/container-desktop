@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { AnchorButton, Button, InputGroup, Icon, Intent, NonIdealState, HTMLTable, FormGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import ClipboardJS from "clipboard";
@@ -28,6 +28,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
   const machine = useStoreState((state) => state.environment.machine);
   const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
+  const program = userConfiguration.program;
   const clipboardButtonRef = useRef<Button>(null);
 
   useEffect(() => {
@@ -45,9 +46,18 @@ export const Screen: AppScreen<ScreenProps> = () => {
     });
   }, [t]);
 
+  const exampleCode = useMemo(() => {
+    return CONTAINER_DOCS_EXAMPLE_CODE.replace("{program}", program?.name || "podman");
+  }, [program])
+
   let commandPrefix;
+  let exampleTitle;
   if (platform === Platforms.Linux && userConfiguration.engine === "virtualized" && machine) {
     commandPrefix = `podman machine ssh ${machine}`;
+    exampleTitle = t("On Linux, to dissociated between commands targeting the native podman engine, a machine prefix must be used.");
+  } else if (platform === Platforms.Mac) {
+    commandPrefix = `limactl shell podman`;
+    exampleTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
   }
   // Change hydration
   usePoller({ poller: containersFetchStats });
@@ -79,9 +89,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <p>{t("As an example, copy and paste this command into your terminal and then come back")}</p>
               <FormGroup helperText={commandPrefix ? commandPrefix: ""}>
                 <InputGroup
-                  title={commandPrefix ? t("On Linux, to dissociated between commands targeting the native runtime, a prefix must be used.") : ""}
+                  title={exampleTitle}
                   className="DashboardContainerExampleCode"
-                  value={CONTAINER_DOCS_EXAMPLE_CODE}
+                  value={exampleCode}
                   readOnly
                   rightElement={<Button icon={IconNames.CLIPBOARD} ref={clipboardButtonRef} />}
                 />
