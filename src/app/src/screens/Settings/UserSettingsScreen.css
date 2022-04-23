@@ -45,7 +45,7 @@
   width: 100%;
 }
 .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
-  background: #301e30;
+  background: #4f175b;
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
 }
@@ -60,7 +60,7 @@
   flex: 1;
   width: 100%;
   margin-left: -2px;
-  background: #301e30;
+  background: #4f175b;
   padding-top: 10px;
   padding-left: 10px;
   padding-right: 10px;
