@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
@@ -138,16 +138,26 @@ export function AppMainScreen() {
   const running = useStoreState((state) => state.environment.running);
   const platform = useStoreState((state) => state.environment.platform);
   const start = useStoreActions((actions) => actions.start);
-  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
+  const engine = useStoreState((state) => state.environment.userConfiguration.engine);
+  const program = useStoreState((state) => state.environment.userConfiguration.program);
+  const startRef = useRef(false);
+
+  console.debug({ phase, native, provisioned, running, platform, engine, program });
 
   useEffect(() => {
-    start();
+    if (startRef.current) {
+      console.debug("Initial start skipped - already started");
+    } else {
+      console.debug("Initial start has been triggered");
+      startRef.current = true;
+      start();
+    }
   }, [start]);
 
   return (
     <div
       className="App"
-      data-engine={userConfiguration.engine}
+      data-engine={engine}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
       data-platform={platform}
@@ -156,7 +166,7 @@ export function AppMainScreen() {
       data-provisioned={provisioned ? "yes" : "no"}
     >
       <Router>
-        <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={userConfiguration.program} />
+        <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
       </Router>
     </div>
   );

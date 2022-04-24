@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Store, EasyPeasyConfig, createTypedHooks } from "easy-peasy";
 // project
-import { ConnectOptions, SystemEnvironment, UserConfigurationOptions } from "../Types";
+import { ConnectOptions, ContainerEngine, SystemEnvironment, UserConfigurationOptions } from "../Types";
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -29,6 +29,13 @@ export interface AppModelState {
   environment: SystemEnvironment;
 }
 
+export interface FindProgramOptions {
+  engine: ContainerEngine;
+  program: string;
+  machine?: string;
+  wslDistributionName?: string;
+}
+
 export interface AppModel extends AppModelState {
   // actions
   setPhase: Action<AppModel, AppBootstrapPhase>;
@@ -44,7 +51,8 @@ export interface AppModel extends AppModelState {
   configure: Thunk<AppModel>;
   setUserConfiguration: Thunk<AppModel, Partial<UserConfigurationOptions>>;
   getUserConfiguration: Thunk<AppModel>;
-  testSocketPathConnection: Thunk<AppModel, string>;
+  testConnectionString: Thunk<AppModel, string>;
+  findProgram: Thunk<AppModel, FindProgramOptions>;
 }
 
 export type AppStore = Store<AppModel, EasyPeasyConfig<object | undefined, object>>;

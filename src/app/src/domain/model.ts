@@ -21,16 +21,17 @@ export const createModel = (registry: AppRegistry): AppModel => {
       running: false,
       userConfiguration: {
         program: {} as any,
-        engine: ContainerEngine.NATIVE, // default
-        autoStartApi: false,
+        engine: ContainerEngine.PODMAN_NATIVE, // default
+        startApi: false,
         minimizeToSystemTray: false,
         path: "",
         logging: {
           level: "error"
         },
         communication: "api",
-        socketPath: ""
+        connectionString: ""
       },
+      wslDistributions: []
     },
     // Actions
     setPhase: action((state, phase) => {
@@ -95,13 +96,13 @@ export const createModel = (registry: AppRegistry): AppModel => {
       if (native) {
         await Native.getInstance().setup();
       }
-      const autoStartApi = options === undefined ? getState().environment.userConfiguration.autoStartApi : options.startApi;
-      console.debug("Application connect", { autoStartApi });
+      const startApi = options === undefined ? getState().environment.userConfiguration.startApi : options.startApi;
+      console.debug("Application connect", { startApi });
       await actions.setPhase(AppBootstrapPhase.CONNECTING);
       return registry.withPending(async () => {
         // check if API is running and do best effort to start it
         let isRunning = false;
-        if (autoStartApi) {
+        if (startApi) {
           //
           isRunning = await registry.api.getIsApiRunning();
           if (isRunning) {
@@ -153,13 +154,23 @@ export const createModel = (registry: AppRegistry): AppModel => {
         }
       });
     }),
-    testSocketPathConnection: thunk(async (actions, options, { getState }) => {
+    testConnectionString: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const test = await registry.api.testSocketPathConnection(options);
+          const test = await registry.api.testConnectionString(options);
           return test;
         } catch (error) {
-          console.error("Error during socket path test", error);
+          console.error("Error during connection string test", error);
+        }
+      });
+    }),
+    findProgram: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const program = await registry.api.findProgram(options);
+          return program;
+        } catch (error) {
+          console.error("Error during connection string test", error);
         }
       });
     }),

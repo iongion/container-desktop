@@ -1,0 +1,15 @@
+.WSLSelector {
+  display: inline-flex;
+}
+.WSLSelector .bp4-button {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 90px;
+}
+.WSLSelector .bp4-html-select {
+  min-width: 140px;
+}
+.ContainerEngineSettingsActions .bp4-button {
+  min-width: 110px;
+}

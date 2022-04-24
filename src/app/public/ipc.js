@@ -18,18 +18,18 @@ const getClient = async () => {
 
 async function getUserConfiguration() {
   const osType = os.type();
-  const socketPath = await backend.findApiSocketPath();
+  const connectionString = await backend.findApiConnectionString();
   const options = {
     engine: await backend.findEngine(),
     program: await backend.findProgram(),
-    autoStartApi: userSettings.get("autoStartApi", false),
+    startApi: userSettings.get("startApi", false),
     minimizeToSystemTray: userSettings.get("minimizeToSystemTray", false),
     communication: "api",
     path: userSettings.getPath(),
     logging: {
       level: getLevel()
     },
-    socketPath: osType === "Windows_NT" ? socketPath : `unix://${socketPath}`
+    connectionString: osType === "Windows_NT" ? connectionString : `unix://${connectionString}`
   };
   return options;
 }
@@ -154,8 +154,12 @@ const servicesMap = {
     return client.createMachine(opts);
   },
   "/test": async function (opts) {
-    const result = await backend.testApiReachability({ socketPath: opts.payload });
+    const result = await backend.testApiReachability({ connectionString: opts.payload });
     result.subject = opts.subject;
+    return result;
+  },
+  "/find.program": async function (opts) {
+    const result = await backend.findProgram(opts);
     return result;
   }
 };

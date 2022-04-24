@@ -1,5 +1,5 @@
 const fs = require("fs");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 const events = require("events");
 // vendors
 const { createLogger } = require("@podman-desktop-companion/logger");
@@ -7,7 +7,10 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 const logger = createLogger("executor");
 const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
 
-function wrapSpawn(launcher, launcherArgs, launcherOpts) {
+function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
+  let spawnLauncher;
+  let spawnArgs;
+  let spawnOpts;
   if (isFlatpak) {
     const hostLauncher = "flatpak-spawn";
     const hostArgs = [
@@ -16,16 +19,61 @@ function wrapSpawn(launcher, launcherArgs, launcherOpts) {
       launcher.replace("/var/run/host", ""),
       ...launcherArgs
     ];
-    logger.debug("[SC.F][>]", [hostLauncher].concat(hostArgs).join(" "));
-    return spawn(hostLauncher, hostArgs, launcherOpts);
+    spawnLauncher = hostLauncher;
+    spawnArgs = hostArgs;
+    spawnOpts = launcherOpts;
   } else {
-    logger.debug("[SC.N][>]", [launcher].concat(launcherArgs).join(" "));
-    return spawn(launcher, launcherArgs, launcherOpts);
+    spawnLauncher = launcher;
+    spawnArgs = launcherArgs;
+    spawnOpts = launcherOpts;
   }
+  const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
+  const command = [spawnLauncher, ...spawnArgs].join(" ");
+  logger.debug("[SC.A][>]", command, spawnLauncherOpts);
+  if (!spawnLauncher) {
+    logger.error("[SC.A][>]", command, spawnLauncherOpts);
+    throw new Error("Launcher path must be set");
+  }
+  if (typeof spawnLauncher !== "string") {
+    logger.error("[SC.A][>]", command, spawnLauncherOpts);
+    throw new Error("Launcher path has invalid type");
+  }
+  logger.debug("[SC.A][>][spawn]", { spawnLauncher, spawnArgs, spawnLauncherOpts });
+  const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
+  child.command = command;
+  return child;
 }
 
-// project
-async function exec_launcher(launcher, launcherArgs, opts) {
+function wrapSpawnSync(launcher, launcherArgs, launcherOpts) {
+  let spawnLauncher;
+  let spawnArgs;
+  let spawnOpts;
+  if (isFlatpak) {
+    const hostLauncher = "flatpak-spawn";
+    const hostArgs = [
+      "--host",
+      // remove flatpak container VFS prefix when executing
+      launcher.replace("/var/run/host", ""),
+      ...launcherArgs
+    ];
+    spawnLauncher = hostLauncher;
+    spawnArgs = hostArgs;
+    spawnOpts = launcherOpts;
+  } else {
+    spawnLauncher = launcher;
+    spawnArgs = launcherArgs;
+    spawnOpts = launcherOpts;
+  }
+  const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
+  const command = [spawnLauncher, ...spawnArgs].join(" ");
+  logger.debug("[SC.S][>]", command);
+  logger.debug("[SC.S][>][spawnSync]", { spawnLauncher, spawnArgs, spawnLauncherOpts });
+  const child = spawnSync(spawnLauncher, spawnArgs, spawnLauncherOpts);
+  child.command = command;
+  return child;
+}
+
+async function exec_launcher_async(launcher, launcherArgs, opts) {
   const launcherOpts = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
@@ -34,43 +82,79 @@ async function exec_launcher(launcher, launcherArgs, opts) {
   };
   return new Promise((resolve) => {
     let resolved = false;
-    const command = [launcher].concat(launcherArgs).join(" ");
     const process = {
       pid: null,
       code: null,
       success: false,
       stdout: "",
       stderr: "",
-      command
+      command: "" // Decorated by child process
     };
     const child = opts?.wrapper
-      ? wrapSpawn(opts.wrapper.launcher, [...opts.wrapper.args, launcher, ...launcherArgs], launcherOpts)
-      : wrapSpawn(launcher, launcherArgs, launcherOpts);
+      ? wrapSpawnAsync(opts.wrapper.launcher, [...(opts.wrapper?.args || []), launcher, ...launcherArgs], launcherOpts)
+      : wrapSpawnAsync(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
-        // logger.warn("Spawning already resolved", { command, from, data });
+        logger.error(child.command, "spawning already resolved", { from, data });
       } else {
+        process.pid = child.pid;
         process.code = child.exitCode;
         process.stderr = process.stderr || data;
         process.success = child.exitCode === 0;
-        logger.debug("[SC.*][<]", { from, data, process });
+        process.command = child.command;
         resolved = true;
+        logger.debug("[SC.A][<]", process);
         resolve(process);
       }
     };
-    process.pid = child.pid;
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.on("exit", (code) => processResolve("exit", code));
-    child.on("close", (code) => processResolve("close", code));
-    child.on("error", (error) => processResolve("error", error));
-    child.stdout.on("data", (data) => (process.stdout += `${data}`));
-    child.stderr.on("data", (data) => (process.stderr += `${data}`));
+    // child.on("close", (code) => processResolve("close", code));
+    child.on("error", (error) => {
+      logger.error(child.command, "spawning error", error);
+      process.error = error;
+    });
+    child.stdout.on("data", (data) => {
+      // logger.debug(child.command, "spawning stdout", data);
+      process.stdout += `${data}`;
+    });
+    child.stderr.on("data", (data) => {
+      // logger.error(child.command, "spawning stderr", data);
+      process.stderr += `${data}`;
+    });
   });
+}
+
+async function exec_launcher_sync(launcher, launcherArgs, opts) {
+  const launcherOpts = {
+    encoding: "utf-8", // TODO: not working for spawn - find alternative
+    cwd: opts?.cwd,
+    env: opts?.env,
+    detached: opts?.detached
+  };
+  const child = opts?.wrapper
+    ? wrapSpawnSync(opts.wrapper.launcher, [...(opts.wrapper?.args || []), launcher, ...launcherArgs], launcherOpts)
+    : wrapSpawnSync(launcher, launcherArgs, launcherOpts);
+  const process = {
+    pid: child.pid,
+    code: child.status,
+    success: child.status === 0,
+    stdout: child.stdout,
+    stderr: child.stderr,
+    command: child.command
+  };
+  logger.debug("[SC.S][<]", process);
+  return process;
+}
+
+async function exec_launcher(launcher, launcherArgs, opts) {
+  return await exec_launcher_async(launcher, launcherArgs, opts);
 }
 
 async function exec_service(opts) {
   let isManagedExit = false;
+  let child;
   const process = {
     pid: null,
     code: null,
@@ -86,7 +170,7 @@ async function exec_service(opts) {
     logger.debug("Already running - reusing");
     process.success = true;
     setImmediate(() => {
-      em.emit("ready", { process });
+      em.emit("ready", { process, child });
     });
   } else {
     // Handle
@@ -95,42 +179,42 @@ async function exec_service(opts) {
       em.emit("error", { type: "process.error", code: error.code });
     };
     const onProcessExit = (child, code) => {
-      logger.debug("Child process exit", code);
+      // logger.debug("Child process exit", code);
       em.emit("exit", { code, managed: isManagedExit });
       isManagedExit = false;
     };
     const onProcessClose = (child, code) => {
-      logger.debug("Child process close", code);
+      // logger.debug("Child process close", code);
       em.emit("close", { code });
     };
     const onProcessData = (child, from, data) => {
-      // logger.debug("Child process data", from, data);
+      // logger.error("Child process data", from, data);
       em.emit("data", { from, data });
     };
     const waitForProcess = (child) => {
       let retries = retry?.count || 5;
       const wait = retry?.wait || 1000;
       const IID = setInterval(async () => {
-        // logger.debug('Remaining', retries, 'of', retry?.count);
+        // logger.error('Remaining', retries, 'of', retry?.count);
         if (retries === 0) {
           clearInterval(IID);
           // logger.error('Max retries reached');
           em.emit("error", { type: "domain.max-retries", code: undefined });
         } else {
           const running = await checkStatus();
-          // logger.debug('Checking running first time after start', running);
+          // logger.error('Checking running first time after start', running);
           if (running) {
             clearInterval(IID);
             isManagedExit = true;
             const configured = await checkStatus();
             if (configured) {
               process.success = true;
-              em.emit("ready", { process });
+              em.emit("ready", { process, child });
             } else {
               em.emit("error", { type: "domain.not-configured", code: undefined });
             }
           } else {
-            logger.debug("Move to next retry", retries);
+            logger.error("Move to next retry", retries);
           }
         }
         retries -= 1;
@@ -142,10 +226,10 @@ async function exec_service(opts) {
         cwd: opts?.cwd,
         env: opts?.env
       };
-      const child = wrapSpawn(programPath, programArgs, launcherOpts);
+      child = wrapSpawnAsync(programPath, programArgs, launcherOpts);
       process.pid = child.pid;
       child.on("exit", (code) => onProcessExit(child, code));
-      child.on("close", (code) => onProcessClose(child, code));
+      // child.on("close", (code) => onProcessClose(child, code));
       child.on("error", (error) => onProcessError(child, error));
       child.stdout.setEncoding("utf8");
       child.stdout.on("data", (data) => onProcessData(child, "stdout", data.toString()));
@@ -156,7 +240,7 @@ async function exec_service(opts) {
         // logger.error('Child process spawn failure', process);
       } else {
         process.success = true;
-        // logger.debug('Child process spawn success', process);
+        // logger.error('Child process spawn success', process);
         waitForProcess(child);
       }
     };
@@ -167,6 +251,10 @@ async function exec_service(opts) {
 }
 
 module.exports = {
+  wrapSpawnAsync,
+  wrapSpawnSync,
+  exec_launcher_async,
+  exec_launcher_sync,
   exec_launcher,
   exec_service
 };

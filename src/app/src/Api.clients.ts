@@ -25,10 +25,12 @@ import {
   UserConfiguration,
   UserConfigurationOptions,
   ContainerStateList,
-  TestResult
+  TestResult,
+  Program
 } from "./Types";
 
 import { Native } from "./Native";
+import { FindProgramOptions } from "./domain/types";
 
 export interface FetchDomainOptions {}
 
@@ -623,14 +625,24 @@ export class ContainerClient {
     });
   }
 
-  async testSocketPathConnection(socketPath: string) {
+  async testConnectionString(connectionString: string) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "/test",
         params: {
-          subject: "socketPath",
-          payload: socketPath.replace("unix://", "").replace("npipe://", "")
+          subject: "connectionString",
+          payload: connectionString.replace("unix://", "").replace("npipe://", "")
         }
+      });
+      return reply.result;
+    });
+  }
+
+  async findProgram(options: FindProgramOptions) {
+    return this.withResult<Program>(async () => {
+      const reply = await Native.getInstance().proxyService<Program>({
+        method: "/find.program",
+        params: options
       });
       return reply.result;
     });

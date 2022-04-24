@@ -162,7 +162,6 @@ export class Native {
     if (reply.success) {
       return reply;
     }
-    // TODO: Improve error flow
     console.error("Proxy reply error", reply);
     throw new Error((reply.result as any).error);
   }

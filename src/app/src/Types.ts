@@ -5,19 +5,20 @@ import { Platforms } from "./Native";
 
 export interface ConnectOptions {
   startApi: boolean;
+  engine?: ContainerEngine;
 }
 
 export interface UserConfiguration {
   program: Program;
   engine: ContainerEngine, // default
-  autoStartApi: boolean;
+  startApi: boolean;
   minimizeToSystemTray: boolean;
   path: string;
   logging: {
     level: string;
   };
   communication: "api" | "cli";
-  socketPath: string;
+  connectionString: string;
 }
 
 export interface TestResult {
@@ -29,7 +30,7 @@ export interface TestResult {
 export interface UserConfigurationOptions {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
-  autoStartApi: boolean;
+  startApi: boolean;
   minimizeToSystemTray: boolean;
   "logging.level": string;
   communication: "api" | "cli";
@@ -116,17 +117,24 @@ export interface SystemInfo {
 }
 
 export enum ContainerEngine {
-  NATIVE = "native",
-  SUBSYSTEM_WSL = "subsystem.wsl",
-  SUBSYSTEM_LIMA = "subsystem.lima",
-  VIRTUALIZED = "virtualized",
-  REMOTE = "remote",
+  PODMAN_NATIVE = "podman.native",
+  PODMAN_SUBSYSTEM_WSL = "podman.subsystem.wsl",
+  PODMAN_SUBSYSTEM_LIMA = "podman.subsystem.lima",
+  PODMAN_VIRTUALIZED = "podman.virtualized",
+  PODMAN_REMOTE = "podman.remote",
   DOCKER = "docker"
 }
 export interface SystemConnection {
   Identity: string;
   Name: string;
   URI: string;
+}
+export interface WSLDistribution {
+  Name: string;
+  State: string;
+  Version: string;
+  Default: boolean;
+  Current: boolean;
 }
 export interface SystemEnvironment {
   machine?: string;
@@ -136,6 +144,7 @@ export interface SystemEnvironment {
   provisioned: boolean;
   system?: SystemInfo;
   userConfiguration: UserConfiguration;
+  wslDistributions: WSLDistribution[];
 }
 
 export interface SystemPruneReport {

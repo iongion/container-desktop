@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect } from "@blueprintjs/core";
+import { Icon, Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
@@ -32,17 +32,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const system = useStoreState((state) => state.environment.system);
   const running = useStoreState((state) => state.environment.running);
   const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
-  const connect = useStoreActions((actions) => actions.connect);
   const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
   const program = userConfiguration.program;
-  const onConnectClick = useCallback(
-    async () => {
-      await connect({ startApi: true });
-    },
-    [connect]
-  );
   const onAutoStartApiChange = useCallback(async (e) => {
-    await setUserConfiguration({ autoStartApi: !!e.currentTarget.checked });
+    await setUserConfiguration({ startApi: !!e.currentTarget.checked });
   }, [setUserConfiguration]);
   const onMinimizeToSystemTray = useCallback(async (e) => {
     await setUserConfiguration({ minimizeToSystemTray: !!e.currentTarget.checked });
@@ -59,12 +52,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   let title = "";
   let errorMessage = "";
   let icon = mdiEmoticonSad;
-  let reconnectActionText = t("Connect");
   if (program?.path) {
     title = t("The API is not running");
     errorMessage = t("Check the logs from application data path if this is not intended behavior");
     icon = mdiEmoticonWink;
-    reconnectActionText = t("Connect and try to start the api");
   } else {
     title = t("Automatic detection failed");
     errorMessage = t("To be able to continue, all required programs need to be installed");
@@ -78,7 +69,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
         icon={<ReactIcon.Icon path={icon} size={3} />}
       >
         <p>{errorMessage}</p>
-        <Button disabled={pending} fill text={reconnectActionText} icon={IconNames.REFRESH} onClick={onConnectClick} />
       </Callout>
     );
 
@@ -95,14 +85,18 @@ export const Screen: AppScreen<ScreenProps> = () => {
       }
     );
   } else {
-    runningDetails = t("Unable to detect system - try to connect and start the api");
-    if (program.name === "podman" && userConfiguration.engine === "virtualized" && !running) {
-      runningDetails = (
-        <>
-          <span>{t("Unable to detect system - podman machine may need restart")}</span> &mdash;
-          <code className="DocsCodeBox">podman machine stop &amp;&amp; podman machine start</code>
-        </>
-      );
+    if (program.path) {
+      runningDetails = t("Unable to detect system - try to connect and start the api");
+      if (program.name === "podman" && userConfiguration.engine === "virtualized" && !running) {
+        runningDetails = (
+          <>
+            <span>{t("Unable to detect system - podman machine may need restart")}</span> &mdash;
+            <code className="DocsCodeBox">podman machine stop &amp;&amp; podman machine start</code>
+          </>
+        );
+      }
+    } else {
+      runningDetails = t("Unable to detect system - no {{name}} program found, install first then restart and come back", program);
     }
   }
 
@@ -115,15 +109,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <div className="AppSettingsForm" data-form="flags">
           <FormGroup
             label={t("Startup")}
-            labelFor="autoStartApi"
+            labelFor="startApi"
             helperText={t("Not needed if container engine is already running as a service")}
           >
             <ControlGroup fill={true}>
               <Checkbox
-                id="autoStartApi"
+                id="startApi"
                 disabled={pending}
                 label={t("Automatically start the Api")}
-                checked={!!userConfiguration.autoStartApi}
+                checked={!!userConfiguration.startApi}
                 onChange={onAutoStartApiChange}
               />
             </ControlGroup>
@@ -142,17 +136,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
         </div>
         <div className="AppSettingsForm" data-form="logging">
           <FormGroup
-            label={t("Logging level")}
+            label={t("Logging and debugging")}
             labelFor="loggingLevel"
           >
-            <ControlGroup>
+          <div className="AppSettingUserConfigurationPath">
+            <Icon icon={IconNames.INFO_SIGN} />
+            <strong>{t('Application settings and logs path')}</strong>
+            <input type="text" value={userConfiguration.path} readOnly/>
+          </div>
+            <ControlGroup >
               <HTMLSelect id="loggingLevel" disabled={pending} value={userConfiguration.logging.level} onChange={onLoggingLevelChange}>
                 {LOGGING_LEVELS.map((level) => {
                   const key= `logging.${level}`;
                   return <option key={key} value={level}>{level}</option>;
                 })}
               </HTMLSelect>
-              <Button disabled={pending} icon={IconNames.SEARCH} text={t('Toggle inspector')} onClick={onToggleInspectorClick} />
+              <Button disabled={pending} icon={IconNames.PANEL_TABLE} text={t('Show inspector')} onClick={onToggleInspectorClick} />
             </ControlGroup>
           </FormGroup>
         </div>

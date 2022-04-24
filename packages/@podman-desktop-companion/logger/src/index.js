@@ -8,7 +8,7 @@ const loggers = [];
 
 function createLogger(name) {
   // This flag is useful to avoid missing logging origin(file and number) when developing
-  if (process.env.USE_LOGGING_WITH_NATIVE_CONSOLE) {
+  if (process.env.USE_LOGGING_WITH_NATIVE_CONSOLE == "yes") {
     return console;
   }
   const level = getLevel();
