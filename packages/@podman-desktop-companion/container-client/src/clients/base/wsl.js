@@ -8,7 +8,7 @@ const { VirtualContainerClient } = require("./virtual");
 // locals
 const CONTROLLER = "wsl";
 
-class BaseContainerClient extends VirtualContainerClient {
+class WSLVirtualContainerClient extends VirtualContainerClient {
   constructor(userConfiguration, id, engine, program, distribution) {
     super(userConfiguration, id, engine, program, { controller: CONTROLLER, scope: distribution });
   }
@@ -76,6 +76,6 @@ class BaseContainerClient extends VirtualContainerClient {
 }
 
 module.exports = {
-  BaseContainerClient,
+  WSLVirtualContainerClient,
   CONTROLLER
 };

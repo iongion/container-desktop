@@ -30,6 +30,36 @@ const WSL_PODMAN_CLI_PATH = "/usr/bin/podman";
 const WSL_PODMAN_CLI_VERSION = "3.4.2";
 const WSL_PODMAN_NAMED_PIPE = "//./pipe/podman-desktop-companion-podman-ubuntu-20.04";
 const WSL_DOCKER_NAMED_PIPE = "//./pipe/podman-desktop-companion-docker-ubuntu-20.04";
+const WSL_DISTRIBUTIONS = [
+  {
+    Current: false,
+    Default: true,
+    Name: "Ubuntu-20.04",
+    State: "Running",
+    Version: "2"
+  },
+  {
+    Current: false,
+    Default: false,
+    Name: "docker-desktop-data",
+    State: "Running",
+    Version: "2"
+  },
+  {
+    Current: false,
+    Default: false,
+    Name: PODMAN_MACHINE_DEFAULT,
+    State: "Running",
+    Version: "2"
+  },
+  {
+    Current: false,
+    Default: false,
+    Name: "docker-desktop",
+    State: "Running",
+    Version: "2"
+  }
+];
 
 // LIMA
 const LIMA_PATH = "/usr/local/bin/limactl";
@@ -65,20 +95,20 @@ const LIMA_INSTANCES = [
 ];
 
 module.exports = {
-  PODMAN_MACHINE_DEFAULT,
   NATIVE_DOCKER_CLI_PATH,
   NATIVE_PODMAN_CLI_PATH,
+  NATIVE_DOCKER_SOCKET_PATH,
+  NATIVE_PODMAN_SOCKET_PATH,
   WINDOWS_PODMAN_CLI_VERSION,
   WINDOWS_PODMAN_CLI_PATH,
   WINDOWS_DOCKER_CLI_PATH,
   WINDOWS_PODMAN_NAMED_PIPE,
   WINDOWS_DOCKER_NAMED_PIPE,
+  PODMAN_MACHINE_DEFAULT,
   PODMAN_CLI_VERSION,
-  DOCKER_CLI_VERSION,
   PODMAN_API_BASE_URL,
+  DOCKER_CLI_VERSION,
   DOCKER_API_BASE_URL,
-  NATIVE_DOCKER_SOCKET_PATH,
-  NATIVE_PODMAN_SOCKET_PATH,
   // WSL
   WSL_DISTRIBUTION,
   WSL_PATH,
@@ -86,6 +116,7 @@ module.exports = {
   WSL_PODMAN_CLI_VERSION,
   WSL_PODMAN_NAMED_PIPE,
   WSL_DOCKER_NAMED_PIPE,
+  WSL_DISTRIBUTIONS,
   // LIMA
   LIMA_PATH,
   LIMA_DOCKER_CLI_PATH,

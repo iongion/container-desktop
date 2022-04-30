@@ -3,7 +3,42 @@
 const { UserConfiguration } = require("../../../../src/configuration");
 const { ContainerClient } = require("../../../../src/clients/podman/wsl");
 // locals
-const { testOnLinux, testOnWindows, testOnMacOS } = require("../../../helpers");
+const { testOnWindows } = require("../../../helpers");
+const {
+  PODMAN_MACHINE_DEFAULT,
+  NATIVE_DOCKER_CLI_PATH,
+  NATIVE_PODMAN_CLI_PATH,
+  WINDOWS_PODMAN_CLI_VERSION,
+  WINDOWS_PODMAN_CLI_PATH,
+  WINDOWS_DOCKER_CLI_PATH,
+  WINDOWS_PODMAN_NAMED_PIPE,
+  WINDOWS_DOCKER_NAMED_PIPE,
+  PODMAN_CLI_VERSION,
+  DOCKER_CLI_VERSION,
+  PODMAN_API_BASE_URL,
+  DOCKER_API_BASE_URL,
+  NATIVE_DOCKER_SOCKET_PATH,
+  NATIVE_PODMAN_SOCKET_PATH,
+  // WSL
+  WSL_DISTRIBUTION,
+  WSL_DISTRIBUTIONS,
+  WSL_PATH,
+  WSL_PODMAN_CLI_PATH,
+  WSL_PODMAN_CLI_VERSION,
+  WSL_PODMAN_NAMED_PIPE,
+  WSL_DOCKER_NAMED_PIPE,
+  // LIMA
+  LIMA_PATH,
+  LIMA_DOCKER_CLI_PATH,
+  LIMA_DOCKER_CLI_VERSION,
+  LIMA_PODMAN_CLI_PATH,
+  LIMA_PODMAN_CLI_VERSION,
+  LIMA_DOCKER_INSTANCE,
+  LIMA_PODMAN_INSTANCE,
+  LIMA_DOCKER_SOCKET_PATH,
+  LIMA_PODMAN_SOCKET_PATH,
+  LIMA_INSTANCES
+} = require("../../../fixtures");
 
 const EXPECTED_MACHINES_WSL = [];
 const EXPECTED_SYSTEM_INFO_WSL = {
@@ -47,37 +82,8 @@ describe("Podman.WSL.ContainerClient", () => {
   });
   describe("getAvailableDistributions", () => {
     testOnWindows("Windows", async () => {
-      const path = await getAvailableDistributions();
-      expect(path).toEqual([
-        {
-          Current: false,
-          Default: true,
-          Name: "Ubuntu-20.04",
-          State: "Running",
-          Version: "2"
-        },
-        {
-          Current: false,
-          Default: false,
-          Name: "docker-desktop-data",
-          State: "Running",
-          Version: "2"
-        },
-        {
-          Current: false,
-          Default: false,
-          Name: PODMAN_MACHINE_DEFAULT,
-          State: "Running",
-          Version: "2"
-        },
-        {
-          Current: false,
-          Default: false,
-          Name: "docker-desktop",
-          State: "Running",
-          Version: "2"
-        }
-      ]);
+      const path = await client.getAvailableDistributions();
+      expect(path).toEqual(WSL_DISTRIBUTIONS);
     });
   });
 });

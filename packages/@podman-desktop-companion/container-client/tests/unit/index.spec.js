@@ -2,9 +2,7 @@
 // module
 const library = require("../../src");
 // locals
-const { testOnLinux, testOnWindows, testOnMacOS } = require("../helpers");
-
-jest.setTimeout(30000);
+jest.setTimeout(50000); // Give time for windows testing VM
 
 describe("library", () => {
   test("exported clients", async () => {

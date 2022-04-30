@@ -1,11 +1,9 @@
 // node
 // module
 const { createApiDriver } = require("../../src");
-const api = require("../../src/api");
 // locals
-const { testOnLinux, testOnWindows, testOnMacOS } = require("../helpers");
 
-jest.setTimeout(30000);
+jest.setTimeout(50000); // Give time for windows testing VM
 
 describe("api", () => {
   test("createApiDriver", async () => {

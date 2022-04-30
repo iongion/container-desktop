@@ -2,14 +2,15 @@
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
-const { BaseContainerClient } = require("../base/wsl");
+const { WSLVirtualContainerClient } = require("../base/wsl");
 // locals
 const PROGRAM = "podman";
 const ENGINE = `${PROGRAM}.subsystem.wsl`;
+const WSL_VM = "Ubuntu-20.04";
 
-class ContainerClient extends BaseContainerClient {
+class ContainerClient extends WSLVirtualContainerClient {
   constructor(userConfiguration, id, distribution) {
-    super(userConfiguration, id, ENGINE, PROGRAM, distribution);
+    super(userConfiguration, id, ENGINE, PROGRAM, distribution || WSL_VM);
   }
 
   async createApiConfiguration(settings) {
