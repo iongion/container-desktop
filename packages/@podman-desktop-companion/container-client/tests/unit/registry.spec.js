@@ -20,6 +20,7 @@ const {
   NATIVE_DOCKER_CLI_PATH,
   NATIVE_PODMAN_CLI_PATH,
   WINDOWS_PODMAN_CLI_VERSION,
+  WINDOWS_DOCKER_CLI_VERSION,
   WINDOWS_PODMAN_CLI_PATH,
   WINDOWS_DOCKER_CLI_PATH,
   WINDOWS_PODMAN_NAMED_PIPE,
@@ -33,6 +34,8 @@ const {
   // WSL
   WSL_DISTRIBUTION,
   WSL_PATH,
+  WSL_DOCKER_CLI_PATH,
+  WSL_DOCKER_CLI_VERSION,
   WSL_PODMAN_CLI_PATH,
   WSL_PODMAN_CLI_VERSION,
   WSL_PODMAN_NAMED_PIPE,
@@ -46,8 +49,7 @@ const {
   LIMA_DOCKER_INSTANCE,
   LIMA_PODMAN_INSTANCE,
   LIMA_DOCKER_SOCKET_PATH,
-  LIMA_PODMAN_SOCKET_PATH,
-  LIMA_INSTANCES
+  LIMA_PODMAN_SOCKET_PATH
 } = require("../fixtures");
 
 jest.setTimeout(50000); // Give time for windows testing VM
@@ -334,7 +336,7 @@ describe("registry", () => {
           program: {
             name: "docker",
             path: WINDOWS_DOCKER_CLI_PATH,
-            version: DOCKER_CLI_VERSION
+            version: WINDOWS_DOCKER_CLI_VERSION
           }
         }
       }
