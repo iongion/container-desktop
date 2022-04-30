@@ -17,22 +17,28 @@ const {
 
 const {
   PODMAN_MACHINE_DEFAULT,
+  PODMAN_CLI_VERSION,
+  PODMAN_API_BASE_URL,
+  DOCKER_CLI_VERSION,
+  DOCKER_API_BASE_URL,
+  // Native - Linux
   NATIVE_DOCKER_CLI_PATH,
   NATIVE_PODMAN_CLI_PATH,
+  NATIVE_DOCKER_SOCKET_PATH,
+  NATIVE_PODMAN_SOCKET_PATH,
+  // Virtualized - MacOS
+  MACOS_PODMAN_CLI_VERSION,
+  MACOS_PODMAN_CLI_PATH,
+  MACOS_PODMAN_CONTROLLER_CLI_PATH,
+  MACOS_PODMAN_SOCKET_PATH,
+  // Virtualized - Windows
   WINDOWS_PODMAN_CLI_VERSION,
-  WINDOWS_DOCKER_CLI_VERSION,
   WINDOWS_PODMAN_CLI_PATH,
+  WINDOWS_DOCKER_CLI_VERSION,
   WINDOWS_DOCKER_CLI_PATH,
   WINDOWS_PODMAN_NAMED_PIPE,
   WINDOWS_DOCKER_NAMED_PIPE,
-  PODMAN_CLI_VERSION,
-  DOCKER_CLI_VERSION,
-  PODMAN_API_BASE_URL,
-  DOCKER_API_BASE_URL,
-  NATIVE_DOCKER_SOCKET_PATH,
-  NATIVE_PODMAN_SOCKET_PATH,
-  // WSL
-  WSL_DISTRIBUTION,
+  // WSL - Windows
   WSL_PATH,
   WSL_DOCKER_CLI_PATH,
   WSL_DOCKER_CLI_VERSION,
@@ -40,7 +46,9 @@ const {
   WSL_PODMAN_CLI_VERSION,
   WSL_PODMAN_NAMED_PIPE,
   WSL_DOCKER_NAMED_PIPE,
-  // LIMA
+  WSL_DISTRIBUTION, // Default WSL distribution (Ubuntu-20.04)
+  WSL_DISTRIBUTIONS,
+  // LIMA - MacOS
   LIMA_PATH,
   LIMA_DOCKER_CLI_PATH,
   LIMA_DOCKER_CLI_VERSION,
@@ -49,7 +57,8 @@ const {
   LIMA_DOCKER_INSTANCE,
   LIMA_PODMAN_INSTANCE,
   LIMA_DOCKER_SOCKET_PATH,
-  LIMA_PODMAN_SOCKET_PATH
+  LIMA_PODMAN_SOCKET_PATH,
+  LIMA_INSTANCES
 } = require("../fixtures");
 
 jest.setTimeout(50000); // Give time for windows testing VM
@@ -411,6 +420,54 @@ describe("registry", () => {
       engine: "podman.native",
       id: "engine.default.podman.native",
       program: "podman"
+    });
+    // podman virtualized
+    expected = engines.find((it) => it.id === "engine.default.podman.virtualized");
+    expect(expected).toStrictEqual({
+      availability: { available: true, reason: undefined },
+      engine: "podman.virtualized",
+      id: "engine.default.podman.virtualized",
+      program: "podman",
+      settings: {
+        current: {
+          api: {
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: MACOS_PODMAN_SOCKET_PATH
+          },
+          controller: {
+            name: "podman",
+            path: MACOS_PODMAN_CONTROLLER_CLI_PATH,
+            scope: PODMAN_MACHINE_DEFAULT,
+            version: ""
+          },
+          program: { name: "podman", path: MACOS_PODMAN_CLI_PATH, version: MACOS_PODMAN_CLI_VERSION }
+        },
+        custom: {
+          api: {
+            baseURL: undefined,
+            connectionString: undefined
+          },
+          controller: {
+            name: "podman",
+            path: undefined,
+            scope: undefined
+          },
+          program: { name: "podman", path: undefined }
+        },
+        detect: {
+          api: {
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: MACOS_PODMAN_SOCKET_PATH
+          },
+          controller: {
+            name: "podman",
+            path: MACOS_PODMAN_CONTROLLER_CLI_PATH,
+            scope: PODMAN_MACHINE_DEFAULT,
+            version: ""
+          },
+          program: { name: "podman", path: MACOS_PODMAN_CLI_PATH, version: MACOS_PODMAN_CLI_VERSION }
+        }
+      }
     });
     // podman WSL
     expected = engines.find((it) => it.id === "engine.default.podman.subsystem.wsl");
