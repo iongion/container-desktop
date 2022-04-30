@@ -28,8 +28,8 @@ const WSL_DISTRIBUTION = "ubuntu-20.04";
 const WSL_PATH = "C:\\Windows\\System32\\wsl.exe";
 const WSL_PODMAN_CLI_PATH = "/usr/bin/podman";
 const WSL_PODMAN_CLI_VERSION = "3.4.2";
-const WSL_PODMAN_NAMED_PIPE = "//./pipe/podman-desktop-companion-podman-ubuntu-20.04";
-const WSL_DOCKER_NAMED_PIPE = "//./pipe/podman-desktop-companion-docker-ubuntu-20.04";
+const WSL_PODMAN_NAMED_PIPE = "//./pipe/podman-desktop-companion-podman-Ubuntu-20.04";
+const WSL_DOCKER_NAMED_PIPE = "//./pipe/podman-desktop-companion-docker-Ubuntu-20.04";
 const WSL_DISTRIBUTIONS = [
   {
     Current: false,
