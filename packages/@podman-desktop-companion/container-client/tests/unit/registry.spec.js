@@ -210,8 +210,8 @@ describe("registry", () => {
           controller: {
             name: "podman",
             path: WINDOWS_PODMAN_CLI_PATH,
-            scope: PODMAN_MACHINE_DEFAULT,
-            version: ""
+            version: WINDOWS_PODMAN_CLI_VERSION,
+            scope: PODMAN_MACHINE_DEFAULT
           },
           program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
         },
@@ -235,8 +235,8 @@ describe("registry", () => {
           controller: {
             name: "podman",
             path: WINDOWS_PODMAN_CLI_PATH,
-            scope: PODMAN_MACHINE_DEFAULT,
-            version: ""
+            version: WINDOWS_PODMAN_CLI_VERSION,
+            scope: PODMAN_MACHINE_DEFAULT
           },
           program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
         }

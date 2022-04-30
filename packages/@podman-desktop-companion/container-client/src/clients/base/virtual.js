@@ -6,7 +6,7 @@ const merge = require("lodash.merge");
 // project
 // module
 const { AbstractContainerClient } = require("../abstract");
-const { findProgram, findProgramPath } = require("../../detector");
+const { findProgram, findProgramPath, findProgramVersion } = require("../../detector");
 // locals
 
 class VirtualContainerClient extends AbstractContainerClient {
@@ -55,11 +55,8 @@ class VirtualContainerClient extends AbstractContainerClient {
     // Restrict
     const isMatchingOs = await this.isAllowedOperatingSystem();
     if (isMatchingOs) {
-      controller.detect = merge(controller.detect, {
-        name: cli,
-        path: await findProgramPath(cli),
-        version: ""
-      });
+      const detection = await findProgram(cli);
+      controller.detect = merge(controller.detect, detection);
     } else {
       this.logger.debug("Skip controller path detection - non matching operating system");
     }
