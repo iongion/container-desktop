@@ -4,12 +4,8 @@ const path = require("path");
 const { UserConfiguration } = require("../../../../src/configuration");
 const { ContainerClient } = require("../../../../src/clients/docker/native");
 // locals
-const { testOnLinux, testOnWindows, testOnMacOS } = require("../../../helpers");
-const FIXTURE_DOCKER_MACHINE = "docker-machine-default";
-const FIXTURE_IDENTITY_PATH = path.join(process.env.HOME, ".ssh", FIXTURE_DOCKER_MACHINE);
+const { testOnLinux } = require("../../../helpers");
 const EXPECTED_MACHINES_LINUX = [];
-const EXPECTED_MACHINES_WINDOWS = [];
-const EXPECTED_MACHINES_MACOS = [];
 const EXPECTED_SYSTEM_INFO_LINUX = {
   Architecture: "x86_64",
   BridgeNfIp6tables: true,
@@ -57,11 +53,7 @@ const EXPECTED_SYSTEM_INFO_LINUX = {
   SecurityOptions: ["name=apparmor", "name=seccomp,profile=default", "name=cgroupns"],
   ServerVersion: "20.10.14"
 };
-const EXPECTED_SYSTEM_INFO_WINDOWS = {};
-const EXPECTED_SYSTEM_INFO_MACOS = {};
 const EXPECTED_SYSTEM_CONNECTIONS_LINUX = [];
-const EXPECTED_SYSTEM_CONNECTIONS_WINDOWS = [];
-const EXPECTED_SYSTEM_CONNECTIONS_MACOS = [];
 
 jest.setTimeout(30000);
 

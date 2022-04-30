@@ -1,11 +1,15 @@
 // node
-const path = require("path");
 // module
 const { UserConfiguration } = require("../../../../src/configuration");
 const { ContainerClient } = require("../../../../src/clients/docker/wsl");
 // locals
-const { testOnLinux, testOnWindows, testOnMacOS } = require("../../../helpers");
-const DISTRIBUTION_NAME_DEFAULT = "ubuntu-20.04";
+const { testOnWindows } = require("../../../helpers");
+const {
+  PODMAN_MACHINE_DEFAULT,
+  DOCKER_CLI_VERSION,
+  // WSL
+  WSL_DISTRIBUTION
+} = require("../../../helpers");
 
 const EXPECTED_MACHINES_WSL = [];
 const EXPECTED_SYSTEM_INFO_WSL = {
@@ -19,7 +23,7 @@ const EXPECTED_SYSTEM_INFO_WSL = {
   KernelVersion: "5.10.16.3-microsoft-standard-WSL2",
   OSType: "linux",
   OperatingSystem: "Docker Desktop",
-  ServerVersion: "20.10.14"
+  ServerVersion: DOCKER_CLI_VERSION
 };
 const EXPECTED_SYSTEM_CONNECTIONS_WSL = [];
 
@@ -31,7 +35,7 @@ describe("Docker.WSL.ContainerClient", () => {
   beforeEach(() => {
     configuration = new UserConfiguration();
     configuration.reset();
-    client = new ContainerClient(configuration, "testing.Docker.WSL.ContainerClient");
+    client = new ContainerClient(configuration, "testing.Docker.WSL.ContainerClient", WSL_DISTRIBUTION);
   });
   describe("getMachines", () => {
     testOnWindows("Windows", async () => {
@@ -49,6 +53,42 @@ describe("Docker.WSL.ContainerClient", () => {
     testOnWindows("Windows", async () => {
       const info = await client.getSystemConnections();
       expect(info).toMatchObject(EXPECTED_SYSTEM_CONNECTIONS_WSL);
+    });
+  });
+
+  describe("getAvailableDistributions", () => {
+    testOnWindows("Windows", async () => {
+      const path = await getAvailableDistributions();
+      expect(path).toEqual([
+        {
+          Current: false,
+          Default: true,
+          Name: WSL_DISTRIBUTION,
+          State: "Running",
+          Version: "2"
+        },
+        {
+          Current: false,
+          Default: false,
+          Name: "docker-desktop-data",
+          State: "Running",
+          Version: "2"
+        },
+        {
+          Current: false,
+          Default: false,
+          Name: PODMAN_MACHINE_DEFAULT,
+          State: "Running",
+          Version: "2"
+        },
+        {
+          Current: false,
+          Default: false,
+          Name: "docker-desktop",
+          State: "Running",
+          Version: "2"
+        }
+      ]);
     });
   });
 });

@@ -1,11 +1,10 @@
 // node
-const path = require("path");
 // module
 const { UserConfiguration } = require("../../../../src/configuration");
 const { ContainerClient } = require("../../../../src/clients/podman/lima");
 // locals
-const { testOnLinux, testOnWindows, testOnMacOS } = require("../../../helpers");
-const FIXTURE_LIMA_INSTANCE = "podman";
+const { testOnMacOS } = require("../../../helpers");
+const { PODMAN_API_BASE_URL, LIMA_INSTANCES, LIMA_PODMAN_SOCKET_PATH } = require("../../../fixtures");
 
 const EXPECTED_MACHINES_MACOS = [];
 const EXPECTED_SYSTEM_INFO_MACOS = {};
@@ -22,6 +21,12 @@ describe("Podman.LIMA.ContainerClient", () => {
     configuration.reset();
     client = new ContainerClient(configuration, "testing.ContainerClient.podman.lima");
     settings = await client.getCurrentSettings();
+  });
+  describe("getAvailableInstances", () => {
+    testOnMacOS("MacOS", async () => {
+      const items = await client.getAvailableInstances();
+      expect(items).toMatchObject(LIMA_INSTANCES);
+    });
   });
   describe("getMachines", () => {
     testOnMacOS("MacOS", async () => {
@@ -45,12 +50,12 @@ describe("Podman.LIMA.ContainerClient", () => {
     testOnMacOS("MacOS", async () => {
       const config = await client.getApiConfig();
       expect(config).toStrictEqual({
-        baseURL: "http://d/v3.0.0/libpod",
+        baseURL: PODMAN_API_BASE_URL,
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json"
         },
-        socketPath: path.join(process.env.HOME, ".lima/podman/sock/podman.sock"),
+        socketPath: LIMA_PODMAN_SOCKET_PATH,
         timeout: 60000
       });
     });
@@ -60,12 +65,11 @@ describe("Podman.LIMA.ContainerClient", () => {
       const driver = await client.getApiDriver();
       expect(driver).toHaveProperty("defaults");
       expect(driver.defaults).toMatchObject({
-        baseURL: "http://d/v3.0.0/libpod",
-        socketPath: path.join(process.env.HOME, ".lima/podman/sock/podman.sock")
+        baseURL: PODMAN_API_BASE_URL,
+        socketPath: LIMA_PODMAN_SOCKET_PATH
       });
     });
   });
-
   describe("isApiRunning", () => {
     testOnMacOS("MacOS", async () => {
       const received = await client.isApiRunning();
@@ -75,29 +79,4 @@ describe("Podman.LIMA.ContainerClient", () => {
       });
     });
   });
-  // describe("isApiRunning", () => {
-  //   beforeEach(async () => {
-  //     await client.stopApi();
-  //   });
-  //   afterEach(async () => {
-  //     await client.stopApi();
-  //   });
-  //   testOnMacOS("MacOS - stop / start and check status", async () => {
-  //     let received;
-  //     // Stop
-  //     await client.stopApi();
-  //     received = await client.isApiRunning();
-  //     expect(received).toStrictEqual({
-  //       details: "API scope is not available",
-  //       success: false
-  //     });
-  //     // Start
-  //     await client.startApi();
-  //     received = await client.isApiRunning();
-  //     expect(received).toStrictEqual({
-  //       details: "OK",
-  //       success: true
-  //     });
-  //   });
-  // });
 });

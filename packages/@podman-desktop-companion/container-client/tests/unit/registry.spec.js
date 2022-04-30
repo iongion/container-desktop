@@ -10,10 +10,20 @@ const Podman = require("../../src/clients/podman");
 const {
   testOnLinux,
   testOnWindows,
-  testOnMacOS,
-  ensurePodmanMachineIsRunning,
-  ensureLIMAInstanceIsRunning
+  testOnMacOS
+  // ensurePodmanMachineIsRunning,
+  // ensureLIMAInstanceIsRunning
 } = require("../helpers");
+const {
+  NATIVE_DOCKER_SOCKET_PATH,
+  NATIVE_PODMAN_SOCKET_PATH,
+  PODMAN_API_BASE_URL,
+  DOCKER_API_BASE_URL,
+  DOCKER_CLI_VERSION,
+  PODMAN_CLI_VERSION,
+  NATIVE_DOCKER_CLI_PATH,
+  NATIVE_PODMAN_CLI_PATH
+} = require("../fixtures");
 
 jest.setTimeout(120000);
 
@@ -54,10 +64,10 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: "/tmp/podman-desktop-companion-podman-rest-api.sock"
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: NATIVE_PODMAN_SOCKET_PATH
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "4.0.3" }
+          program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
         },
         custom: {
           api: {
@@ -68,10 +78,10 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: "/tmp/podman-desktop-companion-podman-rest-api.sock"
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: NATIVE_PODMAN_SOCKET_PATH
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "4.0.3" }
+          program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
         }
       }
     });
@@ -101,13 +111,13 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: "/var/run/docker.sock"
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: NATIVE_DOCKER_SOCKET_PATH
           },
           program: {
             name: "docker",
-            path: "/usr/bin/docker",
-            version: "20.10.14"
+            path: NATIVE_DOCKER_CLI_PATH,
+            version: DOCKER_CLI_VERSION
           }
         },
         custom: {
@@ -119,13 +129,13 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: "/var/run/docker.sock"
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: NATIVE_DOCKER_SOCKET_PATH
           },
           program: {
             name: "docker",
-            path: "/usr/bin/docker",
-            version: "20.10.14"
+            path: NATIVE_DOCKER_CLI_PATH,
+            version: DOCKER_CLI_VERSION
           }
         }
       }
@@ -167,16 +177,16 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: "//./pipe/podman-machine-default"
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: WINDOWS_PODMAN_NAMED_PIPE
           },
           controller: {
             name: "podman",
-            path: "C:\\Program Files\\RedHat\\Podman\\podman.exe",
-            scope: "podman-machine-default",
+            path: WINDOWS_PODMAN_CLI_PATH,
+            scope: PODMAN_MACHINE_DEFAULT,
             version: ""
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "4.0.3" }
+          program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
         },
         custom: {
           api: {
@@ -192,16 +202,16 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: "//./pipe/podman-machine-default"
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: WINDOWS_PODMAN_NAMED_PIPE
           },
           controller: {
             name: "podman",
-            path: "C:\\Program Files\\RedHat\\Podman\\podman.exe",
-            scope: "podman-machine-default",
+            path: WINDOWS_PODMAN_CLI_PATH,
+            scope: PODMAN_MACHINE_DEFAULT,
             version: ""
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "4.0.3" }
+          program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
         }
       }
     });
@@ -215,16 +225,16 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: "//./pipe/ubuntu-20.04"
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: WSL_PODMAN_NAMED_PIPE
           },
           controller: {
             name: "wsl",
-            path: "C:\\Windows\\System32\\wsl.exe",
-            scope: "ubuntu-20.04",
+            path: WSL_PATH,
+            scope: WSL_DISTRIBUTION,
             version: ""
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "3.4.2" }
+          program: { name: "podman", path: WSL_PODMAN_CLI_PATH, version: WSL_PODMAN_CLI_VERSION }
         },
         custom: {
           api: {
@@ -236,16 +246,16 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: "//./pipe/ubuntu-20.04"
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: WSL_PODMAN_NAMED_PIPE
           },
           controller: {
             name: "wsl",
-            path: "C:\\Windows\\System32\\wsl.exe",
-            scope: "ubuntu-20.04",
+            path: WSL_PATH,
+            scope: WSL_DISTRIBUTION,
             version: ""
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "3.4.2" }
+          program: { name: "podman", path: WSL_PODMAN_CLI_PATH, version: WSL_PODMAN_CLI_VERSION }
         }
       }
     });
@@ -275,13 +285,13 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: "//./pipe/docker_engine"
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: WINDOWS_DOCKER_NAMED_PIPE
           },
           program: {
             name: "docker",
-            path: "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
-            version: "20.10.14"
+            path: WINDOWS_DOCKER_CLI_PATH,
+            version: WINDOWS_DOCKER_CLI_VERSION
           }
         },
         custom: {
@@ -293,13 +303,13 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: "//./pipe/docker_engine"
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: WINDOWS_DOCKER_NAMED_PIPE
           },
           program: {
             name: "docker",
-            path: "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
-            version: "20.10.14"
+            path: WINDOWS_DOCKER_CLI_PATH,
+            version: DOCKER_CLI_VERSION
           }
         }
       }
@@ -314,19 +324,19 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: "//./pipe/ubuntu-20.04"
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: WSL_DOCKER_NAMED_PIPE
           },
           controller: {
             name: "wsl",
-            path: "C:\\Windows\\System32\\wsl.exe",
-            scope: "ubuntu-20.04",
+            path: WSL_PATH,
+            scope: WSL_DISTRIBUTION,
             version: ""
           },
           program: {
             name: "docker",
-            path: "/usr/bin/docker",
-            version: "20.10.14"
+            path: WSL_DOCKER_CLI_PATH,
+            version: WSL_DOCKER_CLI_VERSION
           }
         },
         custom: {
@@ -339,19 +349,19 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: "//./pipe/ubuntu-20.04"
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: WSL_DOCKER_NAMED_PIPE
           },
           controller: {
             name: "wsl",
-            path: "C:\\Windows\\System32\\wsl.exe",
-            scope: "ubuntu-20.04",
+            path: WSL_PATH,
+            scope: WSL_DISTRIBUTION,
             version: ""
           },
           program: {
             name: "docker",
-            path: "/usr/bin/docker",
-            version: "20.10.14"
+            path: WSL_DOCKER_CLI_PATH,
+            version: WSL_DOCKER_CLI_VERSION
           }
         }
       }
@@ -393,16 +403,16 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: path.join(process.env.HOME, ".lima/podman/sock/podman.sock")
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: LIMA_PODMAN_SOCKET_PATH
           },
           controller: {
             name: "limactl",
-            path: "/usr/local/bin/limactl",
-            scope: "podman",
+            path: LIMA_PATH,
+            scope: LIMA_PODMAN_INSTANCE,
             version: ""
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "3.2.1" }
+          program: { name: "podman", path: LIMA_PODMAN_CLI_PATH, version: LIMA_PODMAN_CLI_VERSION }
         },
         custom: {
           api: {
@@ -414,16 +424,16 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://d/v3.0.0/libpod",
-            connectionString: path.join(process.env.HOME, ".lima/podman/sock/podman.sock")
+            baseURL: PODMAN_API_BASE_URL,
+            connectionString: LIMA_PODMAN_SOCKET_PATH
           },
           controller: {
             name: "limactl",
-            path: "/usr/local/bin/limactl",
-            scope: "podman",
+            path: LIMA_PATH,
+            scope: LIMA_PODMAN_INSTANCE,
             version: ""
           },
-          program: { name: "podman", path: "/usr/bin/podman", version: "3.2.1" }
+          program: { name: "podman", path: LIMA_PODMAN_CLI_PATH, version: LIMA_PODMAN_CLI_VERSION }
         }
       }
     });
@@ -453,19 +463,19 @@ describe("registry", () => {
       settings: {
         current: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: path.join(process.env.HOME, ".lima/docker/sock/docker.sock")
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: LIMA_DOCKER_SOCKET_PATH
           },
           controller: {
             name: "limactl",
-            path: "/usr/local/bin/limactl",
-            scope: "docker",
+            path: LIMA_PATH,
+            scope: LIMA_DOCKER_INSTANCE,
             version: ""
           },
           program: {
             name: "docker",
-            path: "/usr/bin/docker",
-            version: "20.10.14"
+            path: LIMA_DOCKER_CLI_PATH,
+            version: LIMA_DOCKER_CLI_VERSION
           }
         },
         custom: {
@@ -478,19 +488,19 @@ describe("registry", () => {
         },
         detect: {
           api: {
-            baseURL: "http://localhost",
-            connectionString: path.join(process.env.HOME, ".lima/docker/sock/docker.sock")
+            baseURL: DOCKER_API_BASE_URL,
+            connectionString: LIMA_DOCKER_SOCKET_PATH
           },
           controller: {
             name: "limactl",
-            path: "/usr/local/bin/limactl",
-            scope: "docker",
+            path: LIMA_PATH,
+            scope: LIMA_DOCKER_INSTANCE,
             version: ""
           },
           program: {
             name: "docker",
-            path: "/usr/bin/docker",
-            version: "20.10.14"
+            path: LIMA_DOCKER_CLI_PATH,
+            version: LIMA_DOCKER_CLI_VERSION
           }
         }
       }

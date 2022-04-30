@@ -4,15 +4,15 @@ const path = require("path");
 const { UserConfiguration } = require("../../../../src/configuration");
 const { ContainerClient } = require("../../../../src/clients/podman/native");
 // locals
-const { testOnLinux, testOnWindows, testOnMacOS } = require("../../../helpers");
-const FIXTURE_PODMAN_MACHINE = "podman-machine-default";
-const FIXTURE_IDENTITY_PATH = path.join(process.env.HOME, ".ssh", FIXTURE_PODMAN_MACHINE);
+const { testOnLinux } = require("../../../helpers");
+const { PODMAN_CLI_VERSION, PODMAN_API_BASE_URL, PODMAN_MACHINE_DEFAULT } = require("../../../fixtures");
+const FIXTURE_IDENTITY_PATH = path.join(process.env.HOME, ".ssh", PODMAN_MACHINE_DEFAULT);
 const EXPECTED_MACHINES_LINUX = [
   {
     CPUs: 1,
     Default: true,
     IdentityPath: FIXTURE_IDENTITY_PATH,
-    Name: FIXTURE_PODMAN_MACHINE,
+    Name: PODMAN_MACHINE_DEFAULT,
     // Port: 43861,
     RemoteUsername: "core",
     Running: true,
@@ -20,8 +20,6 @@ const EXPECTED_MACHINES_LINUX = [
     VMType: "qemu"
   }
 ];
-const EXPECTED_MACHINES_WINDOWS = [];
-const EXPECTED_MACHINES_MACOS = [];
 const EXPECTED_SYSTEM_INFO_LINUX = {
   host: {
     arch: "amd64",
@@ -30,30 +28,24 @@ const EXPECTED_SYSTEM_INFO_LINUX = {
     cgroupVersion: "v2"
   },
   version: {
-    APIVersion: "4.0.3",
+    APIVersion: PODMAN_CLI_VERSION,
     GoVersion: "go1.18",
     OsArch: "linux/amd64",
-    Version: "4.0.3"
+    Version: PODMAN_CLI_VERSION
   }
 };
-const EXPECTED_SYSTEM_INFO_WINDOWS = {};
-const EXPECTED_SYSTEM_INFO_MACOS = {};
 const EXPECTED_SYSTEM_CONNECTIONS_LINUX = [
   {
     Default: true,
     Identity: FIXTURE_IDENTITY_PATH,
-    Name: FIXTURE_PODMAN_MACHINE
-    // URI: "ssh://core@localhost:43861/run/user/1000/podman/podman.sock"
+    Name: PODMAN_MACHINE_DEFAULT
   },
   {
     Default: false,
     Identity: FIXTURE_IDENTITY_PATH,
-    Name: `${FIXTURE_PODMAN_MACHINE}-root`
-    // URI: "ssh://root@localhost:43861/run/podman/podman.sock"
+    Name: `${PODMAN_MACHINE_DEFAULT}-root`
   }
 ];
-const EXPECTED_SYSTEM_CONNECTIONS_WINDOWS = [];
-const EXPECTED_SYSTEM_CONNECTIONS_MACOS = [];
 
 jest.setTimeout(30000);
 
@@ -89,7 +81,7 @@ describe("Podman.Native.ContainerClient", () => {
     testOnLinux("Linux", async () => {
       const config = await client.getApiConfig();
       expect(config).toStrictEqual({
-        baseURL: "http://d/v3.0.0/libpod",
+        baseURL: PODMAN_API_BASE_URL,
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json"
@@ -104,7 +96,7 @@ describe("Podman.Native.ContainerClient", () => {
       const driver = await client.getApiDriver();
       expect(driver).toHaveProperty("defaults");
       expect(driver.defaults).toMatchObject({
-        baseURL: "http://d/v3.0.0/libpod",
+        baseURL: PODMAN_API_BASE_URL,
         socketPath: "/tmp/podman-desktop-companion-podman-rest-api.sock"
       });
     });

@@ -8,14 +8,14 @@ const PROGRAM = "podman";
 const ENGINE = `${PROGRAM}.subsystem.wsl`;
 
 class ContainerClient extends BaseContainerClient {
-  constructor(userConfiguration, id) {
-    super(userConfiguration, id, ENGINE, PROGRAM);
+  constructor(userConfiguration, id, distribution) {
+    super(userConfiguration, id, ENGINE, PROGRAM, distribution);
   }
 
   async createApiConfiguration(settings) {
     return {
       baseURL: "http://d/v3.0.0/libpod",
-      connectionString: `//./pipe/${settings.controller.scope}`
+      connectionString: `//./pipe/podman-desktop-companion-${PROGRAM}-${settings.controller.scope}`
     };
   }
 

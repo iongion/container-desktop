@@ -2,9 +2,9 @@
 const os = require("os");
 // vendors
 // project
+const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { VirtualContainerClient } = require("./virtual");
-const { detectLIMAInstances } = require("../../detector");
 // locals
 const CONTROLLER = "limactl";
 
@@ -28,9 +28,39 @@ class LIMAVirtualContainerClient extends VirtualContainerClient {
     return os.type() === "Darwin";
   }
 
+  async getAvailableInstances() {
+    const settings = await this.getCurrentSettings();
+    let items = [];
+    if (os.type() !== "Darwin") {
+      return items;
+    }
+    const controllerPath = settings?.controller?.path;
+    const result = await exec_launcher(controllerPath, ["list"], { encoding: "utf8" });
+    if (result.success) {
+      const output = result.stdout.trim().split("\n").slice(1);
+      items = output.map((it) => {
+        const extracted = it.trim().split(/\s+/);
+        const [Name, Status, SSH, Arch, CPUs, Memory, Disk, Dir] = extracted;
+        return {
+          Name,
+          Status,
+          SSH,
+          Arch,
+          CPUs,
+          Memory,
+          Disk,
+          Dir
+        };
+      });
+    } else {
+      logger.error("Unable to detect LIMA instances", result);
+    }
+    return items;
+  }
+
   async isApiScopeAvailable() {
     const settings = await this.getCurrentSettings();
-    const existing = await detectLIMAInstances();
+    const existing = await this.getAvailableInstances();
     const instance = settings?.controller?.scope;
     const expected = existing.find((it) => it.Name === instance);
     return expected && expected.Status === "Running";
@@ -40,7 +70,7 @@ class LIMAVirtualContainerClient extends VirtualContainerClient {
     const base = super.checkAvailability();
     if (base.available) {
       // LIMA specific - check if controller scope (lima instance) is accessible
-      const existing = await detectLIMAInstances();
+      const existing = await this.getAvailableInstances();
       const instance = settings?.controller?.scope;
       const expected = existing.find((it) => it.Name === instance);
       if (!expected) {

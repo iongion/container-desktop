@@ -1,12 +1,9 @@
 // node
-const path = require("path");
 // module
 const { UserConfiguration } = require("../../../../src/configuration");
 const { ContainerClient } = require("../../../../src/clients/podman/wsl");
 // locals
 const { testOnLinux, testOnWindows, testOnMacOS } = require("../../../helpers");
-const FIXTURE_PODMAN_MACHINE = "podman-machine-default";
-const FIXTURE_IDENTITY_PATH = path.join(process.env.HOME, ".ssh", FIXTURE_PODMAN_MACHINE);
 
 const EXPECTED_MACHINES_WSL = [];
 const EXPECTED_SYSTEM_INFO_WSL = {
@@ -28,7 +25,7 @@ describe("Podman.WSL.ContainerClient", () => {
   beforeEach(() => {
     configuration = new UserConfiguration();
     configuration.reset();
-    client = new ContainerClient(configuration, "testing.Podman.WSL.ContainerClient");
+    client = new ContainerClient(configuration, "testing.Podman.WSL.ContainerClient", WSL_DISTRIBUTION);
   });
   describe("getMachines", () => {
     testOnWindows("Windows", async () => {
@@ -46,6 +43,41 @@ describe("Podman.WSL.ContainerClient", () => {
     testOnWindows("Windows", async () => {
       const info = await client.getSystemConnections();
       expect(info).toMatchObject(EXPECTED_SYSTEM_CONNECTIONS_WSL);
+    });
+  });
+  describe("getAvailableDistributions", () => {
+    testOnWindows("Windows", async () => {
+      const path = await getAvailableDistributions();
+      expect(path).toEqual([
+        {
+          Current: false,
+          Default: true,
+          Name: "Ubuntu-20.04",
+          State: "Running",
+          Version: "2"
+        },
+        {
+          Current: false,
+          Default: false,
+          Name: "docker-desktop-data",
+          State: "Running",
+          Version: "2"
+        },
+        {
+          Current: false,
+          Default: false,
+          Name: PODMAN_MACHINE_DEFAULT,
+          State: "Running",
+          Version: "2"
+        },
+        {
+          Current: false,
+          Default: false,
+          Name: "docker-desktop",
+          State: "Running",
+          Version: "2"
+        }
+      ]);
     });
   });
 });

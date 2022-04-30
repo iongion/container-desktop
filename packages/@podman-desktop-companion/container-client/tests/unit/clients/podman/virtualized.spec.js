@@ -8,15 +8,16 @@ const { ContainerClient } = require("../../../../src/clients/podman/virtualized"
 const {
   testOnLinux,
   testOnWindows,
-  testOnMacOS,
-  ensurePodmanMachineIsRunning,
-  ensureLIMAInstanceIsRunning
+  testOnMacOS
+  // ensurePodmanMachineIsRunning,
+  // ensureLIMAInstanceIsRunning
 } = require("../../../helpers");
+const { PODMAN_CLI_VERSION, PODMAN_MACHINE_DEFAULT } = require("../../../fixtures");
 // fixtures
 const EXPECTED_MACHINES_LINUX = [
   {
     Default: true,
-    Name: "podman-machine-default",
+    Name: PODMAN_MACHINE_DEFAULT,
     RemoteUsername: "core",
     Stream: "testing",
     VMType: "qemu"
@@ -25,7 +26,7 @@ const EXPECTED_MACHINES_LINUX = [
 const EXPECTED_MACHINES_WINDOWS = [
   {
     Default: true,
-    Name: "podman-machine-default",
+    Name: PODMAN_MACHINE_DEFAULT,
     RemoteUsername: "",
     Stream: "35",
     VMType: "wsl"
@@ -34,7 +35,7 @@ const EXPECTED_MACHINES_WINDOWS = [
 const EXPECTED_MACHINES_MACOS = [
   {
     Default: true,
-    Name: "podman-machine-default",
+    Name: PODMAN_MACHINE_DEFAULT,
     RemoteUsername: "core",
     Stream: "testing",
     VMType: "qemu"
@@ -53,9 +54,9 @@ const EXPECTED_SYSTEM_INFO_LINUX = {
     }
   },
   version: {
-    APIVersion: "4.0.3",
+    APIVersion: PODMAN_CLI_VERSION,
     OsArch: "linux/amd64",
-    Version: "4.0.3"
+    Version: PODMAN_CLI_VERSION
   }
 };
 const EXPECTED_SYSTEM_INFO_WINDOWS = {
@@ -71,9 +72,9 @@ const EXPECTED_SYSTEM_INFO_WINDOWS = {
     }
   },
   version: {
-    APIVersion: "4.0.3",
+    APIVersion: PODMAN_CLI_VERSION,
     OsArch: "linux/amd64",
-    Version: "4.0.3"
+    Version: PODMAN_CLI_VERSION
   }
 };
 const EXPECTED_SYSTEM_INFO_MACOS = {
@@ -164,23 +165,4 @@ describe("Podman.Virtualized.ContainerClient", () => {
       });
     });
   });
-  // describe("isApiRunning", () => {
-  //   test("Everywhere - stop / start and check status", async () => {
-  //     let received;
-  //     // Stop
-  //     await client.stopApi();
-  //     received = await client.isApiRunning();
-  //     expect(received).toStrictEqual({
-  //       details: "API scope is not available",
-  //       success: false
-  //     });
-  //     // Start
-  //     await client.startApi();
-  //     received = await client.isApiRunning();
-  //     expect(received).toStrictEqual({
-  //       details: "OK",
-  //       success: true
-  //     });
-  //   });
-  // });
 });

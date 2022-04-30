@@ -8,14 +8,14 @@ const PROGRAM = "docker";
 const ENGINE = `${PROGRAM}.subsystem.wsl`;
 
 class ContainerClient extends BaseContainerClient {
-  constructor(userConfiguration, id) {
-    super(userConfiguration, id, ENGINE, PROGRAM);
+  constructor(userConfiguration, id, distribution) {
+    super(userConfiguration, id, ENGINE, PROGRAM, distribution);
   }
 
   async createApiConfiguration(settings) {
     return {
       baseURL: "http://localhost",
-      connectionString: `//./pipe/${settings.controller.scope}`
+      connectionString: `//./pipe/podman-desktop-companion-${PROGRAM}-${settings.controller.scope}`
     };
   }
 
