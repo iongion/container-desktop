@@ -202,7 +202,7 @@ describe("registry", () => {
     // podman native
     expected = engines.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toMatchObject({
-      availability: { available: false, reason: "Only on Linux" },
+      availability: { available: false, reason: "Not available on Windows_NT" },
       engine: "podman.native",
       id: "engine.default.podman.native",
       program: "podman"
@@ -310,7 +310,7 @@ describe("registry", () => {
     // docker native
     expected = engines.find((it) => it.id === "engine.default.docker.native");
     expect(expected).toMatchObject({
-      availability: { available: false, reason: "Only on Linux" },
+      availability: { available: false, reason: "Not available on Windows_NT" },
       engine: "docker.native",
       id: "engine.default.docker.native",
       program: "docker"
@@ -420,7 +420,7 @@ describe("registry", () => {
     // podman native
     expected = engines.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toMatchObject({
-      availability: { available: false, reason: "Only on Linux" },
+      availability: { available: false, reason: "Not available on Darwin" },
       engine: "podman.native",
       id: "engine.default.podman.native",
       program: "podman"
@@ -528,7 +528,7 @@ describe("registry", () => {
     // docker native
     expected = engines.find((it) => it.id === "engine.default.docker.native");
     expect(expected).toMatchObject({
-      availability: { available: false, reason: "Only on Linux" },
+      availability: { available: false, reason: "Not available on Darwin" },
       engine: "docker.native",
       id: "engine.default.docker.native",
       program: "docker"

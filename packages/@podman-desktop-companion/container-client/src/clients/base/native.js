@@ -17,7 +17,7 @@ class BaseContainerClient extends AbstractContainerClient {
     const isMatchingOs = os.type() === "Linux";
     return {
       available: isMatchingOs,
-      reason: isMatchingOs ? undefined : "Only on Linux"
+      reason: isMatchingOs ? undefined : `Not available on ${os.type()}`
     };
   }
 
