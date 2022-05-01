@@ -11,9 +11,6 @@ class AbstractContainerClient {
     this.engine = engine;
     this.program = program;
     this.logger = createLogger(`clients.${engine}`);
-    this.cache = {
-      engine: undefined
-    };
   }
 
   // Settings management
@@ -27,10 +24,7 @@ class AbstractContainerClient {
     );
   }
   async getCurrentSettings() {
-    if (!this.cache.engine) {
-      this.cache.engine = await this.getEngine();
-    }
-    const { engine } = this.cache;
+    const engine = await this.getEngine();
     const settings = await this.getMergedSettings(engine);
     return settings;
   }

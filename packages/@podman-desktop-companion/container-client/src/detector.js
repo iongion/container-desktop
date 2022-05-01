@@ -14,7 +14,8 @@ const findProgramPath = async (program, opts) => {
     logger.error("Unable to detect program path - program must be specified");
     throw new Error("Unable to detect program path - program must be specified");
   }
-  if (os.type() === "Windows_NT") {
+  const useWhere = os.type() === "Windows_NT" && !opts?.wrapper;
+  if (useWhere) {
     result = await exec_launcher_sync("where", [program], opts);
     logger.debug("Detecting", program, "using - where >", result);
     if (result.success) {
@@ -77,7 +78,10 @@ const findProgram = async (program, opts) => {
   }
   const programPath = await findProgramPath(program, opts);
   if (programPath) {
-    version = await findProgramVersion(programPath, opts);
+    const supportsVersion = program !== "wsl";
+    if (supportsVersion) {
+      version = await findProgramVersion(programPath, opts);
+    }
   } else {
     logger.error(`No path found for ${program} cli program - version check skipped`);
   }
