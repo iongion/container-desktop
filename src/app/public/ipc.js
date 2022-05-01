@@ -6,6 +6,8 @@ const userSettings = require("@podman-desktop-companion/user-settings");
 const { Clients, Registry, UserConfiguration } = require("@podman-desktop-companion/container-client");
 // locals
 const logger = createLogger("shell.ipc");
+const virtualized_engines = ["podman.virtualized", "docker.virtualized"];
+const native_engines = ["podman.native", "docker.native"];
 const application = {
   configuration: undefined,
   registry: undefined,
@@ -21,7 +23,21 @@ const application = {
       currentEngine = this.engines.find((it) => it.engine === currentEngine);
     }
     if (!currentEngine) {
+      logger.debug("No user preferred engine - looking for native");
+      currentEngine = this.engines.find((it) => it.availability.available && native_engines.includes(it.engine));
+    }
+    if (!currentEngine) {
+      logger.debug("No native supported engine - looking for virtualized");
+      if (os.type() === "Windows_NT" || os.type() === "Darwin") {
+        currentEngine = this.engines.find((it) => it.availability.available && virtualized_engines.includes(it.engine));
+      }
+    }
+    if (!currentEngine) {
+      logger.debug("No virtualized supported engine - looking for available");
       currentEngine = this.engines.find((it) => it.availability.available);
+    }
+    if (!currentEngine) {
+      logger.error("No engine is supported on this machine - requirements might be incomplete");
     }
     return currentEngine;
   },
