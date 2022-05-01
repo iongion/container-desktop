@@ -3,25 +3,45 @@ const os = require("os");
 // project
 const { getLevel, setLevel, createLogger } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
-const { Backend, PodmanClient, DockerClient, ENGINE_DOCKER } = require("@podman-desktop-companion/container-client");
+const { Clients, Registry, UserConfiguration } = require("@podman-desktop-companion/container-client");
 // locals
 const logger = createLogger("shell.ipc");
-const backend = new Backend();
-const engineClientMap = {};
-const getClient = async () => {
-  const engine = await backend.findEngine();
-  if (!engineClientMap[engine]) {
-    engineClientMap[engine] = engine === ENGINE_DOCKER ? new DockerClient(backend) : new PodmanClient(backend);
+const application = {
+  configuration: undefined,
+  registry: undefined,
+  engines: [],
+  client: undefined,
+  getClient() {
+    return this.client;
+  },
+  getCurrentEngine() {
+    const userEngineId = this.configuration.getKey("engine.current");
+    let currentEngine;
+    if (userEngineId) {
+      currentEngine = this.engines.find((it) => it.engine === currentEngine);
+    }
+    if (!currentEngine) {
+      currentEngine = this.engines.find((it) => it.availability.available);
+    }
+    return currentEngine;
+  },
+  async createApiRequest(opts) {
+    const { client } = this;
+    if (!client) {
+      logger.error("Cannot create api request - no valid client for current engine");
+      throw new Error("No valid client for current engine");
+    }
+    const driver = await client.getApiDriver();
+    return driver.request(opts);
   }
-  return engineClientMap[engine];
 };
 
 async function getUserConfiguration() {
   const osType = os.type();
-  const connectionString = await backend.findApiConnectionString();
+  const connectionString = await application.findApiConnectionString();
   const options = {
-    engine: await backend.findEngine(),
-    program: await backend.findProgram(),
+    engine: await application.findEngine(),
+    program: await application.findProgram(),
     startApi: userSettings.get("startApi", false),
     minimizeToSystemTray: userSettings.get("minimizeToSystemTray", false),
     communication: "api",
@@ -40,7 +60,7 @@ async function setUserConfiguration(options) {
     if (key === "logging.level") {
       setLevel(options[key]);
     } else if (key === "engine") {
-      await backend.setEngine(options[key]);
+      await application.setEngine(options[key]);
     } else {
       userSettings.set(key, options[key]);
     }
@@ -49,6 +69,71 @@ async function setUserConfiguration(options) {
 }
 
 const servicesMap = {
+  "/start": async function () {
+    const configuration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
+    const registry = new Registry(configuration, [
+      Clients.Podman.Native,
+      Clients.Podman.Virtualized,
+      Clients.Podman.WSL,
+      Clients.Podman.LIMA,
+      Clients.Docker.Native,
+      Clients.Docker.Virtualized,
+      Clients.Docker.WSL,
+      Clients.Docker.LIMA
+    ]);
+    const engines = await registry.getEngines();
+    // Cache
+    application.configuration = configuration;
+    application.registry = registry;
+    application.engines = engines;
+    // User preferences impacting startup
+    let startApi = true;
+    // AppStartup object
+    const currentEngine = application.getCurrentEngine();
+    let provisioned = false;
+    let running = false;
+    let system = {};
+    let connections = [];
+    if (currentEngine) {
+      const programIsSet = !!currentEngine.settings.current.program.path;
+      provisioned = programIsSet;
+      if (provisioned) {
+        const client = registry.getEngineClientById(currentEngine.id);
+        application.client = client;
+        if (client) {
+          system = await client.getSystemInfo();
+          connections = await client.getSystemConnections();
+          const result = await client.isApiRunning();
+          running = result.success;
+          if (!running && startApi) {
+            running = await client.startApi();
+          }
+        } else {
+          logger.error("Unable to find client for current engine api", currentEngine);
+        }
+      }
+    }
+    return {
+      provisioned,
+      running,
+      system,
+      connections,
+      currentEngine,
+      engines,
+      platform: os.type(),
+      environment: process.env.REACT_APP_ENV,
+      version: process.env.REACT_APP_PROJECT_VERSION,
+      userPreferences: {
+        clientId: currentEngine.id,
+        startApi,
+        minimizeToSystemTray: false,
+        path: "",
+        logging: {
+          level: "debug"
+        }
+      }
+    };
+  },
   "/container/engine/request": async function (options) {
     let result = {
       ok: false,
@@ -58,7 +143,7 @@ const servicesMap = {
       statusText: "API request error"
     };
     try {
-      const response = await backend.createApiRequest(options);
+      const response = await application.createApiRequest(options);
       result = {
         ok: response.status >= 200 && response.status < 300,
         data: response.data,
@@ -89,77 +174,62 @@ const servicesMap = {
     return await getUserConfiguration();
   },
   "/system/running": async function () {
-    return await backend.getIsApiRunning();
+    return await application.getIsApiRunning();
   },
   "/system/connections": async function () {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.getSystemConnections();
   },
   "/system/info": async function () {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.getSystemInfo();
   },
   "/system/prune": async function () {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.pruneSystem();
   },
-  "/system/environment": async function () {
-    let system;
-    try {
-      const client = await getClient();
-      const program = await backend.findProgram();
-      system = await client.getSystemEnvironment();
-      system.userConfiguration = await getUserConfiguration();
-      const hasProgram = program.path && program.currentVersion;
-      const isRunning = await backend.getIsApiRunning();
-      system.provisioned = hasProgram && isRunning;
-    } catch (error) {
-      logger.error("Unable to access system environment", error);
-    }
-    return system;
-  },
   "/system/api/start": async function () {
-    return await backend.startApi();
+    return await application.startApi();
   },
   "/system/reset": async function () {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.resetSystem();
   },
   "/container/connect": async function ({ Id }) {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.connectToContainer(Id);
   },
   "/machines/list": async function () {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.getMachines();
   },
   "/machine/restart": async function ({ Name }) {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.restartMachine(Name);
   },
   "/machine/stop": async function ({ Name }) {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.stopMachine(Name);
   },
   "/machine/connect": async function ({ Name }) {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.connectToMachine(Name);
   },
   "/machine/remove": async function ({ Name, force }) {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.removeMachine(Name, force);
   },
   "/machine/create": async function (opts) {
-    const client = await getClient();
+    const client = await application.getClient();
     return client.createMachine(opts);
   },
   "/test": async function (opts) {
-    const result = await backend.testApiReachability({ connectionString: opts.payload });
+    const result = await application.testApiReachability({ connectionString: opts.payload });
     result.subject = opts.subject;
     return result;
   },
   "/find.program": async function (opts) {
-    const result = await backend.findProgram(opts);
+    const result = await application.findProgram(opts);
     return result;
   }
 };

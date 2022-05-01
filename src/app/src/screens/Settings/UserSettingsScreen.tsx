@@ -7,7 +7,7 @@ import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
 import { LOGGING_LEVELS } from "../../Environment";
-import { AppScreen, AppScreenProps, UserConfigurationOptions } from "../../Types";
+import { AppScreen, AppScreenProps, ContainerEngine, UserPreferencesOptions } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
@@ -31,20 +31,21 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const provisioned = useStoreState((state) => state.environment.provisioned);
   const system = useStoreState((state) => state.environment.system);
   const running = useStoreState((state) => state.environment.running);
-  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
-  const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
-  const program = userConfiguration.program;
+  const currentEngine = useStoreState((state) => state.environment.currentEngine);
+  const userPreferences = useStoreState((state) => state.environment.userPreferences);
+  const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
+  const program = currentEngine.settings.current.program;
   const onAutoStartApiChange = useCallback(async (e) => {
-    await setUserConfiguration({ startApi: !!e.currentTarget.checked });
-  }, [setUserConfiguration]);
+    await setUserPreferences({ startApi: !!e.currentTarget.checked });
+  }, [setUserPreferences]);
   const onMinimizeToSystemTray = useCallback(async (e) => {
-    await setUserConfiguration({ minimizeToSystemTray: !!e.currentTarget.checked });
-  }, [setUserConfiguration]);
+    await setUserPreferences({ minimizeToSystemTray: !!e.currentTarget.checked });
+  }, [setUserPreferences]);
   const onLoggingLevelChange = useCallback(async (e) => {
-    const configuration: Partial<UserConfigurationOptions> = {};
+    const configuration: Partial<UserPreferencesOptions> = {};
     configuration["logging.level"] = e.currentTarget.value;
-    await setUserConfiguration(configuration);
-  }, [setUserConfiguration]);
+    await setUserPreferences(configuration);
+  }, [setUserPreferences]);
   const onToggleInspectorClick = useCallback(async (e) => {
     Native.getInstance().openDevTools();
   }, []);
@@ -77,7 +78,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     runningDetails = t(
       "Running on {{distribution}} {{distributionVersion}} ({{kernel}})",
       {
-        currentVersion: program.currentVersion,
+        currentVersion: program.version,
         hostname: system.host?.hostname || "",
         distribution: system.host?.distribution?.distribution || "",
         distributionVersion: system.host?.distribution?.version || "",
@@ -87,7 +88,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   } else {
     if (program.path) {
       runningDetails = t("Unable to detect system - try to connect and start the api");
-      if (program.name === "podman" && userConfiguration.engine === "virtualized" && !running) {
+      if (program.name === "podman" && currentEngine.engine === ContainerEngine.PODMAN_VIRTUALIZED && !running) {
         runningDetails = (
           <>
             <span>{t("Unable to detect system - podman machine may need restart")}</span> &mdash;
@@ -117,7 +118,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 id="startApi"
                 disabled={pending}
                 label={t("Automatically start the Api")}
-                checked={!!userConfiguration.startApi}
+                checked={!!userPreferences.startApi}
                 onChange={onAutoStartApiChange}
               />
             </ControlGroup>
@@ -128,7 +129,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 id="minimizeToSystemTray"
                 disabled={pending}
                 label={t("Minimize to System Tray when closing")}
-                checked={!!userConfiguration.minimizeToSystemTray}
+                checked={!!userPreferences.minimizeToSystemTray}
                 onChange={onMinimizeToSystemTray}
               />
             </ControlGroup>
@@ -142,10 +143,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <div className="AppSettingUserConfigurationPath">
             <Icon icon={IconNames.INFO_SIGN} />
             <strong>{t('Application settings and logs path')}</strong>
-            <input type="text" value={userConfiguration.path} readOnly/>
+            <input type="text" value={userPreferences.path} readOnly/>
           </div>
             <ControlGroup >
-              <HTMLSelect id="loggingLevel" disabled={pending} value={userConfiguration.logging.level} onChange={onLoggingLevelChange}>
+              <HTMLSelect id="loggingLevel" disabled={pending} value={userPreferences.logging.level} onChange={onLoggingLevelChange}>
                 {LOGGING_LEVELS.map((level) => {
                   const key= `logging.${level}`;
                   return <option key={key} value={level}>{level}</option>;

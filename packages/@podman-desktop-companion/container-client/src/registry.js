@@ -1,7 +1,6 @@
 // node
 const os = require("os");
 // vendors
-const merge = require("lodash.merge");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // module
@@ -19,10 +18,10 @@ class Registry {
     const engines = await Promise.all(
       this.clients.map(async (client) => {
         const id = `engine.default.${client.ENGINE}`;
-        if (!this.engineClientsMap[client.ENGINE]) {
-          this.engineClientsMap[client.ENGINE] = new client.ContainerClient(this.userConfiguration, id);
+        if (!this.engineClientsMap[id]) {
+          this.engineClientsMap[id] = new client.ContainerClient(this.userConfiguration, id);
         }
-        const engineController = this.engineClientsMap[client.ENGINE];
+        const engineController = this.engineClientsMap[id];
         const engine = await engineController.getEngine();
         engine.settings.current = await engineController.getCurrentSettings();
         return engine;
@@ -39,6 +38,9 @@ class Registry {
     const custom = await this.getCustomEngines();
     const items = [...defaults, ...custom];
     return items;
+  }
+  getEngineClientById(id) {
+    return this.engineClientsMap[id];
   }
 }
 

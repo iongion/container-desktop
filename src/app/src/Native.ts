@@ -1,4 +1,4 @@
-import { ContainerClientResult, ContainerEngine, UserConfiguration } from "./Types";
+import { ContainerClientResult, ContainerEngine, UserPreferences } from "./Types";
 
 export enum Platforms {
   Browser = "browser",
@@ -46,7 +46,7 @@ interface NativeBridge {
     openDevTools: () => void;
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
-    getUserConfiguration: () => Promise<UserConfiguration>;
+    getUserPreferences: () => Promise<UserPreferences>;
     proxy: <T>(request: any) => Promise<T>;
     getEngine: () => Promise<ContainerEngine>;
   };

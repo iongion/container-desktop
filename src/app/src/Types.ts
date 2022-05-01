@@ -3,22 +3,48 @@ import React from "react";
 // project
 import { Platforms } from "./Native";
 
+export interface AppEngineSettings {
+  api: {
+    baseURL: string;
+    connectionString: string;
+  };
+  program: Program;
+  controller?: {
+    name: string;
+    path: string;
+    version: string;
+    scope: string;
+  }
+}
+export interface AppEngineSettingsMap {
+  current: AppEngineSettings;
+  detect: AppEngineSettings;
+  custom: AppEngineSettings;
+}
+export interface AppEngine {
+  id: string;
+  engine: ContainerEngine;
+  program: string;
+  availability: {
+    available: boolean;
+    reason?: string;
+  };
+  settings: AppEngineSettingsMap;
+}
+
 export interface ConnectOptions {
   startApi: boolean;
   engine?: ContainerEngine;
 }
 
-export interface UserConfiguration {
-  program: Program;
-  engine: ContainerEngine, // default
+export interface UserPreferences {
+  clientId: string, // default
   startApi: boolean;
   minimizeToSystemTray: boolean;
   path: string;
   logging: {
     level: string;
   };
-  communication: "api" | "cli";
-  connectionString: string;
 }
 
 export interface TestResult {
@@ -27,7 +53,7 @@ export interface TestResult {
   details?: any;
 }
 
-export interface UserConfigurationOptions {
+export interface UserPreferencesOptions {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
   startApi: boolean;
@@ -143,8 +169,11 @@ export interface SystemEnvironment {
   running: boolean;
   provisioned: boolean;
   system?: SystemInfo;
-  userConfiguration: UserConfiguration;
-  wslDistributions: WSLDistribution[];
+  // wslDistributions: WSLDistribution[];
+
+  currentEngine: AppEngine;
+  engines: AppEngine[];
+  userPreferences: UserPreferences;
 }
 
 export interface SystemPruneReport {
@@ -161,9 +190,9 @@ export interface SystemResetReport {}
 export interface Program {
   name: string;
   path?: string;
-  currentVersion?: string;
-  title: string;
-  homepage: string;
+  version?: string;
+  title?: string;
+  homepage?: string;
 }
 
 

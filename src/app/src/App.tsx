@@ -132,17 +132,19 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
 };
 
 export function AppMainScreen() {
+  const startRef = useRef(false);
   const phase = useStoreState((state) => state.phase);
   const native = useStoreState((state) => state.native);
-  const provisioned = useStoreState((state) => state.environment.provisioned);
-  const running = useStoreState((state) => state.environment.running);
-  const platform = useStoreState((state) => state.environment.platform);
+  const environment = useStoreState((state) => state.environment);
   const start = useStoreActions((actions) => actions.start);
-  const engine = useStoreState((state) => state.environment.userConfiguration.engine);
-  const program = useStoreState((state) => state.environment.userConfiguration.program);
-  const startRef = useRef(false);
 
-  console.debug({ phase, native, provisioned, running, platform, engine, program });
+  const provisioned = environment.provisioned;
+  const running = environment.running;
+  const platform = environment.platform;
+  const engine = environment.currentEngine;
+  const program = engine?.settings?.current?.program;
+
+  console.debug("Environment", environment);
 
   useEffect(() => {
     if (startRef.current) {

@@ -81,5 +81,5 @@ Screen.Metadata = {
   LeftIcon: IconNames.HEAT_GRID
 };
 Screen.isAvailable = (context: SystemEnvironment) => {
-  return context.userConfiguration.engine !== ContainerEngine.DOCKER;
+  return context.currentEngine.engine !== ContainerEngine.DOCKER;
 }

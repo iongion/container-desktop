@@ -3,6 +3,8 @@
 import {
   //
   Domain,
+  UserPreferences,
+  UserPreferencesOptions,
   //
   ContainerClientResponse,
   Container,
@@ -22,8 +24,6 @@ import {
   SystemResetReport,
   Machine,
   //
-  UserConfiguration,
-  UserConfigurationOptions,
   ContainerStateList,
   TestResult,
   Program
@@ -173,7 +173,6 @@ export class ContainerClient {
   constructor() {
     this.dataApiDriver = new ApiDriver();
   }
-
   setEngine(engine: string) {
     this.engine = engine;
   }
@@ -492,6 +491,15 @@ export class ContainerClient {
     });
   }
 
+  async startApplication() {
+    return this.withResult<SystemEnvironment>(async () => {
+      const reply = await Native.getInstance().proxyService<SystemEnvironment>({
+        method: "/start",
+      });
+      return reply.result;
+    });
+  }
+
   // HTTP API
 
   // Containers
@@ -570,14 +578,6 @@ export class ContainerClient {
   }
 
   // System
-  async getSystemEnvironment() {
-    return this.withResult<SystemEnvironment>(async () => {
-      const reply = await Native.getInstance().proxyService<SystemEnvironment>({
-        method: "/system/environment"
-      });
-      return reply.result;
-    });
-  }
   async startApi() {
     console.debug("Client - startApi");
     return this.withResult<boolean>(async () => {
@@ -604,18 +604,18 @@ export class ContainerClient {
     });
   }
 
-  async getUserConfiguration() {
-    return this.withResult<UserConfiguration>(async () => {
-      const reply = await Native.getInstance().proxyService<UserConfiguration>({
+  async getUserPreferences() {
+    return this.withResult<UserPreferences>(async () => {
+      const reply = await Native.getInstance().proxyService<UserPreferences>({
         method: "/user/configuration/get",
       });
       return reply.result;
     });
   }
 
-  async setUserConfiguration(options: Partial<UserConfigurationOptions>) {
-    return this.withResult<UserConfiguration>(async () => {
-      const reply = await Native.getInstance().proxyService<UserConfiguration>({
+  async setUserPreferences(options: Partial<UserPreferencesOptions>) {
+    return this.withResult<UserPreferences>(async () => {
+      const reply = await Native.getInstance().proxyService<UserPreferences>({
         method: "/user/configuration/set",
         params: {
           options

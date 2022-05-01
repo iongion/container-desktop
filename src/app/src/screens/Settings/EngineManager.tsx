@@ -21,16 +21,17 @@ interface ContainerEngineSettingsProps {
 export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettingsProps> = ({ engine, disabled }) => {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
-  const connect = useStoreActions((actions) => actions.connect);
-  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
-  const wslDistributions = useStoreState((state) => state.environment.wslDistributions);
-  const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
+  // const connect = useStoreActions((actions) => actions.connect);
+  const currentEngine = useStoreState((state) => state.environment.currentEngine);
+  const wslDistributions: any[] = [];
+  const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
   const testConnectionString = useStoreActions((actions) => actions.testConnectionString);
   const findProgram = useStoreActions((actions) => actions.findProgram);
   const start = useStoreActions((actions) => actions.start);
-  const [program, setProgram] = useState(userConfiguration.program);
+  const [program, setProgram] = useState(currentEngine.settings.current.program);
   const [selectedWSLDistribution, setSelectedWSLDistribution] = useState<string>(wslDistributions.find(it => it.Current)?.Name || "");
-  const [connectionString, setConnectionString] = useState(userConfiguration.connectionString);
+  // const [connectionString, setConnectionString] = useState(userPreferences.connectionString);
+  const connectionString = "";
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const result = await Native.getInstance().openFileSelector();
@@ -42,7 +43,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
             const programSettings: any = {};
             const programKey = `${engine}.program.${program}.path`;
             programSettings[programKey] = filePath;
-            await setUserConfiguration(programSettings);
+            await setUserPreferences(programSettings);
           } catch (error) {
             console.error("Unable to change CLI path", error);
             Notification.show({ message: t("Unable to change CLI path"), intent: Intent.DANGER });
@@ -52,7 +53,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         console.error("Unable to open file dialog");
       }
     },
-    [engine, setUserConfiguration, t]
+    [engine, setUserPreferences, t]
   );
   const onWSLDistributionChange = useCallback(
     (event: React.FormEvent<HTMLSelectElement>) => {
@@ -64,9 +65,9 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const onConnectionStringChange = useCallback(
     (event: React.FormEvent<HTMLInputElement>) => {
       const sender = event.currentTarget;
-      setConnectionString(sender.value);
+      // setConnectionString(sender.value);
     },
-    [setConnectionString]
+    [/*setConnectionString*/]
   );
   const onFindWSLProgramClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const result: Program = await findProgram({
@@ -108,7 +109,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         const programSettings: any = {};
         const programKey = `${engine}.program.${program.name}.connectionString`;
         programSettings[programKey] = connectionString.replace("unix://", "").replace("npipe://", "");
-        await setUserConfiguration(programSettings);
+        await setUserPreferences(programSettings);
         Notification.show({ message: t("Connection string has been customized"), intent: Intent.SUCCESS });
         await start();
       } else {
@@ -118,15 +119,15 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       console.error("Unable to change CLI path", error);
       Notification.show({ message: t("Connection string customization failed"), intent: Intent.DANGER });
     }
-  }, [engine, connectionString, program, testConnectionString, setUserConfiguration, start, t]);
+  }, [engine, connectionString, program, testConnectionString, setUserPreferences, start, t]);
   const onConnectClick = useCallback(
     async () => {
-      await connect({ startApi: true, engine });
+      // await connect({ startApi: true, engine });
     },
-    [connect, engine]
+    [/*connect, engine*/]
   );
   // locals
-  const isConnectionStringChanged = connectionString !== userConfiguration.connectionString;
+  const isConnectionStringChanged = false; // connectionString !== userPreferences.connectionString;
   const isLIMA = engine === ContainerEngine.PODMAN_SUBSYSTEM_LIMA;
   const suffix = isLIMA ? <span> - {t("Automatically detected inside LIMA VM")}</span> : "";
   const isWSL = engine === ContainerEngine.PODMAN_SUBSYSTEM_WSL;
@@ -165,7 +166,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       <FormGroup
         helperText={
           <div className="AppSettingsFieldProgramHelper">
-            {program?.currentVersion ? (
+            {program?.version ? (
               <>
                 <span>{t("Detected version {{currentVersion}}", program)}</span>
                 {suffix}
@@ -252,7 +253,7 @@ export interface ContainerEngineManagerProps {
 export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ disabled, helperText }) => {
   const { t } = useTranslation();
   const platform = useStoreState((state) => state.environment.platform);
-  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
+  const currentEngine = useStoreState((state) => state.environment.currentEngine);
   const ContainerEngines = useMemo(
     () => {
       const engines = [
@@ -287,8 +288,8 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
     },
     [t, platform]
   );
-  const [selectedEngine, setSelectedEngine] = useState(userConfiguration.engine);
-  const Settings = ContainerEngineSettingsRegistry[userConfiguration.engine];
+  const [selectedEngine, setSelectedEngine] = useState(currentEngine.engine);
+  const Settings = ContainerEngineSettingsRegistry[currentEngine.engine];
   const onContainerEngineChange = useCallback((e) => {
     setSelectedEngine(e.currentTarget.value);
   }, []);
@@ -318,9 +319,9 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
                 return (
                   <Radio
                     key={engine}
-                    className={`AppSettingsField ${userConfiguration.engine === it.engine ? "AppSettingsFieldActive" : ""}`}
+                    className={`AppSettingsField ${currentEngine.engine === it.engine ? "AppSettingsFieldActive" : ""}`}
                     disabled={disabled}
-                    labelElement={<RadioLabel text={label} highlight={userConfiguration.engine === it.engine} />}
+                    labelElement={<RadioLabel text={label} highlight={currentEngine.engine === it.engine} />}
                     value={engine}
                   >
                     {restrict}
