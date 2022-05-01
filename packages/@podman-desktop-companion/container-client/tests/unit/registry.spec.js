@@ -1,5 +1,4 @@
 // node
-const path = require("path");
 // project
 // module
 const { UserConfiguration } = require("../../src/configuration");
@@ -27,19 +26,25 @@ const {
   NATIVE_DOCKER_SOCKET_PATH,
   NATIVE_PODMAN_SOCKET_PATH,
   // Virtualized - MacOS
-  MACOS_PODMAN_CLI_VERSION,
-  MACOS_PODMAN_CLI_PATH,
+  MACOS_DOCKER_NATIVE_CLI_VERSION,
+  MACOS_DOCKER_NATIVE_CLI_PATH,
+  MACOS_PODMAN_NATIVE_CLI_VERSION,
+  MACOS_PODMAN_NATIVE_CLI_PATH,
+  MACOS_PODMAN_MACHINE_CLI_VERSION,
+  MACOS_PODMAN_MACHINE_CLI_PATH,
   MACOS_PODMAN_CONTROLLER_CLI_PATH,
+  MACOS_PODMAN_CONTROLLER_CLI_VERSION,
   MACOS_PODMAN_SOCKET_PATH,
   // Virtualized - Windows
-  WINDOWS_PODMAN_CLI_VERSION,
-  WINDOWS_PODMAN_CLI_PATH,
+  WINDOWS_PODMAN_NATIVE_CLI_VERSION,
+  WINDOWS_PODMAN_NATIVE_CLI_PATH,
   WINDOWS_DOCKER_CLI_VERSION,
   WINDOWS_DOCKER_CLI_PATH,
   WINDOWS_PODMAN_NAMED_PIPE,
   WINDOWS_DOCKER_NAMED_PIPE,
   // WSL - Windows
   WSL_PATH,
+  WSL_VERSION,
   WSL_DOCKER_CLI_PATH,
   WSL_DOCKER_CLI_VERSION,
   WSL_PODMAN_CLI_PATH,
@@ -47,9 +52,9 @@ const {
   WSL_PODMAN_NAMED_PIPE,
   WSL_DOCKER_NAMED_PIPE,
   WSL_DISTRIBUTION, // Default WSL distribution (Ubuntu-20.04)
-  WSL_DISTRIBUTIONS,
   // LIMA - MacOS
   LIMA_PATH,
+  LIMA_VERSION,
   LIMA_DOCKER_CLI_PATH,
   LIMA_DOCKER_CLI_VERSION,
   LIMA_PODMAN_CLI_PATH,
@@ -57,8 +62,7 @@ const {
   LIMA_DOCKER_INSTANCE,
   LIMA_PODMAN_INSTANCE,
   LIMA_DOCKER_SOCKET_PATH,
-  LIMA_PODMAN_SOCKET_PATH,
-  LIMA_INSTANCES
+  LIMA_PODMAN_SOCKET_PATH
 } = require("../fixtures");
 
 jest.setTimeout(50000); // Give time for windows testing VM
@@ -218,8 +222,8 @@ describe("registry", () => {
           },
           controller: {
             name: "podman",
-            path: WINDOWS_PODMAN_CLI_PATH,
-            version: WINDOWS_PODMAN_CLI_VERSION,
+            path: WINDOWS_PODMAN_NATIVE_CLI_PATH,
+            version: WINDOWS_PODMAN_NATIVE_CLI_VERSION,
             scope: PODMAN_MACHINE_DEFAULT
           },
           program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
@@ -243,8 +247,8 @@ describe("registry", () => {
           },
           controller: {
             name: "podman",
-            path: WINDOWS_PODMAN_CLI_PATH,
-            version: WINDOWS_PODMAN_CLI_VERSION,
+            path: WINDOWS_PODMAN_NATIVE_CLI_PATH,
+            version: WINDOWS_PODMAN_NATIVE_CLI_VERSION,
             scope: PODMAN_MACHINE_DEFAULT
           },
           program: { name: "podman", path: NATIVE_PODMAN_CLI_PATH, version: PODMAN_CLI_VERSION }
@@ -437,10 +441,10 @@ describe("registry", () => {
           controller: {
             name: "podman",
             path: MACOS_PODMAN_CONTROLLER_CLI_PATH,
-            scope: PODMAN_MACHINE_DEFAULT,
-            version: ""
+            version: MACOS_PODMAN_CONTROLLER_CLI_VERSION,
+            scope: PODMAN_MACHINE_DEFAULT
           },
-          program: { name: "podman", path: MACOS_PODMAN_CLI_PATH, version: MACOS_PODMAN_CLI_VERSION }
+          program: { name: "podman", path: MACOS_PODMAN_MACHINE_CLI_PATH, version: MACOS_PODMAN_MACHINE_CLI_VERSION }
         },
         custom: {
           api: {
@@ -462,10 +466,10 @@ describe("registry", () => {
           controller: {
             name: "podman",
             path: MACOS_PODMAN_CONTROLLER_CLI_PATH,
-            scope: PODMAN_MACHINE_DEFAULT,
-            version: ""
+            version: MACOS_PODMAN_CONTROLLER_CLI_VERSION,
+            scope: PODMAN_MACHINE_DEFAULT
           },
-          program: { name: "podman", path: MACOS_PODMAN_CLI_PATH, version: MACOS_PODMAN_CLI_VERSION }
+          program: { name: "podman", path: MACOS_PODMAN_MACHINE_CLI_PATH, version: MACOS_PODMAN_MACHINE_CLI_VERSION }
         }
       }
     });
@@ -494,7 +498,7 @@ describe("registry", () => {
             name: "limactl",
             path: LIMA_PATH,
             scope: LIMA_PODMAN_INSTANCE,
-            version: ""
+            version: LIMA_VERSION
           },
           program: { name: "podman", path: LIMA_PODMAN_CLI_PATH, version: LIMA_PODMAN_CLI_VERSION }
         },
@@ -515,7 +519,7 @@ describe("registry", () => {
             name: "limactl",
             path: LIMA_PATH,
             scope: LIMA_PODMAN_INSTANCE,
-            version: ""
+            version: LIMA_VERSION
           },
           program: { name: "podman", path: LIMA_PODMAN_CLI_PATH, version: LIMA_PODMAN_CLI_VERSION }
         }
@@ -554,7 +558,7 @@ describe("registry", () => {
             name: "limactl",
             path: LIMA_PATH,
             scope: LIMA_DOCKER_INSTANCE,
-            version: ""
+            version: LIMA_VERSION
           },
           program: {
             name: "docker",
@@ -579,7 +583,7 @@ describe("registry", () => {
             name: "limactl",
             path: LIMA_PATH,
             scope: LIMA_DOCKER_INSTANCE,
-            version: ""
+            version: LIMA_VERSION
           },
           program: {
             name: "docker",

@@ -38,25 +38,25 @@ class VirtualContainerClient extends AbstractContainerClient {
   }
 
   async getEngine() {
-    const cli = this.controller;
     const controller = {
       detect: {
-        name: cli,
+        name: this.controller,
         path: "",
         version: "",
         scope: this.scope
       },
       custom: {
-        name: cli,
-        path: this.userConfiguration.getKey(`${this.id}.${cli}.path`),
-        scope: this.userConfiguration.getKey(`${this.id}.${cli}.scope`)
+        name: this.controller,
+        path: this.userConfiguration.getKey(`${this.id}.${this.controller}.path`),
+        scope: this.userConfiguration.getKey(`${this.id}.${this.controller}.scope`)
       }
     };
     // Restrict
     const isMatchingOs = await this.isAllowedOperatingSystem();
     if (isMatchingOs) {
-      const detection = await findProgram(cli);
-      controller.detect = merge(controller.detect, detection);
+      const detection = await findProgram(this.controller);
+      controller.detect.path = detection.path;
+      controller.detect.version = detection.version;
     } else {
       this.logger.debug("Skip controller path detection - non matching operating system");
     }

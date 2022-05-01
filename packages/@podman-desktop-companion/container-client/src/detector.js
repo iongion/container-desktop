@@ -2,76 +2,88 @@
 const os = require("os");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { exec_launcher } = require("@podman-desktop-companion/executor");
+const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // modules
 // locals
 const logger = createLogger("container-client.Detector");
 
 const findProgramPath = async (program, opts) => {
   let result;
-  let path = "";
+  let programPath = "";
   if (!program) {
-    throw new Error("Program must be specified");
+    logger.error("Unable to detect program path - program must be specified");
+    throw new Error("Unable to detect program path - program must be specified");
   }
   if (os.type() === "Windows_NT") {
-    result = await exec_launcher("where", [program], opts);
+    result = await exec_launcher_sync("where", [program], opts);
+    logger.debug("Detecting", program, "using - where >", result);
     if (result.success) {
       const output = result.stdout || "";
       const items = output.split("\r\n");
       const firstExe = items.find((it) => it.endsWith(".exe"));
       const firstItem = items[0];
       if (firstExe) {
-        path = firstExe;
+        programPath = firstExe;
       } else if (firstItem) {
-        path = firstItem;
+        programPath = firstItem;
       } else {
-        logger.warn("Unable to detect program path from parts - using where", result);
+        logger.warn(`Unable to detect ${program} cli program path path from parts - using where`, result);
       }
     } else {
-      logger.warn("Unable to detect program path - using where", result);
+      logger.warn(`Unable to detect ${program} cli program path - using where`, result);
     }
   }
-  if (!path) {
-    result = await exec_launcher("which", [program], opts);
+  if (!programPath) {
+    result = await exec_launcher_sync("which", [program], opts);
+    logger.debug("Detecting", program, "using - which >", result);
     if (result.success) {
-      path = result.stdout || "";
+      programPath = result.stdout || "";
     } else {
-      logger.warn("Unable to detect program path - using which", result);
+      logger.warn(`Unable to detect ${program} cli program path - using which`, result);
     }
   }
-  if (!path) {
-    result = await exec_launcher("whereis", [program], opts);
+  if (!programPath) {
+    result = await exec_launcher_sync("whereis", [program], opts);
+    logger.debug("Detecting", program, "using - whereis >", result);
     if (result.success) {
-      path = result.stdout.split(" ")?.[1] || "";
+      programPath = result.stdout.split(" ")?.[1] || "";
     } else {
-      logger.warn("Unable to detect program path - using whereis", result);
+      logger.warn(`Unable to detect ${program} cli program path - using whereis`, result);
     }
   }
-  if (!path) {
+  if (!programPath) {
     logger.error(`Unable to detect ${program} cli program path with any strategy`, { wrapper: opts?.wrapper });
   }
-  return path.trim();
+  return programPath.trim();
 };
 const findProgramVersion = async (program, opts) => {
   if (!program) {
     throw new Error("Program must be specified");
   }
   let version = "";
-  const result = await exec_launcher(program, ["--version"], opts);
+  const result = await exec_launcher_sync(program, ["--version"], opts);
   if (result.success) {
-    version = (`${result.stdout}`.trim().split(" ")?.[2] || "").replace(",", "");
+    version = `${result.stdout}`.trim().split(",")?.[0].split(" ")?.[2] || "";
+  } else {
+    logger.error(`Unable to detect ${program} cli program version`, result);
   }
   return version.trim();
 };
 const findProgram = async (program, opts) => {
-  const path = await findProgramPath(program, opts);
   let version = "";
-  if (path) {
-    version = await findProgramVersion(path, opts);
+  if (!program) {
+    logger.error("Unable to detect program - program must be specified");
+    throw new Error("Unable to detect program - program must be specified");
+  }
+  const programPath = await findProgramPath(program, opts);
+  if (programPath) {
+    version = await findProgramVersion(programPath, opts);
+  } else {
+    logger.error(`No path found for ${program} cli program - version check skipped`);
   }
   return {
     name: program,
-    path,
+    path: programPath,
     version
   };
 };

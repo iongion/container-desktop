@@ -14,25 +14,31 @@ const NATIVE_DOCKER_SOCKET_PATH = "/var/run/docker.sock";
 const NATIVE_PODMAN_SOCKET_PATH = "/tmp/podman-desktop-companion-podman-rest-api.sock";
 
 // Virtualized - Windows
-const WINDOWS_PODMAN_CLI_VERSION = "4.0.3-dev";
-const WINDOWS_PODMAN_CLI_PATH = "C:\\Program Files\\RedHat\\Podman\\podman.exe";
+const WINDOWS_PODMAN_NATIVE_CLI_VERSION = "4.0.3-dev";
+const WINDOWS_PODMAN_NATIVE_CLI_PATH = "C:\\Program Files\\RedHat\\Podman\\podman.exe";
 const WINDOWS_DOCKER_CLI_VERSION = "20.10.14";
 const WINDOWS_DOCKER_CLI_PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe";
 const WINDOWS_PODMAN_NAMED_PIPE = "//./pipe/podman-machine-default";
 const WINDOWS_DOCKER_NAMED_PIPE = "//./pipe/docker_engine";
 
 // Virtualized - MacOS
-const MACOS_PODMAN_CLI_VERSION = "4.0.2";
-const MACOS_PODMAN_CLI_PATH = "/usr/bin/podman";
+const MACOS_DOCKER_NATIVE_CLI_VERSION = "20.10.8";
+const MACOS_DOCKER_NATIVE_CLI_PATH = "/usr/local/bin/docker";
+const MACOS_PODMAN_NATIVE_CLI_VERSION = "4.0.3";
+const MACOS_PODMAN_NATIVE_CLI_PATH = "/usr/local/bin/podman";
+const MACOS_PODMAN_MACHINE_CLI_VERSION = "4.0.2";
+const MACOS_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 const MACOS_PODMAN_CONTROLLER_CLI_PATH = "/usr/local/bin/podman";
 const MACOS_PODMAN_SOCKET_PATH = path.join(
   process.env.HOME,
   ".local/share/containers/podman/machine/podman-machine-default/podman.sock"
 );
+const MACOS_PODMAN_CONTROLLER_CLI_VERSION = "4.0.3";
 
 // WSL
-const WSL_DISTRIBUTION = "Ubuntu-20.04";
 const WSL_PATH = "C:\\Windows\\System32\\wsl.exe";
+const WSL_VERSION = "2"; // The cli does not report a version
+const WSL_DISTRIBUTION = "Ubuntu-20.04";
 const WSL_PODMAN_CLI_PATH = "/usr/bin/podman";
 const WSL_PODMAN_CLI_VERSION = "3.4.2";
 const WSL_DOCKER_CLI_PATH = "/usr/bin/docker";
@@ -73,6 +79,7 @@ const WSL_DISTRIBUTIONS = [
 
 // LIMA
 const LIMA_PATH = "/usr/local/bin/limactl";
+const LIMA_VERSION = "0.9.2";
 const LIMA_DOCKER_CLI_PATH = "/usr/bin/docker";
 const LIMA_DOCKER_CLI_VERSION = "20.10.14";
 const LIMA_PODMAN_CLI_PATH = "/usr/bin/podman";
@@ -116,19 +123,25 @@ module.exports = {
   NATIVE_DOCKER_SOCKET_PATH,
   NATIVE_PODMAN_SOCKET_PATH,
   // Virtualized - MacOS
-  MACOS_PODMAN_CLI_VERSION,
-  MACOS_PODMAN_CLI_PATH,
+  MACOS_DOCKER_NATIVE_CLI_VERSION,
+  MACOS_DOCKER_NATIVE_CLI_PATH,
+  MACOS_PODMAN_NATIVE_CLI_VERSION,
+  MACOS_PODMAN_NATIVE_CLI_PATH,
+  MACOS_PODMAN_MACHINE_CLI_VERSION,
+  MACOS_PODMAN_MACHINE_CLI_PATH,
+  MACOS_PODMAN_CONTROLLER_CLI_VERSION,
   MACOS_PODMAN_CONTROLLER_CLI_PATH,
   MACOS_PODMAN_SOCKET_PATH,
   // Virtualized - Windows
-  WINDOWS_PODMAN_CLI_VERSION,
-  WINDOWS_PODMAN_CLI_PATH,
+  WINDOWS_PODMAN_NATIVE_CLI_VERSION,
+  WINDOWS_PODMAN_NATIVE_CLI_PATH,
   WINDOWS_DOCKER_CLI_VERSION,
   WINDOWS_DOCKER_CLI_PATH,
   WINDOWS_PODMAN_NAMED_PIPE,
   WINDOWS_DOCKER_NAMED_PIPE,
   // WSL - Windows
   WSL_PATH,
+  WSL_VERSION,
   WSL_DOCKER_CLI_PATH,
   WSL_DOCKER_CLI_VERSION,
   WSL_PODMAN_CLI_PATH,
@@ -139,6 +152,7 @@ module.exports = {
   WSL_DISTRIBUTIONS,
   // LIMA - MacOS
   LIMA_PATH,
+  LIMA_VERSION,
   LIMA_DOCKER_CLI_PATH,
   LIMA_DOCKER_CLI_VERSION,
   LIMA_PODMAN_CLI_PATH,

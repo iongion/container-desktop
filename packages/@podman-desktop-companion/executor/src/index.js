@@ -29,16 +29,15 @@ function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   }
   const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
   const command = [spawnLauncher, ...spawnArgs].join(" ");
-  logger.debug("[SC.A][>]", command, spawnLauncherOpts);
   if (!spawnLauncher) {
-    logger.error("[SC.A][>]", command, spawnLauncherOpts);
+    logger.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
     throw new Error("Launcher path must be set");
   }
   if (typeof spawnLauncher !== "string") {
-    logger.error("[SC.A][>]", command, spawnLauncherOpts);
+    logger.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
     throw new Error("Launcher path has invalid type");
   }
-  logger.debug("[SC.A][>][spawn]", { spawnLauncher, spawnArgs, spawnLauncherOpts });
+  logger.debug("[SC.A][>][spawn]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
   const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
   child.command = command;
   return child;
@@ -99,7 +98,7 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
       } else {
         process.pid = child.pid;
         process.code = child.exitCode;
-        process.stderr = process.stderr || data;
+        process.stderr = process.stderr || "";
         process.success = child.exitCode === 0;
         process.command = child.command;
         resolved = true;
@@ -195,14 +194,14 @@ async function exec_service(opts) {
       let retries = retry?.count || 5;
       const wait = retry?.wait || 1000;
       const IID = setInterval(async () => {
-        // logger.error('Remaining', retries, 'of', retry?.count);
+        logger.debug("Remaining", retries, "of", retry?.count);
         if (retries === 0) {
           clearInterval(IID);
-          // logger.error('Max retries reached');
+          logger.error("Max retries reached");
           em.emit("error", { type: "domain.max-retries", code: undefined });
         } else {
           const running = await checkStatus();
-          // logger.error('Checking running first time after start', running);
+          logger.debug("Checking running first time after start", running);
           if (running) {
             clearInterval(IID);
             isManagedExit = true;
@@ -229,7 +228,7 @@ async function exec_service(opts) {
       child = wrapSpawnAsync(programPath, programArgs, launcherOpts);
       process.pid = child.pid;
       child.on("exit", (code) => onProcessExit(child, code));
-      // child.on("close", (code) => onProcessClose(child, code));
+      child.on("close", (code) => onProcessClose(child, code));
       child.on("error", (error) => onProcessError(child, error));
       child.stdout.setEncoding("utf8");
       child.stdout.on("data", (data) => onProcessData(child, "stdout", data.toString()));
@@ -237,10 +236,10 @@ async function exec_service(opts) {
       child.stderr.on("data", (data) => onProcessData(child, "stderr", data.toString()));
       if (typeof child.pid === "undefined") {
         process.success = false;
-        // logger.error('Child process spawn failure', process);
+        logger.error("Child process spawn failure", process);
       } else {
         process.success = true;
-        // logger.error('Child process spawn success', process);
+        logger.error("Child process spawn success", process);
         waitForProcess(child);
       }
     };
