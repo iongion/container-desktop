@@ -127,7 +127,7 @@ const servicesMap = {
         clientId: currentEngine.id,
         startApi,
         minimizeToSystemTray: false,
-        path: "",
+        path: userSettings.getPath(),
         logging: {
           level: "debug"
         }
