@@ -4,11 +4,11 @@ const os = require("os");
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
-const { VirtualContainerClient } = require("./virtual");
+const { AbstractVirtualContainerClient } = require("./virtual");
 // locals
 const CONTROLLER = "limactl";
 
-class LIMAVirtualContainerClient extends VirtualContainerClient {
+class LIMAVirtualContainerClient extends AbstractVirtualContainerClient {
   constructor(userConfiguration, id, engine, program, scope) {
     super(userConfiguration, id, engine, program, { controller: CONTROLLER, scope: scope });
   }

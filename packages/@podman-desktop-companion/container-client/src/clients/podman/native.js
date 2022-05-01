@@ -2,13 +2,13 @@
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
-const { BaseContainerClient } = require("../base/native");
+const { AbstractNativeContainerClient } = require("../base/native");
 const { Runner } = require("../../api");
 // locals
 const PROGRAM = "podman";
 const ENGINE = `${PROGRAM}.native`;
 
-class ContainerClient extends BaseContainerClient {
+class ContainerClient extends AbstractNativeContainerClient {
   constructor(userConfiguration, id) {
     super(userConfiguration, id, ENGINE, PROGRAM);
     this.nativeApiStarterProcess = undefined;

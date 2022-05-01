@@ -1,14 +1,13 @@
 // node
-const path = require("path");
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
-const { BaseContainerClient } = require("../base/native");
+const { AbstractNativeContainerClient } = require("../base/native");
 // locals
 const PROGRAM = "docker";
 const ENGINE = `${PROGRAM}.native`;
 
-class ContainerClient extends BaseContainerClient {
+class ContainerClient extends AbstractNativeContainerClient {
   constructor(userConfiguration, id) {
     super(userConfiguration, id, ENGINE, PROGRAM);
   }

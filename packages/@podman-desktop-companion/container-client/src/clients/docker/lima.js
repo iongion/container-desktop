@@ -53,22 +53,6 @@ class ContainerClient extends LIMAVirtualContainerClient {
     // System connections make no sense for Docker
     return Promise.resolve([]);
   }
-
-  // API connectivity and startup
-  async startApi(opts) {
-    const settings = await this.getCurrentSettings();
-    return await this.runner.startApi(opts, {
-      path: settings.controller.path,
-      args: ["start", settings.controller.scope]
-    });
-  }
-  async stopApi(opts) {
-    const settings = await this.getCurrentSettings();
-    return await this.runner.stopApi(opts, {
-      path: settings.controller.path,
-      args: ["stop", settings.controller.scope]
-    });
-  }
 }
 
 module.exports = {

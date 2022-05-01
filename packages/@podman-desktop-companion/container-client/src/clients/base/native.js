@@ -8,7 +8,7 @@ const { AbstractContainerClient } = require("../abstract");
 const { findProgram } = require("../../detector");
 // locals
 
-class BaseContainerClient extends AbstractContainerClient {
+class AbstractNativeContainerClient extends AbstractContainerClient {
   async getWrapper() {
     return undefined;
   }
@@ -91,5 +91,5 @@ class BaseContainerClient extends AbstractContainerClient {
 }
 
 module.exports = {
-  BaseContainerClient
+  AbstractNativeContainerClient
 };

@@ -9,6 +9,173 @@ This library addresses the following needs
 * Ability to create api driver
 * Ability to interact with current command line tool of each container engine, in a unified manner
 
+## Design
+
+Class diagram
+
+```mermaid
+classDiagram
+
+class AbstractContainerClient {
+  +getMergedSettings(engine~Engine~) Settings
+  +getCurrentSettings() Settings
+  +createApiConfiguration(settings~Settings~)* ApiConfiguration
+  +getApiConfig() ApiConfiguration
+  +getApiDriver() ApiDriver
+  +isApiConfigured()* bool
+  +isApiScopeAvailable()* bool
+  +isApiAvailable()* bool
+  +isApiRunning() bool
+  +startApi()* bool
+  +stopApi()* bool
+  +checkAvailability()* bool
+  +getEngine()* Engine
+  +getMachines() List~PodmanMachine~
+  +getSystemInfo()* SystemInfo
+  +getSystemConnections()* List~PodmanSystemConnection~
+}
+
+class AbstractNativeContainerClient {
+  +getWrapper() Wrapper
+  +checkAvailability() bool
+  +getEngine() Engine
+  +isApiConfigured() bool
+  +isApiScopeAvailable() bool
+  +isApiAvailable() bool
+}
+AbstractNativeContainerClient --|> AbstractContainerClient
+
+class PodmanNativeContainerClient {
+  +getWrapper()* Wrapper
+  +checkAvailability() bool
+  +getEngine() Engine
+
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +getMachines() List~PodmanMachine~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~PodmanSystemConnection~
+
+  +startApi()* bool
+  +stopApi()* bool
+}
+PodmanNativeContainerClient --|> AbstractNativeContainerClient
+
+class DockerNativeContainerClient {
+  +getWrapper()* Wrapper
+  +checkAvailability() bool
+  +getEngine() Engine
+
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +getMachines() List~empty~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~empty~
+
+  +startApi()* bool
+  +stopApi()* bool
+}
+DockerNativeContainerClient --|> AbstractNativeContainerClient
+
+class AbstractVirtualContainerClient {
+  +getWrapper()* Wrapper
+  +isAllowedOperatingSystem()* bool
+  +checkAvailability() bool
+  +getEngine() EngineWithController
+  
+  +isApiConfigured() bool
+  +isApiScopeAvailable() bool
+  +isApiAvailable() bool
+}
+AbstractVirtualContainerClient --|> AbstractContainerClient
+
+class LIMAVirtualContainerClient {
+  +getWrapper() Wrapper
+  +isAllowedOperatingSystem() bool
+  +getAvailableInstances() List~LIMAInstance~
+
+  +isApiScopeAvailable() bool
+  +checkAvailability() bool
+
+  +startApi() bool
+  +stopApi() bool
+}
+LIMAVirtualContainerClient --|> AbstractVirtualContainerClient
+
+class LIMADockerContainerClient {
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +getMachines() List~empty~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~empty~
+}
+LIMADockerContainerClient --|> LIMAVirtualContainerClient
+
+class LIMAPodmanContainerClient {
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +getMachines() List~Machine~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~SystemConnection~
+}
+LIMAPodmanContainerClient --|> LIMAVirtualContainerClient
+
+class WSLVirtualContainerClient {
+  +getWrapper() Wrapper
+  +isAllowedOperatingSystem() bool
+  +getAvailableDistributions() List~WSLDistribution~
+}
+WSLVirtualContainerClient --|> AbstractVirtualContainerClient
+
+class WSLDockerContainerClient {
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +getMachines() List~empty~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~empty~
+
+  +startApi() bool
+  +stopApi() bool
+}
+WSLDockerContainerClient --|> WSLVirtualContainerClient
+
+class WSLPodmanContainerClient {
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +getMachines() List~empty~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~empty~
+
+  +startApi() bool
+  +stopApi() bool
+}
+WSLPodmanContainerClient --|> WSLVirtualContainerClient
+
+class DockerVirtualizedContainerClient {
+
+  +checkAvailability() bool
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +getMachines() List~empty~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~empty~
+
+  +startApi() bool
+  +stopApi() bool
+}
+DockerVirtualizedContainerClient --|> AbstractNativeContainerClient
+
+class PodmanVirtualizedContainerClient {
+  +getWrapper() Wrapper
+  +createApiConfiguration(settings~Settings~) ApiConfiguration
+  +isAllowedOperatingSystem() bool
+  +isApiScopeAvailable() bool
+  +checkAvailability() bool
+
+  +getMachines() List~PodmanMachine~
+  +getSystemInfo() SystemInfo
+  +getSystemConnections() List~PodmanSystemConnection~
+
+  +startApi() bool
+  +stopApi() bool
+}
+PodmanVirtualizedContainerClient --|> AbstractVirtualContainerClient
+
+```
+
 ## Developing
 
 Needs Linux, Windows and Macos machines, physical is the recommended path, with OpenSSH server running on each.
@@ -26,7 +193,7 @@ To support a new engine, there are 4 execution modes that can be added:
 3. **LIMA** - MacOS specific virtualization technology.
 4. **WSL** - Windows specific virtualization technology.
 
-TLDR extensions guide:
+### TLDR extensions guide
 
 * A new engine must realize the abstract methods of the `AbstractContainerClient` class.
 * To support detection of programs and overrides by user, the overrides must all be realized.

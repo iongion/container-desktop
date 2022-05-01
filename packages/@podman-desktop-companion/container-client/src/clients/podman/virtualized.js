@@ -5,7 +5,7 @@ const path = require("path");
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
-const { VirtualContainerClient } = require("../base/virtual");
+const { AbstractVirtualContainerClient } = require("../base/virtual");
 const { Runner } = require("../../api");
 // locals
 const PROGRAM = "podman";
@@ -13,7 +13,7 @@ const ENGINE = `${PROGRAM}.virtualized`;
 const CONTROLLER = "podman";
 const SCOPE = `${PROGRAM}-machine-default`;
 
-class ContainerClient extends VirtualContainerClient {
+class ContainerClient extends AbstractVirtualContainerClient {
   constructor(userConfiguration, id) {
     super(userConfiguration, id, ENGINE, PROGRAM, { controller: CONTROLLER, scope: SCOPE });
     this.runner = new Runner(this);

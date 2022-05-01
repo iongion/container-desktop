@@ -4,11 +4,11 @@ const os = require("os");
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
-const { VirtualContainerClient } = require("./virtual");
+const { AbstractVirtualContainerClient } = require("./virtual");
 // locals
 const CONTROLLER = "wsl";
 
-class WSLVirtualContainerClient extends VirtualContainerClient {
+class WSLVirtualContainerClient extends AbstractVirtualContainerClient {
   constructor(userConfiguration, id, engine, program, distribution) {
     super(userConfiguration, id, engine, program, { controller: CONTROLLER, scope: distribution });
   }

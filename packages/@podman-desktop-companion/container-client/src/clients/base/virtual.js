@@ -6,10 +6,10 @@ const merge = require("lodash.merge");
 // project
 // module
 const { AbstractContainerClient } = require("../abstract");
-const { findProgram, findProgramPath, findProgramVersion } = require("../../detector");
+const { findProgram } = require("../../detector");
 // locals
 
-class VirtualContainerClient extends AbstractContainerClient {
+class AbstractVirtualContainerClient extends AbstractContainerClient {
   constructor(userConfiguration, id, engine, program, { controller, scope }) {
     super(userConfiguration, id, engine, program);
     // More settings
@@ -139,5 +139,5 @@ class VirtualContainerClient extends AbstractContainerClient {
 }
 
 module.exports = {
-  VirtualContainerClient
+  AbstractVirtualContainerClient
 };
