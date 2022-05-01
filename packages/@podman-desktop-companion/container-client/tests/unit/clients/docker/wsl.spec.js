@@ -27,8 +27,6 @@ const EXPECTED_SYSTEM_INFO_WSL = {
 };
 const EXPECTED_SYSTEM_CONNECTIONS_WSL = [];
 
-jest.setTimeout(30000);
-
 describe("Docker.WSL.ContainerClient", () => {
   let configuration;
   let client;

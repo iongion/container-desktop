@@ -10,6 +10,9 @@ module.exports = {
   // Stop running tests after `n` failures
   bail: 1,
 
+  // 50 seconds
+  testTimeout: 50000,
+
   // The directory where Jest should store its cached dependency information
   // cacheDirectory: "C:\\Users\\Ionut Stoica\\AppData\\Local\\Temp\\jest",
 

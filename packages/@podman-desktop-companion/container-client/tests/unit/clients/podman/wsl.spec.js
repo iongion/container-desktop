@@ -21,8 +21,6 @@ const EXPECTED_SYSTEM_INFO_WSL = {
 };
 const EXPECTED_SYSTEM_CONNECTIONS_WSL = [];
 
-jest.setTimeout(30000);
-
 describe("Podman.WSL.ContainerClient", () => {
   let configuration;
   let client;

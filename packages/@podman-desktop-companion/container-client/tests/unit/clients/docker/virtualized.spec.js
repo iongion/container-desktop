@@ -33,8 +33,6 @@ const EXPECTED_SYSTEM_CONNECTIONS_LINUX = [];
 const EXPECTED_SYSTEM_CONNECTIONS_WINDOWS = [];
 const EXPECTED_SYSTEM_CONNECTIONS_MACOS = [];
 
-jest.setTimeout(30000);
-
 describe("Docker.Virtualized.ContainerClient", () => {
   let configuration;
   let client;

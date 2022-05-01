@@ -65,8 +65,6 @@ const {
   LIMA_PODMAN_SOCKET_PATH
 } = require("../fixtures");
 
-jest.setTimeout(50000); // Give time for windows testing VM
-
 // beforeAll(async () => {
 //   await ensurePodmanMachineIsRunning();
 //   await ensureLIMAInstanceIsRunning();
@@ -93,7 +91,7 @@ describe("registry", () => {
     ]);
   });
   testOnLinux("getDefaultEngines", async () => {
-    const engines = await registry.getEngines();
+    const engines = await registry.getDefaultEngines();
     // podman native
     expected = engines.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toStrictEqual({
@@ -198,7 +196,7 @@ describe("registry", () => {
     });
   });
   testOnWindows("getDefaultEngines", async () => {
-    const engines = await registry.getEngines();
+    const engines = await registry.getDefaultEngines();
     // podman native
     expected = engines.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toMatchObject({
@@ -416,7 +414,7 @@ describe("registry", () => {
     });
   });
   testOnMacOS("getDefaultEngines", async () => {
-    const engines = await registry.getEngines();
+    const engines = await registry.getDefaultEngines();
     // podman native
     expected = engines.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toMatchObject({

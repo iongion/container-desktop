@@ -15,8 +15,6 @@ const EXPECTED_MACHINES_MACOS = [];
 const EXPECTED_SYSTEM_INFO_MACOS = {};
 const EXPECTED_SYSTEM_CONNECTIONS_MACOS = [];
 
-jest.setTimeout(30000);
-
 describe("Docker.LIMA.ContainerClient", () => {
   let configuration;
   let client;

@@ -55,8 +55,6 @@ const EXPECTED_SYSTEM_INFO_LINUX = {
 };
 const EXPECTED_SYSTEM_CONNECTIONS_LINUX = [];
 
-jest.setTimeout(30000);
-
 describe("Docker.Native.ContainerClient", () => {
   let configuration;
   let client;

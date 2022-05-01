@@ -30,8 +30,6 @@ const {
   LIMA_PATH
 } = require("../fixtures");
 
-jest.setTimeout(50000); // Give time for windows testing VM
-
 // beforeAll(async () => {
 //   await ensurePodmanMachineIsRunning();
 //   await ensureLIMAInstanceIsRunning();

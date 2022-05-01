@@ -99,8 +99,6 @@ const EXPECTED_SYSTEM_CONNECTIONS_LINUX = [];
 const EXPECTED_SYSTEM_CONNECTIONS_WINDOWS = [];
 const EXPECTED_SYSTEM_CONNECTIONS_MACOS = [];
 
-jest.setTimeout(30000);
-
 // beforeAll(async () => {
 //   await ensurePodmanMachineIsRunning();
 //   await ensureLIMAInstanceIsRunning();

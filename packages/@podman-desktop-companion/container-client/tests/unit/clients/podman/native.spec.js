@@ -48,8 +48,6 @@ const EXPECTED_SYSTEM_CONNECTIONS_LINUX = [
   }
 ];
 
-jest.setTimeout(30000);
-
 describe("Podman.Native.ContainerClient", () => {
   let configuration;
   let client;
