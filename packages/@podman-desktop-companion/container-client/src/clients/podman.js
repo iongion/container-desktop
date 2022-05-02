@@ -26,7 +26,6 @@ const WINDOWS_PODMAN_NATIVE_CLI_VERSION = "4.0.3-dev";
 const WINDOWS_PODMAN_NATIVE_CLI_PATH = "C:\\Program Files\\RedHat\\Podman\\podman.exe";
 const WINDOWS_PODMAN_MACHINE_CLI_VERSION = "20.10.14";
 const WINDOWS_PODMAN_MACHINE_CLI_PATH = "C:\\Program Files\\PODMAN\\PODMAN\\resources\\bin\\podman.exe";
-const WINDOWS_PODMAN_MACHINE_NAMED_PIPE = "//./pipe/podman-machine-default";
 
 const MACOS_PODMAN_NATIVE_CLI_VERSION = "4.0.3";
 const MACOS_PODMAN_NATIVE_CLI_PATH = "/usr/local/bin/podman";
@@ -369,20 +368,50 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
   async getExpectedSettings() {
     const defaults = await super.getExpectedSettings();
     const connectionString = await this.getConnectionString(PODMAN_MACHINE_DEFAULT);
+    let config = {};
+    if (this.osType === "Linux") {
+      config = {
+        controller: {
+          path: NATIVE_PODMAN_CLI_PATH,
+          version: NATIVE_PODMAN_CLI_VERSION,
+          scope: PODMAN_MACHINE_DEFAULT
+        },
+        program: {
+          path: NATIVE_PODMAN_MACHINE_CLI_PATH,
+          version: NATIVE_PODMAN_MACHINE_CLI_VERSION
+        }
+      };
+    } else if (this.osType === "Windows_NT") {
+      config = {
+        controller: {
+          path: WINDOWS_PODMAN_NATIVE_CLI_PATH,
+          version: WINDOWS_PODMAN_NATIVE_CLI_VERSION,
+          scope: PODMAN_MACHINE_DEFAULT
+        },
+        program: {
+          path: WINDOWS_PODMAN_MACHINE_CLI_PATH,
+          version: WINDOWS_PODMAN_MACHINE_CLI_VERSION
+        }
+      };
+    } else if (this.osType === "Darwin") {
+      config = {
+        controller: {
+          path: MACOS_PODMAN_NATIVE_CLI_PATH,
+          version: MACOS_PODMAN_NATIVE_CLI_VERSION,
+          scope: PODMAN_MACHINE_DEFAULT
+        },
+        program: {
+          path: MACOS_PODMAN_MACHINE_CLI_PATH,
+          version: MACOS_PODMAN_MACHINE_CLI_VERSION
+        }
+      };
+    }
     return merge({}, defaults, {
       api: {
         baseURL: PODMAN_API_BASE_URL,
         connectionString: connectionString
       },
-      controller: {
-        path: NATIVE_PODMAN_CLI_PATH,
-        version: NATIVE_PODMAN_CLI_VERSION,
-        scope: PODMAN_MACHINE_DEFAULT
-      },
-      program: {
-        path: NATIVE_PODMAN_MACHINE_CLI_PATH,
-        version: NATIVE_PODMAN_MACHINE_CLI_VERSION
-      }
+      ...config
     });
   }
   // Runtime
