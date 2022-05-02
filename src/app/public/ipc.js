@@ -105,32 +105,52 @@ const servicesMap = {
     // User preferences impacting startup
     let startApi = true;
     // AppStartup object
-    const currentEngine = application.getCurrentEngine();
-    let provisioned = false;
+    let currentEngine = application.getCurrentEngine();
     let running = false;
     let system = {};
     let connections = [];
-    if (currentEngine) {
+    const isProvisioned = () => {
+      let flag = false;
+      if (!currentEngine) {
+        return flag;
+      }
+      const hasController = !!currentEngine.settings.current.controller;
       const programIsSet = !!currentEngine.settings.current.program.path;
-      provisioned = programIsSet;
-      if (provisioned) {
-        const client = registry.getEngineClientById(currentEngine.id);
-        application.client = client;
-        if (client) {
-          system = await client.getSystemInfo();
-          connections = await client.getSystemConnections();
-          const result = await client.isApiRunning();
-          running = result.success;
-          if (!running && startApi) {
-            running = await client.startApi();
-          }
-        } else {
-          logger.error("Unable to find client for current engine api", currentEngine);
+      if (hasController) {
+        const controllerIsSet = !!currentEngine.settings.current.controller.path;
+        flag = controllerIsSet && programIsSet;
+      } else {
+        flag = programIsSet;
+      }
+      return flag;
+    };
+    if (currentEngine) {
+      const client = registry.getEngineClientById(currentEngine.id);
+      if (client) {
+        let result = await client.isApiRunning();
+        running = result.success;
+        if (!running && startApi) {
+          running = await client.startApi();
+          currentEngine = await client.getEngine();
+          registry.updateEngine(currentEngine.id, currentEngine);
         }
+        application.client = client;
+        try {
+          system = await client.getSystemInfo();
+        } catch (error) {
+          logger.error("Unable to extract system info", error.message, error.stack, currentEngine);
+        }
+        try {
+          connections = await client.getSystemConnections();
+        } catch (error) {
+          logger.error("Unable to list system connections", error.message, error.stack, currentEngine);
+        }
+      } else {
+        logger.error("Unable to find client for current engine api", currentEngine);
       }
     }
     return {
-      provisioned,
+      provisioned: isProvisioned(),
       running,
       system,
       connections,

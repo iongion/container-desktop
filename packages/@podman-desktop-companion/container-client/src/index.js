@@ -1,18 +1,16 @@
 // module
 const { createApiDriver } = require("./api");
 const Detector = require("./detector");
-const Docker = require("./clients/docker");
-const Podman = require("./clients/podman");
+const Clients = require("./clients");
 const { Registry } = require("./registry");
 const { UserConfiguration } = require("./configuration");
+const { Application } = require("./application");
 
 module.exports = {
+  Application,
   createApiDriver,
   Detector,
-  Clients: {
-    Docker,
-    Podman
-  },
+  Clients,
   Registry,
   UserConfiguration
 };
