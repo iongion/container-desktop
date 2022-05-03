@@ -63,7 +63,7 @@ class PodmanClientEngine {
     this.userConfiguration = userConfiguration;
     this.settings = undefined;
     this.apiDriver = undefined;
-    this.logger = createLogger(`podman.${this.ENGINE || "Engine"}.client`);
+    this.logger = createLogger(`${PROGRAM}.${this.ENGINE || "Engine"}.client`);
     this.osType = osType || os.type();
     this.runner = new Runner(this);
   }
@@ -141,6 +141,15 @@ class PodmanClientEngine {
     if (!settings.current.api.connectionString) {
       result.details = "API connection string is not set";
       return result;
+    }
+    // Check unix socket as file
+    if (this.osType === "Windows_NT") {
+      // TODO: Check named pipe
+    } else {
+      if (!fs.existsSync(settings.current.api.connectionString)) {
+        result.details = "API connection string as unix path is not present";
+        return result;
+      }
     }
     result.success = true;
     result.details = "API is configured";
@@ -424,6 +433,7 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
       return true;
     }
     const settings = await this.getCurrentSettings();
+    // TODO: Safe to stop first before starting ?
     return await this.runner.startApi(opts, {
       path: settings.controller.path,
       args: ["machine", "start", settings.controller.scope]
@@ -477,7 +487,7 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
   async runScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
     const command = ["machine", "ssh", program, ...args];
-    const result = await exec_launcher(controller.path, command);
+    const result = await exec_launcher(controller.path, command, opts);
     return result;
   }
 }
@@ -542,11 +552,32 @@ class PodmanClientEngineSubsystemLIMA extends PodmanClientEngineControlled {
     };
   }
   // Runtime
-  async startApi() {
-    return true;
+  async startApi(opts) {
+    const running = await this.isApiRunning();
+    if (running.success) {
+      this.logger.debug("API is already running");
+      return true;
+    }
+    const settings = await this.getCurrentSettings();
+    // TODO: Safe to stop first before starting ?
+    return await this.runner.startApi(opts, {
+      path: settings.controller.path,
+      args: ["start", settings.controller.scope]
+    });
   }
-  async stopApi() {
-    return true;
+  async stopApi(opts) {
+    const settings = await this.getCurrentSettings();
+    return await this.runner.stopApi(opts, {
+      path: settings.controller.path,
+      args: ["stop", settings.controller.scope]
+    });
+  }
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    const { controller } = await this.getCurrentSettings();
+    const command = ["shell", controller.scope, program, ...args];
+    const result = await exec_launcher(controller.path, command, opts);
+    return result;
   }
 }
 
@@ -562,9 +593,9 @@ class PodmanClient extends BaseClient {
   async getEngines() {
     return [
       // PodmanClientEngineNative
-      PodmanClientEngineVirtualized
+      // PodmanClientEngineVirtualized
       // PodmanClientEngineSubsystemWSL
-      // PodmanClientEngineSubsystemLIMA
+      PodmanClientEngineSubsystemLIMA
     ].map((PodmanClientEngine) => {
       const engine = new PodmanClientEngine(this.userConfiguration, this.osType);
       return engine;
