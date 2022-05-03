@@ -191,9 +191,14 @@ async function exec_service(opts) {
       em.emit("data", { from, data });
     };
     const waitForProcess = (child) => {
+      let pending = false;
       let retries = retry?.count || 5;
       const wait = retry?.wait || 1000;
       const IID = setInterval(async () => {
+        if (pending) {
+          logger.debug("Waiting for result of last retry - skipping new retry");
+          return;
+        }
         logger.debug("Remaining", retries, "of", retry?.count);
         if (retries === 0) {
           clearInterval(IID);
@@ -201,18 +206,21 @@ async function exec_service(opts) {
           em.emit("error", { type: "domain.max-retries", code: undefined });
         } else {
           retries -= 1;
-          const running = await checkStatus();
-          logger.debug("Checking running first time after start", running);
+          pending = true;
+          let running = false;
+          try {
+            running = await checkStatus();
+          } catch (error) {
+            logger.error("Checked status - failed", error.message);
+          } finally {
+            logger.debug("Checked status", { running });
+          }
+          pending = false;
           if (running) {
             clearInterval(IID);
             isManagedExit = true;
-            const configured = await checkStatus();
-            if (configured) {
-              process.success = true;
-              em.emit("ready", { process, child });
-            } else {
-              em.emit("error", { type: "domain.not-configured", code: undefined });
-            }
+            process.success = true;
+            em.emit("ready", { process, child });
           } else {
             logger.error("Move to next retry", retries);
           }

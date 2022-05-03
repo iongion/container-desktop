@@ -118,7 +118,55 @@ class PodmanClientEngine {
     }
     return await this.runner.stopApi();
   }
+  // Availability
+  async isProgramAvailable() {
+    const result = { success: false, details: undefined };
+    const settings = await this.getSettings();
+    // Native path to program
+    if (!settings.current.program.path) {
+      result.details = "Program path is not set";
+    }
+    if (!fs.existsSync(settings.current.program.path)) {
+      result.details = "Program is not accessible";
+    }
+    return result;
+  }
+  async isApiAvailable() {
+    const result = { success: false, details: undefined };
+    const settings = await this.getSettings();
+    if (!settings.current.api.baseURL) {
+      result.details = "API base URL is not set";
+      return result;
+    }
+    if (!settings.current.api.connectionString) {
+      result.details = "API connection string is not set";
+      return result;
+    }
+    result.success = true;
+    result.details = "API is configured";
+    return result;
+  }
+  async getAvailability() {
+    const program = await this.isProgramAvailable();
+    const api = await this.isApiRunning();
+    const availability = {
+      all: program.success && api.success,
+      api: api.success,
+      program: program.success,
+      report: {
+        program: program.success ? "Program is available" : program.details,
+        api: api.success ? "Api is running" : api.details
+      }
+    };
+    return availability;
+  }
   async isApiRunning() {
+    // Guard configuration
+    const available = await this.isApiAvailable();
+    if (!available.success) {
+      return available;
+    }
+    // Test reachability
     const result = {
       success: false,
       details: undefined
@@ -127,35 +175,11 @@ class PodmanClientEngine {
     try {
       const response = await driver.get("/_ping");
       result.success = response?.data === "OK";
-      result.details = response?.data;
+      result.details = response?.data || "Api reached";
     } catch (error) {
-      result.details = error.message;
+      result.details = `API is not accessible - ${error.message}`;
     }
     return result;
-  }
-  // Availability
-  async isProgramAvailable() {
-    const settings = await this.getSettings();
-    const programExists = settings.current.program.path.length > 0 && fs.existsSync(settings.current.program.path);
-    return programExists;
-  }
-  async isApiAvailable() {
-    const settings = await this.getSettings();
-    const apiExists = settings.current.api.baseURL.length > 0 && settings.current.api.connectionString.length > 0;
-    return apiExists;
-  }
-  async getAvailability() {
-    const programAvailable = await this.isProgramAvailable();
-    const running = await this.isApiRunning();
-    const availability = {
-      all: programAvailable && running.success,
-      api: running.success,
-      program: programAvailable,
-      report: {
-        api: running.success ? "Api is running" : running.details
-      }
-    };
-    return availability;
   }
 }
 
@@ -179,10 +203,6 @@ class PodmanClientEngineNative extends PodmanClientEngine {
     };
   }
   async getUserSettings() {
-    if (this.osType !== "Linux") {
-      this.logger.warn("Settings user override is not supported on current operating system");
-      return info;
-    }
     return {
       api: {
         baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
@@ -195,10 +215,6 @@ class PodmanClientEngineNative extends PodmanClientEngine {
   }
   async getDetectedSettings(settings) {
     let info = {};
-    if (this.osType !== "Linux") {
-      this.logger.warn("Settings detection is not supported on current operating system");
-      return info;
-    }
     if (fs.existsSync(settings.program.path)) {
       const detectVersion = await findProgramVersion(settings.program.path || PROGRAM);
       info.program = {
@@ -210,21 +226,6 @@ class PodmanClientEngineNative extends PodmanClientEngine {
     return info;
   }
   // Runtime
-  async isApiRunning() {
-    const result = {
-      success: false,
-      details: undefined
-    };
-    const driver = await this.getApiDriver();
-    try {
-      const response = await driver.get("/_ping");
-      result.success = response?.data === "OK";
-      result.details = response?.data;
-    } catch (error) {
-      result.details = error.message;
-    }
-    return result;
-  }
   async startApi(opts) {
     const running = await this.isApiRunning();
     if (running.success) {
@@ -236,25 +237,6 @@ class PodmanClientEngineNative extends PodmanClientEngine {
       path: settings.program.path,
       args: ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"]
     });
-  }
-  // Availability
-  async isApiAvailable() {
-    const settings = await this.getSettings();
-    const apiExists = settings.current.api.baseURL.length > 0 && settings.current.api.connectionString.length > 0;
-    return apiExists;
-  }
-  async getAvailability() {
-    const programAvailable = await this.isProgramAvailable();
-    const running = await this.isApiRunning();
-    const availability = {
-      all: programAvailable && running.success,
-      api: running.success,
-      program: programAvailable,
-      report: {
-        api: running.success ? "Api is running" : running.details
-      }
-    };
-    return availability;
   }
 }
 
@@ -298,10 +280,6 @@ class PodmanClientEngineControlled extends PodmanClientEngine {
   }
   async getDetectedSettings(settings) {
     let info = {};
-    if (this.osType !== "Linux") {
-      this.logger.warn("Settings detection is not supported on current operating system");
-      return info;
-    }
     // controller
     if (fs.existsSync(settings.controller.path)) {
       const detectVersion = await findProgramVersion(settings.controller.path || PROGRAM);
@@ -326,6 +304,7 @@ class PodmanClientEngineControlled extends PodmanClientEngine {
     if (settings.current.controller.path) {
       if (fs.existsSync(settings.current.controller.path)) {
         success = true;
+        details = "Controller is available";
       } else {
         details = `Controller not found in expected ${settings.current.controller.path} location`;
       }
@@ -334,21 +313,44 @@ class PodmanClientEngineControlled extends PodmanClientEngine {
     }
     return { success, details };
   }
+  async isProgramAvailable() {
+    // Controller must be proper
+    const controller = await this.isControllerAvailable();
+    if (!controller.success) {
+      return controller;
+    }
+    // Perform actual program check
+    const result = { success: false, details: undefined };
+    const settings = await this.getSettings();
+    if (!settings.current.program.path) {
+      result.details = "Program path is not set";
+    }
+    // Controlled path to program
+    const check = await this.runScopedCommand("test", ["-f", settings.current.program.path]);
+    if (check.success) {
+      result.success = true;
+      result.details = "Program is available";
+    } else {
+      result.details = check.stderr;
+    }
+    return result;
+  }
   async getAvailability() {
-    const controllerAvailable = await this.isControllerAvailable();
-    const programAvailable = await this.isProgramAvailable();
-    const running = await this.isApiRunning();
-    const availability = {
-      all: programAvailable && controllerAvailable.success && running.success,
-      api: running.success,
-      controller: controllerAvailable.success,
-      program: programAvailable,
+    const base = await super.getAvailability();
+    const controller = await this.isControllerAvailable();
+    return {
+      ...base,
+      all: base.all && base.success,
+      controller: controller.success,
       report: {
-        api: running.success ? "Api is running" : running.details,
-        controller: controllerAvailable.success ? "Controller is running" : controllerAvailable.details
+        ...base.report,
+        controller: controller.success ? "Controller is running" : controller.details
       }
     };
-    return availability;
+  }
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    throw new Error("runScopedCommand must be implemented");
   }
 }
 
@@ -442,11 +444,14 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
     if (flag) {
       const machines = await this.getMachines();
       const target = machines.find((it) => it.Name === settings.current.controller.scope && it.Running);
-      if (!target) {
-        details = `${settings.current.controller.scope} is not running`;
+      if (target) {
+        flag = true;
+        details = `${settings.current.controller.scope} is running`;
+      } else {
+        flag = false;
+        details = `Controller ${settings.current.controller.scope} is not running`;
         this.logger.error("Controller is not available - no running machine found");
       }
-      flag = !!target;
     }
     return { success: flag, details };
   }
@@ -466,6 +471,14 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
       this.logger.error("Unable to decode machines list", error, result);
     }
     return items;
+  }
+
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    const { controller } = await this.getCurrentSettings();
+    const command = ["machine", "ssh", program, ...args];
+    const result = await exec_launcher(controller.path, command);
+    return result;
   }
 }
 
