@@ -72,9 +72,9 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const onConnectionStringChange = useCallback(
     (event: React.FormEvent<HTMLInputElement>) => {
       const sender = event.currentTarget;
-      // setConnectionString(sender.value);
+      setConnectionString(sender.value);
     },
-    [/*setConnectionString*/]
+    []
   );
   const onFindWSLProgramClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const result: Program = await findProgram({
@@ -276,7 +276,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
     () => {
       const engines = [
         // Podman
-        { engine: ContainerEngine.PODMAN_NATIVE, label: t("Podman Native"), active: false, enabled: true },
+        { engine: ContainerEngine.PODMAN_NATIVE, label: t("Podman Native"), active: false, enabled: platform === Platforms.Linux },
         {
           engine: ContainerEngine.PODMAN_VIRTUALIZED,
           label: t("Podman Machine"),
@@ -297,7 +297,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
           enabled: platform === Platforms.Windows
         },
         // Docker
-        { engine: ContainerEngine.DOCKER_NATIVE, label: t("Docker Native"), active: false, enabled: true },
+        { engine: ContainerEngine.DOCKER_NATIVE, label: t("Docker Native"), active: false, enabled: platform === Platforms.Linux },
         {
           engine: ContainerEngine.DOCKER_VIRTUALIZED,
           label: t("Docker Machine"),

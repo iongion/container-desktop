@@ -8,7 +8,6 @@ import {
   //
   ContainerClientResponse,
   Container,
-  ContainerEngine,
   ContainerStats,
   ContainerImageMount,
   ContainerImagePortMapping,
