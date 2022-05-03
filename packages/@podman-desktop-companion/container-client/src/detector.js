@@ -57,9 +57,13 @@ const findProgramPath = async (program, opts) => {
   }
   return programPath.trim();
 };
-const findProgramVersion = async (program, opts) => {
+const findProgramVersion = async (program, opts, defaultValue) => {
   if (!program) {
     throw new Error("Program must be specified");
+  }
+  if (program.endsWith("wsl.exe")) {
+    logger.warn("wsl.exe does not report a version - defaulting", defaultValue);
+    return defaultValue;
   }
   let version = "";
   const result = await exec_launcher_sync(program, ["--version"], opts);

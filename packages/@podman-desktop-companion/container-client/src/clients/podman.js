@@ -5,7 +5,7 @@ const path = require("path");
 const merge = require("lodash.merge");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { exec_launcher } = require("@podman-desktop-companion/executor");
+const { exec_launcher, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { findProgram, findProgramVersion } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
@@ -24,8 +24,8 @@ const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 
 const WINDOWS_PODMAN_NATIVE_CLI_VERSION = "4.0.3-dev";
 const WINDOWS_PODMAN_NATIVE_CLI_PATH = "C:\\Program Files\\RedHat\\Podman\\podman.exe";
-const WINDOWS_PODMAN_MACHINE_CLI_VERSION = "20.10.14";
-const WINDOWS_PODMAN_MACHINE_CLI_PATH = "C:\\Program Files\\PODMAN\\PODMAN\\resources\\bin\\podman.exe";
+const WINDOWS_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
+const WINDOWS_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 
 const MACOS_PODMAN_NATIVE_CLI_VERSION = "4.0.3";
 const MACOS_PODMAN_NATIVE_CLI_PATH = "/usr/local/bin/podman";
@@ -288,10 +288,14 @@ class PodmanClientEngineControlled extends PodmanClientEngine {
     };
   }
   async getDetectedSettings(settings) {
+    const controller = settings.controller.path || PROGRAM;
     let info = {};
     // controller
     if (fs.existsSync(settings.controller.path)) {
-      const detectVersion = await findProgramVersion(settings.controller.path || PROGRAM);
+      const detectVersion = await findProgramVersion(
+        controller,
+        this.osType === "Windows_NT" ? WSL_VERSION : undefined
+      );
       info.controller = {
         version: detectVersion
       };
@@ -470,7 +474,7 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
     let items = [];
     const { controller } = await this.getCurrentSettings();
     const command = ["machine", "list", "--format", customFormat || "json"];
-    const result = await exec_launcher(controller.path, command);
+    const result = await exec_launcher_sync(controller.path, command);
     if (!result.success) {
       this.logger.error("Unable to get machines list", result);
       return items;
@@ -486,8 +490,8 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
   // Executes command inside controller scope
   async runScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
-    const command = ["machine", "ssh", program, ...args];
-    const result = await exec_launcher(controller.path, command, opts);
+    const command = ["machine", "ssh", controller.scope, "-o", "LogLevel=ERROR", program, ...args];
+    const result = await exec_launcher_sync(controller.path, command, opts);
     return result;
   }
 }
@@ -519,10 +523,19 @@ class PodmanClientEngineSubsystemWSL extends PodmanClientEngineControlled {
   }
   // Runtime
   async startApi() {
+    this.logger.debug("Start api skipped - not required");
     return true;
   }
   async stopApi() {
+    this.logger.debug("Stop api skipped - not required");
     return true;
+  }
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    const { controller } = await this.getCurrentSettings();
+    const command = ["--distribution", controller.scope, program, ...args];
+    const result = await exec_launcher(controller.path, command, opts);
+    return result;
   }
 }
 
@@ -592,9 +605,9 @@ class PodmanClient extends BaseClient {
 
   async getEngines() {
     return [
-      // PodmanClientEngineNative
-      // PodmanClientEngineVirtualized
-      // PodmanClientEngineSubsystemWSL
+      PodmanClientEngineNative,
+      PodmanClientEngineVirtualized,
+      PodmanClientEngineSubsystemWSL,
       PodmanClientEngineSubsystemLIMA
     ].map((PodmanClientEngine) => {
       const engine = new PodmanClientEngine(this.userConfiguration, this.osType);
