@@ -5,21 +5,20 @@ const os = require("os");
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { AbstractVirtualContainerClient } = require("./virtual");
+const { LIMA_PATH } = require("../base/constants");
 // locals
 const CONTROLLER = "limactl";
 
 class LIMAVirtualContainerClient extends AbstractVirtualContainerClient {
   constructor(userConfiguration, id, engine, program, scope) {
     super(userConfiguration, id, engine, program, { controller: CONTROLLER, scope: scope });
+    this.controllerPathDefault = LIMA_PATH;
   }
 
-  async getWrapper(settings) {
-    if (typeof settings === "undefined") {
-      throw new Error("Cannot create wrapper - no settings");
-    }
+  async getWrapper({ controller }) {
     const wrapper = {
-      launcher: settings?.controller?.path,
-      args: ["shell", settings?.controller?.scope]
+      launcher: controller.path,
+      args: ["shell", controller.scope]
     };
     return wrapper;
   }

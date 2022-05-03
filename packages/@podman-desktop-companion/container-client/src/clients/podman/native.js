@@ -4,8 +4,8 @@ const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { AbstractNativeContainerClient } = require("../base/native");
 const { Runner } = require("../../api");
+const { PROGRAM, PODMAN_API_BASE_URL, NATIVE_PODMAN_CLI_PATH, NATIVE_PODMAN_SOCKET_PATH } = require("./constants");
 // locals
-const PROGRAM = "podman";
 const ENGINE = `${PROGRAM}.native`;
 
 class ContainerClient extends AbstractNativeContainerClient {
@@ -13,12 +13,13 @@ class ContainerClient extends AbstractNativeContainerClient {
     super(userConfiguration, id, ENGINE, PROGRAM);
     this.nativeApiStarterProcess = undefined;
     this.runner = new Runner(this);
+    this.programPathDefault = NATIVE_PODMAN_CLI_PATH;
   }
 
   async createApiConfiguration(settings) {
-    const connectionString = "/tmp/podman-desktop-companion-podman-rest-api.sock";
+    const connectionString = NATIVE_PODMAN_SOCKET_PATH;
     return {
-      baseURL: "http://d/v3.0.0/libpod",
+      baseURL: PODMAN_API_BASE_URL,
       connectionString
     };
   }

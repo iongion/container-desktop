@@ -3,19 +3,20 @@
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { WSLVirtualContainerClient } = require("../base/wsl");
+const { PROGRAM, PODMAN_API_BASE_URL, WSL_PODMAN_CLI_PATH } = require("./constants");
 // locals
-const PROGRAM = "podman";
 const ENGINE = `${PROGRAM}.subsystem.wsl`;
 const WSL_VM = "Ubuntu-20.04";
 
 class ContainerClient extends WSLVirtualContainerClient {
   constructor(userConfiguration, id, distribution) {
     super(userConfiguration, id, ENGINE, PROGRAM, distribution || WSL_VM);
+    this.programPathDefault = WSL_PODMAN_CLI_PATH;
   }
 
   async createApiConfiguration(settings) {
     return {
-      baseURL: "http://d/v3.0.0/libpod",
+      baseURL: PODMAN_API_BASE_URL,
       connectionString: `//./pipe/podman-desktop-companion-${PROGRAM}-${settings.controller.scope}`
     };
   }

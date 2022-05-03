@@ -90,10 +90,10 @@ describe("registry", () => {
       Docker.LIMA
     ]);
   });
-  testOnLinux("getDefaultEngines", async () => {
-    const engines = await registry.getDefaultEngines();
+  testOnLinux("getDefaultConnectors", async () => {
+    const connectors = await registry.getDefaultConnectors();
     // podman native
-    expected = engines.find((it) => it.id === "engine.default.podman.native");
+    expected = connectors.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "podman.native",
@@ -124,7 +124,7 @@ describe("registry", () => {
       }
     });
     // podman WSL
-    expected = engines.find((it) => it.id === "engine.default.podman.subsystem.wsl");
+    expected = connectors.find((it) => it.id === "engine.default.podman.subsystem.wsl");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Linux" },
       engine: "podman.subsystem.wsl",
@@ -132,7 +132,7 @@ describe("registry", () => {
       program: "podman"
     });
     // podman LIMA
-    expected = engines.find((it) => it.id === "engine.default.podman.subsystem.lima");
+    expected = connectors.find((it) => it.id === "engine.default.podman.subsystem.lima");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Linux" },
       engine: "podman.subsystem.lima",
@@ -140,7 +140,7 @@ describe("registry", () => {
       program: "podman"
     });
     // docker native
-    expected = engines.find((it) => it.id === "engine.default.docker.native");
+    expected = connectors.find((it) => it.id === "engine.default.docker.native");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "docker.native",
@@ -179,7 +179,7 @@ describe("registry", () => {
       }
     });
     // docker WSL
-    expected = engines.find((it) => it.id === "engine.default.docker.subsystem.wsl");
+    expected = connectors.find((it) => it.id === "engine.default.docker.subsystem.wsl");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Linux" },
       engine: "docker.subsystem.wsl",
@@ -187,7 +187,7 @@ describe("registry", () => {
       program: "docker"
     });
     // docker LIMA
-    expected = engines.find((it) => it.id === "engine.default.docker.subsystem.lima");
+    expected = connectors.find((it) => it.id === "engine.default.docker.subsystem.lima");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Linux" },
       engine: "docker.subsystem.lima",
@@ -195,10 +195,10 @@ describe("registry", () => {
       program: "docker"
     });
   });
-  testOnWindows("getDefaultEngines", async () => {
-    const engines = await registry.getDefaultEngines();
+  testOnWindows("getDefaultConnectors", async () => {
+    const connectors = await registry.getDefaultConnectors();
     // podman native
-    expected = engines.find((it) => it.id === "engine.default.podman.native");
+    expected = connectors.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Windows_NT" },
       engine: "podman.native",
@@ -206,7 +206,7 @@ describe("registry", () => {
       program: "podman"
     });
     // podman virtualized
-    expected = engines.find((it) => it.id === "engine.default.podman.virtualized");
+    expected = connectors.find((it) => it.id === "engine.default.podman.virtualized");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "podman.virtualized",
@@ -254,7 +254,7 @@ describe("registry", () => {
       }
     });
     // podman WSL
-    expected = engines.find((it) => it.id === "engine.default.podman.subsystem.wsl");
+    expected = connectors.find((it) => it.id === "engine.default.podman.subsystem.wsl");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "podman.subsystem.wsl",
@@ -298,7 +298,7 @@ describe("registry", () => {
       }
     });
     // podman LIMA
-    expected = engines.find((it) => it.id === "engine.default.podman.subsystem.lima");
+    expected = connectors.find((it) => it.id === "engine.default.podman.subsystem.lima");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Windows_NT" },
       engine: "podman.subsystem.lima",
@@ -306,7 +306,7 @@ describe("registry", () => {
       program: "podman"
     });
     // docker native
-    expected = engines.find((it) => it.id === "engine.default.docker.native");
+    expected = connectors.find((it) => it.id === "engine.default.docker.native");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Windows_NT" },
       engine: "docker.native",
@@ -314,7 +314,7 @@ describe("registry", () => {
       program: "docker"
     });
     // docker virtualized
-    expected = engines.find((it) => it.id === "engine.default.docker.virtualized");
+    expected = connectors.find((it) => it.id === "engine.default.docker.virtualized");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "docker.virtualized",
@@ -353,7 +353,7 @@ describe("registry", () => {
       }
     });
     // docker WSL
-    expected = engines.find((it) => it.id === "engine.default.docker.subsystem.wsl");
+    expected = connectors.find((it) => it.id === "engine.default.docker.subsystem.wsl");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "docker.subsystem.wsl",
@@ -405,7 +405,7 @@ describe("registry", () => {
       }
     });
     // docker LIMA
-    expected = engines.find((it) => it.id === "engine.default.docker.subsystem.lima");
+    expected = connectors.find((it) => it.id === "engine.default.docker.subsystem.lima");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Windows_NT" },
       engine: "docker.subsystem.lima",
@@ -413,10 +413,10 @@ describe("registry", () => {
       program: "docker"
     });
   });
-  testOnMacOS("getDefaultEngines", async () => {
-    const engines = await registry.getDefaultEngines();
+  testOnMacOS("getDefaultConnectors", async () => {
+    const connectors = await registry.getDefaultConnectors();
     // podman native
-    expected = engines.find((it) => it.id === "engine.default.podman.native");
+    expected = connectors.find((it) => it.id === "engine.default.podman.native");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Darwin" },
       engine: "podman.native",
@@ -424,7 +424,7 @@ describe("registry", () => {
       program: "podman"
     });
     // podman virtualized
-    expected = engines.find((it) => it.id === "engine.default.podman.virtualized");
+    expected = connectors.find((it) => it.id === "engine.default.podman.virtualized");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "podman.virtualized",
@@ -472,7 +472,7 @@ describe("registry", () => {
       }
     });
     // podman WSL
-    expected = engines.find((it) => it.id === "engine.default.podman.subsystem.wsl");
+    expected = connectors.find((it) => it.id === "engine.default.podman.subsystem.wsl");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Darwin" },
       engine: "podman.subsystem.wsl",
@@ -480,7 +480,7 @@ describe("registry", () => {
       program: "podman"
     });
     // podman LIMA
-    expected = engines.find((it) => it.id === "engine.default.podman.subsystem.lima");
+    expected = connectors.find((it) => it.id === "engine.default.podman.subsystem.lima");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "podman.subsystem.lima",
@@ -524,7 +524,7 @@ describe("registry", () => {
       }
     });
     // docker native
-    expected = engines.find((it) => it.id === "engine.default.docker.native");
+    expected = connectors.find((it) => it.id === "engine.default.docker.native");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Darwin" },
       engine: "docker.native",
@@ -532,7 +532,7 @@ describe("registry", () => {
       program: "docker"
     });
     // docker WSL
-    expected = engines.find((it) => it.id === "engine.default.docker.subsystem.wsl");
+    expected = connectors.find((it) => it.id === "engine.default.docker.subsystem.wsl");
     expect(expected).toMatchObject({
       availability: { available: false, reason: "Not available on Darwin" },
       engine: "docker.subsystem.wsl",
@@ -540,7 +540,7 @@ describe("registry", () => {
       program: "docker"
     });
     // docker LIMA
-    expected = engines.find((it) => it.id === "engine.default.docker.subsystem.lima");
+    expected = connectors.find((it) => it.id === "engine.default.docker.subsystem.lima");
     expect(expected).toStrictEqual({
       availability: { available: true, reason: undefined },
       engine: "docker.subsystem.lima",

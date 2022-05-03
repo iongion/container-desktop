@@ -23,7 +23,7 @@ class Application {
       Clients.Docker.WSL,
       Clients.Docker.LIMA
     ]);
-    this.engines = undefined;
+    this.connectors = undefined;
     this.client = undefined;
     this.inited = false;
     this.preferredEngines = {
@@ -33,7 +33,7 @@ class Application {
   }
 
   async start() {
-    const engine = await this.getCurrentEngine();
+    const engine = await this.getCurrentConnector();
     const client = await this.getCurrentClient();
     if (!client) {
       this.logger.error("Unable to find a client for current engine", engine);
@@ -44,29 +44,29 @@ class Application {
   }
   async stop() {}
 
-  async setEngines(engines) {
-    this.engines = engines;
+  async setConnectors(connectors) {
+    this.connectors = connectors;
   }
 
-  async getEngines() {
-    if (typeof this.engines === "undefined") {
-      this.engines = await this.registry.getEngines();
+  async getConnectors() {
+    if (typeof this.connectors === "undefined") {
+      this.connectors = await this.registry.getConnectors();
     }
-    return this.engines;
+    return this.connectors;
   }
 
-  async isCurrentEngineProvisioned() {
+  async isCurrentConnectorProvisioned() {
     let flag = false;
-    const currentEngine = await this.getCurrentEngine();
-    if (!currentEngine) {
+    const current = await this.getCurrentConnector();
+    if (!current) {
       return flag;
     }
-    const hasController = !!currentEngine.settings.current.controller;
-    const programIsSet = !!currentEngine.settings.current.program.path;
+    const hasController = !!current.settings.current.controller;
+    const programIsSet = !!current.settings.current.program.path;
     if (hasController) {
-      const controllerIsSet = !!currentEngine.settings.current.controller.path;
+      const controllerIsSet = !!current.settings.current.controller.path;
       if (!controllerIsSet) {
-        this.logger.warn("Current engine client controller is not configured", currentEngine);
+        this.logger.warn("Current engine client controller is not configured", current);
       }
       flag = controllerIsSet && programIsSet;
     } else {
@@ -75,42 +75,40 @@ class Application {
     return flag;
   }
 
-  async getCurrentEngine() {
+  async getCurrentConnector() {
     const userEngineId = this.configuration.getKey("engine.current");
-    const engines = await this.getEngines();
-    let currentEngine;
+    const connectors = await this.getConnectors();
+    let current;
     if (userEngineId) {
-      currentEngine = engines.find((it) => it.engine === currentEngine);
+      current = connectors.find((it) => it.engine === current);
     }
-    if (!currentEngine) {
+    if (!current) {
       this.logger.debug("No user preferred engine - looking for native");
-      currentEngine = engines.find(
-        (it) => it.availability.available && this.preferredEngines.native.includes(it.engine)
-      );
+      current = connectors.find((it) => it.availability.available && this.preferredEngines.native.includes(it.engine));
     }
-    if (!currentEngine) {
+    if (!current) {
       this.logger.debug("No native supported engine - looking for virtualized");
       if (os.type() === "Windows_NT" || os.type() === "Darwin") {
-        currentEngine = engines.find(
+        current = connectors.find(
           (it) => it.availability.available && this.preferredEngines.virtualized.includes(it.engine)
         );
       }
     }
-    if (!currentEngine) {
+    if (!current) {
       this.logger.debug("No virtualized supported engine - looking for available");
-      currentEngine = engines.find((it) => it.availability.available);
+      current = connectors.find((it) => it.availability.available);
     }
-    if (!currentEngine) {
+    if (!current) {
       this.logger.error("No engine is supported on this machine - requirements might be incomplete");
     }
-    return currentEngine;
+    return current;
   }
 
   async getCurrentClient() {
-    const engine = await this.getCurrentEngine();
+    const engine = await this.getCurrentConnector();
     let client;
     if (engine) {
-      client = await this.registry.getEngineClientById(engine.id);
+      client = await this.registry.getConnectorClientById(engine.id);
       if (!client) {
         this.logger.error("Unable to find a client for engine", engine);
       }

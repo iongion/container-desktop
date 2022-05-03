@@ -1,0 +1,59 @@
+const path = require("path");
+
+const PROGRAM = "PODMAN";
+
+const PODMAN_API_BASE_URL = "http://d/v3.0.0/libpod";
+const PODMAN_CLI_VERSION = "4.0.3";
+
+const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
+const NATIVE_PODMAN_SOCKET_PATH = "/tmp/podman-desktop-companion-podman-rest-api.sock";
+const NATIVE_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
+const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
+
+const WINDOWS_PODMAN_NATIVE_CLI_VERSION = "4.0.3-dev";
+const WINDOWS_PODMAN_NATIVE_CLI_PATH = "C:\\Program Files\\RedHat\\Podman\\podman.exe";
+const WINDOWS_PODMAN_MACHINE_CLI_VERSION = "20.10.14";
+const WINDOWS_PODMAN_MACHINE_CLI_PATH = "C:\\Program Files\\PODMAN\\PODMAN\\resources\\bin\\podman.exe";
+const WINDOWS_PODMAN_MACHINE_NAMED_PIPE = "//./pipe/podman-machine-default";
+
+const MACOS_PODMAN_NATIVE_CLI_VERSION = "4.0.3";
+const MACOS_PODMAN_NATIVE_CLI_PATH = "/usr/local/bin/podman";
+const MACOS_PODMAN_MACHINE_CLI_VERSION = "4.0.2";
+const MACOS_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
+
+const WSL_PODMAN_CLI_PATH = "/usr/bin/podman";
+const WSL_PODMAN_CLI_VERSION = "3.4.2";
+const WSL_DISTRIBUTION = "Ubuntu-20.04";
+
+const LIMA_PODMAN_CLI_PATH = "/usr/bin/podman";
+const LIMA_PODMAN_CLI_VERSION = "3.2.1";
+const LIMA_PODMAN_INSTANCE = "podman";
+
+module.exports = {
+  PROGRAM,
+  PODMAN_API_BASE_URL,
+  PODMAN_CLI_VERSION,
+  // Native only on Linux
+  NATIVE_PODMAN_CLI_PATH,
+  NATIVE_PODMAN_SOCKET_PATH,
+  // Windows virtualized
+  WINDOWS_PODMAN_NATIVE_CLI_VERSION,
+  WINDOWS_PODMAN_NATIVE_CLI_PATH,
+  WINDOWS_PODMAN_MACHINE_CLI_VERSION,
+  WINDOWS_PODMAN_MACHINE_CLI_PATH,
+  WINDOWS_PODMAN_MACHINE_NAMED_PIPE,
+  // MacOS virtualized
+  MACOS_PODMAN_NATIVE_CLI_VERSION,
+  MACOS_PODMAN_NATIVE_CLI_PATH,
+  MACOS_PODMAN_MACHINE_CLI_VERSION,
+  MACOS_PODMAN_MACHINE_CLI_PATH,
+  // Windows WSL
+  WSL_DISTRIBUTION,
+  WSL_PODMAN_CLI_PATH,
+  WSL_PODMAN_CLI_VERSION,
+  // MacOS LIMA
+  LIMA_PODMAN_CLI_PATH,
+  LIMA_PODMAN_CLI_VERSION,
+  LIMA_PODMAN_INSTANCE,
+  LIMA_PODMAN_SOCKET_PATH
+};

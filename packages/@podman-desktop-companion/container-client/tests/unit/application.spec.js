@@ -18,12 +18,12 @@ describe("Application", () => {
   });
   test("init", async () => {
     const app = new Application("1.0.0", "testing");
-    const engines = await app.getEngines();
-    expect(engines.length).toBeGreaterThan(0);
+    const connectors = await app.getConnectors();
+    expect(connectors.length).toBeGreaterThan(0);
   });
-  testOnLinux("getCurrentEngine", () => {
+  testOnLinux("getCurrentConnector", () => {
     const app = new Application("1.0.0", "testing");
-    const engine = await app.getCurrentEngine();
-    expect(engine.id).toBe("podman.native");
+    const connector = await app.getCurrentConnector();
+    expect(connector.id).toBe("podman.native");
   });
 });

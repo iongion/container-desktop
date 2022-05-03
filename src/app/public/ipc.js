@@ -11,7 +11,7 @@ const native_engines = ["podman.native", "docker.native"];
 const application = {
   configuration: undefined,
   registry: undefined,
-  engines: [],
+  connectors: [],
   client: undefined,
   getClient() {
     return this.client;
@@ -20,21 +20,23 @@ const application = {
     const userEngineId = this.configuration.getKey("engine.current");
     let currentEngine;
     if (userEngineId) {
-      currentEngine = this.engines.find((it) => it.engine === currentEngine);
+      currentEngine = this.connectors.find((it) => it.engine === currentEngine);
     }
     if (!currentEngine) {
       logger.debug("No user preferred engine - looking for native");
-      currentEngine = this.engines.find((it) => it.availability.available && native_engines.includes(it.engine));
+      currentEngine = this.connectors.find((it) => it.availability.available && native_engines.includes(it.engine));
     }
     if (!currentEngine) {
       logger.debug("No native supported engine - looking for virtualized");
       if (os.type() === "Windows_NT" || os.type() === "Darwin") {
-        currentEngine = this.engines.find((it) => it.availability.available && virtualized_engines.includes(it.engine));
+        currentEngine = this.connectors.find(
+          (it) => it.availability.available && virtualized_engines.includes(it.engine)
+        );
       }
     }
     if (!currentEngine) {
       logger.debug("No virtualized supported engine - looking for available");
-      currentEngine = this.engines.find((it) => it.availability.available);
+      currentEngine = this.connectors.find((it) => it.availability.available);
     }
     if (!currentEngine) {
       logger.error("No engine is supported on this machine - requirements might be incomplete");
@@ -97,11 +99,11 @@ const servicesMap = {
       Clients.Docker.WSL,
       Clients.Docker.LIMA
     ]);
-    const engines = await registry.getEngines();
+    const connectors = await registry.getConnectors();
     // Cache
     application.configuration = configuration;
     application.registry = registry;
-    application.engines = engines;
+    application.connectors = connectors;
     // User preferences impacting startup
     let startApi = true;
     // AppStartup object

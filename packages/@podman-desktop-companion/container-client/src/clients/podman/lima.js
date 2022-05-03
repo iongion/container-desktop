@@ -5,14 +5,14 @@ const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { LIMAVirtualContainerClient } = require("../base/lima");
 const { Runner } = require("../../api");
+const { PROGRAM, PODMAN_API_BASE_URL, LIMA_PODMAN_CLI_PATH, LIMA_PODMAN_INSTANCE } = require("./constants");
 // locals
-const PROGRAM = "podman";
 const ENGINE = `${PROGRAM}.subsystem.lima`;
-const LIMA_VM = PROGRAM;
 
 class ContainerClient extends LIMAVirtualContainerClient {
   constructor(userConfiguration, id) {
-    super(userConfiguration, id, ENGINE, PROGRAM, LIMA_VM);
+    super(userConfiguration, id, ENGINE, PROGRAM, LIMA_PODMAN_INSTANCE);
+    this.programPathDefault = LIMA_PODMAN_CLI_PATH;
     this.nativeApiStarterProcess = undefined;
     this.runner = new Runner(this);
   }
@@ -20,7 +20,7 @@ class ContainerClient extends LIMAVirtualContainerClient {
   async createApiConfiguration(settings) {
     const connectionString = path.join(process.env.HOME, ".lima", settings.controller.scope, "sock/podman.sock");
     return {
-      baseURL: "http://d/v3.0.0/libpod",
+      baseURL: PODMAN_API_BASE_URL,
       connectionString
     };
   }

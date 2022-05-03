@@ -21,7 +21,11 @@ class AbstractNativeContainerClient extends AbstractContainerClient {
     };
   }
 
-  async getEngine() {
+  async getConnector(forceDetect) {
+    // Cache detections
+    if (this.connector && !forceDetect) {
+      return this.connector;
+    }
     // Restrict
     // Combine settings
     // All setup
@@ -33,7 +37,7 @@ class AbstractNativeContainerClient extends AbstractContainerClient {
       detected.path = detection.path;
       detected.version = detection.version;
     }
-    const engine = {
+    const connector = {
       id: this.id,
       engine: this.engine,
       program: this.program,
@@ -63,9 +67,10 @@ class AbstractNativeContainerClient extends AbstractContainerClient {
       }
     };
     // Inject api configuration (merges configuration)
-    const settings = await this.getMergedSettings(engine);
-    engine.settings.detect.api = await this.createApiConfiguration(settings);
-    return engine;
+    const settings = await this.getMergedSettings(connector);
+    connector.settings.detect.api = await this.createApiConfiguration(settings);
+    this.connector = connector;
+    return connector;
   }
 
   // API connectivity and startup

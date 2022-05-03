@@ -7,8 +7,8 @@ const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { AbstractVirtualContainerClient } = require("../base/virtual");
 const { Runner } = require("../../api");
+const { PROGRAM, PODMAN_API_BASE_URL, NATIVE_PODMAN_CLI_PATH } = require("./constants");
 // locals
-const PROGRAM = "podman";
 const ENGINE = `${PROGRAM}.virtualized`;
 const CONTROLLER = "podman";
 const SCOPE = `${PROGRAM}-machine-default`;
@@ -16,16 +16,17 @@ const SCOPE = `${PROGRAM}-machine-default`;
 class ContainerClient extends AbstractVirtualContainerClient {
   constructor(userConfiguration, id) {
     super(userConfiguration, id, ENGINE, PROGRAM, { controller: CONTROLLER, scope: SCOPE });
+    if (os.type() === "Linux") {
+      this.programPathDefault = undefined;
+      this.controllerPathDefault = NATIVE_PODMAN_CLI_PATH;
+    }
     this.runner = new Runner(this);
   }
 
-  async getWrapper(settings) {
-    if (typeof settings === "undefined") {
-      throw new Error("Cannot create wrapper - no settings");
-    }
+  async getWrapper({ controller }) {
     const wrapper = {
-      launcher: settings?.controller?.path,
-      args: ["machine", "ssh", settings?.controller?.scope, "-o", "LogLevel=ERROR"]
+      launcher: controller.path,
+      args: ["machine", "ssh", controller.scope, "-o", "LogLevel=ERROR"]
     };
     return wrapper;
   }
@@ -43,7 +44,7 @@ class ContainerClient extends AbstractVirtualContainerClient {
       connectionString = `//./pipe/${settings.controller.scope}`;
     }
     return {
-      baseURL: "http://d/v3.0.0/libpod",
+      baseURL: PODMAN_API_BASE_URL,
       connectionString
     };
   }

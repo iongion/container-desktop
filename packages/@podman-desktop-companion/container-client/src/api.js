@@ -1,7 +1,7 @@
 // vendors
 const axios = require("axios");
 // project
-const { exec_launcher, exec_service } = require("@podman-desktop-companion/executor");
+const { exec_launcher, exec_service, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 const { createLogger } = require("@podman-desktop-companion/logger");
 // module
@@ -64,7 +64,7 @@ class Runner {
   // API connectivity and startup
   async startApi(opts, starter) {
     this.logger.debug("Starting API - guard configuration");
-    const configured = await this.client.isApiConfigured();
+    const configured = await this.client.isApiAvailable();
     if (!configured) {
       return { success: false, details: "API is not configured" };
     }
@@ -108,17 +108,24 @@ class Runner {
     this.logger.debug("Stopping API");
     let flag = false;
     if (stopper) {
-      const result = await exec_launcher(stopper.path, stopper.args);
-      if (!result.success) {
-        this.logger.warn("Stopping API failed", result);
-      }
+      const result = await exec_launcher_sync(stopper.path, stopper.args);
       flag = result.success;
+    } else {
+      this.logger.warn("Stopping API - no stopper specified");
     }
     if (this.nativeApiStarterProcessChild) {
       this.logger.debug("Stopping API - sending SIGTERM to child", this.nativeApiStarterProcess);
-      flag = this.nativeApiStarterProcessChild.kill("SIGTERM");
+      try {
+        this.nativeApiStarterProcessChild.kill("SIGTERM");
+        flag = true;
+      } catch (error) {
+        this.logger.warn("Stopping API - failed sending SIGTERM to child", error.message);
+      }
       this.nativeApiStarterProcessChild.unref();
       this.nativeApiStarterProcessChild = null;
+    } else {
+      this.logger.debug("No native starter process child found - nothing to stop");
+      flag = true;
     }
     return flag;
   }

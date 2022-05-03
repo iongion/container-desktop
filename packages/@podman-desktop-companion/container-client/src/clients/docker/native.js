@@ -3,19 +3,20 @@
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { AbstractNativeContainerClient } = require("../base/native");
+const { PROGRAM, DOCKER_API_BASE_URL, NATIVE_DOCKER_CLI_PATH, NATIVE_DOCKER_SOCKET_PATH } = require("./constants");
 // locals
-const PROGRAM = "docker";
 const ENGINE = `${PROGRAM}.native`;
 
 class ContainerClient extends AbstractNativeContainerClient {
   constructor(userConfiguration, id) {
     super(userConfiguration, id, ENGINE, PROGRAM);
+    this.programPathDefault = NATIVE_DOCKER_CLI_PATH;
   }
 
   async createApiConfiguration(settings) {
-    const connectionString = "/var/run/docker.sock";
+    const connectionString = NATIVE_DOCKER_SOCKET_PATH;
     return {
-      baseURL: "http://localhost",
+      baseURL: DOCKER_API_BASE_URL,
       connectionString
     };
   }

@@ -4,22 +4,21 @@ const os = require("os");
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
+const { WSL_DISTRIBUTION, WSL_PATH } = require("../base/constants");
 const { AbstractVirtualContainerClient } = require("./virtual");
 // locals
 const CONTROLLER = "wsl";
 
 class WSLVirtualContainerClient extends AbstractVirtualContainerClient {
   constructor(userConfiguration, id, engine, program, distribution) {
-    super(userConfiguration, id, engine, program, { controller: CONTROLLER, scope: distribution });
+    super(userConfiguration, id, engine, program, { controller: CONTROLLER, scope: distribution || WSL_DISTRIBUTION });
+    this.controllerPathDefault = WSL_PATH;
   }
 
-  async getWrapper(settings) {
-    if (typeof settings === "undefined") {
-      throw new Error("Cannot create wrapper - no settings");
-    }
+  async getWrapper({ controller }) {
     const wrapper = {
-      launcher: settings?.controller?.path,
-      args: ["--distribution", settings?.controller?.scope]
+      launcher: controller.path,
+      args: ["--distribution", controller.scope]
     };
     return wrapper;
   }

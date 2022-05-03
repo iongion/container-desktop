@@ -6,13 +6,13 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 // module
 // locals
 
-const createEngineClientsMap = (userConfiguration, clients) => {
-  const engineClientsMap = clients.reduce((acc, client) => {
+const createEngineConnectorsMap = (userConfiguration, clients) => {
+  const engineConnectorsMap = clients.reduce((acc, client) => {
     const id = `engine.default.${client.ENGINE}`;
     acc[id] = new client.ContainerClient(userConfiguration, id);
     return acc;
   }, {});
-  return engineClientsMap;
+  return engineConnectorsMap;
 };
 
 class Registry {
@@ -21,56 +21,56 @@ class Registry {
     this.userConfiguration = userConfiguration;
     this.logger = createLogger("container-client.Registry");
     this.clients = clients;
-    this.engineClientsMap = createEngineClientsMap(userConfiguration, clients);
+    this.engineConnectorsMap = createEngineConnectorsMap(userConfiguration, clients);
   }
-  async getDefaultEngines() {
-    const engines = await Promise.all(
+  async getDefaultConnectors() {
+    const connectors = await Promise.all(
       this.clients.map(async (client) => {
         const id = `engine.default.${client.ENGINE}`;
-        const engineClient = this.engineClientsMap[id];
-        const engine = await engineClient.getEngine();
-        engine.settings.current = await engineClient.getCurrentSettings();
-        return engine;
+        const engineClient = this.engineConnectorsMap[id];
+        const connector = await engineClient.getConnector();
+        connector.settings.current = await engineClient.getCurrentSettings();
+        return connector;
       })
     );
-    return engines;
+    return connectors;
   }
-  async getDefaultEngines() {
-    const engines = await Promise.all(
+  async getDefaultConnectors() {
+    const connectors = await Promise.all(
       this.clients.map(async (client) => {
         const id = `engine.default.${client.ENGINE}`;
-        const engineController = this.engineClientsMap[id];
-        const engine = await engineController.getEngine();
-        engine.settings.current = await engineController.getCurrentSettings();
-        return engine;
+        const engineController = this.engineConnectorsMap[id];
+        const connector = await engineController.getConnector();
+        connector.settings.current = await engineController.getCurrentSettings();
+        return connector;
       })
     );
-    return engines;
+    return connectors;
   }
-  async getCustomEngines() {
-    const engines = [];
-    return engines;
+  async getCustomConnectors() {
+    const connectors = [];
+    return connectors;
   }
-  async getEngines() {
-    const defaults = await this.getDefaultEngines();
-    const custom = await this.getCustomEngines();
+  async getConnectors() {
+    const defaults = await this.getDefaultConnectors();
+    const custom = await this.getCustomConnectors();
     const items = [...defaults, ...custom];
     return items;
   }
-  getEngineClientById(id) {
-    return this.engineClientsMap[id];
+  getConnectorClientById(id) {
+    return this.engineConnectorsMap[id];
   }
   updateEngine(id, engine) {
-    this.engineClientsMap[id] = {
-      ...this.engineClientsMap[id],
+    this.engineConnectorsMap[id] = {
+      ...this.engineConnectorsMap[id],
       ...engine,
       id
     };
-    return this.engineClientsMap[id];
+    return this.engineConnectorsMap[id];
   }
 }
 
 module.exports = {
-  createEngineClientsMap,
+  createEngineConnectorsMap,
   Registry
 };

@@ -1,13 +1,12 @@
 // node
-const path = require("path");
 const os = require("os");
 // vendors
 // project
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { AbstractNativeContainerClient } = require("../base/native");
+const { PROGRAM, DOCKER_API_BASE_URL, NATIVE_DOCKER_CLI_PATH, WINDOWS_DOCKER_NAMED_PIPE } = require("./constants");
 // locals
-const PROGRAM = "docker";
 const ENGINE = `${PROGRAM}.virtualized`;
 
 class ContainerClient extends AbstractNativeContainerClient {
@@ -27,12 +26,12 @@ class ContainerClient extends AbstractNativeContainerClient {
   async createApiConfiguration(settings) {
     let connectionString = "";
     if (os.type() === "Windows_NT") {
-      connectionString = `//./pipe/docker_engine`;
+      connectionString = WINDOWS_DOCKER_NAMED_PIPE;
     } else {
-      connectionString = "/var/run/docker.sock";
+      connectionString = NATIVE_DOCKER_CLI_PATH;
     }
     return {
-      baseURL: "http://localhost",
+      baseURL: DOCKER_API_BASE_URL,
       connectionString
     };
   }

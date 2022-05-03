@@ -17,7 +17,7 @@ Class diagram
 classDiagram
 
 class AbstractContainerClient {
-  +getMergedSettings(engine~Engine~) Settings
+  +getMergedSettings(engine~Connector~) Settings
   +getCurrentSettings() Settings
   +createApiConfiguration(settings~Settings~)* ApiConfiguration
   +getApiConfig() ApiConfiguration
@@ -29,7 +29,7 @@ class AbstractContainerClient {
   +startApi()* bool
   +stopApi()* bool
   +checkAvailability()* bool
-  +getEngine()* Engine
+  +getConnector()* Connector
   +getMachines() List~PodmanMachine~
   +getSystemInfo()* SystemInfo
   +getSystemConnections()* List~PodmanSystemConnection~
@@ -38,7 +38,7 @@ class AbstractContainerClient {
 class AbstractNativeContainerClient {
   +getWrapper() Wrapper
   +checkAvailability() bool
-  +getEngine() Engine
+  +getConnector() Connector
   +isApiConfigured() bool
   +isApiScopeAvailable() bool
   +isApiAvailable() bool
@@ -48,7 +48,7 @@ AbstractNativeContainerClient --|> AbstractContainerClient
 class PodmanNativeContainerClient {
   +getWrapper()* Wrapper
   +checkAvailability() bool
-  +getEngine() Engine
+  +getConnector() Connector
 
   +createApiConfiguration(settings~Settings~) ApiConfiguration
   +getMachines() List~PodmanMachine~
@@ -63,7 +63,7 @@ PodmanNativeContainerClient --|> AbstractNativeContainerClient
 class DockerNativeContainerClient {
   +getWrapper()* Wrapper
   +checkAvailability() bool
-  +getEngine() Engine
+  +getConnector() Connector
 
   +createApiConfiguration(settings~Settings~) ApiConfiguration
   +getMachines() List~empty~
@@ -79,7 +79,7 @@ class AbstractVirtualContainerClient {
   +getWrapper()* Wrapper
   +isAllowedOperatingSystem()* bool
   +checkAvailability() bool
-  +getEngine() EngineWithController
+  +getConnector() ConnectorWithController
   
   +isApiConfigured() bool
   +isApiScopeAvailable() bool

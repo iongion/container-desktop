@@ -37,7 +37,11 @@ class AbstractVirtualContainerClient extends AbstractContainerClient {
     };
   }
 
-  async getEngine() {
+  async getConnector(forceDetect) {
+    // Cache detections
+    if (this.connector && !forceDetect) {
+      return this.connector;
+    }
     const controller = {
       detect: {
         name: this.controller,
@@ -74,7 +78,7 @@ class AbstractVirtualContainerClient extends AbstractContainerClient {
       detected.path = detection.path;
       detected.version = detection.version;
     }
-    const engine = {
+    const connector = {
       id: this.id,
       engine: this.engine,
       program: this.program,
@@ -106,9 +110,9 @@ class AbstractVirtualContainerClient extends AbstractContainerClient {
       }
     };
     // Inject api configuration (merges configuration)
-    const settings = await this.getMergedSettings(engine);
-    engine.settings.detect.api = await this.createApiConfiguration(settings);
-    return engine;
+    const settings = await this.getMergedSettings(connector);
+    connector.settings.detect.api = await this.createApiConfiguration(settings);
+    return connector;
   }
 
   // API connectivity and startup

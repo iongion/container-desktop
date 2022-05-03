@@ -4,20 +4,20 @@ const path = require("path");
 const { exec_launcher } = require("@podman-desktop-companion/executor");
 // module
 const { LIMAVirtualContainerClient } = require("../base/lima");
+const { PROGRAM, DOCKER_API_BASE_URL, LIMA_DOCKER_CLI_PATH, LIMA_DOCKER_INSTANCE } = require("./constants");
 // locals
-const PROGRAM = "docker";
 const ENGINE = `${PROGRAM}.subsystem.lima`;
-const LIMA_VM = PROGRAM;
 
 class ContainerClient extends LIMAVirtualContainerClient {
   constructor(userConfiguration, id) {
-    super(userConfiguration, id, ENGINE, PROGRAM, LIMA_VM);
+    super(userConfiguration, id, ENGINE, PROGRAM, LIMA_DOCKER_INSTANCE);
+    this.programPathDefault = LIMA_DOCKER_CLI_PATH;
   }
 
   async createApiConfiguration(settings) {
     const connectionString = path.join(process.env.HOME, ".lima", settings.controller.scope, "sock/docker.sock");
     return {
-      baseURL: "http://localhost",
+      baseURL: DOCKER_API_BASE_URL,
       connectionString
     };
   }

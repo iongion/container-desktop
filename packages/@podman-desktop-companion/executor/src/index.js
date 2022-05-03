@@ -200,6 +200,7 @@ async function exec_service(opts) {
           logger.error("Max retries reached");
           em.emit("error", { type: "domain.max-retries", code: undefined });
         } else {
+          retries -= 1;
           const running = await checkStatus();
           logger.debug("Checking running first time after start", running);
           if (running) {
@@ -216,7 +217,6 @@ async function exec_service(opts) {
             logger.error("Move to next retry", retries);
           }
         }
-        retries -= 1;
       }, wait);
     };
     const onStart = () => {

@@ -5,27 +5,34 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 // module
 const { createApiDriver, getApiConfig } = require("../api");
 class AbstractContainerClient {
-  constructor(userConfiguration, id, engine, program) {
+  constructor(userConfiguration, id, engine, program, controller) {
     this.userConfiguration = userConfiguration;
     this.id = id;
     this.engine = engine;
     this.program = program;
+    this.controller = controller;
+    this.programPathDefault = undefined;
+    this.controllerPathDefault = undefined;
     this.logger = createLogger(`clients.${engine}`);
   }
 
+  isControlled() {
+    return !!this.this.controller;
+  }
+
   // Settings management
-  async getMergedSettings(engine) {
+  async getMergedSettings(connector) {
     return merge(
       {},
       // detected
-      engine.settings.detect,
+      connector.settings.detect,
       // custom
-      engine.settings.custom
+      connector.settings.custom
     );
   }
   async getCurrentSettings() {
-    const engine = await this.getEngine();
-    const settings = await this.getMergedSettings(engine);
+    const connector = await this.getConnector();
+    const settings = await this.getMergedSettings(connector);
     return settings;
   }
 
@@ -95,7 +102,7 @@ class AbstractContainerClient {
       reason: "Not implemented"
     };
   }
-  async getEngine() {
+  async getConnector(forceDetect) {
     const availability = await this.checkAvailability();
     const settings = {};
     const engine = {
