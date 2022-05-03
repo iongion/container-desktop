@@ -93,6 +93,9 @@ class AbstractClientEngine {
     return await this.runner.stopApi();
   }
   // Availability
+  async isEngineAvailable() {
+    throw new Error("isEngineAvailable must be implemented");
+  }
   async isProgramAvailable() {
     const result = { success: false, details: undefined };
     const settings = await this.getSettings();
@@ -134,17 +137,37 @@ class AbstractClientEngine {
     return result;
   }
   async getAvailability() {
-    const program = await this.isProgramAvailable();
-    const api = await this.isApiRunning();
     const availability = {
-      all: program.success && api.success,
-      api: api.success,
-      program: program.success,
+      all: false,
+      engine: false,
+      program: false,
+      api: false,
       report: {
-        program: program.success ? "Program is available" : program.details,
-        api: api.success ? "Api is running" : api.details
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked"
       }
     };
+    const engine = await this.isEngineAvailable();
+    availability.report.engine = engine.details;
+    if (engine.success) {
+      availability.engine = true;
+    }
+    if (availability.engine) {
+      const program = await this.isProgramAvailable();
+      availability.report.program = program.details;
+      if (program.success) {
+        availability.program = true;
+      }
+    }
+    if (availability.program) {
+      const api = await this.isApiRunning();
+      availability.report.api = api.details;
+      if (api.success) {
+        availability.api = true;
+      }
+    }
+    availability.all = availability.engine && availability.program && availability.api;
     return availability;
   }
   async isApiRunning() {
@@ -271,17 +294,47 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     return result;
   }
   async getAvailability() {
-    const base = await super.getAvailability();
-    const controller = await this.isControllerAvailable();
-    return {
-      ...base,
-      all: base.all && base.success,
-      controller: controller.success,
+    const availability = {
+      all: false,
+      engine: false,
+      controller: false,
+      program: false,
+      api: false,
       report: {
-        ...base.report,
-        controller: controller.success ? "Controller is running" : controller.details
+        engine: "Not checked",
+        controller: "Not checked",
+        program: "Not checked",
+        api: "Not checked"
       }
     };
+    const engine = await this.isEngineAvailable();
+    availability.report.engine = engine.details;
+    if (engine.success) {
+      availability.engine = true;
+    }
+    if (availability.engine) {
+      const controller = await this.isControllerAvailable();
+      availability.report.controller = controller.details;
+      if (controller.success) {
+        availability.controller = true;
+      }
+    }
+    if (availability.controller) {
+      const program = await this.isProgramAvailable();
+      availability.report.program = program.details;
+      if (program.success) {
+        availability.program = true;
+      }
+    }
+    if (availability.program) {
+      const api = await this.isApiRunning();
+      availability.report.api = api.details;
+      if (api.success) {
+        availability.api = true;
+      }
+    }
+    availability.all = availability.engine && availability.controller && availability.program && availability.api;
+    return availability;
   }
   // Executes command inside controller scope
   async runScopedCommand(program, args, opts) {
@@ -293,13 +346,6 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   // Helpers
   async getConnectionString(scope) {
     return `//./pipe/podman-desktop-companion-${this.PROGRAM}-${scope}`;
-  }
-  // Availability
-  async isControllerScopeAvailable() {
-    const settings = await this.getCurrentSettings();
-    const instances = await getAvailableWSLDistributions(settings.controller.path);
-    const target = instances.find((it) => it.Name === settings.controller.scope);
-    return !!target;
   }
   // Runtime
   async startApi() {
@@ -317,19 +363,27 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     const result = await exec_launcher_sync(controller.path, command, opts);
     return result;
   }
+  // Availability
+  async isControllerScopeAvailable() {
+    const settings = await this.getCurrentSettings();
+    const instances = await getAvailableWSLDistributions(settings.controller.path);
+    const target = instances.find((it) => it.Name === settings.controller.scope);
+    return !!target;
+  }
+  async isEngineAvailable() {
+    const result = { success: true, details: "Engine is available" };
+    if (this.osType !== "Windows_NT") {
+      result.success = false;
+      result.details = `Engine is not available on ${this.osType}`;
+    }
+    return result;
+  }
 }
 
 class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   // Helpers
   async getConnectionString(scope) {
     return path.join(process.env.HOME, ".lima", scope, "sock", `${scope}.sock`);
-  }
-  // Availability
-  async isControllerScopeAvailable() {
-    const settings = await this.getCurrentSettings();
-    const instances = await getAvailableLIMAInstances(settings.controller.path);
-    const target = instances.find((it) => it.Name === settings.controller.scope);
-    return target.Status === "Running";
   }
   // Runtime
   async startApi(opts) {
@@ -357,6 +411,21 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     const { controller } = await this.getCurrentSettings();
     const command = ["shell", controller.scope, program, ...args];
     const result = await exec_launcher_sync(controller.path, command, opts);
+    return result;
+  }
+  // Availability
+  async isControllerScopeAvailable() {
+    const settings = await this.getCurrentSettings();
+    const instances = await getAvailableLIMAInstances(settings.controller.path);
+    const target = instances.find((it) => it.Name === settings.controller.scope);
+    return target.Status === "Running";
+  }
+  async isEngineAvailable() {
+    const result = { success: true, details: "Engine is available" };
+    if (this.osType !== "Darwin") {
+      result.success = false;
+      result.details = `Engine is not available on ${this.osType}`;
+    }
     return result;
   }
 }

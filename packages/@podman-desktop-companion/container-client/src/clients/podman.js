@@ -114,6 +114,15 @@ class PodmanClientEngineNative extends AbstractClientEngine {
       args: ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"]
     });
   }
+  // Availability
+  async isEngineAvailable() {
+    const result = { success: true, details: "Engine is available" };
+    if (this.osType !== "Linux") {
+      result.success = false;
+      result.details = `Engine is not available on ${this.osType}`;
+    }
+    return result;
+  }
 }
 
 class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine {

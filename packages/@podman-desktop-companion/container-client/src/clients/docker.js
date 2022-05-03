@@ -101,6 +101,15 @@ class DockerClientEngineNative extends AbstractClientEngine {
     this.logger.debug("Start api skipped - not required");
     return true;
   }
+  // Availability
+  async isEngineAvailable() {
+    const result = { success: true, details: "Engine is available" };
+    if (this.osType !== "Linux") {
+      result.success = false;
+      result.details = `Engine is not available on ${this.osType}`;
+    }
+    return result;
+  }
 }
 
 class DockerClientEngineVirtualized extends DockerClientEngineNative {
@@ -150,6 +159,15 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
       },
       settings
     );
+  }
+  // Availability
+  async isEngineAvailable() {
+    const result = { success: true, details: "Engine is available" };
+    if (this.osType === "Linux") {
+      result.success = false;
+      result.details = `Engine is not available on ${this.osType}`;
+    }
+    return result;
   }
 }
 
