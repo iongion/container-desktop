@@ -18,7 +18,7 @@ import {
   //
   Secret,
   Volume,
-  SystemEnvironment,
+  ApplicationDescriptor,
   SystemInfo,
   SystemPruneReport,
   SystemResetReport,
@@ -382,7 +382,7 @@ export class ContainerClient {
       const engine = this.getEngine();
       let serviceUrl = "/volumes/json";
       let processData = (input: any) => input as Volume[];
-      if (engine === ContainerEngine.DOCKER)  {
+      if (engine.startsWith("docker"))  {
         serviceUrl = "/volumes";
         processData = (input: any) => {
           const output = input.Volumes;
@@ -397,7 +397,7 @@ export class ContainerClient {
     return this.withResult<Volume>(async () => {
       const engine = this.getEngine();
       let serviceUrl = `/volumes/${nameOrId}/json`;
-      if (engine === ContainerEngine.DOCKER)  {
+      if (engine.startsWith("docker"))  {
         serviceUrl = `/volumes/${nameOrId}`;
       }
       const result = await this.dataApiDriver.get<Volume>(serviceUrl);
@@ -492,8 +492,8 @@ export class ContainerClient {
   }
 
   async startApplication() {
-    return this.withResult<SystemEnvironment>(async () => {
-      const reply = await Native.getInstance().proxyService<SystemEnvironment>({
+    return this.withResult<ApplicationDescriptor>(async () => {
+      const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
         method: "/start",
       });
       return reply.result;
@@ -625,13 +625,13 @@ export class ContainerClient {
     });
   }
 
-  async testConnectionString(connectionString: string) {
+  async testConnectionString(options: { baseURL: string; connectionString: string }) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "/test",
         params: {
-          subject: "connectionString",
-          payload: connectionString.replace("unix://", "").replace("npipe://", "")
+          subject: "reachability.api",
+          payload: options
         }
       });
       return reply.result;

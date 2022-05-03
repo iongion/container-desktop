@@ -1,16 +1,20 @@
 // module
-const { createApiDriver } = require("./api");
-const Detector = require("./detector");
-const Clients = require("./clients");
-const { Registry } = require("./registry");
-const { UserConfiguration } = require("./configuration");
-const { Application } = require("./application");
+const adapters = require("./adapters");
+const api = require("./api");
+const application = require("./application");
+const configuration = require("./configuration");
+const constants = require("./constants");
+const detector = require("./detector");
+const registry = require("./registry");
+const shared = require("./shared");
 
 module.exports = {
-  Application,
-  createApiDriver,
-  Detector,
-  Clients,
-  Registry,
-  UserConfiguration
+  api,
+  detector,
+  adapters,
+  registry,
+  shared,
+  configuration,
+  application,
+  constants
 };

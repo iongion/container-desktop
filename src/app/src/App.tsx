@@ -135,16 +135,14 @@ export function AppMainScreen() {
   const startRef = useRef(false);
   const phase = useStoreState((state) => state.phase);
   const native = useStoreState((state) => state.native);
-  const environment = useStoreState((state) => state.environment);
+  const descriptor = useStoreState((state) => state.descriptor);
   const start = useStoreActions((actions) => actions.start);
 
-  const provisioned = environment.provisioned;
-  const running = environment.running;
-  const platform = environment.platform;
-  const engine = environment.currentEngine;
-  const program = engine?.settings?.current?.program;
-
-  console.debug("Environment", environment);
+  const provisioned = descriptor.provisioned;
+  const running = descriptor.running;
+  const platform = descriptor.platform;
+  const currentConnector = descriptor.currentConnector;
+  const program = currentConnector?.settings?.current?.program;
 
   useEffect(() => {
     if (startRef.current) {
@@ -159,7 +157,7 @@ export function AppMainScreen() {
   return (
     <div
       className="App"
-      data-engine={engine}
+      data-engine={currentConnector.engine}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
       data-platform={platform}

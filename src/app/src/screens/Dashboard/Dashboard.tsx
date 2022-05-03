@@ -26,9 +26,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const platform = Native.getInstance().getPlatform();
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
-  const machine = useStoreState((state) => state.environment.machine);
-  const currentEngine = useStoreState((state) => state.environment.currentEngine);
-  const program = currentEngine.settings.current.program;
+  const machine = "TODO";
+  const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
+  const program = currentConnector.settings.current.program;
   const clipboardButtonRef = useRef<Button>(null);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   let commandPrefix;
   let exampleTitle;
-  if (platform === Platforms.Linux && currentEngine.engine === ContainerEngine.PODMAN_VIRTUALIZED && machine) {
+  if (platform === Platforms.Linux && currentConnector.engine === ContainerEngine.PODMAN_VIRTUALIZED && machine) {
     commandPrefix = `podman machine ssh ${machine}`;
     exampleTitle = t("On Linux, to dissociated between commands targeting the native podman engine, a machine prefix must be used.");
   } else if (platform === Platforms.Mac) {

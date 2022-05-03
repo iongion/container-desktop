@@ -3,119 +3,138 @@ const os = require("os");
 // vendors
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const Clients = require("./clients");
-const { Registry } = require("./registry");
-const { UserConfiguration } = require("./configuration");
 // module
+const { Podman, Docker } = require("./adapters");
+const { UserConfiguration } = require("./configuration");
+const { getApiConfig, createApiDriver } = require("./api");
 // locals
 
 class Application {
   constructor(version, env) {
-    this.logger = createLogger("client.Application");
+    this.logger = createLogger("container-client.Application");
     this.configuration = new UserConfiguration(version, env);
-    this.registry = new Registry(this.configuration, [
-      Clients.Podman.Native,
-      Clients.Podman.Virtualized,
-      Clients.Podman.WSL,
-      Clients.Podman.LIMA,
-      Clients.Docker.Native,
-      Clients.Docker.Virtualized,
-      Clients.Docker.WSL,
-      Clients.Docker.LIMA
-    ]);
-    this.connectors = undefined;
-    this.client = undefined;
-    this.inited = false;
-    this.preferredEngines = {
-      native: [Clients.Podman.Native.ENGINE, Clients.Docker.Native.ENGINE],
-      virtualized: [Clients.Podman.Virtualized.ENGINE, Clients.Docker.Virtualized.ENGINE]
+    this.adaptersList = [Podman.Adapter, Docker.Adapter];
+    this.adapters = [];
+  }
+
+  async getAdapters() {
+    if (!this.adapters.length) {
+      const items = this.adaptersList.map((Adapter) => {
+        const adapter = new Adapter(this.configuration);
+        return adapter;
+      });
+      this.adapters = items;
+    }
+    return this.adapters;
+  }
+
+  async getEngines() {
+    const adapterInstances = await this.getAdapters();
+    const items = [];
+    await Promise.all(
+      adapterInstances.map(async (adapter) => {
+        const adapterEngines = await adapter.getEngines();
+        items.push(...adapterEngines);
+      })
+    );
+    return items;
+  }
+
+  async getConnections() {
+    const adapterInstances = await this.getAdapters();
+    const items = [];
+    await Promise.all(
+      adapterInstances.map(async (adapter) => {
+        const connections = await adapter.getConnections();
+        items.push(...connections);
+      })
+    );
+    return items;
+  }
+
+  async getCurrentConnection() {
+    const connections = await this.getConnections();
+    let item;
+    // First preferred
+    const currentConnectorId = this.configuration.getKey("connector.current");
+    if (currentConnectorId) {
+      item = connections.find((it) => it.id === currentConnectorId);
+    }
+    // First available - even if API is not started
+    if (!item) {
+      item = connections.find(({ connector }) => {
+        return connector.availability.engine && connector.availability.program;
+      });
+    }
+    // First in list
+    if (!item) {
+      item = connections[0];
+    }
+    return item;
+  }
+
+  async getUserPreferences() {
+    return {
+      clientId: this.configuration.getKey("connector.current"),
+      startApi: this.configuration.getKey("startApi", false),
+      minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
+      path: this.configuration.getStoragePath(),
+      logging: {
+        level: this.configuration.getKey("logging.level", "debug")
+      }
     };
   }
 
-  async start() {
-    const engine = await this.getCurrentConnector();
-    const client = await this.getCurrentClient();
+  async getDescriptor() {
+    const connections = await this.getConnections();
+    const current = await this.getCurrentConnection();
+    let running = false;
+    let provisioned = false;
+    let currentConnector;
+    if (current) {
+      const { id, engine, connector } = current;
+      provisioned = connector.availability.program;
+      if (typeof connector.availability.controller !== "undefined") {
+        provisioned = connector.availability.program && connector.availability.controller;
+      }
+      running = connector.availability.api;
+      currentConnector = connector;
+    }
+    return {
+      environment: process.env.REACT_APP_ENV || "development",
+      version: process.env.REACT_APP_PROJECT_VERSION || "1.0.0",
+      platform: os.type(),
+      provisioned,
+      running,
+      connectors: connections.map((c) => c.connector),
+      currentConnector,
+      userPreferences: await this.getUserPreferences()
+    };
+  }
+
+  async createApiRequest(opts) {
+    const { client } = this;
     if (!client) {
-      this.logger.error("Unable to find a client for current engine", engine);
-      throw new Error("No client for current engine");
+      logger.error("Cannot create api request - no valid client for current engine");
+      throw new Error("No valid client for current engine");
     }
-    const started = await client.startApi();
-    return started;
-  }
-  async stop() {}
-
-  async setConnectors(connectors) {
-    this.connectors = connectors;
+    const driver = await client.getApiDriver();
+    return driver.request(opts);
   }
 
-  async getConnectors() {
-    if (typeof this.connectors === "undefined") {
-      this.connectors = await this.registry.getConnectors();
+  async testApiReachability(opts) {
+    console.debug(opts);
+    const config = await getApiConfig(opts.baseURL, opts.connectionString);
+    const driver = await createApiDriver(config);
+    const result = { success: false };
+    try {
+      const response = await driver.get("/_ping");
+      result.success = response?.data === "OK";
+      result.details = response?.data || "Api reached";
+    } catch (error) {
+      result.details = `API is not accessible - ${error.message}`;
     }
-    return this.connectors;
-  }
-
-  async isCurrentConnectorProvisioned() {
-    let flag = false;
-    const current = await this.getCurrentConnector();
-    if (!current) {
-      return flag;
-    }
-    const hasController = !!current.settings.current.controller;
-    const programIsSet = !!current.settings.current.program.path;
-    if (hasController) {
-      const controllerIsSet = !!current.settings.current.controller.path;
-      if (!controllerIsSet) {
-        this.logger.warn("Current engine client controller is not configured", current);
-      }
-      flag = controllerIsSet && programIsSet;
-    } else {
-      flag = programIsSet;
-    }
-    return flag;
-  }
-
-  async getCurrentConnector() {
-    const userEngineId = this.configuration.getKey("engine.current");
-    const connectors = await this.getConnectors();
-    let current;
-    if (userEngineId) {
-      current = connectors.find((it) => it.engine === current);
-    }
-    if (!current) {
-      this.logger.debug("No user preferred engine - looking for native");
-      current = connectors.find((it) => it.availability.available && this.preferredEngines.native.includes(it.engine));
-    }
-    if (!current) {
-      this.logger.debug("No native supported engine - looking for virtualized");
-      if (os.type() === "Windows_NT" || os.type() === "Darwin") {
-        current = connectors.find(
-          (it) => it.availability.available && this.preferredEngines.virtualized.includes(it.engine)
-        );
-      }
-    }
-    if (!current) {
-      this.logger.debug("No virtualized supported engine - looking for available");
-      current = connectors.find((it) => it.availability.available);
-    }
-    if (!current) {
-      this.logger.error("No engine is supported on this machine - requirements might be incomplete");
-    }
-    return current;
-  }
-
-  async getCurrentClient() {
-    const engine = await this.getCurrentConnector();
-    let client;
-    if (engine) {
-      client = await this.registry.getConnectorClientById(engine.id);
-      if (!client) {
-        this.logger.error("Unable to find a client for engine", engine);
-      }
-    } else {
-      this.logger.error("No current engine in this context");
-    }
-    return client;
+    return result;
   }
 }
 

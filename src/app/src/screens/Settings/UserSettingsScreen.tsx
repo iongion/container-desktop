@@ -28,13 +28,13 @@ export const Title = "Settings";
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
-  const provisioned = useStoreState((state) => state.environment.provisioned);
-  const system = useStoreState((state) => state.environment.system);
-  const running = useStoreState((state) => state.environment.running);
-  const currentEngine = useStoreState((state) => state.environment.currentEngine);
-  const userPreferences = useStoreState((state) => state.environment.userPreferences);
+  const provisioned = useStoreState((state) => state.descriptor.provisioned);
+  const system = {} as any; // TODO: System
+  const running = useStoreState((state) => state.descriptor.running);
+  const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
+  const userPreferences = useStoreState((state) => state.descriptor.userPreferences);
   const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
-  const program = currentEngine.settings.current.program;
+  const program = currentConnector.settings.current.program;
   const onAutoStartApiChange = useCallback(async (e) => {
     await setUserPreferences({ startApi: !!e.currentTarget.checked });
   }, [setUserPreferences]);
@@ -88,7 +88,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   } else {
     if (program.path) {
       runningDetails = t("Unable to detect system - try to connect and start the api");
-      if (program.name === "podman" && currentEngine.engine === ContainerEngine.PODMAN_VIRTUALIZED && !running) {
+      if (program.name === "podman" && currentConnector.engine === ContainerEngine.PODMAN_VIRTUALIZED && !running) {
         runningDetails = (
           <>
             <span>{t("Unable to detect system - podman machine may need restart")}</span> &mdash;

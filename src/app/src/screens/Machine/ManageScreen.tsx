@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IconNames } from "@blueprintjs/icons";
 
 // project
-import { AppScreenProps, AppScreen, Machine, SystemEnvironment, ContainerEngine } from "../../Types";
+import { AppScreenProps, AppScreen, Machine, ApplicationDescriptor, ContainerEngine } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -80,6 +80,6 @@ Screen.Route = {
 Screen.Metadata = {
   LeftIcon: IconNames.HEAT_GRID
 };
-Screen.isAvailable = (context: SystemEnvironment) => {
-  return context.currentEngine.engine !== ContainerEngine.DOCKER;
+Screen.isAvailable = (context: ApplicationDescriptor) => {
+  return !context.currentConnector.engine.startsWith("docker");
 }

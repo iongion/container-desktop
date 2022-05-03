@@ -1,10 +1,10 @@
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState, useMemo, useEffect } from "react";
 import { Button, ControlGroup, InputGroup, Intent, RadioGroup, Radio, FormGroup, Label, HTMLSelect, ButtonGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
 // project
-import { ContainerEngine, TestResult, Program } from "../../Types";
+import { Connector, ContainerEngine, TestResult, Program } from "../../Types";
 import { Native, Platforms } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
 import { RadioLabel } from "../../components/RadioLabel";
@@ -14,24 +14,31 @@ import { Notification } from "../../Notification";
 import "./EngineManager.css";
 
 interface ContainerEngineSettingsProps {
-  engine: ContainerEngine;
+  connector: Connector;
   disabled?: boolean;
 }
 
-export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettingsProps> = ({ engine, disabled }) => {
+export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettingsProps> = ({ connector, disabled }) => {
   const { t } = useTranslation();
+  const { engine } = connector;
   const pending = useStoreState((state) => state.pending);
   // const connect = useStoreActions((actions) => actions.connect);
-  const currentEngine = useStoreState((state) => state.environment.currentEngine);
+  const currentConnector = connector; // useStoreState((state) => state.descriptor.currentConnector);
   const wslDistributions: any[] = [];
   const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
   const testConnectionString = useStoreActions((actions) => actions.testConnectionString);
   const findProgram = useStoreActions((actions) => actions.findProgram);
   const start = useStoreActions((actions) => actions.start);
-  const [program, setProgram] = useState(currentEngine.settings.current.program);
+  const [program, setProgram] = useState(currentConnector.settings.current.program);
+  const api = currentConnector.settings.current.api;
+  const [connectionString, setConnectionString] = useState(currentConnector.settings.current.api.connectionString);
   const [selectedWSLDistribution, setSelectedWSLDistribution] = useState<string>(wslDistributions.find(it => it.Current)?.Name || "");
-  // const [connectionString, setConnectionString] = useState(userPreferences.connectionString);
-  const connectionString = "";
+
+  useEffect(() => {
+    setProgram(connector.settings.current.program);
+    setConnectionString(connector.settings.current.api.connectionString);
+  }, [connector]);
+
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const result = await Native.getInstance().openFileSelector();
@@ -95,16 +102,23 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     setProgram(result);
   }, [engine, program, selectedWSLDistribution, findProgram, t]);
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    const result: TestResult = await testConnectionString(connectionString);
+    const result: TestResult = await testConnectionString({
+      baseURL: api.baseURL,
+      connectionString,
+    });
     if (result.success) {
       Notification.show({ message: t("API was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("API could not be reached"), intent: Intent.DANGER });
     }
-  }, [connectionString, testConnectionString, t]);
+  }, [connectionString, testConnectionString, api, t]);
+
   const onConnectionStringAcceptClick = useCallback(async () => {
     try {
-      const result: TestResult = await testConnectionString(connectionString);
+      const result: TestResult = await testConnectionString({
+        baseURL: api.baseURL,
+        connectionString,
+      });
       if (result.success) {
         const programSettings: any = {};
         const programKey = `${engine}.program.${program.name}.connectionString`;
@@ -119,7 +133,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       console.error("Unable to change CLI path", error);
       Notification.show({ message: t("Connection string customization failed"), intent: Intent.DANGER });
     }
-  }, [engine, connectionString, program, testConnectionString, setUserPreferences, start, t]);
+  }, [engine, connectionString, program, testConnectionString, setUserPreferences, start, api, t]);
   const onConnectClick = useCallback(
     async () => {
       // await connect({ startApi: true, engine });
@@ -168,7 +182,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           <div className="AppSettingsFieldProgramHelper">
             {program?.version ? (
               <>
-                <span>{t("Detected version {{currentVersion}}", program)}</span>
+                <span>{t("Detected version {{version}}", program)}</span>
                 {suffix}
               </>
             ) : (
@@ -199,7 +213,6 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         </ControlGroup>
       </FormGroup>
       <FormGroup
-        helperText={t("NOTE - Custom connection string is reset on environment change due to auto-detection.")}
         label={t("Connection string")}
         labelFor={`${program.name}_socket`}
       >
@@ -242,7 +255,11 @@ export const ContainerEngineSettingsRegistry: { [key in ContainerEngine]: React.
   [ContainerEngine.PODMAN_REMOTE]: ContainerEngineSettingsPodmanRemote,
   [ContainerEngine.PODMAN_SUBSYSTEM_LIMA]: ContainerEngineSettingsProgramLocal,
   [ContainerEngine.PODMAN_SUBSYSTEM_WSL]: ContainerEngineSettingsProgramLocal,
-  [ContainerEngine.DOCKER]: ContainerEngineSettingsProgramLocal,
+  [ContainerEngine.DOCKER_NATIVE]: ContainerEngineSettingsProgramLocal,
+  [ContainerEngine.DOCKER_VIRTUALIZED]: ContainerEngineSettingsProgramLocal,
+  [ContainerEngine.DOCKER_REMOTE]: ContainerEngineSettingsPodmanRemote,
+  [ContainerEngine.DOCKER_SUBSYSTEM_LIMA]: ContainerEngineSettingsProgramLocal,
+  [ContainerEngine.DOCKER_SUBSYSTEM_WSL]: ContainerEngineSettingsProgramLocal,
 }
 
 export interface ContainerEngineManagerProps {
@@ -252,11 +269,13 @@ export interface ContainerEngineManagerProps {
 
 export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ disabled, helperText }) => {
   const { t } = useTranslation();
-  const platform = useStoreState((state) => state.environment.platform);
-  const currentEngine = useStoreState((state) => state.environment.currentEngine);
+  const platform = useStoreState((state) => state.descriptor.platform);
+  const connectors = useStoreState((state) => state.descriptor.connectors);
+  const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
   const ContainerEngines = useMemo(
     () => {
       const engines = [
+        // Podman
         { engine: ContainerEngine.PODMAN_NATIVE, label: t("Podman Native"), active: false, enabled: true },
         {
           engine: ContainerEngine.PODMAN_VIRTUALIZED,
@@ -277,22 +296,45 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
           active: false,
           enabled: platform === Platforms.Windows
         },
+        // Docker
+        { engine: ContainerEngine.DOCKER_NATIVE, label: t("Docker Native"), active: false, enabled: true },
         {
-          engine: ContainerEngine.DOCKER,
-          label: t("Docker (experimental)"),
+          engine: ContainerEngine.DOCKER_VIRTUALIZED,
+          label: t("Docker Machine"),
           active: false,
-          enabled: true
-        }
+          enabled: platform === Platforms.Windows || platform === Platforms.Mac
+        },
+        { engine: ContainerEngine.DOCKER_REMOTE, label: t("Docker Remote"), active: false, enabled: false },
+        {
+          engine: ContainerEngine.DOCKER_SUBSYSTEM_LIMA,
+          label: t("Docker on LIMA"),
+          active: false,
+          enabled: platform === Platforms.Mac
+        },
+        {
+          engine: ContainerEngine.DOCKER_SUBSYSTEM_WSL,
+          label: t("Docker on WSL"),
+          active: false,
+          enabled: platform === Platforms.Windows
+        },
       ];
       return engines;
     },
     [t, platform]
   );
-  const [selectedEngine, setSelectedEngine] = useState(currentEngine.engine);
-  const Settings = ContainerEngineSettingsRegistry[currentEngine.engine];
+
+  const [selectedConnectorId, setSelectedConnectorId] = useState(currentConnector.id);
+  const connector = connectors.find(it => it.id === selectedConnectorId);
+  let settingsWidget: any = null;
+  if (connector && ContainerEngineSettingsRegistry[connector.engine]) {
+    const Settings = ContainerEngineSettingsRegistry[connector.engine];
+    settingsWidget = <Settings connector={connector} />;
+  }
+
   const onContainerEngineChange = useCallback((e) => {
-    setSelectedEngine(e.currentTarget.value);
+    setSelectedConnectorId(e.currentTarget.value);
   }, []);
+
   return (
     <div className="AppSettingsEngineManager">
       <Label>{t("Container engine")} - {helperText}</Label>
@@ -304,25 +346,21 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
               className="AppSettingsFormContent"
               data-form="engine"
               onChange={onContainerEngineChange}
-              selectedValue={selectedEngine}
+              selectedValue={connector?.id}
             >
-              {ContainerEngines.map((it) => {
-                let restrict;
-                let disabled = !it.enabled;
-                const { engine, label } = it;
-                if (engine === ContainerEngine.PODMAN_NATIVE) {
-                  if (platform === Platforms.Mac || platform === Platforms.Windows) {
-                    disabled = true;
-                  }
-                }
-                restrict = <RestrictedTo engine={engine} />;
+              {connectors.map((it) => {
+                const { engine } = it;
+                const containerEngine = engine ? ContainerEngines.find(it => it.engine === engine) : undefined;
+                const label = containerEngine ? containerEngine.label : "Unsupported";
+                const disabled = containerEngine ? !containerEngine.enabled : true;
+                const restrict = <RestrictedTo engine={engine} />;
                 return (
                   <Radio
                     key={engine}
-                    className={`AppSettingsField ${currentEngine.engine === it.engine ? "AppSettingsFieldActive" : ""}`}
+                    className={`AppSettingsField ${currentConnector.engine === it.engine ? "AppSettingsFieldActive" : ""}`}
                     disabled={disabled}
-                    labelElement={<RadioLabel text={label} highlight={currentEngine.engine === it.engine} />}
-                    value={engine}
+                    labelElement={<RadioLabel text={label} highlight={currentConnector.engine === it.engine} />}
+                    value={it.id}
                   >
                     {restrict}
                   </Radio>
@@ -332,7 +370,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
           </FormGroup>
         </div>
         <div className="AppSettingsForm" data-form="engine.settings">
-          <Settings engine={selectedEngine} />
+          {settingsWidget}
         </div>
       </div>
     </div>

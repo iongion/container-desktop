@@ -12,12 +12,12 @@ export const createModel = (registry: AppRegistry): AppModel => {
     phase: AppBootstrapPhase.INITIAL,
     pending: false,
     native,
-    environment: {
+    descriptor: {
+      environment: "",
+      version: "",
       platform,
-      system: {} as any,
-      engines: [],
-      currentEngine: {} as any,
-      connections: [],
+      connectors: [],
+      currentConnector: {} as any,
       provisioned: false,
       running: false,
       userPreferences: {
@@ -29,19 +29,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
           level: "error"
         },
       }
-      // userConfiguration: {
-      //   program: {} as any,
-      //   engine: ContainerEngine.PODMAN_NATIVE, // default
-      //   startApi: false,
-      //   minimizeToSystemTray: false,
-      //   path: "",
-      //   logging: {
-      //     level: "error"
-      //   },
-      //   communication: "api",
-      //   connectionString: ""
-      // },
-      // wslDistributions: []
     },
     // Actions
     setPhase: action((state, phase) => {
@@ -50,8 +37,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
     setPending: action((state, flag) => {
       state.pending = flag;
     }),
-    setEnvironment: action((state, value) => {
-      state.environment = produce(state.environment, (draft) => {
+    setDescriptor: action((state, value) => {
+      state.descriptor = produce(state.descriptor, (draft) => {
         Object.keys(value || {}).forEach(key => {
           (draft as any)[key] = (value as any)[key];
         })
@@ -66,15 +53,16 @@ export const createModel = (registry: AppRegistry): AppModel => {
       }
     }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
-      const { phase, pending, environment } = opts;
+      console.debug("Update domain", opts);
+      const { phase, pending, descriptor } = opts;
       if (phase !== undefined) {
         state.phase = phase;
       }
       if (pending !== undefined) {
         state.pending = pending;
       }
-      if (environment !== undefined) {
-        state.environment = environment;
+      if (descriptor !== undefined) {
+        state.descriptor = descriptor;
       }
     }),
     // Thunks
@@ -86,21 +74,22 @@ export const createModel = (registry: AppRegistry): AppModel => {
         try {
           await actions.setPhase(AppBootstrapPhase.CONNECTING);
           const startup = await registry.api.startApplication();
-          if (startup.currentEngine) {
-            registry.api.setEngine(startup.currentEngine.engine);
+          if (startup.currentConnector) {
+            registry.api.setEngine(startup.currentConnector.engine);
             let nextPhase = AppBootstrapPhase.CONFIGURED;
             if (startup.provisioned) {
               if (startup.running) {
                 nextPhase = AppBootstrapPhase.READY;
+              } else {
+                nextPhase = AppBootstrapPhase.FAILED;
               }
             } else {
               nextPhase = AppBootstrapPhase.FAILED;
             }
             await actions.domainUpdate({
               phase: nextPhase,
-              environment: {
-                ...getState().environment,
-                // userConfiguration: configuration
+              descriptor: {
+                ...getState().descriptor,
                 ...startup
               }
             });
@@ -111,71 +100,15 @@ export const createModel = (registry: AppRegistry): AppModel => {
         }
       });
     }),
-    /*
-    configure: thunk(async (actions, options, { getState }) => {
-      console.debug("Application configure");
-      return registry.withPending(async () => {
-        try {
-          const configuration = await registry.api.getUserPreferences();
-          registry.api.setEngine(configuration.engine);
-          await actions.domainUpdate({
-            phase: AppBootstrapPhase.CONFIGURED,
-            environment: {
-              ...getState().environment,
-              // userConfiguration: configuration
-            }
-          });
-          return configuration;
-        } catch (error) {
-          console.error("Error during user configuration reading", error);
-        }
-      });
-    }),
-    connect: thunk(async (actions, options, { getState }) => {
-      if (native) {
-        await Native.getInstance().setup();
-      }
-      const startApi = options === undefined ? getState().environment.userConfiguration.startApi : options.startApi;
-      console.debug("Application connect", { startApi });
-      await actions.setPhase(AppBootstrapPhase.CONNECTING);
-      return registry.withPending(async () => {
-        // check if API is running and do best effort to start it
-        let isRunning = false;
-        if (startApi) {
-          //
-          isRunning = await registry.api.getIsApiRunning();
-          if (isRunning) {
-            console.debug("Connect - startApi - skipped(already running)");
-          } else {
-            console.debug("Connect - startApi - init");
-            isRunning = await registry.api.startApi();
-            console.debug("Connect - startApi - done", { isRunning });
-          }
-        }
-        let nextPhase = AppBootstrapPhase.CONNECTED;
-        const environment = await registry.api.getSystemEnvironment();
-        if (environment.provisioned) {
-          nextPhase = AppBootstrapPhase.READY;
-        } else {
-          nextPhase = AppBootstrapPhase.FAILED;
-        }
-        registry.api.setEngine(environment.userConfiguration.engine);
-        await actions.domainUpdate({
-          phase: nextPhase,
-          environment
-        });
-      });
-    }),
-    */
     setUserPreferences: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         // try {
-        //   const currentEngine = getState().environment.userConfiguration.engine;
+        //   const currentConnector = getState().environment.userConfiguration.engine;
         //   const configuration = await registry.api.setUserPreferences(options);
         //   await actions.setEnvironment({ userConfiguration: configuration });
         //   // If engine is changing - reconnect
-        //   if (options.engine !== undefined && options.engine !== currentEngine) {
-        //     console.debug("Engine change detected - re-starting", { current: currentEngine, next: options.engine });
+        //   if (options.engine !== undefined && options.engine !== currentConnector) {
+        //     console.debug("Engine change detected - re-starting", { current: currentConnector, next: options.engine });
         //     await actions.start();
         //   }
         //   return configuration;

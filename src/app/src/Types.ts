@@ -3,33 +3,37 @@ import React from "react";
 // project
 import { Platforms } from "./Native";
 
-export interface AppEngineSettings {
+export interface ConnectorSettings {
   api: {
     baseURL: string;
     connectionString: string;
   };
   program: Program;
-  controller?: {
-    name: string;
-    path: string;
-    version: string;
-    scope: string;
-  }
+  controller?: Controller;
 }
-export interface AppEngineSettingsMap {
-  current: AppEngineSettings;
-  detect: AppEngineSettings;
-  custom: AppEngineSettings;
+export interface ConnectorSettingsMap {
+  current: ConnectorSettings;
+  detected: ConnectorSettings;
+  expected: ConnectorSettings;
+  user: ConnectorSettings;
 }
-export interface AppEngine {
+export interface Connector {
   id: string;
   engine: ContainerEngine;
-  program: string;
   availability: {
-    available: boolean;
-    reason?: string;
+    all: boolean;
+    engine: boolean;
+    api: boolean;
+    program: boolean;
+    controller?: boolean;
+    report: {
+      engine: string;
+      api: string;
+      program: string;
+      controller?: string;
+    }
   };
-  settings: AppEngineSettingsMap;
+  settings: ConnectorSettingsMap;
 }
 
 export interface ConnectOptions {
@@ -148,7 +152,12 @@ export enum ContainerEngine {
   PODMAN_SUBSYSTEM_LIMA = "podman.subsystem.lima",
   PODMAN_VIRTUALIZED = "podman.virtualized",
   PODMAN_REMOTE = "podman.remote",
-  DOCKER = "docker"
+  // Docker
+  DOCKER_NATIVE = "docker.native",
+  DOCKER_SUBSYSTEM_WSL = "docker.subsystem.wsl",
+  DOCKER_SUBSYSTEM_LIMA = "docker.subsystem.lima",
+  DOCKER_VIRTUALIZED = "docker.virtualized",
+  DOCKER_REMOTE = "docker.remote",
 }
 export interface SystemConnection {
   Identity: string;
@@ -162,17 +171,15 @@ export interface WSLDistribution {
   Default: boolean;
   Current: boolean;
 }
-export interface SystemEnvironment {
-  machine?: string;
+export interface ApplicationDescriptor {
+  environment: string;
+  version: string;
   platform: Platforms;
-  connections: SystemConnection[];
-  running: boolean;
   provisioned: boolean;
-  system?: SystemInfo;
-  // wslDistributions: WSLDistribution[];
-
-  currentEngine: AppEngine;
-  engines: AppEngine[];
+  running: boolean;
+  // computed
+  connectors: Connector[];
+  currentConnector: Connector;
   userPreferences: UserPreferences;
 }
 
@@ -195,6 +202,11 @@ export interface Program {
   homepage?: string;
 }
 
+export interface Controller {
+  path?: string;
+  version?: string;
+  scope?: string;
+}
 
 export interface ContainerClientResponse<T = unknown> {
   ok: boolean;
@@ -515,5 +527,5 @@ export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> 
     Path: string;
   };
   Metadata?: Partial<AppScreenMetadata>;
-  isAvailable?: (context: SystemEnvironment) => boolean;
+  isAvailable?: (context: ApplicationDescriptor) => boolean;
 };

@@ -3,55 +3,15 @@ const os = require("os");
 // project
 const { getLevel, setLevel, createLogger } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
-const { Clients, Registry, UserConfiguration } = require("@podman-desktop-companion/container-client");
+const { Application } = require("@podman-desktop-companion/container-client").application;
 // locals
 const logger = createLogger("shell.ipc");
-const virtualized_engines = ["podman.virtualized", "docker.virtualized"];
-const native_engines = ["podman.native", "docker.native"];
-const application = {
-  configuration: undefined,
-  registry: undefined,
-  connectors: [],
-  client: undefined,
-  getClient() {
-    return this.client;
-  },
-  getCurrentEngine() {
-    const userEngineId = this.configuration.getKey("engine.current");
-    let currentEngine;
-    if (userEngineId) {
-      currentEngine = this.connectors.find((it) => it.engine === currentEngine);
-    }
-    if (!currentEngine) {
-      logger.debug("No user preferred engine - looking for native");
-      currentEngine = this.connectors.find((it) => it.availability.available && native_engines.includes(it.engine));
-    }
-    if (!currentEngine) {
-      logger.debug("No native supported engine - looking for virtualized");
-      if (os.type() === "Windows_NT" || os.type() === "Darwin") {
-        currentEngine = this.connectors.find(
-          (it) => it.availability.available && virtualized_engines.includes(it.engine)
-        );
-      }
-    }
-    if (!currentEngine) {
-      logger.debug("No virtualized supported engine - looking for available");
-      currentEngine = this.connectors.find((it) => it.availability.available);
-    }
-    if (!currentEngine) {
-      logger.error("No engine is supported on this machine - requirements might be incomplete");
-    }
-    return currentEngine;
-  },
-  async createApiRequest(opts) {
-    const { client } = this;
-    if (!client) {
-      logger.error("Cannot create api request - no valid client for current engine");
-      throw new Error("No valid client for current engine");
-    }
-    const driver = await client.getApiDriver();
-    return driver.request(opts);
+let application;
+const getApp = () => {
+  if (!application) {
+    application = new Application(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
   }
+  return application;
 };
 
 async function getUserConfiguration() {
@@ -88,89 +48,7 @@ async function setUserConfiguration(options) {
 
 const servicesMap = {
   "/start": async function () {
-    const configuration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
-    const registry = new Registry(configuration, [
-      Clients.Podman.Native,
-      Clients.Podman.Virtualized,
-      Clients.Podman.WSL,
-      Clients.Podman.LIMA,
-      Clients.Docker.Native,
-      Clients.Docker.Virtualized,
-      Clients.Docker.WSL,
-      Clients.Docker.LIMA
-    ]);
-    const connectors = await registry.getConnectors();
-    // Cache
-    application.configuration = configuration;
-    application.registry = registry;
-    application.connectors = connectors;
-    // User preferences impacting startup
-    let startApi = true;
-    // AppStartup object
-    let currentEngine = application.getCurrentEngine();
-    let running = false;
-    let system = {};
-    let connections = [];
-    const isProvisioned = () => {
-      let flag = false;
-      if (!currentEngine) {
-        return flag;
-      }
-      const hasController = !!currentEngine.settings.current.controller;
-      const programIsSet = !!currentEngine.settings.current.program.path;
-      if (hasController) {
-        const controllerIsSet = !!currentEngine.settings.current.controller.path;
-        flag = controllerIsSet && programIsSet;
-      } else {
-        flag = programIsSet;
-      }
-      return flag;
-    };
-    if (currentEngine) {
-      const client = registry.getEngineClientById(currentEngine.id);
-      if (client) {
-        let result = await client.isApiRunning();
-        running = result.success;
-        if (!running && startApi) {
-          running = await client.startApi();
-          currentEngine = await client.getEngine();
-          registry.updateEngine(currentEngine.id, currentEngine);
-        }
-        application.client = client;
-        try {
-          system = await client.getSystemInfo();
-        } catch (error) {
-          logger.error("Unable to extract system info", error.message, error.stack, currentEngine);
-        }
-        try {
-          connections = await client.getSystemConnections();
-        } catch (error) {
-          logger.error("Unable to list system connections", error.message, error.stack, currentEngine);
-        }
-      } else {
-        logger.error("Unable to find client for current engine api", currentEngine);
-      }
-    }
-    return {
-      provisioned: isProvisioned(),
-      running,
-      system,
-      connections,
-      currentEngine,
-      engines,
-      platform: os.type(),
-      environment: process.env.REACT_APP_ENV,
-      version: process.env.REACT_APP_PROJECT_VERSION,
-      userPreferences: {
-        clientId: currentEngine.id,
-        startApi,
-        minimizeToSystemTray: false,
-        path: userSettings.getPath(),
-        logging: {
-          level: "debug"
-        }
-      }
-    };
+    return await getApp().getDescriptor();
   },
   "/container/engine/request": async function (options) {
     let result = {
@@ -262,7 +140,7 @@ const servicesMap = {
     return client.createMachine(opts);
   },
   "/test": async function (opts) {
-    const result = await application.testApiReachability({ connectionString: opts.payload });
+    const result = await getApp().testApiReachability(opts.payload);
     result.subject = opts.subject;
     return result;
   },

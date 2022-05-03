@@ -122,6 +122,7 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
           connectionString: NATIVE_DOCKER_SOCKET_PATH
         },
         program: {
+          name: PROGRAM,
           path: NATIVE_DOCKER_CLI_PATH,
           version: NATIVE_DOCKER_CLI_VERSION
         }
@@ -132,6 +133,7 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
           connectionString: WINDOWS_DOCKER_NATIVE_SOCKET_PATH
         },
         program: {
+          name: PROGRAM,
           path: WINDOWS_DOCKER_NATIVE_CLI_PATH,
           version: WINDOWS_DOCKER_NATIVE_CLI_VERSION
         }
@@ -142,6 +144,7 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
           connectionString: MACOS_DOCKER_NATIVE_SOCKET_PATH
         },
         program: {
+          name: PROGRAM,
           path: MACOS_DOCKER_NATIVE_CLI_PATH,
           version: MACOS_DOCKER_NATIVE_CLI_VERSION
         }
@@ -226,7 +229,8 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
   }
 }
 
-class DockerAdapter extends AbstractAdapter {
+class Adapter extends AbstractAdapter {
+  PROGRAM = PROGRAM;
   constructor(userConfiguration, osType) {
     super(userConfiguration, osType);
     this.connectorClientEngineMap = {};
@@ -242,38 +246,35 @@ class DockerAdapter extends AbstractAdapter {
       return engine;
     });
   }
-  async getConnectors() {
+  async getConnections() {
     const engines = await this.getEngines();
-    const connectors = await Promise.all(
+    const items = await Promise.all(
       engines.map(async (client) => {
         const id = `engine.default.${client.ENGINE}`;
-        if (!this.connectorClientEngineMap[id]) {
-          const settings = await client.getSettings();
-          const connector = {
-            id,
-            engine: client.ENGINE,
-            availability: await client.getAvailability(),
-            settings
-          };
-          this.connectorClientEngineMap[id] = {
-            client,
-            connector
-          };
-        }
-        return this.connectorClientEngineMap[id].connector;
+        const settings = await client.getSettings();
+        const connector = {
+          id,
+          engine: client.ENGINE,
+          availability: await client.getAvailability(),
+          settings
+        };
+        return {
+          client,
+          connector
+        };
       })
     );
-    return connectors;
+    return items;
   }
   async getEngineClientById(id) {
-    await this.getConnectors();
-    return this.connectorClientEngineMap[id].client;
+    const items = await this.getConnections();
+    return items.find((it) => it.connector.id === id);
   }
 }
 
 module.exports = {
   // adapters
-  DockerAdapter,
+  Adapter,
   // engines
   DockerClientEngineNative,
   DockerClientEngineVirtualized,

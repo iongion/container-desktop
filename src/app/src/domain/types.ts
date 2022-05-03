@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Store, EasyPeasyConfig, createTypedHooks } from "easy-peasy";
 // project
-import { ConnectOptions, ContainerEngine, SystemEnvironment, UserPreferencesOptions } from "../Types";
+import { ConnectOptions, ContainerEngine, ApplicationDescriptor, UserPreferencesOptions } from "../Types";
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -26,7 +26,7 @@ export interface AppModelState {
   phase: AppBootstrapPhase;
   pending: boolean;
   native: boolean;
-  environment: SystemEnvironment;
+  descriptor: ApplicationDescriptor;
 }
 
 export interface FindProgramOptions {
@@ -40,7 +40,7 @@ export interface AppModel extends AppModelState {
   // actions
   setPhase: Action<AppModel, AppBootstrapPhase>;
   setPending: Action<AppModel, boolean>;
-  setEnvironment: Action<AppModel, Partial<SystemEnvironment>>;
+  setDescriptor: Action<AppModel, Partial<ApplicationDescriptor>>;
 
   domainReset: Action<AppModel, Partial<AppModelState>>;
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
@@ -53,7 +53,7 @@ export interface AppModel extends AppModelState {
 
   setUserPreferences: Thunk<AppModel, Partial<UserPreferencesOptions>>;
   getUserPreferences: Thunk<AppModel>;
-  testConnectionString: Thunk<AppModel, string>;
+  testConnectionString: Thunk<AppModel, { baseURL: string; connectionString: string }>;
   findProgram: Thunk<AppModel, FindProgramOptions>;
 }
 

@@ -21,12 +21,8 @@ class AbstractAdapter {
   async getEngines() {
     throw new Error("getEngines must be implemented");
   }
-  async getConnectors() {
-    throw new Error("getConnectors must be implemented");
-  }
-  async getEngineClientById(id) {
-    await this.getConnectors();
-    return this.connectorClientEngineMap[id].client;
+  async getConnections() {
+    throw new Error("getConnections must be implemented");
   }
 }
 
@@ -294,7 +290,6 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     } else {
       result.flag = false;
       result.details = `Controller scope ${settings.current.controller.scope} scope is not available`;
-      this.logger.error(result.details);
       return result;
     }
     // Only if scope is available
