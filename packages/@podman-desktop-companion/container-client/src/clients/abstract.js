@@ -9,7 +9,7 @@ const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { findProgram, findProgramVersion } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
-const { getAvailableLIMAInstances } = require("../shared");
+const { getAvailableLIMAInstances, getAvailableWSLDistributions } = require("../shared");
 const { WSL_VERSION } = require("../constants");
 
 class AbstractAdapter {
@@ -289,6 +289,36 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
   }
 }
 
+class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
+  // Helpers
+  async getConnectionString(scope) {
+    return `//./pipe/podman-desktop-companion-${this.PROGRAM}-${scope}`;
+  }
+  // Availability
+  async isControllerScopeAvailable() {
+    const settings = await this.getCurrentSettings();
+    const instances = await getAvailableWSLDistributions(settings.controller.path);
+    const target = instances.find((it) => it.Name === settings.controller.scope);
+    return !!target;
+  }
+  // Runtime
+  async startApi() {
+    this.logger.debug("Start api skipped - not required");
+    return true;
+  }
+  async stopApi() {
+    this.logger.debug("Stop api skipped - not required");
+    return true;
+  }
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    const { controller } = await this.getCurrentSettings();
+    const command = ["--distribution", controller.scope, program, ...args];
+    const result = await exec_launcher_sync(controller.path, command, opts);
+    return result;
+  }
+}
+
 class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   // Helpers
   async getConnectionString(scope) {
@@ -335,5 +365,6 @@ module.exports = {
   AbstractAdapter,
   AbstractClientEngine,
   AbstractControlledClientEngine,
+  AbstractClientEngineSubsystemWSL,
   AbstractClientEngineSubsystemLIMA
 };

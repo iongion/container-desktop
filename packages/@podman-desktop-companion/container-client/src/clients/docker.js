@@ -20,6 +20,7 @@ const {
   AbstractAdapter,
   AbstractClientEngine,
   AbstractControlledClientEngine,
+  AbstractClientEngineSubsystemWSL,
   AbstractClientEngineSubsystemLIMA
 } = require("./abstract");
 // locals
@@ -33,7 +34,7 @@ const NATIVE_DOCKER_SOCKET_PATH = `/var/run/${PROGRAM}.sock`;
 // Windows virtualized
 const WINDOWS_DOCKER_NATIVE_CLI_VERSION = "20.10.14";
 const WINDOWS_DOCKER_NATIVE_CLI_PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe";
-const WINDOWS_DOCKER_NATIVE_SOCKET_PATH = `//.pipe/${DOCKER_SCOPE_DEFAULT}`;
+const WINDOWS_DOCKER_NATIVE_SOCKET_PATH = `//./pipe/${DOCKER_SCOPE_DEFAULT}`;
 // MacOS virtualized
 const MACOS_DOCKER_NATIVE_CLI_VERSION = "20.10.8";
 const MACOS_DOCKER_NATIVE_CLI_PATH = "/usr/local/bin/docker";
@@ -152,12 +153,9 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
   }
 }
 
-class DockerClientEngineSubsystemWSL extends AbstractDockerControlledClientEngine {
+class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
-  // Helpers
-  async getConnectionString(scope) {
-    return `//./pipe/podman-desktop-companion-${PROGRAM}-${scope}`;
-  }
+  PROGRAM = PROGRAM;
   // Settings
   async getExpectedSettings() {
     return {
@@ -176,22 +174,6 @@ class DockerClientEngineSubsystemWSL extends AbstractDockerControlledClientEngin
         version: WSL_DOCKER_CLI_VERSION
       }
     };
-  }
-  // Runtime
-  async startApi() {
-    this.logger.debug("Start api skipped - not required");
-    return true;
-  }
-  async stopApi() {
-    this.logger.debug("Stop api skipped - not required");
-    return true;
-  }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    const { controller } = await this.getCurrentSettings();
-    const command = ["--distribution", controller.scope, program, ...args];
-    const result = await exec_launcher_async(controller.path, command, opts);
-    return result;
   }
 }
 

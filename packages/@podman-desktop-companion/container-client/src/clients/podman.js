@@ -21,6 +21,7 @@ const {
   AbstractAdapter,
   AbstractClientEngine,
   AbstractControlledClientEngine,
+  AbstractClientEngineSubsystemWSL,
   AbstractClientEngineSubsystemLIMA
 } = require("./abstract");
 // locals
@@ -214,12 +215,9 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
   }
 }
 
-class PodmanClientEngineSubsystemWSL extends AbstractPodmanControlledClientEngine {
-  ENGINE = ENGINE_PODMAN_SUBSYSTEM_WSL;
-  // Helpers
-  async getConnectionString(scope) {
-    return `//./pipe/podman-desktop-companion-${PROGRAM}-${scope}`;
-  }
+class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
+  ENGINE = ENGINE_PODMAN_SUBSYSTEM_LIMA;
+  PROGRAM = PROGRAM;
   // Settings
   async getExpectedSettings() {
     return {
@@ -238,22 +236,6 @@ class PodmanClientEngineSubsystemWSL extends AbstractPodmanControlledClientEngin
         version: WSL_PODMAN_CLI_VERSION
       }
     };
-  }
-  // Runtime
-  async startApi() {
-    this.logger.debug("Start api skipped - not required");
-    return true;
-  }
-  async stopApi() {
-    this.logger.debug("Stop api skipped - not required");
-    return true;
-  }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    const { controller } = await this.getCurrentSettings();
-    const command = ["--distribution", controller.scope, program, ...args];
-    const result = await exec_launcher(controller.path, command, opts);
-    return result;
   }
 }
 
