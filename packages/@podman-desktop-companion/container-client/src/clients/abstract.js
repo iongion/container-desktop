@@ -81,7 +81,6 @@ class AbstractClientEngine {
     const settings = await this.getSettings();
     return settings.current;
   }
-  ///////
   // Api
   async startApi() {
     throw new Error("startApi must be implemented");
@@ -192,6 +191,27 @@ class AbstractClientEngine {
     }
     return result;
   }
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    const result = await exec_launcher_sync(program, args, opts);
+    return result;
+  }
+  // System information
+  async getSystemInfo(customFormat) {
+    let info = {};
+    const { program } = await this.getCurrentSettings();
+    const result = await this.runScopedCommand(program.path, ["system", "info", "--format", customFormat || "json"]);
+    if (!result.success) {
+      this.logger.error("Unable to get system info", result);
+      return info;
+    }
+    try {
+      info = result.stdout ? JSON.parse(result.stdout) : info;
+    } catch (error) {
+      this.logger.error("Unable to decode system info", error, result);
+    }
+    return info;
+  }
 }
 
 class AbstractControlledClientEngine extends AbstractClientEngine {
@@ -230,8 +250,6 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       info.controller = {
         version: detectVersion
       };
-    } else {
-      info = await findProgram(settings.controller.name || this.PROGRAM);
     }
     return info;
   }

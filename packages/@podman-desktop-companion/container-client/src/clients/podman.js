@@ -97,7 +97,7 @@ class PodmanClientEngineNative extends AbstractClientEngine {
         version: detectVersion
       };
     } else {
-      info = await findProgram(settings.program.name || PROGRAM);
+      // info = await findProgram(settings.program.name || PROGRAM);
     }
     return info;
   }

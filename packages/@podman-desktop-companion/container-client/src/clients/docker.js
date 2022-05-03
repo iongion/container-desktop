@@ -18,7 +18,7 @@ const {
 const {
   AbstractAdapter,
   AbstractClientEngine,
-  AbstractControlledClientEngine,
+  // AbstractControlledClientEngine,
   AbstractClientEngineSubsystemWSL,
   AbstractClientEngineSubsystemLIMA
 } = require("./abstract");
@@ -50,10 +50,6 @@ const ENGINE_DOCKER_NATIVE = `${PROGRAM}.native`;
 const ENGINE_DOCKER_VIRTUALIZED = `${PROGRAM}.virtualized`;
 const ENGINE_DOCKER_SUBSYSTEM_WSL = `${PROGRAM}.subsystem.wsl`;
 const ENGINE_DOCKER_SUBSYSTEM_LIMA = `${PROGRAM}.subsystem.lima`;
-
-class AbstractDockerControlledClientEngine extends AbstractControlledClientEngine {
-  PROGRAM = PROGRAM;
-}
 
 class DockerClientEngineNative extends AbstractClientEngine {
   ENGINE = ENGINE_DOCKER_NATIVE;
@@ -91,7 +87,7 @@ class DockerClientEngineNative extends AbstractClientEngine {
         version: detectVersion
       };
     } else {
-      info = await findProgram(settings.program.name || PROGRAM);
+      // info = await findProgram(settings.program.name || PROGRAM);
     }
     return info;
   }
@@ -108,6 +104,10 @@ class DockerClientEngineNative extends AbstractClientEngine {
       result.details = `Engine is not available on ${this.osType}`;
     }
     return result;
+  }
+  // System information
+  async getSystemInfo() {
+    return super.getSystemInfo("{{ json . }}");
   }
 }
 
@@ -192,6 +192,10 @@ class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
       }
     };
   }
+  // System information
+  async getSystemInfo() {
+    return super.getSystemInfo("{{ json . }}");
+  }
 }
 
 class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA {
@@ -215,6 +219,10 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
         version: LIMA_DOCKER_CLI_VERSION
       }
     };
+  }
+  // System information
+  async getSystemInfo() {
+    return super.getSystemInfo("{{ json . }}");
   }
 }
 
