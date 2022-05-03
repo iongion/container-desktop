@@ -4,7 +4,6 @@ const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { exec_launcher_async } = require("@podman-desktop-companion/executor");
 // module
 const { findProgram, findProgramVersion } = require("../detector");
 const {

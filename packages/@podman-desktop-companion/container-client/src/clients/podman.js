@@ -4,7 +4,7 @@ const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { exec_launcher, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { findProgram, findProgramVersion } = require("../detector");
 const { getAvailablePodmanMachines } = require("../shared");
@@ -139,8 +139,22 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
   }
   // Settings
   async getExpectedSettings() {
-    const defaults = await super.getExpectedSettings();
     const connectionString = await this.getConnectionString(PODMAN_MACHINE_DEFAULT);
+    const defaults = {
+      api: {
+        baseURL: API_BASE_URL,
+        connectionString: connectionString
+      },
+      controller: {
+        path: undefined,
+        version: undefined,
+        scope: undefined
+      },
+      program: {
+        path: undefined,
+        version: undefined
+      }
+    };
     let config = {};
     if (this.osType === "Linux") {
       config = {
@@ -209,6 +223,10 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
     });
   }
   // Availability
+  async isEngineAvailable() {
+    const result = { success: true, details: "Engine is available" };
+    return result;
+  }
   async isControllerScopeAvailable() {
     const settings = await this.getCurrentSettings();
     const machines = await getAvailablePodmanMachines(settings.controller.path);
