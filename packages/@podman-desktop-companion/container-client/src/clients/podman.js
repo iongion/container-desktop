@@ -1,207 +1,65 @@
-const os = require("os");
+// nodejs
 const fs = require("fs");
 const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { createLogger } = require("@podman-desktop-companion/logger");
 const { exec_launcher, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { findProgram, findProgramVersion } = require("../detector");
-const { createApiDriver, getApiConfig, Runner } = require("../api");
-
+const {
+  // WSL - common
+  WSL_PATH,
+  WSL_VERSION,
+  WSL_DISTRIBUTION,
+  // LIMA - common
+  LIMA_PATH,
+  LIMA_VERSION
+} = require("../constants");
+const { AbstractAdapter, AbstractClientEngine } = require("./abstract");
+// locals
 const PROGRAM = "podman";
-
-const PODMAN_API_BASE_URL = "http://d/v3.0.0/libpod";
+const API_BASE_URL = "http://d/v3.0.0/libpod";
 const PODMAN_MACHINE_DEFAULT = "podman-machine-default";
-
+// Native
 const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
 const NATIVE_PODMAN_CLI_VERSION = "4.0.3";
-const NATIVE_PODMAN_SOCKET_PATH = "/tmp/podman-desktop-companion-podman-rest-api.sock";
-
+const NATIVE_PODMAN_SOCKET_PATH = `/tmp/podman-desktop-companion-${PROGRAM}-rest-api.sock`;
 const NATIVE_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
 const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
-
+// Windows virtualized
 const WINDOWS_PODMAN_NATIVE_CLI_VERSION = "4.0.3-dev";
 const WINDOWS_PODMAN_NATIVE_CLI_PATH = "C:\\Program Files\\RedHat\\Podman\\podman.exe";
 const WINDOWS_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
 const WINDOWS_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
-
+// MacOS virtualized
 const MACOS_PODMAN_NATIVE_CLI_VERSION = "4.0.3";
 const MACOS_PODMAN_NATIVE_CLI_PATH = "/usr/local/bin/podman";
 const MACOS_PODMAN_MACHINE_CLI_VERSION = "4.0.2";
 const MACOS_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
-
+// Windows WSL
 const WSL_PODMAN_CLI_PATH = "/usr/bin/podman";
 const WSL_PODMAN_CLI_VERSION = "3.4.2";
-
+// MacOS LIMA
 const LIMA_PODMAN_CLI_PATH = "/usr/bin/podman";
 const LIMA_PODMAN_CLI_VERSION = "3.2.1";
 const LIMA_PODMAN_INSTANCE = "podman";
-
+// Engines
 const ENGINE_PODMAN_NATIVE = `${PROGRAM}.native`;
 const ENGINE_PODMAN_VIRTUALIZED = `${PROGRAM}.virtualized`;
 const ENGINE_PODMAN_SUBSYSTEM_WSL = `${PROGRAM}.subsystem.wsl`;
 const ENGINE_PODMAN_SUBSYSTEM_LIMA = `${PROGRAM}.subsystem.lima`;
 
-const WSL_PATH = "C:\\Windows\\System32\\wsl.exe";
-const WSL_VERSION = "2"; // The cli does not report a version
-const WSL_DISTRIBUTION = "Ubuntu-20.04";
-
-const LIMA_PATH = "/usr/local/bin/limactl";
-const LIMA_VERSION = "0.9.2";
-
-class BaseClient {
-  constructor(userConfiguration, osType) {
-    this.userConfiguration = userConfiguration;
-    this.osType = osType || os.type();
-  }
-}
-
-class PodmanClientEngine {
-  constructor(userConfiguration, osType) {
-    this.userConfiguration = userConfiguration;
-    this.settings = undefined;
-    this.apiDriver = undefined;
-    this.logger = createLogger(`${PROGRAM}.${this.ENGINE || "Engine"}.client`);
-    this.osType = osType || os.type();
-    this.runner = new Runner(this);
-  }
-  // Lazy factory
-  async getApiDriver() {
-    if (!this.apiDriver) {
-      const settings = await this.getCurrentSettings();
-      const config = await getApiConfig(settings.api.baseURL, settings.api.connectionString);
-      this.apiDriver = await createApiDriver(config);
-    }
-    return this.apiDriver;
-  }
-  // Settings
-  async getExpectedSettings() {
-    throw new Error("getExpectedSettings must be implemented");
-  }
-  // settings = defaults
-  async getUserSettings(settings) {
-    return {};
-  }
-  // settings = merge(defaults, user)
-  async getDetectedSettings(settings) {
-    throw new Error("getDetectedSettings must be implemented");
-  }
-  async getSettings() {
-    if (!this.settings) {
-      const expected = await this.getExpectedSettings();
-      const detected = await this.getDetectedSettings(expected);
-      const user = await this.getUserSettings(merge({}, expected, detected));
-      const settings = {
-        expected,
-        detected,
-        user,
-        current: merge({}, expected, user, detected)
-      };
-      this.settings = settings;
-    }
-    return this.settings;
-  }
-  async getCurrentSettings() {
-    const settings = await this.getSettings();
-    return settings.current;
-  }
-  ///////
-  // Api
-  async startApi() {
-    throw new Error("startApi must be implemented");
-  }
-  async stopApi() {
-    if (!this.runner) {
-      return true;
-    }
-    return await this.runner.stopApi();
-  }
-  // Availability
-  async isProgramAvailable() {
-    const result = { success: false, details: undefined };
-    const settings = await this.getSettings();
-    // Native path to program
-    if (!settings.current.program.path) {
-      result.details = "Program path is not set";
-    }
-    if (!fs.existsSync(settings.current.program.path)) {
-      result.details = "Program is not accessible";
-    }
-    return result;
-  }
-  async isApiAvailable() {
-    const result = { success: false, details: undefined };
-    const settings = await this.getSettings();
-    if (!settings.current.api.baseURL) {
-      result.details = "API base URL is not set";
-      return result;
-    }
-    if (!settings.current.api.connectionString) {
-      result.details = "API connection string is not set";
-      return result;
-    }
-    // Check unix socket as file
-    if (this.osType === "Windows_NT") {
-      // TODO: Check named pipe
-    } else {
-      if (!fs.existsSync(settings.current.api.connectionString)) {
-        result.details = "API connection string as unix path is not present";
-        return result;
-      }
-    }
-    result.success = true;
-    result.details = "API is configured";
-    return result;
-  }
-  async getAvailability() {
-    const program = await this.isProgramAvailable();
-    const api = await this.isApiRunning();
-    const availability = {
-      all: program.success && api.success,
-      api: api.success,
-      program: program.success,
-      report: {
-        program: program.success ? "Program is available" : program.details,
-        api: api.success ? "Api is running" : api.details
-      }
-    };
-    return availability;
-  }
-  async isApiRunning() {
-    // Guard configuration
-    const available = await this.isApiAvailable();
-    if (!available.success) {
-      return available;
-    }
-    // Test reachability
-    const result = {
-      success: false,
-      details: undefined
-    };
-    const driver = await this.getApiDriver();
-    try {
-      const response = await driver.get("/_ping");
-      result.success = response?.data === "OK";
-      result.details = response?.data || "Api reached";
-    } catch (error) {
-      result.details = `API is not accessible - ${error.message}`;
-    }
-    return result;
-  }
-}
-
-class PodmanClientEngineNative extends PodmanClientEngine {
+class PodmanClientEngineNative extends AbstractClientEngine {
   ENGINE = ENGINE_PODMAN_NATIVE;
   constructor(userConfiguration, osType) {
-    super(userConfiguration, osType);
+    super(userConfiguration, osType, PROGRAM);
   }
   // Settings
   async getExpectedSettings() {
     return {
       api: {
-        baseURL: PODMAN_API_BASE_URL,
+        baseURL: API_BASE_URL,
         connectionString: NATIVE_PODMAN_SOCKET_PATH
       },
       program: {
@@ -249,7 +107,10 @@ class PodmanClientEngineNative extends PodmanClientEngine {
   }
 }
 
-class PodmanClientEngineControlled extends PodmanClientEngine {
+class PodmanClientEngineControlled extends AbstractClientEngine {
+  constructor(userConfiguration, osType) {
+    super(userConfiguration, osType, PROGRAM);
+  }
   // Helpers
   async getConnectionString(scope) {
     throw new Error("getConnectionString must be implemented");
@@ -258,7 +119,7 @@ class PodmanClientEngineControlled extends PodmanClientEngine {
   async getExpectedSettings() {
     return {
       api: {
-        baseURL: PODMAN_API_BASE_URL,
+        baseURL: API_BASE_URL,
         connectionString: NATIVE_PODMAN_SOCKET_PATH
       },
       controller: {
@@ -423,7 +284,7 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
     }
     return merge({}, defaults, {
       api: {
-        baseURL: PODMAN_API_BASE_URL,
+        baseURL: API_BASE_URL,
         connectionString: connectionString
       },
       ...config
@@ -506,8 +367,8 @@ class PodmanClientEngineSubsystemWSL extends PodmanClientEngineControlled {
   async getExpectedSettings() {
     return {
       api: {
-        baseURL: PODMAN_API_BASE_URL,
-        connectionString: PODMAN_API_BASE_URL
+        baseURL: API_BASE_URL,
+        connectionString: API_BASE_URL
       },
       controller: {
         path: WSL_PATH,
@@ -549,8 +410,8 @@ class PodmanClientEngineSubsystemLIMA extends PodmanClientEngineControlled {
   async getExpectedSettings() {
     return {
       api: {
-        baseURL: PODMAN_API_BASE_URL,
-        connectionString: PODMAN_API_BASE_URL
+        baseURL: API_BASE_URL,
+        connectionString: API_BASE_URL
       },
       controller: {
         path: LIMA_PATH,
@@ -594,15 +455,11 @@ class PodmanClientEngineSubsystemLIMA extends PodmanClientEngineControlled {
   }
 }
 
-class PodmanClient extends BaseClient {
+class PodmanAdapter extends AbstractAdapter {
   constructor(userConfiguration, osType) {
     super(userConfiguration, osType);
     this.connectorClientEngineMap = {};
   }
-
-  async detectProgram() {}
-  async detectController() {}
-
   async getEngines() {
     return [
       PodmanClientEngineNative,
@@ -614,7 +471,6 @@ class PodmanClient extends BaseClient {
       return engine;
     });
   }
-
   async getConnectors() {
     const engines = await this.getEngines();
     const connectors = await Promise.all(
@@ -638,7 +494,6 @@ class PodmanClient extends BaseClient {
     );
     return connectors;
   }
-
   async getEngineClientById(id) {
     await this.getConnectors();
     return this.connectorClientEngineMap[id].client;
@@ -646,5 +501,17 @@ class PodmanClient extends BaseClient {
 }
 
 module.exports = {
-  PodmanClient
+  // adapters
+  PodmanAdapter,
+  // engines
+  PodmanClientEngineNative,
+  PodmanClientEngineVirtualized,
+  PodmanClientEngineSubsystemWSL,
+  PodmanClientEngineSubsystemLIMA,
+  // constants
+  PROGRAM,
+  ENGINE_PODMAN_NATIVE,
+  ENGINE_PODMAN_VIRTUALIZED,
+  ENGINE_PODMAN_SUBSYSTEM_WSL,
+  ENGINE_PODMAN_SUBSYSTEM_LIMA
 };

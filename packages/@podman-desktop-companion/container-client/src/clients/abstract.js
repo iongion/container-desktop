@@ -1,80 +1,153 @@
+const os = require("os");
+const fs = require("fs");
 // vendors
 const merge = require("lodash.merge");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // module
-const { createApiDriver, getApiConfig } = require("../api");
-class AbstractContainerClient {
-  constructor(userConfiguration, id, engine, program, controller) {
+const { createApiDriver, getApiConfig, Runner } = require("../api");
+
+class AbstractAdapter {
+  constructor(userConfiguration, osType) {
     this.userConfiguration = userConfiguration;
-    this.id = id;
-    this.engine = engine;
+    this.osType = osType || os.type();
+    this.connectorClientEngineMap = {};
+  }
+  async getEngines() {
+    throw new Error("getEngines must be implemented");
+  }
+  async getConnectors() {
+    throw new Error("getConnectors must be implemented");
+  }
+  async getEngineClientById(id) {
+    await this.getConnectors();
+    return this.connectorClientEngineMap[id].client;
+  }
+}
+
+class AbstractClientEngine {
+  constructor(userConfiguration, osType, program) {
     this.program = program;
-    this.controller = controller;
-    this.programPathDefault = undefined;
-    this.controllerPathDefault = undefined;
-    this.logger = createLogger(`clients.${engine}`);
+    this.userConfiguration = userConfiguration;
+    this.settings = undefined;
+    this.apiDriver = undefined;
+    this.logger = createLogger(`${program}.${this.ENGINE || "Engine"}.client`);
+    this.osType = osType || os.type();
+    this.runner = new Runner(this);
   }
-
-  isControlled() {
-    return !!this.this.controller;
+  // Lazy factory
+  async getApiDriver() {
+    if (!this.apiDriver) {
+      const settings = await this.getCurrentSettings();
+      const config = await getApiConfig(settings.api.baseURL, settings.api.connectionString);
+      this.apiDriver = await createApiDriver(config);
+    }
+    return this.apiDriver;
   }
-
-  // Settings management
-  async getMergedSettings(connector) {
-    return merge(
-      {},
-      // detected
-      connector.settings.detect,
-      // custom
-      connector.settings.custom
-    );
+  // Settings
+  async getExpectedSettings() {
+    throw new Error("getExpectedSettings must be implemented");
   }
-  async getCurrentSettings() {
-    const connector = await this.getConnector();
-    const settings = await this.getMergedSettings(connector);
-    return settings;
-  }
-
-  // API life-cycle
-  async createApiConfiguration(settings) {
+  // settings = defaults
+  async getUserSettings(settings) {
     return {};
   }
-  async getApiConfig() {
-    const settings = await this.getCurrentSettings();
-    const config = getApiConfig(settings.api.baseURL, settings.api.connectionString);
-    return config;
+  // settings = merge(defaults, user)
+  async getDetectedSettings(settings) {
+    throw new Error("getDetectedSettings must be implemented");
   }
-  async getApiDriver() {
-    const config = await this.getApiConfig();
-    const driver = await createApiDriver(config);
-    return driver;
+  async getSettings() {
+    if (!this.settings) {
+      const expected = await this.getExpectedSettings();
+      const detected = await this.getDetectedSettings(expected);
+      const user = await this.getUserSettings(merge({}, expected, detected));
+      const settings = {
+        expected,
+        detected,
+        user,
+        current: merge({}, expected, user, detected)
+      };
+      this.settings = settings;
+    }
+    return this.settings;
   }
-  async isApiConfigured() {
-    throw new Error("Not implemented");
+  async getCurrentSettings() {
+    const settings = await this.getSettings();
+    return settings.current;
   }
-  async isApiScopeAvailable() {
-    throw new Error("Not implemented");
+  ///////
+  // Api
+  async startApi() {
+    throw new Error("startApi must be implemented");
+  }
+  async stopApi() {
+    if (!this.runner) {
+      return true;
+    }
+    return await this.runner.stopApi();
+  }
+  // Availability
+  async isProgramAvailable() {
+    const result = { success: false, details: undefined };
+    const settings = await this.getSettings();
+    // Native path to program
+    if (!settings.current.program.path) {
+      result.details = "Program path is not set";
+      return result;
+    }
+    if (!fs.existsSync(settings.current.program.path)) {
+      result.details = "Program is not accessible";
+      return result;
+    }
+    result.success = true;
+    result.details = "Program is available";
+    return result;
   }
   async isApiAvailable() {
-    throw new Error("Not implemented");
+    const result = { success: false, details: undefined };
+    const settings = await this.getSettings();
+    if (!settings.current.api.baseURL) {
+      result.details = "API base URL is not set";
+      return result;
+    }
+    if (!settings.current.api.connectionString) {
+      result.details = "API connection string is not set";
+      return result;
+    }
+    // Check unix socket as file
+    if (this.osType === "Windows_NT") {
+      // TODO: Check named pipe
+    } else {
+      if (!fs.existsSync(settings.current.api.connectionString)) {
+        result.details = "API connection string as unix path is not present";
+        return result;
+      }
+    }
+    result.success = true;
+    result.details = "API is configured";
+    return result;
+  }
+  async getAvailability() {
+    const program = await this.isProgramAvailable();
+    const api = await this.isApiRunning();
+    const availability = {
+      all: program.success && api.success,
+      api: api.success,
+      program: program.success,
+      report: {
+        program: program.success ? "Program is available" : program.details,
+        api: api.success ? "Api is running" : api.details
+      }
+    };
+    return availability;
   }
   async isApiRunning() {
-    const configured = await this.isApiConfigured();
-    if (!configured) {
-      this.logger.warn("isApiRunning failed - API is not configured");
-      return { success: false, details: "API is not configured" };
-    }
-    const isScopeAvailable = await this.isApiScopeAvailable();
-    if (!isScopeAvailable) {
-      this.logger.warn("isApiRunning failed - API scope is not available");
-      return { success: false, details: "API scope is not available" };
-    }
+    // Guard configuration
     const available = await this.isApiAvailable();
-    if (!available) {
-      this.logger.warn("isApiRunning failed - API is not available");
-      return { success: false, details: "API is not available" };
+    if (!available.success) {
+      return available;
     }
+    // Test reachability
     const result = {
       success: false,
       details: undefined
@@ -83,52 +156,15 @@ class AbstractContainerClient {
     try {
       const response = await driver.get("/_ping");
       result.success = response?.data === "OK";
-      result.details = response?.data;
+      result.details = response?.data || "Api reached";
     } catch (error) {
-      result.details = error.message;
+      result.details = `API is not accessible - ${error.message}`;
     }
     return result;
-  }
-  async startApi() {
-    throw new Error("Not implemented");
-  }
-  async stopApi() {
-    throw new Error("Not implemented");
-  }
-
-  async checkAvailability() {
-    return {
-      available: false,
-      reason: "Not implemented"
-    };
-  }
-  async getConnector(forceDetect) {
-    const availability = await this.checkAvailability();
-    const settings = {};
-    const engine = {
-      id: this.id,
-      engine: this.engine,
-      program: this.program,
-      availability,
-      settings
-    };
-    return engine;
-  }
-
-  // Public API
-  async getSystemInfo() {
-    throw new Error("Not implemented");
-  }
-
-  // Original podman influenced design specific
-  async getMachines() {
-    return [];
-  }
-  async getSystemConnections() {
-    return [];
   }
 }
 
 module.exports = {
-  AbstractContainerClient
+  AbstractAdapter,
+  AbstractClientEngine
 };
