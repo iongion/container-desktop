@@ -7,6 +7,7 @@ const merge = require("lodash.merge");
 const { exec_launcher, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { findProgram, findProgramVersion } = require("../detector");
+const { getAvailablePodmanMachines } = require("../shared");
 const {
   // WSL - common
   WSL_PATH,
@@ -16,7 +17,12 @@ const {
   LIMA_PATH,
   LIMA_VERSION
 } = require("../constants");
-const { AbstractAdapter, AbstractClientEngine } = require("./abstract");
+const {
+  AbstractAdapter,
+  AbstractClientEngine,
+  AbstractControlledClientEngine,
+  AbstractClientEngineSubsystemLIMA
+} = require("./abstract");
 // locals
 const PROGRAM = "podman";
 const API_BASE_URL = "http://d/v3.0.0/libpod";
@@ -50,11 +56,13 @@ const ENGINE_PODMAN_VIRTUALIZED = `${PROGRAM}.virtualized`;
 const ENGINE_PODMAN_SUBSYSTEM_WSL = `${PROGRAM}.subsystem.wsl`;
 const ENGINE_PODMAN_SUBSYSTEM_LIMA = `${PROGRAM}.subsystem.lima`;
 
+class AbstractPodmanControlledClientEngine extends AbstractControlledClientEngine {
+  PROGRAM = PROGRAM;
+}
+
 class PodmanClientEngineNative extends AbstractClientEngine {
   ENGINE = ENGINE_PODMAN_NATIVE;
-  constructor(userConfiguration, osType) {
-    super(userConfiguration, osType, PROGRAM);
-  }
+  PROGRAM = PROGRAM;
   // Settings
   async getExpectedSettings() {
     return {
@@ -107,128 +115,7 @@ class PodmanClientEngineNative extends AbstractClientEngine {
   }
 }
 
-class PodmanClientEngineControlled extends AbstractClientEngine {
-  constructor(userConfiguration, osType) {
-    super(userConfiguration, osType, PROGRAM);
-  }
-  // Helpers
-  async getConnectionString(scope) {
-    throw new Error("getConnectionString must be implemented");
-  }
-  // Settings
-  async getExpectedSettings() {
-    return {
-      api: {
-        baseURL: API_BASE_URL,
-        connectionString: NATIVE_PODMAN_SOCKET_PATH
-      },
-      controller: {
-        path: "",
-        version: "",
-        scope: PODMAN_MACHINE_DEFAULT
-      },
-      program: {
-        path: "",
-        version: ""
-      }
-    };
-  }
-  async getUserSettings() {
-    return {
-      api: {
-        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
-        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
-      },
-      controller: {
-        path: this.userConfiguration.getKey(`${this.id}.controller.path`),
-        scope: this.userConfiguration.getKey(`${this.id}.controller.scope`)
-      },
-      program: {
-        path: this.userConfiguration.getKey(`${this.id}.program.path`)
-      }
-    };
-  }
-  async getDetectedSettings(settings) {
-    const controller = settings.controller.path || PROGRAM;
-    let info = {};
-    // controller
-    if (fs.existsSync(settings.controller.path)) {
-      const detectVersion = await findProgramVersion(
-        controller,
-        this.osType === "Windows_NT" ? WSL_VERSION : undefined
-      );
-      info.controller = {
-        version: detectVersion
-      };
-    } else {
-      info = await findProgram(settings.controller.name || PROGRAM);
-    }
-    return info;
-  }
-  async getSettings() {
-    const settings = await super.getSettings();
-    settings.current.api.connectionString = await this.getConnectionString(settings.current.controller.scope);
-    return settings;
-  }
-  // Availability
-  async isControllerAvailable() {
-    const settings = await this.getSettings();
-    let success = false;
-    let details;
-    if (settings.current.controller.path) {
-      if (fs.existsSync(settings.current.controller.path)) {
-        success = true;
-        details = "Controller is available";
-      } else {
-        details = `Controller not found in expected ${settings.current.controller.path} location`;
-      }
-    } else {
-      details = "Controller path not set";
-    }
-    return { success, details };
-  }
-  async isProgramAvailable() {
-    // Controller must be proper
-    const controller = await this.isControllerAvailable();
-    if (!controller.success) {
-      return controller;
-    }
-    // Perform actual program check
-    const result = { success: false, details: undefined };
-    const settings = await this.getSettings();
-    if (!settings.current.program.path) {
-      result.details = "Program path is not set";
-    }
-    // Controlled path to program
-    const check = await this.runScopedCommand("test", ["-f", settings.current.program.path]);
-    if (check.success) {
-      result.success = true;
-      result.details = "Program is available";
-    } else {
-      result.details = check.stderr;
-    }
-    return result;
-  }
-  async getAvailability() {
-    const base = await super.getAvailability();
-    const controller = await this.isControllerAvailable();
-    return {
-      ...base,
-      all: base.all && base.success,
-      controller: controller.success,
-      report: {
-        ...base.report,
-        controller: controller.success ? "Controller is running" : controller.details
-      }
-    };
-  }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    throw new Error("runScopedCommand must be implemented");
-  }
-}
-
-class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
+class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine {
   ENGINE = ENGINE_PODMAN_VIRTUALIZED;
   // Helpers
   async getConnectionString(scope) {
@@ -312,42 +199,12 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
     });
   }
   // Availability
-  async isControllerAvailable() {
-    const settings = await this.getSettings();
-    let flag = settings.current.controller.path.length > 0 && fs.existsSync(settings.current.controller.path);
-    let details;
-    if (flag) {
-      const machines = await this.getMachines();
-      const target = machines.find((it) => it.Name === settings.current.controller.scope && it.Running);
-      if (target) {
-        flag = true;
-        details = `${settings.current.controller.scope} is running`;
-      } else {
-        flag = false;
-        details = `Controller ${settings.current.controller.scope} is not running`;
-        this.logger.error("Controller is not available - no running machine found");
-      }
-    }
-    return { success: flag, details };
+  async isControllerScopeAvailable() {
+    const settings = await this.getCurrentSettings();
+    const machines = await getAvailablePodmanMachines(settings.controller.path);
+    const target = machines.find((it) => it.Name === settings.controller.scope);
+    return target.Running;
   }
-  // Podman machines
-  async getMachines(customFormat) {
-    let items = [];
-    const { controller } = await this.getCurrentSettings();
-    const command = ["machine", "list", "--format", customFormat || "json"];
-    const result = await exec_launcher_sync(controller.path, command);
-    if (!result.success) {
-      this.logger.error("Unable to get machines list", result);
-      return items;
-    }
-    try {
-      items = result.stdout ? JSON.parse(result.stdout) : items;
-    } catch (error) {
-      this.logger.error("Unable to decode machines list", error, result);
-    }
-    return items;
-  }
-
   // Executes command inside controller scope
   async runScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
@@ -357,7 +214,7 @@ class PodmanClientEngineVirtualized extends PodmanClientEngineControlled {
   }
 }
 
-class PodmanClientEngineSubsystemWSL extends PodmanClientEngineControlled {
+class PodmanClientEngineSubsystemWSL extends AbstractPodmanControlledClientEngine {
   ENGINE = ENGINE_PODMAN_SUBSYSTEM_WSL;
   // Helpers
   async getConnectionString(scope) {
@@ -400,12 +257,9 @@ class PodmanClientEngineSubsystemWSL extends PodmanClientEngineControlled {
   }
 }
 
-class PodmanClientEngineSubsystemLIMA extends PodmanClientEngineControlled {
+class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA {
   ENGINE = ENGINE_PODMAN_SUBSYSTEM_LIMA;
-  // Helpers
-  async getConnectionString(scope) {
-    return path.join(process.env.HOME, ".lima", scope, "sock/podman.sock");
-  }
+  PROGRAM = PROGRAM;
   // Settings
   async getExpectedSettings() {
     return {
@@ -424,34 +278,6 @@ class PodmanClientEngineSubsystemLIMA extends PodmanClientEngineControlled {
         version: LIMA_PODMAN_CLI_VERSION
       }
     };
-  }
-  // Runtime
-  async startApi(opts) {
-    const running = await this.isApiRunning();
-    if (running.success) {
-      this.logger.debug("API is already running");
-      return true;
-    }
-    const settings = await this.getCurrentSettings();
-    // TODO: Safe to stop first before starting ?
-    return await this.runner.startApi(opts, {
-      path: settings.controller.path,
-      args: ["start", settings.controller.scope]
-    });
-  }
-  async stopApi(opts) {
-    const settings = await this.getCurrentSettings();
-    return await this.runner.stopApi(opts, {
-      path: settings.controller.path,
-      args: ["stop", settings.controller.scope]
-    });
-  }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    const { controller } = await this.getCurrentSettings();
-    const command = ["shell", controller.scope, program, ...args];
-    const result = await exec_launcher(controller.path, command, opts);
-    return result;
   }
 }
 

@@ -1,11 +1,16 @@
 const os = require("os");
 const fs = require("fs");
+const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
+const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
+const { findProgram, findProgramVersion } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
+const { getAvailableLIMAInstances } = require("../shared");
+const { WSL_VERSION } = require("../constants");
 
 class AbstractAdapter {
   constructor(userConfiguration, osType) {
@@ -26,12 +31,13 @@ class AbstractAdapter {
 }
 
 class AbstractClientEngine {
-  constructor(userConfiguration, osType, program) {
-    this.program = program;
+  PROGRAM = undefined;
+  ENGINE = undefined;
+  constructor(userConfiguration, osType) {
     this.userConfiguration = userConfiguration;
     this.settings = undefined;
     this.apiDriver = undefined;
-    this.logger = createLogger(`${program}.${this.ENGINE || "Engine"}.client`);
+    this.logger = createLogger(`${this.PROGRAM}.${this.ENGINE || "Engine"}.client`);
     this.osType = osType || os.type();
     this.runner = new Runner(this);
   }
@@ -119,7 +125,7 @@ class AbstractClientEngine {
       // TODO: Check named pipe
     } else {
       if (!fs.existsSync(settings.current.api.connectionString)) {
-        result.details = "API connection string as unix path is not present";
+        result.details = `API connection string as unix path is not present in ${settings.current.api.connectionString}`;
         return result;
       }
     }
@@ -145,6 +151,7 @@ class AbstractClientEngine {
     // Guard configuration
     const available = await this.isApiAvailable();
     if (!available.success) {
+      this.logger.debug("API is not available - unable to ping", available);
       return available;
     }
     // Test reachability
@@ -164,7 +171,169 @@ class AbstractClientEngine {
   }
 }
 
+class AbstractControlledClientEngine extends AbstractClientEngine {
+  // Helpers
+  async getConnectionString(scope) {
+    throw new Error("getConnectionString must be implemented");
+  }
+  // Settings
+  async getExpectedSettings() {
+    throw new Error("getExpectedSettings must be implemented");
+  }
+  async getUserSettings() {
+    return {
+      api: {
+        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
+        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
+      },
+      controller: {
+        path: this.userConfiguration.getKey(`${this.id}.controller.path`),
+        scope: this.userConfiguration.getKey(`${this.id}.controller.scope`)
+      },
+      program: {
+        path: this.userConfiguration.getKey(`${this.id}.program.path`)
+      }
+    };
+  }
+  async getDetectedSettings(settings) {
+    const controller = settings.controller.path || this.PROGRAM;
+    let info = {};
+    // controller
+    if (fs.existsSync(settings.controller.path)) {
+      const detectVersion = await findProgramVersion(
+        controller,
+        this.osType === "Windows_NT" ? WSL_VERSION : undefined
+      );
+      info.controller = {
+        version: detectVersion
+      };
+    } else {
+      info = await findProgram(settings.controller.name || this.PROGRAM);
+    }
+    return info;
+  }
+  async getSettings() {
+    const settings = await super.getSettings();
+    settings.current.api.connectionString = await this.getConnectionString(settings.current.controller.scope);
+    return settings;
+  }
+  // Availability
+  async isControllerAvailable() {
+    const settings = await this.getSettings();
+    let success = false;
+    let details;
+    if (settings.current.controller.path) {
+      if (fs.existsSync(settings.current.controller.path)) {
+        success = true;
+        details = "Controller is available";
+      } else {
+        details = `Controller not found in expected ${settings.current.controller.path} location`;
+      }
+    } else {
+      details = "Controller path not set";
+    }
+    return { success, details };
+  }
+  async isControllerScopeAvailable() {
+    throw new Error("isControllerScopeAvailable must be implemented");
+  }
+  async isProgramAvailable() {
+    // Controller must be proper
+    const controller = await this.isControllerAvailable();
+    if (!controller.success) {
+      return controller;
+    }
+    // Perform actual program check
+    const result = { success: false, details: undefined };
+    const settings = await this.getSettings();
+    const scope = await this.isControllerScopeAvailable();
+    if (scope) {
+      result.success = true;
+      result.details = `Controller scope ${settings.current.controller.scope} is running`;
+    } else {
+      result.flag = false;
+      result.details = `Controller scope ${settings.current.controller.scope} scope is not available`;
+      this.logger.error(result.details);
+      return result;
+    }
+    // Only if scope is available
+    if (!settings.current.program.path) {
+      result.details = "Program path is not set";
+    }
+    // Controlled path to program
+    const check = await this.runScopedCommand("test", ["-f", settings.current.program.path]);
+    if (check.success) {
+      result.success = true;
+      result.details = "Program is available";
+    } else {
+      result.details = check.stderr;
+    }
+    return result;
+  }
+  async getAvailability() {
+    const base = await super.getAvailability();
+    const controller = await this.isControllerAvailable();
+    return {
+      ...base,
+      all: base.all && base.success,
+      controller: controller.success,
+      report: {
+        ...base.report,
+        controller: controller.success ? "Controller is running" : controller.details
+      }
+    };
+  }
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    throw new Error("runScopedCommand must be implemented");
+  }
+}
+
+class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
+  // Helpers
+  async getConnectionString(scope) {
+    return path.join(process.env.HOME, ".lima", scope, "sock", `${scope}.sock`);
+  }
+  // Availability
+  async isControllerScopeAvailable() {
+    const settings = await this.getCurrentSettings();
+    const instances = await getAvailableLIMAInstances(settings.controller.path);
+    const target = instances.find((it) => it.Name === settings.controller.scope);
+    return target.Status === "Running";
+  }
+  // Runtime
+  async startApi(opts) {
+    const running = await this.isApiRunning();
+    if (running.success) {
+      this.logger.debug("API is already running");
+      return true;
+    }
+    const settings = await this.getCurrentSettings();
+    // TODO: Safe to stop first before starting ?
+    return await this.runner.startApi(opts, {
+      path: settings.controller.path,
+      args: ["start", settings.controller.scope]
+    });
+  }
+  async stopApi(opts) {
+    const settings = await this.getCurrentSettings();
+    return await this.runner.stopApi(opts, {
+      path: settings.controller.path,
+      args: ["stop", settings.controller.scope]
+    });
+  }
+  // Executes command inside controller scope
+  async runScopedCommand(program, args, opts) {
+    const { controller } = await this.getCurrentSettings();
+    const command = ["shell", controller.scope, program, ...args];
+    const result = await exec_launcher_sync(controller.path, command, opts);
+    return result;
+  }
+}
+
 module.exports = {
   AbstractAdapter,
-  AbstractClientEngine
+  AbstractClientEngine,
+  AbstractControlledClientEngine,
+  AbstractClientEngineSubsystemLIMA
 };

@@ -40,6 +40,7 @@ function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   logger.debug("[SC.A][>][spawn]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
   const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
   child.command = command;
+  logger.debug("[SC.A][<][spawn]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts }, { pid: child.pid });
   return child;
 }
 
@@ -187,12 +188,12 @@ async function exec_service(opts) {
       em.emit("close", { code });
     };
     const onProcessData = (child, from, data) => {
-      // logger.error("Child process data", from, data);
+      logger.debug("Child process data", child.pid, from, data);
       em.emit("data", { from, data });
     };
     const waitForProcess = (child) => {
       let pending = false;
-      let retries = retry?.count || 5;
+      let retries = retry?.count || 15;
       const wait = retry?.wait || 1000;
       const IID = setInterval(async () => {
         if (pending) {
@@ -235,6 +236,7 @@ async function exec_service(opts) {
       };
       child = wrapSpawnAsync(programPath, programArgs, launcherOpts);
       process.pid = child.pid;
+      process.code = child.exitCode;
       child.on("exit", (code) => onProcessExit(child, code));
       child.on("close", (code) => onProcessClose(child, code));
       child.on("error", (error) => onProcessError(child, error));
@@ -246,7 +248,7 @@ async function exec_service(opts) {
         process.success = false;
         logger.error("Child process spawn failure", process);
       } else {
-        process.success = true;
+        process.success = !child.killed;
         logger.error("Child process spawn success", process);
         waitForProcess(child);
       }

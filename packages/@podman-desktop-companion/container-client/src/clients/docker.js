@@ -4,7 +4,7 @@ const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { exec_launcher, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_launcher_async } = require("@podman-desktop-companion/executor");
 // module
 const { findProgram, findProgramVersion } = require("../detector");
 const {
@@ -16,27 +16,28 @@ const {
   LIMA_PATH,
   LIMA_VERSION
 } = require("../constants");
-const { AbstractAdapter, AbstractClientEngine } = require("./abstract");
+const {
+  AbstractAdapter,
+  AbstractClientEngine,
+  AbstractControlledClientEngine,
+  AbstractClientEngineSubsystemLIMA
+} = require("./abstract");
 // locals
 const PROGRAM = "docker";
 const API_BASE_URL = "http://localhost";
-const DOCKER_MACHINE_DEFAULT = "docker_engine";
+const DOCKER_SCOPE_DEFAULT = "docker_engine";
 // Native
 const NATIVE_DOCKER_CLI_PATH = "/usr/bin/docker";
 const NATIVE_DOCKER_CLI_VERSION = "20.10.14";
 const NATIVE_DOCKER_SOCKET_PATH = `/var/run/${PROGRAM}.sock`;
-const NATIVE_DOCKER_MACHINE_CLI_VERSION = "20.10.14";
-const NATIVE_DOCKER_MACHINE_CLI_PATH = "/usr/bin/docker";
 // Windows virtualized
 const WINDOWS_DOCKER_NATIVE_CLI_VERSION = "20.10.14";
 const WINDOWS_DOCKER_NATIVE_CLI_PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe";
-const WINDOWS_DOCKER_MACHINE_CLI_VERSION = "20.10.14";
-const WINDOWS_DOCKER_MACHINE_CLI_PATH = "/usr/bin/docker";
+const WINDOWS_DOCKER_NATIVE_SOCKET_PATH = `//.pipe/${DOCKER_SCOPE_DEFAULT}`;
 // MacOS virtualized
-const MACOS_DOCKER_NATIVE_CLI_VERSION = "20.10.14";
+const MACOS_DOCKER_NATIVE_CLI_VERSION = "20.10.8";
 const MACOS_DOCKER_NATIVE_CLI_PATH = "/usr/local/bin/docker";
-const MACOS_DOCKER_MACHINE_CLI_VERSION = "20.10.14";
-const MACOS_DOCKER_MACHINE_CLI_PATH = "/usr/bin/docker";
+const MACOS_DOCKER_NATIVE_SOCKET_PATH = `/var/run/${PROGRAM}.sock`;
 // Windows WSL
 const WSL_DOCKER_CLI_PATH = "/usr/bin/docker";
 const WSL_DOCKER_CLI_VERSION = "20.10.14";
@@ -50,11 +51,13 @@ const ENGINE_DOCKER_VIRTUALIZED = `${PROGRAM}.virtualized`;
 const ENGINE_DOCKER_SUBSYSTEM_WSL = `${PROGRAM}.subsystem.wsl`;
 const ENGINE_DOCKER_SUBSYSTEM_LIMA = `${PROGRAM}.subsystem.lima`;
 
+class AbstractDockerControlledClientEngine extends AbstractControlledClientEngine {
+  PROGRAM = PROGRAM;
+}
+
 class DockerClientEngineNative extends AbstractClientEngine {
   ENGINE = ENGINE_DOCKER_NATIVE;
-  constructor(userConfiguration, osType) {
-    super(userConfiguration, osType, PROGRAM);
-  }
+  PROGRAM = PROGRAM;
   // Settings
   async getExpectedSettings() {
     return {
@@ -97,225 +100,59 @@ class DockerClientEngineNative extends AbstractClientEngine {
     this.logger.debug("Start api skipped - not required");
     return true;
   }
-  async stopApi() {
-    this.logger.debug("Stop api skipped - not required");
-    return true;
-  }
 }
 
-class DockerClientEngineControlled extends AbstractClientEngine {
-  constructor(userConfiguration, osType) {
-    super(userConfiguration, osType, PROGRAM);
-  }
-  // Helpers
-  async getConnectionString(scope) {
-    throw new Error("getConnectionString must be implemented");
-  }
-  // Settings
-  async getExpectedSettings() {
-    return {
-      api: {
-        baseURL: API_BASE_URL,
-        connectionString: NATIVE_DOCKER_SOCKET_PATH
-      },
-      controller: {
-        path: "",
-        version: "",
-        scope: DOCKER_MACHINE_DEFAULT
-      },
-      program: {
-        path: "",
-        version: ""
-      }
-    };
-  }
-  async getUserSettings() {
-    return {
-      api: {
-        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
-        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
-      },
-      controller: {
-        path: this.userConfiguration.getKey(`${this.id}.controller.path`),
-        scope: this.userConfiguration.getKey(`${this.id}.controller.scope`)
-      },
-      program: {
-        path: this.userConfiguration.getKey(`${this.id}.program.path`)
-      }
-    };
-  }
-  async getDetectedSettings(settings) {
-    const controller = settings.controller.path || PROGRAM;
-    let info = {};
-    // controller
-    if (fs.existsSync(settings.controller.path)) {
-      const detectVersion = await findProgramVersion(
-        controller,
-        this.osType === "Windows_NT" ? WSL_VERSION : undefined
-      );
-      info.controller = {
-        version: detectVersion
-      };
-    } else {
-      info = await findProgram(settings.controller.name || PROGRAM);
-    }
-    return info;
-  }
-  async getSettings() {
-    const settings = await super.getSettings();
-    settings.current.api.connectionString = await this.getConnectionString(settings.current.controller.scope);
-    return settings;
-  }
-  // Availability
-  async isControllerAvailable() {
-    const settings = await this.getSettings();
-    let success = false;
-    let details;
-    if (settings.current.controller.path) {
-      if (fs.existsSync(settings.current.controller.path)) {
-        success = true;
-        details = "Controller is available";
-      } else {
-        details = `Controller not found in expected ${settings.current.controller.path} location`;
-      }
-    } else {
-      details = "Controller path not set";
-    }
-    return { success, details };
-  }
-  async isProgramAvailable() {
-    // Controller must be proper
-    const controller = await this.isControllerAvailable();
-    if (!controller.success) {
-      return controller;
-    }
-    // Perform actual program check
-    const result = { success: false, details: undefined };
-    const settings = await this.getSettings();
-    if (!settings.current.program.path) {
-      result.details = "Program path is not set";
-    }
-    // Controlled path to program
-    const check = await this.runScopedCommand("test", ["-f", settings.current.program.path]);
-    if (check.success) {
-      result.success = true;
-      result.details = "Program is available";
-    } else {
-      result.details = check.stderr;
-    }
-    return result;
-  }
-  async getAvailability() {
-    const base = await super.getAvailability();
-    const controller = await this.isControllerAvailable();
-    return {
-      ...base,
-      all: base.all && base.success,
-      controller: controller.success,
-      report: {
-        ...base.report,
-        controller: controller.success ? "Controller is running" : controller.details
-      }
-    };
-  }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    throw new Error("runScopedCommand must be implemented");
-  }
-}
-
-class DockerClientEngineVirtualized extends DockerClientEngineControlled {
+class DockerClientEngineVirtualized extends DockerClientEngineNative {
   ENGINE = ENGINE_DOCKER_VIRTUALIZED;
-  // Helpers
-  async getConnectionString(scope) {
-    let connectionString = NATIVE_DOCKER_SOCKET_PATH;
-    if (this.osType === "Windows_NT") {
-      connectionString = `//./pipe/${scope}`;
-    }
-    return connectionString;
-  }
   // Settings
   async getExpectedSettings() {
-    const defaults = await super.getExpectedSettings();
-    const connectionString = await this.getConnectionString(DOCKER_MACHINE_DEFAULT);
-    let config = {};
+    let settings = {};
     if (this.osType === "Linux") {
-      config = {
-        controller: {
-          path: NATIVE_DOCKER_CLI_PATH,
-          version: NATIVE_DOCKER_CLI_VERSION,
-          scope: DOCKER_MACHINE_DEFAULT
+      settings = {
+        api: {
+          connectionString: NATIVE_DOCKER_SOCKET_PATH
         },
         program: {
-          path: NATIVE_DOCKER_MACHINE_CLI_PATH,
-          version: NATIVE_DOCKER_MACHINE_CLI_VERSION
+          path: NATIVE_DOCKER_CLI_PATH,
+          version: NATIVE_DOCKER_CLI_VERSION
         }
       };
     } else if (this.osType === "Windows_NT") {
-      config = {
-        controller: {
-          path: WINDOWS_DOCKER_NATIVE_CLI_PATH,
-          version: WINDOWS_DOCKER_NATIVE_CLI_VERSION,
-          scope: DOCKER_MACHINE_DEFAULT
+      settings = {
+        api: {
+          connectionString: WINDOWS_DOCKER_NATIVE_SOCKET_PATH
         },
         program: {
-          path: WINDOWS_DOCKER_MACHINE_CLI_PATH,
-          version: WINDOWS_DOCKER_MACHINE_CLI_VERSION
+          path: WINDOWS_DOCKER_NATIVE_CLI_PATH,
+          version: WINDOWS_DOCKER_NATIVE_CLI_VERSION
         }
       };
     } else if (this.osType === "Darwin") {
-      config = {
-        controller: {
-          path: MACOS_DOCKER_NATIVE_CLI_PATH,
-          version: MACOS_DOCKER_NATIVE_CLI_VERSION,
-          scope: DOCKER_MACHINE_DEFAULT
+      settings = {
+        api: {
+          connectionString: MACOS_DOCKER_NATIVE_SOCKET_PATH
         },
         program: {
-          path: MACOS_DOCKER_MACHINE_CLI_PATH,
-          version: MACOS_DOCKER_MACHINE_CLI_VERSION
+          path: MACOS_DOCKER_NATIVE_CLI_PATH,
+          version: MACOS_DOCKER_NATIVE_CLI_VERSION
         }
       };
     }
-    return merge({}, defaults, {
-      api: {
-        baseURL: API_BASE_URL,
-        connectionString: connectionString
+    return merge(
+      {
+        api: {
+          baseURL: API_BASE_URL
+        },
+        program: {
+          name: PROGRAM
+        }
       },
-      ...config
-    });
-  }
-  // Runtime
-  async startApi(opts) {
-    const running = await this.isApiRunning();
-    if (running.success) {
-      this.logger.debug("API is already running");
-      return true;
-    }
-    const settings = await this.getCurrentSettings();
-    // TODO: Safe to stop first before starting ?
-    return await this.runner.startApi(opts, {
-      path: settings.controller.path,
-      args: ["machine", "start", settings.controller.scope]
-    });
-  }
-  async stopApi(opts) {
-    const settings = await this.getCurrentSettings();
-    return await this.runner.stopApi(opts, {
-      path: settings.controller.path,
-      args: ["machine", "stop", settings.controller.scope]
-    });
-  }
-  // Availability - inherited
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    const { controller } = await this.getCurrentSettings();
-    const command = ["machine", "ssh", controller.scope, "-o", "LogLevel=ERROR", program, ...args];
-    const result = await exec_launcher_sync(controller.path, command, opts);
-    return result;
+      settings
+    );
   }
 }
 
-class DockerClientEngineSubsystemWSL extends DockerClientEngineControlled {
+class DockerClientEngineSubsystemWSL extends AbstractDockerControlledClientEngine {
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
   // Helpers
   async getConnectionString(scope) {
@@ -353,17 +190,14 @@ class DockerClientEngineSubsystemWSL extends DockerClientEngineControlled {
   async runScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
     const command = ["--distribution", controller.scope, program, ...args];
-    const result = await exec_launcher(controller.path, command, opts);
+    const result = await exec_launcher_async(controller.path, command, opts);
     return result;
   }
 }
 
-class DockerClientEngineSubsystemLIMA extends DockerClientEngineControlled {
+class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA {
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_LIMA;
-  // Helpers
-  async getConnectionString(scope) {
-    return path.join(process.env.HOME, ".lima", scope, "sock/podman.sock");
-  }
+  PROGRAM = PROGRAM;
   // Settings
   async getExpectedSettings() {
     return {
@@ -382,34 +216,6 @@ class DockerClientEngineSubsystemLIMA extends DockerClientEngineControlled {
         version: LIMA_DOCKER_CLI_VERSION
       }
     };
-  }
-  // Runtime
-  async startApi(opts) {
-    const running = await this.isApiRunning();
-    if (running.success) {
-      this.logger.debug("API is already running");
-      return true;
-    }
-    const settings = await this.getCurrentSettings();
-    // TODO: Safe to stop first before starting ?
-    return await this.runner.startApi(opts, {
-      path: settings.controller.path,
-      args: ["start", settings.controller.scope]
-    });
-  }
-  async stopApi(opts) {
-    const settings = await this.getCurrentSettings();
-    return await this.runner.stopApi(opts, {
-      path: settings.controller.path,
-      args: ["stop", settings.controller.scope]
-    });
-  }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    const { controller } = await this.getCurrentSettings();
-    const command = ["shell", controller.scope, program, ...args];
-    const result = await exec_launcher(controller.path, command, opts);
-    return result;
   }
 }
 
