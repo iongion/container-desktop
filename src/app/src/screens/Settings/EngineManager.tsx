@@ -1,10 +1,11 @@
 import { useCallback, useState, useMemo, useEffect } from "react";
-import { Button, ControlGroup, InputGroup, Intent, RadioGroup, Radio, FormGroup, Label, HTMLSelect, ButtonGroup } from "@blueprintjs/core";
+import { Button, ControlGroup, InputGroup, Intent, RadioGroup, Radio, FormGroup, Label, HTMLSelect, ButtonGroup, Tab, Tabs } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
+import { useForm, useFormContext, FormProvider, Controller } from "react-hook-form";
 
 // project
-import { Connector, ContainerEngine, TestResult, Program } from "../../Types";
+import { Connector, ContainerAdapter, ContainerEngine, TestResult, Program } from "../../Types";
 import { Native, Platforms } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
 import { RadioLabel } from "../../components/RadioLabel";
@@ -18,26 +19,39 @@ interface ContainerEngineSettingsProps {
   disabled?: boolean;
 }
 
+export interface ConnectorFormData {
+  action: string;
+  scope: string; // WSL distribution or LIMA instance
+  programPath: string;
+  connectionString: string;
+}
+
 export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettingsProps> = ({ connector, disabled }) => {
   const { t } = useTranslation();
   const { engine } = connector;
-  const pending = useStoreState((state) => state.pending);
-  // const connect = useStoreActions((actions) => actions.connect);
-  const currentConnector = connector; // useStoreState((state) => state.descriptor.currentConnector);
+  const currentConnector = connector;
+  const { current } = currentConnector.settings;
+  const { api, program } = current;
+
   const wslDistributions: any[] = [];
+
   const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
-  const testConnectionString = useStoreActions((actions) => actions.testConnectionString);
+  const testProgramReachability = useStoreActions((actions) => actions.testProgramReachability);
+  const testApiReachability = useStoreActions((actions) => actions.testApiReachability);
   const findProgram = useStoreActions((actions) => actions.findProgram);
-  const start = useStoreActions((actions) => actions.start);
-  const [program, setProgram] = useState(currentConnector.settings.current.program);
-  const api = currentConnector.settings.current.api;
-  const [connectionString, setConnectionString] = useState(currentConnector.settings.current.api.connectionString);
+
   const [selectedWSLDistribution, setSelectedWSLDistribution] = useState<string>(wslDistributions.find(it => it.Current)?.Name || "");
 
+  // Form setup
+
+  const { reset, control, getValues } = useFormContext<ConnectorFormData>();
+
   useEffect(() => {
-    setProgram(connector.settings.current.program);
-    setConnectionString(connector.settings.current.api.connectionString);
-  }, [connector]);
+    reset({
+      programPath: program.path,
+      connectionString: api.connectionString
+    })
+  }, [api, program, reset]);
 
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -69,13 +83,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     },
     [setSelectedWSLDistribution]
   );
-  const onConnectionStringChange = useCallback(
-    (event: React.FormEvent<HTMLInputElement>) => {
-      const sender = event.currentTarget;
-      setConnectionString(sender.value);
-    },
-    []
-  );
+
   const onFindWSLProgramClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const result: Program = await findProgram({
       engine,
@@ -99,53 +107,36 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         intent: Intent.DANGER
       });
     }
-    setProgram(result);
+    // setProgram(result);
   }, [engine, program, selectedWSLDistribution, findProgram, t]);
-  const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    const result: TestResult = await testConnectionString({
-      baseURL: api.baseURL,
-      connectionString,
+
+  const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+    const values = getValues();
+    const result: TestResult = await testProgramReachability({
+      ...program,
+      path: values.programPath
     });
+    if (result.success) {
+      Notification.show({ message: t("Program was reached successfully"), intent: Intent.SUCCESS });
+    } else {
+      Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
+    }
+  }, [program, testProgramReachability, getValues, t]);
+
+  const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+    const values = getValues();
+    const result: TestResult = await testApiReachability({ ...api, connectionString: values.connectionString });
     if (result.success) {
       Notification.show({ message: t("API was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("API could not be reached"), intent: Intent.DANGER });
     }
-  }, [connectionString, testConnectionString, api, t]);
+  }, [api, testApiReachability, getValues, t]);
 
-  const onConnectionStringAcceptClick = useCallback(async () => {
-    try {
-      const result: TestResult = await testConnectionString({
-        baseURL: api.baseURL,
-        connectionString,
-      });
-      if (result.success) {
-        const programSettings: any = {};
-        const programKey = `${engine}.program.${program.name}.connectionString`;
-        programSettings[programKey] = connectionString.replace("unix://", "").replace("npipe://", "");
-        await setUserPreferences(programSettings);
-        Notification.show({ message: t("Connection string has been customized"), intent: Intent.SUCCESS });
-        await start();
-      } else {
-        Notification.show({ message: t("Connection string customization failed - API could not be reached"), intent: Intent.DANGER });
-      }
-    } catch (error) {
-      console.error("Unable to change CLI path", error);
-      Notification.show({ message: t("Connection string customization failed"), intent: Intent.DANGER });
-    }
-  }, [engine, connectionString, program, testConnectionString, setUserPreferences, start, api, t]);
-  const onConnectClick = useCallback(
-    async () => {
-      // await connect({ startApi: true, engine });
-    },
-    [/*connect, engine*/]
-  );
   // locals
-  const isConnectionStringChanged = false; // connectionString !== userPreferences.connectionString;
   const isLIMA = engine === ContainerEngine.PODMAN_SUBSYSTEM_LIMA;
   const suffix = isLIMA ? <span> - {t("Automatically detected inside LIMA VM")}</span> : "";
   const isWSL = engine === ContainerEngine.PODMAN_SUBSYSTEM_WSL;
-  const canConnect = !pending && !!program.path;
   let wslSelector;
   if (isWSL) {
     wslSelector = (
@@ -175,73 +166,99 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       </div>
     );
   }
+
+  // console.debug("Rendering");
+
   return (
-    <div className="ContainerEngineSettings" data-settings="program.local">
-      <FormGroup
-        helperText={
-          <div className="AppSettingsFieldProgramHelper">
-            {program?.version ? (
-              <>
-                <span>{t("Detected version {{version}}", program)}</span>
-                {suffix}
-              </>
-            ) : (
-              t("Could not detect current version")
-            )}
-          </div>
-        }
-        label={t("Path to {{name}} CLI", program)}
-        labelFor={`${program.name}_path`}
-      >
-        <ControlGroup fill={true} vertical={false}>
-          <InputGroup
-            fill
-            id={`${program.name}_path`}
-            readOnly
-            placeholder={"..."}
-            value={program.path}
-          />
-          {isLIMA || isWSL ? null : <Button
-            icon={IconNames.LOCATE}
-            text={t("Select")}
-            title={t("Select program")}
-            intent={Intent.PRIMARY}
-            onClick={onProgramSelectClick}
-          />
+      <div className="ContainerEngineSettings" data-settings="program.local">
+        <FormGroup
+          helperText={
+            <div className="AppSettingsFieldProgramHelper">
+              {program?.version ? (
+                <>
+                  <span>{t("Detected version {{version}}", program)}</span>
+                  {suffix}
+                </>
+              ) : (
+                t("Could not detect current version")
+              )}
+            </div>
           }
-          {wslSelector}
-        </ControlGroup>
-      </FormGroup>
-      <FormGroup
-        label={t("Connection string")}
-        labelFor={`${program.name}_socket`}
-      >
-        <ControlGroup fill={true} vertical={false}>
-          <InputGroup
-            fill
-            id={`${program.name}_socket`}
-            placeholder={"..."}
-            value={connectionString}
-            onChange={onConnectionStringChange}
-            rightElement={
-              <Button minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onConnectionStringTestClick} />
+          label={t("Path to {{name}} CLI", program)}
+          labelFor="programPath"
+        >
+          <ControlGroup fill={true} vertical={false}>
+            <Controller
+              control={control}
+              name="programPath"
+              defaultValue=""
+              rules={{ required: t("Program path must be set") }}
+              render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { error } }) => {
+                return (
+                  <InputGroup
+                    fill
+                    id={name}
+                    name={name}
+                    inputRef={ref}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    placeholder={current.program.path}
+                    data-invalid={error ? true : false}
+                    intent={error ? Intent.DANGER : undefined}
+                    title={error ? error.message : ""}
+                    rightElement={
+                      <Button disabled={!!error} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
+                    }
+                  />
+                );
+              }}
+            />
+            {isLIMA || isWSL ? null : <Button
+              icon={IconNames.LOCATE}
+              text={t("Select")}
+              title={t("Select program")}
+              intent={Intent.PRIMARY}
+              onClick={onProgramSelectClick}
+            />
             }
-          />
-          <Button
-            icon={IconNames.TICK}
-            text={t("Accept")}
-            title={isConnectionStringChanged ? t("Try to use this value") : t("No change detected")}
-            disabled={!isConnectionStringChanged}
-            intent={isConnectionStringChanged ? Intent.SUCCESS : Intent.NONE}
-            onClick={onConnectionStringAcceptClick}
-          />
-        </ControlGroup>
-      </FormGroup>
-      <ButtonGroup className="ContainerEngineSettingsActions">
-        <Button disabled={!canConnect} intent={Intent.PRIMARY} text={t("Save")} icon={IconNames.FLOPPY_DISK} onClick={onConnectClick} />
-        <Button disabled={!canConnect} intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
-      </ButtonGroup>
-    </div>
+            {wslSelector}
+          </ControlGroup>
+        </FormGroup>
+        <FormGroup
+          label={t("Connection string")}
+          labelFor="connectionString"
+        >
+          <ControlGroup fill={true} vertical={false}>
+            <Controller
+              control={control}
+              name="connectionString"
+              defaultValue=""
+              rules={{ required: t("Connection string must be set") }}
+              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { error, invalid } }) => {
+                return (
+                  <InputGroup
+                    fill
+                    id={name}
+                    name={name}
+                    inputRef={ref}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    placeholder={current.api.connectionString}
+                    data-invalid={error ? true : false}
+                    intent={error ? Intent.DANGER : undefined}
+                    title={error ? error.message : ""}
+                    rightElement={
+                      <Button disabled={!!error} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onConnectionStringTestClick} />
+                    }
+                  />
+                );
+              }}
+            />
+          </ControlGroup>
+        </FormGroup>
+      </div>
   );
 }
 
@@ -249,7 +266,8 @@ export const ContainerEngineSettingsPodmanRemote: React.FC<ContainerEngineSettin
   return null;
 }
 
-export const ContainerEngineSettingsRegistry: { [key in ContainerEngine]: React.FC<ContainerEngineSettingsProps> } = {
+export type ContainerEngineSettingsRegistryStore = { [key in ContainerEngine]: React.FC<ContainerEngineSettingsProps> };
+export const ContainerEngineSettingsRegistry: ContainerEngineSettingsRegistryStore = {
   [ContainerEngine.PODMAN_NATIVE]: ContainerEngineSettingsProgramLocal,
   [ContainerEngine.PODMAN_VIRTUALIZED]: ContainerEngineSettingsProgramLocal,
   [ContainerEngine.PODMAN_REMOTE]: ContainerEngineSettingsPodmanRemote,
@@ -262,6 +280,128 @@ export const ContainerEngineSettingsRegistry: { [key in ContainerEngine]: React.
   [ContainerEngine.DOCKER_SUBSYSTEM_WSL]: ContainerEngineSettingsProgramLocal,
 }
 
+export interface ContainerEngineItem {
+  adapter: ContainerAdapter;
+  engine: ContainerEngine;
+  label: string;
+  active: boolean;
+  enabled: boolean;
+}
+
+export interface ContainerEngineManagerSettingsProps {
+  adapter: ContainerAdapter;
+  disabled?: boolean;
+  connectors: Connector[];
+  currentConnector: Connector;
+  engines: ContainerEngineItem[];
+}
+export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSettingsProps> = ({ adapter, disabled, connectors, currentConnector, engines }) => {
+  const { t } = useTranslation();
+  const start = useStoreActions((actions) => actions.start);
+
+  const [selectedConnectorId, setSelectedConnectorId] = useState(currentConnector.id);
+  let connector = connectors.find(it => it.id === selectedConnectorId);
+  // if no controller found - pick first usable
+  if (!connector) {
+    connector = connectors.find(({ availability }) => {
+      let usable = availability.api;
+      if (typeof availability.controller !== "undefined") {
+        usable = availability.controller;
+      }
+      return usable;
+    });
+  }
+  let settingsWidget: any = null;
+  if (connector && ContainerEngineSettingsRegistry[connector.engine]) {
+    const Settings = ContainerEngineSettingsRegistry[connector.engine];
+    settingsWidget = <Settings connector={connector} />;
+  }
+  const onContainerEngineChange = useCallback((e) => {
+    setSelectedConnectorId(e.currentTarget.value);
+  }, []);
+
+  const { current } = currentConnector.settings;
+
+  const methods = useForm<ConnectorFormData>({
+    mode: "all",
+    reValidateMode: 'onChange',
+    shouldUseNativeValidation: false,
+    defaultValues: {
+      programPath: current.program.path,
+      connectionString: current.api.connectionString
+    },
+    criteriaMode: 'firstError'
+  });
+
+  const { formState, handleSubmit } = methods;
+
+  const onSaveClick = handleSubmit(data => {
+    data.action = 'save';
+    console.debug(data.action, data, connector);
+    return data;
+  });
+
+  const onConnectClick = handleSubmit(async (data) => {
+    if (connector) {
+      await start({ startApi: true, adapter, connector: connector.id });
+    }
+    return false;
+  });
+
+  const canAct = formState.isValid;
+  const canSave = canAct && formState.isDirty;
+
+  return (
+    <FormProvider {...methods}>
+      <form>
+        <div className="AppSettingsFormView" data-form-view="container-engine" data-adapter={adapter}>
+          <div className="AppSettingsFormViewBody">
+            <div className="AppSettingsForm" data-form="engine">
+              <FormGroup>
+                <RadioGroup
+                  disabled={disabled}
+                  className="AppSettingsFormContent"
+                  data-form="engine"
+                  onChange={onContainerEngineChange}
+                  selectedValue={connector?.id}
+                >
+                  {connectors.map((it) => {
+                    const { engine } = it;
+                    const containerEngine = engine ? engines.find(it => it.engine === engine) : undefined;
+                    const label = containerEngine ? containerEngine.label : "Unsupported";
+                    const disabled = containerEngine ? !containerEngine.enabled : true;
+                    const restrict = <RestrictedTo engine={engine} />;
+                    return (
+                      <Radio
+                        key={engine}
+                        className={`AppSettingsField ${connector?.id === it.id ? "AppSettingsFieldActive" : ""}`}
+                        disabled={disabled}
+                        labelElement={<RadioLabel text={label} highlight={currentConnector.id === it.id} />}
+                        value={it.id}
+                      >
+                        {restrict}
+                      </Radio>
+                    );
+                  })}
+                </RadioGroup>
+              </FormGroup>
+            </div>
+            <div className="AppSettingsForm" data-form="engine.settings">
+              {settingsWidget}
+            </div>
+          </div>
+          <div className="AppSettingsFormViewFooter">
+          <ButtonGroup className="ContainerEngineSettingsActions">
+            <Button disabled={!canAct} type="button" value="connect" intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
+            <Button disabled={!canSave} type="button" value="save" intent={Intent.PRIMARY} text={t("Save")} icon={IconNames.FLOPPY_DISK} onClick={onSaveClick} />
+          </ButtonGroup>
+          </div>
+        </div>
+      </form>
+    </FormProvider>
+  );
+}
+
 export interface ContainerEngineManagerProps {
   helperText?: string;
   disabled?: boolean;
@@ -270,50 +410,87 @@ export interface ContainerEngineManagerProps {
 export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ disabled, helperText }) => {
   const { t } = useTranslation();
   const platform = useStoreState((state) => state.descriptor.platform);
-  const connectors = useStoreState((state) => state.descriptor.connectors);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
-  const ContainerEngines = useMemo(
+  const PodmanContainerEngines = useMemo(
     () => {
       const engines = [
         // Podman
-        { engine: ContainerEngine.PODMAN_NATIVE, label: t("Podman Native"), active: false, enabled: platform === Platforms.Linux },
         {
+          adapter: ContainerAdapter.PODMAN,
+          engine: ContainerEngine.PODMAN_NATIVE,
+          label: t("Native"),
+          active: false,
+          enabled: platform === Platforms.Linux
+        },
+        {
+          adapter: ContainerAdapter.PODMAN,
           engine: ContainerEngine.PODMAN_VIRTUALIZED,
-          label: t("Podman Machine"),
+          label: t("Machine"),
           active: false,
           enabled: true
         },
-        { engine: ContainerEngine.PODMAN_REMOTE, label: t("Podman Remote"), active: false, enabled: false },
         {
+          adapter: ContainerAdapter.PODMAN,
+          engine: ContainerEngine.PODMAN_REMOTE,
+          label: t("Remote"),
+          active: false,
+          enabled: false
+        },
+        {
+          adapter: ContainerAdapter.PODMAN,
           engine: ContainerEngine.PODMAN_SUBSYSTEM_LIMA,
-          label: t("Podman on LIMA"),
+          label: t("Custom LIMA"),
           active: false,
           enabled: platform === Platforms.Mac
         },
         {
+          adapter: ContainerAdapter.PODMAN,
           engine: ContainerEngine.PODMAN_SUBSYSTEM_WSL,
-          label: t("Podman on WSL"),
+          label: t("Custom WSL"),
           active: false,
           enabled: platform === Platforms.Windows
         },
+      ];
+      return engines;
+    },
+    [t, platform]
+  );
+  const DockerContainerEngines = useMemo(
+    () => {
+      const engines = [
         // Docker
-        { engine: ContainerEngine.DOCKER_NATIVE, label: t("Docker Native"), active: false, enabled: platform === Platforms.Linux },
         {
+          adapter: ContainerAdapter.DOCKER,
+          engine: ContainerEngine.DOCKER_NATIVE,
+          label: t("Native"),
+          active: false,
+          enabled: platform === Platforms.Linux
+        },
+        {
+          adapter: ContainerAdapter.DOCKER,
           engine: ContainerEngine.DOCKER_VIRTUALIZED,
-          label: t("Docker Machine"),
+          label: t("Machine"),
           active: false,
           enabled: platform === Platforms.Windows || platform === Platforms.Mac
         },
-        { engine: ContainerEngine.DOCKER_REMOTE, label: t("Docker Remote"), active: false, enabled: false },
         {
+          adapter: ContainerAdapter.DOCKER,
+          engine: ContainerEngine.DOCKER_REMOTE,
+          label: t("Remote"),
+          active: false,
+          enabled: false
+        },
+        {
+          adapter: ContainerAdapter.DOCKER,
           engine: ContainerEngine.DOCKER_SUBSYSTEM_LIMA,
-          label: t("Docker on LIMA"),
+          label: t("Custom LIMA"),
           active: false,
           enabled: platform === Platforms.Mac
         },
         {
+          adapter: ContainerAdapter.DOCKER,
           engine: ContainerEngine.DOCKER_SUBSYSTEM_WSL,
-          label: t("Docker on WSL"),
+          label: t("Custom WSL"),
           active: false,
           enabled: platform === Platforms.Windows
         },
@@ -323,56 +500,30 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
     [t, platform]
   );
 
-  const [selectedConnectorId, setSelectedConnectorId] = useState(currentConnector.id);
-  const connector = connectors.find(it => it.id === selectedConnectorId);
-  let settingsWidget: any = null;
-  if (connector && ContainerEngineSettingsRegistry[connector.engine]) {
-    const Settings = ContainerEngineSettingsRegistry[connector.engine];
-    settingsWidget = <Settings connector={connector} />;
-  }
-
-  const onContainerEngineChange = useCallback((e) => {
-    setSelectedConnectorId(e.currentTarget.value);
+  const adapter = useStoreState((state) => state.descriptor.currentConnector.adapter);
+  const [containerAdapter, setContainerAdapter] = useState(adapter || ContainerAdapter.PODMAN);
+  const onContainerAdapterChange = useCallback((e) => {
+    setContainerAdapter(e);
   }, []);
+
+  const connectors = useStoreState((state) => state.descriptor.connectors);
+  const podmanConnectors = useMemo(() => connectors.filter(it => it.engine.startsWith(containerAdapter)), [connectors, containerAdapter]);
+  const dockerConnectors = useMemo(() => connectors.filter(it => it.engine.startsWith(containerAdapter)), [connectors, containerAdapter]);
+
+  useEffect(() => {
+    setContainerAdapter(adapter);
+  }, [adapter]);
+
+  console.debug({ adapter , containerAdapter });
 
   return (
     <div className="AppSettingsEngineManager">
-      <Label>{t("Container engine")} - {helperText}</Label>
-      <div className="AppSettingsFormView" data-form-view="container-engine">
-        <div className="AppSettingsForm" data-form="engine">
-          <FormGroup>
-            <RadioGroup
-              disabled={disabled}
-              className="AppSettingsFormContent"
-              data-form="engine"
-              onChange={onContainerEngineChange}
-              selectedValue={connector?.id}
-            >
-              {connectors.map((it) => {
-                const { engine } = it;
-                const containerEngine = engine ? ContainerEngines.find(it => it.engine === engine) : undefined;
-                const label = containerEngine ? containerEngine.label : "Unsupported";
-                const disabled = containerEngine ? !containerEngine.enabled : true;
-                const restrict = <RestrictedTo engine={engine} />;
-                return (
-                  <Radio
-                    key={engine}
-                    className={`AppSettingsField ${currentConnector.engine === it.engine ? "AppSettingsFieldActive" : ""}`}
-                    disabled={disabled}
-                    labelElement={<RadioLabel text={label} highlight={currentConnector.engine === it.engine} />}
-                    value={it.id}
-                  >
-                    {restrict}
-                  </Radio>
-                );
-              })}
-            </RadioGroup>
-          </FormGroup>
-        </div>
-        <div className="AppSettingsForm" data-form="engine.settings">
-          {settingsWidget}
-        </div>
-      </div>
+      <Tabs selectedTabId={containerAdapter} onChange={onContainerAdapterChange} renderActiveTabPanelOnly>
+        <Tab id={ContainerAdapter.PODMAN} title={t("Podman")} panelClassName="podman-panel" panel={<ContainerEngineManagerSettings adapter={ContainerAdapter.PODMAN} currentConnector={currentConnector} engines={PodmanContainerEngines} connectors={podmanConnectors} />} />
+        <Tab id={ContainerAdapter.DOCKER} title={t("Docker")} panelClassName="docker-panel" panel={<ContainerEngineManagerSettings adapter={ContainerAdapter.DOCKER} currentConnector={currentConnector} engines={DockerContainerEngines} connectors={dockerConnectors} />} />
+        <Tabs.Expander />
+        <Label>{helperText}</Label>
+      </Tabs>
     </div>
   );
 };

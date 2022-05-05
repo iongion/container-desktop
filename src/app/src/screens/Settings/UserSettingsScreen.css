@@ -1,22 +1,31 @@
 .AppSettingsEngineManager {
   margin-top: 10px;
 }
-.AppSettingsEngineManager > .bp4-label {
-  margin-bottom: 0;
-  background: #111;
-  line-height: 30px;
-  padding-left: 4px;
+
+.AppSettingsEngineManager .bp4-tab-list {
+  padding-left: 10px;
 }
+.AppSettingsEngineManager .bp4-tab-panel {
+  margin-top: 5px;
+}
+
 .AppSettingsCallout {
   text-align: center;
   padding: 5px !important;
   margin: 0;
 }
 .AppSettingsFormView[data-form-view="container-engine"] {
-  display: flex;
-  margin-bottom: 15px;
   border: 1px solid #111;
+  margin-bottom: 10px;
+}
+.AppSettingsFormView[data-form-view="container-engine"] .AppSettingsFormViewBody {
+  display: flex;
   padding: 5px;
+}
+.AppSettingsFormView[data-form-view="container-engine"] .AppSettingsFormViewFooter {
+  padding: 5px;
+  background: #141414;
+  padding-left: 210px;
 }
 .AppSettingsFormColumn {
   display: flex;
@@ -61,6 +70,9 @@
   width: 100%;
   margin-left: -2px;
   background: #4f175b;
+  padding: 10px;
+}
+.AppSettingsForm[data-form="flags"] {
   padding: 10px;
 }
 .AppSettingUserConfigurationPath {

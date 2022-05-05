@@ -1,4 +1,5 @@
 // node
+const path = require("path");
 const os = require("os");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
@@ -89,8 +90,9 @@ const findProgram = async (program, opts) => {
   } else {
     logger.error(`No path found for ${program} cli program - version check skipped`);
   }
+  const name = path.basename(program).replace(".exe", "");
   return {
-    name: program,
+    name,
     path: programPath,
     version
   };

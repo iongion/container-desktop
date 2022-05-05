@@ -47,8 +47,11 @@ async function setUserConfiguration(options) {
 }
 
 const servicesMap = {
-  "/start": async function () {
-    return await getApp().getDescriptor();
+  "/start": async function (options) {
+    return await getApp().start(options);
+  },
+  "/connect": async function (options) {
+    return await getApp().connect(options);
   },
   "/container/engine/request": async function (options) {
     let result = {
@@ -104,9 +107,6 @@ const servicesMap = {
     const client = await application.getClient();
     return client.pruneSystem();
   },
-  "/system/api/start": async function () {
-    return await application.startApi();
-  },
   "/system/reset": async function () {
     const client = await application.getClient();
     return client.resetSystem();
@@ -140,7 +140,7 @@ const servicesMap = {
     return client.createMachine(opts);
   },
   "/test": async function (opts) {
-    const result = await getApp().testApiReachability(opts.payload);
+    const result = await getApp().test(opts.subject, opts.payload);
     result.subject = opts.subject;
     return result;
   },

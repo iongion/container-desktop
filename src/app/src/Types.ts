@@ -12,13 +12,15 @@ export interface ConnectorSettings {
   controller?: Controller;
 }
 export interface ConnectorSettingsMap {
-  current: ConnectorSettings;
-  detected: ConnectorSettings;
   expected: ConnectorSettings;
-  user: ConnectorSettings;
+  detected: Partial<ConnectorSettings>;
+  automatic: Partial<ConnectorSettings>;
+  user: Partial<ConnectorSettings>;
+  current: ConnectorSettings;
 }
 export interface Connector {
   id: string;
+  adapter: ContainerAdapter;
   engine: ContainerEngine;
   availability: {
     all: boolean;
@@ -38,11 +40,11 @@ export interface Connector {
 
 export interface ConnectOptions {
   startApi: boolean;
-  engine?: ContainerEngine;
+  adapter: ContainerAdapter;
+  connector: string;
 }
 
 export interface UserPreferences {
-  clientId: string, // default
   startApi: boolean;
   minimizeToSystemTray: boolean;
   path: string;
@@ -144,6 +146,11 @@ export interface SystemInfo {
   registries: SystemInfoRegistries;
   store: any;
   version: SystemVersion;
+}
+
+export enum ContainerAdapter {
+  PODMAN = "podman",
+  DOCKER = "docker",
 }
 
 export enum ContainerEngine {

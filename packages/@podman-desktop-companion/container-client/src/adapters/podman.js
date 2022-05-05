@@ -78,17 +78,6 @@ class PodmanClientEngineNative extends AbstractClientEngine {
       }
     };
   }
-  async getUserSettings() {
-    return {
-      api: {
-        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
-        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
-      },
-      program: {
-        path: this.userConfiguration.getKey(`${this.id}.program.path`)
-      }
-    };
-  }
   async getDetectedSettings(settings) {
     let info = {};
     if (fs.existsSync(settings.program.path)) {
@@ -100,6 +89,17 @@ class PodmanClientEngineNative extends AbstractClientEngine {
       // info = await findProgram(settings.program.name || PROGRAM);
     }
     return info;
+  }
+  async getUserSettings() {
+    return {
+      api: {
+        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
+        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
+      },
+      program: {
+        path: this.userConfiguration.getKey(`${this.id}.program.path`)
+      }
+    };
   }
   // Runtime
   async startApi(opts) {
@@ -293,12 +293,8 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 }
 
 class Adapter extends AbstractAdapter {
-  PROGRAM = PROGRAM;
-  constructor(userConfiguration, osType) {
-    super(userConfiguration, osType);
-    this.connectorClientEngineMap = {};
-  }
-  async getEngines() {
+  ADAPTER = PROGRAM;
+  async createEngines() {
     return [
       PodmanClientEngineNative,
       PodmanClientEngineVirtualized,
@@ -306,35 +302,14 @@ class Adapter extends AbstractAdapter {
       PodmanClientEngineSubsystemLIMA
     ].map((PodmanClientEngine) => {
       const engine = new PodmanClientEngine(this.userConfiguration, this.osType);
+      engine.adapter = PROGRAM;
+      engine.id = `engine.default.${engine.ENGINE}`;
       return engine;
     });
   }
-  async getConnections() {
-    const engines = await this.getEngines();
-    const connectors = await Promise.all(
-      engines.map(async (engine) => {
-        const id = `engine.default.${engine.ENGINE}`;
-        const settings = await engine.getSettings();
-        const connector = {
-          id,
-          engine: engine.ENGINE,
-          availability: await engine.getAvailability(),
-          settings
-        };
-        return {
-          id,
-          engine,
-          connector
-        };
-      })
-    );
-    return connectors;
-  }
-  async getEngineClientById(id) {
-    await this.getConnections();
-    return this.connectorClientEngineMap[id].client;
-  }
 }
+// Expose as static
+Adapter.ADAPTER = PROGRAM;
 
 module.exports = {
   // adapters

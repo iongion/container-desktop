@@ -25,7 +25,8 @@ import {
   //
   ContainerStateList,
   TestResult,
-  Program
+  Program,
+  ConnectOptions
 } from "./Types";
 
 import { Native } from "./Native";
@@ -490,10 +491,23 @@ export class ContainerClient {
     });
   }
 
-  async startApplication() {
+  async start(opts: ConnectOptions | undefined) {
+    console.debug("Client - start");
     return this.withResult<ApplicationDescriptor>(async () => {
       const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
         method: "/start",
+        params: opts
+      });
+      return reply.result;
+    });
+  }
+
+  async connect(opts: ConnectOptions) {
+    console.debug("Client - connect");
+    return this.withResult<boolean>(async () => {
+      const reply = await Native.getInstance().proxyService<boolean>({
+        method: "/connect",
+        params: opts
       });
       return reply.result;
     });
@@ -577,27 +591,10 @@ export class ContainerClient {
   }
 
   // System
-  async startApi() {
-    console.debug("Client - startApi");
-    return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/system/api/start"
-      });
-      return reply.result;
-    });
-  }
   async resetSystem() {
     return this.withResult<SystemResetReport>(async () => {
       const reply = await Native.getInstance().proxyService<SystemResetReport>({
         method: "/system/reset"
-      });
-      return reply.result;
-    });
-  }
-  async getIsApiRunning() {
-    return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/system/running"
       });
       return reply.result;
     });
@@ -624,7 +621,20 @@ export class ContainerClient {
     });
   }
 
-  async testConnectionString(options: { baseURL: string; connectionString: string }) {
+  async testProgramReachability(options: { name: string; path: string }) {
+    return this.withResult<TestResult>(async () => {
+      const reply = await Native.getInstance().proxyService<TestResult>({
+        method: "/test",
+        params: {
+          subject: "reachability.program",
+          payload: options
+        }
+      });
+      return reply.result;
+    });
+  }
+
+  async testApiReachability(options: { baseURL: string; connectionString: string }) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "/test",

@@ -23,7 +23,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
       userPreferences: {
         startApi: true,
         minimizeToSystemTray: false,
-        clientId: "", // default
         path: "",
         logging: {
           level: "error"
@@ -68,15 +67,13 @@ export const createModel = (registry: AppRegistry): AppModel => {
     // Thunks
     start: thunk(async (actions, options, { getState }) => {
       console.debug("Application start");
-      // await actions.configure();
-      // await actions.connect();
       return registry.withPending(async () => {
         try {
-          await actions.setPhase(AppBootstrapPhase.CONNECTING);
-          const startup = await registry.api.startApplication();
+          await actions.setPhase(AppBootstrapPhase.STARTING);
+          const startup = await registry.api.start(options);
           if (startup.currentConnector) {
             registry.api.setEngine(startup.currentConnector.engine);
-            let nextPhase = AppBootstrapPhase.CONFIGURED;
+            let nextPhase = AppBootstrapPhase.STARTED;
             if (startup.provisioned) {
               if (startup.running) {
                 nextPhase = AppBootstrapPhase.READY;
@@ -97,6 +94,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
           return startup;
         } catch (error) {
           console.error("Error during application startup", error);
+          // TODO: Redirect to settings screen
         }
       });
     }),
@@ -128,10 +126,20 @@ export const createModel = (registry: AppRegistry): AppModel => {
         return {} as any;
       });
     }),
-    testConnectionString: thunk(async (actions, options, { getState }) => {
+    testProgramReachability: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const test = await registry.api.testConnectionString(options);
+          const test = await registry.api.testProgramReachability(options);
+          return test;
+        } catch (error) {
+          console.error("Error during program path test", error);
+        }
+      });
+    }),
+    testApiReachability: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const test = await registry.api.testApiReachability(options);
           return test;
         } catch (error) {
           console.error("Error during connection string test", error);

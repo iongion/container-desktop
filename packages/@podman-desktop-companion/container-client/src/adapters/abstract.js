@@ -7,90 +7,211 @@ const merge = require("lodash.merge");
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
-const { findProgram, findProgramVersion } = require("../detector");
+const { findProgramVersion } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
 const { getAvailableLIMAInstances, getAvailableWSLDistributions } = require("../shared");
 const { WSL_VERSION } = require("../constants");
 
+/**
+ *
+ * @typedef {Object} Api
+ * @property {string} baseURL - The HTTP API base url
+ * @property {number} connectionString - The HTTP API connection string as unix socket or windows named pipe
+ *
+ * @typedef {Object} Program
+ * @property {string} name - The name of the program
+ * @property {version} path - The executable path of the program
+ * @property {string} version - The program version
+ *
+ * @typedef {Object} Controller
+ * @property {string} name - The name of the program
+ * @property {version} path - The executable path of the program
+ * @property {string} version - The program version
+ *
+ * @typedef {Object} Settings
+ * @property {Api} api
+ * @property {Program} program
+ *
+ * @typedef {Object} SettingsDictionary
+ * @property {Settings} expected - suggested
+ * @property {Settings} detected - computed
+ * @property {Settings} automatic - merging of suggested and computed
+ * @property {Settings} user - user overrides
+ * @property {Settings} current - merging of expected, detected, automatic and user
+ *
+ */
+
 class AbstractAdapter {
+  /** @access public */
+  ADAPTER = undefined;
   constructor(userConfiguration, osType) {
+    /** @access protected */
     this.userConfiguration = userConfiguration;
+    /** @access protected */
     this.osType = osType || os.type();
-    this.connectorClientEngineMap = {};
-  }
-  async getEngines() {
-    throw new Error("getEngines must be implemented");
-  }
-  async getConnections() {
-    throw new Error("getConnections must be implemented");
   }
 }
 
 class AbstractClientEngine {
+  /** @access public */
   PROGRAM = undefined;
+  /** @access public */
   ENGINE = undefined;
+
   constructor(userConfiguration, osType) {
+    /** @access protected */
     this.userConfiguration = userConfiguration;
-    this.settings = undefined;
-    this.apiDriver = undefined;
-    this.logger = createLogger(`${this.PROGRAM}.${this.ENGINE || "Engine"}.client`);
+    /** @access protected */
     this.osType = osType || os.type();
+    /** @access protected */
+    this.logger = createLogger(`${this.PROGRAM}.${this.ENGINE || "Engine"}.client`);
+    /** @access private */
     this.runner = new Runner(this);
   }
+
   // Lazy factory
   async getApiDriver() {
-    if (!this.apiDriver) {
-      const settings = await this.getCurrentSettings();
-      const config = await getApiConfig(settings.api.baseURL, settings.api.connectionString);
-      this.apiDriver = await createApiDriver(config);
-    }
-    return this.apiDriver;
+    const settings = await this.getCurrentSettings();
+    const config = await getApiConfig(settings.api.baseURL, settings.api.connectionString);
+    const apiDriver = await createApiDriver(config);
+    return apiDriver;
   }
-  // Settings
+
+  /**
+   * Creates a predefined dictionary with suggested optimal configuration
+   * @abstract
+   * @protected
+   * @return {Settings}
+   */
   async getExpectedSettings() {
     throw new Error("getExpectedSettings must be implemented");
   }
-  // settings = defaults
-  async getUserSettings(settings) {
-    return {};
-  }
-  // settings = merge(defaults, user)
+
+  /**
+   * Creates a dictionary with configuration resulting from probing the system
+   * @abstract
+   * @protected
+   * @return {Settings}
+   */
   async getDetectedSettings(settings) {
     throw new Error("getDetectedSettings must be implemented");
   }
-  async getSettings() {
-    if (!this.settings) {
-      const expected = await this.getExpectedSettings();
-      const detected = await this.getDetectedSettings(expected);
-      const user = await this.getUserSettings(merge({}, expected, detected));
-      const settings = {
-        expected,
-        detected,
-        user,
-        current: merge({}, expected, user, detected)
-      };
-      this.settings = settings;
-    }
-    return this.settings;
+
+  /**
+   * Creates a dictionary with merged configuration resulting from merging expected and detected settings
+   * @protected
+   * @return {Settings}
+   */
+  async getAutomaticSettings() {
+    const expected = await this.getExpectedSettings();
+    const detected = await this.getDetectedSettings(expected);
+    return merge({}, expected, detected);
   }
+
+  /**
+   * Creates a dictionary with configuration resulting from user defined overrides.
+   * Optimize and avoid calling it if the engine is not accessible
+   * @param {Settings} settings
+   *        The result of getAutomaticSettings
+   * @abstract
+   * @protected
+   * @return {Settings}
+   */
+  async getUserSettings(settings) {
+    return {};
+  }
+
+  /**
+   * Creates a dictionary with all configurations and an additional current key made of merging of expected > detected > automatic > user
+   * @public
+   * @return {SettingsDictionary}
+   */
+  async getSettings() {
+    const expected = await this.getExpectedSettings();
+    const detected = await this.getDetectedSettings(expected);
+    const automatic = await this.getAutomaticSettings();
+    // Optimization - apply user overrides only if engine is available
+    let user = {};
+    const available = await this.isEngineAvailable();
+    if (available) {
+      user = await this.getUserSettings(automatic);
+    }
+    const settings = {
+      expected,
+      detected,
+      automatic,
+      user,
+      current: merge(
+        {
+          api: {
+            baseURL: undefined,
+            connectionString: undefined
+          },
+          program: {
+            name: this.PROGRAM,
+            path: undefined,
+            version: undefined
+          }
+        },
+        automatic,
+        user
+      )
+    };
+    return settings;
+  }
+
+  /**
+   * Extracts only the current settings representing actual configuration
+   * @public
+   * @return {Settings} Settings - Actual settings
+   */
   async getCurrentSettings() {
     const settings = await this.getSettings();
     return settings.current;
   }
-  // Api
+
+  /**
+   *
+   * Attempts to put the system in a proper state for communication
+   * @abstract
+   * @public
+   * @return {bool} flag representing success or failure during startup
+   */
   async startApi() {
     throw new Error("startApi must be implemented");
   }
+
+  /**
+   *
+   * Cleans-up start processes and allocated resources
+   * @public
+   * @return {bool} flag representing success or failure during cleanup
+   */
   async stopApi() {
     if (!this.runner) {
       return true;
     }
     return await this.runner.stopApi();
   }
-  // Availability
+
+  /**
+   *
+   * Platform / Operating system based availability check for current engine.
+   * This method must not access settings as it is called during their computation!
+   * @abstract
+   * @public
+   * @return {bool} flag representing accessibility
+   */
   async isEngineAvailable() {
     throw new Error("isEngineAvailable must be implemented");
   }
+
+  /**
+   *
+   * Verifies if the program is specified and can be executable
+   * @public
+   * @return {bool} flag representing availability
+   */
   async isProgramAvailable() {
     const result = { success: false, details: undefined };
     const settings = await this.getSettings();
@@ -107,6 +228,13 @@ class AbstractClientEngine {
     result.details = "Program is available";
     return result;
   }
+
+  /**
+   *
+   * Verifies if the api is specified and can be queried
+   * @public
+   * @return {bool} flag representing availability
+   */
   async isApiAvailable() {
     const result = { success: false, details: undefined };
     const settings = await this.getSettings();
@@ -131,6 +259,7 @@ class AbstractClientEngine {
     result.details = "API is configured";
     return result;
   }
+
   async getAvailability() {
     const availability = {
       all: false,
@@ -183,9 +312,20 @@ class AbstractClientEngine {
       result.success = response?.data === "OK";
       result.details = response?.data || "Api reached";
     } catch (error) {
-      result.details = `API is not accessible - ${error.message}`;
+      result.details = "API is not accessible";
+      this.logger.error("API ping service failed");
     }
     return result;
+  }
+  async getConnector() {
+    const connector = {
+      id: this.id,
+      adapter: this.adapter, // injected by factory
+      engine: this.ENGINE,
+      availability: await this.getAvailability(),
+      settings: await this.getSettings()
+    };
+    return connector;
   }
   // Executes command inside controller scope
   async runScopedCommand(program, args, opts) {
@@ -219,7 +359,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
   async getExpectedSettings() {
     throw new Error("getExpectedSettings must be implemented");
   }
-  async getUserSettings() {
+  async getUserSettings(settings) {
     return {
       api: {
         baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
@@ -249,11 +389,47 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     }
     return info;
   }
+
   async getSettings() {
-    const settings = await super.getSettings();
+    const expected = await this.getExpectedSettings();
+    const detected = await this.getDetectedSettings(expected);
+    const automatic = await this.getAutomaticSettings();
+    // Optimization - apply user overrides only if engine is available
+    let user = {};
+    const available = await this.isEngineAvailable();
+    if (available) {
+      user = await this.getUserSettings(automatic);
+    }
+    const settings = {
+      expected,
+      detected,
+      automatic,
+      user,
+      current: merge(
+        {
+          api: {
+            baseURL: undefined,
+            connectionString: undefined
+          },
+          controller: {
+            path: undefined,
+            scope: undefined,
+            version: undefined
+          },
+          program: {
+            name: this.PROGRAM,
+            path: undefined,
+            version: undefined
+          }
+        },
+        automatic,
+        user
+      )
+    };
     settings.current.api.connectionString = await this.getConnectionString(settings.current.controller.scope);
     return settings;
   }
+
   // Availability
   async isControllerAvailable() {
     const settings = await this.getSettings();

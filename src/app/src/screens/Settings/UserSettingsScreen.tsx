@@ -7,7 +7,7 @@ import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
 import { LOGGING_LEVELS } from "../../Environment";
-import { AppScreen, AppScreenProps, ContainerEngine, UserPreferencesOptions } from "../../Types";
+import { AppScreen, AppScreenProps, UserPreferencesOptions } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
@@ -29,7 +29,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
   const provisioned = useStoreState((state) => state.descriptor.provisioned);
-  const system = {} as any; // TODO: System
   const running = useStoreState((state) => state.descriptor.running);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
   const userPreferences = useStoreState((state) => state.descriptor.userPreferences);
@@ -73,40 +72,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
       </Callout>
     );
 
-  let runningDetails: any = "";
-  if (system) {
-    runningDetails = t(
-      "Running on {{distribution}} {{distributionVersion}} ({{kernel}})",
-      {
-        currentVersion: program.version,
-        hostname: system.host?.hostname || "",
-        distribution: system.host?.distribution?.distribution || "",
-        distributionVersion: system.host?.distribution?.version || "",
-        kernel: system.host?.kernel || ""
-      }
-    );
-  } else {
-    if (program.path) {
-      runningDetails = t("Unable to detect system - try to connect and start the api");
-      if (program.name === "podman" && currentConnector.engine === ContainerEngine.PODMAN_VIRTUALIZED && !running) {
-        runningDetails = (
-          <>
-            <span>{t("Unable to detect system - podman machine may need restart")}</span> &mdash;
-            <code className="DocsCodeBox">podman machine stop &amp;&amp; podman machine start</code>
-          </>
-        );
-      }
-    } else {
-      runningDetails = t("Unable to detect system - no {{name}} program found, install first then restart and come back", program);
-    }
-  }
-
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader currentScreen={ID} />
       <div className="AppScreenContent">
         {contentWidget}
-        <ContainerEngineManager helperText={runningDetails} />
+        <ContainerEngineManager/>
         <div className="AppSettingsForm" data-form="flags">
           <FormGroup
             label={t("Startup")}

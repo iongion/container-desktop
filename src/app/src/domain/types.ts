@@ -15,9 +15,10 @@ import { ContainerClient } from "../Api.clients";
 
 export enum AppBootstrapPhase {
   INITIAL = "initial",
-  CONFIGURED = "configured",
-  CONNECTED = "connected",
   CONNECTING = "connecting",
+  CONNECTED = "connected",
+  STARTING = "starting",
+  STARTED = "started",
   READY = "ready",
   FAILED = "failed"
 }
@@ -46,14 +47,15 @@ export interface AppModel extends AppModelState {
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
 
   // thunks
-  start: Thunk<AppModel>;
-
-  // connect: Thunk<AppModel, ConnectOptions | undefined>;
+  start: Thunk<AppModel, ConnectOptions | undefined>;
   // configure: Thunk<AppModel>;
 
   setUserPreferences: Thunk<AppModel, Partial<UserPreferencesOptions>>;
   getUserPreferences: Thunk<AppModel>;
-  testConnectionString: Thunk<AppModel, { baseURL: string; connectionString: string }>;
+
+  testProgramReachability: Thunk<AppModel, { name: string; path: string }>;
+  testApiReachability: Thunk<AppModel, { baseURL: string; connectionString: string }>;
+
   findProgram: Thunk<AppModel, FindProgramOptions>;
 }
 

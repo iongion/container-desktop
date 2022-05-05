@@ -1,12 +1,14 @@
 // node
 const os = require("os");
 // vendors
+const merge = require("lodash.merge");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // module
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig, createApiDriver } = require("./api");
+const { findProgram } = require("./detector");
 // locals
 
 class Application {
@@ -14,68 +16,45 @@ class Application {
     this.logger = createLogger("container-client.Application");
     this.configuration = new UserConfiguration(version, env);
     this.adaptersList = [Podman.Adapter, Docker.Adapter];
+    // available only after start - hydrated in this order
     this.adapters = [];
+    this.engines = [];
+    this.currentEngine = undefined;
+    this.connectors = [];
   }
 
   async getAdapters() {
-    if (!this.adapters.length) {
-      const items = this.adaptersList.map((Adapter) => {
-        const adapter = new Adapter(this.configuration);
-        return adapter;
-      });
-      this.adapters = items;
-    }
-    return this.adapters;
+    const items = this.adaptersList.map((Adapter) => {
+      const adapter = new Adapter(this.configuration);
+      return adapter;
+    });
+    return items;
   }
 
   async getEngines() {
-    const adapterInstances = await this.getAdapters();
     const items = [];
     await Promise.all(
-      adapterInstances.map(async (adapter) => {
-        const adapterEngines = await adapter.getEngines();
+      this.adapters.map(async (adapter) => {
+        const adapterEngines = await adapter.createEngines();
         items.push(...adapterEngines);
       })
     );
     return items;
   }
 
-  async getConnections() {
-    const adapterInstances = await this.getAdapters();
+  async getConnectors() {
     const items = [];
     await Promise.all(
-      adapterInstances.map(async (adapter) => {
-        const connections = await adapter.getConnections();
-        items.push(...connections);
+      this.engines.map(async (engine) => {
+        const connector = await engine.getConnector();
+        items.push(connector);
       })
     );
     return items;
   }
 
-  async getCurrentConnection() {
-    const connections = await this.getConnections();
-    let item;
-    // First preferred
-    const currentConnectorId = this.configuration.getKey("connector.current");
-    if (currentConnectorId) {
-      item = connections.find((it) => it.id === currentConnectorId);
-    }
-    // First available - even if API is not started
-    if (!item) {
-      item = connections.find(({ connector }) => {
-        return connector.availability.engine && connector.availability.program;
-      });
-    }
-    // First in list
-    if (!item) {
-      item = connections[0];
-    }
-    return item;
-  }
-
   async getUserPreferences() {
     return {
-      clientId: this.configuration.getKey("connector.current"),
       startApi: this.configuration.getKey("startApi", false),
       minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
       path: this.configuration.getStoragePath(),
@@ -86,19 +65,15 @@ class Application {
   }
 
   async getDescriptor() {
-    const connections = await this.getConnections();
-    const current = await this.getCurrentConnection();
     let running = false;
     let provisioned = false;
-    let currentConnector;
-    if (current) {
-      const { id, engine, connector } = current;
-      provisioned = connector.availability.program;
-      if (typeof connector.availability.controller !== "undefined") {
-        provisioned = connector.availability.program && connector.availability.controller;
+    const currentConnector = this.currentConnector;
+    if (currentConnector) {
+      provisioned = currentConnector.availability.program;
+      if (typeof currentConnector.availability.controller !== "undefined") {
+        provisioned = currentConnector.availability.program && currentConnector.availability.controller;
       }
-      running = connector.availability.api;
-      currentConnector = connector;
+      running = currentConnector.availability.api;
     }
     return {
       environment: process.env.REACT_APP_ENV || "development",
@@ -106,33 +81,123 @@ class Application {
       platform: os.type(),
       provisioned,
       running,
-      connectors: connections.map((c) => c.connector),
+      connectors: this.connectors,
       currentConnector,
       userPreferences: await this.getUserPreferences()
     };
   }
 
+  // start
+  async start(opts) {
+    this.adapters = await this.getAdapters();
+    this.engines = await this.getEngines();
+    this.connectors = await this.getConnectors(this.engines);
+    const { startApi, adapter, connector } = merge(
+      {
+        // defaults
+        startApi: true,
+        adapter: Podman.Adapter.ADAPTER,
+        connector: this.configuration.getKey("connector.current")
+      },
+      opts || {}
+    );
+    // current connector
+    // 1st source - user preferred
+    if (connector) {
+      this.currentConnector = this.connectors.find(({ id }) => {
+        return id === connector;
+      });
+    }
+    // 2st source - user preferred is missing - default
+    if (!this.currentConnector) {
+      this.logger.debug(connector ? "Specified connector not found - defaulting" : "Connector not found - defaulting");
+      this.currentConnector = this.connectors.find(({ availability }) => {
+        return availability.engine && availability.program;
+      });
+    }
+    if (!this.currentConnector) {
+      this.logger.error("Unable to connect without any usable connector");
+      return false;
+    }
+    // current engine
+    this.currentEngine = this.engines.find((it) => it.id === this.currentConnector.id);
+    if (!this.currentEngine) {
+      this.logger.error("Unable to start without any usable engine");
+      return false;
+    }
+    this.configuration.setKey("connector.current", this.currentConnector.id);
+    // Start API only if specified
+    let started = false;
+    if (startApi) {
+      started = await this.currentEngine.startApi();
+      this.currentConnector = await this.currentEngine.getConnector();
+    }
+    const descriptor = await this.getDescriptor();
+    return descriptor;
+  }
+
+  // proxying
+
   async createApiRequest(opts) {
-    const { client } = this;
-    if (!client) {
-      logger.error("Cannot create api request - no valid client for current engine");
+    const { currentEngine } = this;
+    if (!currentEngine) {
+      this.logger.error("Cannot create api request - no valid client for current engine");
       throw new Error("No valid client for current engine");
     }
-    const driver = await client.getApiDriver();
+    const driver = await currentEngine.getApiDriver();
     return driver.request(opts);
   }
 
-  async testApiReachability(opts) {
-    console.debug(opts);
-    const config = await getApiConfig(opts.baseURL, opts.connectionString);
-    const driver = await createApiDriver(config);
+  // testing
+
+  async test(subject, payload) {
+    let result = { success: false };
+    switch (subject) {
+      case "reachability.api":
+        result = this.testApiReachability(payload);
+        break;
+      case "reachability.program":
+        result = this.testProgramReachability(payload);
+        break;
+      default:
+        result.details = `Unable to perform unknown test subject "${subject}"`;
+        break;
+    }
+    return result;
+  }
+
+  async testProgramReachability(opts) {
     const result = { success: false };
+    this.logger.debug("Testing if program is reachable", opts);
+    if (opts.path) {
+      try {
+        const program = await findProgram(opts.path);
+        this.logger.debug("Testing if program is reachable - completed", program);
+        if (program.path) {
+          result.success = true;
+          result.details = "Program found";
+          result.program = program;
+        }
+      } catch (error) {
+        this.logger.error("Testing if program is reachable - failed during detection", error.message);
+        result.details = "Program detection error";
+      }
+    }
+    return result;
+  }
+
+  async testApiReachability(opts) {
+    const result = { success: false };
+    const config = await getApiConfig(opts.baseURL, opts.connectionString);
+    this.logger.debug("Testing if API is reachable", config);
+    const driver = await createApiDriver(config);
     try {
       const response = await driver.get("/_ping");
       result.success = response?.data === "OK";
       result.details = response?.data || "Api reached";
     } catch (error) {
-      result.details = `API is not accessible - ${error.message}`;
+      result.details = `API is not accessible`;
+      this.logger.error("Reachability test failed", opts, error.message);
     }
     return result;
   }
