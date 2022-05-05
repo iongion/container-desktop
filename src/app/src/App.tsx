@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { HashRouter as Router, Switch, Route, useLocation } from "react-router-dom";
@@ -157,6 +158,7 @@ export function AppMainScreen() {
   return (
     <div
       className="App"
+      data-adapter={currentConnector.adapter}
       data-engine={currentConnector.engine}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
@@ -165,6 +167,9 @@ export function AppMainScreen() {
       data-running={running ? "yes" : "no"}
       data-provisioned={provisioned ? "yes" : "no"}
     >
+      <Helmet>
+        <body className="bp4-dark" data-adapter={currentConnector.adapter} />
+      </Helmet>
       <Router>
         <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
       </Router>

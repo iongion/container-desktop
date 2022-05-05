@@ -365,19 +365,20 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
                   onChange={onContainerEngineChange}
                   selectedValue={connector?.id}
                 >
-                  {connectors.map((it) => {
-                    const { engine } = it;
-                    const containerEngine = engine ? engines.find(it => it.engine === engine) : undefined;
+                  {engines.map((containerEngine) => {
+                    const engineConnector = connectors.find(it => it.engine === containerEngine.engine);
                     const label = containerEngine ? containerEngine.label : "Unsupported";
                     const disabled = containerEngine ? !containerEngine.enabled : true;
-                    const restrict = <RestrictedTo engine={engine} />;
+                    const restrict = <RestrictedTo engine={containerEngine.engine} />;
                     return (
                       <Radio
-                        key={engine}
-                        className={`AppSettingsField ${connector?.id === it.id ? "AppSettingsFieldActive" : ""}`}
+                        key={containerEngine.engine}
+                        data-adapter={containerEngine.adapter}
+                        data-engine={containerEngine.engine}
+                        className={`AppSettingsField ${connector?.id === engineConnector?.id ? "AppSettingsFieldActive" : ""}`}
                         disabled={disabled}
-                        labelElement={<RadioLabel text={label} highlight={currentConnector.id === it.id} />}
-                        value={it.id}
+                        labelElement={<RadioLabel text={label} highlight={currentConnector.id === engineConnector?.id} />}
+                        value={engineConnector?.id}
                       >
                         {restrict}
                       </Radio>
@@ -513,8 +514,6 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
   useEffect(() => {
     setContainerAdapter(adapter);
   }, [adapter]);
-
-  console.debug({ adapter , containerAdapter });
 
   return (
     <div className="AppSettingsEngineManager">

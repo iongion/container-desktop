@@ -27,7 +27,6 @@ export const Title = "Settings";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
   const provisioned = useStoreState((state) => state.descriptor.provisioned);
   const running = useStoreState((state) => state.descriptor.running);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
@@ -42,7 +41,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, [setUserPreferences]);
   const onLoggingLevelChange = useCallback(async (e) => {
     const configuration: Partial<UserPreferencesOptions> = {};
-    configuration["logging.level"] = e.currentTarget.value;
+    configuration.logging = {
+      level: e.currentTarget.value
+    };
     await setUserPreferences(configuration);
   }, [setUserPreferences]);
   const onToggleInspectorClick = useCallback(async (e) => {
@@ -87,7 +88,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
             <ControlGroup fill={true}>
               <Checkbox
                 id="startApi"
-                disabled={pending}
                 label={t("Automatically start the Api")}
                 checked={!!userPreferences.startApi}
                 onChange={onAutoStartApiChange}
@@ -98,7 +98,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
             <ControlGroup fill={true}>
               <Checkbox
                 id="minimizeToSystemTray"
-                disabled={pending}
                 label={t("Minimize to System Tray when closing")}
                 checked={!!userPreferences.minimizeToSystemTray}
                 onChange={onMinimizeToSystemTray}
@@ -113,17 +112,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
           >
           <div className="AppSettingUserConfigurationPath">
             <Icon icon={IconNames.INFO_SIGN} />
-            <strong>{t('Application settings and logs path')}</strong>
+            <strong>{t('Storage path')}</strong>
             <input type="text" value={userPreferences.path} readOnly/>
           </div>
-            <ControlGroup >
-              <HTMLSelect id="loggingLevel" disabled={pending} value={userPreferences.logging.level} onChange={onLoggingLevelChange}>
+            <ControlGroup>
+              <HTMLSelect id="loggingLevel" value={userPreferences.logging.level} onChange={onLoggingLevelChange}>
                 {LOGGING_LEVELS.map((level) => {
                   const key= `logging.${level}`;
                   return <option key={key} value={level}>{level}</option>;
                 })}
               </HTMLSelect>
-              <Button disabled={pending} icon={IconNames.PANEL_TABLE} text={t('Show inspector')} onClick={onToggleInspectorClick} />
+              <Button icon={IconNames.PANEL_TABLE} text={t('Show inspector')} onClick={onToggleInspectorClick} />
             </ControlGroup>
           </FormGroup>
         </div>

@@ -1,5 +1,4 @@
 // vendors
-const os = require("os");
 // project
 const { getLevel, setLevel, createLogger } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
@@ -13,38 +12,6 @@ const getApp = () => {
   }
   return application;
 };
-
-async function getUserConfiguration() {
-  const osType = os.type();
-  const connectionString = await application.findApiConnectionString();
-  const options = {
-    engine: await application.findEngine(),
-    program: await application.findProgram(),
-    startApi: userSettings.get("startApi", false),
-    minimizeToSystemTray: userSettings.get("minimizeToSystemTray", false),
-    communication: "api",
-    path: userSettings.getPath(),
-    logging: {
-      level: getLevel()
-    },
-    connectionString: osType === "Windows_NT" ? connectionString : `unix://${connectionString}`
-  };
-  return options;
-}
-
-async function setUserConfiguration(options) {
-  logger.debug("Updating user configuration", options);
-  Object.keys(options).forEach(async (key) => {
-    if (key === "logging.level") {
-      setLevel(options[key]);
-    } else if (key === "engine") {
-      await application.setEngine(options[key]);
-    } else {
-      userSettings.set(key, options[key]);
-    }
-  });
-  return await getUserConfiguration();
-}
 
 const servicesMap = {
   "/start": async function (options) {
@@ -85,59 +52,53 @@ const servicesMap = {
     }
     return result;
   },
-  "/user/configuration/get": async function () {
-    return await getUserConfiguration();
+  "/user/preferences/get": async function () {
+    const app = await getApp();
+    return await app.getUserPreferences();
   },
-  "/user/configuration/set": async function ({ options }) {
-    await setUserConfiguration(options);
-    return await getUserConfiguration();
-  },
-  "/system/running": async function () {
-    return await application.getIsApiRunning();
-  },
-  "/system/connections": async function () {
-    const client = await application.getClient();
-    return client.getSystemConnections();
+  "/user/preferences/set": async function ({ options }) {
+    const app = await getApp();
+    return await app.setUserPreferences(options);
   },
   "/system/info": async function () {
-    const client = await application.getClient();
-    return client.getSystemInfo();
+    const app = await getApp();
+    return app.getSystemInfo();
   },
   "/system/prune": async function () {
-    const client = await application.getClient();
-    return client.pruneSystem();
+    const app = await getApp();
+    return app.pruneSystem();
   },
   "/system/reset": async function () {
-    const client = await application.getClient();
-    return client.resetSystem();
+    const app = await getApp();
+    return app.resetSystem();
   },
   "/container/connect": async function ({ Id }) {
-    const client = await application.getClient();
-    return client.connectToContainer(Id);
+    const app = await getApp();
+    return app.connectToContainer(Id);
   },
   "/machines/list": async function () {
-    const client = await application.getClient();
-    return client.getMachines();
+    const app = await getApp();
+    return app.getMachines();
   },
   "/machine/restart": async function ({ Name }) {
-    const client = await application.getClient();
-    return client.restartMachine(Name);
+    const app = await getApp();
+    return app.restartMachine(Name);
   },
   "/machine/stop": async function ({ Name }) {
-    const client = await application.getClient();
-    return client.stopMachine(Name);
+    const app = await getApp();
+    return app.stopMachine(Name);
   },
   "/machine/connect": async function ({ Name }) {
-    const client = await application.getClient();
-    return client.connectToMachine(Name);
+    const app = await getApp();
+    return app.connectToMachine(Name);
   },
   "/machine/remove": async function ({ Name, force }) {
-    const client = await application.getClient();
-    return client.removeMachine(Name, force);
+    const app = await getApp();
+    return app.removeMachine(Name, force);
   },
   "/machine/create": async function (opts) {
-    const client = await application.getClient();
-    return client.createMachine(opts);
+    const app = await getApp();
+    return app.createMachine(opts);
   },
   "/test": async function (opts) {
     const result = await getApp().test(opts.subject, opts.payload);

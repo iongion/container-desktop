@@ -6,6 +6,9 @@ import "./index.css";
 import { store } from "./App.store";
 import { App } from "./App";
 
+import "./themes/podman.css";
+import "./themes/docker.css";
+
 export function renderApplication() {
   const relativeTime = require("dayjs/plugin/relativeTime");
   dayjs.extend(relativeTime);

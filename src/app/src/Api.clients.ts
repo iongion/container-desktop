@@ -109,7 +109,6 @@ export const coerceImage = (image: ContainerImage) => {
   let tag = "";
   let name = "";
   let registry = "";
-  // console.warn("Coerce image", image);
   if (image) {
     const nameSource = image.Names || image.History;
     const parts = (nameSource ? nameSource[0] || "" : "").split(":");
@@ -142,9 +141,7 @@ export class ApiDriver {
         data
       },
     };
-    // console.debug("Proxy-ing request", request);
     const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, true);
-    // console.debug(">>>>>> HTTP API RESPONSE", reply);
     return reply.result;
   }
   public async get<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
@@ -480,8 +477,10 @@ export class ContainerClient {
   // System
   async getSystemInfo() {
     return this.withResult<SystemInfo>(async () => {
-      const result = await this.dataApiDriver.get<SystemInfo>(`/system/info`);
-      return result.data;
+      const reply = await Native.getInstance().proxyService<SystemInfo>({
+        method: "/system/info",
+      });
+      return reply.result;
     });
   }
   async pruneSystem() {
@@ -492,7 +491,6 @@ export class ContainerClient {
   }
 
   async start(opts: ConnectOptions | undefined) {
-    console.debug("Client - start");
     return this.withResult<ApplicationDescriptor>(async () => {
       const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
         method: "/start",
@@ -503,7 +501,6 @@ export class ContainerClient {
   }
 
   async connect(opts: ConnectOptions) {
-    console.debug("Client - connect");
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
         method: "/connect",
@@ -603,7 +600,7 @@ export class ContainerClient {
   async getUserPreferences() {
     return this.withResult<UserPreferences>(async () => {
       const reply = await Native.getInstance().proxyService<UserPreferences>({
-        method: "/user/configuration/get",
+        method: "/user/preferences/get",
       });
       return reply.result;
     });
@@ -612,7 +609,7 @@ export class ContainerClient {
   async setUserPreferences(options: Partial<UserPreferencesOptions>) {
     return this.withResult<UserPreferences>(async () => {
       const reply = await Native.getInstance().proxyService<UserPreferences>({
-        method: "/user/configuration/set",
+        method: "/user/preferences/set",
         params: {
           options
         }

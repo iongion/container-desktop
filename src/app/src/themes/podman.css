@@ -1,0 +1,7 @@
+.App[data-adapter="podman"] .AppSidebar {
+  background-color: #1a051c;
+}
+.App[data-adapter="podman"] .AppSidebarFooter,
+.App[data-adapter="podman"] .AppSidebarFooter .bp4-navbar {
+  background-color: #1a051c;
+}

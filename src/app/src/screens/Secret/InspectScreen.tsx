@@ -25,6 +25,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const secretFetch = useStoreActions((actions) => actions.secret.secretFetch);
+
   useEffect(() => {
     (async () => {
       const secret = await secretFetch({
@@ -33,6 +34,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       setSecret(secret);
     })();
   }, [secretFetch, id]);
+
   if (!secret) {
     return (
       <div className="AppScreen" data-screen={ID}>

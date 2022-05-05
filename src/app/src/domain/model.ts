@@ -93,26 +93,25 @@ export const createModel = (registry: AppRegistry): AppModel => {
           }
           return startup;
         } catch (error) {
-          console.error("Error during application startup", error);
           // TODO: Redirect to settings screen
+          console.error("Error during application startup", error);
         }
       });
     }),
     setUserPreferences: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
-        // try {
-        //   const currentConnector = getState().environment.userConfiguration.engine;
-        //   const configuration = await registry.api.setUserPreferences(options);
-        //   await actions.setEnvironment({ userConfiguration: configuration });
-        //   // If engine is changing - reconnect
-        //   if (options.engine !== undefined && options.engine !== currentConnector) {
-        //     console.debug("Engine change detected - re-starting", { current: currentConnector, next: options.engine });
-        //     await actions.start();
-        //   }
-        //   return configuration;
-        // } catch (error) {
-        //   console.error("Error during user configuration update", error);
-        // }
+        try {
+          const userPreferences = await registry.api.setUserPreferences(options);
+          await actions.domainUpdate({
+            descriptor: {
+              ...getState().descriptor,
+              userPreferences
+            }
+          });
+        } catch (error) {
+          // TODO: Notify the user
+          console.error("Error during user preferences update", error);
+        }
       });
     }),
     getUserPreferences: thunk(async (actions) => {

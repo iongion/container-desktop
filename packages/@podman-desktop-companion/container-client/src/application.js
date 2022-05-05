@@ -53,17 +53,6 @@ class Application {
     return items;
   }
 
-  async getUserPreferences() {
-    return {
-      startApi: this.configuration.getKey("startApi", false),
-      minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
-      path: this.configuration.getStoragePath(),
-      logging: {
-        level: this.configuration.getKey("logging.level", "debug")
-      }
-    };
-  }
-
   async getDescriptor() {
     let running = false;
     let provisioned = false;
@@ -146,6 +135,32 @@ class Application {
     }
     const driver = await currentEngine.getApiDriver();
     return driver.request(opts);
+  }
+
+  // configuration
+
+  async setUserPreferences(opts) {
+    Object.keys(opts).forEach((key) => {
+      const value = opts[key];
+      this.configuration.setKey(key, value);
+    });
+    return await this.getUserPreferences();
+  }
+
+  async getUserPreferences() {
+    return {
+      startApi: this.configuration.getKey("startApi", false),
+      minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
+      path: this.configuration.getStoragePath(),
+      logging: {
+        level: this.configuration.getKey("logging.level", "debug")
+      }
+    };
+  }
+
+  // services
+  async getSystemInfo() {
+    return await this.currentEngine.getSystemInfo();
   }
 
   // testing

@@ -64,7 +64,9 @@ export interface UserPreferencesOptions {
   engine: Partial<ContainerEngine>;
   startApi: boolean;
   minimizeToSystemTray: boolean;
-  "logging.level": string;
+  logging: {
+    level: string;
+  };
   communication: "api" | "cli";
 }
 

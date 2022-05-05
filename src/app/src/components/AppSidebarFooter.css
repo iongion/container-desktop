@@ -11,7 +11,9 @@
 .AppSidebarFooter .bp4-navbar {
   margin: 0;
   padding: 0;
-  background: #4f175b url("../images/podman-logo.svg") no-repeat center left;
+  background-image: url("../images/podman-logo.svg");
+  background-repeat: no-repeat;
+  background-position: center left;
   background-size: 28px;
   height: 32px;
 }

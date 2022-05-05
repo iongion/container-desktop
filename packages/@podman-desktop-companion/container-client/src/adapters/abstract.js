@@ -113,7 +113,6 @@ class AbstractClientEngine {
    * Optimize and avoid calling it if the engine is not accessible
    * @param {Settings} settings
    *        The result of getAutomaticSettings
-   * @abstract
    * @protected
    * @return {Settings}
    */
