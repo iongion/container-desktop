@@ -11,13 +11,15 @@ const is_ip_private = require("private-ip");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { createLogger } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
+const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;
 // locals
 const osType = os.type();
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const { invoker } = require("./ipc");
 const logger = createLogger("shell.main");
+const userConfiguration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
 let window;
-const isHideToTrayOnClose = () => userSettings.get("minimizeToSystemTray", false);
+const isHideToTrayOnClose = () => userConfiguration.getKey("minimizeToSystemTray", false);
 const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
   return !app.isPackaged;

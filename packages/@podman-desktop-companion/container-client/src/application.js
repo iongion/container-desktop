@@ -3,7 +3,7 @@ const os = require("os");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { createLogger } = require("@podman-desktop-companion/logger");
+const { setLevel, createLogger } = require("@podman-desktop-companion/logger");
 // module
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
@@ -143,6 +143,9 @@ class Application {
     Object.keys(opts).forEach((key) => {
       const value = opts[key];
       this.configuration.setKey(key, value);
+      if (key === "logging") {
+        setLevel(value.level);
+      }
     });
     return await this.getUserPreferences();
   }

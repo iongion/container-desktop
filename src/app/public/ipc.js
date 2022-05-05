@@ -1,7 +1,6 @@
 // vendors
 // project
-const { getLevel, setLevel, createLogger } = require("@podman-desktop-companion/logger");
-const userSettings = require("@podman-desktop-companion/user-settings");
+const { createLogger } = require("@podman-desktop-companion/logger");
 const { Application } = require("@podman-desktop-companion/container-client").application;
 // locals
 const logger = createLogger("shell.ipc");

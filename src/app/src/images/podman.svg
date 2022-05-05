@@ -6,7 +6,7 @@
    height="231.40778"
    width="862.71112"
    sodipodi:docname="podman.svg"
-   inkscape:version="1.1 (ce6663b3b7, 2021-05-25)"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04, custom)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -23,13 +23,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      showgrid="false"
-     inkscape:zoom="1.5509247"
-     inkscape:cx="431.03317"
-     inkscape:cy="115.7374"
-     inkscape:window-width="1864"
-     inkscape:window-height="1016"
-     inkscape:window-x="56"
-     inkscape:window-y="27"
+     inkscape:zoom="0.77546235"
+     inkscape:cx="433.28989"
+     inkscape:cy="123.79711"
+     inkscape:window-width="1920"
+     inkscape:window-height="1007"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg8" />
   <defs
@@ -90,7 +90,6 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>

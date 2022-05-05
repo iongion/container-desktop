@@ -6,7 +6,7 @@
 }
 .AppHeader .bp4-navbar {
   display: flex;
-  background: #1a051c url("../images/podman.svg") no-repeat 0 center;
+  background: #1a051c url("../images/podman-desktop-companion.svg") no-repeat 0 center;
   background-size: contain;
 }
 .AppHeader .bp4-navbar-heading {
