@@ -149,6 +149,7 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
         connectionString: connectionString
       },
       controller: {
+        name: PROGRAM,
         path: undefined,
         version: undefined,
         scope: undefined

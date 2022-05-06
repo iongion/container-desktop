@@ -23,6 +23,7 @@ interface ContainerEngineSettingsProps {
 export interface ConnectorFormData {
   action: string;
   scope: string; // WSL distribution or LIMA instance
+  controllerPath: string;
   programPath: string;
   connectionString: string;
   useAsDefault: boolean;
@@ -34,7 +35,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const { availability, engine } = connector;
   const currentConnector = connector;
   const { automatic, current } = currentConnector.settings;
-  const { api, program } = current;
+  const { api, program, controller } = current;
 
   const wslDistributions: any[] = [];
 
@@ -51,10 +52,11 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   useEffect(() => {
     reset({
+      controllerPath: controller?.path,
       programPath: program.path,
       connectionString: api.connectionString
     })
-  }, [api, program, reset]);
+  }, [api, controller, program, reset]);
 
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -174,8 +176,77 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     );
   }
 
+
+
   return (
     <div className="ContainerEngineSettings" data-settings="program.local">
+
+      <Controller
+        control={control}
+        name="programPath"
+        defaultValue=""
+        rules={{ required: t("Controller path must be set") }}
+        render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { error } }) => {
+          let valid = true;
+          let message;
+          if (error?.message) {
+            message = error.message;
+            valid = false;
+          }
+          if (valid) {
+            valid = !!availability.controller;
+          }
+          if (!availability.controller) {
+            message = availability.report.controller;
+          }
+          return (
+            <FormGroup
+              helperText={
+                availability.controller ? (
+                <div className="AppSettingsFieldProgramHelper">
+                  {controller?.version ? (
+                    <>
+                      <span>{t("Detected version {{version}}", controller)}</span>
+                      {suffix}
+                    </>
+                  ) : (
+                    t("Could not detect current version")
+                  )}
+                </div>
+                ) : message
+              }
+              label={t("Path to {{name}} CLI", controller)}
+              labelFor="controllerPath"
+            >
+              <ControlGroup fill={true} vertical={false}>
+                <InputGroup
+                  fill
+                  id={name}
+                  name={name}
+                  inputRef={ref}
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  placeholder={automatic.controller?.path || ""}
+                  intent={valid ? undefined : Intent.DANGER}
+                  title={message}
+                  rightElement={
+                    <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
+                  }
+                />
+                <Button
+                  icon={IconNames.LOCATE}
+                  text={t("Select")}
+                  title={t("Select controller")}
+                  intent={Intent.PRIMARY}
+                  onClick={onProgramSelectClick}
+                />
+              </ControlGroup>
+            </FormGroup>
+          );
+        }}
+      />
+
       <Controller
         control={control}
         name="programPath"
