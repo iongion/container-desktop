@@ -8,11 +8,10 @@ const { setLevel, createLogger } = require("@podman-desktop-companion/logger");
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig, createApiDriver } = require("./api");
-const { findProgramVersion } = require("./detector");
 // locals
 
 class Application {
-  constructor(version, env) {
+  constructor(version, env, osType) {
     this.logger = createLogger("container-client.Application");
     this.configuration = new UserConfiguration(version, env);
     this.adaptersList = [Podman.Adapter, Docker.Adapter];
@@ -24,6 +23,7 @@ class Application {
     this.connectors = [];
     this.currentConnector = undefined;
     this.started = false;
+    this.osType = osType || os.type();
   }
 
   async getAdapters() {
@@ -70,7 +70,7 @@ class Application {
     return {
       environment: process.env.REACT_APP_ENV || "development",
       version: process.env.REACT_APP_PROJECT_VERSION || "1.0.0",
-      platform: os.type(),
+      platform: this.osType,
       provisioned,
       running,
       connectors: this.connectors,
@@ -139,9 +139,18 @@ class Application {
     );
     // Start API only if specified
     if (startApi) {
-      this.currentConnector = await this.currentEngine.getConnector();
       try {
         this.started = await this.currentEngine.startApi();
+        if (this.started) {
+          this.logger.debug("Updating connector post successful start-up to get updated details");
+          this.currentConnector = await this.currentEngine.getConnector();
+          this.connectors = this.connectors.map((it) => {
+            if (it.id === this.currentConnector.id) {
+              return { ...it, ...this.currentConnector };
+            }
+            return it;
+          });
+        }
       } catch (error) {
         this.started = false;
         this.logger.error("Application start error", error);
@@ -232,7 +241,7 @@ class Application {
         result = this.testApiReachability(payload);
         break;
       case "reachability.program":
-        result = this.testProgramReachability(payload);
+        result = this.testEngineProgramReachability(payload);
         break;
       default:
         result.details = `Unable to perform unknown test subject "${subject}"`;
@@ -241,17 +250,21 @@ class Application {
     return result;
   }
 
-  async testProgramReachability(opts) {
+  async testEngineProgramReachability({ id, program }) {
     const result = { success: false };
-    this.logger.debug("Testing if program is reachable", opts);
-    if (opts.path) {
+    this.logger.debug("Testing if program is reachable in engine", { program, engine: id });
+    if (program.path) {
       try {
-        const program = await findProgramVersion(opts.path);
-        this.logger.debug("Testing if program is reachable - completed", program);
-        if (program.path) {
+        const engine = this.engines.find((it) => it.id === id);
+        if (!engine) {
+          this.logger.error("Unable to updated settings of missing engine instance", id);
+          throw new Error("Update failed - no engine");
+        }
+        const check = await engine.runScopedCommand(program.path, ["--version"]);
+        this.logger.debug("Testing if program is reachable - completed", check);
+        if (check.success) {
           result.success = true;
-          result.details = "Program found";
-          result.program = program;
+          result.details = "Program has been found";
         }
       } catch (error) {
         this.logger.error("Testing if program is reachable - failed during detection", error.message);

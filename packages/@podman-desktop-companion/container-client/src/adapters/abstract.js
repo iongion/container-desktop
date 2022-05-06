@@ -415,6 +415,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     if (fs.existsSync(settings.controller.path)) {
       const detectVersion = await findProgramVersion(
         controller,
+        { osType: this.osType },
         this.osType === "Windows_NT" ? WSL_VERSION : undefined
       );
       info.controller = {

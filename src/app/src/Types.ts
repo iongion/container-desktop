@@ -72,6 +72,11 @@ export interface EngineUserSettingsOptions {
   settings: Partial<EngineConnectorSettings>;
 }
 
+export interface EngineProgramOptions {
+  id: string; // engine client instance id
+  program: Partial<Program>;
+}
+
 export enum Environments {
   DEVELOPMENT = "development",
   PRODUCTION = "production"

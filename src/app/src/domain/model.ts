@@ -138,10 +138,10 @@ export const createModel = (registry: AppRegistry): AppModel => {
       });
     }),
     // Others
-    testProgramReachability: thunk(async (actions, options, { getState }) => {
+    testEngineProgramReachability: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const test = await registry.api.testProgramReachability(options);
+          const test = await registry.api.testEngineProgramReachability(options.id, options.program);
           return test;
         } catch (error) {
           console.error("Error during program path test", error);

@@ -85,12 +85,10 @@ class PodmanClientEngineNative extends AbstractClientEngine {
   async getDetectedSettings(settings) {
     let info = {};
     if (fs.existsSync(settings.program.path)) {
-      const detectVersion = await findProgramVersion(settings.program.path || PROGRAM);
+      const detectVersion = await findProgramVersion(settings.program.path || this.PROGRAM, { osType: this.osType });
       info.program = {
         version: detectVersion
       };
-    } else {
-      // info = await findProgram(settings.program.name || PROGRAM);
     }
     return info;
   }

@@ -648,13 +648,16 @@ export class ContainerClient {
   }
 
 
-  async testProgramReachability(options: { name: string; path: string }) {
+  async testEngineProgramReachability(id: string, program: Partial<Program>) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "/test",
         params: {
           subject: "reachability.program",
-          payload: options
+          payload: {
+            id,
+            program
+          }
         }
       });
       return reply.result;

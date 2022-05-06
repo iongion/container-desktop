@@ -39,7 +39,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const wslDistributions: any[] = [];
 
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
-  const testProgramReachability = useStoreActions((actions) => actions.testProgramReachability);
+  const testEngineProgramReachability = useStoreActions((actions) => actions.testEngineProgramReachability);
   const testApiReachability = useStoreActions((actions) => actions.testApiReachability);
   const findProgram = useStoreActions((actions) => actions.findProgram);
 
@@ -115,16 +115,19 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
-    const result: TestResult = await testProgramReachability({
-      ...program,
-      path: values.programPath
+    const result: TestResult = await testEngineProgramReachability({
+      id: currentConnector.id,
+      program: {
+        ...program,
+        path: values.programPath
+      }
     });
     if (result.success) {
       Notification.show({ message: t("Program was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
     }
-  }, [program, testProgramReachability, getValues, t]);
+  }, [program, currentConnector, testEngineProgramReachability, getValues, t]);
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();

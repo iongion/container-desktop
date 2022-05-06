@@ -15,7 +15,8 @@ const findProgramPath = async (program, opts) => {
     logger.error("Unable to detect program path - program must be specified");
     throw new Error("Unable to detect program path - program must be specified");
   }
-  const useWhere = os.type() === "Windows_NT" && !opts?.wrapper;
+  const osType = opts.osType || os.type();
+  const useWhere = osType === "Windows_NT" && !opts?.wrapper;
   if (useWhere) {
     result = await exec_launcher_sync("where", [program], opts);
     logger.debug("Detecting", program, "using - where >", result);
