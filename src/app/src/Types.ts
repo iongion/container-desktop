@@ -75,6 +75,7 @@ export interface EngineUserSettingsOptions {
 export interface EngineProgramOptions {
   id: string; // engine client instance id
   program: Partial<Program>;
+  controller?: Partial<Controller>;
 }
 
 export enum Environments {

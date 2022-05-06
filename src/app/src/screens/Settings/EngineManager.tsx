@@ -119,6 +119,10 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     const values = getValues();
     const result: TestResult = await testEngineProgramReachability({
       id: currentConnector.id,
+      controller: controller ? {
+        ...controller,
+        path: values.controllerPath
+      } : undefined,
       program: {
         ...program,
         path: values.programPath
@@ -129,7 +133,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     } else {
       Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
     }
-  }, [program, currentConnector, testEngineProgramReachability, getValues, t]);
+  }, [program, controller, currentConnector, testEngineProgramReachability, getValues, t]);
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
