@@ -5,8 +5,9 @@ const path = require("path");
 const merge = require("lodash.merge");
 // project
 const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const userSettings = require("@podman-desktop-companion/user-settings");
 // module
-const { findProgram, findProgramVersion } = require("../detector");
+const { findProgramVersion } = require("../detector");
 const { getAvailablePodmanMachines } = require("../shared");
 const {
   // WSL - common
@@ -31,7 +32,10 @@ const PODMAN_MACHINE_DEFAULT = "podman-machine-default";
 // Native
 const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
 const NATIVE_PODMAN_CLI_VERSION = "4.0.3";
-const NATIVE_PODMAN_SOCKET_PATH = `/tmp/podman-desktop-companion-${PROGRAM}-rest-api.sock`;
+const NATIVE_PODMAN_SOCKET_PATH = path.join(
+  userSettings.getPath(),
+  `podman-desktop-companion-${PROGRAM}-rest-api.sock`
+);
 const NATIVE_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
 const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 // Windows virtualized

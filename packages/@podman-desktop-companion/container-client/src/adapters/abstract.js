@@ -279,7 +279,7 @@ class AbstractClientEngine {
       // TODO: Check named pipe
     } else {
       if (!fs.existsSync(settings.api.connectionString)) {
-        result.details = `API connection string as unix path is not present in ${settings.api.connectionString}`;
+        result.details = "API connection string as unix path is not present";
         return result;
       }
     }
@@ -499,7 +499,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       result.details = `Controller scope ${settings.controller.scope} is running`;
     } else {
       result.flag = false;
-      result.details = `Controller scope ${settings.controller.scope} scope is not available`;
+      result.details = `Controller scope ${settings.controller.scope} is not available`;
       return result;
     }
     // Only if scope is available

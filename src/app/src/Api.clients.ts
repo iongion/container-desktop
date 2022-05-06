@@ -5,6 +5,7 @@ import {
   Domain,
   GlobalUserSettings,
   GlobalUserSettingsOptions,
+  EngineConnectorSettings,
   //
   ContainerClientResponse,
   Container,
@@ -632,15 +633,16 @@ export class ContainerClient {
     });
   }
 
-  async setEngineUserSettings(id: string, settings: Partial<any>) {
-    return this.withResult<any>(async () => {
-      const reply = await Native.getInstance().proxyService<any>({
+  async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
+    return this.withResult<EngineConnectorSettings>(async () => {
+      const reply = await Native.getInstance().proxyService<EngineConnectorSettings>({
         method: "/engine/user/settings/set",
         params: {
           id,
           settings
         }
       });
+      console.debug(reply);
       return reply.result;
     });
   }

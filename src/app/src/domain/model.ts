@@ -1,8 +1,10 @@
 // vendors
 import { action, thunk } from "easy-peasy";
 import merge from "lodash.merge";
+import produce from "immer";
 // project
 import { Native } from "../Native";
+import { Connector } from "../Types";
 import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types";
 
 export const createModel = (registry: AppRegistry): AppModel => {
@@ -42,6 +44,15 @@ export const createModel = (registry: AppRegistry): AppModel => {
     syncGlobalUserSettings: action((state, values) => {
       state.descriptor.userSettings = values;
     }),
+    syncEngineUserSettings: action((state, values) => {
+      state.descriptor.currentConnector.settings.user = merge(state.descriptor.currentConnector.settings.user, values.settings);
+      state.descriptor.connectors = produce(state.descriptor.connectors, (draft: Connector[]) => {
+        const index = draft.findIndex(it => it.id === values.id)
+        if (index !== -1) {
+          draft[index].settings.user = merge(draft[index].settings.user, values.settings);
+        }
+      });
+    }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
       console.debug("Update domain", opts);
       const { phase, pending, descriptor } = opts;
@@ -52,16 +63,15 @@ export const createModel = (registry: AppRegistry): AppModel => {
         state.pending = pending;
       }
       if (descriptor !== undefined) {
-        console.debug("Updating descriptor")
         state.descriptor = merge(state.descriptor, descriptor);
       }
     }),
     // Thunks
     start: thunk(async (actions, options) => {
-      console.debug("Application start");
+      let nextPhase = AppBootstrapPhase.STARTING;
       return registry.withPending(async () => {
         try {
-          await actions.setPhase(AppBootstrapPhase.STARTING);
+          await actions.setPhase(nextPhase);
           const startup = await registry.api.start(options);
           if (startup.currentConnector) {
             registry.api.setEngine(startup.currentConnector.engine);
@@ -84,6 +94,10 @@ export const createModel = (registry: AppRegistry): AppModel => {
         } catch (error) {
           // TODO: Redirect to settings screen
           console.error("Error during application startup", error);
+          nextPhase = AppBootstrapPhase.FAILED;
+          await actions.domainUpdate({
+            phase: nextPhase,
+          });
         }
       });
     }),
@@ -115,7 +129,9 @@ export const createModel = (registry: AppRegistry): AppModel => {
       return registry.withPending(async () => {
         try {
           const updated = await registry.api.setEngineUserSettings(options.id, options.settings);
-          console.debug(updated)
+          actions.syncEngineUserSettings(options);
+          console.debug(getState());
+          return updated;
         } catch (error) {
           // TODO: Notify the user
           console.error("Error during engine user preferences update", error);

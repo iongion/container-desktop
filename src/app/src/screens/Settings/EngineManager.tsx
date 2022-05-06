@@ -25,13 +25,15 @@ export interface ConnectorFormData {
   scope: string; // WSL distribution or LIMA instance
   programPath: string;
   connectionString: string;
+  useAsDefault: boolean;
 }
 
 export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettingsProps> = ({ connector, disabled }) => {
   const { t } = useTranslation();
-  const { engine } = connector;
+  const pending = useStoreState((state) => state.pending);
+  const { availability, engine } = connector;
   const currentConnector = connector;
-  const { current } = currentConnector.settings;
+  const { automatic, current } = currentConnector.settings;
   const { api, program } = current;
 
   const wslDistributions: any[] = [];
@@ -138,6 +140,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const isLIMA = engine === ContainerEngine.PODMAN_SUBSYSTEM_LIMA;
   const suffix = isLIMA ? <span> - {t("Automatically detected inside LIMA VM")}</span> : "";
   const isWSL = engine === ContainerEngine.PODMAN_SUBSYSTEM_WSL;
+
   let wslSelector;
   if (isWSL) {
     wslSelector = (
@@ -168,98 +171,131 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     );
   }
 
-  // console.debug("Rendering");
-
   return (
-      <div className="ContainerEngineSettings" data-settings="program.local">
-        <FormGroup
-          helperText={
-            <div className="AppSettingsFieldProgramHelper">
-              {program?.version ? (
-                <>
-                  <span>{t("Detected version {{version}}", program)}</span>
-                  {suffix}
-                </>
-              ) : (
-                t("Could not detect current version")
-              )}
-            </div>
+    <div className="ContainerEngineSettings" data-settings="program.local">
+      <Controller
+        control={control}
+        name="programPath"
+        defaultValue=""
+        rules={{ required: t("Program path must be set") }}
+        render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { error } }) => {
+          let valid = true;
+          let message;
+          if (error?.message) {
+            message = error.message;
+            valid = false;
           }
-          label={t("Path to {{name}} CLI", program)}
-          labelFor="programPath"
-        >
-          <ControlGroup fill={true} vertical={false}>
-            <Controller
-              control={control}
-              name="programPath"
-              defaultValue=""
-              rules={{ required: t("Program path must be set") }}
-              render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { error } }) => {
-                return (
-                  <InputGroup
-                    fill
-                    id={name}
-                    name={name}
-                    inputRef={ref}
-                    value={value}
-                    onChange={onChange}
-                    onBlur={onBlur}
-                    placeholder={current.program.path}
-                    data-invalid={error ? true : false}
-                    intent={error ? Intent.DANGER : undefined}
-                    title={error ? error.message : ""}
-                    rightElement={
-                      <Button disabled={!!error} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
-                    }
-                  />
-                );
-              }}
-            />
-            {isLIMA || isWSL ? null : <Button
-              icon={IconNames.LOCATE}
-              text={t("Select")}
-              title={t("Select program")}
-              intent={Intent.PRIMARY}
-              onClick={onProgramSelectClick}
-            />
+          if (valid) {
+            valid = availability.program;
+          }
+          if (!availability.program) {
+            message = availability.report.program;
+          }
+          return (
+            <FormGroup
+              helperText={
+                availability.program ? (
+                <div className="AppSettingsFieldProgramHelper">
+                  {program?.version ? (
+                    <>
+                      <span>{t("Detected version {{version}}", program)}</span>
+                      {suffix}
+                    </>
+                  ) : (
+                    t("Could not detect current version")
+                  )}
+                </div>
+                ) : message
+              }
+              label={t("Path to {{name}} CLI", program)}
+              labelFor="programPath"
+            >
+              <ControlGroup fill={true} vertical={false}>
+                <InputGroup
+                  fill
+                  id={name}
+                  name={name}
+                  inputRef={ref}
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  placeholder={automatic.program?.path || ""}
+                  intent={valid ? undefined : Intent.DANGER}
+                  title={message}
+                  rightElement={
+                    <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
+                  }
+                />
+                {isLIMA || isWSL ? null : <Button
+                  icon={IconNames.LOCATE}
+                  text={t("Select")}
+                  title={t("Select program")}
+                  intent={Intent.PRIMARY}
+                  onClick={onProgramSelectClick}
+                />
+                }
+              </ControlGroup>
+            </FormGroup>
+          );
+        }}
+      />
+
+      <Controller
+        control={control}
+        name="connectionString"
+        defaultValue=""
+        rules={{ required: t("Connection string must be set") }}
+        render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { error, invalid } }) => {
+          let helperText = "";
+          if (value && automatic.api?.connectionString) {
+            if (automatic.api?.connectionString !== value) {
+              helperText = t("Overriding default");
             }
-            {wslSelector}
-          </ControlGroup>
-        </FormGroup>
-        <FormGroup
-          label={t("Connection string")}
-          labelFor="connectionString"
-        >
-          <ControlGroup fill={true} vertical={false}>
-            <Controller
-              control={control}
-              name="connectionString"
-              defaultValue=""
-              rules={{ required: t("Connection string must be set") }}
-              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { error, invalid } }) => {
-                return (
-                  <InputGroup
-                    fill
-                    id={name}
-                    name={name}
-                    inputRef={ref}
-                    value={value}
-                    onChange={onChange}
-                    onBlur={onBlur}
-                    placeholder={current.api.connectionString}
-                    data-invalid={error ? true : false}
-                    intent={error ? Intent.DANGER : undefined}
-                    title={error ? error.message : ""}
-                    rightElement={
-                      <Button disabled={!!error} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onConnectionStringTestClick} />
-                    }
-                  />
-                );
-              }}
-            />
-          </ControlGroup>
-        </FormGroup>
-      </div>
+          }
+          let valid = true;
+          let message;
+          if (error?.message) {
+            message = error.message;
+            valid = false;
+          }
+          if (valid) {
+            valid = availability.api;
+          }
+          if (!availability.api) {
+            message = availability.report.api;
+          } else {
+            message = helperText;
+          }
+          return (
+            <FormGroup
+              label={t("Connection string")}
+              labelFor="connectionString"
+              helperText={message}
+            >
+              <ControlGroup fill={true} vertical={false}>
+                <InputGroup
+                  fill
+                  id={name}
+                  name={name}
+                  inputRef={ref}
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  placeholder={automatic.api?.connectionString || ""}
+                  intent={valid ? undefined : Intent.DANGER}
+                  title={message}
+                  rightElement={
+                    <ButtonGroup>
+                      <Button disabled={!!error || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onConnectionStringTestClick} />
+                    </ButtonGroup>
+                  }
+                />
+              </ControlGroup>
+            </FormGroup>
+          );
+        }}
+      />
+    </div>
   );
 }
 
@@ -298,6 +334,7 @@ export interface ContainerEngineManagerSettingsProps {
 }
 export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSettingsProps> = ({ adapter, disabled, connectors, currentConnector, engines }) => {
   const { t } = useTranslation();
+  const pending = useStoreState((state) => state.pending);
   const defaultConnector = useStoreState((state) => state.descriptor.userSettings.connector.default);
   const start = useStoreActions((actions) => actions.start);
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
@@ -318,23 +355,22 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
 
   const methods = useForm<ConnectorFormData>({
     mode: "all",
-    reValidateMode: 'onChange',
+    reValidateMode: "onChange",
     shouldUseNativeValidation: false,
     defaultValues: {
       programPath: currentConnector.settings.current.program.path,
       connectionString: currentConnector.settings.current.api.connectionString
     },
-    criteriaMode: 'firstError'
+    criteriaMode: "firstError"
   });
 
-  const { formState, handleSubmit } = methods;
+  const { reset, formState, handleSubmit } = methods;
 
   const onContainerEngineChange = useCallback((e) => {
     setSelectedConnectorId(e.currentTarget.value);
   }, []);
 
   const onSaveClick = handleSubmit(async (data) => {
-    data.action = 'save';
     if (!connector) {
       return;
     }
@@ -355,17 +391,40 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
         }
       ),
     };
-    const result = await setEngineUserSettings({ id: connector.id, settings: engineUserSettings });
-    console.debug(data.action, data, connector, engineUserSettings);
-    console.debug(">>>> result", result);
-    return data;
+    try {
+      const settings: EngineConnectorSettings = await setEngineUserSettings({ id: connector.id, settings: engineUserSettings });
+      reset({
+        programPath: settings.program.path,
+        connectionString: settings.api.connectionString
+      });
+      Notification.show({ message: t("Container engine settings have been updated"), intent: Intent.SUCCESS });
+    } catch (error) {
+      Notification.show({ message: t("Container engine settings update has failed"), intent: Intent.DANGER });
+    }
   });
 
   const onConnectClick = handleSubmit(async (data) => {
     if (connector) {
       await start({ startApi: true, adapter, connector: connector.id });
     }
-    return false;
+    return true;
+  });
+
+  const onResetClick = handleSubmit(async (data) => {
+    if (!connector) {
+      return;
+    }
+    try {
+      const settings: EngineConnectorSettings = await setEngineUserSettings({ id: connector.id, settings: connector?.settings.automatic });
+      reset({
+        programPath: settings.program.path,
+        connectionString: settings.api.connectionString
+      });
+      Notification.show({ message: t("Container engine settings have been reset"), intent: Intent.SUCCESS });
+    } catch (error) {
+      Notification.show({ message: t("Container engine settings reset has failed"), intent: Intent.DANGER });
+    }
+    return true;
   });
 
   const onUseAsDefaultChange = useCallback(async (e) => {
@@ -373,8 +432,9 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     await setGlobalUserSettings({ connector: { default: isChecked ? connector?.id : undefined } });
   }, [setGlobalUserSettings, connector]);
 
-  const canAct = formState.isValid;
-  const canSave = canAct && formState.isDirty;
+  const canAct = formState.isValid && !pending;
+  const canSave = canAct && formState.isDirty && !pending;
+  const canReset = !pending;
   const isDefaultConnector = connector && defaultConnector === connector.id;
 
   let settingsWidget: any = null;
@@ -426,18 +486,20 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
           </div>
           <div className="AppSettingsFormViewFooter">
             <ButtonGroup className="ContainerEngineSettingsActions">
-              <Button disabled={!canAct} type="button" value="connect" intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
-              <Button disabled={!canSave} type="button" value="save" intent={Intent.PRIMARY} text={t("Save")} icon={IconNames.FLOPPY_DISK} onClick={onSaveClick} />
+              <Button disabled={!canAct} intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
+              <Button disabled={!canSave} intent={Intent.PRIMARY} text={t("Save")} icon={IconNames.FLOPPY_DISK} onClick={onSaveClick} />
             </ButtonGroup>
-          <FormGroup className="ContainerEngineSettingsSetDefault">
-            <ControlGroup>
-              <Checkbox
-                label={t("Use as default")}
-                onChange={onUseAsDefaultChange}
-                checked={isDefaultConnector}
-              />
-            </ControlGroup>
-          </FormGroup>
+            <FormGroup className="ContainerEngineSettingsSetDefault">
+              <ControlGroup>
+                <Checkbox
+                  label={t("Use as default")}
+                  onChange={onUseAsDefaultChange}
+                  checked={isDefaultConnector}
+                />
+              </ControlGroup>
+            </FormGroup>
+            <div className="ContainerEngineSettingsActionsSpacer"></div>
+            <Button data-action="reset" disabled={!canReset} minimal intent={Intent.NONE} title={t("Reset to automatic values")} icon={IconNames.RESET} onClick={onResetClick} />
           </div>
         </div>
       </form>

@@ -54,7 +54,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   let errorMessage = "";
   let icon = mdiEmoticonSad;
   if (program?.path) {
-    title = t("The API is not running");
+    title = t("Unusable connection");
     errorMessage = t("Check the logs from application data path if this is not intended behavior");
     icon = mdiEmoticonWink;
   } else {

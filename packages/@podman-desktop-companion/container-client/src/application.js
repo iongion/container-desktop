@@ -139,8 +139,13 @@ class Application {
     );
     // Start API only if specified
     if (startApi) {
-      this.started = await this.currentEngine.startApi();
       this.currentConnector = await this.currentEngine.getConnector();
+      try {
+        this.started = await this.currentEngine.startApi();
+      } catch (error) {
+        this.started = false;
+        this.logger.error("Application start error", error);
+      }
     }
     const descriptor = await this.getDescriptor();
     return descriptor;

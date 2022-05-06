@@ -42,6 +42,7 @@ export interface AppModel extends AppModelState {
   setPhase: Action<AppModel, AppBootstrapPhase>;
   setPending: Action<AppModel, boolean>;
   syncGlobalUserSettings: Action<AppModel, GlobalUserSettings>;
+  syncEngineUserSettings: Action<AppModel, EngineUserSettingsOptions>;
 
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
 
