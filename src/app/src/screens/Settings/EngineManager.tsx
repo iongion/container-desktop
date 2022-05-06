@@ -1,5 +1,5 @@
 import { useCallback, useState, useMemo, useEffect } from "react";
-import { Button, ControlGroup, InputGroup, Intent, RadioGroup, Radio, FormGroup, Label, HTMLSelect, ButtonGroup, Tab, Tabs } from "@blueprintjs/core";
+import { Button, Checkbox, ControlGroup, InputGroup, Intent, RadioGroup, Radio, FormGroup, Label, HTMLSelect, ButtonGroup, Tab, Tabs } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import { useForm, useFormContext, FormProvider, Controller } from "react-hook-form";
@@ -297,11 +297,13 @@ export interface ContainerEngineManagerSettingsProps {
 }
 export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSettingsProps> = ({ adapter, disabled, connectors, currentConnector, engines }) => {
   const { t } = useTranslation();
+  const defaultConnector = useStoreState((state) => state.descriptor.userPreferences.connector.default);
   const start = useStoreActions((actions) => actions.start);
-
+  const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
   const [selectedConnectorId, setSelectedConnectorId] = useState(currentConnector.id);
+
+  // if no connector found - pick first usable
   let connector = connectors.find(it => it.id === selectedConnectorId);
-  // if no controller found - pick first usable
   if (!connector) {
     connector = connectors.find(({ availability }) => {
       let usable = availability.api;
@@ -311,29 +313,23 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
       return usable;
     });
   }
-  let settingsWidget: any = null;
-  if (connector && ContainerEngineSettingsRegistry[connector.engine]) {
-    const Settings = ContainerEngineSettingsRegistry[connector.engine];
-    settingsWidget = <Settings connector={connector} />;
-  }
-  const onContainerEngineChange = useCallback((e) => {
-    setSelectedConnectorId(e.currentTarget.value);
-  }, []);
-
-  const { current } = currentConnector.settings;
 
   const methods = useForm<ConnectorFormData>({
     mode: "all",
     reValidateMode: 'onChange',
     shouldUseNativeValidation: false,
     defaultValues: {
-      programPath: current.program.path,
-      connectionString: current.api.connectionString
+      programPath: currentConnector.settings.current.program.path,
+      connectionString: currentConnector.settings.current.api.connectionString
     },
     criteriaMode: 'firstError'
   });
 
   const { formState, handleSubmit } = methods;
+
+  const onContainerEngineChange = useCallback((e) => {
+    setSelectedConnectorId(e.currentTarget.value);
+  }, []);
 
   const onSaveClick = handleSubmit(data => {
     data.action = 'save';
@@ -348,8 +344,20 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     return false;
   });
 
+  const onUseAsDefaultChange = useCallback(async (e) => {
+    const isChecked = e.currentTarget.checked;
+    await setUserPreferences({ connector: { default: isChecked ? connector?.id : undefined } });
+  }, [setUserPreferences, connector]);
+
   const canAct = formState.isValid;
   const canSave = canAct && formState.isDirty;
+  const isDefaultConnector = connector && defaultConnector === connector.id;
+
+  let settingsWidget: any = null;
+  if (connector && ContainerEngineSettingsRegistry[connector.engine]) {
+    const Settings = ContainerEngineSettingsRegistry[connector.engine];
+    settingsWidget = <Settings connector={connector} />;
+  }
 
   return (
     <FormProvider {...methods}>
@@ -370,6 +378,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
                     const label = containerEngine ? containerEngine.label : "Unsupported";
                     const disabled = containerEngine ? !containerEngine.enabled : true;
                     const restrict = <RestrictedTo engine={containerEngine.engine} />;
+                    const important = defaultConnector !== undefined && defaultConnector === engineConnector?.id;
                     return (
                       <Radio
                         key={containerEngine.engine}
@@ -377,7 +386,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
                         data-engine={containerEngine.engine}
                         className={`AppSettingsField ${connector?.id === engineConnector?.id ? "AppSettingsFieldActive" : ""}`}
                         disabled={disabled}
-                        labelElement={<RadioLabel text={label} highlight={currentConnector.id === engineConnector?.id} />}
+                        labelElement={<RadioLabel text={label} important={important} highlight={currentConnector.id === engineConnector?.id} />}
                         value={engineConnector?.id}
                       >
                         {restrict}
@@ -392,10 +401,19 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
             </div>
           </div>
           <div className="AppSettingsFormViewFooter">
-          <ButtonGroup className="ContainerEngineSettingsActions">
-            <Button disabled={!canAct} type="button" value="connect" intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
-            <Button disabled={!canSave} type="button" value="save" intent={Intent.PRIMARY} text={t("Save")} icon={IconNames.FLOPPY_DISK} onClick={onSaveClick} />
-          </ButtonGroup>
+            <ButtonGroup className="ContainerEngineSettingsActions">
+              <Button disabled={!canAct} type="button" value="connect" intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
+              <Button disabled={!canSave} type="button" value="save" intent={Intent.PRIMARY} text={t("Save")} icon={IconNames.FLOPPY_DISK} onClick={onSaveClick} />
+            </ButtonGroup>
+          <FormGroup className="ContainerEngineSettingsSetDefault">
+            <ControlGroup>
+              <Checkbox
+                label={t("Use as default")}
+                onChange={onUseAsDefaultChange}
+                checked={isDefaultConnector}
+              />
+            </ControlGroup>
+          </FormGroup>
           </div>
         </div>
       </form>

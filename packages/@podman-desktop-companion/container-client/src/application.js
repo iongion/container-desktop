@@ -86,7 +86,7 @@ class Application {
         // defaults
         startApi: true,
         adapter: Podman.Adapter.ADAPTER,
-        connector: this.configuration.getKey("connector.current")
+        connector: this.configuration.getKey("connector.default")
       },
       opts || {}
     );
@@ -114,7 +114,7 @@ class Application {
       this.logger.error("Unable to start without any usable engine");
       return false;
     }
-    this.configuration.setKey("connector.current", this.currentConnector.id);
+    // this.configuration.setKey("connector.current", this.currentConnector.id);
     // Start API only if specified
     let started = false;
     if (startApi) {
@@ -157,6 +157,9 @@ class Application {
       path: this.configuration.getStoragePath(),
       logging: {
         level: this.configuration.getKey("logging.level", "debug")
+      },
+      connector: {
+        default: this.configuration.getKey("connector.default")
       }
     };
   }

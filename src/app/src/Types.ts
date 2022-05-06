@@ -51,6 +51,9 @@ export interface UserPreferences {
   logging: {
     level: string;
   };
+  connector: {
+    default: string | undefined;
+  };
 }
 
 export interface TestResult {
@@ -59,15 +62,9 @@ export interface TestResult {
   details?: any;
 }
 
-export interface UserPreferencesOptions {
+export interface UserPreferencesOptions extends UserPreferences {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
-  startApi: boolean;
-  minimizeToSystemTray: boolean;
-  logging: {
-    level: string;
-  };
-  communication: "api" | "cli";
 }
 
 export enum Environments {

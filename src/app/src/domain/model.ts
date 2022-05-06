@@ -1,6 +1,6 @@
 // vendors
 import { action, thunk } from "easy-peasy";
-import produce from "immer";
+import merge from "lodash.merge";
 // project
 import { Native } from "../Native";
 import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types";
@@ -27,6 +27,9 @@ export const createModel = (registry: AppRegistry): AppModel => {
         logging: {
           level: "error"
         },
+        connector: {
+          default: undefined
+        }
       }
     },
     // Actions
@@ -36,20 +39,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
     setPending: action((state, flag) => {
       state.pending = flag;
     }),
-    setDescriptor: action((state, value) => {
-      state.descriptor = produce(state.descriptor, (draft) => {
-        Object.keys(value || {}).forEach(key => {
-          (draft as any)[key] = (value as any)[key];
-        })
-      });
-    }),
-    domainReset: action((state, { phase, pending }) => {
-      if (phase !== undefined) {
-        state.phase = phase;
-      }
-      if (pending !== undefined) {
-        state.pending = pending;
-      }
+    syncUserPreferences: action((state, values) => {
+      state.descriptor.userPreferences = values;
     }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
       console.debug("Update domain", opts);
@@ -61,11 +52,12 @@ export const createModel = (registry: AppRegistry): AppModel => {
         state.pending = pending;
       }
       if (descriptor !== undefined) {
-        state.descriptor = descriptor;
+        console.debug("Updating descriptor")
+        state.descriptor = merge(state.descriptor, descriptor);
       }
     }),
     // Thunks
-    start: thunk(async (actions, options, { getState }) => {
+    start: thunk(async (actions, options) => {
       console.debug("Application start");
       return registry.withPending(async () => {
         try {
@@ -85,10 +77,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
             }
             await actions.domainUpdate({
               phase: nextPhase,
-              descriptor: {
-                ...getState().descriptor,
-                ...startup
-              }
+              descriptor: startup
             });
           }
           return startup;
@@ -102,12 +91,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
       return registry.withPending(async () => {
         try {
           const userPreferences = await registry.api.setUserPreferences(options);
-          await actions.domainUpdate({
-            descriptor: {
-              ...getState().descriptor,
-              userPreferences
-            }
-          });
+          await actions.syncUserPreferences(userPreferences);
         } catch (error) {
           // TODO: Notify the user
           console.error("Error during user preferences update", error);

@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Store, EasyPeasyConfig, createTypedHooks } from "easy-peasy";
 // project
-import { ConnectOptions, ContainerEngine, ApplicationDescriptor, UserPreferencesOptions } from "../Types";
+import { ConnectOptions, ContainerEngine, ApplicationDescriptor, UserPreferences, UserPreferencesOptions } from "../Types";
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -41,9 +41,8 @@ export interface AppModel extends AppModelState {
   // actions
   setPhase: Action<AppModel, AppBootstrapPhase>;
   setPending: Action<AppModel, boolean>;
-  setDescriptor: Action<AppModel, Partial<ApplicationDescriptor>>;
+  syncUserPreferences: Action<AppModel, UserPreferences>;
 
-  domainReset: Action<AppModel, Partial<AppModelState>>;
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
 
   // thunks

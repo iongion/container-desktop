@@ -26,6 +26,8 @@
   padding: 5px;
   background: #141414;
   padding-left: 210px;
+  display: flex;
+  align-items: center;
 }
 .AppSettingsFormColumn {
   display: flex;
@@ -52,6 +54,9 @@
   padding-left: 30px;
   padding-right: 10px;
   width: 100%;
+}
+.AppSettingsField .bp4-control-indicator {
+  margin-top: 0;
 }
 .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
   background: #4f175b;

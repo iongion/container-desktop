@@ -13,3 +13,11 @@
 .ContainerEngineSettingsActions .bp4-button {
   min-width: 110px;
 }
+.ContainerEngineSettingsSetDefault {
+  margin: 0;
+  padding-left: 10px;
+  display: inline-block;
+}
+.ContainerEngineSettingsSetDefault .bp4-checkbox {
+  margin: 0;
+}
