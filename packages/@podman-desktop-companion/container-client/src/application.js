@@ -1,5 +1,6 @@
 // node
 const os = require("os");
+const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
@@ -12,6 +13,7 @@ const { getApiConfig, createApiDriver } = require("./api");
 
 class Application {
   constructor(version, env, osType) {
+    this.osType = osType || os.type();
     this.logger = createLogger("container-client.Application");
     this.configuration = new UserConfiguration(version, env);
     this.adaptersList = [Podman.Adapter, Docker.Adapter];
@@ -23,12 +25,11 @@ class Application {
     this.connectors = [];
     this.currentConnector = undefined;
     this.started = false;
-    this.osType = osType || os.type();
   }
 
   async getAdapters() {
     const items = this.adaptersList.map((Adapter) => {
-      const adapter = new Adapter(this.configuration);
+      const adapter = new Adapter(this.configuration, this.osType);
       return adapter;
     });
     return items;
@@ -211,7 +212,7 @@ class Application {
   async setEngineUserSettings({ id, settings }) {
     const engine = this.engines.find((it) => it.id === id);
     if (!engine) {
-      this.logger.error("Unable to updated settings of missing engine instance", id);
+      this.logger.error("Unable to update settings of missing engine instance", id);
       throw new Error("Update failed - no engine");
     }
     return await engine.setUserSettings(settings);
@@ -250,14 +251,15 @@ class Application {
     return result;
   }
 
-  async testEngineProgramReachability({ id, program }) {
+  async testEngineProgramReachability(opts) {
     const result = { success: false };
-    this.logger.debug("Testing if program is reachable in engine", { program, engine: id });
+    this.logger.debug("Testing if program is reachable in engine", opts);
+    const { id, program } = opts;
     if (program.path) {
       try {
         const engine = this.engines.find((it) => it.id === id);
         if (!engine) {
-          this.logger.error("Unable to updated settings of missing engine instance", id);
+          this.logger.error("Unable to test engine program reachability - no engine", opts);
           throw new Error("Update failed - no engine");
         }
         const check = await engine.runScopedCommand(program.path, ["--version"]);

@@ -98,9 +98,14 @@ async function main() {
           }
         },
         proxy: async (req) => {
-          const result = await ipcRenderer.invoke("proxy", req);
-          // logger.debug(">> proxy to client", result);
-          return result;
+          try {
+            const result = await ipcRenderer.invoke("proxy", req);
+            // logger.debug(">> proxy to client", result);
+            return result;
+          } catch (error) {
+            logger.error("Proxy invocation error", error.message, error.stack);
+            throw new Error("Proxy invocation error");
+          }
         }
       }
     };
