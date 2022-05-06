@@ -8,7 +8,7 @@ const { setLevel, createLogger } = require("@podman-desktop-companion/logger");
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig, createApiDriver } = require("./api");
-const { findProgram } = require("./detector");
+const { findProgramVersion } = require("./detector");
 // locals
 
 class Application {
@@ -246,7 +246,7 @@ class Application {
     this.logger.debug("Testing if program is reachable", opts);
     if (opts.path) {
       try {
-        const program = await findProgram(opts.path);
+        const program = await findProgramVersion(opts.path);
         this.logger.debug("Testing if program is reachable - completed", program);
         if (program.path) {
           result.success = true;
