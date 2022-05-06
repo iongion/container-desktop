@@ -32,3 +32,18 @@
   display: inline-block;
   border: 1px solid transparent;
 }
+[data-table="containers"] tbody tr[data-state="exited"] {
+  background-color: #480505;
+}
+[data-table="containers"] .ContainerState[data-state="exited"] {
+  background-color: #c71700;
+}
+[data-table="containers"] .ContainerState[data-state="running"] {
+  background-color: #128e4c;
+}
+[data-table="containers"] .ContainerState[data-state="created"] {
+  background-color: #0d4766;
+}
+[data-table="containers"] .ContainerState[data-state="stopped"] {
+  background-color: #708810;
+}

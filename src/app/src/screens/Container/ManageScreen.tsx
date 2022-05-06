@@ -84,7 +84,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 />
               );
               return (
-                <tr key={container.Id} data-container={container.Id}>
+                <tr key={container.Id} data-container={container.Id} data-state={container.DecodedState}>
                   {isCondensed ? (
                     <td>
                       {containerLogsButton} {containerLayersButton}
@@ -98,7 +98,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <td>
                     <Code title={container.Pid ? "" : t("Not available")}>{container.Pid || "n/a"}</Code>
                   </td>
-                  <td>{container.DecodedState}</td>
+                  <td>
+                    <span className="ContainerState" data-state={container.DecodedState}>{container.DecodedState}</span>
+                  </td>
                   <td>{container.Id.substr(0, 12)}</td>
                   <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                   <td>
