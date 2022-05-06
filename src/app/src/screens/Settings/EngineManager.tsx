@@ -176,12 +176,12 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     );
   }
 
-  return (
-    <div className="ContainerEngineSettings" data-settings="program.local">
-
+  let programWidget;
+  if (controller) {
+    programWidget = (
       <Controller
         control={control}
-        name="programPath"
+        name="controllerPath"
         defaultValue=""
         rules={{ required: t("Controller path must be set") }}
         render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { error } }) => {
@@ -244,7 +244,9 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           );
         }}
       />
-
+    );
+  } else {
+    programWidget = (
       <Controller
         control={control}
         name="programPath"
@@ -311,6 +313,13 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           );
         }}
       />
+    );
+  }
+
+  return (
+    <div className="ContainerEngineSettings" data-settings="program.local">
+
+      {programWidget}
 
       <Controller
         control={control}
@@ -464,9 +473,19 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
         }
       ),
     };
+    if (connector.settings.current.controller) {
+      engineUserSettings.controller = merge(
+        {},
+        connector.settings.current.controller,
+        {
+          path: data.controllerPath,
+        }
+      );
+    }
     try {
       const settings: EngineConnectorSettings = await setEngineUserSettings({ id: connector.id, settings: engineUserSettings });
       reset({
+        controllerPath: currentConnector.settings.current.controller?.path,
         programPath: settings.program.path,
         connectionString: settings.api.connectionString
       });
