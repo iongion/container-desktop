@@ -56,6 +56,8 @@ class AbstractClientEngine {
   /** @access public */
   PROGRAM = undefined;
   /** @access public */
+  ADAPTER = undefined;
+  /** @access public */
   ENGINE = undefined;
 
   constructor(userConfiguration, osType) {
@@ -111,13 +113,37 @@ class AbstractClientEngine {
   /**
    * Creates a dictionary with configuration resulting from user defined overrides.
    * Optimize and avoid calling it if the engine is not accessible
-   * @param {Settings} settings
-   *        The result of getAutomaticSettings
-   * @protected
+   *
+   * @public
    * @return {Settings}
    */
-  async getUserSettings(settings) {
-    return {};
+  async getUserSettings() {
+    return {
+      api: {
+        baseURL: undefined,
+        connectionString: undefined
+      },
+      program: {
+        path: undefined
+      }
+    };
+  }
+
+  /**
+   * Persists a dictionary with configuration resulting from user defined overrides.
+   *
+   * @param {Settings} settings
+   *        The user settings
+   * @public
+   * @abstract
+   * @return {Settings}
+   */
+  async setUserSettings(settings) {
+    const defaults = await this.getUserSettings();
+    const userSettings = this.userConfiguration.getKey(this.id);
+    const updated = merge(defaults, userSettings, settings || {});
+    this.userConfiguration.setKey(this.id, updated);
+    return updated;
   }
 
   /**
@@ -133,7 +159,7 @@ class AbstractClientEngine {
     let user = {};
     const available = await this.isEngineAvailable();
     if (available) {
-      user = await this.getUserSettings(automatic);
+      user = await this.getUserSettings();
     }
     const settings = {
       expected,
@@ -165,8 +191,11 @@ class AbstractClientEngine {
    * @return {Settings} Settings - Actual settings
    */
   async getCurrentSettings() {
-    const settings = await this.getSettings();
-    return settings.current;
+    if (!this.currentSettings) {
+      const settings = await this.getSettings();
+      this.currentSettings = settings.current;
+    }
+    return this.currentSettings;
   }
 
   /**
@@ -213,13 +242,13 @@ class AbstractClientEngine {
    */
   async isProgramAvailable() {
     const result = { success: false, details: undefined };
-    const settings = await this.getSettings();
+    const settings = await this.getCurrentSettings();
     // Native path to program
-    if (!settings.current.program.path) {
+    if (!settings.program.path) {
       result.details = "Program path is not set";
       return result;
     }
-    if (!fs.existsSync(settings.current.program.path)) {
+    if (!fs.existsSync(settings.program.path)) {
       result.details = "Program is not accessible";
       return result;
     }
@@ -236,12 +265,12 @@ class AbstractClientEngine {
    */
   async isApiAvailable() {
     const result = { success: false, details: undefined };
-    const settings = await this.getSettings();
-    if (!settings.current.api.baseURL) {
+    const settings = await this.getCurrentSettings();
+    if (!settings.api.baseURL) {
       result.details = "API base URL is not set";
       return result;
     }
-    if (!settings.current.api.connectionString) {
+    if (!settings.api.connectionString) {
       result.details = "API connection string is not set";
       return result;
     }
@@ -249,8 +278,8 @@ class AbstractClientEngine {
     if (this.osType === "Windows_NT") {
       // TODO: Check named pipe
     } else {
-      if (!fs.existsSync(settings.current.api.connectionString)) {
-        result.details = `API connection string as unix path is not present in ${settings.current.api.connectionString}`;
+      if (!fs.existsSync(settings.api.connectionString)) {
+        result.details = `API connection string as unix path is not present in ${settings.api.connectionString}`;
         return result;
       }
     }
@@ -319,7 +348,7 @@ class AbstractClientEngine {
   async getConnector() {
     const connector = {
       id: this.id,
-      adapter: this.adapter, // injected by factory
+      adapter: this.ADAPTER, // injected by factory
       engine: this.ENGINE,
       availability: await this.getAvailability(),
       settings: await this.getSettings()
@@ -331,7 +360,9 @@ class AbstractClientEngine {
     const result = await exec_launcher_sync(program, args, opts);
     return result;
   }
-  // System information
+
+  // Services
+
   async getSystemInfo(customFormat) {
     let info = {};
     const { program } = await this.getCurrentSettings();
@@ -347,6 +378,10 @@ class AbstractClientEngine {
     }
     return info;
   }
+
+  async getMachines() {
+    return [];
+  }
 }
 
 class AbstractControlledClientEngine extends AbstractClientEngine {
@@ -358,7 +393,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
   async getExpectedSettings() {
     throw new Error("getExpectedSettings must be implemented");
   }
-  async getUserSettings(settings) {
+  async getUserSettings() {
     return {
       api: {
         baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
@@ -397,7 +432,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     let user = {};
     const available = await this.isEngineAvailable();
     if (available) {
-      user = await this.getUserSettings(automatic);
+      user = await this.getUserSettings();
     }
     const settings = {
       expected,
@@ -431,15 +466,15 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
 
   // Availability
   async isControllerAvailable() {
-    const settings = await this.getSettings();
+    const settings = await this.getCurrentSettings();
     let success = false;
     let details;
-    if (settings.current.controller.path) {
-      if (fs.existsSync(settings.current.controller.path)) {
+    if (settings.controller.path) {
+      if (fs.existsSync(settings.controller.path)) {
         success = true;
         details = "Controller is available";
       } else {
-        details = `Controller not found in expected ${settings.current.controller.path} location`;
+        details = `Controller not found in expected ${settings.controller.path} location`;
       }
     } else {
       details = "Controller path not set";
@@ -457,22 +492,22 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     }
     // Perform actual program check
     const result = { success: false, details: undefined };
-    const settings = await this.getSettings();
+    const settings = await this.getCurrentSettings();
     const scope = await this.isControllerScopeAvailable();
     if (scope) {
       result.success = true;
-      result.details = `Controller scope ${settings.current.controller.scope} is running`;
+      result.details = `Controller scope ${settings.controller.scope} is running`;
     } else {
       result.flag = false;
-      result.details = `Controller scope ${settings.current.controller.scope} scope is not available`;
+      result.details = `Controller scope ${settings.controller.scope} scope is not available`;
       return result;
     }
     // Only if scope is available
-    if (!settings.current.program.path) {
+    if (!settings.program.path) {
       result.details = "Program path is not set";
     }
     // Controlled path to program
-    const check = await this.runScopedCommand("test", ["-f", settings.current.program.path]);
+    const check = await this.runScopedCommand("test", ["-f", settings.program.path]);
     if (check.success) {
       result.success = true;
       result.details = "Program is available";

@@ -51,53 +51,47 @@ const servicesMap = {
     }
     return result;
   },
-  "/user/preferences/get": async function () {
-    const app = await getApp();
-    return await app.getUserPreferences();
+  "/global/user/settings/get": async function () {
+    return await getApp().getGlobalUserSettings();
   },
-  "/user/preferences/set": async function ({ options }) {
-    const app = await getApp();
-    return await app.setUserPreferences(options);
+  "/global/user/settings/set": async function ({ options }) {
+    return await getApp().setGlobalUserSettings(options);
+  },
+  "/engine/user/settings/get": async function (id) {
+    return await getApp().getEngineUserSettings(id);
+  },
+  "/engine/user/settings/set": async function (id, settings) {
+    return await getApp().setEngineUserSettings(id, settings);
   },
   "/system/info": async function () {
-    const app = await getApp();
-    return app.getSystemInfo();
+    return await getApp().getSystemInfo();
   },
   "/system/prune": async function () {
-    const app = await getApp();
-    return app.pruneSystem();
+    return await getApp().pruneSystem();
   },
   "/system/reset": async function () {
-    const app = await getApp();
-    return app.resetSystem();
+    return await getApp().resetSystem();
   },
   "/container/connect": async function ({ Id }) {
-    const app = await getApp();
-    return app.connectToContainer(Id);
+    return await getApp().connectToContainer(Id);
   },
   "/machines/list": async function () {
-    const app = await getApp();
-    return app.getMachines();
+    return await getApp().getMachines();
   },
   "/machine/restart": async function ({ Name }) {
-    const app = await getApp();
-    return app.restartMachine(Name);
+    return await getApp().restartMachine(Name);
   },
   "/machine/stop": async function ({ Name }) {
-    const app = await getApp();
-    return app.stopMachine(Name);
+    return await getApp().stopMachine(Name);
   },
   "/machine/connect": async function ({ Name }) {
-    const app = await getApp();
-    return app.connectToMachine(Name);
+    return await getApp().connectToMachine(Name);
   },
   "/machine/remove": async function ({ Name, force }) {
-    const app = await getApp();
-    return app.removeMachine(Name, force);
+    return await getApp().removeMachine(Name, force);
   },
   "/machine/create": async function (opts) {
-    const app = await getApp();
-    return app.createMachine(opts);
+    return await getApp().createMachine(opts);
   },
   "/test": async function (opts) {
     const result = await getApp().test(opts.subject, opts.payload);

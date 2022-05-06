@@ -1,8 +1,8 @@
 
 .AppSidebarFooter {
+  position: relative;
   margin: 0;
   padding: 0;
-  background: #4f175b;
   height: 32px;
   font-size: 10px;
   white-space: nowrap;
@@ -22,15 +22,18 @@
   padding-left: 32px;
   padding-right: 0;
 }
-.AppSidebarFooter .bp4-navbar-group:last-child {
+.AppSidebarFooter .AppSidebarFooterRightColumn{
+  position: relative;
+  min-width: 30px;
+  display: block;
+  min-height: 30px;
+  top: -28px;
   padding-left: 0;
+  z-index: 10;
 }
 .AppSidebarFooter .bp4-navbar-heading {
   font-size: 12px;
   color: #aaa;
-}
-.AppSidebarFooterPendingIndicator {
-  margin-right: 10px;
 }
 .AppSidebarVersionString {
   font-size: 10px;

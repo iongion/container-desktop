@@ -3,7 +3,7 @@ import React from "react";
 // project
 import { Platforms } from "./Native";
 
-export interface ConnectorSettings {
+export interface EngineConnectorSettings {
   api: {
     baseURL: string;
     connectionString: string;
@@ -11,12 +11,12 @@ export interface ConnectorSettings {
   program: Program;
   controller?: Controller;
 }
-export interface ConnectorSettingsMap {
-  expected: ConnectorSettings;
-  detected: Partial<ConnectorSettings>;
-  automatic: Partial<ConnectorSettings>;
-  user: Partial<ConnectorSettings>;
-  current: ConnectorSettings;
+export interface EngineConnectorSettingsMap {
+  expected: EngineConnectorSettings;
+  detected: Partial<EngineConnectorSettings>;
+  automatic: Partial<EngineConnectorSettings>;
+  user: Partial<EngineConnectorSettings>;
+  current: EngineConnectorSettings;
 }
 export interface Connector {
   id: string;
@@ -35,7 +35,7 @@ export interface Connector {
       controller?: string;
     }
   };
-  settings: ConnectorSettingsMap;
+  settings: EngineConnectorSettingsMap;
 }
 
 export interface ConnectOptions {
@@ -44,7 +44,7 @@ export interface ConnectOptions {
   connector: string;
 }
 
-export interface UserPreferences {
+export interface GlobalUserSettings {
   startApi: boolean;
   minimizeToSystemTray: boolean;
   path: string;
@@ -62,9 +62,14 @@ export interface TestResult {
   details?: any;
 }
 
-export interface UserPreferencesOptions extends UserPreferences {
+export interface GlobalUserSettingsOptions extends GlobalUserSettings {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
+}
+
+export interface EngineUserSettingsOptions {
+  id: string; // engine client instance id
+  settings: Partial<EngineConnectorSettings>;
 }
 
 export enum Environments {
@@ -186,7 +191,7 @@ export interface ApplicationDescriptor {
   // computed
   connectors: Connector[];
   currentConnector: Connector;
-  userPreferences: UserPreferences;
+  userSettings: GlobalUserSettings;
 }
 
 export interface SystemPruneReport {

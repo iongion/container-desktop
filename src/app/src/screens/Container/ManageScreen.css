@@ -23,3 +23,12 @@
   text-overflow: ellipsis;
   font-size: 11px;
 }
+[data-table="containers"] .ContainerState {
+  border-radius: 6px;
+  padding: 3px;
+  text-align: center;
+  font-size: 11px;
+  min-width: 50px;
+  display: inline-block;
+  border: 1px solid transparent;
+}

@@ -1,4 +1,4 @@
-import { ContainerClientResult, ContainerEngine, UserPreferences } from "./Types";
+import { ContainerClientResult, ContainerEngine, GlobalUserSettings } from "./Types";
 
 export enum Platforms {
   Browser = "browser",
@@ -32,6 +32,9 @@ export interface OpenTerminalOptions {
 interface NativeBridge {
   platform: Platforms;
   available: boolean;
+  defaults: {
+    connector: string | undefined;
+  };
   ipcRenderer: {
     send: (message: any) => any;
   };
@@ -46,7 +49,7 @@ interface NativeBridge {
     openDevTools: () => void;
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
-    getUserPreferences: () => Promise<UserPreferences>;
+    getGlobalUserSettings: () => Promise<GlobalUserSettings>;
     proxy: <T>(request: any) => Promise<T>;
     getEngine: () => Promise<ContainerEngine>;
   };
@@ -62,6 +65,9 @@ export class Native {
     this.bridge = (globalThis as any)?.nativeBridge || {
       platform: "browser",
       available: false,
+      defaults: {
+        connector: undefined,
+      },
       ipcRenderer: {
         send: (message: any) => { throw new Error("Not bridged"); }
       },
@@ -117,8 +123,8 @@ export class Native {
   public getPlatform() {
     return this.bridge.platform || Platforms.Unknown;
   }
-  public getEngine() {
-    return this.bridge.application.getEngine();
+  public getDefaultConnector() {
+    return this.bridge.defaults.connector;
   }
   public withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());

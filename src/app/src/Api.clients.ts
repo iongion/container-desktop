@@ -3,8 +3,8 @@
 import {
   //
   Domain,
-  UserPreferences,
-  UserPreferencesOptions,
+  GlobalUserSettings,
+  GlobalUserSettingsOptions,
   //
   ContainerClientResponse,
   Container,
@@ -597,19 +597,20 @@ export class ContainerClient {
     });
   }
 
-  async getUserPreferences() {
-    return this.withResult<UserPreferences>(async () => {
-      const reply = await Native.getInstance().proxyService<UserPreferences>({
-        method: "/user/preferences/get",
+  // Configuration globals
+  async getGlobalUserSettings() {
+    return this.withResult<GlobalUserSettings>(async () => {
+      const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
+        method: "/global/user/settings/get",
       });
       return reply.result;
     });
   }
 
-  async setUserPreferences(options: Partial<UserPreferencesOptions>) {
-    return this.withResult<UserPreferences>(async () => {
-      const reply = await Native.getInstance().proxyService<UserPreferences>({
-        method: "/user/preferences/set",
+  async setGlobalUserSettings(options: Partial<GlobalUserSettingsOptions>) {
+    return this.withResult<GlobalUserSettings>(async () => {
+      const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
+        method: "/global/user/settings/set",
         params: {
           options
         }
@@ -617,6 +618,33 @@ export class ContainerClient {
       return reply.result;
     });
   }
+
+  // Configuration per engine
+  async getEngineUserSettings(id: string) {
+    return this.withResult<any>(async () => {
+      const reply = await Native.getInstance().proxyService<any>({
+        method: "/engine/user/settings/get",
+        params: {
+          id
+        },
+      });
+      return reply.result;
+    });
+  }
+
+  async setEngineUserSettings(id: string, settings: Partial<any>) {
+    return this.withResult<any>(async () => {
+      const reply = await Native.getInstance().proxyService<any>({
+        method: "/engine/user/settings/set",
+        params: {
+          id,
+          settings
+        }
+      });
+      return reply.result;
+    });
+  }
+
 
   async testProgramReachability(options: { name: string; path: string }) {
     return this.withResult<TestResult>(async () => {

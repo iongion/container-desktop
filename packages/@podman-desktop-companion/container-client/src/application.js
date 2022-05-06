@@ -18,9 +18,12 @@ class Application {
     this.adaptersList = [Podman.Adapter, Docker.Adapter];
     // available only after start - hydrated in this order
     this.adapters = [];
+    this.currentAdapter = undefined;
     this.engines = [];
     this.currentEngine = undefined;
     this.connectors = [];
+    this.currentConnector = undefined;
+    this.started = false;
   }
 
   async getAdapters() {
@@ -72,15 +75,12 @@ class Application {
       running,
       connectors: this.connectors,
       currentConnector,
-      userPreferences: await this.getUserPreferences()
+      userSettings: await this.getGlobalUserSettings()
     };
   }
 
-  // start
-  async start(opts) {
-    this.adapters = await this.getAdapters();
-    this.engines = await this.getEngines();
-    this.connectors = await this.getConnectors(this.engines);
+  // init
+  async init(opts) {
     const { startApi, adapter, connector } = merge(
       {
         // defaults
@@ -90,7 +90,9 @@ class Application {
       },
       opts || {}
     );
-    // current connector
+    this.adapters = await this.getAdapters();
+    this.engines = await this.getEngines();
+    this.connectors = await this.getConnectors(this.engines);
     // 1st source - user preferred
     if (connector) {
       this.currentConnector = this.connectors.find(({ id }) => {
@@ -105,24 +107,52 @@ class Application {
       });
     }
     if (!this.currentConnector) {
-      this.logger.error("Unable to connect without any usable connector");
+      this.logger.error("Unable to init without any usable connector");
       return false;
     }
+    // current adapter inferred from connector
+    this.currentAdapter = this.adapters.find((it) => it.ADAPTER === this.currentConnector.adapter);
     // current engine
     this.currentEngine = this.engines.find((it) => it.id === this.currentConnector.id);
     if (!this.currentEngine) {
-      this.logger.error("Unable to start without any usable engine");
+      this.logger.error("Unable to init without any usable engine");
       return false;
     }
-    // this.configuration.setKey("connector.current", this.currentConnector.id);
+    return true;
+  }
+
+  // start
+  async start(opts) {
+    const inited = await this.init(opts);
+    if (!inited) {
+      this.logger.error("Unable to start - init incomplete");
+      return false;
+    }
+    const { startApi, adapter, connector } = merge(
+      {
+        // defaults
+        startApi: true,
+        adapter: Podman.Adapter.ADAPTER,
+        connector: this.configuration.getKey("connector.default")
+      },
+      opts || {}
+    );
     // Start API only if specified
-    let started = false;
     if (startApi) {
-      started = await this.currentEngine.startApi();
+      this.started = await this.currentEngine.startApi();
       this.currentConnector = await this.currentEngine.getConnector();
     }
     const descriptor = await this.getDescriptor();
     return descriptor;
+  }
+
+  async stop() {
+    if (!this.started) {
+      this.logger.debug("Stop skipped - not started");
+    }
+    const stopped = await this.currentEngine.stopApi();
+    this.stared = !stopped;
+    return stopped;
   }
 
   // proxying
@@ -139,7 +169,7 @@ class Application {
 
   // configuration
 
-  async setUserPreferences(opts) {
+  async setGlobalUserSettings(opts) {
     Object.keys(opts).forEach((key) => {
       const value = opts[key];
       this.configuration.setKey(key, value);
@@ -147,10 +177,10 @@ class Application {
         setLevel(value.level);
       }
     });
-    return await this.getUserPreferences();
+    return await this.getGlobalUserSettings();
   }
 
-  async getUserPreferences() {
+  async getGlobalUserSettings() {
     return {
       startApi: this.configuration.getKey("startApi", false),
       minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
@@ -164,12 +194,26 @@ class Application {
     };
   }
 
-  // services
+  async setEngineUserSettings({ id, settings }) {
+    const engine = this.engines.find((it) => it.id === id);
+    if (!engine) {
+      this.logger.error("Unable to updated settings of missing engine instance", id);
+      throw new Error("Update failed - no engine");
+    }
+    return await engine.setUserSettings(settings);
+  }
+
+  async getEngineUserSettings(id) {
+    const engine = this.engines.find((it) => it.id === id);
+    return await engine.getUserSettings();
+  }
+
   async getSystemInfo() {
     return await this.currentEngine.getSystemInfo();
   }
-
-  // testing
+  async getMachines() {
+    return await this.currentAdapter.getMachines(this.currentEngine);
+  }
 
   async test(subject, payload) {
     let result = { success: false };

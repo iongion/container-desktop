@@ -27,7 +27,7 @@ export function AppSidebarFooter() {
             <span className="AppSidebarProgramString">{programString}</span>
           </NavbarHeading>
         </NavbarGroup>
-        <NavbarGroup align={Alignment.RIGHT}>
+        <NavbarGroup align={Alignment.RIGHT} className="AppSidebarFooterRightColumn">
           {pendingIndicator}
         </NavbarGroup>
       </Navbar>

@@ -7,7 +7,7 @@ import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
 import { LOGGING_LEVELS } from "../../Environment";
-import { AppScreen, AppScreenProps, UserPreferencesOptions } from "../../Types";
+import { AppScreen, AppScreenProps, GlobalUserSettingsOptions } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
@@ -30,22 +30,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const provisioned = useStoreState((state) => state.descriptor.provisioned);
   const running = useStoreState((state) => state.descriptor.running);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
-  const userPreferences = useStoreState((state) => state.descriptor.userPreferences);
-  const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
+  const userSettings = useStoreState((state) => state.descriptor.userSettings);
+  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const program = currentConnector.settings.current.program;
   const onAutoStartApiChange = useCallback(async (e) => {
-    await setUserPreferences({ startApi: !!e.currentTarget.checked });
-  }, [setUserPreferences]);
+    await setGlobalUserSettings({ startApi: !!e.currentTarget.checked });
+  }, [setGlobalUserSettings]);
   const onMinimizeToSystemTray = useCallback(async (e) => {
-    await setUserPreferences({ minimizeToSystemTray: !!e.currentTarget.checked });
-  }, [setUserPreferences]);
+    await setGlobalUserSettings({ minimizeToSystemTray: !!e.currentTarget.checked });
+  }, [setGlobalUserSettings]);
   const onLoggingLevelChange = useCallback(async (e) => {
-    const configuration: Partial<UserPreferencesOptions> = {};
+    const configuration: Partial<GlobalUserSettingsOptions> = {};
     configuration.logging = {
       level: e.currentTarget.value
     };
-    await setUserPreferences(configuration);
-  }, [setUserPreferences]);
+    await setGlobalUserSettings(configuration);
+  }, [setGlobalUserSettings]);
   const onToggleInspectorClick = useCallback(async (e) => {
     Native.getInstance().openDevTools();
   }, []);
@@ -89,7 +89,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <Checkbox
                 id="startApi"
                 label={t("Automatically start the Api")}
-                checked={!!userPreferences.startApi}
+                checked={!!userSettings.startApi}
                 onChange={onAutoStartApiChange}
               />
             </ControlGroup>
@@ -99,7 +99,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <Checkbox
                 id="minimizeToSystemTray"
                 label={t("Minimize to System Tray when closing")}
-                checked={!!userPreferences.minimizeToSystemTray}
+                checked={!!userSettings.minimizeToSystemTray}
                 onChange={onMinimizeToSystemTray}
               />
             </ControlGroup>
@@ -113,10 +113,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <div className="AppSettingUserConfigurationPath">
             <Icon icon={IconNames.INFO_SIGN} />
             <strong>{t('Storage path')}</strong>
-            <input type="text" value={userPreferences.path} readOnly/>
+            <input type="text" value={userSettings.path} readOnly/>
           </div>
             <ControlGroup>
-              <HTMLSelect id="loggingLevel" value={userPreferences.logging.level} onChange={onLoggingLevelChange}>
+              <HTMLSelect id="loggingLevel" value={userSettings.logging.level} onChange={onLoggingLevelChange}>
                 {LOGGING_LEVELS.map((level) => {
                   const key= `logging.${level}`;
                   return <option key={key} value={level}>{level}</option>;

@@ -294,6 +294,7 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 
 class Adapter extends AbstractAdapter {
   ADAPTER = PROGRAM;
+
   async createEngines() {
     return [
       PodmanClientEngineNative,
@@ -302,10 +303,32 @@ class Adapter extends AbstractAdapter {
       PodmanClientEngineSubsystemLIMA
     ].map((PodmanClientEngine) => {
       const engine = new PodmanClientEngine(this.userConfiguration, this.osType);
-      engine.adapter = PROGRAM;
+      engine.ADAPTER = PROGRAM;
       engine.id = `engine.default.${engine.ENGINE}`;
       return engine;
     });
+  }
+
+  async getMachines(engine, customFormat) {
+    let items = [];
+    const { program } = await engine.getCurrentSettings();
+    const result = await engine.runScopedCommand(program.path, [
+      "machine",
+      "list",
+      "--noheading",
+      "--format",
+      customFormat || "json"
+    ]);
+    if (!result.success) {
+      this.logger.error("Unable to get list of machines", result);
+      return items;
+    }
+    try {
+      items = result.stdout ? JSON.parse(result.stdout) : info;
+    } catch (error) {
+      this.logger.error("Unable to get list of machines", error, result);
+    }
+    return items;
   }
 }
 // Expose as static

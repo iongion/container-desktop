@@ -239,10 +239,15 @@ class Adapter extends AbstractAdapter {
       DockerClientEngineSubsystemLIMA
     ].map((DockerClientEngine) => {
       const engine = new DockerClientEngine(this.userConfiguration, this.osType);
-      engine.adapter = PROGRAM;
+      engine.ADAPTER = PROGRAM;
       engine.id = `engine.default.${engine.ENGINE}`;
       return engine;
     });
+  }
+
+  async getMachines(engine, customFormat) {
+    this.logger.warn(`${PROGRAM} does not support machines concept`);
+    return [];
   }
 }
 // Expose as static

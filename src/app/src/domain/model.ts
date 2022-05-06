@@ -20,7 +20,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
       currentConnector: {} as any,
       provisioned: false,
       running: false,
-      userPreferences: {
+      userSettings: {
         startApi: true,
         minimizeToSystemTray: false,
         path: "",
@@ -39,8 +39,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
     setPending: action((state, flag) => {
       state.pending = flag;
     }),
-    syncUserPreferences: action((state, values) => {
-      state.descriptor.userPreferences = values;
+    syncGlobalUserSettings: action((state, values) => {
+      state.descriptor.userSettings = values;
     }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
       console.debug("Update domain", opts);
@@ -87,21 +87,22 @@ export const createModel = (registry: AppRegistry): AppModel => {
         }
       });
     }),
-    setUserPreferences: thunk(async (actions, options, { getState }) => {
+    // Global
+    setGlobalUserSettings: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const userPreferences = await registry.api.setUserPreferences(options);
-          await actions.syncUserPreferences(userPreferences);
+          const userSettings = await registry.api.setGlobalUserSettings(options);
+          await actions.syncGlobalUserSettings(userSettings);
         } catch (error) {
           // TODO: Notify the user
-          console.error("Error during user preferences update", error);
+          console.error("Error during global user preferences update", error);
         }
       });
     }),
-    getUserPreferences: thunk(async (actions) => {
+    getGlobalUserSettings: thunk(async (actions) => {
       return registry.withPending(async () => {
         // try {
-        //   const configuration = await registry.api.getUserPreferences();
+        //   const configuration = await registry.api.getGlobalUserSettings();
         //   return configuration;
         // } catch (error) {
         //   console.error("Error during user configuration reading", error);
@@ -109,6 +110,19 @@ export const createModel = (registry: AppRegistry): AppModel => {
         return {} as any;
       });
     }),
+    // Engine
+    setEngineUserSettings: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const updated = await registry.api.setEngineUserSettings(options.id, options.settings);
+          console.debug(updated)
+        } catch (error) {
+          // TODO: Notify the user
+          console.error("Error during engine user preferences update", error);
+        }
+      });
+    }),
+    // Others
     testProgramReachability: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {

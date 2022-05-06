@@ -1,12 +1,11 @@
 .AppHeader {
   margin: 0;
   padding: 0;
-  background: #1a051c;
   -webkit-app-region: drag;
 }
 .AppHeader .bp4-navbar {
   display: flex;
-  background: #1a051c url("../images/podman-desktop-companion.svg") no-repeat 0 center;
+  background: url("../images/podman-desktop-companion.svg") no-repeat 0 center;
   background-size: contain;
 }
 .AppHeader .bp4-navbar-heading {

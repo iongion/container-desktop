@@ -3,9 +3,10 @@ import { Button, Checkbox, ControlGroup, InputGroup, Intent, RadioGroup, Radio, 
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import { useForm, useFormContext, FormProvider, Controller } from "react-hook-form";
+import merge from "lodash.merge";
 
 // project
-import { Connector, ContainerAdapter, ContainerEngine, TestResult, Program } from "../../Types";
+import { Connector, ContainerAdapter, ContainerEngine, TestResult, Program, EngineConnectorSettings } from "../../Types";
 import { Native, Platforms } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
 import { RadioLabel } from "../../components/RadioLabel";
@@ -35,7 +36,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   const wslDistributions: any[] = [];
 
-  const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
+  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const testProgramReachability = useStoreActions((actions) => actions.testProgramReachability);
   const testApiReachability = useStoreActions((actions) => actions.testApiReachability);
   const findProgram = useStoreActions((actions) => actions.findProgram);
@@ -64,7 +65,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
             const programSettings: any = {};
             const programKey = `${engine}.program.${program}.path`;
             programSettings[programKey] = filePath;
-            await setUserPreferences(programSettings);
+            await setGlobalUserSettings(programSettings);
           } catch (error) {
             console.error("Unable to change CLI path", error);
             Notification.show({ message: t("Unable to change CLI path"), intent: Intent.DANGER });
@@ -74,7 +75,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         console.error("Unable to open file dialog");
       }
     },
-    [engine, setUserPreferences, t]
+    [engine, setGlobalUserSettings, t]
   );
   const onWSLDistributionChange = useCallback(
     (event: React.FormEvent<HTMLSelectElement>) => {
@@ -297,9 +298,10 @@ export interface ContainerEngineManagerSettingsProps {
 }
 export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSettingsProps> = ({ adapter, disabled, connectors, currentConnector, engines }) => {
   const { t } = useTranslation();
-  const defaultConnector = useStoreState((state) => state.descriptor.userPreferences.connector.default);
+  const defaultConnector = useStoreState((state) => state.descriptor.userSettings.connector.default);
   const start = useStoreActions((actions) => actions.start);
-  const setUserPreferences = useStoreActions((actions) => actions.setUserPreferences);
+  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
+  const setEngineUserSettings = useStoreActions((actions) => actions.setEngineUserSettings);
   const [selectedConnectorId, setSelectedConnectorId] = useState(currentConnector.id);
 
   // if no connector found - pick first usable
@@ -331,9 +333,31 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     setSelectedConnectorId(e.currentTarget.value);
   }, []);
 
-  const onSaveClick = handleSubmit(data => {
+  const onSaveClick = handleSubmit(async (data) => {
     data.action = 'save';
-    console.debug(data.action, data, connector);
+    if (!connector) {
+      return;
+    }
+    // setEngineUserSettings
+    const engineUserSettings: Partial<EngineConnectorSettings> = {
+      program: merge(
+        {},
+        connector.settings.current.program,
+        {
+          path: data.programPath,
+        }
+      ),
+      api: merge(
+        {},
+        connector.settings.current.api,
+        {
+          connectionString: data.connectionString,
+        }
+      ),
+    };
+    const result = await setEngineUserSettings({ id: connector.id, settings: engineUserSettings });
+    console.debug(data.action, data, connector, engineUserSettings);
+    console.debug(">>>> result", result);
     return data;
   });
 
@@ -346,8 +370,8 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
 
   const onUseAsDefaultChange = useCallback(async (e) => {
     const isChecked = e.currentTarget.checked;
-    await setUserPreferences({ connector: { default: isChecked ? connector?.id : undefined } });
-  }, [setUserPreferences, connector]);
+    await setGlobalUserSettings({ connector: { default: isChecked ? connector?.id : undefined } });
+  }, [setGlobalUserSettings, connector]);
 
   const canAct = formState.isValid;
   const canSave = canAct && formState.isDirty;
