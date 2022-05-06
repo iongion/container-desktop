@@ -73,6 +73,7 @@ export interface EngineUserSettingsOptions {
 }
 
 export interface EngineProgramOptions {
+  engine: ContainerEngine;
   id: string; // engine client instance id
   program: Partial<Program>;
   controller?: Partial<Controller>;

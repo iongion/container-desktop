@@ -27,7 +27,8 @@ import {
   ContainerStateList,
   TestResult,
   Program,
-  ConnectOptions
+  ConnectOptions,
+  EngineProgramOptions
 } from "./Types";
 
 import { Native } from "./Native";
@@ -648,16 +649,13 @@ export class ContainerClient {
   }
 
 
-  async testEngineProgramReachability(id: string, program: Partial<Program>) {
+  async testEngineProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "/test",
         params: {
           subject: "reachability.program",
-          payload: {
-            id,
-            program
-          }
+          payload: opts
         }
       });
       return reply.result;

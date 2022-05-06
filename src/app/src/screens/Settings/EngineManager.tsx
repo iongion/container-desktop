@@ -117,23 +117,28 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
-    const result: TestResult = await testEngineProgramReachability({
+    const programTest: any = {
+      engine,
       id: currentConnector.id,
-      controller: controller ? {
-        ...controller,
-        path: values.controllerPath
-      } : undefined,
       program: {
         ...program,
         path: values.programPath
       }
-    });
+    };
+    if (controller && [ContainerEngine.PODMAN_VIRTUALIZED, ContainerEngine.DOCKER_VIRTUALIZED].includes(engine)) {
+      programTest.controller = {
+        ...controller,
+        path: values.controllerPath
+      };
+    }
+    console.debug("Program path test", programTest);
+    const result: TestResult = await testEngineProgramReachability(programTest);
     if (result.success) {
       Notification.show({ message: t("Program was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
     }
-  }, [program, controller, currentConnector, testEngineProgramReachability, getValues, t]);
+  }, [engine, program, controller, currentConnector, testEngineProgramReachability, getValues, t]);
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
@@ -181,7 +186,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   }
 
   let programWidget;
-  if (controller) {
+  if (controller && (engine === ContainerEngine.PODMAN_VIRTUALIZED || engine === ContainerEngine.DOCKER_VIRTUALIZED)) {
     programWidget = (
       <Controller
         control={control}

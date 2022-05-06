@@ -9,6 +9,7 @@ const { setLevel, createLogger } = require("@podman-desktop-companion/logger");
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig, createApiDriver } = require("./api");
+const { findProgramVersion } = require("./detector");
 // locals
 
 class Application {
@@ -253,14 +254,29 @@ class Application {
 
   async testEngineProgramReachability(opts) {
     const result = { success: false };
-    this.logger.debug("Testing if program is reachable in engine", opts);
-    const { id, program } = opts;
-    if (program.path) {
+    this.logger.debug("Testing if program is reachable", opts);
+    const { engine, id, controller, program } = opts;
+    const testController = controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
+    if (testController) {
+      try {
+        const version = await findProgramVersion(controller.path);
+        if (!version) {
+          throw new Error("Test failed - no version");
+        }
+        if (version) {
+          result.success = true;
+          result.details = `Program has been found - version ${version}`;
+        }
+      } catch (error) {
+        this.logger.error("Testing if program is reachable - failed during detection", error.message);
+        result.details = "Program detection error";
+      }
+    } else if (program.path) {
       try {
         const engine = this.engines.find((it) => it.id === id);
         if (!engine) {
           this.logger.error("Unable to test engine program reachability - no engine", opts);
-          throw new Error("Update failed - no engine");
+          throw new Error("Test failed - no engine");
         }
         const check = await engine.runScopedCommand(program.path, ["--version"]);
         this.logger.debug("Testing if program is reachable - completed", check);
