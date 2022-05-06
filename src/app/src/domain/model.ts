@@ -92,7 +92,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
           }
           return startup;
         } catch (error) {
-          // TODO: Redirect to settings screen
           console.error("Error during application startup", error);
           nextPhase = AppBootstrapPhase.FAILED;
           await actions.domainUpdate({

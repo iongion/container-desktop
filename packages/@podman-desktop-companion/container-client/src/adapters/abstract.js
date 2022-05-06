@@ -563,6 +563,9 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
   async runScopedCommand(program, args, opts) {
     throw new Error("runScopedCommand must be implemented");
   }
+  async getControllerScopes() {
+    throw new Error("getControllerScopes must be implemented");
+  }
 }
 
 class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
@@ -600,6 +603,12 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
       result.details = `Engine is not available on ${this.osType}`;
     }
     return result;
+  }
+  // Services
+  async getControllerScopes() {
+    const settings = await this.getCurrentSettings();
+    const items = await getAvailableWSLDistributions(settings.controller.path);
+    return items;
   }
 }
 
@@ -650,6 +659,12 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
       result.details = `Engine is not available on ${this.osType}`;
     }
     return result;
+  }
+  // Services
+  async getControllerScopes() {
+    const settings = await this.getCurrentSettings();
+    const items = await getAvailableLIMAInstances(settings.controller.path);
+    return items;
   }
 }
 

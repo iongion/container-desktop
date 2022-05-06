@@ -216,8 +216,13 @@ class Application {
   async getSystemInfo() {
     return await this.currentEngine.getSystemInfo();
   }
+
   async getMachines() {
     return await this.currentAdapter.getMachines(this.currentEngine);
+  }
+
+  async getControllerScopes() {
+    return await this.currentAdapter.getControllerScopes(this.currentEngine);
   }
 
   async test(subject, payload) {

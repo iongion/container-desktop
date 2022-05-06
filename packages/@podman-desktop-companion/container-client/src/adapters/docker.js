@@ -231,6 +231,7 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 
 class Adapter extends AbstractAdapter {
   ADAPTER = PROGRAM;
+
   async createEngines() {
     return [
       DockerClientEngineNative,

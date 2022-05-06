@@ -334,6 +334,15 @@ class Adapter extends AbstractAdapter {
     }
     return items;
   }
+
+  async getControllerScopes(engine) {
+    if (engine instanceof AbstractControlledClientEngine) {
+      const items = await engine.getControllerScopes();
+      return items;
+    }
+    this.logger.warn("Unable to get list of controller scopes - current engine is not scoped.");
+    return [];
+  }
 }
 // Expose as static
 Adapter.ADAPTER = PROGRAM;
