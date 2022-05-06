@@ -176,8 +176,6 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     );
   }
 
-
-
   return (
     <div className="ContainerEngineSettings" data-settings="program.local">
 
@@ -432,6 +430,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     reValidateMode: "onChange",
     shouldUseNativeValidation: false,
     defaultValues: {
+      controllerPath: currentConnector.settings.current.controller?.path,
       programPath: currentConnector.settings.current.program.path,
       connectionString: currentConnector.settings.current.api.connectionString
     },
