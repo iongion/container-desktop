@@ -1,10 +1,12 @@
 const os = require("os");
+const path = require("path");
 // vendors
 require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;
+const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
 // locals
 const logger = createLogger("shell.preload");
 const userConfiguration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
@@ -98,14 +100,18 @@ async function main() {
           }
         },
         proxy: async (req) => {
-          try {
-            const result = await ipcRenderer.invoke("proxy", req);
-            // logger.debug(">> proxy to client", result);
-            return result;
-          } catch (error) {
-            logger.error("Proxy invocation error", error.message, error.stack);
-            throw new Error("Proxy invocation error");
-          }
+          // try {
+          //   const result = await ipcRenderer.invoke("proxy", req);
+          //   // logger.debug(">> proxy to client", result);
+          //   return result;
+          // } catch (error) {
+          //   logger.error("Proxy invocation error", error.message, error.stack);
+          //   throw new Error("Proxy invocation error");
+          // }
+          const serviceWorkerPath = path.join(__dirname, "ipc.js");
+          const result = await withWorkerRPC(serviceWorkerPath, (rpc) => rpc.invoke(req));
+          logger.debug(">> proxy to client", result);
+          return result;
         }
       }
     };

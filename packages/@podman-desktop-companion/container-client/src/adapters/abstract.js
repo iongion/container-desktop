@@ -5,7 +5,7 @@ const path = require("path");
 const merge = require("lodash.merge");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { findProgramVersion } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
@@ -363,7 +363,12 @@ class AbstractClientEngine {
 
   async runScopedCommand(program, args, opts) {
     const { launcher, command } = await this.getScopedCommand(program, args);
-    const result = await exec_launcher_sync(launcher, command, opts);
+    let result;
+    if (opts?.async) {
+      result = await exec_launcher_async(launcher, command, opts);
+    } else {
+      result = await exec_launcher_sync(launcher, command, opts);
+    }
     return result;
   }
 
@@ -593,7 +598,12 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   async runScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
     const command = ["--distribution", controller.scope, program, ...args];
-    const result = await exec_launcher_sync(controller.path, command, opts);
+    let result;
+    if (opts?.async) {
+      result = await exec_launcher_async(controller.path, command, opts);
+    } else {
+      result = await exec_launcher_sync(controller.path, command, opts);
+    }
     return result;
   }
   // Availability

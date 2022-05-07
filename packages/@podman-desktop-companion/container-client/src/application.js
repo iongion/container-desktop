@@ -361,7 +361,9 @@ class Application {
   }
   async startMachine({ Name }) {
     const { program } = await this.currentEngine.getCurrentSettings();
-    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "start", Name]);
+    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "start", Name], {
+      async: true
+    });
     return check.success;
   }
   async stopMachine({ Name }) {

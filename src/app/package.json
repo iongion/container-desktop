@@ -46,6 +46,7 @@
     "@podman-desktop-companion/container-client": "file:../../packages/@podman-desktop-companion/container-client",
     "@podman-desktop-companion/executor": "file:../../packages/@podman-desktop-companion/executor",
     "@podman-desktop-companion/logger": "file:../../packages/@podman-desktop-companion/logger",
+    "@podman-desktop-companion/rpc": "file:../../packages/@podman-desktop-companion/rpc",
     "@podman-desktop-companion/terminal": "file:../../packages/@podman-desktop-companion/terminal",
     "@podman-desktop-companion/user-settings": "file:../../packages/@podman-desktop-companion/user-settings",
     "ajv": "8.11.0",
