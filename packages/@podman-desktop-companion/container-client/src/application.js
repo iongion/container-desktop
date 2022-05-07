@@ -322,7 +322,7 @@ class Application {
     const { id, title, shell } = opts || {};
     this.logger.debug("Connecting to container", opts);
     const { currentEngine } = this;
-    const { program } = await currentEngine.getCurrentSettings();
+    const { program } = await this.currentEngine.getCurrentSettings();
     const { launcher, command } = await currentEngine.getScopedCommand(program.path, [
       "exec",
       "-it",
@@ -360,10 +360,12 @@ class Application {
     return start.success;
   }
   async startMachine({ Name }) {
+    const { program } = await this.currentEngine.getCurrentSettings();
     const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "start", Name]);
     return check.success;
   }
   async stopMachine({ Name }) {
+    const { program } = await this.currentEngine.getCurrentSettings();
     const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "stop", Name]);
     return check.success;
   }
@@ -373,15 +375,23 @@ class Application {
       this.logger.warn("Unable to stop machine before removal");
       return false;
     }
+    const { program } = await this.currentEngine.getCurrentSettings();
     const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "rm", opts.Name, "--force"]);
     return check.success;
   }
-  async createMachine({ Name }) {
-    const output = await this.currentEngine.runScopedCommand(
-      program.path[
-        ("machine", "init", "--cpus", opts.cpus, "--disk-size", opts.diskSize, "--memory", opts.ramSize, opts.name)
-      ]
-    );
+  async createMachine(opts) {
+    const { program } = await this.currentEngine.getCurrentSettings();
+    const output = await this.currentEngine.runScopedCommand(program.path, [
+      "machine",
+      "init",
+      "--cpus",
+      opts.cpus,
+      "--disk-size",
+      opts.diskSize,
+      "--memory",
+      opts.ramSize,
+      opts.name
+    ]);
     if (!output.success) {
       logger.error("Unable to create machine", opts, output);
     }
