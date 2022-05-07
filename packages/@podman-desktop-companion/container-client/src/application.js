@@ -5,6 +5,7 @@ const path = require("path");
 const merge = require("lodash.merge");
 // project
 const { setLevel, createLogger } = require("@podman-desktop-companion/logger");
+const { launchTerminal } = require("@podman-desktop-companion/terminal");
 // module
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
@@ -224,17 +225,19 @@ class Application {
     return await engine.getUserSettings();
   }
 
+  // introspection
+
   async getSystemInfo() {
     return await this.currentEngine.getSystemInfo();
   }
-
   async getMachines() {
     return await this.currentAdapter.getMachines(this.currentEngine);
   }
-
   async getControllerScopes() {
     return await this.currentAdapter.getControllerScopes(this.currentEngine);
   }
+
+  // tests
 
   async test(subject, payload) {
     let result = { success: false };
@@ -256,7 +259,8 @@ class Application {
     const result = { success: false };
     this.logger.debug("Testing if program is reachable", opts);
     const { engine, id, controller, program } = opts;
-    const testController = controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
+    const testController =
+      controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
     if (testController) {
       try {
         const version = await findProgramVersion(controller.path);
@@ -307,6 +311,38 @@ class Application {
     }
     return result;
   }
+
+  // cleanup
+  async pruneSystem() {}
+
+  async resetSystem() {}
+
+  // utilities
+  async connectToContainer(nameOrId, shell) {
+    const { currentEngine } = this;
+    if (!currentEngine) {
+      this.logger.error("Cannot create api request - no valid client for current engine");
+      throw new Error("No valid client for current engine");
+    }
+    const { program } = await currentEngine.getCurrentSettings();
+    const { launcher, command } = await currentEngine.getScopedCommand(program.path, [
+      "exec",
+      "-it",
+      nameOrId,
+      shell || "/bin/sh"
+    ]);
+    this.logger.debug("Launching terminal for", { launcher, command });
+    const output = await launchTerminal(launcher, command);
+    if (!output.success) {
+      logger.error("Unable to connect to container", nameOrId, output);
+    }
+    return output.success;
+  }
+  async connectToMachine({ Name }) {}
+  async restartMachine({ Name }) {}
+  async stopMachine({ Name }) {}
+  async removeMachine({ Name }) {}
+  async createMachine({ Name }) {}
 }
 
 module.exports = {

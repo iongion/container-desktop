@@ -356,8 +356,14 @@ class AbstractClientEngine {
     return connector;
   }
   // Executes command inside controller scope
+  async getScopedCommand(program, args) {
+    // pass-through
+    return { launcher: program, command: args };
+  }
+
   async runScopedCommand(program, args, opts) {
-    const result = await exec_launcher_sync(program, args, opts);
+    const { launcher, command } = await this.getScopedCommand(program, args);
+    const result = await exec_launcher_sync(launcher, command, opts);
     return result;
   }
 
@@ -561,8 +567,8 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     return availability;
   }
   // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    throw new Error("runScopedCommand must be implemented");
+  async getScopedCommand(program, args) {
+    throw new Error("getScopedCommand must be implemented");
   }
   async getControllerScopes() {
     throw new Error("getControllerScopes must be implemented");
@@ -611,6 +617,12 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     const items = await getAvailableWSLDistributions(settings.controller.path);
     return items;
   }
+  // Executes command inside controller scope
+  async getScopedCommand(program, args) {
+    const { controller } = await this.getCurrentSettings();
+    const command = ["machine", "ssh", controller.scope, "-o", "LogLevel=ERROR", program, ...args];
+    return { launcher: controller.path, command };
+  }
 }
 
 class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
@@ -639,13 +651,6 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
       args: ["stop", settings.controller.scope]
     });
   }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    const { controller } = await this.getCurrentSettings();
-    const command = ["shell", controller.scope, program, ...args];
-    const result = await exec_launcher_sync(controller.path, command, opts);
-    return result;
-  }
   // Availability
   async isControllerScopeAvailable() {
     const settings = await this.getCurrentSettings();
@@ -666,6 +671,12 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     const settings = await this.getCurrentSettings();
     const items = await getAvailableLIMAInstances(settings.controller.path);
     return items;
+  }
+  // Executes command inside controller scope
+  async getScopedCommand(program, args) {
+    const { controller } = await this.getCurrentSettings();
+    const command = ["shell", controller.scope, program, ...args];
+    return { launcher: controller.path, command };
   }
 }
 

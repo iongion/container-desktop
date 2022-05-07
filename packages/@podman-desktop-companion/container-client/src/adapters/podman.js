@@ -239,10 +239,15 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
     return target.Running;
   }
   // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
+  async getScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
     const command = ["machine", "ssh", controller.scope, "-o", "LogLevel=ERROR", program, ...args];
-    const result = await exec_launcher_sync(controller.path, command, opts);
+    return { launcher: controller.path, command };
+  }
+
+  async runScopedCommand(program, args, opts) {
+    const { launcher, command } = await this.getScopedCommand(program, args, opts);
+    const result = await exec_launcher_sync(launcher, command, opts);
     return result;
   }
 }

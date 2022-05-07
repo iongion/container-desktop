@@ -26,9 +26,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const platform = Native.getInstance().getPlatform();
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
-  const machine = "TODO";
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
   const program = currentConnector.settings.current.program;
+  const machine = currentConnector.settings.current.controller?.scope || "";
   const clipboardButtonRef = useRef<Button>(null);
 
   useEffect(() => {
@@ -59,6 +59,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     commandPrefix = `limactl shell podman`;
     exampleTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
   }
+
   // Change hydration
   usePoller({ poller: containersFetchStats });
 
