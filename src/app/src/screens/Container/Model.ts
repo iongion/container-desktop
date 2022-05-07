@@ -25,7 +25,7 @@ export interface ContainersModel extends ContainersModelState {
   containerRestart: Thunk<ContainersModel, Partial<Container>>;
   containerRemove: Thunk<ContainersModel, Partial<Container>>;
   containerCreate: Thunk<ContainersModel, CreateContainerOptions>;
-  containerConnect: Thunk<ContainersModel, Partial<Container>>;
+  containerConnect: Thunk<ContainersModel, Container>;
 }
 
 export const createModel = (registry: AppRegistry): ContainersModel => ({
@@ -164,7 +164,7 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
     registry.withPending(async () => {
       let connected = false;
       if (options.Id) {
-        connected = await registry.api.connectToContainer(options.Id);
+        connected = await registry.api.connectToContainer(options);
       } else {
         console.warn("Unable to connect to container without name", options);
       }

@@ -516,11 +516,11 @@ export class ContainerClient {
   // HTTP API
 
   // Containers
-  async connectToContainer(Id: string) {
+  async connectToContainer(item: Container) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
         method: "/container/connect",
-        params: { Id }
+        params: { id: item.Id, title: item.Name || item.Names?.[0], shell: undefined }
       });
       return reply.result;
     });

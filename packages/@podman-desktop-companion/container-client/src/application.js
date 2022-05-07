@@ -318,31 +318,75 @@ class Application {
   async resetSystem() {}
 
   // utilities
-  async connectToContainer(nameOrId, shell) {
+  async connectToContainer(opts) {
+    const { id, title, shell } = opts || {};
+    this.logger.debug("Connecting to container", opts);
     const { currentEngine } = this;
-    if (!currentEngine) {
-      this.logger.error("Cannot create api request - no valid client for current engine");
-      throw new Error("No valid client for current engine");
-    }
     const { program } = await currentEngine.getCurrentSettings();
     const { launcher, command } = await currentEngine.getScopedCommand(program.path, [
       "exec",
       "-it",
-      nameOrId,
+      id,
       shell || "/bin/sh"
     ]);
     this.logger.debug("Launching terminal for", { launcher, command });
-    const output = await launchTerminal(launcher, command);
+    const output = await launchTerminal(launcher, command, {
+      title: title || `${currentEngine.ADAPTER} container`
+    });
     if (!output.success) {
-      logger.error("Unable to connect to container", nameOrId, output);
+      logger.error("Unable to connect to container", id, output);
     }
     return output.success;
   }
-  async connectToMachine({ Name }) {}
-  async restartMachine({ Name }) {}
-  async stopMachine({ Name }) {}
-  async removeMachine({ Name }) {}
-  async createMachine({ Name }) {}
+
+  async connectToMachine(opts) {
+    const { name, title, shell } = opts || {};
+    this.logger.debug("Connecting to machine", opts);
+    const { currentEngine } = this;
+    const { launcher, command } = await currentEngine.getScopedCommand("/bin/sh", []);
+    this.logger.debug("Launching terminal for", { launcher, command });
+    const output = await launchTerminal(launcher, command, {
+      title: title || `${currentEngine.ADAPTER} machine`
+    });
+    if (!output.success) {
+      logger.error("Unable to connect to machine", id, output);
+    }
+    return output.success;
+  }
+
+  async restartMachine(opts) {
+    const stop = await this.stopMachine(opts);
+    const start = await this.startMachine(opts);
+    return start.success;
+  }
+  async startMachine({ Name }) {
+    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "start", Name]);
+    return check.success;
+  }
+  async stopMachine({ Name }) {
+    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "stop", Name]);
+    return check.success;
+  }
+  async removeMachine(opts) {
+    const stopped = await stopMachine(opts);
+    if (!stopped) {
+      this.logger.warn("Unable to stop machine before removal");
+      return false;
+    }
+    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "rm", opts.Name, "--force"]);
+    return check.success;
+  }
+  async createMachine({ Name }) {
+    const output = await this.currentEngine.runScopedCommand(
+      program.path[
+        ("machine", "init", "--cpus", opts.cpus, "--disk-size", opts.diskSize, "--memory", opts.ramSize, opts.name)
+      ]
+    );
+    if (!output.success) {
+      logger.error("Unable to create machine", opts, output);
+    }
+    return output.success;
+  }
 }
 
 module.exports = {

@@ -72,20 +72,20 @@ const servicesMap = {
   "/system/reset": async function () {
     return await getApp().resetSystem();
   },
-  "/container/connect": async function ({ Id }) {
-    return await getApp().connectToContainer(Id);
+  "/container/connect": async function (opts) {
+    return await getApp().connectToContainer(opts);
   },
   "/machines/list": async function () {
     return await getApp().getMachines();
   },
-  "/machine/restart": async function ({ Name }) {
-    return await getApp().restartMachine(Name);
+  "/machine/restart": async function (opts) {
+    return await getApp().restartMachine(opts);
   },
-  "/machine/stop": async function ({ Name }) {
-    return await getApp().stopMachine(Name);
+  "/machine/stop": async function (opts) {
+    return await getApp().stopMachine(opts);
   },
-  "/machine/connect": async function ({ Name }) {
-    return await getApp().connectToMachine(Name);
+  "/machine/connect": async function (opts) {
+    return await getApp().connectToMachine(opts);
   },
   "/machine/remove": async function ({ Name, force }) {
     return await getApp().removeMachine(Name, force);
