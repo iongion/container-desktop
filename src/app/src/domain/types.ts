@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Store, EasyPeasyConfig, createTypedHooks } from "easy-peasy";
 // project
-import { ConnectOptions, ContainerEngine, ApplicationDescriptor, GlobalUserSettings, GlobalUserSettingsOptions, EngineUserSettingsOptions, EngineProgramOptions } from "../Types";
+import { ConnectOptions, ContainerEngine, ApplicationDescriptor, GlobalUserSettings, GlobalUserSettingsOptions, EngineUserSettingsOptions, EngineApiOptions, EngineProgramOptions } from "../Types";
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -56,7 +56,7 @@ export interface AppModel extends AppModelState {
   setEngineUserSettings: Thunk<AppModel, EngineUserSettingsOptions>;
 
   testEngineProgramReachability: Thunk<AppModel, EngineProgramOptions>;
-  testApiReachability: Thunk<AppModel, { baseURL: string; connectionString: string }>;
+  testApiReachability: Thunk<AppModel, EngineApiOptions>;
 
   findProgram: Thunk<AppModel, FindProgramOptions>;
 }

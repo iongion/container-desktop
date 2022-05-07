@@ -28,6 +28,7 @@ import {
   TestResult,
   Program,
   ConnectOptions,
+  EngineApiOptions,
   EngineProgramOptions
 } from "./Types";
 
@@ -662,13 +663,13 @@ export class ContainerClient {
     });
   }
 
-  async testApiReachability(options: { baseURL: string; connectionString: string }) {
+  async testApiReachability(opts: EngineApiOptions) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "/test",
         params: {
           subject: "reachability.api",
-          payload: options
+          payload: opts
         }
       });
       return reply.result;

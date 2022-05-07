@@ -72,6 +72,13 @@ export interface EngineUserSettingsOptions {
   settings: Partial<EngineConnectorSettings>;
 }
 
+export interface EngineApiOptions {
+  engine: ContainerEngine;
+  id: string; // engine client instance id
+  baseURL: string;
+  connectionString: string;
+}
+
 export interface EngineProgramOptions {
   engine: ContainerEngine;
   id: string; // engine client instance id

@@ -142,13 +142,18 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
-    const result: TestResult = await testApiReachability({ ...api, connectionString: values.connectionString });
+    const result: TestResult = await testApiReachability({
+      engine,
+      id: currentConnector.id,
+       ...api,
+       connectionString: values.connectionString
+    });
     if (result.success) {
       Notification.show({ message: t("API was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("API could not be reached"), intent: Intent.DANGER });
     }
-  }, [api, testApiReachability, getValues, t]);
+  }, [engine, api, currentConnector, testApiReachability, getValues, t]);
 
   // locals
   const isLIMA = engine === ContainerEngine.PODMAN_SUBSYSTEM_LIMA;

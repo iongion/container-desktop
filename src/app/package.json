@@ -21,6 +21,7 @@
     "electron": "^18.1.0",
     "electron-builder": "^23.0.3",
     "electron-packager": "^15.5.1",
+    "electron-reloader": "^1.2.3",
     "eslint": "^8.14.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-react-app": "^7.0.1",
