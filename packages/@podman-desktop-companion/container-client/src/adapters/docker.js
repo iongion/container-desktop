@@ -4,7 +4,6 @@ const fs = require("fs");
 const merge = require("lodash.merge");
 // project
 // module
-const { findProgramVersion } = require("../detector");
 const {
   // WSL - common
   WSL_PATH,

@@ -432,7 +432,7 @@ class AbstractClientEngine {
     };
     const args = ["system", "prune"];
     if (input.all) {
-      args.push("-all");
+      args.push("--all");
     }
     if (input.filter) {
       args.push(...Object.keys(input.filter).map((key) => `label=${key}=${filter[key]}`));
@@ -450,13 +450,17 @@ class AbstractClientEngine {
     } else {
       this.logger.error(this.ADAPTER, this.ENGINE, "System prune error", result);
     }
-    logger.debug(this.ADAPTER, this.ENGINE, "System report complete", report);
     return result.success;
   }
 
   async resetSystem() {
+    if (this.PROGRAM === "docker") {
+      this.logger.debug(this.ADAPTER, this.ENGINE, "No such concept for current engine - skipping");
+      return true;
+    }
     const { program } = await this.getCurrentSettings();
-    const result = await this.runScopedCommand(program.path, ["system", "reset", "--force", "--log-level=debug"]);
+    const args = ["system", "reset", "--force", "--log-level=debug"];
+    const result = await this.runScopedCommand(program.path, args);
     if (result.success) {
       logger.debug(this.ADAPTER, this.ENGINE, "System reset success", result);
     } else {
