@@ -75,6 +75,7 @@ export interface EngineUserSettingsOptions {
 
 export interface EngineApiOptions {
   engine: ContainerEngine;
+  scope: string; // ControllerScope Name
   id: string; // engine client instance id
   baseURL: string;
   connectionString: string;

@@ -33,8 +33,7 @@ export interface AppModelState {
 export interface FindProgramOptions {
   engine: ContainerEngine;
   program: string;
-  machine?: string;
-  wslDistributionName?: string;
+  scope?: string;
 }
 
 export interface AppModel extends AppModelState {
