@@ -10,7 +10,6 @@ const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig, createApiDriver } = require("./api");
 const { findProgramVersion } = require("./detector");
-const { getAvailableWSLDistributions, getAvailableLIMAInstances, getAvailablePodmanMachines } = require("./shared");
 // locals
 
 class Application {
@@ -303,7 +302,22 @@ class Application {
     return await this.currentAdapter.getMachines(this.currentEngine);
   }
 
-  // tests
+  // finders & testers
+  async findProgram(opts) {
+    const engine = this.engines.find((it) => it.id === opts.id);
+    if (!engine) {
+      this.logger.error("Unable to find a matching engine", opts.id);
+      throw new Error("Find failed - no engine");
+    }
+    const command = await engine.runScopedCommand("which", [opts.program], { scope: opts.scope });
+    if (command.success) {
+      return {
+        name: opts.program,
+        path: command.stdout.trim()
+      };
+    }
+    return undefined;
+  }
 
   async test({ subject, payload }) {
     let result = { success: false };

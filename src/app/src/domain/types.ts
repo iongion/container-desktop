@@ -32,6 +32,7 @@ export interface AppModelState {
 
 export interface FindProgramOptions {
   engine: ContainerEngine;
+  id: string; // connector id
   program: string;
   scope?: string;
 }

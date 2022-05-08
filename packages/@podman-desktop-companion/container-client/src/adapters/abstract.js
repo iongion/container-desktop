@@ -383,13 +383,13 @@ class AbstractClientEngine {
     return connector;
   }
   // Executes command inside controller scope
-  async getScopedCommand(program, args) {
+  async getScopedCommand(program, args, opts) {
     // pass-through
     return { launcher: program, command: args };
   }
 
   async runScopedCommand(program, args, opts) {
-    const { launcher, command } = await this.getScopedCommand(program, args);
+    const { launcher, command } = await this.getScopedCommand(program, args, opts);
     let result;
     if (opts?.async) {
       result = await exec_launcher_async(launcher, command, opts);
@@ -630,7 +630,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     return connector;
   }
   // Executes command inside controller scope
-  async getScopedCommand(program, args) {
+  async getScopedCommand(program, args, opts) {
     throw new Error("getScopedCommand must be implemented");
   }
   async getControllerScopes() {
@@ -686,9 +686,9 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     return items;
   }
   // Executes command inside controller scope
-  async getScopedCommand(program, args) {
+  async getScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
-    const command = ["machine", "ssh", controller.scope, "-o", "LogLevel=ERROR", program, ...args];
+    const command = ["machine", "ssh", opts?.scope || controller.scope, "-o", "LogLevel=ERROR", program, ...args];
     return { launcher: controller.path, command };
   }
 }
@@ -741,9 +741,9 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     return items;
   }
   // Executes command inside controller scope
-  async getScopedCommand(program, args) {
+  async getScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
-    const command = ["shell", controller.scope, program, ...args];
+    const command = ["shell", opts?.scope || controller.scope, program, ...args];
     return { launcher: controller.path, command };
   }
 }

@@ -14,7 +14,6 @@ import { RestrictedTo } from "../../components/RestrictedTo";
 import { Notification } from "../../Notification";
 
 import "./EngineManager.css";
-import { varKinds } from "ajv/dist/compile/codegen";
 
 interface ContainerEngineSettingsProps {
   connector: Connector;
@@ -43,6 +42,12 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   // Form setup
   const { reset, control, getValues, setValue } = useFormContext<ConnectorFormData>();
+
+  // locals
+  const isLIMA = [ContainerEngine.PODMAN_SUBSYSTEM_LIMA, ContainerEngine.DOCKER_SUBSYSTEM_LIMA].includes(engine);
+  const isWSL = [ContainerEngine.PODMAN_SUBSYSTEM_WSL, ContainerEngine.DOCKER_SUBSYSTEM_WSL].includes(engine);
+  const isMachine = [ContainerEngine.PODMAN_VIRTUALIZED].includes(engine);
+  const isScoped = isLIMA || isWSL || isMachine;
 
   useEffect(() => {
     reset({
@@ -83,16 +88,18 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     const result: Program = await findProgram({
       engine,
       scope: values.scope,
+      id: connector.id,
       program: program.name,
     });
-    if (result.path) {
+    if (result && result.path) {
       Notification.show({
         message: t(
-          "Found {{program}} CLI in {{scope}}",
-          { program: program.name, path: program.path, scope: values.scope }
+          "Found {{program}} CLI in {{scope}} on {{path}}",
+          { program: program.name, path: result.path, scope: values.scope }
         ),
         intent: Intent.SUCCESS
       });
+      setValue("programPath", result.path, { shouldDirty: true });
     } else {
       Notification.show({
         message: t(
@@ -103,7 +110,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       });
     }
     // setProgram(result);
-  }, [engine, program, getValues, findProgram, t]);
+  }, [engine, program, connector, getValues, setValue, findProgram, t]);
 
   const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
@@ -112,13 +119,11 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       scope: values.scope,
       id: connector.id,
       program: {
-        ...program,
         path: values.programPath
       }
     };
-    if (controller && [ContainerEngine.PODMAN_VIRTUALIZED, ContainerEngine.DOCKER_VIRTUALIZED].includes(engine)) {
+    if (controller) {
       programTest.controller = {
-        ...controller,
         path: values.controllerPath
       };
     }
@@ -128,7 +133,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     } else {
       Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
     }
-  }, [engine, program, controller, connector, testEngineProgramReachability, getValues, t]);
+  }, [engine, controller, connector, testEngineProgramReachability, getValues, t]);
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
@@ -136,21 +141,15 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       engine,
       scope: values.scope,
       id: connector.id,
-       ...api,
-       connectionString: values.connectionString
+      baseURL: api.baseURL,
+      connectionString: values.connectionString
     });
     if (result.success) {
       Notification.show({ message: t("API was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("API could not be reached"), intent: Intent.DANGER });
     }
-  }, [engine, api, connector, testApiReachability, getValues, t]);
-
-  // locals
-  const isLIMA = [ContainerEngine.PODMAN_SUBSYSTEM_LIMA, ContainerEngine.DOCKER_SUBSYSTEM_LIMA].includes(engine);
-  const isWSL = [ContainerEngine.PODMAN_SUBSYSTEM_WSL, ContainerEngine.DOCKER_SUBSYSTEM_WSL].includes(engine);
-  const isMachine = [ContainerEngine.PODMAN_VIRTUALIZED].includes(engine);
-  const isScoped = isLIMA || isWSL || isMachine;
+  }, [engine, connector, api, testApiReachability, getValues, t]);
 
   let scopeSelectorWidget: any = undefined;
   if (isScoped && Array.isArray(scopes)) {
