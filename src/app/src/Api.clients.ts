@@ -109,11 +109,12 @@ export const coerceContainer = (container: Container) => {
 };
 
 export const coerceImage = (image: ContainerImage) => {
+  console.debug(">> image", JSON.stringify(image, null, 2));
   let info = "";
   let tag = "";
   let name = "";
   let registry = "";
-  const nameSource = image.Names || image.History;
+  const nameSource = image.Names || image.NamesHistory;
   const parts = (nameSource ? nameSource[0] || "" : "").split(":");
   [info, tag] = parts;
   let paths = [];
@@ -121,16 +122,16 @@ export const coerceImage = (image: ContainerImage) => {
   name = paths.join("/");
   if (!tag) {
     if (image.RepoTags) {
-      tag = (image.RepoTags[0] || "");
+      const fromTag = (image.RepoTags[0] || "");
+      name = fromTag.slice(0, fromTag.indexOf(":"));
+      tag = fromTag.slice(fromTag.indexOf(":") + 1);
     }
-  }
-  if (!name) {
-    name = tag.slice(0, tag.indexOf(":"));
   }
   image.Name = registry ? name : `library/${name}`;
   image.Tag = tag;
   image.Registry = registry || "docker.io";
   image.History = [];
+  console.debug("<< image", JSON.stringify(image, null, 2));
   return image;
 };
 
@@ -366,7 +367,13 @@ export class ContainerClient {
           };
         })
       };
-      const createResult = await this.dataApiDriver.post<{ Id: string }>("/containers/create", creator);
+      let url = "/containers/create";
+      if (opts.Name) {
+        const searchParams = new URLSearchParams();
+        searchParams.set("name", opts.Name)
+        url = `${url}?${searchParams.toString()}`;
+      }
+      const createResult = await this.dataApiDriver.post<{ Id: string }>(url, creator);
       const create = { created: false, started: false };
       if (createResult.ok) {
         create.created = true;

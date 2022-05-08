@@ -97,6 +97,12 @@ class AbstractClientEngine {
    * @return {Settings}
    */
   async getDetectedSettings(settings, detect) {
+    const available = await this.isEngineAvailable();
+    if (!available.success) {
+      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings detect ignore - not applicable for this engine");
+      return {};
+    }
+    this.logger.debug(this.ADAPTER, this.ENGINE, "Engine is available");
     if (detect) {
       this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache skip");
     } else {
@@ -175,7 +181,7 @@ class AbstractClientEngine {
     // Optimization - apply user overrides only if engine is available
     let user = {};
     const available = await this.isEngineAvailable();
-    if (available) {
+    if (available.success) {
       user = await this.getUserSettings();
     }
     const settings = {
@@ -495,6 +501,12 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     };
   }
   async getDetectedSettings(settings, detect) {
+    const available = await this.isEngineAvailable();
+    if (!available.success) {
+      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings detect ignore - not applicable for this engine");
+      return {};
+    }
+    this.logger.debug(this.ADAPTER, this.ENGINE, "Engine is available");
     if (detect) {
       this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache skip");
     } else {
@@ -538,7 +550,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     // Optimization - apply user overrides only if engine is available
     let user = {};
     const available = await this.isEngineAvailable();
-    if (available) {
+    if (available.success) {
       user = await this.getUserSettings();
     }
     const settings = {

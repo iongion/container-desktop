@@ -437,6 +437,7 @@ export interface ContainerImage {
     maintainer: string;
   } | null;
   Names: string[];
+  NamesHistory?: string[];
   ParentId: string;
   RepoTags?: string[];
   SharedSize: number;
