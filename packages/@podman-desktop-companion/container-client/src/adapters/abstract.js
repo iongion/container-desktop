@@ -420,6 +420,50 @@ class AbstractClientEngine {
   async getMachines() {
     return [];
   }
+
+  // Clean-up
+  async pruneSystem(opts) {
+    const input = {
+      all: true,
+      filter: {},
+      force: true,
+      volumes: false,
+      ...(opts || {})
+    };
+    const args = ["system", "prune"];
+    if (input.all) {
+      args.push("-all");
+    }
+    if (input.filter) {
+      args.push(...Object.keys(input.filter).map((key) => `label=${key}=${filter[key]}`));
+    }
+    if (input.force) {
+      args.push("--force");
+    }
+    if (input.volumes) {
+      args.push("--volumes");
+    }
+    const { program } = await this.getCurrentSettings();
+    const result = await this.runScopedCommand(program.path, args);
+    if (result.success) {
+      this.logger.debug(this.ADAPTER, this.ENGINE, "System prune complete");
+    } else {
+      this.logger.error(this.ADAPTER, this.ENGINE, "System prune error", result);
+    }
+    logger.debug(this.ADAPTER, this.ENGINE, "System report complete", report);
+    return result.success;
+  }
+
+  async resetSystem() {
+    const { program } = await this.getCurrentSettings();
+    const result = await this.runScopedCommand(program.path, ["system", "reset", "--force", "--log-level=debug"]);
+    if (result.success) {
+      logger.debug(this.ADAPTER, this.ENGINE, "System reset success", result);
+    } else {
+      logger.error(this.ADAPTER, this.ENGINE, "System reset error", result);
+    }
+    return result.success;
+  }
 }
 
 class AbstractControlledClientEngine extends AbstractClientEngine {

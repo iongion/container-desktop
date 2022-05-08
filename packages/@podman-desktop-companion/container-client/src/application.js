@@ -399,9 +399,13 @@ class Application {
   }
 
   // cleanup
-  async pruneSystem() {}
+  async pruneSystem() {
+    return await this.currentEngine.pruneSystem();
+  }
 
-  async resetSystem() {}
+  async resetSystem() {
+    return await this.currentEngine.resetSystem();
+  }
 
   // utilities
   async connectToContainer(opts) {
