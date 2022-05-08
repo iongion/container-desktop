@@ -240,6 +240,10 @@
   box-shadow: 0 0 0 1px rgb(17 20 24 / 20%), 0 0 0 rgb(17 20 24 / 0%), 0 1px 1px rgb(17 20 24 / 40%);
 }
 
+.bp4-toast {
+  max-width: 50%;
+}
+
 code.DocsCodeBox {
   margin-left: 2px;
   border: 1px solid #333;
