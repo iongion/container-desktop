@@ -94,8 +94,8 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     if (result && result.path) {
       Notification.show({
         message: t(
-          "Found {{program}} CLI in {{scope}} on {{path}}",
-          { program: program.name, path: result.path, scope: values.scope }
+          "Found {{program}} CLI in {{scope}} on {{path}} {{version}}",
+          { program: program.name, path: result.path, version: result.version, scope: values.scope }
         ),
         intent: Intent.SUCCESS
       });

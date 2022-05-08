@@ -237,12 +237,6 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
     const command = ["machine", "ssh", opts?.scope || controller.scope, "-o", "LogLevel=ERROR", program, ...args];
     return { launcher: controller.path, command };
   }
-
-  async runScopedCommand(program, args, opts) {
-    const { launcher, command } = await this.getScopedCommand(program, args, opts);
-    const result = await exec_launcher_sync(launcher, command, opts);
-    return result;
-  }
 }
 
 class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {

@@ -9,7 +9,7 @@ const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig, createApiDriver } = require("./api");
-const { findProgramVersion } = require("./detector");
+const { findProgram, findProgramVersion } = require("./detector");
 // locals
 
 class Application {
@@ -309,14 +309,15 @@ class Application {
       this.logger.error("Unable to find a matching engine", opts.id);
       throw new Error("Find failed - no engine");
     }
-    const command = await engine.runScopedCommand("which", [opts.program], { scope: opts.scope });
-    if (command.success) {
-      return {
-        name: opts.program,
-        path: command.stdout.trim()
-      };
+    try {
+      const locator = opts.engine === Podman.ENGINE_PODMAN_VIRTUALIZED ? "whereis" : "which";
+      const result = await engine.getScopedCommand(locator, [opts.program], { scope: opts.scope });
+      const wrapper = { launcher: result.launcher, args: result.command.slice(0, -2) };
+      const detect = await findProgram(opts.program, { wrapper });
+      return detect;
+    } catch (error) {
+      this.logger.error("Unable to find program", error.message);
     }
-    return undefined;
   }
 
   async test({ subject, payload }) {

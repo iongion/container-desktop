@@ -652,18 +652,6 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     this.logger.debug(this.ADAPTER, this.ENGINE, "Stop api skipped - not required");
     return true;
   }
-  // Executes command inside controller scope
-  async runScopedCommand(program, args, opts) {
-    const { controller } = await this.getCurrentSettings();
-    const command = ["--distribution", controller.scope, program, ...args];
-    let result;
-    if (opts?.async) {
-      result = await exec_launcher_async(controller.path, command, opts);
-    } else {
-      result = await exec_launcher_sync(controller.path, command, opts);
-    }
-    return result;
-  }
   // Availability
   async isControllerScopeAvailable() {
     const settings = await this.getCurrentSettings();
@@ -688,7 +676,7 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
-    const command = ["machine", "ssh", opts?.scope || controller.scope, "-o", "LogLevel=ERROR", program, ...args];
+    const command = ["--distribution", opts?.scope || controller.scope, program, ...args];
     return { launcher: controller.path, command };
   }
 }
