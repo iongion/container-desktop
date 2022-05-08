@@ -9,7 +9,7 @@ class UserConfiguration {
   constructor(version, stage) {
     this.version = version || "1.0.0";
     this.stage = stage || "production";
-    this.prefix = `${this.version}.${this.stage}`;
+    this.prefix = `${this.version.replace(/\./g, "|")}.${this.stage}`;
     logger.debug("Configuration set-up", this.prefix);
   }
   getStoragePath() {
@@ -21,12 +21,12 @@ class UserConfiguration {
   getKey(name, defaultValue) {
     const fqdn = this.getKeyFQDN(name);
     const value = userSettings.get(fqdn, defaultValue);
-    logger.debug("getKey", { fqdn, defaultValue }, "<", value);
+    // logger.debug("getKey", { fqdn, defaultValue }, "<", value);
     return value;
   }
   setKey(name, value) {
     const fqdn = this.getKeyFQDN(name);
-    logger.debug("setKey", { fqdn, value });
+    // logger.debug("setKey", { fqdn, value });
     userSettings.set(fqdn, value);
     return this;
   }

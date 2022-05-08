@@ -33,6 +33,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const userSettings = useStoreState((state) => state.descriptor.userSettings);
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const program = currentConnector.settings.current.program;
+
   const onAutoStartApiChange = useCallback(async (e) => {
     await setGlobalUserSettings({ startApi: !!e.currentTarget.checked });
   }, [setGlobalUserSettings]);
@@ -107,14 +108,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
         </div>
         <div className="AppSettingsForm" data-form="logging">
           <FormGroup
-            label={t("Logging and debugging")}
+            label={t("Configuration and logging")}
+            labelFor="userSettingsPath"
+          >
+            <div className="AppSettingUserConfigurationPath">
+              <Icon icon={IconNames.INFO_SIGN} />
+              <strong>{t('Storage path')}</strong>
+              <input id="userSettingsPath" name="userSettingsPath" type="text" value={userSettings.path} readOnly/>
+            </div>
+          </FormGroup>
+          <FormGroup
+            label={t("Level")}
             labelFor="loggingLevel"
           >
-          <div className="AppSettingUserConfigurationPath">
-            <Icon icon={IconNames.INFO_SIGN} />
-            <strong>{t('Storage path')}</strong>
-            <input type="text" value={userSettings.path} readOnly/>
-          </div>
             <ControlGroup>
               <HTMLSelect id="loggingLevel" value={userSettings.logging.level} onChange={onLoggingLevelChange}>
                 {LOGGING_LEVELS.map((level) => {
@@ -122,6 +128,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   return <option key={key} value={level}>{level}</option>;
                 })}
               </HTMLSelect>
+            </ControlGroup>
+          </FormGroup>
+
+          <FormGroup
+            label={t("Debugging")}
+            labelFor="loggingLevel"
+          >
+            <ControlGroup>
               <Button icon={IconNames.PANEL_TABLE} text={t('Show inspector')} onClick={onToggleInspectorClick} />
             </ControlGroup>
           </FormGroup>

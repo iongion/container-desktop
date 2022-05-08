@@ -18,7 +18,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ image, currentScreen
       withBack
       withoutSearch
       titleIcon={IconNames.BOX}
-      titleText={image.Id || ""}
+      titleText={`${image.Registry}/${image.Name}`}
       rightContent={<ActionsMenu image={image} withoutStart expand isActive={(input) => input === currentScreen} />}
     />
   );

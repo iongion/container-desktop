@@ -32,7 +32,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
         connector: {
           default: undefined
         }
-      }
+      },
     },
     // Actions
     setPhase: action((state, phase) => {

@@ -54,6 +54,9 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
   }),
   containersSearchByTerm: computed((state) => {
     return (searchTerm: string) => {
+      if (!searchTerm) {
+        return state.containers;
+      }
       return state.containers.filter((it) => {
         const haystacks = [it.Names[0] || "", it.Image, it.Id, `${it.Pid}`, `${it.Size}`].map((t) => t.toLowerCase());
         const matching = haystacks.find((it) => it.includes(searchTerm));

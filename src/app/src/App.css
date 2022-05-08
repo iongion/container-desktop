@@ -57,7 +57,7 @@
   justify-content: flex-start;
 }
 .AppScreenHeader .NavbarCenterContent span {
-  max-width: 200px;
+  max-width: 80%;
   text-overflow: ellipsis;
   display: inline-block;
   overflow: hidden;

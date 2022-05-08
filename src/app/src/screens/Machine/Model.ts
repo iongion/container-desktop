@@ -119,6 +119,9 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
     ),
     machinesSearchByTerm: computed((state) => {
       return (searchTerm: string) => {
+        if (!searchTerm) {
+          return state.machines;
+        }
         return state.machines.filter((it) => {
           const haystacks = [it.Name, it.VMType].map((t) => t.toLowerCase());
           const matching = haystacks.find((it) => it.includes(searchTerm));

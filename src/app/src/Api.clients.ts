@@ -6,6 +6,7 @@ import {
   GlobalUserSettings,
   GlobalUserSettingsOptions,
   EngineConnectorSettings,
+  ControllerScope,
   //
   ContainerClientResponse,
   Container,
@@ -112,17 +113,23 @@ export const coerceImage = (image: ContainerImage) => {
   let tag = "";
   let name = "";
   let registry = "";
-  if (image) {
-    const nameSource = image.Names || image.History;
-    const parts = (nameSource ? nameSource[0] || "" : "").split(":");
-    [info, tag] = parts;
-    let paths = [];
-    [registry, ...paths] = info.split("/");
-    name = paths.join("/");
+  const nameSource = image.Names || image.History;
+  const parts = (nameSource ? nameSource[0] || "" : "").split(":");
+  [info, tag] = parts;
+  let paths = [];
+  [registry, ...paths] = info.split("/");
+  name = paths.join("/");
+  if (!tag) {
+    if (image.RepoTags) {
+      tag = (image.RepoTags[0] || "");
+    }
   }
-  image.Name = name;
+  if (!name) {
+    name = tag.slice(0, tag.indexOf(":"));
+  }
+  image.Name = registry ? name : `library/${name}`;
   image.Tag = tag;
-  image.Registry = registry;
+  image.Registry = registry || "docker.io";
   image.History = [];
   return image;
 };
@@ -136,7 +143,7 @@ interface ApiDriverConfig<D> {
 export class ApiDriver {
   public async request<T = any, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
     const request = {
-      method: "/container/engine/request",
+      method: "createApiRequest",
       params: {
         method,
         url,
@@ -215,7 +222,7 @@ export class ContainerClient {
       const result = await this.dataApiDriver.get<ContainerImage>(`/images/${id}/json`, {
         params
       });
-      const image = result.data;
+      const image = coerceImage(result.data);
       if (opts?.withHistory) {
         image.History = await this.getImageHistory(id);
       }
@@ -481,22 +488,28 @@ export class ContainerClient {
   async getSystemInfo() {
     return this.withResult<SystemInfo>(async () => {
       const reply = await Native.getInstance().proxyService<SystemInfo>({
-        method: "/system/info",
+        method: "getSystemInfo",
       });
       return reply.result;
     });
   }
   async pruneSystem() {
+    // return this.withResult<SystemPruneReport>(async () => {
+    //   const result = await this.dataApiDriver.post<SystemPruneReport>(`/system/prune`);
+    //   return result.data;
+    // });
     return this.withResult<SystemPruneReport>(async () => {
-      const result = await this.dataApiDriver.post<SystemPruneReport>(`/system/prune`);
-      return result.data;
+      const reply = await Native.getInstance().proxyService<SystemPruneReport>({
+        method: "pruneSystem",
+      });
+      return reply.result;
     });
   }
 
   async start(opts: ConnectOptions | undefined) {
     return this.withResult<ApplicationDescriptor>(async () => {
       const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
-        method: "/start",
+        method: "start",
         params: opts
       });
       return reply.result;
@@ -506,7 +519,7 @@ export class ContainerClient {
   async connect(opts: ConnectOptions) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/connect",
+        method: "connect",
         params: opts
       });
       return reply.result;
@@ -519,8 +532,18 @@ export class ContainerClient {
   async connectToContainer(item: Container) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/container/connect",
+        method: "connectToContainer",
         params: { id: item.Id, title: item.Name || item.Names?.[0], shell: undefined }
+      });
+      return reply.result;
+    });
+  }
+
+  // Controller scopes - WSL distributions, LIMA instances and podman machines
+  async getControllerScopes() {
+    return this.withResult<ControllerScope[]>(async () => {
+      const reply = await Native.getInstance().proxyService<ControllerScope[]>({
+        method: "getControllerScopes"
       });
       return reply.result;
     });
@@ -530,7 +553,7 @@ export class ContainerClient {
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
       const reply = await Native.getInstance().proxyService<Machine[]>({
-        method: "/machines/list"
+        method: "getMachines"
       });
       return reply.result;
     });
@@ -538,7 +561,7 @@ export class ContainerClient {
   async restartMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/restart",
+        method: "restartMachine",
         params: { Name }
       });
       return reply.result;
@@ -547,7 +570,7 @@ export class ContainerClient {
   async getMachine(Name: string) {
     return this.withResult<Machine>(async () => {
       const reply = await Native.getInstance().proxyService<Machine>({
-        method: "/machine/inspect",
+        method: "inspectMachine",
         params: { Name }
       });
       return reply.result;
@@ -556,7 +579,7 @@ export class ContainerClient {
   async createMachine(opts: CreateMachineOptions) {
     return this.withResult<Machine>(async () => {
       const reply = await Native.getInstance().proxyService<Machine>({
-        method: "/machine/create",
+        method: "createMachine",
         params: opts
       });
       return reply.result;
@@ -565,7 +588,7 @@ export class ContainerClient {
   async removeMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/remove",
+        method: "removeMachine",
         params: { Name, force: true }
       });
       return reply.result;
@@ -574,7 +597,7 @@ export class ContainerClient {
   async stopMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/stop",
+        method: "stopMachine",
         params: { Name }
       });
       return reply.result;
@@ -583,7 +606,7 @@ export class ContainerClient {
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/connect",
+        method: "connectToMachine",
         params: { Name }
       });
       return reply.result;
@@ -594,7 +617,7 @@ export class ContainerClient {
   async resetSystem() {
     return this.withResult<SystemResetReport>(async () => {
       const reply = await Native.getInstance().proxyService<SystemResetReport>({
-        method: "/system/reset"
+        method: "resetSystem"
       });
       return reply.result;
     });
@@ -604,7 +627,7 @@ export class ContainerClient {
   async getGlobalUserSettings() {
     return this.withResult<GlobalUserSettings>(async () => {
       const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
-        method: "/global/user/settings/get",
+        method: "getGlobalUserSettings",
       });
       return reply.result;
     });
@@ -613,10 +636,8 @@ export class ContainerClient {
   async setGlobalUserSettings(options: Partial<GlobalUserSettingsOptions>) {
     return this.withResult<GlobalUserSettings>(async () => {
       const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
-        method: "/global/user/settings/set",
-        params: {
-          options
-        }
+        method: "setGlobalUserSettings",
+        params: options
       });
       return reply.result;
     });
@@ -626,7 +647,7 @@ export class ContainerClient {
   async getEngineUserSettings(id: string) {
     return this.withResult<any>(async () => {
       const reply = await Native.getInstance().proxyService<any>({
-        method: "/engine/user/settings/get",
+        method: "getEngineUserSettings",
         params: {
           id
         },
@@ -638,7 +659,7 @@ export class ContainerClient {
   async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
     return this.withResult<EngineConnectorSettings>(async () => {
       const reply = await Native.getInstance().proxyService<EngineConnectorSettings>({
-        method: "/engine/user/settings/set",
+        method: "setEngineUserSettings",
         params: {
           id,
           settings
@@ -653,7 +674,7 @@ export class ContainerClient {
   async testEngineProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
-        method: "/test",
+        method: "test",
         params: {
           subject: "reachability.program",
           payload: opts
@@ -666,7 +687,7 @@ export class ContainerClient {
   async testApiReachability(opts: EngineApiOptions) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
-        method: "/test",
+        method: "test",
         params: {
           subject: "reachability.api",
           payload: opts
@@ -679,7 +700,7 @@ export class ContainerClient {
   async findProgram(options: FindProgramOptions) {
     return this.withResult<Program>(async () => {
       const reply = await Native.getInstance().proxyService<Program>({
-        method: "/find.program",
+        method: "findProgram",
         params: options
       });
       return reply.result;

@@ -1,6 +1,5 @@
 // node
 const os = require("os");
-const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
@@ -11,6 +10,7 @@ const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig, createApiDriver } = require("./api");
 const { findProgramVersion } = require("./detector");
+const { getAvailableWSLDistributions, getAvailableLIMAInstances, getAvailablePodmanMachines } = require("./shared");
 // locals
 
 class Application {
@@ -27,6 +27,44 @@ class Application {
     this.connectors = [];
     this.currentConnector = undefined;
     this.started = false;
+  }
+
+  async invoke(method, params) {
+    let reply = {
+      success: false,
+      result: undefined,
+      warnings: []
+    };
+    const service = this[method];
+    // logger.debug("Creating invocation", method, params);
+    if (service) {
+      try {
+        // logger.debug("Invoking", method, params);
+        reply.success = true;
+        reply.result = await service.apply(this, [params]);
+      } catch (error) {
+        const result = {
+          error: "Service invocation error",
+          method,
+          params
+        };
+        if (error.response) {
+          result.response = error.response;
+        }
+        logger.error("Service error", result, error.message, error.stack);
+        reply.success = false;
+        reply.result = result;
+      }
+    } else {
+      const result = {
+        error: "No such IPC method",
+        method: method
+      };
+      logger.error("Service error", result);
+      reply.success = false;
+      reply.result = result;
+    }
+    return reply;
   }
 
   async getAdapters() {
@@ -52,7 +90,7 @@ class Application {
     const items = [];
     await Promise.all(
       this.engines.map(async (engine) => {
-        const connector = await engine.getConnector();
+        const connector = await engine.getConnector({ detect: true });
         items.push(connector);
       })
     );
@@ -146,7 +184,7 @@ class Application {
         this.started = await this.currentEngine.startApi();
         if (this.started) {
           this.logger.debug("Updating connector post successful start-up to get updated details");
-          this.currentConnector = await this.currentEngine.getConnector();
+          this.currentConnector = await this.currentEngine.getConnector({ detect: true });
           this.connectors = this.connectors.map((it) => {
             if (it.id === this.currentConnector.id) {
               return { ...it, ...this.currentConnector };
@@ -176,17 +214,48 @@ class Application {
 
   async createApiRequest(opts) {
     const { currentEngine } = this;
-    if (!currentEngine) {
-      this.logger.error("Cannot create api request - no valid client for current engine");
-      throw new Error("No valid client for current engine");
+    // Normalize response
+    let result = {
+      ok: false,
+      data: undefined,
+      headers: [],
+      status: 500,
+      statusText: "API request error"
+    };
+    try {
+      if (!currentEngine) {
+        this.logger.error("Cannot create api request - no valid client for current engine");
+        throw new Error("No valid client for current engine");
+      }
+      const driver = await currentEngine.getApiDriver();
+      const response = await driver.request(opts);
+      result = {
+        ok: response.status >= 200 && response.status < 300,
+        data: response.data,
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText
+      };
+    } catch (error) {
+      if (error.response) {
+        result = {
+          ok: false,
+          data: error.response.data,
+          headers: error.response.headers,
+          status: error.response.status,
+          statusText: error.response.statusText
+        };
+      } else {
+        result.statusText = error.message || "API request error";
+      }
     }
-    const driver = await currentEngine.getApiDriver();
-    return driver.request(opts);
+    return result;
   }
 
   // configuration
 
   async setGlobalUserSettings(opts) {
+    this.logger.debug("Updating global user settings", opts);
     Object.keys(opts).forEach((key) => {
       const value = opts[key];
       this.configuration.setKey(key, value);
@@ -233,13 +302,10 @@ class Application {
   async getMachines() {
     return await this.currentAdapter.getMachines(this.currentEngine);
   }
-  async getControllerScopes() {
-    return await this.currentAdapter.getControllerScopes(this.currentEngine);
-  }
 
   // tests
 
-  async test(subject, payload) {
+  async test({ subject, payload }) {
     let result = { success: false };
     switch (subject) {
       case "reachability.api":
@@ -306,8 +372,13 @@ class Application {
       result.success = response?.data === "OK";
       result.details = response?.data || "Api reached";
     } catch (error) {
-      result.details = `API is not accessible`;
-      this.logger.error("Reachability test failed", opts, error.message);
+      result.details = "API is not reachable - start manually or connect";
+      this.logger.error(
+        "Reachability test failed",
+        opts,
+        error.message,
+        error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+      );
     }
     return result;
   }

@@ -32,7 +32,11 @@ function createApiDriver(config) {
       return response;
     },
     function (error) {
-      logger.error("[container-client] HTTP response error", error.message, error.stack);
+      logger.error(
+        "[container-client] HTTP response error",
+        error.message,
+        error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+      );
       return Promise.reject(error);
     }
   );
@@ -49,7 +53,7 @@ function getApiConfig(baseURL, socketPath) {
       "Content-Type": "application/json"
     }
   };
-  logger.debug("API configuration", config);
+  // logger.debug("API configuration", config);
   return config;
 }
 

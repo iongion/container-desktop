@@ -66,7 +66,7 @@ function wrapSpawnSync(launcher, launcherArgs, launcherOpts) {
   }
   const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
   const command = [spawnLauncher, ...spawnArgs].join(" ");
-  logger.debug("[SC.S][>]", command);
+  // logger.debug("[SC.S][>]", command);
   logger.debug("[SC.S][>][spawnSync]", { spawnLauncher, spawnArgs, spawnLauncherOpts });
   const child = spawnSync(spawnLauncher, spawnArgs, spawnLauncherOpts);
   child.command = command;
@@ -188,7 +188,7 @@ async function exec_service(opts) {
       em.emit("close", { code });
     };
     const onProcessData = (child, from, data) => {
-      logger.debug("Child process data", child.pid, from, data);
+      // logger.debug("Child process data", child.pid, from, data);
       em.emit("data", { from, data });
     };
     const waitForProcess = (child) => {
@@ -249,7 +249,7 @@ async function exec_service(opts) {
         logger.error("Child process spawn failure", process);
       } else {
         process.success = !child.killed;
-        logger.error("Child process spawn success", process);
+        logger.debug("Child process spawn success", process);
         waitForProcess(child);
       }
     };

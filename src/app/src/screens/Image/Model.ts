@@ -36,6 +36,7 @@ export const createModel = (registry: AppRegistry): ImagesModel => {
     images: [],
     // actions
     setImages: action((state, images) => {
+      console.debug("Update stat images", images);
       state.images = images;
     }),
     update: action((state, image) => {
@@ -56,6 +57,9 @@ export const createModel = (registry: AppRegistry): ImagesModel => {
     }),
     searchByTerm: computed((state) => {
       return (searchTerm: string) => {
+        if (!searchTerm) {
+          return state.images;
+        }
         return state.images.filter((it) => {
           const haystacks = [it.Name, it.Id].map((t) => t.toLowerCase());
           const matching = haystacks.find((it) => it.includes(searchTerm));

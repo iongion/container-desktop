@@ -100,18 +100,9 @@ async function main() {
           }
         },
         proxy: async (req) => {
-          // try {
-          //   const result = await ipcRenderer.invoke("proxy", req);
-          //   // logger.debug(">> proxy to client", result);
-          //   return result;
-          // } catch (error) {
-          //   logger.error("Proxy invocation error", error.message, error.stack);
-          //   throw new Error("Proxy invocation error");
-          // }
-          const serviceWorkerPath = path.join(__dirname, "ipc.js");
-          const result = await withWorkerRPC(serviceWorkerPath, (rpc) => rpc.invoke(req));
-          logger.debug(">> proxy to client", result);
-          return result;
+          // Using worker to avoid users perceive the app as stuck during long operations
+          const serviceWorkerPath = path.join(__dirname, "worker.js");
+          return await withWorkerRPC(serviceWorkerPath, (rpc) => rpc.invoke(req));
         }
       }
     };

@@ -36,21 +36,19 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const currentConnector = connector;
   const { automatic, current } = currentConnector.settings;
   const { api, program, controller } = current;
+  const controllerScopes = currentConnector.scopes;
 
-  const wslDistributions: any[] = [];
-
-  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const testEngineProgramReachability = useStoreActions((actions) => actions.testEngineProgramReachability);
   const testApiReachability = useStoreActions((actions) => actions.testApiReachability);
   const findProgram = useStoreActions((actions) => actions.findProgram);
 
-  const [selectedWSLDistribution, setSelectedWSLDistribution] = useState<string>(wslDistributions.find(it => it.Current)?.Name || "");
+  const [selectedControllerScope, setSelectedControllerScope] = useState<string>(controller?.scope ||"");
 
   // Form setup
-
-  const { reset, control, getValues } = useFormContext<ConnectorFormData>();
+  const { reset, control, getValues, setValue } = useFormContext<ConnectorFormData>();
 
   useEffect(() => {
+    setSelectedControllerScope(controller?.scope || "");
     reset({
       controllerPath: controller?.path,
       programPath: program.path,
@@ -60,16 +58,17 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+      const subject = e.currentTarget.getAttribute("data-subject");
       const result = await Native.getInstance().openFileSelector();
       if (result) {
         const filePath = result?.filePaths[0];
         if (!result.canceled && filePath) {
           try {
-            const program = filePath.split(/\\|\//).pop()?.replace(".exe", "") || "";
-            const programSettings: any = {};
-            const programKey = `${engine}.program.${program}.path`;
-            programSettings[programKey] = filePath;
-            await setGlobalUserSettings(programSettings);
+            if (subject === "program") {
+              setValue("programPath", filePath, { shouldDirty: true });
+            } else if (subject === "controller") {
+              setValue("controllerPath", filePath, { shouldDirty: true });
+            }
           } catch (error) {
             console.error("Unable to change CLI path", error);
             Notification.show({ message: t("Unable to change CLI path"), intent: Intent.DANGER });
@@ -79,27 +78,28 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         console.error("Unable to open file dialog");
       }
     },
-    [engine, setGlobalUserSettings, t]
-  );
-  const onWSLDistributionChange = useCallback(
-    (event: React.FormEvent<HTMLSelectElement>) => {
-      const sender = event.currentTarget;
-      setSelectedWSLDistribution(sender.value);
-    },
-    [setSelectedWSLDistribution]
+    [setValue, t]
   );
 
-  const onFindWSLProgramClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+  const onControllerScopeChange = useCallback(
+    (event: React.FormEvent<HTMLSelectElement>) => {
+      const sender = event.currentTarget;
+      setSelectedControllerScope(sender.value);
+    },
+    [setSelectedControllerScope]
+  );
+
+  const onFindControllerProgram = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const result: Program = await findProgram({
       engine,
-      wslDistributionName: selectedWSLDistribution,
+      wslDistributionName: selectedControllerScope,
       program: program.name,
     });
     if (result.path) {
       Notification.show({
         message: t(
           "Found {{program}} CLI in {{distribution}} WLS distribution",
-          { program: program.name, path: program.path, distribution: selectedWSLDistribution }
+          { program: program.name, path: program.path, distribution: selectedControllerScope }
         ),
         intent: Intent.SUCCESS
       });
@@ -107,13 +107,13 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       Notification.show({
         message: t(
           "Unable to find {{program}} CLI in {{distribution}} WSL distribution",
-          { program: program.name, distribution: selectedWSLDistribution }
+          { program: program.name, distribution: selectedControllerScope }
         ),
         intent: Intent.DANGER
       });
     }
     // setProgram(result);
-  }, [engine, program, selectedWSLDistribution, findProgram, t]);
+  }, [engine, program, selectedControllerScope, findProgram, t]);
 
   const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
@@ -157,36 +157,52 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   // locals
   const isLIMA = engine === ContainerEngine.PODMAN_SUBSYSTEM_LIMA;
-  const suffix = isLIMA ? <span> - {t("Automatically detected inside LIMA VM")}</span> : "";
   const isWSL = engine === ContainerEngine.PODMAN_SUBSYSTEM_WSL;
+  const isMachine = engine === ContainerEngine.PODMAN_VIRTUALIZED;
+  const isScoped = isLIMA || isWSL || isMachine;
 
-  let wslSelector;
-  if (isWSL) {
-    wslSelector = (
-      <div className="WSLSelector">
-        <HTMLSelect
-          id="wsl_distribution"
-          name="wsl_distribution"
-          title={t("WSL distribution")}
-          value={selectedWSLDistribution}
-          onChange={onWSLDistributionChange}
-        >
-          <option value="">{t("-- select --")}</option>
-          {wslDistributions.map((it) => {
-            return (
-              <option key={it.Name} value={it.Name}>{it.Name}</option>
-            );
-          })}
-        </HTMLSelect>
-        <Button
-          disabled={!selectedWSLDistribution}
-          icon={IconNames.TARGET}
-          text={t("Find")}
-          intent={Intent.PRIMARY}
-          title={t("Click to trigger automatic detection")}
-          onClick={onFindWSLProgramClick}
+  let scopeSelectorWidget: any = undefined;
+  if (isScoped && Array.isArray(controllerScopes)) {
+    let scopeLabel = t("Scope");
+    let scopeTitle = "";
+    if (isLIMA) {
+      scopeLabel = t("LIMA instance");
+      scopeTitle = t("The LIMA instance in which the current engine is running");
+    } else if (isWSL) {
+      scopeLabel = t("WSL distribution");
+      scopeTitle = t("The WSL distribution in which the current engine is running");
+    } else if (isMachine) {
+      scopeLabel = t("Podman machines");
+      scopeTitle = t("The podman machine in which the current engine is running");
+    }
+    scopeSelectorWidget = (
+      <FormGroup className="ProgramScopeLocator" label={scopeLabel} labelFor="scopeSelector">
+        <ControlGroup>
+          <HTMLSelect
+            id="scopeSelector"
+            name="scopeSelector"
+            title={scopeTitle}
+            value={selectedControllerScope}
+            onChange={onControllerScopeChange}
+          >
+            <option value="">{t("-- select --")}</option>
+            {controllerScopes.map((it) => {
+              return (
+                <option key={it.Name} value={it.Name}>{it.Name}</option>
+              );
+            })}
+          </HTMLSelect>
+          <Button
+            className="ScopeSelectorFindButton"
+            minimal
+            disabled={!selectedControllerScope}
+            icon={IconNames.TARGET}
+            intent={Intent.PRIMARY}
+            title={t("Click to trigger automatic detection")}
+            onClick={onFindControllerProgram}
         />
-      </div>
+        </ControlGroup>
+      </FormGroup>
     );
   }
 
@@ -198,7 +214,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         name="controllerPath"
         defaultValue=""
         rules={{ required: t("Controller path must be set") }}
-        render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { error } }) => {
+        render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { isDirty, error } }) => {
           let valid = true;
           let message;
           if (error?.message) {
@@ -211,50 +227,74 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           if (!availability.controller) {
             message = availability.report.controller;
           }
+          let helperText = availability.controller ? (
+            <div className="AppSettingsFieldProgramHelper">
+              {controller?.version ? (
+                <>
+                  <span>{t("Detected version {{version}}", controller)}</span>
+                </>
+              ) : (
+                t("Could not detect current version")
+              )}
+            </div>
+          ) : message;
+          if (isDirty) {
+            helperText = t("Version needs detection");
+          }
+          let controllerPathLabel = t("Path to {{name}} CLI", controller);
+          if (isScoped) {
+            if (isMachine) {
+              controllerPathLabel = t("Path to native {{name}} CLI", controller);
+            } else if (isWSL) {
+              controllerPathLabel = t("Path to WSL distribution {{name}} CLI", controller);
+            } else if (isLIMA) {
+              controllerPathLabel = t("Path to LIMA instance {{name}} CLI", controller);
+            }
+          }
+          let programSelectButton;
+          if (!isScoped || (isScoped && isMachine)) {
+            programSelectButton = (
+              <Button
+                icon={IconNames.LOCATE}
+                text={t("Select")}
+                title={t("Select controller")}
+                intent={Intent.PRIMARY}
+                data-subject="controller"
+                onClick={onProgramSelectClick}
+              />
+            );
+          }
           return (
-            <FormGroup
-              helperText={
-                availability.controller ? (
-                <div className="AppSettingsFieldProgramHelper">
-                  {controller?.version ? (
-                    <>
-                      <span>{t("Detected version {{version}}", controller)}</span>
-                      {suffix}
-                    </>
-                  ) : (
-                    t("Could not detect current version")
-                  )}
-                </div>
-                ) : message
-              }
-              label={t("Path to {{name}} CLI", controller)}
-              labelFor="controllerPath"
-            >
-              <ControlGroup fill={true} vertical={false}>
-                <InputGroup
-                  fill
-                  id={name}
-                  name={name}
-                  inputRef={ref}
-                  value={value}
-                  onChange={onChange}
-                  onBlur={onBlur}
-                  placeholder={automatic.controller?.path || ""}
-                  intent={valid ? undefined : Intent.DANGER}
-                  title={message}
-                  rightElement={
-                    <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
-                  }
-                />
-                <Button
-                  icon={IconNames.LOCATE}
-                  text={t("Select")}
-                  title={t("Select controller")}
-                  intent={Intent.PRIMARY}
-                  onClick={onProgramSelectClick}
-                />
-              </ControlGroup>
-            </FormGroup>
+            <div className="ProgramLocator">
+              {scopeSelectorWidget}
+              <FormGroup
+                helperText={helperText}
+                label={controllerPathLabel}
+                labelFor="controllerPath"
+                className="ProgramPathLocator"
+              >
+                <ControlGroup fill={true} vertical={false}>
+                  <InputGroup
+                    fill
+                    id={name}
+                    name={name}
+                    inputRef={ref}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    placeholder={automatic.controller?.path || ""}
+                    intent={valid ? undefined : Intent.DANGER}
+                    title={message}
+                    rightElement={
+                      <>
+                        <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
+                      </>
+                    }
+                  />
+                  {programSelectButton}
+                </ControlGroup>
+              </FormGroup>
+            </div>
           );
         }}
       />
@@ -266,7 +306,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         name="programPath"
         defaultValue=""
         rules={{ required: t("Program path must be set") }}
-        render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { error } }) => {
+        render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { isDirty, error } }) => {
           let valid = true;
           let message;
           if (error?.message) {
@@ -279,22 +319,23 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           if (!availability.program) {
             message = availability.report.program;
           }
+          let helperText = availability.program ? (
+            <div className="AppSettingsFieldProgramHelper">
+              {program?.version ? (
+                <>
+                  <span>{t("Detected version {{version}}", program)}</span>
+                </>
+              ) : (
+                t("Could not detect current version")
+              )}
+            </div>
+          ) : message;
+          if (isDirty) {
+            helperText = t("Version needs detection");
+          }
           return (
             <FormGroup
-              helperText={
-                availability.program ? (
-                <div className="AppSettingsFieldProgramHelper">
-                  {program?.version ? (
-                    <>
-                      <span>{t("Detected version {{version}}", program)}</span>
-                      {suffix}
-                    </>
-                  ) : (
-                    t("Could not detect current version")
-                  )}
-                </div>
-                ) : message
-              }
+              helperText={helperText}
               label={t("Path to {{name}} CLI", program)}
               labelFor="programPath"
             >
@@ -314,11 +355,12 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                     <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
                   }
                 />
-                {isLIMA || isWSL ? null : <Button
+                {isScoped ? null : <Button
                   icon={IconNames.LOCATE}
                   text={t("Select")}
                   title={t("Select program")}
                   intent={Intent.PRIMARY}
+                  data-subject="program"
                   onClick={onProgramSelectClick}
                 />
                 }
@@ -340,7 +382,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         name="connectionString"
         defaultValue=""
         rules={{ required: t("Connection string must be set") }}
-        render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { error, invalid } }) => {
+        render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { isDirty, error, invalid } }) => {
           let helperText = "";
           if (value && automatic.api?.connectionString) {
             if (automatic.api?.connectionString !== value) {
@@ -359,7 +401,10 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           if (!availability.api) {
             message = availability.report.api;
           } else {
-            message = helperText;
+            message = helperText || availability.report.api;
+          }
+          if (isDirty) {
+            message = t("Reachability test is needed");
           }
           return (
             <FormGroup

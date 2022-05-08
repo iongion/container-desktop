@@ -15,7 +15,6 @@ const { UserConfiguration } = require("@podman-desktop-companion/container-clien
 // locals
 const osType = os.type();
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
-const { invoker } = require("./ipc");
 const logger = createLogger("shell.main");
 const userConfiguration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
 let window;
@@ -76,22 +75,6 @@ ipcMain.handle("openTerminal", async function (event, options) {
   let success = await launchTerminal(options);
   logger.debug("IPC - openTerminal - result", options, success);
   return success;
-});
-ipcMain.handle("getEngine", async function (event) {
-  logger.debug("IPC - getEngine - start");
-  let current = userSettings.get("engine", undefined);
-  logger.debug("IPC - getEngine - result", current);
-  return current;
-});
-ipcMain.handle("proxy", async function (event, invocation) {
-  const { method, params } = invocation;
-  if (typeof params !== "undefined" && typeof params.data === "undefined") {
-    delete params.data;
-  }
-  logger.debug("IPC - proxy invoke >", invocation);
-  const reply = await invoker.invoke(method, params);
-  logger.debug("IPC - proxy invoke <", reply);
-  return reply;
 });
 
 function createWindow() {

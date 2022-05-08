@@ -36,6 +36,7 @@ export interface Connector {
     }
   };
   settings: EngineConnectorSettingsMap;
+  scopes?: ControllerScope[];
 }
 
 export interface ConnectOptions {
@@ -188,13 +189,6 @@ export interface SystemConnection {
   Identity: string;
   Name: string;
   URI: string;
-}
-export interface WSLDistribution {
-  Name: string;
-  State: string;
-  Version: string;
-  Default: boolean;
-  Current: boolean;
 }
 export interface ApplicationDescriptor {
   environment: string;
@@ -440,7 +434,7 @@ export interface ContainerImage {
   Id: string;
   Labels: {
     maintainer: string;
-  };
+  } | null;
   Names: string[];
   ParentId: string;
   RepoTags?: string[];
@@ -461,6 +455,8 @@ export interface ContainerImage {
     StopSignal: string;
     WorkDir: string;
   };
+  // Docker specific
+  RepoDigests?: string[];
 }
 
 export interface Machine {
@@ -471,6 +467,28 @@ export interface Machine {
   VMType: string;
   Created: string;
 }
+
+export interface WSLDistribution {
+  Name: string;
+  State: string;
+  Version: string;
+  Default: boolean;
+  Current: boolean;
+}
+
+
+export interface LIMAInstance {
+  Name: string;
+  Status: string;
+  SSH: string;
+  Arch: string;
+  CPUs: string;
+  Memory: string;
+  Disk: string;
+  Dir: string;
+}
+
+export type ControllerScope = Machine | WSLDistribution | LIMAInstance;
 
 export interface SecretSpecDriverOptionsMap {
   [key: string]: string;

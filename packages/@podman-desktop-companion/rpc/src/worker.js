@@ -15,6 +15,7 @@ self.onmessage = async function (e) {
     }
     const req = msg.payload;
     const { invoker } = require(msg.workerPath);
+    // logger.debug("Invocation start", req.method, req.params);
     const result = await invoker.invoke(req.method, req.params);
     response = {
       success: true,
@@ -23,7 +24,7 @@ self.onmessage = async function (e) {
       created: new Date().getTime() / 1000,
       payload: result
     };
-    logger.debug("Invocation done", response, req);
+    // logger.debug("Invocation done", response, req);
   } catch (error) {
     logger.error("Invocation error", error);
     response = {

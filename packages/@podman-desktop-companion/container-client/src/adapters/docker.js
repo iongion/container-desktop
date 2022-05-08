@@ -67,16 +67,6 @@ class DockerClientEngineNative extends AbstractClientEngine {
       }
     };
   }
-  async getDetectedSettings(settings) {
-    let info = {};
-    if (fs.existsSync(settings.program.path)) {
-      const detectVersion = await findProgramVersion(settings.program.path || this.PROGRAM, { osType: this.osType });
-      info.program = {
-        version: detectVersion
-      };
-    }
-    return info;
-  }
   async getUserSettings() {
     return {
       api: {
@@ -90,7 +80,7 @@ class DockerClientEngineNative extends AbstractClientEngine {
   }
   // Runtime
   async startApi() {
-    this.logger.debug("Start api skipped - not required");
+    this.logger.debug(this.ADAPTER, this.ENGINE, "Start api skipped - not required");
     return true;
   }
   // Availability

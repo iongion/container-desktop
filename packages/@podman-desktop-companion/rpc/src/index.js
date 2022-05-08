@@ -37,7 +37,7 @@ const withWorker = (cb) => {
         return;
       }
       invocation.handled = true;
-      logger.debug("Handler - clear timed-out", response.guid);
+      // logger.debug("Handler - clear timed-out", response.guid);
       clearTimeout(invocation.timeout);
       delete invocations[invocation.guid];
       // invoking the handler
@@ -51,7 +51,7 @@ const withWorker = (cb) => {
 
 const withWorkerRPC = (serviceWorkerPath, handler) =>
   new Promise((resolve, reject) => {
-    logger.debug("Handling with worker", serviceWorkerPath);
+    // logger.debug("Handling with worker", serviceWorkerPath);
     try {
       withWorker((worker) => {
         const rpc = {
@@ -99,7 +99,7 @@ const withWorkerRPC = (serviceWorkerPath, handler) =>
               logger.error("Response timed-out", guid);
               reject(new Error("Worker communication timeout"));
             }, message.maxExecutionTime);
-            // logger.debug('Message sent', message);
+            // logger.debug("Message sent", message);
             worker.postMessage(message);
           }
         };

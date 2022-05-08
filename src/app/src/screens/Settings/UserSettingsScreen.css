@@ -32,9 +32,6 @@
 .AppSettingsFormColumn {
   display: flex;
 }
-.AppSettingsFieldProgramHelper {
-  padding-left: 5px;
-}
 .AppSettingsForm[data-form="engine"] {
   display: flex;
   padding: 0;
@@ -88,15 +85,9 @@
   justify-content: flex-start;
   padding: 2px;
   padding-left: 8px;
-  margin-bottom: 10px;
   overflow: hidden;
-
-
-  margin-bottom: 10px;
   background: #111;
-  line-height: 30px;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  line-height: 27px;
 }
 .AppSettingUserConfigurationPath strong {
   font-size: 12px;
@@ -118,4 +109,13 @@
   color: #fff;
   font-family: monospace;
   border-radius: 4px;
+}
+.AppSettingsForm[data-form="logging"] {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  column-gap: 4px;
+}
+.AppSettingsForm[data-form="logging"] .bp4-form-group:first-child {
+  flex: 1;
 }

@@ -1,15 +1,3 @@
-.WSLSelector {
-  display: inline-flex;
-}
-.WSLSelector .bp4-button {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 90px;
-}
-.WSLSelector .bp4-html-select {
-  min-width: 140px;
-}
 .ContainerEngineSettingsActions .bp4-button {
   min-width: 110px;
 }
@@ -35,4 +23,22 @@
 }
 .ContainerEngineSettings[data-settings="program.local"] .bp4-form-helper-text {
   min-height: 1em;
+}
+.ProgramLocator {
+  display: flex;
+  column-gap: 5px;
+  margin-bottom: 15px;
+}
+.ProgramPathLocator {
+  flex: 1;
+}
+.ProgramScopeLocator {
+  display: inline-flex;
+}
+.ProgramScopeLocator .ScopeSelectorFindButton {
+  width: 30px;
+}
+.ProgramScopeLocator .bp4-html-select {
+  min-width: 200px;
+  max-width: 200px;
 }

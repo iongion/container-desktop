@@ -86,13 +86,13 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "start.shell": "electron public/electron.js",
+    "start.shell": "electron public/main.js",
     "electron-builder": "electron-builder",
-    "package:mac_x86": "electron-builder --publish never --macos --x64 -c.extraMetadata.main=build/electron.js",
-    "package:mac_arm": "electron-builder --publish never --macos --arm64 -c.extraMetadata.main=build/electron.js",
-    "package:win_x86": "electron-builder --publish never --windows --x64 -c.extraMetadata.main=build/electron.js",
-    "package:linux_x86": "electron-builder --publish never --linux --x64 -c.extraMetadata.main=build/electron.js",
-    "package:linux_arm": "electron-builder --publish never --linux --arm64 -c.extraMetadata.main=build/electron.js"
+    "package:mac_x86": "electron-builder --publish never --macos --x64 -c.extraMetadata.main=build/main.js",
+    "package:mac_arm": "electron-builder --publish never --macos --arm64 -c.extraMetadata.main=build/main.js",
+    "package:win_x86": "electron-builder --publish never --windows --x64 -c.extraMetadata.main=build/main.js",
+    "package:linux_x86": "electron-builder --publish never --linux --x64 -c.extraMetadata.main=build/main.js",
+    "package:linux_arm": "electron-builder --publish never --linux --arm64 -c.extraMetadata.main=build/main.js"
   },
   "browserslist": [
     "last 1 electron version",

@@ -1,5 +1,4 @@
 // nodejs
-const fs = require("fs");
 const path = require("path");
 // vendors
 const merge = require("lodash.merge");
@@ -7,7 +6,6 @@ const merge = require("lodash.merge");
 const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 const userSettings = require("@podman-desktop-companion/user-settings");
 // module
-const { findProgramVersion } = require("../detector");
 const { getAvailablePodmanMachines } = require("../shared");
 const {
   // WSL - common
@@ -63,6 +61,11 @@ const ENGINE_PODMAN_SUBSYSTEM_LIMA = `${PROGRAM}.subsystem.lima`;
 
 class AbstractPodmanControlledClientEngine extends AbstractControlledClientEngine {
   PROGRAM = PROGRAM;
+  async getControllerScopes() {
+    const settings = await this.getCurrentSettings();
+    const scopes = await getAvailablePodmanMachines(settings.controller.path);
+    return scopes;
+  }
 }
 
 class PodmanClientEngineNative extends AbstractClientEngine {
@@ -82,16 +85,6 @@ class PodmanClientEngineNative extends AbstractClientEngine {
       }
     };
   }
-  async getDetectedSettings(settings) {
-    let info = {};
-    if (fs.existsSync(settings.program.path)) {
-      const detectVersion = await findProgramVersion(settings.program.path || this.PROGRAM, { osType: this.osType });
-      info.program = {
-        version: detectVersion
-      };
-    }
-    return info;
-  }
   async getUserSettings() {
     return {
       api: {
@@ -107,7 +100,7 @@ class PodmanClientEngineNative extends AbstractClientEngine {
   async startApi(opts) {
     const running = await this.isApiRunning();
     if (running.success) {
-      this.logger.debug("API is already running");
+      this.logger.debug(this.ADAPTER, this.ENGINE, "API is already running");
       return true;
     }
     const settings = await this.getCurrentSettings();
@@ -210,7 +203,7 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
   async startApi(opts) {
     const running = await this.isApiRunning();
     if (running.success) {
-      this.logger.debug("API is already running");
+      this.logger.debug(this.ADAPTER, this.ENGINE, "API is already running");
       return true;
     }
     const settings = await this.getCurrentSettings();
@@ -234,7 +227,7 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
   }
   async isControllerScopeAvailable() {
     const settings = await this.getCurrentSettings();
-    const machines = await getAvailablePodmanMachines(settings.controller.path);
+    const machines = await this.getControllerScopes();
     const target = machines.find((it) => it.Name === settings.controller.scope);
     return target.Running;
   }
@@ -328,13 +321,13 @@ class Adapter extends AbstractAdapter {
       customFormat || "json"
     ]);
     if (!result.success) {
-      this.logger.error("Unable to get list of machines", result);
+      this.logger.error(this.ADAPTER, this.ENGINE, "Unable to get list of machines", result);
       return items;
     }
     try {
       items = result.stdout ? JSON.parse(result.stdout) : info;
     } catch (error) {
-      this.logger.error("Unable to get list of machines", error, result);
+      this.logger.error(this.ADAPTER, this.ENGINE, "Unable to get list of machines", error, result);
     }
     return items;
   }
@@ -344,7 +337,11 @@ class Adapter extends AbstractAdapter {
       const items = await engine.getControllerScopes();
       return items;
     }
-    this.logger.warn("Unable to get list of controller scopes - current engine is not scoped.");
+    this.logger.warn(
+      this.ADAPTER,
+      this.ENGINE,
+      "Unable to get list of controller scopes - current engine is not scoped."
+    );
     return [];
   }
 }

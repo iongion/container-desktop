@@ -7,7 +7,7 @@ const merge = require("lodash.merge");
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
-const { findProgramVersion } = require("../detector");
+const { findProgramVersion, findProgramPath } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
 const { getAvailableLIMAInstances, getAvailableWSLDistributions } = require("../shared");
 const { WSL_VERSION } = require("../constants");
@@ -69,6 +69,8 @@ class AbstractClientEngine {
     this.logger = createLogger(`${this.PROGRAM}.${this.ENGINE || "Engine"}.client`);
     /** @access private */
     this.runner = new Runner(this);
+    /** @access protected */
+    this.detectedSettings = undefined; // CACHE value - avoid program detection multiple times after init
   }
 
   // Lazy factory
@@ -91,23 +93,38 @@ class AbstractClientEngine {
 
   /**
    * Creates a dictionary with configuration resulting from probing the system
-   * @abstract
    * @protected
    * @return {Settings}
    */
-  async getDetectedSettings(settings) {
-    throw new Error("getDetectedSettings must be implemented");
-  }
-
-  /**
-   * Creates a dictionary with merged configuration resulting from merging expected and detected settings
-   * @protected
-   * @return {Settings}
-   */
-  async getAutomaticSettings() {
-    const expected = await this.getExpectedSettings();
-    const detected = await this.getDetectedSettings(expected);
-    return merge({}, expected, detected);
+  async getDetectedSettings(settings, detect) {
+    if (detect) {
+      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache skip");
+    } else {
+      if (this.detectedSettings) {
+        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache hit");
+        return this.detectedSettings;
+      } else {
+        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache miss");
+      }
+    }
+    let info = {};
+    if (settings.program.path && fs.existsSync(settings.program.path)) {
+      const detectVersion = await findProgramVersion(settings.program.path, { osType: this.osType });
+      info.program = {
+        version: detectVersion
+      };
+    } else {
+      const detectPath = await findProgramPath(settings.program.name || this.PROGRAM, { osType: this.osType });
+      let detectVersion;
+      if (detectPath) {
+        detectVersion = await findProgramVersion(settings.program.path, { osType: this.osType });
+      }
+      info.program = {
+        path: detectPath,
+        version: detectVersion
+      };
+    }
+    return info;
   }
 
   /**
@@ -151,10 +168,10 @@ class AbstractClientEngine {
    * @public
    * @return {SettingsDictionary}
    */
-  async getSettings() {
+  async getSettings({ detect }) {
     const expected = await this.getExpectedSettings();
-    const detected = await this.getDetectedSettings(expected);
-    const automatic = await this.getAutomaticSettings();
+    const detected = await this.getDetectedSettings(expected, detect);
+    const automatic = merge({}, expected, detected);
     // Optimization - apply user overrides only if engine is available
     let user = {};
     const available = await this.isEngineAvailable();
@@ -192,7 +209,7 @@ class AbstractClientEngine {
    */
   async getCurrentSettings() {
     if (!this.currentSettings) {
-      const settings = await this.getSettings();
+      const settings = await this.getSettings({ detect: false });
       this.currentSettings = settings.current;
     }
     return this.currentSettings;
@@ -311,6 +328,8 @@ class AbstractClientEngine {
       if (program.success) {
         availability.program = true;
       }
+    } else {
+      availability.report.program = "Not checked - engine not available";
     }
     if (availability.program) {
       const api = await this.isApiRunning();
@@ -318,6 +337,8 @@ class AbstractClientEngine {
       if (api.success) {
         availability.api = true;
       }
+    } else {
+      availability.report.api = "Not checked - program not available";
     }
     availability.all = availability.engine && availability.program && availability.api;
     return availability;
@@ -326,7 +347,7 @@ class AbstractClientEngine {
     // Guard configuration
     const available = await this.isApiAvailable();
     if (!available.success) {
-      this.logger.debug("API is not available - unable to ping", available);
+      this.logger.debug(this.ADAPTER, this.ENGINE, "API is not available - unable to ping", available);
       return available;
     }
     // Test reachability
@@ -338,20 +359,26 @@ class AbstractClientEngine {
     try {
       const response = await driver.get("/_ping");
       result.success = response?.data === "OK";
-      result.details = response?.data || "Api reached";
+      result.details = result.success ? "Api is reachable" : response?.data;
     } catch (error) {
-      result.details = "API is not accessible";
-      this.logger.error("API ping service failed");
+      result.details = "API is not reachable - start manually or connect";
+      this.logger.error(
+        this.ADAPTER,
+        this.ENGINE,
+        "API ping service failed",
+        error.message,
+        error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+      );
     }
     return result;
   }
-  async getConnector() {
+  async getConnector(opts) {
     const connector = {
       id: this.id,
       adapter: this.ADAPTER, // injected by factory
       engine: this.ENGINE,
       availability: await this.getAvailability(),
-      settings: await this.getSettings()
+      settings: await this.getSettings(opts)
     };
     return connector;
   }
@@ -379,13 +406,13 @@ class AbstractClientEngine {
     const { program } = await this.getCurrentSettings();
     const result = await this.runScopedCommand(program.path, ["system", "info", "--format", customFormat || "json"]);
     if (!result.success) {
-      this.logger.error("Unable to get system info", result);
+      this.logger.error(this.ADAPTER, this.ENGINE, "Unable to get system info", result);
       return info;
     }
     try {
       info = result.stdout ? JSON.parse(result.stdout) : info;
     } catch (error) {
-      this.logger.error("Unable to decode system info", error, result);
+      this.logger.error(this.ADAPTER, this.ENGINE, "Unable to decode system info", error, result);
     }
     return info;
   }
@@ -419,11 +446,21 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       }
     };
   }
-  async getDetectedSettings(settings) {
-    const controller = settings.controller.path || this.PROGRAM;
+  async getDetectedSettings(settings, detect) {
+    if (detect) {
+      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache skip");
+    } else {
+      if (this.detectedSettings) {
+        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache hit");
+        return this.detectedSettings;
+      } else {
+        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache miss");
+      }
+    }
+    const controller = settings.controller.path;
     let info = {};
     // controller
-    if (fs.existsSync(settings.controller.path)) {
+    if (controller && fs.existsSync(settings.controller.path)) {
       const detectVersion = await findProgramVersion(
         controller,
         { osType: this.osType },
@@ -432,14 +469,24 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       info.controller = {
         version: detectVersion
       };
+    } else {
+      const detectPath = await findProgramPath(settings.controller.name || this.PROGRAM, { osType: this.osType });
+      let detectVersion;
+      if (detectPath) {
+        detectVersion = await findProgramVersion(settings.controller.path, { osType: this.osType });
+      }
+      info.controller = {
+        path: detectPath,
+        version: detectVersion
+      };
     }
     return info;
   }
 
-  async getSettings() {
+  async getSettings({ detect }) {
     const expected = await this.getExpectedSettings();
-    const detected = await this.getDetectedSettings(expected);
-    const automatic = await this.getAutomaticSettings();
+    const detected = await this.getDetectedSettings(expected, detect);
+    const automatic = merge({}, expected, detected);
     // Optimization - apply user overrides only if engine is available
     let user = {};
     const available = await this.isEngineAvailable();
@@ -553,6 +600,8 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       if (controller.success) {
         availability.controller = true;
       }
+    } else {
+      availability.report.controller = "Not checked - engine not available";
     }
     if (availability.controller) {
       const program = await this.isProgramAvailable();
@@ -560,6 +609,8 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       if (program.success) {
         availability.program = true;
       }
+    } else {
+      availability.report.program = "Not checked - controller not available";
     }
     if (availability.program) {
       const api = await this.isApiRunning();
@@ -567,9 +618,16 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       if (api.success) {
         availability.api = true;
       }
+    } else {
+      availability.report.api = `Not checked - ${availability.report.program}`;
     }
     availability.all = availability.engine && availability.controller && availability.program && availability.api;
     return availability;
+  }
+  async getConnector(opts) {
+    const connector = await super.getConnector(opts);
+    connector.scopes = await this.getControllerScopes();
+    return connector;
   }
   // Executes command inside controller scope
   async getScopedCommand(program, args) {
@@ -587,11 +645,11 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   }
   // Runtime
   async startApi() {
-    this.logger.debug("Start api skipped - not required");
+    this.logger.debug(this.ADAPTER, this.ENGINE, "Start api skipped - not required");
     return true;
   }
   async stopApi() {
-    this.logger.debug("Stop api skipped - not required");
+    this.logger.debug(this.ADAPTER, this.ENGINE, "Stop api skipped - not required");
     return true;
   }
   // Executes command inside controller scope
@@ -609,7 +667,7 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   // Availability
   async isControllerScopeAvailable() {
     const settings = await this.getCurrentSettings();
-    const instances = await getAvailableWSLDistributions(settings.controller.path);
+    const instances = await this.getControllerScopes();
     const target = instances.find((it) => it.Name === settings.controller.scope);
     return !!target;
   }
@@ -644,7 +702,7 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   async startApi(opts) {
     const running = await this.isApiRunning();
     if (running.success) {
-      this.logger.debug("API is already running");
+      this.logger.debug(this.ADAPTER, this.ENGINE, "API is already running");
       return true;
     }
     const settings = await this.getCurrentSettings();
@@ -664,7 +722,7 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   // Availability
   async isControllerScopeAvailable() {
     const settings = await this.getCurrentSettings();
-    const instances = await getAvailableLIMAInstances(settings.controller.path);
+    const instances = await this.getControllerScopes();
     const target = instances.find((it) => it.Name === settings.controller.scope);
     return target.Status === "Running";
   }

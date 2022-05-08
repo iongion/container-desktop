@@ -69,7 +69,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
   useEffect(() => {
     if (pollerCallback.current) {
       isPending.current = true;
-      console.debug("Polling initial");
+      // console.debug("Polling initial");
       pollerCallback.current().finally(() => {
         isPending.current = false;
       });
