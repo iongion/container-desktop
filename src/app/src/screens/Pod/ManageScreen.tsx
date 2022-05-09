@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Pod } from "../../Types";
+import { AppScreenProps, AppScreen, Pod, ApplicationDescriptor } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -94,3 +94,6 @@ Screen.Route = {
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE_ADD
 };
+Screen.isAvailable = (context: ApplicationDescriptor) => {
+  return !context.currentConnector.engine.startsWith("docker");
+}
