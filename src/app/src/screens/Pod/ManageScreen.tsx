@@ -13,7 +13,7 @@ import { pathTo } from "../../Navigator";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
 // module
-import { ActionsMenu } from ".";
+import { ListActionsMenu, ItemActionsMenu } from ".";
 
 import "./ManageScreen.css";
 
@@ -32,7 +32,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader onSearch={onSearchChange} />
+      <AppScreenHeader onSearch={onSearchChange} titleIcon={IconNames.KEY} rightContent={<ListActionsMenu />} />
       <div className="AppScreenContent">
         <HTMLTable condensed striped className="AppDataTable" data-table="pods">
           <thead>
@@ -52,11 +52,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   className="PodDetailsButton"
                   minimal
                   small
-                  href={pathTo(`/screens/pod/${encodeURIComponent(pod.Id)}/inspect`)}
+                  href={pathTo(`/screens/pod/${encodeURIComponent(pod.Id)}/processes`)}
                   text={pod.Name}
                   intent={Intent.PRIMARY}
                   icon={IconNames.CUBE_ADD}
-                  title={t("Pod inspect")}
+                  title={t("Pod processes")}
                 />
               );
               const creationDate = typeof pod.Created === "string" ? dayjs(pod.Created) : dayjs(Number(pod.Created) * 1000);
@@ -74,7 +74,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <td>{pod.Id.substring(0, 12)}</td>
                   <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                   <td>
-                    <ActionsMenu pod={pod} />
+                    <ItemActionsMenu pod={pod} />
                   </td>
                 </tr>
               );

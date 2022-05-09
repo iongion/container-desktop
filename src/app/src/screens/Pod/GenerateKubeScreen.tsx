@@ -8,10 +8,10 @@ import { CodeEditor } from "../../components/CodeEditor";
 
 import { useStoreActions } from "../../domain/types";
 
-import "./InspectScreen.css";
+import "./ProcessesScreen.css";
 import { Spinner } from "@blueprintjs/core";
 
-export const ID = "pod.inspect";
+export const ID = "pod.kube";
 
 interface ScreenProps extends AppScreenProps {}
 
@@ -26,11 +26,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const pod = await podFetch({
-          Id: id
+          Id: id,
+          WithKube: true,
         });
         setPod(pod);
       } catch (error) {
-        console.error("Unable to fetch at this moment", error);
+        console.error("Unable to generate at this moment", error);
       } finally {
         setPending(false);
       }
@@ -42,7 +43,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <>
       <ScreenHeader pod={pod} currentScreen={ID} />
       <div className="AppScreenContent">
-        <CodeEditor value={`${JSON.stringify(pod?.Processes || {}, null, 2)}`} mode="json" />
+        <CodeEditor value={`${pod?.Kube}`} mode="yaml" />
       </div>
     </>
   );
@@ -55,11 +56,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Pod Inspect";
+Screen.Title = "Pod kube";
 Screen.Route = {
-  Path: `/screens/pod/:id/inspect`
+  Path: `/screens/pod/:id/kube`
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.CUBE,
+  LeftIcon: IconNames.LIST_DETAIL_VIEW,
   ExcludeFromSidebar: true
 };

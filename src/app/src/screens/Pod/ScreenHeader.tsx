@@ -4,7 +4,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { Pod } from "../../Types";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 
-import { ActionsMenu } from "./ActionsMenu";
+import { ItemActionsMenu } from "./ActionsMenu";
 
 // Screen header
 
@@ -20,7 +20,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ pod, currentScreen }
       withoutSearch
       titleIcon={IconNames.BOX}
       titleText={pod.Name || pod.Id || ""}
-      rightContent={<ActionsMenu pod={pod} expand isActive={(input) => input === currentScreen} />}
+      rightContent={<ItemActionsMenu pod={pod} expand isActive={(input) => input === currentScreen} />}
     />
   );
 };

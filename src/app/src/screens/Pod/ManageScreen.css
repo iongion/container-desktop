@@ -39,6 +39,10 @@
   display: inline-block;
   border: 1px solid transparent;
 }
+
+[data-table="pods"] .PodState[data-state="Degraded"] {
+  background-color: #611f69;
+}
 [data-table="pods"] .PodState[data-state="Exited"] {
   background-color: #c71700;
 }

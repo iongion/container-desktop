@@ -74,6 +74,14 @@ export const createModel = (registry: AppRegistry): PodsModel => ({
   podFetch: thunk(async (actions, options) =>
     registry.withPending(async () => {
       const pod = await registry.api.getPod(options.Id);
+      if (options.WithProcesses) {
+        const processes = await registry.api.getPodProcesses(options.Id);
+        pod.Processes = processes;
+      }
+      if (options.WithKube) {
+        const kube = await registry.api.generateKube({ entityId: options.Id });
+        pod.Kube = kube;
+      }
       actions.podUpdate(pod);
       return pod;
     })

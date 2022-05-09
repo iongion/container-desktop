@@ -566,6 +566,10 @@ export enum PodStatusList {
 }
 
 export interface PodContainer {}
+export interface PodProcess {
+  Processes: string[];
+  Titles: string[];
+}
 export interface Pod {
   Cgroup: string;
   Created: string;
@@ -579,6 +583,9 @@ export interface Pod {
   Pid: string;
   NumContainers: number;
   Containers: PodContainer[];
+  // computed
+  Processes: PodProcess;
+  Kube?: string;
 }
 
 // Application types

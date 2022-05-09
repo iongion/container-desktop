@@ -25,6 +25,7 @@ import {
   SystemResetReport,
   Machine,
   Pod,
+  PodProcess,
   //
   ContainerStateList,
   TestResult,
@@ -35,7 +36,7 @@ import {
 } from "./Types";
 
 import { Native } from "./Native";
-import { FindProgramOptions } from "./domain/types";
+import { FindProgramOptions, GenerateKubeOptions } from "./domain/types";
 
 export interface FetchDomainOptions {}
 
@@ -92,6 +93,8 @@ export interface CreateMachineOptions {}
 
 export interface FetchPodOptions {
   Id: string;
+  WithProcesses?: boolean;
+  WithKube?: boolean;
 }
 export interface CreatePodOptions {
   Name: string;
@@ -143,8 +146,13 @@ export const coerceImage = (image: ContainerImage) => {
 };
 
 export const coercePod = (pod: Pod) => {
+  pod.Processes = {
+    Processes: [],
+    Titles: []
+  };
   return pod;
 }
+
 
 interface ApiDriverConfig<D> {
   timeout?: number;
@@ -648,6 +656,12 @@ export class ContainerClient {
       return item;
     });
   }
+  async getPodProcesses(Id: string) {
+    return this.withResult<PodProcess>(async () => {
+      const result = await this.dataApiDriver.get<PodProcess>(`/pods/${Id}/top`);
+      return result.data
+    });
+  }
   async createPod(opts: CreatePodOptions) {
     return this.withResult<{ created: boolean; started: boolean; }>(async () => {
       const creator = {
@@ -723,6 +737,17 @@ export class ContainerClient {
     return this.withResult<SystemResetReport>(async () => {
       const reply = await Native.getInstance().proxyService<SystemResetReport>({
         method: "resetSystem"
+      });
+      return reply.result;
+    });
+  }
+
+  // Generators
+  async generateKube(opts: GenerateKubeOptions) {
+    return this.withResult<string>(async () => {
+      const reply = await Native.getInstance().proxyService<string>({
+        method: "generateKube",
+        params: opts
       });
       return reply.result;
     });

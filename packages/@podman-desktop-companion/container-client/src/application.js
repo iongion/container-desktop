@@ -495,6 +495,24 @@ class Application {
     }
     return output.success;
   }
+
+  async generateKube(opts) {
+    const capable = this.currentEngine.ADAPTER === Podman.Adapter.ADAPTER;
+    if (!capable) {
+      logger.error(
+        "Current engine is not able to generate kube yaml",
+        this.currentEngine.ADAPTER,
+        Podman.Adapter.ADAPTER
+      );
+      return null;
+    }
+    const { program } = await this.currentEngine.getCurrentSettings();
+    const output = await this.currentEngine.runScopedCommand(program.path, ["generate", "kube", opts.entityId]);
+    if (!output.success) {
+      logger.error("Unable to generate kube", opts, output);
+    }
+    return output.stdout;
+  }
 }
 
 module.exports = {

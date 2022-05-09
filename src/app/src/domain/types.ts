@@ -38,6 +38,10 @@ export interface FindProgramOptions {
   scope?: string;
 }
 
+export interface GenerateKubeOptions {
+  entityId: string;
+}
+
 export interface AppModel extends AppModelState {
   // actions
   setPhase: Action<AppModel, AppBootstrapPhase>;
@@ -60,6 +64,8 @@ export interface AppModel extends AppModelState {
   testApiReachability: Thunk<AppModel, EngineApiOptions>;
 
   findProgram: Thunk<AppModel, FindProgramOptions>;
+
+  generateKube: Thunk<AppModel, GenerateKubeOptions>;
 }
 
 export type AppStore = Store<AppModel, EasyPeasyConfig<object | undefined, object>>;

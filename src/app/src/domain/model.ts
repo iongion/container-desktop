@@ -168,6 +168,17 @@ export const createModel = (registry: AppRegistry): AppModel => {
         }
       });
     }),
+    // Generators
+    generateKube: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const program = await registry.api.generateKube(options);
+          return program;
+        } catch (error) {
+          console.error("Error during connection string test", error);
+        }
+      });
+    }),
   };
   return model;
 };

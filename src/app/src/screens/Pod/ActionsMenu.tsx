@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { AnchorButton, ButtonGroup, MenuItem, Intent } from "@blueprintjs/core";
+import { AnchorButton, ButtonGroup, MenuItem, Intent, Button } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
@@ -11,9 +11,13 @@ import { goToScreen } from "../../Navigator";
 
 import { useStoreActions } from "../../domain/types";
 import { getPodUrl } from "./Navigation";
+import { CreateDrawer } from "./CreateDrawer";
 
 // Actions menu
-interface ActionsMenuProps {
+interface ListActionsMenuProps {
+  withoutCreate?: boolean;
+}
+interface ItemActionsMenuProps {
   pod: Pod;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
@@ -26,7 +30,7 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ pod, expand, isActive }) => {
+export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, isActive }) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const podFetch = useStoreActions((actions) => actions.pod.podFetch);
@@ -105,16 +109,32 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ pod, expand, isActive 
     <>
       <AnchorButton
         minimal
+        active={isActive ? isActive("pod.processes") : false}
+        icon={IconNames.LIST_DETAIL_VIEW}
+        text={t("Processes")}
+        href={getPodUrl(pod.Id, "processes")}
+      />
+      <AnchorButton
+        minimal
         active={isActive ? isActive("pod.inspect") : false}
         icon={IconNames.EYE_OPEN}
         text={t("Inspect")}
         href={getPodUrl(pod.Id, "inspect")}
       />
+      <AnchorButton
+        minimal
+        active={isActive ? isActive("pod.kube") : false}
+        icon={IconNames.TEXT_HIGHLIGHT}
+        text={t("Kube")}
+        href={getPodUrl(pod.Id, "kube")}
+      />
     </>
   ) : undefined;
   const expandAsMenuItems = expand ? undefined : (
     <>
+      <MenuItem icon={IconNames.EYE_OPEN} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect")} />
+      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getPodUrl(pod.Id, "kube")} />
     </>
   );
 
@@ -127,35 +147,59 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ pod, expand, isActive 
   const canRestart = !isPaused;
 
   return (
-    <ButtonGroup>
-      {expandAsButtons}
-      <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"}>
-        {expandAsMenuItems}
-        <MenuItem
-          data-pod={pod.Id}
-          data-action={isPaused ? "pod.unpause" : "pod.pause"}
-          disabled={!canPauseUnpause}
-          icon={IconNames.PAUSE}
-          text={isPaused ? t("Resume") : t("Pause")}
-          onClick={onActionClick}
-        />
-        <MenuItem
-          data-pod={pod.Id}
-          data-action="pod.stop"
-          disabled={!canStop}
-          icon={IconNames.STOP}
-          text={t("Stop")}
-          onClick={onActionClick}
-        />
-        <MenuItem
-          data-pod={pod.Id}
-          data-action="pod.restart"
-          disabled={!canRestart}
-          icon={IconNames.RESET}
-          text={t("Restart")}
-          onClick={onActionClick}
-        />
-      </ConfirmMenu>
-    </ButtonGroup>
+    <>
+      <ButtonGroup>
+        {expandAsButtons}
+        <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"}>
+          {expandAsMenuItems}
+          <MenuItem
+            data-pod={pod.Id}
+            data-action={isPaused ? "pod.unpause" : "pod.pause"}
+            disabled={!canPauseUnpause}
+            icon={IconNames.PAUSE}
+            text={isPaused ? t("Resume") : t("Pause")}
+            onClick={onActionClick}
+          />
+          <MenuItem
+            data-pod={pod.Id}
+            data-action="pod.stop"
+            disabled={!canStop}
+            icon={IconNames.STOP}
+            text={t("Stop")}
+            onClick={onActionClick}
+          />
+          <MenuItem
+            data-pod={pod.Id}
+            data-action="pod.restart"
+            disabled={!canRestart}
+            icon={IconNames.RESET}
+            text={t("Restart")}
+            onClick={onActionClick}
+          />
+        </ConfirmMenu>
+      </ButtonGroup>
+    </>
+  );
+};
+
+export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate }) => {
+  const { t } = useTranslation();
+  const [withCreate, setWithCreate] = useState(false);
+  const onCreateClick = useCallback(() => {
+    setWithCreate(true);
+  }, []);
+  const onCreateSecretClose = useCallback(() => {
+    setWithCreate(false);
+  }, []);
+  const startButton = withoutCreate ? null : (
+    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+  );
+  return (
+    <>
+      <ButtonGroup>
+        {startButton}
+      </ButtonGroup>
+      {withCreate && <CreateDrawer onClose={onCreateSecretClose} />}
+    </>
   );
 };

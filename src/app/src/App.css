@@ -30,6 +30,10 @@
   padding: 10px;
   flex-direction: column;
 }
+.AppScreen[data-pending="yes"] {
+  align-items: center;
+  justify-content: center;
+}
 .AppScreenContent {
   display: flex;
   flex: 1;

@@ -8,10 +8,10 @@ import { CodeEditor } from "../../components/CodeEditor";
 
 import { useStoreActions } from "../../domain/types";
 
-import "./InspectScreen.css";
+import "./ProcessesScreen.css";
 import { Spinner } from "@blueprintjs/core";
 
-export const ID = "pod.inspect";
+export const ID = "pod.processes";
 
 interface ScreenProps extends AppScreenProps {}
 
@@ -26,7 +26,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const pod = await podFetch({
-          Id: id
+          Id: id,
+          WithProcesses: true
         });
         setPod(pod);
       } catch (error) {
@@ -55,11 +56,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Pod Inspect";
+Screen.Title = "Pod processes";
 Screen.Route = {
-  Path: `/screens/pod/:id/inspect`
+  Path: `/screens/pod/:id/processes`
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.CUBE,
+  LeftIcon: IconNames.LIST_DETAIL_VIEW,
   ExcludeFromSidebar: true
 };
