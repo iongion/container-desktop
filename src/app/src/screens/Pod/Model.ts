@@ -74,13 +74,13 @@ export const createModel = (registry: AppRegistry): PodsModel => ({
   podFetch: thunk(async (actions, options) =>
     registry.withPending(async () => {
       const pod = await registry.api.getPod(options.Id);
-      if (options.WithProcesses) {
+      if (options.withProcesses) {
         const processes = await registry.api.getPodProcesses(options.Id);
         pod.Processes = processes;
       }
-      if (options.WithKube) {
-        const kube = await registry.api.generateKube({ entityId: options.Id });
-        pod.Kube = kube;
+      if (options.withKube) {
+        const generation = await registry.api.generateKube({ entityId: options.Id });
+        pod.Kube = generation.success ? generation.stdout : "";
       }
       actions.podUpdate(pod);
       return pod;

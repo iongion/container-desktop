@@ -44,7 +44,7 @@
   background-color: #611f69;
 }
 [data-table="pods"] .PodState[data-state="Exited"] {
-  background-color: #c71700;
+  background-color: #8b104c;
 }
 [data-table="pods"] .PodState[data-state="Running"] {
   color: #60ff45;

@@ -507,11 +507,11 @@ class Application {
       return null;
     }
     const { program } = await this.currentEngine.getCurrentSettings();
-    const output = await this.currentEngine.runScopedCommand(program.path, ["generate", "kube", opts.entityId]);
-    if (!output.success) {
-      logger.error("Unable to generate kube", opts, output);
+    const result = await this.currentEngine.runScopedCommand(program.path, ["generate", "kube", opts.entityId]);
+    if (!result.success) {
+      logger.error("Unable to generate kube", opts, result);
     }
-    return output.stdout;
+    return result;
   }
 }
 

@@ -9,7 +9,7 @@ import { ItemActionsMenu } from "./ActionsMenu";
 // Screen header
 
 interface ScreenHeaderProps {
-  pod: Pod;
+  pod?: Pod;
   currentScreen: string;
 }
 
@@ -18,9 +18,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ pod, currentScreen }
     <AppScreenHeader
       withBack
       withoutSearch
-      titleIcon={IconNames.BOX}
-      titleText={pod.Name || pod.Id || ""}
-      rightContent={<ItemActionsMenu pod={pod} expand isActive={(input) => input === currentScreen} />}
+      titleIcon={IconNames.CUBE_ADD}
+      titleText={pod?.Name || pod?.Id || ""}
+      rightContent={pod ? <ItemActionsMenu pod={pod} expand isActive={(input) => input === currentScreen} /> : undefined}
     />
   );
 };

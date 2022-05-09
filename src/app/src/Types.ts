@@ -222,6 +222,15 @@ export interface Program {
   homepage?: string;
 }
 
+export interface ProgramExecutionResult {
+  pid: number;
+  success: boolean;
+  stdout?: string;
+  stderr?: string;
+  command: string;
+  code: number;
+}
+
 export interface Controller {
   path?: string;
   version?: string;
@@ -415,6 +424,7 @@ export interface Container {
   //
   NetworkSettings?: ContainerNetworkSettings;
   DecodedState: ContainerStateList;
+  Kube?: string;
 }
 
 export interface ContainerImageHistory {
@@ -566,7 +576,7 @@ export enum PodStatusList {
 }
 
 export interface PodContainer {}
-export interface PodProcess {
+export interface PodProcessReport {
   Processes: string[];
   Titles: string[];
 }
@@ -584,7 +594,7 @@ export interface Pod {
   NumContainers: number;
   Containers: PodContainer[];
   // computed
-  Processes: PodProcess;
+  Processes: PodProcessReport;
   Kube?: string;
 }
 

@@ -27,6 +27,7 @@ import { Screen as ContainersScreen } from "./screens/Container/ManageScreen";
 import { Screen as ContainerLogsScreen } from "./screens/Container/LogsScreen";
 import { Screen as ContainerInspectScreen } from "./screens/Container/InspectScreen";
 import { Screen as ContainerStatsScreen } from "./screens/Container/StatsScreen";
+import { Screen as ContainerGenerateKubeScreen } from "./screens/Container/GenerateKubeScreen";
 import { Screen as ContainerTerminalScreen } from "./screens/Container/TerminalScreen";
 import { Screen as ImagesScreen } from "./screens/Image/ManageScreen";
 import { Screen as ImageLayersScreen } from "./screens/Image/LayersScreen";
@@ -50,6 +51,7 @@ const Screens = [
   ContainerLogsScreen,
   ContainerInspectScreen,
   ContainerStatsScreen,
+  ContainerGenerateKubeScreen,
   ContainerTerminalScreen,
   ImagesScreen,
   ImageLayersScreen,

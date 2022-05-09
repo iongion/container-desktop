@@ -8,7 +8,7 @@ import { CodeEditor } from "../../components/CodeEditor";
 
 import { useStoreActions } from "../../domain/types";
 
-import "./ProcessesScreen.css";
+import "./GenerateKubeScreen.css";
 import { Spinner } from "@blueprintjs/core";
 
 export const ID = "pod.kube";
@@ -27,7 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setPending(true);
         const pod = await podFetch({
           Id: id,
-          WithKube: true,
+          withKube: true,
         });
         setPod(pod);
       } catch (error) {
@@ -38,7 +38,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     })();
   }, [podFetch, id]);
 
-  const loading = (pending || !pod);
+  const loading = pending;
   const contents = loading ? <Spinner /> : (
     <>
       <ScreenHeader pod={pod} currentScreen={ID} />
@@ -61,6 +61,6 @@ Screen.Route = {
   Path: `/screens/pod/:id/kube`
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.LIST_DETAIL_VIEW,
+  LeftIcon: IconNames.TEXT_HIGHLIGHT,
   ExcludeFromSidebar: true
 };

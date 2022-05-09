@@ -105,12 +105,15 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
     [performActionCommand]
   );
 
+  const isKubeDisabled = pod.Containers.length <= 1;
+  const kubeTitle = isKubeDisabled ? t("Unable to generate kube - pod only has an infra container") : "";
+
   const expandAsButtons = expand ? (
     <>
       <AnchorButton
         minimal
         active={isActive ? isActive("pod.processes") : false}
-        icon={IconNames.LIST_DETAIL_VIEW}
+        icon={IconNames.LIST}
         text={t("Processes")}
         href={getPodUrl(pod.Id, "processes")}
       />
@@ -123,18 +126,20 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
       />
       <AnchorButton
         minimal
+        disabled={isKubeDisabled}
         active={isActive ? isActive("pod.kube") : false}
         icon={IconNames.TEXT_HIGHLIGHT}
         text={t("Kube")}
         href={getPodUrl(pod.Id, "kube")}
+        title={kubeTitle}
       />
     </>
   ) : undefined;
   const expandAsMenuItems = expand ? undefined : (
     <>
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
+      <MenuItem icon={IconNames.LIST} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect")} />
-      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getPodUrl(pod.Id, "kube")} />
+      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getPodUrl(pod.Id, "kube")} disabled={isKubeDisabled} title={kubeTitle} />
     </>
   );
 

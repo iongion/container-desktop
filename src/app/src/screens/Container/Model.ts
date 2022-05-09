@@ -89,6 +89,10 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
       }
       const container = await registry.api.getContainer(options.Id);
       const hydrated: Container = { ...container, Logs: logs, Stats: stats };
+      if (options.withKube) {
+        const generation = await registry.api.generateKube({ entityId: options.Id });
+        hydrated.Kube = generation.success ? generation.stdout : "";
+      }
       actions.containerUpdate(hydrated);
       return hydrated;
     })

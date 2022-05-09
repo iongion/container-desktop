@@ -25,11 +25,12 @@ import {
   SystemResetReport,
   Machine,
   Pod,
-  PodProcess,
+  PodProcessReport,
   //
   ContainerStateList,
   TestResult,
   Program,
+  ProgramExecutionResult,
   ConnectOptions,
   EngineApiOptions,
   EngineProgramOptions
@@ -43,6 +44,7 @@ export interface FetchDomainOptions {}
 export interface FetchImageOptions {
   Id: string;
   withHistory?: boolean;
+  withKube?: boolean;
 }
 
 export interface PushImageOptions {
@@ -54,6 +56,7 @@ export interface FetchContainerOptions {
   Id: string;
   withLogs?: boolean;
   withStats?: boolean;
+  withKube?: boolean;
 }
 
 export interface FetchVolumeOptions {
@@ -93,8 +96,8 @@ export interface CreateMachineOptions {}
 
 export interface FetchPodOptions {
   Id: string;
-  WithProcesses?: boolean;
-  WithKube?: boolean;
+  withProcesses?: boolean;
+  withKube?: boolean;
 }
 export interface CreatePodOptions {
   Name: string;
@@ -657,9 +660,15 @@ export class ContainerClient {
     });
   }
   async getPodProcesses(Id: string) {
-    return this.withResult<PodProcess>(async () => {
-      const result = await this.dataApiDriver.get<PodProcess>(`/pods/${Id}/top`);
-      return result.data
+    return this.withResult<PodProcessReport>(async () => {
+      const result = await this.dataApiDriver.get<PodProcessReport>(`/pods/${Id}/top`);
+      if (!result.data) {
+        return {
+          Processes: [],
+          Titles: []
+        };
+      }
+      return result.data;
     });
   }
   async createPod(opts: CreatePodOptions) {
@@ -744,11 +753,12 @@ export class ContainerClient {
 
   // Generators
   async generateKube(opts: GenerateKubeOptions) {
-    return this.withResult<string>(async () => {
-      const reply = await Native.getInstance().proxyService<string>({
+    return this.withResult<ProgramExecutionResult>(async () => {
+      const reply = await Native.getInstance().proxyService<ProgramExecutionResult>({
         method: "generateKube",
         params: opts
       });
+      console.debug(reply);
       return reply.result;
     });
   }

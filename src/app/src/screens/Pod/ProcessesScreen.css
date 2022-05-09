@@ -1,0 +1,30 @@
+.AppDataTable[data-table="pod.processes"] tr th[data-column="COMMAND"],
+.AppDataTable[data-table="pod.processes"] tr td[data-column="COMMAND"] {
+  width: 100% !important;
+  text-align: left;
+}
+.AppDataTable[data-table="pod.processes"] tr td[data-column="COMMAND"] code {
+  position: absolute;
+  width: 100%;
+  border: 1px solid #111;
+  background-color: #333;
+  color: #ccc;
+  display: inline-block;
+  padding: 4px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.CommandColumn {
+  position: relative;
+  width: calc(100% - 40px);
+  min-height: 25px;
+}
+.CommandColumn button[data-action="copy.to.clipboard"] {
+  position: absolute;
+  right: -30px;
+}
