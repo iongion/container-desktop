@@ -1,5 +1,6 @@
-const os = require("os");
 const fs = require("fs");
+const net = require("net");
+const os = require("os");
 const path = require("path");
 // vendors
 const merge = require("lodash.merge");
@@ -363,7 +364,7 @@ class AbstractClientEngine {
     };
     const driver = await this.getApiDriver();
     try {
-      const response = await driver.get("/_ping");
+      const response = await driver.request({ method: "GET", url: "/_ping" });
       result.success = response?.data === "OK";
       result.details = result.success ? "Api is reachable" : response?.data;
     } catch (error) {
@@ -699,6 +700,79 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
 }
 
 class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
+  async createApiDriver(config) {
+    return {
+      request: async (request) => {
+        const response = await new Promise((resolve, reject) => {
+          // Create Windows Named Pipe server
+          const PIPE_NAME = `request-guid-${Math.random()}`;
+          const PIPE_PATH = "\\\\.\\pipe\\" + PIPE_NAME;
+          let response;
+          let lastError;
+          let complete = false;
+          const server = net.createServer((stream) => {
+            stream.on("data", async (c) => {
+              const data = c.toString();
+              if (complete) {
+                this.logger.debug("Relaying already handled", data);
+                return;
+              }
+              complete = true;
+              this.logger.debug("Relaying request to native unix socket", config.socketPath, data);
+              if (data) {
+                try {
+                  const result = await this.runScopedCommand("printf", [
+                    data,
+                    "|",
+                    "socat",
+                    `UNIX-CONNECT:${config.socketPath}`,
+                    "-"
+                  ]);
+                  this.logger.debug("Relaying response back to named pipe", result);
+                  const output = result.success ? result.stdout : result.stderr;
+                  stream.write(output);
+                } catch (error) {
+                  this.logger.error(this.ENGINE, "Native communication error", error);
+                } finally {
+                  stream.end();
+                }
+              }
+            });
+            stream.on("end", () => {
+              server.close();
+              if (lastError) {
+                reject(lastError);
+              } else {
+                resolve(response);
+              }
+            });
+          });
+          server.listen(PIPE_PATH, async () => {
+            // Make actual request to the temporary socket server created above
+            this.logger.debug("Issuing request to windows named pipe server", PIPE_PATH);
+            const actual = { ...config, socketPath: PIPE_PATH };
+            const driver = createApiDriver(actual);
+            try {
+              response = await driver.request(request);
+              this.logger.debug("Response received", response.status, response.data);
+            } catch (error) {
+              lastError = error;
+              this.logger.error(this.ENGINE, "Request invocation error", error.message, error.response?.status);
+            }
+          });
+        });
+        return response;
+      }
+    };
+  }
+
+  async getApiDriver(userConfig) {
+    const settings = await this.getCurrentSettings();
+    const config = userConfig || (await getApiConfig(settings.api.baseURL, settings.api.connectionString));
+    const apiDriver = await this.createApiDriver(config);
+    return apiDriver;
+  }
+
   // Helpers
   async getConnectionString(scope) {
     return `//./pipe/podman-desktop-companion-${this.PROGRAM}-${scope}`;

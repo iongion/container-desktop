@@ -378,12 +378,18 @@ class Application {
   }
 
   async testApiReachability(opts) {
+    const engine = this.engines.find((it) => it.id === opts.id);
+    if (!engine) {
+      this.logger.error("Unable to find a matching engine", opts.id);
+      throw new Error("Find failed - no engine");
+    }
+
     const result = { success: false };
-    const config = await getApiConfig(opts.baseURL, opts.connectionString);
+    const config = getApiConfig(opts.baseURL, opts.connectionString);
     this.logger.debug("Testing if API is reachable", config);
-    const driver = await createApiDriver(config);
+    const driver = await engine.getApiDriver(config);
     try {
-      const response = await driver.get("/_ping");
+      const response = await driver.request({ method: "GET", url: "/_ping" });
       result.success = response?.data === "OK";
       result.details = response?.data || "Api reached";
     } catch (error) {
