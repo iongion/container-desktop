@@ -16,7 +16,8 @@
     "@podman-desktop-companion/user-settings": "file:../user-settings",
     "@podman-desktop-companion/utils": "file:../utils",
     "axios": "^0.25.0",
-    "lodash.merge": "^4.6.2"
+    "lodash.merge": "^4.6.2",
+    "uuid": "^8.3.2"
   },
   "engines": {
     "node": "~16"

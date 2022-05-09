@@ -3,7 +3,6 @@ const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 const userSettings = require("@podman-desktop-companion/user-settings");
 // module
 const { getAvailablePodmanMachines } = require("../shared");

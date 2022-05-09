@@ -4,6 +4,7 @@ const os = require("os");
 const path = require("path");
 // vendors
 const merge = require("lodash.merge");
+const { v4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
@@ -704,7 +705,7 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
       request: async (request) => {
         const response = await new Promise((resolve, reject) => {
           // Create Windows Named Pipe server
-          const PIPE_NAME = `request-guid-${Math.random()}`;
+          const PIPE_NAME = `request-guid-${v4()}`;
           const PIPE_PATH = "\\\\.\\pipe\\" + PIPE_NAME;
           let response;
           let lastError;
