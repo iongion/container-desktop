@@ -24,6 +24,7 @@ import {
   SystemPruneReport,
   SystemResetReport,
   Machine,
+  Pod,
   //
   ContainerStateList,
   TestResult,
@@ -89,6 +90,14 @@ export interface FetchMachineOptions {
 }
 export interface CreateMachineOptions {}
 
+export interface FetchPodOptions {
+  Id: string;
+}
+export interface CreatePodOptions {
+  Name: string;
+  Start?: boolean;
+}
+
 export interface InvocationOptions<T = unknown> {
   method: string;
   params?: T;
@@ -132,6 +141,10 @@ export const coerceImage = (image: ContainerImage) => {
   image.History = [];
   return image;
 };
+
+export const coercePod = (pod: Pod) => {
+  return pod;
+}
 
 interface ApiDriverConfig<D> {
   timeout?: number;
@@ -182,7 +195,6 @@ export class ContainerClient {
   setEngine(engine: string) {
     this.engine = engine;
   }
-
   getEngine() {
     return this.engine;
   }
@@ -563,15 +575,6 @@ export class ContainerClient {
       return reply.result;
     });
   }
-  async restartMachine(Name: string) {
-    return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "restartMachine",
-        params: { Name }
-      });
-      return reply.result;
-    });
-  }
   async getMachine(Name: string) {
     return this.withResult<Machine>(async () => {
       const reply = await Native.getInstance().proxyService<Machine>({
@@ -608,6 +611,15 @@ export class ContainerClient {
       return reply.result;
     });
   }
+  async restartMachine(Name: string) {
+    return this.withResult<boolean>(async () => {
+      const reply = await Native.getInstance().proxyService<boolean>({
+        method: "restartMachine",
+        params: { Name }
+      });
+      return reply.result;
+    });
+  }
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
@@ -615,6 +627,94 @@ export class ContainerClient {
         params: { Name }
       });
       return reply.result;
+    });
+  }
+
+  // Pods
+  async getPods() {
+    return this.withResult<Pod[]>(async () => {
+      const result = await this.dataApiDriver.get<Pod[]>("/pods/json", {
+        params: {
+          all: true
+        }
+      });
+      return result.ok ? result.data.map((it) => coercePod(it)) : [];
+    });
+  }
+  async getPod(Id: string) {
+    return this.withResult<Pod>(async () => {
+      const result = await this.dataApiDriver.get<Pod>(`/pods/${Id}/json`);
+      const item = coercePod(result.data);
+      return item;
+    });
+  }
+  async createPod(opts: CreatePodOptions) {
+    return this.withResult<{ created: boolean; started: boolean; }>(async () => {
+      const creator = {
+        name: opts.Name,
+      };
+      let url = "/pods/create";
+      if (opts.Name) {
+        const searchParams = new URLSearchParams();
+        searchParams.set("name", opts.Name)
+        url = `${url}?${searchParams.toString()}`;
+      }
+      const createResult = await this.dataApiDriver.post<{ Id: string }>(url, creator);
+      const create = { created: false, started: false };
+      if (createResult.ok) {
+        create.created = true;
+        if (opts.Start) {
+          const { Id } = createResult.data;
+          const startResult = await this.dataApiDriver.post(`/pods/${Id}/start`);
+          if (startResult.ok) {
+            create.started = true;
+          }
+        } else {
+          create.started = false;
+        }
+      }
+      return create;
+    });
+  }
+  async removePod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.delete<boolean>(`/pods/${Id}`, {
+        params: {
+          force: true,
+          v: true
+        }
+      });
+      return result.ok;
+    });
+  }
+  async stopPod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/stop`);
+      return result.ok;
+    });
+  }
+  async restartPod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/restart`);
+      return result.ok;
+    });
+  }
+  async pausePod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/pause`);
+      return result.ok;
+    });
+  }
+  async unpausePod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/unpause`);
+      return result.ok;
+    });
+  }
+  async killPod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/kill`);
+      return result.ok;
     });
   }
 
@@ -674,7 +774,6 @@ export class ContainerClient {
       return reply.result;
     });
   }
-
 
   async testEngineProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<TestResult>(async () => {

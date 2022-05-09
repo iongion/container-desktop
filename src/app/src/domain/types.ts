@@ -5,6 +5,7 @@ import { ConnectOptions, ContainerEngine, ApplicationDescriptor, GlobalUserSetti
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
+import { PodsModel } from "../screens/Pod/Model";
 import { MachinesModel } from "../screens/Machine/Model";
 import { VolumesModel } from "../screens/Volume/Model";
 import { SecretsModel } from "../screens/Secret/Model";
@@ -68,7 +69,7 @@ export interface AppStorePendingOperationResult {
   warnings: any[];
 }
 export type AppStorePendingOperation = (store: AppStore) => Promise<any>;
-export type AppStorePendingCallback = (operation: AppStorePendingOperation) => Promise<AppStorePendingOperationResult>;
+export type AppStorePendingCallback = (operation: AppStorePendingOperation) => Promise<any>;
 
 export interface AppRegistry {
   api: ContainerClient;
@@ -85,6 +86,7 @@ export interface DomainModel extends AppModel {
   settings: SettingsModel;
   troubleshoot: TroubleshootModel;
   volume: VolumesModel;
+  pod: PodsModel;
 }
 
 export const { useStoreActions, useStoreDispatch, useStoreState } = createTypedHooks<DomainModel>();

@@ -157,18 +157,26 @@ export class Native {
     try {
       console.debug("[>]", request);
       reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request);
-      if (http || request.method === "/container/engine/request") {
-        reply.success = (reply.result as any)?.ok || false;
+      if (http) {
+        reply.success = (reply.result as any).ok;
       }
       console.debug("[<]", reply);
-    } catch (error) {
-      console.error("Proxy response error", { request, error });
+    } catch (error: any) {
+      console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
+      error.http = !!http;
+      error.result = {
+        result: "Proxy service internal error",
+        success: false,
+        warnings: [],
+      }
       throw error;
     }
-    if (reply.success) {
-      return reply;
+    if (!reply.success) {
+      const error = new Error(http ? "HTTP proxy service error" : "Application proxy service error");
+      (error as any).http = !!http;
+      (error as any).result = reply;
+      throw error;
     }
-    console.error("Proxy reply error", reply);
-    throw new Error((reply.result as any).error);
+    return reply;
   }
 }

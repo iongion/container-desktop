@@ -2,8 +2,10 @@ import { HTMLTable, Icon } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 import { IconNames } from "@blueprintjs/icons";
 
+import dayjs from "dayjs";
+
 // project
-import { AppScreenProps, AppScreen, Machine, ApplicationDescriptor, ContainerEngine } from "../../Types";
+import { AppScreenProps, AppScreen, Machine, ApplicationDescriptor } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -57,8 +59,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <td>{machine.VMType}</td>
                   <td>{machine.Active ? t("Yes") : t("No")}</td>
                   <td>{machine.Running ? t("Yes") : t("No")}</td>
-                  <td>{machine.LastUp}</td>
-                  <td>{machine.Created}</td>
+                  <td>{dayjs(machine.LastUp).format("DD MMM YYYY HH:mm")}</td>
+                  <td>{dayjs(machine.Created).format("DD MMM YYYY HH:mm")}</td>
                   <td>
                     <MachineActionsMenu withoutCreate machine={machine} />
                   </td>

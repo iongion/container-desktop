@@ -31,6 +31,8 @@ import { Screen as ContainerTerminalScreen } from "./screens/Container/TerminalS
 import { Screen as ImagesScreen } from "./screens/Image/ManageScreen";
 import { Screen as ImageLayersScreen } from "./screens/Image/LayersScreen";
 import { Screen as ImageInspectScreen } from "./screens/Image/InspectScreen";
+import { Screen as PodsScreen } from "./screens/Pod/ManageScreen";
+import { Screen as PodInspectScreen } from "./screens/Pod/InspectScreen";
 import { Screen as VolumesScreen } from "./screens/Volume/ManageScreen";
 import { Screen as VolumeInspectScreen } from "./screens/Volume/InspectScreen";
 import { Screen as MachinesScreen } from "./screens/Machine/ManageScreen";
@@ -50,6 +52,8 @@ const Screens = [
   ImagesScreen,
   ImageLayersScreen,
   ImageInspectScreen,
+  PodsScreen,
+  PodInspectScreen,
   MachinesScreen,
   SecretsScreen,
   SecretInspectScreen,

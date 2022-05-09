@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Pods section with list and inspect
 * Multiple container engine support
 * Docker engine support
 * Podman and Docker support for operating modes

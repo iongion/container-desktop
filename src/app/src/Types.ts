@@ -238,8 +238,8 @@ export interface ContainerClientResponse<T = unknown> {
 
 export interface ContainerClientResult<T = unknown> {
   success: boolean;
-  warnings: any[];
   result: T;
+  warnings: any[];
 }
 
 export interface ContainerStats {
@@ -553,6 +553,35 @@ export const MOUNT_ACCESS = [
   { title: "Read only", type: "ro" },
   { title: "Read / Write", type: "rw" }
 ];
+
+export enum PodStatusList {
+  CREATED = "Created",
+  ERROR = "Error",
+  EXITED = "Exited",
+  PAUSED = "Paused",
+  RUNNING = "Running",
+  DEGRADED = "Degraded",
+  STOPPED = "Stopped",
+  DEAD = "Dead",
+}
+
+export interface PodContainer {}
+export interface Pod {
+  Cgroup: string;
+  Created: string;
+  Id: string;
+  InfraId: string;
+  Labels: { [key: string]: string };
+  Name: string;
+  NameSpace: string;
+  Networks: string[];
+  Status: PodStatusList;
+  Pid: string;
+  NumContainers: number;
+  Containers: PodContainer[];
+}
+
+// Application types
 
 export interface AppScreenProps {
   navigator: Navigator;

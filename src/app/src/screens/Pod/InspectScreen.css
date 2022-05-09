@@ -1,0 +1,17 @@
+.PodInspectDisplay {
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.4em;
+}
+[data-table="pod.inspect"] tr td {
+  text-align: left;
+  font-family: monospace;
+}
+[data-table="pod.inspect"] tr td:first-child {
+  width: 50%;
+}
+[data-table="pod.inspect"] [data-table-row="group.name"] td {
+  background: #000;
+  font-family: sans-serif;
+  font-size: 18px;
+}
