@@ -282,7 +282,7 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
     return {
       api: {
         baseURL: API_BASE_URL,
-        connectionString: NATIVE_PODMAN_SOCKET_PATH
+        connectionString: await this.getConnectionString(LIMA_PODMAN_INSTANCE)
       },
       controller: {
         path: LIMA_PATH,

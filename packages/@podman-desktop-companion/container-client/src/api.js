@@ -46,7 +46,7 @@ function createApiDriver(config) {
 function getApiConfig(baseURL, socketPath) {
   const config = {
     timeout: 60000,
-    socketPath,
+    socketPath: socketPath ? socketPath.replace("unix://", "") : socketPath,
     baseURL,
     headers: {
       Accept: "application/json",

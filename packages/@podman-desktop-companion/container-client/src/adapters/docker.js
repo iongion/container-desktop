@@ -195,7 +195,7 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
     return {
       api: {
         baseURL: API_BASE_URL,
-        connectionString: API_BASE_URL
+        connectionString: await this.getConnectionString(LIMA_DOCKER_INSTANCE)
       },
       controller: {
         path: LIMA_PATH,
