@@ -27,13 +27,11 @@ const {
 const PROGRAM = "podman";
 const API_BASE_URL = "http://d/v3.0.0/libpod";
 const PODMAN_MACHINE_DEFAULT = "podman-machine-default";
+const PODMAN_API_SOCKET = `podman-desktop-companion-${PROGRAM}-rest-api.sock`;
 // Native
 const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
 const NATIVE_PODMAN_CLI_VERSION = "4.0.3";
-const NATIVE_PODMAN_SOCKET_PATH = path.join(
-  userSettings.getPath(),
-  `podman-desktop-companion-${PROGRAM}-rest-api.sock`
-);
+const NATIVE_PODMAN_SOCKET_PATH = path.join(userSettings.getPath(), PODMAN_API_SOCKET);
 const NATIVE_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
 const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 // Windows virtualized
@@ -247,7 +245,7 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
     return {
       api: {
         baseURL: API_BASE_URL,
-        connectionString: API_BASE_URL
+        connectionString: `/tmp/${PODMAN_API_SOCKET}`
       },
       controller: {
         path: WSL_PATH,
@@ -261,6 +259,20 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
       }
     };
   }
+
+  // Runtime
+  async startApi(opts) {
+    const running = await this.isApiRunning();
+    if (running.success) {
+      this.logger.debug("API is already running");
+      return true;
+    }
+    const settings = await this.getCurrentSettings();
+    return await this.runner.startApi(opts, {
+      path: settings.program.path,
+      args: ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"]
+    });
+  }
 }
 
 class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA {
@@ -271,7 +283,7 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
     return {
       api: {
         baseURL: API_BASE_URL,
-        connectionString: API_BASE_URL
+        connectionString: NATIVE_PODMAN_SOCKET_PATH
       },
       controller: {
         path: LIMA_PATH,

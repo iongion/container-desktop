@@ -36,7 +36,6 @@ export const createModel = (registry: AppRegistry): ImagesModel => {
     images: [],
     // actions
     setImages: action((state, images) => {
-      console.debug("Update stat images", images);
       state.images = images;
     }),
     update: action((state, image) => {

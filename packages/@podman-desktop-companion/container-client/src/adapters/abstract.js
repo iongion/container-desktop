@@ -580,7 +580,6 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
         user
       )
     };
-    settings.current.api.connectionString = await this.getConnectionString(settings.current.controller.scope);
     return settings;
   }
 
@@ -775,7 +774,7 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
 
   // Helpers
   async getConnectionString(scope) {
-    return `//./pipe/podman-desktop-companion-${this.PROGRAM}-${scope}`;
+    return undefined;
   }
   // Runtime
   async startApi() {

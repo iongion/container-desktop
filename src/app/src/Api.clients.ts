@@ -109,7 +109,6 @@ export const coerceContainer = (container: Container) => {
 };
 
 export const coerceImage = (image: ContainerImage) => {
-  console.debug(">> image", JSON.stringify(image, null, 2));
   let info = "";
   let tag = "";
   let name = "";
@@ -131,7 +130,6 @@ export const coerceImage = (image: ContainerImage) => {
   image.Tag = tag;
   image.Registry = registry || "docker.io";
   image.History = [];
-  console.debug("<< image", JSON.stringify(image, null, 2));
   return image;
 };
 

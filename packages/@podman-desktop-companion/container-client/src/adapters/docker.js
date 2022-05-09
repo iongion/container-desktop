@@ -167,7 +167,7 @@ class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
     return {
       api: {
         baseURL: API_BASE_URL,
-        connectionString: API_BASE_URL
+        connectionString: NATIVE_DOCKER_SOCKET_PATH
       },
       controller: {
         path: WSL_PATH,

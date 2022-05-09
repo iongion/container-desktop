@@ -211,7 +211,7 @@ class Application {
 
   // proxying
 
-  async createApiRequest(opts) {
+  async createApiRequest(opts, driverOpts) {
     const { currentEngine } = this;
     // Normalize response
     let result = {
@@ -226,7 +226,7 @@ class Application {
         this.logger.error("Cannot create api request - no valid client for current engine");
         throw new Error("No valid client for current engine");
       }
-      const driver = await currentEngine.getApiDriver();
+      const driver = await currentEngine.getApiDriver(driverOpts);
       const response = await driver.request(opts);
       result = {
         ok: response.status >= 200 && response.status < 300,
