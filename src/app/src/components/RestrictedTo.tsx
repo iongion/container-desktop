@@ -14,27 +14,54 @@ interface RestrictedToProps {
 export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine, withTitle }) => {
   const { t } = useTranslation();
   const platformsMap: { [key: string]: { icon?: string; title: string; ignore?: boolean } } = {
-    [ContainerEngine.NATIVE]: {
+    // Podman
+    [ContainerEngine.PODMAN_NATIVE]: {
       icon: mdiLinux,
       title: t("Only on Linux"),
       ignore: false
     },
-    [ContainerEngine.SUBSYSTEM_WSL]: {
+    [ContainerEngine.PODMAN_SUBSYSTEM_WSL]: {
       icon: mdiMicrosoftWindows,
       title: t("Only on Microsoft Windows"),
       ignore: false
     },
-    [ContainerEngine.SUBSYSTEM_LIMA]: {
+    [ContainerEngine.PODMAN_SUBSYSTEM_LIMA]: {
       icon: mdiApple,
       title: t("Only on Apple MacOS"),
       ignore: false
     },
-    [ContainerEngine.VIRTUALIZED]: {
+    [ContainerEngine.PODMAN_VIRTUALIZED]: {
       icon: undefined,
       title: "",
       ignore: true
     },
-    [ContainerEngine.REMOTE]: {
+    [ContainerEngine.PODMAN_REMOTE]: {
+      icon: undefined,
+      title: "",
+      ignore: true
+    },
+    // Docker
+    [ContainerEngine.DOCKER_NATIVE]: {
+      icon: mdiLinux,
+      title: t("Only on Linux"),
+      ignore: false
+    },
+    [ContainerEngine.DOCKER_SUBSYSTEM_WSL]: {
+      icon: mdiMicrosoftWindows,
+      title: t("Only on Microsoft Windows"),
+      ignore: false
+    },
+    [ContainerEngine.DOCKER_SUBSYSTEM_LIMA]: {
+      icon: mdiApple,
+      title: t("Only on Apple MacOS"),
+      ignore: false
+    },
+    [ContainerEngine.DOCKER_VIRTUALIZED]: {
+      icon: undefined,
+      title: "",
+      ignore: true
+    },
+    [ContainerEngine.DOCKER_REMOTE]: {
       icon: undefined,
       title: "",
       ignore: true

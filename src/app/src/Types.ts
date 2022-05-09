@@ -3,21 +3,58 @@ import React from "react";
 // project
 import { Platforms } from "./Native";
 
-export interface ConnectOptions {
-  startApi: boolean;
+export interface EngineConnectorSettings {
+  api: {
+    baseURL: string;
+    connectionString: string;
+  };
+  program: Program;
+  controller?: Controller;
+}
+export interface EngineConnectorSettingsMap {
+  expected: EngineConnectorSettings;
+  detected: Partial<EngineConnectorSettings>;
+  automatic: Partial<EngineConnectorSettings>;
+  user: Partial<EngineConnectorSettings>;
+  current: EngineConnectorSettings;
+}
+export interface Connector {
+  id: string;
+  adapter: ContainerAdapter;
+  engine: ContainerEngine;
+  availability: {
+    all: boolean;
+    engine: boolean;
+    api: boolean;
+    program: boolean;
+    controller?: boolean;
+    report: {
+      engine: string;
+      api: string;
+      program: string;
+      controller?: string;
+    }
+  };
+  settings: EngineConnectorSettingsMap;
+  scopes?: ControllerScope[];
 }
 
-export interface UserConfiguration {
-  program: Program;
-  engine: ContainerEngine, // default
-  autoStartApi: boolean;
+export interface ConnectOptions {
+  startApi: boolean;
+  adapter: ContainerAdapter;
+  connector: string;
+}
+
+export interface GlobalUserSettings {
+  startApi: boolean;
   minimizeToSystemTray: boolean;
   path: string;
   logging: {
     level: string;
   };
-  communication: "api" | "cli";
-  socketPath: string;
+  connector: {
+    default: string | undefined;
+  };
 }
 
 export interface TestResult {
@@ -26,13 +63,29 @@ export interface TestResult {
   details?: any;
 }
 
-export interface UserConfigurationOptions {
+export interface GlobalUserSettingsOptions extends GlobalUserSettings {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
-  autoStartApi: boolean;
-  minimizeToSystemTray: boolean;
-  "logging.level": string;
-  communication: "api" | "cli";
+}
+
+export interface EngineUserSettingsOptions {
+  id: string; // engine client instance id
+  settings: Partial<EngineConnectorSettings>;
+}
+
+export interface EngineApiOptions {
+  engine: ContainerEngine;
+  scope: string; // ControllerScope Name
+  id: string; // engine client instance id
+  baseURL: string;
+  connectionString: string;
+}
+
+export interface EngineProgramOptions {
+  engine: ContainerEngine;
+  id: string; // engine client instance id
+  program: Partial<Program>;
+  controller?: Partial<Controller>;
 }
 
 export enum Environments {
@@ -115,27 +168,39 @@ export interface SystemInfo {
   version: SystemVersion;
 }
 
+export enum ContainerAdapter {
+  PODMAN = "podman",
+  DOCKER = "docker",
+}
+
 export enum ContainerEngine {
-  NATIVE = "native",
-  SUBSYSTEM_WSL = "subsystem.wsl",
-  SUBSYSTEM_LIMA = "subsystem.lima",
-  VIRTUALIZED = "virtualized",
-  REMOTE = "remote",
-  DOCKER = "docker"
+  PODMAN_NATIVE = "podman.native",
+  PODMAN_SUBSYSTEM_WSL = "podman.subsystem.wsl",
+  PODMAN_SUBSYSTEM_LIMA = "podman.subsystem.lima",
+  PODMAN_VIRTUALIZED = "podman.virtualized",
+  PODMAN_REMOTE = "podman.remote",
+  // Docker
+  DOCKER_NATIVE = "docker.native",
+  DOCKER_SUBSYSTEM_WSL = "docker.subsystem.wsl",
+  DOCKER_SUBSYSTEM_LIMA = "docker.subsystem.lima",
+  DOCKER_VIRTUALIZED = "docker.virtualized",
+  DOCKER_REMOTE = "docker.remote",
 }
 export interface SystemConnection {
   Identity: string;
   Name: string;
   URI: string;
 }
-export interface SystemEnvironment {
-  machine?: string;
+export interface ApplicationDescriptor {
+  environment: string;
+  version: string;
   platform: Platforms;
-  connections: SystemConnection[];
-  running: boolean;
   provisioned: boolean;
-  system?: SystemInfo;
-  userConfiguration: UserConfiguration;
+  running: boolean;
+  // computed
+  connectors: Connector[];
+  currentConnector: Connector;
+  userSettings: GlobalUserSettings;
 }
 
 export interface SystemPruneReport {
@@ -152,11 +217,25 @@ export interface SystemResetReport {}
 export interface Program {
   name: string;
   path?: string;
-  currentVersion?: string;
-  title: string;
-  homepage: string;
+  version?: string;
+  title?: string;
+  homepage?: string;
 }
 
+export interface ProgramExecutionResult {
+  pid: number;
+  success: boolean;
+  stdout?: string;
+  stderr?: string;
+  command: string;
+  code: number;
+}
+
+export interface Controller {
+  path?: string;
+  version?: string;
+  scope?: string;
+}
 
 export interface ContainerClientResponse<T = unknown> {
   ok: boolean;
@@ -168,8 +247,8 @@ export interface ContainerClientResponse<T = unknown> {
 
 export interface ContainerClientResult<T = unknown> {
   success: boolean;
-  warnings: any[];
   result: T;
+  warnings: any[];
 }
 
 export interface ContainerStats {
@@ -345,6 +424,7 @@ export interface Container {
   //
   NetworkSettings?: ContainerNetworkSettings;
   DecodedState: ContainerStateList;
+  Kube?: string;
 }
 
 export interface ContainerImageHistory {
@@ -365,8 +445,9 @@ export interface ContainerImage {
   Id: string;
   Labels: {
     maintainer: string;
-  };
+  } | null;
   Names: string[];
+  NamesHistory?: string[];
   ParentId: string;
   RepoTags?: string[];
   SharedSize: number;
@@ -386,6 +467,8 @@ export interface ContainerImage {
     StopSignal: string;
     WorkDir: string;
   };
+  // Docker specific
+  RepoDigests?: string[];
 }
 
 export interface Machine {
@@ -396,6 +479,28 @@ export interface Machine {
   VMType: string;
   Created: string;
 }
+
+export interface WSLDistribution {
+  Name: string;
+  State: string;
+  Version: string;
+  Default: boolean;
+  Current: boolean;
+}
+
+
+export interface LIMAInstance {
+  Name: string;
+  Status: string;
+  SSH: string;
+  Arch: string;
+  CPUs: string;
+  Memory: string;
+  Disk: string;
+  Dir: string;
+}
+
+export type ControllerScope = Machine | WSLDistribution | LIMAInstance;
 
 export interface SecretSpecDriverOptionsMap {
   [key: string]: string;
@@ -459,6 +564,42 @@ export const MOUNT_ACCESS = [
   { title: "Read / Write", type: "rw" }
 ];
 
+export enum PodStatusList {
+  CREATED = "Created",
+  ERROR = "Error",
+  EXITED = "Exited",
+  PAUSED = "Paused",
+  RUNNING = "Running",
+  DEGRADED = "Degraded",
+  STOPPED = "Stopped",
+  DEAD = "Dead",
+}
+
+export interface PodContainer {}
+export interface PodProcessReport {
+  Processes: string[];
+  Titles: string[];
+}
+export interface Pod {
+  Cgroup: string;
+  Created: string;
+  Id: string;
+  InfraId: string;
+  Labels: { [key: string]: string };
+  Name: string;
+  NameSpace: string;
+  Networks: string[];
+  Status: PodStatusList;
+  Pid: string;
+  NumContainers: number;
+  Containers: PodContainer[];
+  // computed
+  Processes: PodProcessReport;
+  Kube?: string;
+}
+
+// Application types
+
 export interface AppScreenProps {
   navigator: Navigator;
 }
@@ -477,5 +618,5 @@ export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> 
     Path: string;
   };
   Metadata?: Partial<AppScreenMetadata>;
-  isAvailable?: (context: SystemEnvironment) => boolean;
+  isAvailable?: (context: ApplicationDescriptor) => boolean;
 };

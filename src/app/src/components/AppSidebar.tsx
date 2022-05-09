@@ -17,14 +17,14 @@ interface AppSidebarProps {
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ screens, currentScreen }) => {
   const { t } = useTranslation();
-  const environment = useStoreState((state) => state.environment);
+  const descriptor = useStoreState((state) => state.descriptor);
   const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
   return (
     <div className="AppSidebar">
       <div className="AppSidebarActions">
         <ButtonGroup vertical>
           {sidebarScreens.map((Screen) => {
-            const isDisabled = Screen.isAvailable ? !Screen.isAvailable(environment) : false;
+            const isDisabled = Screen.isAvailable ? !Screen.isAvailable(descriptor) : false;
             return (
               <AnchorButton
                 disabled={isDisabled}

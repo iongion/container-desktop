@@ -47,6 +47,9 @@ export const createModel = (registry: AppRegistry): VolumesModel => ({
   // computed
   volumesSearchByTerm: computed((state) => {
     return (searchTerm: string) => {
+      if (!searchTerm) {
+        return state.volumes;
+      }
       return state.volumes.filter((it) => {
         const haystacks = [it.Name, it.Scope].map((t) => t.toLowerCase());
         const matching = haystacks.find((it) => it.includes(searchTerm));

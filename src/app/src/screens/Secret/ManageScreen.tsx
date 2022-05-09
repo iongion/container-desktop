@@ -5,7 +5,7 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Secret, SystemEnvironment, ContainerEngine } from "../../Types";
+import { AppScreenProps, AppScreen, Secret, ApplicationDescriptor } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -75,6 +75,6 @@ Screen.Route = {
 Screen.Metadata = {
   LeftIcon: IconNames.KEY
 };
-Screen.isAvailable = (context: SystemEnvironment) => {
-  return context.userConfiguration.engine !== ContainerEngine.DOCKER;
+Screen.isAvailable = (context: ApplicationDescriptor) => {
+  return !context.currentConnector.engine.startsWith("docker");
 }

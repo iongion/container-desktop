@@ -19,7 +19,37 @@
   width: 1px;
 }
 [data-table="containers"] .ContainerLayersButton {
-  max-width: 260px;
-  text-overflow: ellipsis;
+  max-width: 240px;
   font-size: 11px;
+}
+[data-table="containers"] .ContainerLayersButton .bp4-button-text {
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: inline-block;
+  white-space: nowrap;
+}
+[data-table="containers"] .ContainerState {
+  border-radius: 6px;
+  padding: 3px;
+  text-align: center;
+  font-size: 11px;
+  min-width: 50px;
+  display: inline-block;
+  border: 1px solid transparent;
+}
+[data-table="containers"] .ContainerState[data-state="exited"] {
+  background-color: #8b104c;
+}
+[data-table="containers"] .ContainerState[data-state="running"] {
+  color: #60ff45;
+}
+[data-table="containers"] .ContainerState[data-state="created"] {
+  color: #00a6ff;
+}
+[data-table="containers"] .ContainerState[data-state="stopped"] {
+  color: #888a83;
+}
+[data-table="containers"] .ContainerState[data-state="paused"] {
+  color: orange;
 }

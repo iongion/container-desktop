@@ -1,9 +1,10 @@
 // vendors
 import { action, thunk } from "easy-peasy";
+import merge from "lodash.merge";
 import produce from "immer";
 // project
-import { ContainerEngine } from "../Types";
 import { Native } from "../Native";
+import { Connector } from "../Types";
 import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types";
 
 export const createModel = (registry: AppRegistry): AppModel => {
@@ -13,23 +14,24 @@ export const createModel = (registry: AppRegistry): AppModel => {
     phase: AppBootstrapPhase.INITIAL,
     pending: false,
     native,
-    environment: {
+    descriptor: {
+      environment: "",
+      version: "",
       platform,
-      system: {} as any,
-      connections: [],
+      connectors: [],
+      currentConnector: {} as any,
       provisioned: false,
       running: false,
-      userConfiguration: {
-        program: {} as any,
-        engine: ContainerEngine.NATIVE, // default
-        autoStartApi: false,
+      userSettings: {
+        startApi: true,
         minimizeToSystemTray: false,
         path: "",
         logging: {
           level: "error"
         },
-        communication: "api",
-        socketPath: ""
+        connector: {
+          default: undefined
+        }
       },
     },
     // Actions
@@ -39,127 +41,141 @@ export const createModel = (registry: AppRegistry): AppModel => {
     setPending: action((state, flag) => {
       state.pending = flag;
     }),
-    setEnvironment: action((state, value) => {
-      state.environment = produce(state.environment, (draft) => {
-        Object.keys(value || {}).forEach(key => {
-          (draft as any)[key] = (value as any)[key];
-        })
+    syncGlobalUserSettings: action((state, values) => {
+      state.descriptor.userSettings = values;
+    }),
+    syncEngineUserSettings: action((state, values) => {
+      state.descriptor.currentConnector.settings.user = merge(state.descriptor.currentConnector.settings.user, values.settings);
+      state.descriptor.connectors = produce(state.descriptor.connectors, (draft: Connector[]) => {
+        const index = draft.findIndex(it => it.id === values.id)
+        if (index !== -1) {
+          draft[index].settings.user = merge(draft[index].settings.user, values.settings);
+        }
       });
     }),
-    domainReset: action((state, { phase, pending }) => {
-      if (phase !== undefined) {
-        state.phase = phase;
-      }
-      if (pending !== undefined) {
-        state.pending = pending;
-      }
-    }),
     domainUpdate: action((state, opts: Partial<AppModelState>) => {
-      const { phase, pending, environment } = opts;
+      console.debug("Update domain", opts);
+      const { phase, pending, descriptor } = opts;
       if (phase !== undefined) {
         state.phase = phase;
       }
       if (pending !== undefined) {
         state.pending = pending;
       }
-      if (environment !== undefined) {
-        state.environment = environment;
+      if (descriptor !== undefined) {
+        state.descriptor = merge(state.descriptor, descriptor);
       }
     }),
     // Thunks
-    start: thunk(async (actions) => {
-      console.debug("Application start");
-      await actions.configure();
-      await actions.connect();
-    }),
-    configure: thunk(async (actions, options, { getState }) => {
-      console.debug("Application configure");
+    start: thunk(async (actions, options) => {
+      let nextPhase = AppBootstrapPhase.STARTING;
       return registry.withPending(async () => {
         try {
-          const configuration = await registry.api.getUserConfiguration();
-          registry.api.setEngine(configuration.engine);
-          await actions.domainUpdate({
-            phase: AppBootstrapPhase.CONFIGURED,
-            environment: {
-              ...getState().environment,
-              userConfiguration: configuration
+          await actions.setPhase(nextPhase);
+          const startup = await registry.api.start(options);
+          if (startup.currentConnector) {
+            registry.api.setEngine(startup.currentConnector.engine);
+            let nextPhase = AppBootstrapPhase.STARTED;
+            if (startup.provisioned) {
+              if (startup.running) {
+                nextPhase = AppBootstrapPhase.READY;
+              } else {
+                nextPhase = AppBootstrapPhase.FAILED;
+              }
+            } else {
+              nextPhase = AppBootstrapPhase.FAILED;
             }
-          });
-          return configuration;
-        } catch (error) {
-          console.error("Error during user configuration reading", error);
-        }
-      });
-    }),
-    connect: thunk(async (actions, options, { getState }) => {
-      if (native) {
-        await Native.getInstance().setup();
-      }
-      const autoStartApi = options === undefined ? getState().environment.userConfiguration.autoStartApi : options.startApi;
-      console.debug("Application connect", { autoStartApi });
-      await actions.setPhase(AppBootstrapPhase.CONNECTING);
-      return registry.withPending(async () => {
-        // check if API is running and do best effort to start it
-        let isRunning = false;
-        if (autoStartApi) {
-          //
-          isRunning = await registry.api.getIsApiRunning();
-          if (isRunning) {
-            console.debug("Connect - startApi - skipped(already running)");
-          } else {
-            console.debug("Connect - startApi - init");
-            isRunning = await registry.api.startApi();
-            console.debug("Connect - startApi - done", { isRunning });
+            await actions.domainUpdate({
+              phase: nextPhase,
+              descriptor: startup
+            });
           }
-        }
-        let nextPhase = AppBootstrapPhase.CONNECTED;
-        const environment = await registry.api.getSystemEnvironment();
-        if (environment.provisioned) {
-          nextPhase = AppBootstrapPhase.READY;
-        } else {
+          return startup;
+        } catch (error) {
+          console.error("Error during application startup", error);
           nextPhase = AppBootstrapPhase.FAILED;
+          await actions.domainUpdate({
+            phase: nextPhase,
+          });
         }
-        registry.api.setEngine(environment.userConfiguration.engine);
-        await actions.domainUpdate({
-          phase: nextPhase,
-          environment
-        });
       });
     }),
-    setUserConfiguration: thunk(async (actions, options, { getState }) => {
+    // Global
+    setGlobalUserSettings: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const currentEngine = getState().environment.userConfiguration.engine;
-          const configuration = await registry.api.setUserConfiguration(options);
-          await actions.setEnvironment({ userConfiguration: configuration });
-          // If engine is changing - reconnect
-          if (options.engine !== undefined && options.engine !== currentEngine) {
-            console.debug("Engine change detected - re-starting", { current: currentEngine, next: options.engine });
-            await actions.start();
-          }
-          return configuration;
+          const userSettings = await registry.api.setGlobalUserSettings(options);
+          await actions.syncGlobalUserSettings(userSettings);
         } catch (error) {
-          console.error("Error during user configuration update", error);
+          // TODO: Notify the user
+          console.error("Error during global user preferences update", error);
         }
       });
     }),
-    getUserConfiguration: thunk(async (actions) => {
+    getGlobalUserSettings: thunk(async (actions) => {
+      return registry.withPending(async () => {
+        // try {
+        //   const configuration = await registry.api.getGlobalUserSettings();
+        //   return configuration;
+        // } catch (error) {
+        //   console.error("Error during user configuration reading", error);
+        // }
+        return {} as any;
+      });
+    }),
+    // Engine
+    setEngineUserSettings: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const configuration = await registry.api.getUserConfiguration();
-          return configuration;
+          const updated = await registry.api.setEngineUserSettings(options.id, options.settings);
+          actions.syncEngineUserSettings(options);
+          console.debug(getState());
+          return updated;
         } catch (error) {
-          console.error("Error during user configuration reading", error);
+          // TODO: Notify the user
+          console.error("Error during engine user preferences update", error);
         }
       });
     }),
-    testSocketPathConnection: thunk(async (actions, options, { getState }) => {
+    // Others
+    testEngineProgramReachability: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const test = await registry.api.testSocketPathConnection(options);
+          const test = await registry.api.testEngineProgramReachability(options);
           return test;
         } catch (error) {
-          console.error("Error during socket path test", error);
+          console.error("Error during program path test", error);
+        }
+      });
+    }),
+    testApiReachability: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const test = await registry.api.testApiReachability(options);
+          return test;
+        } catch (error) {
+          console.error("Error during connection string test", error);
+        }
+      });
+    }),
+    findProgram: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const program = await registry.api.findProgram(options);
+          return program;
+        } catch (error) {
+          console.error("Error during connection string test", error);
+        }
+      });
+    }),
+    // Generators
+    generateKube: thunk(async (actions, options, { getState }) => {
+      return registry.withPending(async () => {
+        try {
+          const program = await registry.api.generateKube(options);
+          return program;
+        } catch (error) {
+          console.error("Error during connection string test", error);
         }
       });
     }),

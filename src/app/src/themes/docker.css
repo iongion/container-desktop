@@ -1,0 +1,47 @@
+body[data-adapter="docker"] {
+  background-color: #030d2a;
+}
+body[data-adapter="docker"] .AppHeader,
+body[data-adapter="docker"] .AppHeader .bp4-navbar {
+  background-color: #030d2a;
+}
+body[data-adapter="docker"] .AppContent {
+  background-color: #0b142f;
+}
+body[data-adapter="docker"] .AppScreenHeader .bp4-navbar {
+  background-color: #1f4374;
+}
+body[data-adapter="docker"] .AppSidebar {
+  background-color: #030d2a;
+}
+body[data-adapter="docker"] .AppSidebarFooter,
+body[data-adapter="docker"] .AppSidebarFooter .bp4-navbar {
+  background-color: #030d2a;
+}
+body[data-adapter="docker"] .AppSettingsFormView[data-form-view="container-engine"] .AppSettingsFormViewFooter {
+  background: #030d2a;
+}
+body[data-adapter="docker"] .AppSettingUserConfigurationPath {
+  background: #030d2a;
+}
+body[data-adapter="docker"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive,
+body[data-adapter="docker"] .AppSettingsForm[data-form="engine.settings"] {
+  background-color: #1f4374;
+}
+body[data-adapter="docker"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
+  color: #6caaff;
+}
+body[data-adapter="docker"] .DashboardContainersReportTable {
+  border-color: #6caaff;
+}
+
+body[data-adapter="docker"] .bp4-popover2-content .bp4-menu {
+  background-color: #030d2a !important;
+}
+body[data-adapter="docker"] .bp4-popover2-arrow-fill {
+  fill: #030d2a !important;
+}
+body[data-adapter="docker"] .AppDrawer {
+  background-color: #0b1942 !important;
+  box-shadow: none;
+}

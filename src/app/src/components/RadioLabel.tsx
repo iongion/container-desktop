@@ -1,8 +1,10 @@
 interface RadioLabelProps {
   text: string;
+  important?: boolean;
   highlight?: boolean;
 }
 
-export const RadioLabel: React.FC<RadioLabelProps> = ({ text, highlight }) => {
-  return <span className="RadioLabel">{highlight ? <strong>{text}</strong> : text}</span>;
+export const RadioLabel: React.FC<RadioLabelProps> = ({ text, important, highlight }) => {
+  const flag = important ? "*" : "";
+  return <span className="RadioLabel">{highlight ? <strong>{text}</strong> : text} {flag}</span>;
 };

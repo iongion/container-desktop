@@ -65,8 +65,10 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
       registry.withPending(async () => {
         let stopped = false;
         if (options.Name) {
-          const result = await registry.api.stopMachine(options.Name);
-          stopped = true;
+          stopped = await registry.api.stopMachine(options.Name);
+          if (stopped) {
+            actions.machineUpdate({ Name: options.Name, Running: false });
+          }
         }
         return stopped;
       })
@@ -117,6 +119,9 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
     ),
     machinesSearchByTerm: computed((state) => {
       return (searchTerm: string) => {
+        if (!searchTerm) {
+          return state.machines;
+        }
         return state.machines.filter((it) => {
           const haystacks = [it.Name, it.VMType].map((t) => t.toLowerCase());
           const matching = haystacks.find((it) => it.includes(searchTerm));

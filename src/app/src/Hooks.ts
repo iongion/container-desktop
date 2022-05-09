@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 // project
 import Environment from "./Environment";
 
@@ -15,11 +15,11 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
   const pollerID = useRef<any>();
   const isPending = useRef<boolean>(false);
   // Allows interval to continue if poller changes over time
-  useLayoutEffect(() => {
+  useEffect(() => {
     pollerCallback.current = poller;
   }, [poller]);
   // Clears old interval if rate changes, allowing new poller to be created
-  useLayoutEffect(() => {
+  useEffect(() => {
     clearInterval(pollerID.current);
   }, [rate]);
   // Poller effect
@@ -42,22 +42,24 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         return pollerCallback.current();
       }
     }
-    pollerID.current = setInterval(async () => {
-      try {
-        // console.debug("Polling cycle started");
-        await poll();
-      } catch (error) {
-        console.error("Polling cycle error, stopping - error must be handled", error);
-        clearInterval(pollerID.current);
-      } finally {
-        isPending.current = false;
-        // console.debug("Poller cycle complete");
-        if (!Environment.features.polling?.enabled) {
-          console.debug("Polling disabled - stopping after first cycle", Environment.features);
+    if (Environment.features.polling?.enabled) {
+      pollerID.current = setInterval(async () => {
+        try {
+          if (isPending.current) {
+            console.debug("Polling cycle skipped");
+          } else {
+            console.debug("Polling cycle started");
+            await poll();
+          }
+        } catch (error) {
+          console.error("Polling cycle error, stopping - error must be handled", error);
           clearInterval(pollerID.current);
+        } finally {
+          isPending.current = false;
+          console.debug("Poller cycle complete");
         }
-      }
-    }, frequency);
+      }, frequency);
+    }
     return () => {
       clearInterval(pollerID.current);
       isPending.current = false;
@@ -67,6 +69,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
   useEffect(() => {
     if (pollerCallback.current) {
       isPending.current = true;
+      // console.debug("Polling initial");
       pollerCallback.current().finally(() => {
         isPending.current = false;
       });

@@ -7,7 +7,7 @@ import "./AppSidebarFooter.css";
 
 export function AppSidebarFooter() {
   const pending = useStoreState((state) => state.pending);
-  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
+  const program = useStoreState((state) => state.descriptor.currentConnector.settings.current.program);
   const pendingIndicatorStyle: React.CSSProperties = {
     visibility: pending ? "visible" : "hidden"
   };
@@ -17,7 +17,7 @@ export function AppSidebarFooter() {
     </div>
   );
   const versionString = `GUI v${PROJECT_VERSION}.${CurrentEnvironment.name[0]}`;
-  const programString = `CLI ${userConfiguration.program.name} ${userConfiguration.program.currentVersion}`;
+  const programString = `CLI ${program.name} ${program.version}`;
   return (
     <div className="AppSidebarFooter">
       <Navbar>
@@ -27,7 +27,7 @@ export function AppSidebarFooter() {
             <span className="AppSidebarProgramString">{programString}</span>
           </NavbarHeading>
         </NavbarGroup>
-        <NavbarGroup align={Alignment.RIGHT}>
+        <NavbarGroup align={Alignment.RIGHT} className="AppSidebarFooterRightColumn">
           {pendingIndicator}
         </NavbarGroup>
       </Navbar>

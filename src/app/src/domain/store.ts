@@ -3,7 +3,7 @@ import { createStore, StoreProvider } from "easy-peasy";
 // project
 import { ContainerClient } from "../Api.clients";
 import { Environments } from "../Types";
-import { AppModel, AppRegistry, AppStore, AppStorePendingOperation, AppStorePendingOperationResult } from "./types";
+import { AppModel, AppRegistry, AppStore, AppStorePendingOperation } from "./types";
 // domain
 import { createModel as createAppModel } from "./model";
 
@@ -15,25 +15,18 @@ import { createModel as createSecretModel } from "../screens/Secret/Model";
 import { createModel as createSettingsModel } from "../screens/Settings/Model";
 import { createModel as createTroubleshootModel } from "../screens/Troubleshoot/Model";
 import { createModel as createVolumesModel } from "../screens/Volume/Model";
+import { createModel as createPodsModel } from "../screens/Pod/Model";
 
 // TODO: Improve typings
 export const withPending = async (store: AppStore, operation: AppStorePendingOperation) => {
-  let result: AppStorePendingOperationResult = {
-    success: false,
-    result: undefined,
-    warnings: []
-  };
+  let result;
   store.getActions().setPending(true);
   try {
     result = await operation(store);
   } catch (error: any) {
-    result = {
-      ...result,
-      result: error?.response?.data || error.message
-    };
-    console.error("Pending operation error", result, error.message, error.stack);
+    console.error("Pending operation error", error.result, error.message, error.stack);
     store.getActions().setPending(false);
-    // throw error;
+    throw error;
   } finally {
     store.getActions().setPending(false);
   }
@@ -61,6 +54,7 @@ export const createAppStore = (env: Environments) => {
   store.addModel("settings", createSettingsModel(registry));
   store.addModel("troubleshoot", createTroubleshootModel(registry));
   store.addModel("volume", createVolumesModel(registry));
+  store.addModel("pod", createPodsModel(registry));
   return store;
 };
 

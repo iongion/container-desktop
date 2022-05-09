@@ -1,10 +1,11 @@
+import { useEffect } from "react";
 import { IconNames } from "@blueprintjs/icons";
 
 // project
 import { AppScreen, AppScreenProps } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { CodeEditor } from "../../components/CodeEditor";
-import { useStoreState } from "../../domain/types";
+import { useStoreActions, useStoreState } from "../../domain/types";
 
 // module
 
@@ -19,10 +20,19 @@ export const View = "system-info";
 export const Title = "System info";
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const provisioned = useStoreState((state) => state.environment.provisioned);
-  const running = useStoreState((state) => state.environment.running);
-  const system = useStoreState((state) => state.environment.system);
-  const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(system, null, 2)} /> : null;
+  const provisioned = useStoreState((state) => state.descriptor.provisioned);
+  const running = useStoreState((state) => state.descriptor.running);
+  const systemInfo = useStoreState((state) => state.settings.systemInfo);
+  const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(systemInfo, null, 2)} /> : null;
+
+  const getSystemInfo = useStoreActions((actions) => actions.settings.getSystemInfo);
+
+  useEffect(() => {
+    (async () => {
+      await getSystemInfo();
+    })();
+  }, [getSystemInfo]);
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader currentScreen={ID} />

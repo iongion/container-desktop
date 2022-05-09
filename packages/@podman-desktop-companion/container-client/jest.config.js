@@ -8,7 +8,10 @@ module.exports = {
   // automock: false,
 
   // Stop running tests after `n` failures
-  // bail: 0,
+  bail: 1,
+
+  // 50 seconds
+  testTimeout: 50000,
 
   // The directory where Jest should store its cached dependency information
   // cacheDirectory: "C:\\Users\\Ionut Stoica\\AppData\\Local\\Temp\\jest",
@@ -24,6 +27,8 @@ module.exports = {
 
   // The directory where Jest should output its coverage files
   coverageDirectory: "coverage",
+
+  // detectOpenHandles: true,
 
   // An array of regexp pattern strings used to skip coverage collection
   // coveragePathIgnorePatterns: [
@@ -128,7 +133,7 @@ module.exports = {
   // setupFiles: [],
 
   // A list of paths to modules that run some code to configure or set up the testing framework before each test
-  // setupFilesAfterEnv: [],
+  setupFilesAfterEnv: ["./tests/setupTests.js"],
 
   // The number of seconds after which a test is considered as slow and reported as such in the results.
   // slowTestThreshold: 5,
@@ -184,7 +189,7 @@ module.exports = {
   // unmockedModulePathPatterns: undefined,
 
   // Indicates whether each individual test should be reported during the run
-  // verbose: undefined,
+  verbose: true
 
   // An array of regexp patterns that are matched against all source file paths before re-running tests in watch mode
   // watchPathIgnorePatterns: [],

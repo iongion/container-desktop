@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect } from "@blueprintjs/core";
+import { Icon, Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
@@ -7,7 +7,7 @@ import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
 import { LOGGING_LEVELS } from "../../Environment";
-import { AppScreen, AppScreenProps, UserConfigurationOptions } from "../../Types";
+import { AppScreen, AppScreenProps, GlobalUserSettingsOptions } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
@@ -27,31 +27,26 @@ export const Title = "Settings";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
-  const provisioned = useStoreState((state) => state.environment.provisioned);
-  const system = useStoreState((state) => state.environment.system);
-  const running = useStoreState((state) => state.environment.running);
-  const userConfiguration = useStoreState((state) => state.environment.userConfiguration);
-  const connect = useStoreActions((actions) => actions.connect);
-  const setUserConfiguration = useStoreActions((actions) => actions.setUserConfiguration);
-  const program = userConfiguration.program;
-  const onConnectClick = useCallback(
-    async () => {
-      await connect({ startApi: true });
-    },
-    [connect]
-  );
+  const provisioned = useStoreState((state) => state.descriptor.provisioned);
+  const running = useStoreState((state) => state.descriptor.running);
+  const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
+  const userSettings = useStoreState((state) => state.descriptor.userSettings);
+  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
+  const program = currentConnector.settings.current.program;
+
   const onAutoStartApiChange = useCallback(async (e) => {
-    await setUserConfiguration({ autoStartApi: !!e.currentTarget.checked });
-  }, [setUserConfiguration]);
+    await setGlobalUserSettings({ startApi: !!e.currentTarget.checked });
+  }, [setGlobalUserSettings]);
   const onMinimizeToSystemTray = useCallback(async (e) => {
-    await setUserConfiguration({ minimizeToSystemTray: !!e.currentTarget.checked });
-  }, [setUserConfiguration]);
+    await setGlobalUserSettings({ minimizeToSystemTray: !!e.currentTarget.checked });
+  }, [setGlobalUserSettings]);
   const onLoggingLevelChange = useCallback(async (e) => {
-    const configuration: Partial<UserConfigurationOptions> = {};
-    configuration["logging.level"] = e.currentTarget.value;
-    await setUserConfiguration(configuration);
-  }, [setUserConfiguration]);
+    const configuration: Partial<GlobalUserSettingsOptions> = {};
+    configuration.logging = {
+      level: e.currentTarget.value
+    };
+    await setGlobalUserSettings(configuration);
+  }, [setGlobalUserSettings]);
   const onToggleInspectorClick = useCallback(async (e) => {
     Native.getInstance().openDevTools();
   }, []);
@@ -59,12 +54,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   let title = "";
   let errorMessage = "";
   let icon = mdiEmoticonSad;
-  let reconnectActionText = t("Connect");
   if (program?.path) {
-    title = t("The API is not running");
+    title = t("Unusable connection");
     errorMessage = t("Check the logs from application data path if this is not intended behavior");
     icon = mdiEmoticonWink;
-    reconnectActionText = t("Connect and try to start the api");
   } else {
     title = t("Automatic detection failed");
     errorMessage = t("To be able to continue, all required programs need to be installed");
@@ -78,52 +71,26 @@ export const Screen: AppScreen<ScreenProps> = () => {
         icon={<ReactIcon.Icon path={icon} size={3} />}
       >
         <p>{errorMessage}</p>
-        <Button disabled={pending} fill text={reconnectActionText} icon={IconNames.REFRESH} onClick={onConnectClick} />
       </Callout>
     );
-
-  let runningDetails: any = "";
-  if (system) {
-    runningDetails = t(
-      "Running on {{distribution}} {{distributionVersion}} ({{kernel}})",
-      {
-        currentVersion: program.currentVersion,
-        hostname: system.host?.hostname || "",
-        distribution: system.host?.distribution?.distribution || "",
-        distributionVersion: system.host?.distribution?.version || "",
-        kernel: system.host?.kernel || ""
-      }
-    );
-  } else {
-    runningDetails = t("Unable to detect system - try to connect and start the api");
-    if (program.name === "podman" && userConfiguration.engine === "virtualized" && !running) {
-      runningDetails = (
-        <>
-          <span>{t("Unable to detect system - podman machine may need restart")}</span> &mdash;
-          <code className="DocsCodeBox">podman machine stop &amp;&amp; podman machine start</code>
-        </>
-      );
-    }
-  }
 
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader currentScreen={ID} />
       <div className="AppScreenContent">
         {contentWidget}
-        <ContainerEngineManager helperText={runningDetails} />
+        <ContainerEngineManager/>
         <div className="AppSettingsForm" data-form="flags">
           <FormGroup
             label={t("Startup")}
-            labelFor="autoStartApi"
+            labelFor="startApi"
             helperText={t("Not needed if container engine is already running as a service")}
           >
             <ControlGroup fill={true}>
               <Checkbox
-                id="autoStartApi"
-                disabled={pending}
+                id="startApi"
                 label={t("Automatically start the Api")}
-                checked={!!userConfiguration.autoStartApi}
+                checked={!!userSettings.startApi}
                 onChange={onAutoStartApiChange}
               />
             </ControlGroup>
@@ -132,9 +99,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
             <ControlGroup fill={true}>
               <Checkbox
                 id="minimizeToSystemTray"
-                disabled={pending}
                 label={t("Minimize to System Tray when closing")}
-                checked={!!userConfiguration.minimizeToSystemTray}
+                checked={!!userSettings.minimizeToSystemTray}
                 onChange={onMinimizeToSystemTray}
               />
             </ControlGroup>
@@ -142,17 +108,35 @@ export const Screen: AppScreen<ScreenProps> = () => {
         </div>
         <div className="AppSettingsForm" data-form="logging">
           <FormGroup
-            label={t("Logging level")}
+            label={t("Configuration and logging")}
+            labelFor="userSettingsPath"
+          >
+            <div className="AppSettingUserConfigurationPath">
+              <Icon icon={IconNames.INFO_SIGN} />
+              <strong>{t('Storage path')}</strong>
+              <input id="userSettingsPath" name="userSettingsPath" type="text" value={userSettings.path} readOnly/>
+            </div>
+          </FormGroup>
+          <FormGroup
+            label={t("Level")}
             labelFor="loggingLevel"
           >
             <ControlGroup>
-              <HTMLSelect id="loggingLevel" disabled={pending} value={userConfiguration.logging.level} onChange={onLoggingLevelChange}>
+              <HTMLSelect id="loggingLevel" value={userSettings.logging.level} onChange={onLoggingLevelChange}>
                 {LOGGING_LEVELS.map((level) => {
                   const key= `logging.${level}`;
                   return <option key={key} value={level}>{level}</option>;
                 })}
               </HTMLSelect>
-              <Button disabled={pending} icon={IconNames.SEARCH} text={t('Toggle inspector')} onClick={onToggleInspectorClick} />
+            </ControlGroup>
+          </FormGroup>
+
+          <FormGroup
+            label={t("Debugging")}
+            labelFor="loggingLevel"
+          >
+            <ControlGroup>
+              <Button icon={IconNames.PANEL_TABLE} text={t('Show inspector')} onClick={onToggleInspectorClick} />
             </ControlGroup>
           </FormGroup>
         </div>

@@ -9,7 +9,6 @@
   max-width: 100%;
 }
 .AppScreen[data-screen="dashboard"] .AppScreenContent p {
-  color: #bc59d5;
   white-space: nowrap;
   text-align: center;
 }
@@ -33,7 +32,7 @@
   font-size: 11px !important;
   font-family: monospace;
   min-width: 50%;
-  border: 1px solid #bc59d5;
+  border: 1px solid;
 }
 .DashboardContainersReportTable tr td:last-child {
   text-align: center;

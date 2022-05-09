@@ -1,0 +1,53 @@
+body[data-adapter="podman"] .AppHeader,
+body[data-adapter="podman"] .AppHeader .bp4-navbar {
+  background-color: #1a051c;
+}
+body[data-adapter="podman"] .AppContent {
+  background-color: #261b26;
+}
+body[data-adapter="podman"] .AppScreenHeader .bp4-navbar {
+  background-color: #1a051c;
+}
+body[data-adapter="podman"] .AppSidebar {
+  background-color: #1a051c;
+}
+body[data-adapter="podman"] .AppSidebarFooter,
+body[data-adapter="podman"] .AppSidebarFooter .bp4-navbar {
+  background-color: #4f175b;
+}
+body[data-adapter="podman"] .AppSettingsFormView[data-form-view="container-engine"] .AppSettingsFormViewFooter {
+  background: #1a051c;
+}
+body[data-adapter="podman"] .AppSettingUserConfigurationPath {
+  background: #1a051c;
+}
+body[data-adapter="podman"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive,
+body[data-adapter="podman"] .AppSettingsForm[data-form="engine.settings"] {
+  background-color: #4f175b;
+}
+body[data-adapter="podman"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
+  color: #bc59d5;
+}
+body[data-adapter="podman"] .DashboardContainersReportTable {
+  border-color: #bc59d5;
+}
+
+body[data-adapter="podman"] .bp4-popover2-content .bp4-menu {
+  background-color: #1a051c !important;
+}
+body[data-adapter="podman"] .bp4-popover2-arrow-fill {
+  fill: #1a051c !important;
+}
+body[data-adapter="podman"] .AppDrawer {
+  background-color: #341c42 !important;
+  box-shadow: none;
+}
+
+
+body[data-adapter="podman"] .AppScreen .bp4-navbar {
+  background: #4f175b;
+}
+
+.AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
+  background: #4f175b;
+}

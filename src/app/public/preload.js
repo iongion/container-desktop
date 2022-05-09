@@ -1,106 +1,15 @@
 const os = require("os");
+const path = require("path");
 // vendors
 require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
+const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;
+const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
 // locals
 const logger = createLogger("shell.preload");
-
-const application = {
-  setup: function () {
-    logger.debug("Application setup");
-    return { logger };
-  },
-  minimize: () => {
-    logger.debug("Application minimize");
-    try {
-      ipcRenderer.send("window.minimize");
-    } catch (error) {
-      logger.error("Unable to minimize", error);
-    }
-  },
-  maximize: () => {
-    logger.debug("Application maximize");
-    try {
-      ipcRenderer.send("window.maximize");
-    } catch (error) {
-      logger.error("Unable to maximize", error);
-    }
-  },
-  restore: () => {
-    logger.debug("Application restore");
-    try {
-      ipcRenderer.send("window.restore");
-    } catch (error) {
-      logger.error("Unable to restore", error);
-    }
-  },
-  close: () => {
-    logger.debug("Application close");
-    try {
-      ipcRenderer.send("window.close");
-    } catch (error) {
-      logger.error("Unable to close", error);
-    }
-  },
-  exit: () => {
-    logger.debug("Application exit");
-    try {
-      ipcRenderer.send("application.exit");
-    } catch (error) {
-      logger.error("Unable to exit", error);
-    }
-  },
-  relaunch: () => {
-    logger.debug("Application relaunch");
-    try {
-      ipcRenderer.send("application.relaunch");
-    } catch (error) {
-      logger.error("Unable to relaunch", error);
-    }
-  },
-  openDevTools: () => {
-    logger.debug("Application openDevTools");
-    try {
-      ipcRenderer.send("openDevTools");
-    } catch (error) {
-      logger.error("Unable to openDevTools", error);
-    }
-  },
-  openFileSelector: async (options) => {
-    logger.debug("Application openFileSelector", options);
-    try {
-      const result = await ipcRenderer.invoke("openFileSelector", options);
-      return result;
-    } catch (error) {
-      logger.error("Unable to openFileSelector", error);
-    }
-  },
-  openTerminal: async (options) => {
-    logger.debug("Application openTerminal", options);
-    try {
-      const result = await ipcRenderer.invoke("openTerminal", options);
-      return result;
-    } catch (error) {
-      logger.error("Unable to openTerminal", error);
-    }
-  },
-  getEngine: async (options) => {
-    logger.debug("Application getEngine", options);
-    try {
-      const result = await ipcRenderer.invoke("getEngine", options);
-      return result;
-    } catch (error) {
-      logger.error("Unable to getEngine", error);
-    }
-  },
-  proxy: async (req) => {
-    const result = await ipcRenderer.invoke("proxy", req);
-    // logger.debug(">> proxy to client", result);
-    return result;
-  }
-};
+const userConfiguration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
 
 async function main() {
   logger.debug("Starting renderer process");
@@ -108,7 +17,94 @@ async function main() {
     const context = {
       available: true,
       platform: os.type(),
-      application
+      defaults: {
+        connector: userConfiguration.getKey("connector.default")
+      },
+      application: {
+        setup: function () {
+          logger.debug("Application setup");
+          return { logger };
+        },
+        minimize: () => {
+          logger.debug("Application minimize");
+          try {
+            ipcRenderer.send("window.minimize");
+          } catch (error) {
+            logger.error("Unable to minimize", error);
+          }
+        },
+        maximize: () => {
+          logger.debug("Application maximize");
+          try {
+            ipcRenderer.send("window.maximize");
+          } catch (error) {
+            logger.error("Unable to maximize", error);
+          }
+        },
+        restore: () => {
+          logger.debug("Application restore");
+          try {
+            ipcRenderer.send("window.restore");
+          } catch (error) {
+            logger.error("Unable to restore", error);
+          }
+        },
+        close: () => {
+          logger.debug("Application close");
+          try {
+            ipcRenderer.send("window.close");
+          } catch (error) {
+            logger.error("Unable to close", error);
+          }
+        },
+        exit: () => {
+          logger.debug("Application exit");
+          try {
+            ipcRenderer.send("application.exit");
+          } catch (error) {
+            logger.error("Unable to exit", error);
+          }
+        },
+        relaunch: () => {
+          logger.debug("Application relaunch");
+          try {
+            ipcRenderer.send("application.relaunch");
+          } catch (error) {
+            logger.error("Unable to relaunch", error);
+          }
+        },
+        openDevTools: () => {
+          logger.debug("Application openDevTools");
+          try {
+            ipcRenderer.send("openDevTools");
+          } catch (error) {
+            logger.error("Unable to openDevTools", error);
+          }
+        },
+        openFileSelector: async (options) => {
+          logger.debug("Application openFileSelector", options);
+          try {
+            const result = await ipcRenderer.invoke("openFileSelector", options);
+            return result;
+          } catch (error) {
+            logger.error("Unable to openFileSelector", error);
+          }
+        },
+        openTerminal: async (options) => {
+          logger.debug("Application openTerminal", options);
+          try {
+            const result = await ipcRenderer.invoke("openTerminal", options);
+            return result;
+          } catch (error) {
+            logger.error("Unable to openTerminal", error);
+          }
+        },
+        proxy: async (req) => {
+          // Using worker to avoid users perceive the app as stuck during long operations
+          const serviceWorkerPath = path.join(__dirname, "worker.js");
+          return await withWorkerRPC(serviceWorkerPath, (rpc) => rpc.invoke(req));
+        }
+      }
     };
     // Expose to application
     contextBridge.exposeInMainWorld("nativeBridge", context);

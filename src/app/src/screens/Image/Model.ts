@@ -56,6 +56,9 @@ export const createModel = (registry: AppRegistry): ImagesModel => {
     }),
     searchByTerm: computed((state) => {
       return (searchTerm: string) => {
+        if (!searchTerm) {
+          return state.images;
+        }
         return state.images.filter((it) => {
           const haystacks = [it.Name, it.Id].map((t) => t.toLowerCase());
           const matching = haystacks.find((it) => it.includes(searchTerm));

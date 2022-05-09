@@ -63,7 +63,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   minimal
                   small
                   href={getImageUrl(image.Id, "layers")}
-                  text={image.Name}
+                  text={isCondensed ? `${image.Name}:${image.Tag}`: image.Name}
                   intent={Intent.PRIMARY}
                   icon={IconNames.BOX}
                 />
@@ -73,7 +73,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   {isCondensed ? (
                     <td>
                       {imageLayersButton}
-                      <div>{image.Names?.[0] || image.Name}</div>
+                      <div>{image.Registry}</div>
                     </td>
                   ) : (
                     <>

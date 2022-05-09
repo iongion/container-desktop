@@ -49,7 +49,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
       <>
         <Icon icon={titleIcon} />
         &nbsp;
-        <span>{titleText}</span>
+        <span title={titleText}>{titleText}</span>
       </>
     );
   }

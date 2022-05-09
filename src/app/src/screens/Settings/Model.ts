@@ -2,31 +2,31 @@
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
-import { SystemEnvironment, ContainerEngine } from "../../Types";
+import { ContainerEngine, SystemInfo } from "../../Types";
 
 export interface SettingsModelState {
-  environment?: SystemEnvironment;
   engine?: ContainerEngine;
+  systemInfo?: SystemInfo;
 }
 
 export interface SettingsModel extends SettingsModelState {
   // actions
-  setEnvironment: Action<SettingsModel, SystemEnvironment>;
+  setSystemInfo: Action<SettingsModel, SystemInfo>;
   // thunks
-  fetchEnvironment: Thunk<SettingsModel>;
+  getSystemInfo: Thunk<SettingsModel>;
 }
 
 export const createModel = (registry: AppRegistry): SettingsModel => {
   return {
-    setEnvironment: action((state, environment) => {
-      state.environment = environment;
+    setSystemInfo: action((state, systemInfo) => {
+      state.systemInfo = systemInfo;
     }),
-    fetchEnvironment: thunk(async (actions) => {
-      return registry.withPending(async () => {
-        const environment = await registry.api.getSystemEnvironment();
-        actions.setEnvironment(environment);
-        return environment;
-      });
-    }),
+    getSystemInfo: thunk(async (actions) =>
+      registry.withPending(async () => {
+        const info = await registry.api.getSystemInfo();
+        actions.setSystemInfo(info);
+        return info;
+      })
+    ),
   };
 };

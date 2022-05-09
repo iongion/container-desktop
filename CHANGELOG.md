@@ -8,6 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Added view kube yaml for pod
+* Added view kube yaml for container
+* Pods section processes
+* Pods section list
+* Pods section inspect
+* Multiple container engine support
+* Docker engine support
+* Podman and Docker support for operating modes
+* Adaptive color scheme to dissociate between engines (original for podman and blue for docker)
+* Ability to customize path to podman / docker and their connection strings
+* Ability to test custom configuration
+* Ability to save customization and restore defaults
+* Ability to detect what is currently available
+* Full support for custom LIMA instance and WSL distributions for both engines
+* 45: Added support for Windows Terminal as tool for "Open terminal" functionality
+* Ability to dissociated between container states using colors
+* Refactored the entire application to support any container engine easily
+
+## Changed
+
+* Improved error messages everywhere
+* Changed configuration and logging location, less screen vertical real-estate used
+* Upgraded all dependencies to their most recent supported versions
+
+## Fixed
+
+* 56: Podman machine startup / shutdown
+
 ## [4.0.3-rc.5] - 2022-04-23
 
 ### Added

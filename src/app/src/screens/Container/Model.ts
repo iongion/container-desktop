@@ -25,7 +25,7 @@ export interface ContainersModel extends ContainersModelState {
   containerRestart: Thunk<ContainersModel, Partial<Container>>;
   containerRemove: Thunk<ContainersModel, Partial<Container>>;
   containerCreate: Thunk<ContainersModel, CreateContainerOptions>;
-  containerConnect: Thunk<ContainersModel, Partial<Container>>;
+  containerConnect: Thunk<ContainersModel, Container>;
 }
 
 export const createModel = (registry: AppRegistry): ContainersModel => ({
@@ -54,6 +54,9 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
   }),
   containersSearchByTerm: computed((state) => {
     return (searchTerm: string) => {
+      if (!searchTerm) {
+        return state.containers;
+      }
       return state.containers.filter((it) => {
         const haystacks = [it.Names[0] || "", it.Image, it.Id, `${it.Pid}`, `${it.Size}`].map((t) => t.toLowerCase());
         const matching = haystacks.find((it) => it.includes(searchTerm));
@@ -86,6 +89,10 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
       }
       const container = await registry.api.getContainer(options.Id);
       const hydrated: Container = { ...container, Logs: logs, Stats: stats };
+      if (options.withKube) {
+        const generation = await registry.api.generateKube({ entityId: options.Id });
+        hydrated.Kube = generation.success ? generation.stdout : "";
+      }
       actions.containerUpdate(hydrated);
       return hydrated;
     })
@@ -164,7 +171,7 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
     registry.withPending(async () => {
       let connected = false;
       if (options.Id) {
-        connected = await registry.api.connectToContainer(options.Id);
+        connected = await registry.api.connectToContainer(options);
       } else {
         console.warn("Unable to connect to container without name", options);
       }

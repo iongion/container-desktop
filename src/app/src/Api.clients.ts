@@ -3,10 +3,13 @@
 import {
   //
   Domain,
+  GlobalUserSettings,
+  GlobalUserSettingsOptions,
+  EngineConnectorSettings,
+  ControllerScope,
   //
   ContainerClientResponse,
   Container,
-  ContainerEngine,
   ContainerStats,
   ContainerImageMount,
   ContainerImagePortMapping,
@@ -16,25 +19,32 @@ import {
   //
   Secret,
   Volume,
-  SystemEnvironment,
+  ApplicationDescriptor,
   SystemInfo,
   SystemPruneReport,
   SystemResetReport,
   Machine,
+  Pod,
+  PodProcessReport,
   //
-  UserConfiguration,
-  UserConfigurationOptions,
   ContainerStateList,
-  TestResult
+  TestResult,
+  Program,
+  ProgramExecutionResult,
+  ConnectOptions,
+  EngineApiOptions,
+  EngineProgramOptions
 } from "./Types";
 
 import { Native } from "./Native";
+import { FindProgramOptions, GenerateKubeOptions } from "./domain/types";
 
 export interface FetchDomainOptions {}
 
 export interface FetchImageOptions {
   Id: string;
   withHistory?: boolean;
+  withKube?: boolean;
 }
 
 export interface PushImageOptions {
@@ -46,6 +56,7 @@ export interface FetchContainerOptions {
   Id: string;
   withLogs?: boolean;
   withStats?: boolean;
+  withKube?: boolean;
 }
 
 export interface FetchVolumeOptions {
@@ -83,6 +94,16 @@ export interface FetchMachineOptions {
 }
 export interface CreateMachineOptions {}
 
+export interface FetchPodOptions {
+  Id: string;
+  withProcesses?: boolean;
+  withKube?: boolean;
+}
+export interface CreatePodOptions {
+  Name: string;
+  Start?: boolean;
+}
+
 export interface InvocationOptions<T = unknown> {
   method: string;
   params?: T;
@@ -107,21 +128,34 @@ export const coerceImage = (image: ContainerImage) => {
   let tag = "";
   let name = "";
   let registry = "";
-  // console.warn("Coerce image", image);
-  if (image) {
-    const nameSource = image.Names || image.History;
-    const parts = (nameSource ? nameSource[0] || "" : "").split(":");
-    [info, tag] = parts;
-    let paths = [];
-    [registry, ...paths] = info.split("/");
-    name = paths.join("/");
+  const nameSource = image.Names || image.NamesHistory;
+  const parts = (nameSource ? nameSource[0] || "" : "").split(":");
+  [info, tag] = parts;
+  let paths = [];
+  [registry, ...paths] = info.split("/");
+  name = paths.join("/");
+  if (!tag) {
+    if (image.RepoTags) {
+      const fromTag = (image.RepoTags[0] || "");
+      name = fromTag.slice(0, fromTag.indexOf(":"));
+      tag = fromTag.slice(fromTag.indexOf(":") + 1);
+    }
   }
-  image.Name = name;
+  image.Name = registry ? name : `library/${name}`;
   image.Tag = tag;
-  image.Registry = registry;
+  image.Registry = registry || "docker.io";
   image.History = [];
   return image;
 };
+
+export const coercePod = (pod: Pod) => {
+  pod.Processes = {
+    Processes: [],
+    Titles: []
+  };
+  return pod;
+}
+
 
 interface ApiDriverConfig<D> {
   timeout?: number;
@@ -132,7 +166,7 @@ interface ApiDriverConfig<D> {
 export class ApiDriver {
   public async request<T = any, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
     const request = {
-      method: "/container/engine/request",
+      method: "createApiRequest",
       params: {
         method,
         url,
@@ -140,9 +174,7 @@ export class ApiDriver {
         data
       },
     };
-    // console.debug("Proxy-ing request", request);
     const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, true);
-    // console.debug(">>>>>> HTTP API RESPONSE", reply);
     return reply.result;
   }
   public async get<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
@@ -171,11 +203,9 @@ export class ContainerClient {
   constructor() {
     this.dataApiDriver = new ApiDriver();
   }
-
   setEngine(engine: string) {
     this.engine = engine;
   }
-
   getEngine() {
     return this.engine;
   }
@@ -214,7 +244,7 @@ export class ContainerClient {
       const result = await this.dataApiDriver.get<ContainerImage>(`/images/${id}/json`, {
         params
       });
-      const image = result.data;
+      const image = coerceImage(result.data);
       if (opts?.withHistory) {
         image.History = await this.getImageHistory(id);
       }
@@ -358,7 +388,13 @@ export class ContainerClient {
           };
         })
       };
-      const createResult = await this.dataApiDriver.post<{ Id: string }>("/containers/create", creator);
+      let url = "/containers/create";
+      if (opts.Name) {
+        const searchParams = new URLSearchParams();
+        searchParams.set("name", opts.Name)
+        url = `${url}?${searchParams.toString()}`;
+      }
+      const createResult = await this.dataApiDriver.post<{ Id: string }>(url, creator);
       const create = { created: false, started: false };
       if (createResult.ok) {
         create.created = true;
@@ -381,7 +417,7 @@ export class ContainerClient {
       const engine = this.getEngine();
       let serviceUrl = "/volumes/json";
       let processData = (input: any) => input as Volume[];
-      if (engine === ContainerEngine.DOCKER)  {
+      if (engine.startsWith("docker"))  {
         serviceUrl = "/volumes";
         processData = (input: any) => {
           const output = input.Volumes;
@@ -396,7 +432,7 @@ export class ContainerClient {
     return this.withResult<Volume>(async () => {
       const engine = this.getEngine();
       let serviceUrl = `/volumes/${nameOrId}/json`;
-      if (engine === ContainerEngine.DOCKER)  {
+      if (engine.startsWith("docker"))  {
         serviceUrl = `/volumes/${nameOrId}`;
       }
       const result = await this.dataApiDriver.get<Volume>(serviceUrl);
@@ -479,25 +515,63 @@ export class ContainerClient {
   // System
   async getSystemInfo() {
     return this.withResult<SystemInfo>(async () => {
-      const result = await this.dataApiDriver.get<SystemInfo>(`/system/info`);
-      return result.data;
+      const reply = await Native.getInstance().proxyService<SystemInfo>({
+        method: "getSystemInfo",
+      });
+      return reply.result;
     });
   }
   async pruneSystem() {
+    // return this.withResult<SystemPruneReport>(async () => {
+    //   const result = await this.dataApiDriver.post<SystemPruneReport>(`/system/prune`);
+    //   return result.data;
+    // });
     return this.withResult<SystemPruneReport>(async () => {
-      const result = await this.dataApiDriver.post<SystemPruneReport>(`/system/prune`);
-      return result.data;
+      const reply = await Native.getInstance().proxyService<SystemPruneReport>({
+        method: "pruneSystem",
+      });
+      return reply.result;
+    });
+  }
+
+  async start(opts: ConnectOptions | undefined) {
+    return this.withResult<ApplicationDescriptor>(async () => {
+      const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
+        method: "start",
+        params: opts
+      });
+      return reply.result;
+    });
+  }
+
+  async connect(opts: ConnectOptions) {
+    return this.withResult<boolean>(async () => {
+      const reply = await Native.getInstance().proxyService<boolean>({
+        method: "connect",
+        params: opts
+      });
+      return reply.result;
     });
   }
 
   // HTTP API
 
   // Containers
-  async connectToContainer(Id: string) {
+  async connectToContainer(item: Container) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/container/connect",
-        params: { Id }
+        method: "connectToContainer",
+        params: { id: item.Id, title: item.Name || item.Names?.[0], shell: undefined }
+      });
+      return reply.result;
+    });
+  }
+
+  // Controller scopes - WSL distributions, LIMA instances and podman machines
+  async getControllerScopes() {
+    return this.withResult<ControllerScope[]>(async () => {
+      const reply = await Native.getInstance().proxyService<ControllerScope[]>({
+        method: "getControllerScopes"
       });
       return reply.result;
     });
@@ -507,16 +581,7 @@ export class ContainerClient {
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
       const reply = await Native.getInstance().proxyService<Machine[]>({
-        method: "/machines/list"
-      });
-      return reply.result;
-    });
-  }
-  async restartMachine(Name: string) {
-    return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/restart",
-        params: { Name }
+        method: "getMachines"
       });
       return reply.result;
     });
@@ -524,7 +589,7 @@ export class ContainerClient {
   async getMachine(Name: string) {
     return this.withResult<Machine>(async () => {
       const reply = await Native.getInstance().proxyService<Machine>({
-        method: "/machine/inspect",
+        method: "inspectMachine",
         params: { Name }
       });
       return reply.result;
@@ -533,7 +598,7 @@ export class ContainerClient {
   async createMachine(opts: CreateMachineOptions) {
     return this.withResult<Machine>(async () => {
       const reply = await Native.getInstance().proxyService<Machine>({
-        method: "/machine/create",
+        method: "createMachine",
         params: opts
       });
       return reply.result;
@@ -542,7 +607,7 @@ export class ContainerClient {
   async removeMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/remove",
+        method: "removeMachine",
         params: { Name, force: true }
       });
       return reply.result;
@@ -551,7 +616,16 @@ export class ContainerClient {
   async stopMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/stop",
+        method: "stopMachine",
+        params: { Name }
+      });
+      return reply.result;
+    });
+  }
+  async restartMachine(Name: string) {
+    return this.withResult<boolean>(async () => {
+      const reply = await Native.getInstance().proxyService<boolean>({
+        method: "restartMachine",
         params: { Name }
       });
       return reply.result;
@@ -560,77 +634,213 @@ export class ContainerClient {
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
       const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/machine/connect",
+        method: "connectToMachine",
         params: { Name }
       });
       return reply.result;
     });
   }
 
-  // System
-  async getSystemEnvironment() {
-    return this.withResult<SystemEnvironment>(async () => {
-      const reply = await Native.getInstance().proxyService<SystemEnvironment>({
-        method: "/system/environment"
+  // Pods
+  async getPods() {
+    return this.withResult<Pod[]>(async () => {
+      const result = await this.dataApiDriver.get<Pod[]>("/pods/json", {
+        params: {
+          all: true
+        }
       });
-      return reply.result;
+      return result.ok ? result.data.map((it) => coercePod(it)) : [];
     });
   }
-  async startApi() {
-    console.debug("Client - startApi");
+  async getPod(Id: string) {
+    return this.withResult<Pod>(async () => {
+      const result = await this.dataApiDriver.get<Pod>(`/pods/${Id}/json`);
+      const item = coercePod(result.data);
+      return item;
+    });
+  }
+  async getPodProcesses(Id: string) {
+    return this.withResult<PodProcessReport>(async () => {
+      const result = await this.dataApiDriver.get<PodProcessReport>(`/pods/${Id}/top`);
+      if (!result.data) {
+        return {
+          Processes: [],
+          Titles: []
+        };
+      }
+      return result.data;
+    });
+  }
+  async createPod(opts: CreatePodOptions) {
+    return this.withResult<{ created: boolean; started: boolean; }>(async () => {
+      const creator = {
+        name: opts.Name,
+      };
+      let url = "/pods/create";
+      if (opts.Name) {
+        const searchParams = new URLSearchParams();
+        searchParams.set("name", opts.Name)
+        url = `${url}?${searchParams.toString()}`;
+      }
+      const createResult = await this.dataApiDriver.post<{ Id: string }>(url, creator);
+      const create = { created: false, started: false };
+      if (createResult.ok) {
+        create.created = true;
+        if (opts.Start) {
+          const { Id } = createResult.data;
+          const startResult = await this.dataApiDriver.post(`/pods/${Id}/start`);
+          if (startResult.ok) {
+            create.started = true;
+          }
+        } else {
+          create.started = false;
+        }
+      }
+      return create;
+    });
+  }
+  async removePod(Id: string) {
     return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/system/api/start"
+      const result = await this.dataApiDriver.delete<boolean>(`/pods/${Id}`, {
+        params: {
+          force: true,
+          v: true
+        }
       });
-      return reply.result;
+      return result.ok;
     });
   }
+  async stopPod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/stop`);
+      return result.ok;
+    });
+  }
+  async restartPod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/restart`);
+      return result.ok;
+    });
+  }
+  async pausePod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/pause`);
+      return result.ok;
+    });
+  }
+  async unpausePod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/unpause`);
+      return result.ok;
+    });
+  }
+  async killPod(Id: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.post<boolean>(`/pods/${Id}/kill`);
+      return result.ok;
+    });
+  }
+
+  // System
   async resetSystem() {
     return this.withResult<SystemResetReport>(async () => {
       const reply = await Native.getInstance().proxyService<SystemResetReport>({
-        method: "/system/reset"
-      });
-      return reply.result;
-    });
-  }
-  async getIsApiRunning() {
-    return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "/system/running"
+        method: "resetSystem"
       });
       return reply.result;
     });
   }
 
-  async getUserConfiguration() {
-    return this.withResult<UserConfiguration>(async () => {
-      const reply = await Native.getInstance().proxyService<UserConfiguration>({
-        method: "/user/configuration/get",
+  // Generators
+  async generateKube(opts: GenerateKubeOptions) {
+    return this.withResult<ProgramExecutionResult>(async () => {
+      const reply = await Native.getInstance().proxyService<ProgramExecutionResult>({
+        method: "generateKube",
+        params: opts
+      });
+      console.debug(reply);
+      return reply.result;
+    });
+  }
+
+  // Configuration globals
+  async getGlobalUserSettings() {
+    return this.withResult<GlobalUserSettings>(async () => {
+      const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
+        method: "getGlobalUserSettings",
       });
       return reply.result;
     });
   }
 
-  async setUserConfiguration(options: Partial<UserConfigurationOptions>) {
-    return this.withResult<UserConfiguration>(async () => {
-      const reply = await Native.getInstance().proxyService<UserConfiguration>({
-        method: "/user/configuration/set",
+  async setGlobalUserSettings(options: Partial<GlobalUserSettingsOptions>) {
+    return this.withResult<GlobalUserSettings>(async () => {
+      const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
+        method: "setGlobalUserSettings",
+        params: options
+      });
+      return reply.result;
+    });
+  }
+
+  // Configuration per engine
+  async getEngineUserSettings(id: string) {
+    return this.withResult<any>(async () => {
+      const reply = await Native.getInstance().proxyService<any>({
+        method: "getEngineUserSettings",
         params: {
-          options
+          id
+        },
+      });
+      return reply.result;
+    });
+  }
+
+  async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
+    return this.withResult<EngineConnectorSettings>(async () => {
+      const reply = await Native.getInstance().proxyService<EngineConnectorSettings>({
+        method: "setEngineUserSettings",
+        params: {
+          id,
+          settings
         }
       });
+      console.debug(reply);
       return reply.result;
     });
   }
 
-  async testSocketPathConnection(socketPath: string) {
+  async testEngineProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
-        method: "/test",
+        method: "test",
         params: {
-          subject: "socketPath",
-          payload: socketPath.replace("unix://", "").replace("npipe://", "")
+          subject: "reachability.program",
+          payload: opts
         }
+      });
+      return reply.result;
+    });
+  }
+
+  async testApiReachability(opts: EngineApiOptions) {
+    return this.withResult<TestResult>(async () => {
+      const reply = await Native.getInstance().proxyService<TestResult>({
+        method: "test",
+        params: {
+          subject: "reachability.api",
+          payload: opts
+        }
+      });
+      return reply.result;
+    });
+  }
+
+  async findProgram(options: FindProgramOptions) {
+    return this.withResult<Program>(async () => {
+      const reply = await Native.getInstance().proxyService<Program>({
+        method: "findProgram",
+        params: options
       });
       return reply.result;
     });
