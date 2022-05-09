@@ -1,4 +1,5 @@
 const fs = require("fs");
+const path = require("path");
 const { spawn, spawnSync } = require("child_process");
 const events = require("events");
 // vendors
@@ -6,6 +7,15 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
 const logger = createLogger("executor");
 const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
+
+function isFilePresent(filePath) {
+  let vfsFilePath = filePath;
+  if (isFlatpak) {
+    vfsFilePath = path.join("/var/run/host", filePath);
+  }
+  logger.debug("Checking file presence", { filePath, vfsFilePath });
+  return fs.existsSync(vfsFilePath);
+}
 
 function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   let spawnLauncher;
@@ -260,6 +270,7 @@ async function exec_service(opts) {
 }
 
 module.exports = {
+  isFilePresent,
   wrapSpawnAsync,
   wrapSpawnSync,
   exec_launcher_async,

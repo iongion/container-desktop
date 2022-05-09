@@ -7,7 +7,7 @@ const merge = require("lodash.merge");
 const { v4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { isFilePresent, exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { findProgramVersion, findProgramPath } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
@@ -116,7 +116,7 @@ class AbstractClientEngine {
       }
     }
     let info = {};
-    if (settings.program.path && fs.existsSync(settings.program.path)) {
+    if (settings.program.path && isFilePresent(settings.program.path)) {
       const detectVersion = await findProgramVersion(settings.program.path, { osType: this.osType });
       info.program = {
         version: detectVersion
@@ -273,7 +273,7 @@ class AbstractClientEngine {
       result.details = "Program path is not set";
       return result;
     }
-    if (!fs.existsSync(settings.program.path)) {
+    if (!isFilePresent(settings.program.path)) {
       result.details = "Program is not accessible";
       return result;
     }
@@ -303,10 +303,10 @@ class AbstractClientEngine {
     if (this.osType === "Windows_NT") {
       // TODO: Check named pipe
     } else {
-      if (!fs.existsSync(settings.api.connectionString)) {
-        result.details = "API connection string as unix path is not present";
-        return result;
-      }
+      // if (!isFilePresent(settings.api.connectionString)) {
+      //   result.details = "API connection string as unix path is not present";
+      //   return result;
+      // }
     }
     result.success = true;
     result.details = "API is configured";
@@ -522,7 +522,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     const controller = settings.controller.path;
     let info = {};
     // controller
-    if (controller && fs.existsSync(settings.controller.path)) {
+    if (controller && isFilePresent(settings.controller.path)) {
       const detectVersion = await findProgramVersion(
         controller,
         { osType: this.osType },
@@ -590,7 +590,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     let success = false;
     let details;
     if (settings.controller.path) {
-      if (fs.existsSync(settings.controller.path)) {
+      if (isFilePresent(settings.controller.path)) {
         success = true;
         details = "Controller is available";
       } else {
