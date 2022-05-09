@@ -1,8 +1,10 @@
 // nodejs
+const fs = require("fs");
 const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
+const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
 const userSettings = require("@podman-desktop-companion/user-settings");
 // module
 const { getAvailablePodmanMachines } = require("../shared");
@@ -30,7 +32,9 @@ const PODMAN_API_SOCKET = `podman-desktop-companion-${PROGRAM}-rest-api.sock`;
 // Native
 const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
 const NATIVE_PODMAN_CLI_VERSION = "4.0.3";
-const NATIVE_PODMAN_SOCKET_PATH = path.join(userSettings.getPath(), PODMAN_API_SOCKET);
+const NATIVE_PODMAN_SOCKET_PATH = isFlatpak
+  ? path.join("/tmp", PODMAN_API_SOCKET)
+  : path.join(userSettings.getPath(), PODMAN_API_SOCKET);
 const NATIVE_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
 const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 // Windows virtualized

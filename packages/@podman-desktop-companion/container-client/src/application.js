@@ -8,7 +8,7 @@ const { launchTerminal } = require("@podman-desktop-companion/terminal");
 // module
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
-const { getApiConfig, createApiDriver } = require("./api");
+const { getApiConfig } = require("./api");
 const { findProgram, findProgramVersion } = require("./detector");
 // locals
 
@@ -139,16 +139,15 @@ class Application {
         return id === connector;
       });
     }
-    // 2st source - user preferred is missing - default
+    // Factory preferred - favor podman
     if (!this.currentConnector) {
-      this.logger.debug(connector ? "Specified connector not found - defaulting" : "Connector not found - defaulting");
-      this.currentConnector = this.connectors.find(({ availability }) => {
-        return availability.engine && availability.program;
+      this.logger.error("Unable to init without any usable connector - picking preferred(favor podman)");
+      this.currentConnector = this.connectors.find(({ id }) => {
+        if (this.osType === "Windows_NT" || this.osType === "Darwin") {
+          return id === "engine.default.podman.virtualized";
+        }
+        return id === "engine.default.podman.native";
       });
-    }
-    if (!this.currentConnector) {
-      this.logger.error("Unable to init without any usable connector");
-      return false;
     }
     // current adapter inferred from connector
     this.currentAdapter = this.adapters.find((it) => it.ADAPTER === this.currentConnector.adapter);
