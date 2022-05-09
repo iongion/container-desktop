@@ -124,7 +124,7 @@ class Application {
     const { startApi, adapter, connector } = merge(
       {
         // defaults
-        startApi: false,
+        startApi: this.configuration.getKey("startApi", false),
         adapter: Podman.Adapter.ADAPTER,
         connector: this.configuration.getKey("connector.default")
       },
@@ -170,7 +170,7 @@ class Application {
     const { startApi, adapter, connector } = merge(
       {
         // defaults
-        startApi: false,
+        startApi: this.configuration.getKey("startApi", false),
         adapter: Podman.Adapter.ADAPTER,
         connector: this.configuration.getKey("connector.default")
       },
@@ -194,6 +194,8 @@ class Application {
         this.started = false;
         this.logger.error("Application start error", error);
       }
+    } else {
+      this.logger.debug("Skipping startup - startApi is not flagged");
     }
     const descriptor = await this.getDescriptor();
     return descriptor;
