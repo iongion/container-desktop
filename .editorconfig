@@ -20,7 +20,7 @@ insert_final_newline = true
 max_line_length = 120
 
 # 4 space indentation
-[*.{json,py}]
+[*.{json,py,rs}]
 indent_size = 4
 
 # Tab indentation

@@ -6,6 +6,7 @@ PROJECT_HOME="$( dirname "$SCRIPT_HOME" )"
 SRC_DIR="$PROJECT_HOME/support/unix-socket-relay"
 
 function relay_prepare {
+  rm -f "$SRC_DIR/target/release/relay"
   cd "$SRC_DIR" && \
     cargo build
 }
@@ -20,5 +21,6 @@ relay_compile
 
 HTTP_MESSAGE=$(cat "$SRC_DIR/test/samples/ping.http.txt")
 echo "Sending PING: $HTTP_MESSAGE"
+echo "$HTTP_MESSAGE" | "$SRC_DIR/target/release/relay" /var/run/docker.sock
 
-echo "$HTTP_MESSAGE" | "$SRC_DIR/target/release/unix-socket-relay" /var/run/docker.sock
+# "$SRC_DIR/target/release/server" /tmp/server-relay.sock
