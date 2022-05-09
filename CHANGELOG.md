@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.1] - 2022-05-09
+
 ### Added
 
 * Added view kube yaml for pod
