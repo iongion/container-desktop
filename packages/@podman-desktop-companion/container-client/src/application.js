@@ -124,7 +124,7 @@ class Application {
     const { startApi, adapter, connector } = merge(
       {
         // defaults
-        startApi: true,
+        startApi: false,
         adapter: Podman.Adapter.ADAPTER,
         connector: this.configuration.getKey("connector.default")
       },
@@ -170,7 +170,7 @@ class Application {
     const { startApi, adapter, connector } = merge(
       {
         // defaults
-        startApi: true,
+        startApi: false,
         adapter: Podman.Adapter.ADAPTER,
         connector: this.configuration.getKey("connector.default")
       },

@@ -1,7 +1,7 @@
 // vendors
 const axios = require("axios");
 // project
-const { exec_launcher, exec_service, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_service, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 const { createLogger } = require("@podman-desktop-companion/logger");
 // module
@@ -70,13 +70,19 @@ class Runner {
     this.logger.debug("Starting API - guard configuration");
     const configured = await this.client.isApiAvailable();
     if (!configured) {
-      return { success: false, details: "API is not configured" };
+      this.logger.error("Starting API - API is not configured");
+      return false;
     }
     this.logger.debug("Starting API - check if already running");
     const running = await this.client.isApiRunning();
     if (running.success) {
       this.logger.debug("Starting API - already running(returning)");
       return true;
+    }
+    this.logger.debug("Starting API - invoking starter", starter);
+    if (!starter.path) {
+      this.logger.error("Starting API - Starter program not configured");
+      return false;
     }
     const clientOpts = {
       retry: { count: 10, wait: 5000 },

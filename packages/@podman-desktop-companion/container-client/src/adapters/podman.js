@@ -271,9 +271,11 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
       return true;
     }
     const settings = await this.getCurrentSettings();
+    const args = ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"];
+    const { launcher, command } = await this.getScopedCommand(settings.program.path, args);
     return await this.runner.startApi(opts, {
-      path: settings.program.path,
-      args: ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"]
+      path: launcher,
+      args: command
     });
   }
 }
