@@ -57,9 +57,11 @@ class RPCWorkerGateway {
       handled: false,
       timeout: undefined,
       clear: (markHandled) => {
-        invocation.handled = markHandled;
-        delete this.invocations[guid];
         clearTimeout(invocation.timeout);
+        if (markHandled) {
+          invocation.handled = markHandled;
+        }
+        delete this.invocations[guid];
         invocation.timeout = undefined;
       },
       send: () =>

@@ -17,7 +17,7 @@ const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const logger = createLogger("shell.main");
 let window;
 const isHideToTrayOnClose = () => userConfiguration.getKey("minimizeToSystemTray", false);
-const isDebug = true; // !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
+const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
   return !app.isPackaged;
 };
