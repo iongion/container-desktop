@@ -49,7 +49,7 @@ const withWorker = (cb) => {
   cb(worker);
 };
 
-const withWorkerRPC = (serviceWorkerPath, handler) =>
+const withWorkerRPC = (handler, context) =>
   new Promise((resolve, reject) => {
     // logger.debug("Handling with worker", serviceWorkerPath);
     try {
@@ -62,7 +62,7 @@ const withWorkerRPC = (serviceWorkerPath, handler) =>
               type: "rpc.request",
               created: new Date().getTime() / 1000,
               payload: req,
-              workerPath: serviceWorkerPath,
+              context,
               // timeout control
               handled: false,
               timeout: null,

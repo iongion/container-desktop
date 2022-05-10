@@ -1,4 +1,3 @@
-// node
 const os = require("os");
 const path = require("path");
 // vendors
@@ -103,7 +102,14 @@ async function main() {
         proxy: async (req) => {
           // Using worker to avoid users perceive the app as stuck during long operations
           const serviceWorkerPath = path.join(__dirname, "worker.js");
-          return await withWorkerRPC(serviceWorkerPath, (rpc) => rpc.invoke(req));
+          // Using worker to avoid users perceive the app as stuck during long operations
+          const workerContext = {
+            workerPath: serviceWorkerPath, // injected by rpc
+            version: process.env.REACT_APP_PROJECT_VERSION,
+            environment: process.env.REACT_APP_ENV,
+            osType: os.type()
+          };
+          return await withWorkerRPC((rpc) => rpc.invoke(req), workerContext);
         }
       }
     };

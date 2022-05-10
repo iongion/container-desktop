@@ -11,9 +11,165 @@ const { UserConfiguration } = require("./configuration");
 const { getApiConfig } = require("./api");
 const { findProgram, findProgramVersion } = require("./detector");
 // locals
+const DEFAULT_CONNECTORS = [
+  // Podman
+  {
+    adapter: Podman.Adapter.ADAPTER,
+    engine: Podman.ENGINE_PODMAN_NATIVE,
+    id: "engine.default.podman.native",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "podman",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  },
+  {
+    adapter: Podman.Adapter.ADAPTER,
+    engine: Podman.ENGINE_PODMAN_VIRTUALIZED,
+    id: "engine.default.podman.virtualized",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      controller: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked",
+        controller: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "podman",
+          path: undefined,
+          version: undefined
+        },
+        controller: {
+          name: "podman",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  },
+  // Docker
+  {
+    adapter: Docker.Adapter.ADAPTER,
+    engine: Docker.ENGINE_DOCKER_NATIVE,
+    id: "engine.default.docker.native",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "docker",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  },
+  {
+    adapter: Docker.Adapter.ADAPTER,
+    engine: Docker.ENGINE_DOCKER_VIRTUALIZED,
+    id: "engine.default.docker.virtualized",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      controller: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked",
+        controller: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "docker",
+          path: undefined,
+          version: undefined
+        },
+        controller: {
+          name: "docker",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  }
+];
 
 class Application {
   constructor(version, env, osType) {
+    this.version = version;
+    this.environment = env;
     this.osType = osType || os.type();
     this.logger = createLogger("container-client.Application");
     this.configuration = new UserConfiguration(version, env);
@@ -23,7 +179,7 @@ class Application {
     this.currentAdapter = undefined;
     this.engines = [];
     this.currentEngine = undefined;
-    this.connectors = [];
+    this.connectors = DEFAULT_CONNECTORS;
     this.currentConnector = undefined;
     this.started = false;
     this.logger.debug("Created application controller", { version, env, osType });
@@ -161,8 +317,8 @@ class Application {
     return true;
   }
 
-  // start
-  async start(opts) {
+  // exec
+  async exec(opts) {
     const inited = await this.init(opts);
     if (!inited) {
       this.logger.error("Unable to start - init incomplete");
@@ -208,8 +364,46 @@ class Application {
     } else {
       this.logger.debug("Skipping startup - startApi is not flagged for auto start neither is it running");
     }
+    return this.started;
+  }
 
-    const descriptor = await this.getDescriptor();
+  async start(opts) {
+    this.logger.debug("Application starting");
+    try {
+      await this.exec(opts);
+    } catch (error) {
+      this.adaptersList = [Podman.Adapter];
+      this.logger.error("Application startup error - unable to execute", error.message, error.stack);
+    }
+    const defaultConnector = this.osType === "Linux" ? DEFAULT_CONNECTORS[0] : DEFAULT_CONNECTORS[1];
+    let descriptor = {
+      connectors: DEFAULT_CONNECTORS,
+      currentConnector: defaultConnector,
+      environment: this.environment || "unknown",
+      platform: this.osTye || "Unknown",
+      provisioned: false,
+      running: false,
+      userSettings: {
+        connector: { default: "engine.default.podman.native" },
+        logging: { level: "debug" },
+        minimizeToSystemTray: false,
+        path: this.configuration.getStoragePath(),
+        startApi: true
+      }
+    };
+    try {
+      descriptor = await this.getDescriptor();
+      if (!descriptor.currentConnector) {
+        descriptor.currentConnector = defaultConnector;
+      }
+    } catch (error) {
+      this.logger.error(
+        "Application startup error - fatal error - unable to create descriptor",
+        error.message,
+        error.stack
+      );
+    }
+    this.logger.debug("Application startup descriptor", descriptor);
     return descriptor;
   }
 
