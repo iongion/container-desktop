@@ -1,115 +1,152 @@
 // node
-const fs = require("fs");
-const path = require("path");
-const { Blob } = require("buffer");
 // vendors
 const { v4: uuidv4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
-const logger = createLogger("rpc");
+const DEFAULT_MAX_EXECUTION_TIME = 60000;
 
-// POOR man's RPC
-
-let worker;
-const invocations = {};
-const workerProcessPath = path.join(__dirname, "worker.js");
-const workerProcessSource = fs.readFileSync(workerProcessPath);
-
-const withWorker = (cb) => {
-  if (!worker) {
-    process.dlopen = () => {
-      throw new Error("Load native module is not safe");
-    };
-    let processorURL;
-    if (typeof self?.webkitURL !== "undefined") {
-      const processorBlob = new self.Blob([workerProcessSource.toString()], { type: "text/javascript" });
-      processorURL = self.webkitURL.createObjectURL(processorBlob);
-    } else {
-      const processorBlob = new Blob([workerProcessSource.toString()], { type: "text/javascript" });
-      processorURL = URL.createObjectURL(processorBlob);
-    }
-    const handler = (evt) => {
-      const response = evt.data;
-      const invocation = invocations[response.guid];
-      if (!invocation) {
-        logger.error("No such invocation", response.guid);
-        return;
-      }
-      invocation.handled = true;
-      // logger.debug("Handler - clear timed-out", response.guid);
-      clearTimeout(invocation.timeout);
-      delete invocations[invocation.guid];
-      // invoking the handler
-      invocation.handler(response);
-    };
-    worker = new Worker(processorURL);
-    worker.addEventListener("message", handler);
+class RPCWorkerGateway {
+  constructor(factory) {
+    this.factory = factory;
+    this.invocations = {};
+    this.worker = null;
+    this.logger = createLogger("rpc.gateway");
   }
-  cb(worker);
-};
-
-const withWorkerRPC = (handler, context) =>
-  new Promise((resolve, reject) => {
-    // logger.debug("Handling with worker", serviceWorkerPath);
-    try {
-      withWorker((worker) => {
-        const rpc = {
-          invoke: (req, opts) => {
-            const guid = `rpc-${uuidv4()}`;
-            const message = {
-              guid,
-              type: "rpc.request",
-              created: new Date().getTime() / 1000,
-              payload: req,
-              context,
-              // timeout control
-              handled: false,
-              timeout: null,
-              maxExecutionTime: 60000
-            };
-            // logger.debug('Starting response listener', guid);
-            invocations[guid] = {
-              message,
-              handler: (response) => {
-                // logger.debug('Graceful - clear timed-out', guid);
-                clearTimeout(message.timeout);
-                try {
-                  if (response.success) {
-                    resolve(response.payload);
-                  } else {
-                    reject(new Error(response.payload.error));
-                  }
-                } catch (error) {
-                  logger.error("Error during response resolving", error, response);
-                  reject(new Error("Message response error"));
-                }
-              }
-            };
-            // logger.debug('Starting timeout listener', message);
-            message.timeout = setTimeout(() => {
-              logger.error("Expired - clear timed-out", guid);
-              clearTimeout(message.timeout);
-              if (message.handled) {
-                // logger.debug('Message handled', guid);
-                return;
-              }
-              message.handled = true;
-              delete invocations[guid];
-              logger.error("Response timed-out", guid);
-              reject(new Error("Worker communication timeout"));
-            }, message.maxExecutionTime);
-            // logger.debug("Message sent", message);
-            worker.postMessage(message);
-          }
-        };
-        handler(rpc);
+  async getWorker() {
+    if (!this.worker) {
+      this.worker = await this.factory();
+      this.worker.addEventListener("message", (evt) => {
+        const response = evt.data;
+        const invocation = this.invocations[response.guid];
+        if (invocation) {
+          invocation.clear(true);
+          // clear the stack
+          setTimeout(() => {
+            if (response.type === "rpc.response.result") {
+              invocation.done(null, response.payload);
+            } else {
+              invocation.done(null, {
+                result: response.payload,
+                success: false,
+                warnings: []
+              });
+            }
+          });
+        } else {
+          this.logger.error("No invocation for current response", response);
+        }
       });
-    } catch (error) {
-      reject(error);
     }
-  });
+    return this.worker;
+  }
+  async createInvocation({ payload, context }, opts) {
+    const guid = `rpc-${uuidv4()}`;
+    const maxExecutionTime = opts?.maxExecutionTime || DEFAULT_MAX_EXECUTION_TIME;
+    const message = {
+      guid,
+      type: "rpc.request",
+      created: new Date().getTime() / 1000,
+      payload,
+      context,
+      // timeout control
+      maxExecutionTime
+    };
+    const invocation = {
+      message,
+      handled: false,
+      timeout: undefined,
+      clear: (markHandled) => {
+        invocation.handled = markHandled;
+        delete this.invocations[guid];
+        clearTimeout(invocation.timeout);
+        invocation.timeout = undefined;
+      },
+      send: () =>
+        new Promise(async (resolve, reject) => {
+          this.invocations[guid] = invocation;
+          this.logger.debug(guid, "Message timeout monitor started");
+          // register timeout monitor
+          invocation.done = (err, res) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(res);
+            }
+          };
+          invocation.timeout = setTimeout(() => {
+            invocation.clear();
+            if (invocation.handled) {
+              this.logger.debug(guid, "Message timed-out - skip handling(already handled)");
+            } else {
+              this.logger.debug(guid, "Message timed-out - marking as handled(notifying timeout)");
+              invocation.handled = true;
+              reject(new Error("Worker communication timeout"));
+            }
+          }, maxExecutionTime);
+          // deliver message and wait for reply
+          const worker = await this.getWorker();
+          try {
+            this.logger.debug(guid, "Message delivery started", message);
+            worker.postMessage(message);
+          } catch (error) {
+            this.logger.error(guid, "Message post error", error.message, error.stack);
+          }
+        })
+    };
+    return invocation;
+  }
+  async invoke(payload, context, opts) {
+    const invocation = await this.createInvocation({ payload, context }, opts);
+    return await invocation.send();
+  }
+}
+
+function createWorkerGateway(factory) {
+  const gateway = new RPCWorkerGateway(factory);
+  return gateway;
+}
+
+async function createWorkerClient(scope, onMessage, id) {
+  async function scopeMessageListener(event) {
+    // message context
+    const message = event.data;
+    const logger = createLogger(id || "rpc.worker");
+    const ctx = {
+      logger,
+      message,
+      done: (fault, result) => {
+        if (fault) {
+          scope.postMessage({
+            type: "rpc.response.fault",
+            guid: message.guid,
+            payload: fault
+          });
+        } else {
+          scope.postMessage({
+            type: "rpc.response.result",
+            guid: message.guid,
+            payload: result
+          });
+        }
+      }
+    };
+    try {
+      await onMessage(ctx, message);
+    } catch (error) {
+      logger.error(message.guid, "Message processing exception", error);
+      ctx.done({ message: error.message, stack: error.stack });
+    }
+  }
+  scope.addEventListener("message", scopeMessageListener);
+  return {
+    release: () => {
+      scope.removeEventListener("message", scopeMessageListener);
+    }
+  };
+}
 
 module.exports = {
-  withWorkerRPC
+  createWorkerGateway,
+  createWorkerClient
 };

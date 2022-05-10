@@ -3,7 +3,7 @@ const os = require("os");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { setLevel, createLogger } = require("@podman-desktop-companion/logger");
+const { setLevel, getLevel, createLogger } = require("@podman-desktop-companion/logger");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 // module
 const { Podman, Docker } = require("./adapters");
@@ -182,7 +182,11 @@ class Application {
     this.connectors = DEFAULT_CONNECTORS;
     this.currentConnector = undefined;
     this.started = false;
-    this.logger.debug("Created application controller", { version, env, osType });
+    this.logger.debug("%c Created application controller", "background: #222; color: #bada55", {
+      version,
+      env,
+      osType
+    });
   }
 
   async invoke(method, params) {
@@ -265,8 +269,8 @@ class Application {
       running = currentConnector.availability.api;
     }
     return {
-      environment: process.env.REACT_APP_ENV || "development",
-      version: process.env.REACT_APP_PROJECT_VERSION || "1.0.0",
+      environment: this.environment,
+      version: this.version,
       platform: this.osType,
       provisioned,
       running,
@@ -478,7 +482,7 @@ class Application {
       minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
       path: this.configuration.getStoragePath(),
       logging: {
-        level: this.configuration.getKey("logging.level", "debug")
+        level: getLevel()
       },
       connector: {
         default: this.configuration.getKey("connector.default")

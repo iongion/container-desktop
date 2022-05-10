@@ -1,22 +1,21 @@
-const os = require("os");
-const path = require("path");
 // vendors
 require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;
-const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
+const { createWorkerGateway } = require("@podman-desktop-companion/rpc");
 // locals
+const { userConfiguration, osType, version, environment } = require("./configuration");
 const logger = createLogger("shell.preload");
-const userConfiguration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
+// Using worker to avoid users perceive the app as stuck during long operations
+const gateway = createWorkerGateway(() => new Worker("worker.js"));
 
 async function main() {
   logger.debug("Starting renderer process");
   process.once("loaded", () => {
     const context = {
       available: true,
-      platform: os.type(),
+      platform: osType,
       defaults: {
         connector: userConfiguration.getKey("connector.default")
       },
@@ -101,15 +100,12 @@ async function main() {
         },
         proxy: async (req) => {
           // Using worker to avoid users perceive the app as stuck during long operations
-          const serviceWorkerPath = path.join(__dirname, "worker.js");
-          // Using worker to avoid users perceive the app as stuck during long operations
-          const workerContext = {
-            workerPath: serviceWorkerPath, // injected by rpc
-            version: process.env.REACT_APP_PROJECT_VERSION,
-            environment: process.env.REACT_APP_ENV,
-            osType: os.type()
+          const context = {
+            version,
+            environment,
+            osType
           };
-          return await withWorkerRPC((rpc) => rpc.invoke(req), workerContext);
+          return await gateway.invoke(req, context);
         }
       }
     };

@@ -8,17 +8,40 @@ PROJECT_HOME = os.path.dirname(__file__)
 PROJECT_CODE = "podman-desktop-companion"
 PROJECT_VERSION = Path(os.path.join(PROJECT_HOME, "VERSION")).read_text().strip()
 NODE_ENV = os.environ.get("NODE_ENV", "development")
-REACT_APP_ENV = os.environ.get("REACT_APP_ENV", NODE_ENV)
-REACT_APP_PROJECT_VERSION = PROJECT_VERSION
+APP_ENV = os.environ.get("APP_ENV", NODE_ENV)
+APP_PROJECT_VERSION = PROJECT_VERSION
 TARGET = os.environ.get("TARGET", "linux")
 USE_LOGGING_WITH_NATIVE_CONSOLE = "yes" if NODE_ENV != "production" else "no"
 PORT = 5000
+
+
+def get_env():
+    return {
+        "BROWSER": "none",
+        "PORT": str(PORT),
+        "PROJECT_HOME": PROJECT_HOME,
+        "PROJECT_CODE": PROJECT_CODE,
+        "PROJECT_VERSION": PROJECT_VERSION,
+        "USE_LOGGING_WITH_NATIVE_CONSOLE": USE_LOGGING_WITH_NATIVE_CONSOLE,
+        "NODE_ENV": NODE_ENV,
+        "TARGET": TARGET,
+        "PUBLIC_URL": ".",
+        # "DEBUG": "electron-builder"
+        # "FAST_REFRESH": "false",
+        # CRA
+        "REACT_APP_ENV": APP_ENV,
+        "REACT_APP_PROJECT_VERSION": APP_PROJECT_VERSION,
+        # Electron
+        "ELECTRON_WEBPACK_APP_ENV": APP_ENV,
+        "ELECTRON_WEBPACK_APP_PROJECT_VERSION": APP_PROJECT_VERSION
+    }
 
 
 def run_env(ctx, cmd, env=None):
     cmd_env = {**get_env(), **({} if env is None else env)}
     nvm_dir = os.getenv("NVM_DIR", str(Path.home().joinpath(".nvm")))
     nvm_sh = os.path.join(nvm_dir, "nvm.sh")
+    print("Environment", cmd_env)
     if os.path.exists(nvm_sh):
         with ctx.prefix(f'source "{nvm_dir}/nvm.sh"'):
             nvm_rc = os.path.join(ctx.cwd, ".nvmrc")
@@ -57,25 +80,6 @@ def bundle_apps(c, env=None):
 def help(c):
     c.run("invoke --list")
 
-
-def get_env():
-    return {
-        "BROWSER": "none",
-        "PORT": str(PORT),
-        "PROJECT_HOME": PROJECT_HOME,
-        "PROJECT_CODE": PROJECT_CODE,
-        "PROJECT_VERSION": PROJECT_VERSION,
-        "USE_LOGGING_WITH_NATIVE_CONSOLE": USE_LOGGING_WITH_NATIVE_CONSOLE,
-        "NODE_ENV": NODE_ENV,
-        "REACT_APP_ENV": REACT_APP_ENV,
-        "REACT_APP_PROJECT_VERSION": REACT_APP_PROJECT_VERSION,
-        "TARGET": TARGET,
-        "PUBLIC_URL": ".",
-        # "DEBUG": "electron-builder"
-        # "FAST_REFRESH": "false",
-    }
-
-
 @task
 def prepare(c, docs=False):
     # Install infrastructure dependencies
@@ -104,7 +108,12 @@ def bundle(c, docs=False):
 
 @task
 def release(c, docs=False):
-    env = {"NODE_ENV": "production", "REACT_APP_ENV": "production"}
+    env = {
+        "NODE_ENV": "production",
+        "APP_ENV": "production",
+        "RECT_APP_ENV": "production",
+        "ELECTRON_WEBPACK_APP_ENV": "production"
+    }
     build_apps(c, env)
     bundle_apps(c, env)
 

@@ -1,5 +1,4 @@
 // node
-const os = require("os");
 const path = require("path");
 const url = require("url");
 require("fix-path")();
@@ -11,15 +10,14 @@ const is_ip_private = require("private-ip");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { createLogger } = require("@podman-desktop-companion/logger");
 const userSettings = require("@podman-desktop-companion/user-settings");
-const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;
+// shared
+const { userConfiguration, osType } = require("./configuration");
 // locals
-const osType = os.type();
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
 const logger = createLogger("shell.main");
-const userConfiguration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
 let window;
 const isHideToTrayOnClose = () => userConfiguration.getKey("minimizeToSystemTray", false);
-const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
+const isDebug = true; // !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
   return !app.isPackaged;
 };
@@ -130,7 +128,7 @@ function createWindow() {
     const info = new URL(event.url);
     if (!is_ip_private(info.hostname)) {
       if (!DOMAINS_ALLOW_LIST.includes(info.hostname)) {
-        console.error("Security issue - attempt to open a domain that is not allowed", info);
+        logger.error("Security issue - attempt to open a domain that is not allowed", info);
         return { action: "deny" };
       }
     }
