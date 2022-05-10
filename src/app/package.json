@@ -1,6 +1,6 @@
 {
   "name": "podman-desktop-companion",
-  "version": "4.1.0-rc.7",
+  "version": "4.1.0-rc.8",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman Desktop Companion",
   "keywords": [],
@@ -82,8 +82,8 @@
     "node": "~16"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "node scripts/generate-runtime-configuration.js && react-scripts start",
+    "build": "node scripts/generate-runtime-configuration.js && react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
     "start.shell": "electron public/electron.js",

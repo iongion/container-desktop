@@ -28,12 +28,15 @@ def get_env():
         "PUBLIC_URL": ".",
         # "DEBUG": "electron-builder"
         # "FAST_REFRESH": "false",
+        # Global
+        "APP_ENV": APP_ENV,
+        "APP_PROJECT_VERSION": APP_PROJECT_VERSION,
         # CRA
         "REACT_APP_ENV": APP_ENV,
         "REACT_APP_PROJECT_VERSION": APP_PROJECT_VERSION,
         # Electron
         "ELECTRON_WEBPACK_APP_ENV": APP_ENV,
-        "ELECTRON_WEBPACK_APP_PROJECT_VERSION": APP_PROJECT_VERSION
+        "ELECTRON_WEBPACK_APP_PROJECT_VERSION": APP_PROJECT_VERSION,
     }
 
 
@@ -80,6 +83,7 @@ def bundle_apps(c, env=None):
 def help(c):
     c.run("invoke --list")
 
+
 @task
 def prepare(c, docs=False):
     # Install infrastructure dependencies
@@ -111,8 +115,9 @@ def release(c, docs=False):
     env = {
         "NODE_ENV": "production",
         "APP_ENV": "production",
-        "RECT_APP_ENV": "production",
-        "ELECTRON_WEBPACK_APP_ENV": "production"
+        "REACT_APP_ENV": "production",
+        "ELECTRON_WEBPACK_APP_ENV": "production",
+        "USE_LOGGING_WITH_NATIVE_CONSOLE": "no",
     }
     build_apps(c, env)
     bundle_apps(c, env)
