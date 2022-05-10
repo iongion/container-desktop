@@ -82,6 +82,15 @@ export const createModel = (registry: AppRegistry): PodsModel => ({
         const generation = await registry.api.generateKube({ entityId: options.Id });
         pod.Kube = generation.success ? generation.stdout : "";
       }
+      if (options.withLogs) {
+        let tail = 100;
+        if (options.withLogs !== undefined && options.withLogs !== true) {
+          tail = options.withLogs.Tail;
+        }
+        const logs = await registry.api.getPodLogs(options.Id, tail);
+        console.debug(logs);
+        pod.Logs = logs;
+      }
       actions.podUpdate(pod);
       return pod;
     })

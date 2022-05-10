@@ -112,8 +112,15 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
     <>
       <AnchorButton
         minimal
-        active={isActive ? isActive("pod.processes") : false}
+        active={isActive ? isActive("pod.logs") : false}
         icon={IconNames.LIST}
+        text={t("Logs")}
+        href={getPodUrl(pod.Id, "logs")}
+      />
+      <AnchorButton
+        minimal
+        active={isActive ? isActive("pod.processes") : false}
+        icon={IconNames.LIST_DETAIL_VIEW}
         text={t("Processes")}
         href={getPodUrl(pod.Id, "processes")}
       />
@@ -137,7 +144,8 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
   ) : undefined;
   const expandAsMenuItems = expand ? undefined : (
     <>
-      <MenuItem icon={IconNames.LIST} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
+      <MenuItem icon={IconNames.LIST} text={t("Logs")} href={getPodUrl(pod.Id, "logs")} />
+      <MenuItem icon={IconNames.LIST_DETAIL_VIEW} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect")} />
       <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getPodUrl(pod.Id, "kube")} disabled={isKubeDisabled} title={kubeTitle} />
     </>

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+* Added pod logs viewer
+* Added jump to list for all screens to avoid back button confusion
+
 ## [4.1.0-rc.1] - 2022-05-09
 
 ### Added

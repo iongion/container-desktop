@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { Alignment, Button, InputGroup, Navbar, Icon } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Alignment, AnchorButton, Button, InputGroup, Navbar, Icon } from "@blueprintjs/core";
+import { IconName, IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 
@@ -11,6 +11,8 @@ interface AppScreenHeaderProps {
   titleText?: string;
   titleIcon?: any;
   rightContent?: React.ReactNode;
+  listRoutePath?: string;
+  listRouteIcon?: IconName;
 }
 
 export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
@@ -19,17 +21,21 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   withoutSearch,
   titleText,
   titleIcon,
-  rightContent
+  rightContent,
+  listRoutePath,
+  listRouteIcon
 }) => {
   const { t } = useTranslation();
   const history = useHistory();
   const onGoBackClick = useCallback(() => {
     history.go(-1);
   }, [history]);
+  const withList = !!listRoutePath;
   const backButton = withBack ? (
     <Navbar.Group align={Alignment.LEFT}>
       <Navbar.Heading>
-        <Button minimal title={t("Go back")} text={t("Back")} icon={IconNames.CHEVRON_LEFT} onClick={onGoBackClick} />
+        <Button minimal title={t("Go back")} icon={IconNames.CHEVRON_LEFT} onClick={onGoBackClick} />
+        {withList && <AnchorButton minimal icon={listRouteIcon || IconNames.LIST} href={listRoutePath} title={t("Jump to list")} />}
       </Navbar.Heading>
     </Navbar.Group>
   ) : null;

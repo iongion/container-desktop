@@ -98,6 +98,7 @@ export interface FetchPodOptions {
   Id: string;
   withProcesses?: boolean;
   withKube?: boolean;
+  withLogs?: boolean | { Tail: number };
 }
 export interface CreatePodOptions {
   Name: string;
@@ -669,6 +670,18 @@ export class ContainerClient {
         };
       }
       return result.data;
+    });
+  }
+  async getPodLogs(Id: string, tail?: number) {
+    return this.withResult<ProgramExecutionResult>(async () => {
+      const reply = await Native.getInstance().proxyService<ProgramExecutionResult>({
+        method: "getPodLogs",
+        params: {
+          Id,
+          Tail: tail
+        }
+      });
+      return reply.result;
     });
   }
   async createPod(opts: CreatePodOptions) {
