@@ -9,7 +9,7 @@ const { v4 } = require("uuid");
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { isFilePresent, exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
-const { findProgramVersion, findProgramPath } = require("../detector");
+const { findProgram, findProgramVersion, findProgramPath } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
 const { getAvailableLIMAInstances, getAvailableWSLDistributions } = require("../shared");
 const { WSL_VERSION } = require("../constants");
@@ -98,7 +98,7 @@ class AbstractClientEngine {
    * @protected
    * @return {Settings}
    */
-  async getDetectedSettings(settings, detect) {
+  async getDetectedSettings(settings, detect, started) {
     const available = await this.isEngineAvailable();
     if (!available.success) {
       this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings detect ignore - not applicable for this engine");
@@ -176,9 +176,9 @@ class AbstractClientEngine {
    * @public
    * @return {SettingsDictionary}
    */
-  async getSettings({ detect }) {
+  async getSettings({ detect, started }) {
     const expected = await this.getExpectedSettings();
-    const detected = await this.getDetectedSettings(expected, detect);
+    const detected = await this.getDetectedSettings(expected, detect, started);
     const automatic = merge({}, expected, detected);
     // Optimization - apply user overrides only if engine is available
     let user = {};
@@ -502,7 +502,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       }
     };
   }
-  async getDetectedSettings(settings, detect) {
+  async getDetectedSettings(settings, detect, started) {
     const available = await this.isEngineAvailable();
     if (!available.success) {
       this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings detect ignore - not applicable for this engine");
@@ -522,7 +522,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     const controller = settings.controller.path;
     let info = {};
     // controller
-    if (controller && isFilePresent(settings.controller.path)) {
+    if (controller && isFilePresent(controller)) {
       const detectVersion = await findProgramVersion(
         controller,
         { osType: this.osType },
@@ -532,22 +532,38 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
         version: detectVersion
       };
     } else {
-      const detectPath = await findProgramPath(settings.controller.name || this.PROGRAM, { osType: this.osType });
+      const detectPath = await findProgramPath(settings.controller.name, { osType: this.osType });
       let detectVersion;
       if (detectPath) {
-        detectVersion = await findProgramVersion(settings.controller.path, { osType: this.osType });
+        detectVersion = await findProgramVersion(detectPath, { osType: this.osType });
       }
       info.controller = {
         path: detectPath,
         version: detectVersion
       };
     }
+    // program - only if started
+    if (started) {
+      const program = await findProgram(settings.program.path || settings.program.name || this.PROGRAM, {
+        osType: this.osType,
+        wrapper: async (launcher, args) => {
+          const scoped = await this.getScopedCommand(launcher, args);
+          return { launcher: scoped.launcher, args: scoped.command };
+        }
+      });
+      info.program = {
+        path: program.path,
+        version: program.version
+      };
+    } else {
+      this.logger.warn("API not started - program detection skipped", settings.program);
+    }
     return info;
   }
 
-  async getSettings({ detect }) {
+  async getSettings({ detect, started }) {
     const expected = await this.getExpectedSettings();
-    const detected = await this.getDetectedSettings(expected, detect);
+    const detected = await this.getDetectedSettings(expected, detect, started);
     const automatic = merge({}, expected, detected);
     // Optimization - apply user overrides only if engine is available
     let user = {};

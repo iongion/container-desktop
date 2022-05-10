@@ -176,27 +176,38 @@ class Application {
       },
       opts || {}
     );
+    // Perform additional detections upon API availability
+    const updaterAfterStart = async () => {
+      if (this.started) {
+        this.logger.debug("Updating connector post successful start-up to get updated details");
+        this.currentConnector = await this.currentEngine.getConnector({ detect: true, started: this.started });
+        this.connectors = this.connectors.map((it) => {
+          if (it.id === this.currentConnector.id) {
+            return { ...it, ...this.currentConnector };
+          }
+          return it;
+        });
+      } else {
+        this.logger.warn("Updating connector skipped - not started");
+      }
+    };
     // Start API only if specified
-    if (startApi) {
+    this.started = !!this.currentConnector.availability.api;
+    if (this.started) {
+      this.logger.debug("Skipping startup - API is already running");
+      await updaterAfterStart();
+    } else if (startApi) {
       try {
         this.started = await this.currentEngine.startApi();
-        if (this.started) {
-          this.logger.debug("Updating connector post successful start-up to get updated details");
-          this.currentConnector = await this.currentEngine.getConnector({ detect: true });
-          this.connectors = this.connectors.map((it) => {
-            if (it.id === this.currentConnector.id) {
-              return { ...it, ...this.currentConnector };
-            }
-            return it;
-          });
-        }
+        await updaterAfterStart();
       } catch (error) {
         this.started = false;
         this.logger.error("Application start error", error);
       }
     } else {
-      this.logger.debug("Skipping startup - startApi is not flagged");
+      this.logger.debug("Skipping startup - startApi is not flagged for auto start neither is it running");
     }
+
     const descriptor = await this.getDescriptor();
     return descriptor;
   }

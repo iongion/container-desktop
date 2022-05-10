@@ -17,6 +17,18 @@ function isFilePresent(filePath) {
   return fs.existsSync(vfsFilePath);
 }
 
+async function createWrapper(opts, launcher, args) {
+  let wrapper;
+  if (opts?.wrapper) {
+    if (typeof opts.wrapper === "function") {
+      wrapper = await opts.wrapper(launcher, args);
+    } else {
+      wrapper = opts.wrapper;
+    }
+  }
+  return wrapper;
+}
+
 function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   let spawnLauncher;
   let spawnArgs;
@@ -90,6 +102,7 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
     env: opts?.env,
     detached: opts?.detached
   };
+  const wrapper_next = await createWrapper(opts, launcher, launcherArgs);
   return new Promise((resolve) => {
     let resolved = false;
     const process = {
@@ -100,8 +113,9 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
       stderr: "",
       command: "" // Decorated by child process
     };
-    const child = opts?.wrapper
-      ? wrapSpawnAsync(opts.wrapper.launcher, [...(opts.wrapper?.args || []), launcher, ...launcherArgs], launcherOpts)
+
+    const child = wrapper_next
+      ? wrapSpawnAsync(wrapper_next.launcher, wrapper_next.args, launcherOpts)
       : wrapSpawnAsync(launcher, launcherArgs, launcherOpts);
     const processResolve = (from, data) => {
       if (resolved) {
@@ -143,8 +157,9 @@ async function exec_launcher_sync(launcher, launcherArgs, opts) {
     env: opts?.env,
     detached: opts?.detached
   };
+  const wrapper_next = await createWrapper(opts, launcher, launcherArgs);
   const child = opts?.wrapper
-    ? wrapSpawnSync(opts.wrapper.launcher, [...(opts.wrapper?.args || []), launcher, ...launcherArgs], launcherOpts)
+    ? wrapSpawnSync(wrapper_next.launcher, wrapper_next.args, launcherOpts)
     : wrapSpawnSync(launcher, launcherArgs, launcherOpts);
   const process = {
     pid: child.pid,
