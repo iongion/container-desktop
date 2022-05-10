@@ -64,7 +64,8 @@ class AbstractPodmanControlledClientEngine extends AbstractControlledClientEngin
   PROGRAM = PROGRAM;
   async getControllerScopes() {
     const settings = await this.getCurrentSettings();
-    const scopes = await getAvailablePodmanMachines(settings.controller.path);
+    const available = await this.isEngineAvailable();
+    const scopes = available ? await getAvailablePodmanMachines(settings.controller.path) : [];
     return scopes;
   }
 }
@@ -230,7 +231,7 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
     const settings = await this.getCurrentSettings();
     const machines = await this.getControllerScopes();
     const target = machines.find((it) => it.Name === settings.controller.scope);
-    return target.Running;
+    return !!target?.Running;
   }
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {

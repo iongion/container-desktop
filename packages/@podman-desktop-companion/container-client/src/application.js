@@ -26,6 +26,7 @@ class Application {
     this.connectors = [];
     this.currentConnector = undefined;
     this.started = false;
+    this.logger.debug("Created application controller", { version, env, osType });
   }
 
   async invoke(method, params) {
