@@ -8,10 +8,10 @@ import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 // project
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
-import { Container, ContainerStateList } from "../../Types";
+import { Container, ContainerAdapter, ContainerStateList } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
-import { useStoreActions } from "../../domain/types";
+import { useStoreActions, useStoreState } from "../../domain/types";
 import { getContainerUrl, getContainerServiceUrl } from "./Navigation";
 
 // Actions menu
@@ -31,6 +31,7 @@ interface PerformActionOptions {
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isActive }) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
+  const currentAdapter = useStoreState((state) => state.descriptor.currentConnector.adapter);
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
   const containerPause = useStoreActions((actions) => actions.container.containerPause);
   const containerUnpause = useStoreActions((actions) => actions.container.containerUnpause);
@@ -148,12 +149,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
       />
     </>
   ) : undefined;
+  const isKubeAvailable = currentAdapter === ContainerAdapter.PODMAN;
   const expandAsMenuItems = expand ? undefined : (
     <>
       <MenuItem icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getContainerUrl(container.Id, "inspect")} />
       <MenuItem icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
-      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} />
+      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} disabled={!isKubeAvailable} title={t("Not available when using {{currentAdapter}} engine", {currentAdapter})} />
     </>
   );
 

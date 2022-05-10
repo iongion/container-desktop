@@ -525,6 +525,17 @@ class Application {
     }
     return result;
   }
+
+  async getPodLogs(opts) {
+    const { program } = await this.currentEngine.getCurrentSettings();
+    const args = ["pod", "logs"];
+    if (typeof opts.Tail !== "undefined") {
+      args.push(`--tail=${opts.Tail}`);
+    }
+    args.push("-f", opts.Id);
+    const result = await this.currentEngine.runScopedCommand(program.path, args);
+    return result;
+  }
 }
 
 module.exports = {

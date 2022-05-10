@@ -9,9 +9,10 @@ export interface CodeEditorProps {
   value: string;
   mode?: string;
   theme?: string;
+  headerTitle?: any;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ value, mode, theme }) => {
+export const CodeEditor: React.FC<CodeEditorProps> = ({ value, mode, theme, headerTitle }) => {
   const monaco = useMonaco();
   useEffect(() => {
     // or make sure that it exists by other ways
@@ -21,6 +22,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, mode, theme }) =>
   }, [monaco, theme]);
   return (
     <div className="CodeEditor">
+      {headerTitle ? <div className="CodeEditorHeader">{headerTitle}</div> : null}
       <Editor
         height="100%"
         language={mode || "json"}

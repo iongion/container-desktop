@@ -33,6 +33,7 @@ import { Screen as ImagesScreen } from "./screens/Image/ManageScreen";
 import { Screen as ImageLayersScreen } from "./screens/Image/LayersScreen";
 import { Screen as ImageInspectScreen } from "./screens/Image/InspectScreen";
 import { Screen as PodsScreen } from "./screens/Pod/ManageScreen";
+import { Screen as PodLogsScreen } from "./screens/Pod/LogsScreen";
 import { Screen as PodInspectScreen } from "./screens/Pod/InspectScreen";
 import { Screen as PodProcessesScreen } from "./screens/Pod/ProcessesScreen";
 import { Screen as PodGenerateKubeScreen } from "./screens/Pod/GenerateKubeScreen";
@@ -57,6 +58,7 @@ const Screens = [
   ImageLayersScreen,
   ImageInspectScreen,
   PodsScreen,
+  PodLogsScreen,
   PodInspectScreen,
   PodProcessesScreen,
   PodGenerateKubeScreen,

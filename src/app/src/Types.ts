@@ -222,6 +222,11 @@ export interface Program {
   homepage?: string;
 }
 
+export interface ProgramOutput {
+  stdout?: string | null;
+  stderr?: string | null;
+}
+
 export interface ProgramExecutionResult {
   pid: number;
   success: boolean;
@@ -596,6 +601,7 @@ export interface Pod {
   // computed
   Processes: PodProcessReport;
   Kube?: string;
+  Logs?: ProgramOutput;
 }
 
 // Application types
