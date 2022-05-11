@@ -230,7 +230,7 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
     const settings = await this.getCurrentSettings();
     const machines = await this.getControllerScopes();
     const target = machines.find((it) => it.Name === settings.controller.scope);
-    return target.Running;
+    return target?.Running;
   }
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {
