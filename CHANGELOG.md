@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.11] - 2022-05-11
+
+* issue #73 - Prevent crashing if no programs or versions are found - do not merge empty strings, default as `undefined` is required for proper merge
+
 ## [4.1.0-rc.10] - 2022-05-11
 
 * issue #73 - Read and write settings without needing to spawn a worker

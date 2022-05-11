@@ -8,12 +8,13 @@ const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // locals
 const logger = createLogger("container-client.Detector");
 
+// must return undefined when nothing is found - NOT empty string
 const findProgramPath = async (program, opts) => {
   let result;
-  let programPath = "";
+  let programPath = undefined;
   if (!program) {
     logger.error("Unable to detect program path - program must be specified");
-    throw new Error("Unable to detect program path - program must be specified");
+    return programPath;
   }
   const osType = opts.osType || os.type();
   const useWhere = osType === "Windows_NT" && !opts?.wrapper;
@@ -57,27 +58,41 @@ const findProgramPath = async (program, opts) => {
   if (!programPath) {
     logger.error(`Unable to detect ${program} cli program path with any strategy`, { wrapper: opts?.wrapper });
   }
-  return programPath.trim();
+  if (typeof programPath === "undefined") {
+    return undefined;
+  }
+  const cleared = programPath.trim();
+  if (!cleared) {
+    return undefined;
+  }
+  return cleared;
 };
 const findProgramVersion = async (program, opts, defaultValue) => {
+  let version = undefined;
   if (!program) {
-    throw new Error("Program must be specified");
+    return defaultValue || version;
   }
   if (program.endsWith("wsl.exe")) {
     logger.warn("wsl.exe does not report a version - defaulting", defaultValue);
     return defaultValue;
   }
-  let version = "";
   const result = await exec_launcher_sync(program, ["--version"], opts);
   if (result.success) {
     version = `${result.stdout}`.trim().split(",")?.[0].split(" ")?.[2] || "";
   } else {
     logger.error(`Unable to detect ${program} cli program version`, result);
   }
-  return version.trim();
+  if (typeof version === "undefined") {
+    return undefined;
+  }
+  const cleared = version.trim();
+  if (cleared) {
+    return undefined;
+  }
+  return cleared;
 };
 const findProgram = async (program, opts) => {
-  let version = "";
+  let version = undefined;
   if (!program) {
     logger.error("Unable to detect program - program must be specified");
     throw new Error("Unable to detect program - program must be specified");
