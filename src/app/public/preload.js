@@ -28,8 +28,8 @@ async function main() {
       },
       application: {
         setup: function () {
-          logger.debug("Application setup");
-          return { logger };
+          logger.error("Application setup");
+          return { logger: createLogger("shell.ui") };
         },
         minimize: () => {
           logger.debug("Application minimize");

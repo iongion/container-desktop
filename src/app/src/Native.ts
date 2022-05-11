@@ -113,6 +113,11 @@ export class Native {
   static getInstance() {
     if (!Native.instance) {
       Native.instance = new Native();
+      try {
+        Native.instance.setup();
+      } catch (error) {
+        console.error("Bridge setup error", error);
+      }
     }
     return Native.instance;
   }
