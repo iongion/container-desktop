@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { IconNames } from "@blueprintjs/icons";
 import { useParams } from "react-router-dom";
 
 import { AppScreenProps, AppScreen, Pod } from "../../Types";
 import { ScreenHeader } from ".";
+import { ScreenLoader } from "../../components/ScreenLoader";
 import { CodeEditor } from "../../components/CodeEditor";
 
 import { useStoreActions } from "../../domain/types";
 
 import "./GenerateKubeScreen.css";
-import { Spinner } from "@blueprintjs/core";
 
 export const ID = "pod.kube";
 
@@ -19,7 +19,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [pod, setPod] = useState<Pod>();
   const { id } = useParams<{ id: string }>();
-  const screenRef = useRef<HTMLDivElement>(null);
   const podFetch = useStoreActions((actions) => actions.pod.podFetch);
   useEffect(() => {
     (async () => {
@@ -38,19 +37,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
     })();
   }, [podFetch, id]);
 
-  const loading = pending;
-  const contents = loading ? <Spinner /> : (
-    <>
+  if (!pod) {
+    return <ScreenLoader screen={ID} pending={pending} />;
+  }
+
+  return (
+    <div className="AppScreen" data-screen={ID}>
       <ScreenHeader pod={pod} currentScreen={ID} />
       <div className="AppScreenContent">
         <CodeEditor value={`${pod?.Kube}`} mode="yaml" />
       </div>
-    </>
-  );
-
-  return (
-    <div className="AppScreen" data-screen={ID} data-pending={loading ? "yes" : "no"} ref={screenRef}>
-      {contents}
     </div>
   );
 };

@@ -60,7 +60,7 @@ export interface AppModel extends AppModelState {
 
   setEngineUserSettings: Thunk<AppModel, EngineUserSettingsOptions>;
 
-  testEngineProgramReachability: Thunk<AppModel, EngineProgramOptions>;
+  testProgramReachability: Thunk<AppModel, EngineProgramOptions>;
   testApiReachability: Thunk<AppModel, EngineApiOptions>;
 
   findProgram: Thunk<AppModel, FindProgramOptions>;

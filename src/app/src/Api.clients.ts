@@ -33,7 +33,9 @@ import {
   ProgramExecutionResult,
   ConnectOptions,
   EngineApiOptions,
-  EngineProgramOptions
+  EngineProgramOptions,
+  Connector,
+  ContainerEngine,
 } from "./Types";
 
 import { Native } from "./Native";
@@ -165,6 +167,7 @@ interface ApiDriverConfig<D> {
 }
 
 export class ApiDriver {
+  private connector?: Connector;
   public async request<T = any, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
     const request = {
       method: "createApiRequest",
@@ -175,8 +178,22 @@ export class ApiDriver {
         data
       },
     };
-    const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, true);
-    return reply.result;
+    // Direct HTTP invocations
+    if (this.connector && ![ContainerEngine.PODMAN_SUBSYSTEM_WSL, ContainerEngine.DOCKER_SUBSYSTEM_WSL].includes(this.connector.engine)) {
+      const driver = await Native.getInstance().createApiDriver(this.connector.settings.current.api);
+      const reply = await driver.request(request.params as any);
+      const result: ContainerClientResponse<T> = {
+        ok: reply.status >= 200 && reply.status <= 300,
+        status: reply.status,
+        statusText: reply.statusText,
+        data: reply.data as T,
+        headers: reply.headers,
+      };
+      return result;
+    } else {
+      const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, { http: true });
+      return reply.result;
+    }
   }
   public async get<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
     return this.request<T, D>("GET", url, undefined, config);
@@ -196,19 +213,26 @@ export class ApiDriver {
   public async patch<T = any, D = any>(url: string, data?: D, config?: ApiDriverConfig<D>) {
     return this.request<T, D>("PATCH", url, data, config);
   }
+
+  public setConnector(connector: Connector) {
+    this.connector = connector;
+  }
 }
 export class ContainerClient {
   protected dataApiDriver: ApiDriver;
-  protected engine: string = "";
+  protected connector?: Connector;
 
   constructor() {
     this.dataApiDriver = new ApiDriver();
   }
-  setEngine(engine: string) {
-    this.engine = engine;
+
+  setConnector(connector: Connector) {
+    this.connector = connector;
+    this.dataApiDriver.setConnector(connector);
   }
-  getEngine() {
-    return this.engine;
+
+  getConnector() {
+    return this.connector;
   }
 
   protected async withResult<T>(handler: () => Promise<T>) {
@@ -415,7 +439,7 @@ export class ContainerClient {
   // Volumes
   async getVolumes() {
     return this.withResult<Volume[]>(async () => {
-      const engine = this.getEngine();
+      const engine = this.connector?.engine || "";
       let serviceUrl = "/volumes/json";
       let processData = (input: any) => input as Volume[];
       if (engine.startsWith("docker"))  {
@@ -431,7 +455,7 @@ export class ContainerClient {
   }
   async getVolume(nameOrId: string, opts?: FetchVolumeOptions) {
     return this.withResult<Volume>(async () => {
-      const engine = this.getEngine();
+      const engine = this.connector?.engine || "";
       let serviceUrl = `/volumes/${nameOrId}/json`;
       if (engine.startsWith("docker"))  {
         serviceUrl = `/volumes/${nameOrId}`;
@@ -540,7 +564,7 @@ export class ContainerClient {
       const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
         method: "start",
         params: opts
-      });
+      }, { keepAlive: true });
       return reply.result;
     });
   }
@@ -771,7 +795,6 @@ export class ContainerClient {
         method: "generateKube",
         params: opts
       });
-      console.debug(reply);
       return reply.result;
     });
   }
@@ -818,12 +841,11 @@ export class ContainerClient {
           settings
         }
       });
-      console.debug(reply);
       return reply.result;
     });
   }
 
-  async testEngineProgramReachability(opts: EngineProgramOptions) {
+  async testProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "test",

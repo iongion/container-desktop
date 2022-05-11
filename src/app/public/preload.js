@@ -1,29 +1,35 @@
-const os = require("os");
-const path = require("path");
 // vendors
-require("fix-path")();
+// require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;
-const { withWorkerRPC } = require("@podman-desktop-companion/rpc");
+const { createWorkerGateway } = require("@podman-desktop-companion/rpc");
 // locals
+const { userConfiguration, osType, version, environment } = require("./configuration");
+const { Application } = require("@podman-desktop-companion/container-client").application;
+const { createApiAdapter } = require("@podman-desktop-companion/container-client").api;
 const logger = createLogger("shell.preload");
-const userConfiguration = new UserConfiguration(process.env.REACT_APP_PROJECT_VERSION, process.env.REACT_APP_ENV);
+// Using worker to avoid users perceive the app as stuck during long operations
 
 async function main() {
   logger.debug("Starting renderer process");
   process.once("loaded", () => {
     const context = {
       available: true,
-      platform: os.type(),
+      platform: osType,
       defaults: {
-        connector: userConfiguration.getKey("connector.default")
+        connector: userConfiguration.getKey("connector.default"),
+        // This must not fail - prevents startup failures to put the app in an undefined state
+        descriptor: Application.getDefaultDescriptor({
+          osType,
+          version,
+          environment
+        })
       },
       application: {
         setup: function () {
-          logger.debug("Application setup");
-          return { logger };
+          logger.error("Application setup");
+          return { logger: createLogger("shell.ui") };
         },
         minimize: () => {
           logger.debug("Application minimize");
@@ -99,11 +105,17 @@ async function main() {
             logger.error("Unable to openTerminal", error);
           }
         },
-        proxy: async (req) => {
-          // Using worker to avoid users perceive the app as stuck during long operations
-          const serviceWorkerPath = path.join(__dirname, "worker.js");
-          return await withWorkerRPC(serviceWorkerPath, (rpc) => rpc.invoke(req));
-        }
+        proxy: async (req, ctx, opts) => {
+          const gateway = createWorkerGateway(() => new Worker("worker.js"));
+          // Inject configuration
+          ctx.configuration = {
+            osType,
+            version,
+            environment
+          };
+          return await gateway.invoke(req, ctx, opts);
+        },
+        getApiAdapter: () => createApiAdapter()
       }
     };
     // Expose to application

@@ -64,12 +64,14 @@ class AbstractPodmanControlledClientEngine extends AbstractControlledClientEngin
   PROGRAM = PROGRAM;
   async getControllerScopes() {
     const settings = await this.getCurrentSettings();
-    const scopes = await getAvailablePodmanMachines(settings.controller.path);
+    const available = await this.isEngineAvailable();
+    const scopes = available ? await getAvailablePodmanMachines(settings.controller.path) : [];
     return scopes;
   }
 }
 
 class PodmanClientEngineNative extends AbstractClientEngine {
+  static ENGINE = ENGINE_PODMAN_NATIVE;
   ENGINE = ENGINE_PODMAN_NATIVE;
   PROGRAM = PROGRAM;
   // Settings
@@ -122,6 +124,7 @@ class PodmanClientEngineNative extends AbstractClientEngine {
 }
 
 class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine {
+  static ENGINE = ENGINE_PODMAN_VIRTUALIZED;
   ENGINE = ENGINE_PODMAN_VIRTUALIZED;
   PROGRAM = PROGRAM;
   // Helpers
@@ -230,7 +233,7 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
     const settings = await this.getCurrentSettings();
     const machines = await this.getControllerScopes();
     const target = machines.find((it) => it.Name === settings.controller.scope);
-    return target.Running;
+    return !!target?.Running;
   }
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {
@@ -241,6 +244,7 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
 }
 
 class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
+  static ENGINE = ENGINE_PODMAN_SUBSYSTEM_WSL;
   ENGINE = ENGINE_PODMAN_SUBSYSTEM_WSL;
   PROGRAM = PROGRAM;
   // Settings
@@ -281,6 +285,7 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
 }
 
 class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA {
+  static ENGINE = ENGINE_PODMAN_SUBSYSTEM_LIMA;
   ENGINE = ENGINE_PODMAN_SUBSYSTEM_LIMA;
   PROGRAM = PROGRAM;
   // Settings
@@ -306,20 +311,12 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 
 class Adapter extends AbstractAdapter {
   ADAPTER = PROGRAM;
-
-  async createEngines() {
-    return [
-      PodmanClientEngineNative,
-      PodmanClientEngineVirtualized,
-      PodmanClientEngineSubsystemWSL,
-      PodmanClientEngineSubsystemLIMA
-    ].map((PodmanClientEngine) => {
-      const engine = new PodmanClientEngine(this.userConfiguration, this.osType);
-      engine.ADAPTER = PROGRAM;
-      engine.id = `engine.default.${engine.ENGINE}`;
-      return engine;
-    });
-  }
+  ENGINES = [
+    PodmanClientEngineNative,
+    PodmanClientEngineVirtualized,
+    PodmanClientEngineSubsystemWSL,
+    PodmanClientEngineSubsystemLIMA
+  ];
 
   async getMachines(engine, customFormat) {
     let items = [];

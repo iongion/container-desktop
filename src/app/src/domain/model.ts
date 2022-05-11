@@ -9,31 +9,11 @@ import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types
 
 export const createModel = (registry: AppRegistry): AppModel => {
   const native = Native.getInstance().isNative();
-  const platform = Native.getInstance().getPlatform();
   const model: AppModel = {
     phase: AppBootstrapPhase.INITIAL,
     pending: false,
     native,
-    descriptor: {
-      environment: "",
-      version: "",
-      platform,
-      connectors: [],
-      currentConnector: {} as any,
-      provisioned: false,
-      running: false,
-      userSettings: {
-        startApi: true,
-        minimizeToSystemTray: false,
-        path: "",
-        logging: {
-          level: "error"
-        },
-        connector: {
-          default: undefined
-        }
-      },
-    },
+    descriptor: Native.getInstance().getDefaultApplicationDescriptor(),
     // Actions
     setPhase: action((state, phase) => {
       state.phase = phase;
@@ -74,7 +54,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
           await actions.setPhase(nextPhase);
           const startup = await registry.api.start(options);
           if (startup.currentConnector) {
-            registry.api.setEngine(startup.currentConnector.engine);
+            registry.api.setConnector(startup.currentConnector);
             let nextPhase = AppBootstrapPhase.STARTED;
             if (startup.provisioned) {
               if (startup.running) {
@@ -91,8 +71,8 @@ export const createModel = (registry: AppRegistry): AppModel => {
             });
           }
           return startup;
-        } catch (error) {
-          console.error("Error during application startup", error);
+        } catch (error: any) {
+          console.error("Error during application startup", error.message, error.result);
           nextPhase = AppBootstrapPhase.FAILED;
           await actions.domainUpdate({
             phase: nextPhase,
@@ -138,10 +118,10 @@ export const createModel = (registry: AppRegistry): AppModel => {
       });
     }),
     // Others
-    testEngineProgramReachability: thunk(async (actions, options, { getState }) => {
+    testProgramReachability: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const test = await registry.api.testEngineProgramReachability(options);
+          const test = await registry.api.testProgramReachability(options);
           return test;
         } catch (error) {
           console.error("Error during program path test", error);

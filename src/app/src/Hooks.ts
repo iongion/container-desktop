@@ -32,7 +32,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
       return;
     }
     isPending.current = false;
-    function poll() {
+    async function poll() {
       if (pollerCallback.current) {
         if (isPending.current) {
           // console.warn("Skip poll cycle - still pending");
@@ -42,7 +42,8 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         return pollerCallback.current();
       }
     }
-    if (Environment.features.polling?.enabled) {
+    const isPollingEnabled = Environment.features.polling?.enabled;
+    if (isPollingEnabled) {
       pollerID.current = setInterval(async () => {
         try {
           if (isPending.current) {

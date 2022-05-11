@@ -1,11 +1,12 @@
-import { useRef, useMemo, useState, useCallback } from "react";
-import { Button, HTMLTable, Intent, Spinner } from "@blueprintjs/core";
+import { useRef, useMemo, useState, useCallback, useEffect } from "react";
+import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 import { AppScreenProps, AppScreen, Pod, PodProcessReport } from "../../Types";
 import { ScreenHeader } from ".";
+import { ScreenLoader } from "../../components/ScreenLoader";
 
 import { Notification } from "../../Notification";
 import { useStoreActions } from "../../domain/types";
@@ -24,6 +25,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { id } = useParams<{ id: string }>();
   const screenRef = useRef<HTMLDivElement>(null);
   const podFetch = useStoreActions((actions) => actions.pod.podFetch);
+  const podFetchProcesses = useStoreActions((actions) => actions.pod.podFetchProcesses);
 
   const onCopyToClipboardClick = useCallback(async (e) => {
     const code = e.currentTarget.parentNode.querySelector("code");
@@ -31,13 +33,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     Notification.show({ message: t("The command was copied to clipboard"), intent: Intent.SUCCESS });
   }, [t]);
 
-  const screenUpdater = useMemo(() => {
-    return async () => {
+  useEffect(() => {
+    (async () => {
       try {
         setPending(true);
         const pod = await podFetch({
-          Id: id,
-          withProcesses: true
+          Id: id
         });
         setPod(pod);
       } catch (error) {
@@ -45,8 +46,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
       } finally {
         setPending(false);
       }
-    };
+    })();
   }, [id, podFetch]);
+
+  const screenUpdater = useMemo(() => {
+    return async () => {
+      if (!pod) {
+        return;
+      }
+      try {
+        setPending(true);
+        await podFetchProcesses(pod);
+      } catch (error) {
+        console.error("Unable to fetch at this moment", error);
+      } finally {
+        setPending(false);
+      }
+    };
+  }, [pod, podFetchProcesses]);
 
   // Change hydration
   usePoller({ poller: screenUpdater });
@@ -59,7 +76,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
     return report;
   }, [pod]);
 
-  const contents = pending ? <Spinner /> : (
+  if (!pod) {
+    return <ScreenLoader screen={ID} pending={pending} />;
+  }
+
+  const contents = (
     <>
       <ScreenHeader pod={pod} currentScreen={ID} />
       <div className="AppScreenContent">

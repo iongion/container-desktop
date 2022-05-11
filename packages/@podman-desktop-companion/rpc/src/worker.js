@@ -14,9 +14,10 @@ self.onmessage = async function (e) {
       return;
     }
     const req = msg.payload;
-    const { invoker } = require(msg.workerPath);
+    const ctx = msg.context;
+    const { invoker } = require(ctx.workerPath);
     // logger.debug("Invocation start", req.method, req.params);
-    const result = await invoker.invoke(req.method, req.params);
+    const result = await invoker.invoke(req.method, req.params, msg.context);
     response = {
       success: true,
       guid: msg.guid,

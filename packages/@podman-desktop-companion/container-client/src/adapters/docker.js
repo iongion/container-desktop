@@ -50,6 +50,7 @@ const ENGINE_DOCKER_SUBSYSTEM_WSL = `${PROGRAM}.subsystem.wsl`;
 const ENGINE_DOCKER_SUBSYSTEM_LIMA = `${PROGRAM}.subsystem.lima`;
 
 class DockerClientEngineNative extends AbstractClientEngine {
+  static ENGINE = ENGINE_DOCKER_NATIVE;
   ENGINE = ENGINE_DOCKER_NATIVE;
   PROGRAM = PROGRAM;
   // Settings
@@ -98,7 +99,9 @@ class DockerClientEngineNative extends AbstractClientEngine {
 }
 
 class DockerClientEngineVirtualized extends DockerClientEngineNative {
+  static ENGINE = ENGINE_DOCKER_VIRTUALIZED;
   ENGINE = ENGINE_DOCKER_VIRTUALIZED;
+  PROGRAM = PROGRAM;
   // Settings
   async getExpectedSettings() {
     let settings = {};
@@ -160,6 +163,7 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
 }
 
 class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
+  static ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
   PROGRAM = PROGRAM;
   // Settings
@@ -188,6 +192,7 @@ class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
 }
 
 class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA {
+  static ENGINE = ENGINE_DOCKER_SUBSYSTEM_LIMA;
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_LIMA;
   PROGRAM = PROGRAM;
   // Settings
@@ -217,21 +222,12 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 
 class Adapter extends AbstractAdapter {
   ADAPTER = PROGRAM;
-
-  async createEngines() {
-    return [
-      DockerClientEngineNative,
-      DockerClientEngineVirtualized,
-      DockerClientEngineSubsystemWSL,
-      DockerClientEngineSubsystemLIMA
-    ].map((DockerClientEngine) => {
-      const engine = new DockerClientEngine(this.userConfiguration, this.osType);
-      engine.ADAPTER = PROGRAM;
-      engine.id = `engine.default.${engine.ENGINE}`;
-      return engine;
-    });
-  }
-
+  ENGINES = [
+    DockerClientEngineNative,
+    DockerClientEngineVirtualized,
+    DockerClientEngineSubsystemWSL,
+    DockerClientEngineSubsystemLIMA
+  ];
   async getMachines(engine, customFormat) {
     this.logger.warn(`${PROGRAM} does not support machines concept`);
     return [];

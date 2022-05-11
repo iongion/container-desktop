@@ -19,6 +19,7 @@ export interface PodsModel extends PodsModelState {
   // Thunks
   podsFetch: Thunk<PodsModel>;
   podFetch: Thunk<PodsModel, FetchPodOptions>;
+  podFetchProcesses: Thunk<PodsModel, Partial<Pod>>;
   podPause: Thunk<PodsModel, Partial<Pod>>;
   podUnpause: Thunk<PodsModel, Partial<Pod>>;
   podStop: Thunk<PodsModel, Partial<Pod>>;
@@ -75,24 +76,48 @@ export const createModel = (registry: AppRegistry): PodsModel => ({
     registry.withPending(async () => {
       const pod = await registry.api.getPod(options.Id);
       if (options.withProcesses) {
-        const processes = await registry.api.getPodProcesses(options.Id);
-        pod.Processes = processes;
+        try {
+            const processes = await registry.api.getPodProcesses(options.Id);
+            pod.Processes = processes;
+        } catch (error) {
+          console.error("Unable to load processes", error);
+        }
       }
       if (options.withKube) {
-        const generation = await registry.api.generateKube({ entityId: options.Id });
-        pod.Kube = generation.success ? generation.stdout : "";
+        try {
+          const generation = await registry.api.generateKube({ entityId: options.Id });
+          pod.Kube = generation.success ? generation.stdout : "";
+        } catch (error) {
+          console.error("Unable to load kube", error);
+          pod.Kube = "";
+        }
       }
       if (options.withLogs) {
-        let tail = 100;
-        if (options.withLogs !== undefined && options.withLogs !== true) {
-          tail = options.withLogs.Tail;
+        try {
+          let tail = 100;
+          if (options.withLogs !== undefined && options.withLogs !== true) {
+            tail = options.withLogs.Tail;
+          }
+          const logs = await registry.api.getPodLogs(options.Id, tail);
+          pod.Logs = logs;
+        } catch (error) {
+          console.error("Unable to load logs", error);
         }
-        const logs = await registry.api.getPodLogs(options.Id, tail);
-        console.debug(logs);
-        pod.Logs = logs;
       }
       actions.podUpdate(pod);
       return pod;
+    })
+  ),
+  podFetchProcesses: thunk(async (actions, pod) =>
+    registry.withPending(async () => {
+      let flag = false;
+      if (pod.Id) {
+        const processes = await registry.api.getPodProcesses(pod.Id);
+        if (flag) {
+          actions.podUpdate({ Id: pod.Id, Processes: processes });
+        }
+      }
+      return flag;
     })
   ),
   podPause: thunk(async (actions, pod) =>

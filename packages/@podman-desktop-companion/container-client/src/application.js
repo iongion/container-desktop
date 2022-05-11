@@ -3,7 +3,7 @@ const os = require("os");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { setLevel, createLogger } = require("@podman-desktop-companion/logger");
+const { setLevel, getLevel, createLogger } = require("@podman-desktop-companion/logger");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 // module
 const { Podman, Docker } = require("./adapters");
@@ -11,31 +11,188 @@ const { UserConfiguration } = require("./configuration");
 const { getApiConfig } = require("./api");
 const { findProgram, findProgramVersion } = require("./detector");
 // locals
+const DEFAULT_CONNECTORS = [
+  // Podman
+  {
+    adapter: Podman.Adapter.ADAPTER,
+    engine: Podman.ENGINE_PODMAN_NATIVE,
+    id: "engine.default.podman.native",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "podman",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  },
+  {
+    adapter: Podman.Adapter.ADAPTER,
+    engine: Podman.ENGINE_PODMAN_VIRTUALIZED,
+    id: "engine.default.podman.virtualized",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      controller: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked",
+        controller: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "podman",
+          path: undefined,
+          version: undefined
+        },
+        controller: {
+          name: "podman",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  },
+  // Docker
+  {
+    adapter: Docker.Adapter.ADAPTER,
+    engine: Docker.ENGINE_DOCKER_NATIVE,
+    id: "engine.default.docker.native",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "docker",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  },
+  {
+    adapter: Docker.Adapter.ADAPTER,
+    engine: Docker.ENGINE_DOCKER_VIRTUALIZED,
+    id: "engine.default.docker.virtualized",
+    availability: {
+      all: false,
+      api: false,
+      engine: false,
+      program: false,
+      controller: false,
+      api: false,
+      report: {
+        engine: "Not checked",
+        program: "Not checked",
+        api: "Not checked",
+        controller: "Not checked"
+      }
+    },
+    settings: {
+      expected: {},
+      detected: {},
+      automatic: {},
+      user: {},
+      current: {
+        api: {
+          baseURL: "",
+          connectionString: ""
+        },
+        program: {
+          name: "docker",
+          path: undefined,
+          version: undefined
+        },
+        controller: {
+          name: "docker",
+          path: undefined,
+          version: undefined
+        }
+      }
+    }
+  }
+];
 
 class Application {
-  constructor(version, env, osType) {
-    this.osType = osType || os.type();
+  constructor(opts) {
+    this.version = opts.version;
+    this.environment = opts.environment;
+    this.osType = opts.osType || os.type();
     this.logger = createLogger("container-client.Application");
-    this.configuration = new UserConfiguration(version, env);
+    this.configuration = new UserConfiguration(opts.version, opts.environment);
     this.adaptersList = [Podman.Adapter, Docker.Adapter];
     // available only after start - hydrated in this order
     this.adapters = [];
     this.currentAdapter = undefined;
     this.engines = [];
     this.currentEngine = undefined;
-    this.connectors = [];
-    this.currentConnector = undefined;
-    this.started = false;
+    this.connectors = opts.connectors || [];
+    this.currentConnector = opts.currentConnector || undefined;
+    this.inited = !!opts.inited;
+    this.started = !!opts.started;
+    this.logger.debug("%c Created application controller", "background: #222; color: #bada55", opts);
   }
 
-  async invoke(method, params) {
+  async invoke(method, params, context) {
     let reply = {
       success: false,
       result: undefined,
       warnings: []
     };
     const service = this[method];
-    // logger.debug("Creating invocation", method, params);
     if (service) {
       try {
         // logger.debug("Invoking", method, params);
@@ -67,56 +224,106 @@ class Application {
   }
 
   async getAdapters() {
-    const items = this.adaptersList.map((Adapter) => {
-      const adapter = new Adapter(this.configuration, this.osType);
-      return adapter;
-    });
-    return items;
+    if (this.adapters.length) {
+      this.logger.debug("Reusing adapters list", this.adapters);
+    } else {
+      // Optimize if current cached connector exists - only instantiate a single adapter
+      const currentConnector = this.currentConnector;
+      if (currentConnector) {
+        this.logger.debug("Computing single adapter for current connector", currentConnector.adapter);
+        const Adapter = this.adaptersList.find((it) => it.ADAPTER === currentConnector.adapter);
+        this.adapters = [new Adapter(this.configuration, this.osType)];
+      } else {
+        this.logger.debug("Computing all adapters list");
+        this.adapters = this.adaptersList.map((Adapter) => {
+          const adapter = new Adapter(this.configuration, this.osType);
+          return adapter;
+        });
+      }
+    }
+    return this.adapters;
+  }
+
+  async getCurrentAdapter() {
+    if (this.currentAdapter) {
+      this.logger.debug("Reusing current adapter", this.currentAdapter);
+    } else {
+      this.logger.debug("Computing current adapter");
+      const adapters = await this.getAdapters();
+      this.currentAdapter = adapters.find((it) => it.ADAPTER === this.currentConnector.adapter);
+    }
+    return this.currentAdapter;
   }
 
   async getEngines() {
-    const items = [];
-    await Promise.all(
-      this.adapters.map(async (adapter) => {
-        const adapterEngines = await adapter.createEngines();
-        items.push(...adapterEngines);
-      })
-    );
-    return items;
+    if (this.engines.length) {
+      this.logger.debug("Reusing engines list", this.engines);
+    } else {
+      this.logger.debug("Computing engines list");
+      const items = [];
+      const adapters = await this.getAdapters();
+      await Promise.all(
+        adapters.map(async (adapter) => {
+          const adapterEngines = await adapter.createEngines();
+          items.push(...adapterEngines);
+        })
+      );
+      if (this.connectors.length) {
+        items.forEach((engine) => {
+          const connector = this.connectors.find((it) => it.id === engine.id);
+          if (connector) {
+            this.logger.debug("Restore engine detected settings", engine.id, connector.settings.detected);
+            engine.setDetectedSettings(connector.settings.detected);
+          }
+        });
+      }
+      this.engines = items;
+    }
+    return this.engines;
+  }
+
+  async getCurrentEngine() {
+    if (this.currentEngine) {
+      this.logger.debug("Reusing current engine", this.currentEngine);
+    } else {
+      this.logger.debug("Computing current engine");
+      const engines = await this.getEngines();
+      this.currentEngine = engines.find((it) => it.id === this.currentConnector.id);
+    }
+    return this.currentEngine;
   }
 
   async getConnectors() {
-    const items = [];
-    await Promise.all(
-      this.engines.map(async (engine) => {
-        const connector = await engine.getConnector({ detect: true });
-        items.push(connector);
-      })
-    );
-    return items;
+    if (this.connectors.length) {
+      this.logger.debug("Reusing connectors list");
+    } else {
+      this.logger.debug("Computing connectors list");
+      const items = [];
+      const engines = await this.getEngines();
+      await Promise.all(
+        engines.map(async (engine) => {
+          const connector = await engine.getConnector({ detect: true });
+          items.push(connector);
+        })
+      );
+      this.connectors = items;
+    }
+    return this.connectors;
   }
 
-  async getDescriptor() {
-    let running = false;
-    let provisioned = false;
-    const currentConnector = this.currentConnector;
-    if (currentConnector) {
-      provisioned = currentConnector.availability.program;
-      if (typeof currentConnector.availability.controller !== "undefined") {
-        provisioned = currentConnector.availability.program && currentConnector.availability.controller;
-      }
-      running = currentConnector.availability.api;
+  async getCurrentConnector() {
+    if (!this.currentConnector) {
+      this.logger.debug("Computing current connector");
+      const connectors = await this.getConnectors();
+      this.logger.error("Unable to init without any usable connector - picking preferred(favor podman)");
+      this.currentConnector = connectors.find(({ id }) => {
+        if (this.osType === "Windows_NT" || this.osType === "Darwin") {
+          return id === "engine.default.podman.virtualized";
+        }
+        return id === "engine.default.podman.native";
+      });
     }
-    return {
-      environment: process.env.REACT_APP_ENV || "development",
-      version: process.env.REACT_APP_PROJECT_VERSION || "1.0.0",
-      platform: this.osType,
-      provisioned,
-      running,
-      connectors: this.connectors,
-      currentConnector,
-      userSettings: await this.getGlobalUserSettings()
-    };
+    return this.currentConnector;
   }
 
   // init
@@ -132,7 +339,7 @@ class Application {
     );
     this.adapters = await this.getAdapters();
     this.engines = await this.getEngines();
-    this.connectors = await this.getConnectors(this.engines);
+    this.connectors = await this.getConnectors();
     // 1st source - user preferred
     if (connector) {
       this.currentConnector = this.connectors.find(({ id }) => {
@@ -150,18 +357,19 @@ class Application {
       });
     }
     // current adapter inferred from connector
-    this.currentAdapter = this.adapters.find((it) => it.ADAPTER === this.currentConnector.adapter);
+    this.currentAdapter = await this.getCurrentAdapter();
     // current engine
-    this.currentEngine = this.engines.find((it) => it.id === this.currentConnector.id);
+    this.currentEngine = await this.getCurrentEngine();
     if (!this.currentEngine) {
       this.logger.error("Unable to init without any usable engine");
       return false;
     }
+    this.inited = true;
     return true;
   }
 
-  // start
-  async start(opts) {
+  // exec
+  async exec(opts) {
     const inited = await this.init(opts);
     if (!inited) {
       this.logger.error("Unable to start - init incomplete");
@@ -180,7 +388,9 @@ class Application {
     const updaterAfterStart = async () => {
       if (this.started) {
         this.logger.debug("Updating connector post successful start-up to get updated details");
-        this.currentConnector = await this.currentEngine.getConnector({ detect: true, started: this.started });
+        const currentEngine = await this.getCurrentEngine();
+        this.currentConnector = await currentEngine.getConnector({ detect: true, started: this.started });
+        // Update connector state
         this.connectors = this.connectors.map((it) => {
           if (it.id === this.currentConnector.id) {
             return { ...it, ...this.currentConnector };
@@ -198,7 +408,8 @@ class Application {
       await updaterAfterStart();
     } else if (startApi) {
       try {
-        this.started = await this.currentEngine.startApi();
+        const currentEngine = await this.getCurrentEngine();
+        this.started = await currentEngine.startApi();
         await updaterAfterStart();
       } catch (error) {
         this.started = false;
@@ -207,8 +418,46 @@ class Application {
     } else {
       this.logger.debug("Skipping startup - startApi is not flagged for auto start neither is it running");
     }
+    return this.started;
+  }
 
-    const descriptor = await this.getDescriptor();
+  async start(opts) {
+    this.logger.debug("Application starting");
+    try {
+      await this.exec(opts);
+    } catch (error) {
+      this.adaptersList = [Podman.Adapter];
+      this.logger.error("Application startup error - unable to execute", error.message, error.stack);
+    }
+    const defaultConnector = this.osType === "Linux" ? DEFAULT_CONNECTORS[0] : DEFAULT_CONNECTORS[1];
+    let descriptor = {
+      connectors: DEFAULT_CONNECTORS,
+      currentConnector: defaultConnector,
+      environment: this.environment || "unknown",
+      platform: this.osTye || "Unknown",
+      provisioned: false,
+      running: false,
+      userSettings: {
+        connector: { default: "engine.default.podman.native" },
+        logging: { level: "debug" },
+        minimizeToSystemTray: false,
+        path: this.configuration.getStoragePath(),
+        startApi: true
+      }
+    };
+    try {
+      descriptor = await this.getDescriptor();
+      if (!descriptor.currentConnector) {
+        descriptor.currentConnector = defaultConnector;
+      }
+    } catch (error) {
+      this.logger.error(
+        "Application startup error - fatal error - unable to create descriptor",
+        error.message,
+        error.stack
+      );
+    }
+    this.logger.debug("Application startup descriptor", descriptor);
     return descriptor;
   }
 
@@ -216,7 +465,8 @@ class Application {
     if (!this.started) {
       this.logger.debug("Stop skipped - not started");
     }
-    const stopped = await this.currentEngine.stopApi();
+    const currentEngine = await this.getCurrentEngine();
+    const stopped = await currentEngine.stopApi();
     this.stared = !stopped;
     return stopped;
   }
@@ -224,7 +474,7 @@ class Application {
   // proxying
 
   async createApiRequest(opts, driverOpts) {
-    const { currentEngine } = this;
+    const currentEngine = await this.getCurrentEngine();
     // Normalize response
     let result = {
       ok: false,
@@ -283,7 +533,7 @@ class Application {
       minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
       path: this.configuration.getStoragePath(),
       logging: {
-        level: this.configuration.getKey("logging.level", "debug")
+        level: getLevel()
       },
       connector: {
         default: this.configuration.getKey("connector.default")
@@ -292,7 +542,8 @@ class Application {
   }
 
   async setEngineUserSettings({ id, settings }) {
-    const engine = this.engines.find((it) => it.id === id);
+    const engines = await this.getEngines();
+    const engine = engines.find((it) => it.id === id);
     if (!engine) {
       this.logger.error("Unable to update settings of missing engine instance", id);
       throw new Error("Update failed - no engine");
@@ -301,22 +552,27 @@ class Application {
   }
 
   async getEngineUserSettings(id) {
-    const engine = this.engines.find((it) => it.id === id);
+    const engines = await this.getEngines();
+    const engine = engines.find((it) => it.id === id);
     return await engine.getUserSettings();
   }
 
   // introspection
 
   async getSystemInfo() {
-    return await this.currentEngine.getSystemInfo();
+    const currentEngine = await this.getCurrentEngine();
+    return await currentEngine.getSystemInfo();
   }
   async getMachines() {
-    return await this.currentAdapter.getMachines(this.currentEngine);
+    const currentAdapter = await this.getCurrentAdapter();
+    const currentEngine = await this.getCurrentEngine();
+    return await currentAdapter.getMachines(currentEngine);
   }
 
   // finders & testers
   async findProgram(opts) {
-    const engine = this.engines.find((it) => it.id === opts.id);
+    const engines = await this.getEngines();
+    const engine = engines.find((it) => it.id === opts.id);
     if (!engine) {
       this.logger.error("Unable to find a matching engine", opts.id);
       throw new Error("Find failed - no engine");
@@ -339,7 +595,7 @@ class Application {
         result = this.testApiReachability(payload);
         break;
       case "reachability.program":
-        result = this.testEngineProgramReachability(payload);
+        result = this.testProgramReachability(payload);
         break;
       default:
         result.details = `Unable to perform unknown test subject "${subject}"`;
@@ -348,16 +604,17 @@ class Application {
     return result;
   }
 
-  async testEngineProgramReachability(opts) {
+  async testProgramReachability(opts) {
     const result = { success: false };
     this.logger.debug("Testing if program is reachable", opts);
-    const { engine, id, controller, program } = opts;
+    const { adapter, engine, id, controller, program } = opts;
     const testController =
       controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
     if (testController) {
       try {
         const version = await findProgramVersion(controller.path);
         if (!version) {
+          this.logger.error("[C] Program test failed - no version");
           throw new Error("Test failed - no version");
         }
         if (version) {
@@ -365,24 +622,26 @@ class Application {
           result.details = `Program has been found - version ${version}`;
         }
       } catch (error) {
-        this.logger.error("Testing if program is reachable - failed during detection", error.message);
+        this.logger.error("[C] Testing if program is reachable - failed during detection", error.message);
         result.details = "Program detection error";
       }
     } else if (program.path) {
       try {
-        const engine = this.engines.find((it) => it.id === id);
-        if (!engine) {
-          this.logger.error("Unable to test engine program reachability - no engine", opts);
-          throw new Error("Test failed - no engine");
-        }
-        const check = await engine.runScopedCommand(program.path, ["--version"]);
-        this.logger.debug("Testing if program is reachable - completed", check);
-        if (check.success) {
-          result.success = true;
-          result.details = "Program has been found";
+        // Always instantiate engines for tests
+        const adapterEngine = this.getAdapterEngine(adapter, engine);
+        if (!adapterEngine.engine) {
+          result.success = false;
+          result.details = "Adapter engine is not accessible";
+        } else {
+          const check = await adapterEngine.engine.runScopedCommand(program.path, ["--version"]);
+          this.logger.debug("[P] Testing if program is reachable - completed", check);
+          if (check.success) {
+            result.success = true;
+            result.details = "Program has been found";
+          }
         }
       } catch (error) {
-        this.logger.error("Testing if program is reachable - failed during detection", error.message);
+        this.logger.error("[P] Testing if program is reachable - failed during detection", error.message);
         result.details = "Program detection error";
       }
     }
@@ -390,47 +649,72 @@ class Application {
   }
 
   async testApiReachability(opts) {
-    const engine = this.engines.find((it) => it.id === opts.id);
-    if (!engine) {
-      this.logger.error("Unable to find a matching engine", opts.id);
-      throw new Error("Find failed - no engine");
-    }
-
     const result = { success: false };
-    const config = getApiConfig(opts.baseURL, opts.connectionString);
-    this.logger.debug("Testing if API is reachable", config);
-    const driver = await engine.getApiDriver(config);
-    try {
-      const response = await driver.request({ method: "GET", url: "/_ping" });
-      result.success = response?.data === "OK";
-      result.details = response?.data || "Api reached";
-    } catch (error) {
-      result.details = "API is not reachable - start manually or connect";
-      this.logger.error(
-        "Reachability test failed",
-        opts,
-        error.message,
-        error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
-      );
+    const { adapter, engine, id, controller, program } = opts;
+    this.logger.debug("Testing if api is reachable", opts);
+    // Always instantiate engines for tests
+    const adapterEngine = this.getAdapterEngine(adapter, engine);
+    if (!adapterEngine.engine) {
+      result.success = false;
+      result.details = "Adapter engine is not accessible";
+    } else {
+      const config = getApiConfig(opts.baseURL, opts.connectionString);
+      const driver = await adapterEngine.engine.getApiDriver(config);
+      try {
+        const response = await driver.request({ method: "GET", url: "/_ping" });
+        result.success = response?.data === "OK";
+        result.details = response?.data || "Api reached";
+      } catch (error) {
+        result.details = "API is not reachable - start manually or connect";
+        this.logger.error(
+          "Reachability test failed",
+          opts,
+          error.message,
+          error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+        );
+      }
+      this.logger.debug("[P] Testing if api is reachable - completed", result.success);
     }
     return result;
   }
 
+  getAdapterEngine(adapterName, engineName) {
+    // Always instantiate engines for tests
+    let adapter;
+    let engine;
+    const Adapter = this.adaptersList.find((it) => it.ADAPTER === adapterName);
+    if (!Adapter) {
+      this.logger.error("[P] No adapter", adapter);
+    } else {
+      adapter = new Adapter(this.configuration, this.osType);
+      engine = adapter.createEngineByName(engineName);
+      if (!engine) {
+        this.logger.error("[P] No adapter engine", adapterName, engineName);
+      }
+    }
+    return {
+      adapter,
+      engine
+    };
+  }
+
   // cleanup
   async pruneSystem() {
-    return await this.currentEngine.pruneSystem();
+    const currentEngine = await this.getCurrentEngine();
+    return await currentEngine.pruneSystem();
   }
 
   async resetSystem() {
-    return await this.currentEngine.resetSystem();
+    const currentEngine = await this.getCurrentEngine();
+    return await currentEngine.resetSystem();
   }
 
   // utilities
   async connectToContainer(opts) {
     const { id, title, shell } = opts || {};
     this.logger.debug("Connecting to container", opts);
-    const { currentEngine } = this;
-    const { program } = await this.currentEngine.getCurrentSettings();
+    const currentEngine = await this.getCurrentEngine();
+    const { program } = await currentEngine.getCurrentSettings();
     const { launcher, command } = await currentEngine.getScopedCommand(program.path, [
       "exec",
       "-it",
@@ -468,15 +752,17 @@ class Application {
     return start.success;
   }
   async startMachine({ Name }) {
-    const { program } = await this.currentEngine.getCurrentSettings();
-    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "start", Name], {
+    const currentEngine = await this.getCurrentEngine();
+    const { program } = await currentEngine.getCurrentSettings();
+    const check = await currentEngine.runScopedCommand(program.path, ["machine", "start", Name], {
       async: true
     });
     return check.success;
   }
   async stopMachine({ Name }) {
-    const { program } = await this.currentEngine.getCurrentSettings();
-    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "stop", Name]);
+    const currentEngine = await this.getCurrentEngine();
+    const { program } = await currentEngine.getCurrentSettings();
+    const check = await currentEngine.runScopedCommand(program.path, ["machine", "stop", Name]);
     return check.success;
   }
   async removeMachine(opts) {
@@ -485,13 +771,15 @@ class Application {
       this.logger.warn("Unable to stop machine before removal");
       return false;
     }
-    const { program } = await this.currentEngine.getCurrentSettings();
-    const check = await this.currentEngine.runScopedCommand(program.path, ["machine", "rm", opts.Name, "--force"]);
+    const currentEngine = await this.getCurrentEngine();
+    const { program } = await currentEngine.getCurrentSettings();
+    const check = await currentEngine.runScopedCommand(program.path, ["machine", "rm", opts.Name, "--force"]);
     return check.success;
   }
   async createMachine(opts) {
-    const { program } = await this.currentEngine.getCurrentSettings();
-    const output = await this.currentEngine.runScopedCommand(program.path, [
+    const currentEngine = await this.getCurrentEngine();
+    const { program } = await currentEngine.getCurrentSettings();
+    const output = await currentEngine.runScopedCommand(program.path, [
       "machine",
       "init",
       "--cpus",
@@ -509,17 +797,14 @@ class Application {
   }
 
   async generateKube(opts) {
-    const capable = this.currentEngine.ADAPTER === Podman.Adapter.ADAPTER;
+    const currentEngine = await this.getCurrentEngine();
+    const capable = currentEngine.ADAPTER === Podman.Adapter.ADAPTER;
     if (!capable) {
-      logger.error(
-        "Current engine is not able to generate kube yaml",
-        this.currentEngine.ADAPTER,
-        Podman.Adapter.ADAPTER
-      );
+      logger.error("Current engine is not able to generate kube yaml", currentEngine.ADAPTER, Podman.Adapter.ADAPTER);
       return null;
     }
-    const { program } = await this.currentEngine.getCurrentSettings();
-    const result = await this.currentEngine.runScopedCommand(program.path, ["generate", "kube", opts.entityId]);
+    const { program } = await currentEngine.getCurrentSettings();
+    const result = await currentEngine.runScopedCommand(program.path, ["generate", "kube", opts.entityId]);
     if (!result.success) {
       logger.error("Unable to generate kube", opts, result);
     }
@@ -527,14 +812,69 @@ class Application {
   }
 
   async getPodLogs(opts) {
-    const { program } = await this.currentEngine.getCurrentSettings();
+    const currentEngine = await this.getCurrentEngine();
+    const { program } = await currentEngine.getCurrentSettings();
     const args = ["pod", "logs"];
     if (typeof opts.Tail !== "undefined") {
       args.push(`--tail=${opts.Tail}`);
     }
     args.push("-f", opts.Id);
-    const result = await this.currentEngine.runScopedCommand(program.path, args);
+    const result = await currentEngine.runScopedCommand(program.path, args);
     return result;
+  }
+
+  // STARTUP BEHAVIOR
+  async getDescriptor() {
+    let running = false;
+    let provisioned = false;
+    const currentConnector = this.currentConnector;
+    if (currentConnector) {
+      provisioned = currentConnector.availability.program;
+      if (typeof currentConnector.availability.controller !== "undefined") {
+        provisioned = currentConnector.availability.program && currentConnector.availability.controller;
+      }
+      running = currentConnector.availability.api;
+    }
+    return {
+      environment: this.environment,
+      version: this.version,
+      platform: this.osType,
+      provisioned,
+      running,
+      connectors: this.connectors,
+      currentConnector,
+      userSettings: await this.getGlobalUserSettings()
+    };
+  }
+
+  static getDefaultDescriptor(opts) {
+    // THIS MUST NEVER FAIL
+    const osType = opts.osType;
+    const version = opts.version;
+    const environment = opts.environment;
+    const defaultConnectorId =
+      osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
+
+    const configuration = new UserConfiguration(version, environment);
+
+    return {
+      environment: environment,
+      version: version,
+      platform: osType,
+      provisioned: !!opts?.provisioned,
+      running: !!opts?.provisioned,
+      connectors: DEFAULT_CONNECTORS,
+      currentConnector: DEFAULT_CONNECTORS.find((it) => it.id === defaultConnectorId),
+      userSettings: {
+        connector: {
+          default: defaultConnectorId
+        },
+        logging: { level: "error" },
+        minimizeToSystemTray: false,
+        path: configuration.getStoragePath(),
+        startApi: false
+      }
+    };
   }
 }
 

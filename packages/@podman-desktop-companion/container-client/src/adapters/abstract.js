@@ -46,11 +46,39 @@ const { WSL_VERSION } = require("../constants");
 class AbstractAdapter {
   /** @access public */
   ADAPTER = undefined;
+  /** @access public */
+  ENGINES = [];
+
   constructor(userConfiguration, osType) {
     /** @access protected */
     this.userConfiguration = userConfiguration;
     /** @access protected */
     this.osType = osType || os.type();
+    this.logger = createLogger(`${this.ADAPTER}.adapter`);
+  }
+
+  createEngines() {
+    return this.ENGINES.map((Engine) => this.createEngine(Engine));
+  }
+
+  createEngine(Engine) {
+    const instance = new Engine(this.userConfiguration, this.osType);
+    instance.ADAPTER = this.ADAPTER;
+    instance.id = `engine.default.${instance.ENGINE}`;
+    return instance;
+  }
+
+  createEngineByName(engine) {
+    const Engine = this.ENGINES.find((it) => it.ENGINE === engine);
+    if (!Engine) {
+      this.logger.error(
+        "Unable to find specified engine",
+        engine,
+        this.ENGINES.map((it) => it.ENGINE)
+      );
+      throw new Error("Unable to find specified engine");
+    }
+    return this.createEngine(Engine);
   }
 }
 
@@ -73,6 +101,11 @@ class AbstractClientEngine {
     this.runner = new Runner(this);
     /** @access protected */
     this.detectedSettings = undefined; // CACHE value - avoid program detection multiple times after init
+  }
+
+  // Restore to avoid expensive computation
+  setDetectedSettings(settings) {
+    this.detectedSettings = settings;
   }
 
   // Lazy factory
@@ -820,7 +853,8 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   // Services
   async getControllerScopes() {
     const settings = await this.getCurrentSettings();
-    const items = await getAvailableWSLDistributions(settings.controller.path);
+    const available = await this.isEngineAvailable();
+    const items = available ? await getAvailableWSLDistributions(settings.controller.path) : [];
     return items;
   }
   // Executes command inside controller scope
@@ -862,7 +896,7 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     const settings = await this.getCurrentSettings();
     const instances = await this.getControllerScopes();
     const target = instances.find((it) => it.Name === settings.controller.scope);
-    return target.Status === "Running";
+    return target?.Status === "Running";
   }
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
@@ -875,7 +909,9 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   // Services
   async getControllerScopes() {
     const settings = await this.getCurrentSettings();
-    const items = await getAvailableLIMAInstances(settings.controller.path);
+    const available = await this.isEngineAvailable();
+    const canListScopes = available && settings.controller.path;
+    const items = canListScopes ? await getAvailableLIMAInstances(settings.controller.path) : [];
     return items;
   }
   // Executes command inside controller scope
