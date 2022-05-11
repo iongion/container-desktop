@@ -1,5 +1,6 @@
 // vendors
 const axios = require("axios");
+const adapter = require("axios/lib/adapters/http");
 // project
 const { exec_service, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
@@ -11,7 +12,7 @@ const logger = createLogger("container-client.api");
 function createApiDriver(config) {
   const driver = axios.create({
     ...config,
-    adapter: require("axios/lib/adapters/http")
+    adapter
   });
   // Configure http client logging
   // Add a request interceptor
@@ -144,5 +145,6 @@ class Runner {
 module.exports = {
   getApiConfig,
   createApiDriver,
+  createApiAdapter: () => adapter,
   Runner
 };

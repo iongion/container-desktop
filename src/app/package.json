@@ -49,6 +49,7 @@
     "@podman-desktop-companion/rpc": "file:../../packages/@podman-desktop-companion/rpc",
     "@podman-desktop-companion/terminal": "file:../../packages/@podman-desktop-companion/terminal",
     "@podman-desktop-companion/user-settings": "file:../../packages/@podman-desktop-companion/user-settings",
+    "@podman-desktop-companion/utils": "file:../../packages/@podman-desktop-companion/utils",
     "ajv": "8.11.0",
     "axios": "^0.26.1",
     "clipboard": "^2.0.11",

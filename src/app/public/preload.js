@@ -7,6 +7,7 @@ const { createWorkerGateway } = require("@podman-desktop-companion/rpc");
 // locals
 const { userConfiguration, osType, version, environment } = require("./configuration");
 const { Application } = require("@podman-desktop-companion/container-client").application;
+const { createApiAdapter } = require("@podman-desktop-companion/container-client").api;
 const logger = createLogger("shell.preload");
 // Using worker to avoid users perceive the app as stuck during long operations
 
@@ -113,7 +114,8 @@ async function main() {
             environment
           };
           return await gateway.invoke(req, ctx, opts);
-        }
+        },
+        getApiAdapter: () => createApiAdapter()
       }
     };
     // Expose to application

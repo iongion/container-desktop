@@ -1,4 +1,6 @@
+import axios, { AxiosAdapter } from "axios";
 import { ApplicationDescriptor, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings } from "./Types";
+const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 
 export enum Platforms {
   Browser = "browser",
@@ -59,6 +61,7 @@ interface NativeBridge {
     getGlobalUserSettings: () => Promise<GlobalUserSettings>;
     proxy: <T>(request: any, context: any, opts?: ProxyServiceOptions) => Promise<T>;
     getEngine: () => Promise<ContainerEngine>;
+    getApiAdapter: () => AxiosAdapter;
   };
 }
 
@@ -149,6 +152,41 @@ export class Native {
   }
   public getDefaultApplicationDescriptor() {
     return this.bridge.defaults.descriptor;
+  }
+  public createApiDriver(config: any) {
+    const adapter = this.bridge.application.getApiAdapter();
+    const driver = axios.create({
+      baseURL: config.baseURL,
+      socketPath: config.connectionString.replace("unix://", ""),
+      adapter
+    });
+      // Add a request interceptor
+    driver.interceptors.request.use(
+      function (config) {
+        console.debug("[container-client] HTTP request", axiosConfigToCURL(config));
+        return config;
+      },
+      function (error) {
+        console.error("[container-client] HTTP request error", error.message, error.stack);
+        return Promise.reject(error);
+      }
+    );
+    // Add a response interceptor
+    driver.interceptors.response.use(
+      function (response) {
+        console.debug("[container-client] HTTP response", { status: response.status, statusText: response.statusText });
+        return response;
+      },
+      function (error) {
+        console.error(
+          "[container-client] HTTP response error",
+          error.message,
+          error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+        );
+        return Promise.reject(error);
+      }
+    );
+    return driver;
   }
   public withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());

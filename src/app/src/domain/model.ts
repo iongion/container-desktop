@@ -54,7 +54,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
           await actions.setPhase(nextPhase);
           const startup = await registry.api.start(options);
           if (startup.currentConnector) {
-            registry.api.setEngine(startup.currentConnector.engine);
+            registry.api.setConnector(startup.currentConnector);
             let nextPhase = AppBootstrapPhase.STARTED;
             if (startup.provisioned) {
               if (startup.running) {
