@@ -7,7 +7,7 @@ const { createWorkerGateway } = require("@podman-desktop-companion/rpc");
 // locals
 const { userConfiguration, osType, version, environment } = require("./configuration");
 const { Application } = require("@podman-desktop-companion/container-client").application;
-const { createApiAdapter } = require("@podman-desktop-companion/container-client").api;
+const { createApiDriver } = require("@podman-desktop-companion/container-client").api;
 const logger = createLogger("shell.preload");
 // Using worker to avoid users perceive the app as stuck during long operations
 
@@ -115,7 +115,53 @@ async function main() {
           };
           return await gateway.invoke(req, ctx, opts);
         },
-        getApiAdapter: () => createApiAdapter()
+        proxyHTTPRequest: async (req) => {
+          const driver = createApiDriver({
+            baseURL: req.baseURL,
+            socketPath: req.socketPath
+          });
+          let result;
+          try {
+            const response = await driver.request({
+              method: req.method,
+              url: req.url,
+              params: req.params,
+              data: req.data
+            });
+            result = {
+              ok: response.status >= 200 && response.status <= 300,
+              status: response.status,
+              statusText: response.statusText,
+              data: response.data,
+              headers: response.headers
+            };
+          } catch (error) {
+            if (error.response) {
+              logger.error("Response error", error.message, error.stack);
+              result = {
+                ok: false,
+                status: error.response.status,
+                statusText: error.response.statusText,
+                data: error.response.data,
+                headers: error.response.headers
+              };
+            } else {
+              logger.error("Request exception", error.message, error.stack);
+              result = {
+                ok: false,
+                status: 500,
+                statusText: "Request exception",
+                data: undefined,
+                headers: {}
+              };
+            }
+          }
+          return {
+            result: result,
+            success: result.ok,
+            warnings: []
+          };
+        }
       }
     };
     // Expose to application

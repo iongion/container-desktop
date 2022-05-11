@@ -170,28 +170,21 @@ export class ApiDriver {
   private connector?: Connector;
   public async request<T = any, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
     const request = {
-      method: "createApiRequest",
-      params: {
-        method,
-        url,
-        ...config,
-        data
-      },
-    };
-    // Direct HTTP invocations
+      method,
+      url,
+      ...config,
+      data
+    }
+    // Direct HTTP invocations where possible
     if (this.connector && ![ContainerEngine.PODMAN_SUBSYSTEM_WSL, ContainerEngine.DOCKER_SUBSYSTEM_WSL].includes(this.connector.engine)) {
-      const driver = await Native.getInstance().createApiDriver(this.connector.settings.current.api);
-      const reply = await driver.request(request.params as any);
-      const result: ContainerClientResponse<T> = {
-        ok: reply.status >= 200 && reply.status <= 300,
-        status: reply.status,
-        statusText: reply.statusText,
-        data: reply.data as T,
-        headers: reply.headers,
-      };
-      return result;
+      const reply = await Native.getInstance().proxyHTTPRequest<ContainerClientResponse<T>>(request, this.connector.settings.current.api);
+      return reply.result;
     } else {
-      const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, { http: true });
+      const service = {
+        method: "createApiRequest",
+        params: request,
+      };
+      const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(service, { http: true });
       return reply.result;
     }
   }

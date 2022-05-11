@@ -1,6 +1,4 @@
-import axios, { AxiosAdapter } from "axios";
-import { ApplicationDescriptor, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings } from "./Types";
-const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
+import { ApplicationDescriptor, EngineConnectorApiSettings, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings } from "./Types";
 
 export enum Platforms {
   Browser = "browser",
@@ -59,9 +57,9 @@ interface NativeBridge {
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
     getGlobalUserSettings: () => Promise<GlobalUserSettings>;
+    proxyHTTPRequest: <T>(request: any) => Promise<T>;
     proxy: <T>(request: any, context: any, opts?: ProxyServiceOptions) => Promise<T>;
     getEngine: () => Promise<ContainerEngine>;
-    getApiAdapter: () => AxiosAdapter;
   };
 }
 
@@ -158,41 +156,6 @@ export class Native {
   public getDefaultApplicationDescriptor() {
     return this.bridge.defaults.descriptor;
   }
-  public createApiDriver(config: any) {
-    const adapter = this.bridge.application.getApiAdapter();
-    const driver = axios.create({
-      baseURL: config.baseURL,
-      socketPath: config.connectionString.replace("unix://", ""),
-      adapter
-    });
-      // Add a request interceptor
-    driver.interceptors.request.use(
-      function (config) {
-        console.debug("[container-client] HTTP request", axiosConfigToCURL(config));
-        return config;
-      },
-      function (error) {
-        console.error("[container-client] HTTP request error", error.message, error.stack);
-        return Promise.reject(error);
-      }
-    );
-    // Add a response interceptor
-    driver.interceptors.response.use(
-      function (response) {
-        console.debug("[container-client] HTTP response", { status: response.status, statusText: response.statusText });
-        return response;
-      },
-      function (error) {
-        console.error(
-          "[container-client] HTTP response error",
-          error.message,
-          error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
-        );
-        return Promise.reject(error);
-      }
-    );
-    return driver;
-  }
   public withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());
   }
@@ -218,6 +181,37 @@ export class Native {
       throw new Error("Bridge communication error");
     }
     return result;
+  }
+  public async proxyHTTPRequest<T>(request: any, api: EngineConnectorApiSettings) {
+    let reply: ContainerClientResult<T>;
+    const isHTTP = true;
+    try {
+      const configured = {
+        ...request,
+        baseURL: api.baseURL,
+        socketPath: api.connectionString,
+      }
+      console.debug("[>]", configured);
+      reply = await this.bridge.application.proxyHTTPRequest<ContainerClientResult<T>>(configured);
+      reply.success = (reply.result as any).ok;
+      console.debug("[<]", reply);
+    } catch (error: any) {
+      console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
+      error.http = isHTTP;
+      error.result = {
+        result: "Proxy service internal error",
+        success: false,
+        warnings: [],
+      }
+      throw error;
+    }
+    if (!reply.success) {
+      const error = new Error(isHTTP ? "HTTP proxy service error" : "Application proxy service error");
+      (error as any).http = isHTTP;
+      (error as any).result = reply;
+      throw error;
+    }
+    return reply;
   }
   public async proxyService<T>(request: any, opts?: ProxyServiceOptions) {
     let reply: ContainerClientResult<T>;
@@ -263,7 +257,7 @@ export class Native {
     }
     if (!reply.success) {
       const error = new Error(isHTTP ? "HTTP proxy service error" : "Application proxy service error");
-      (error as any).http = !isHTTP;
+      (error as any).http = isHTTP;
       (error as any).result = reply;
       throw error;
     }

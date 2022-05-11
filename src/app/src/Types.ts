@@ -3,11 +3,13 @@ import React from "react";
 // project
 import { Platforms } from "./Native";
 
+export interface EngineConnectorApiSettings {
+  baseURL: string;
+  connectionString: string;
+}
+
 export interface EngineConnectorSettings {
-  api: {
-    baseURL: string;
-    connectionString: string;
-  };
+  api: EngineConnectorApiSettings;
   program: Program;
   controller?: Controller;
 }
