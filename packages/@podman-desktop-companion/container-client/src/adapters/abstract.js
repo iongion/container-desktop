@@ -46,11 +46,39 @@ const { WSL_VERSION } = require("../constants");
 class AbstractAdapter {
   /** @access public */
   ADAPTER = undefined;
+  /** @access public */
+  ENGINES = [];
+
   constructor(userConfiguration, osType) {
     /** @access protected */
     this.userConfiguration = userConfiguration;
     /** @access protected */
     this.osType = osType || os.type();
+    this.logger = createLogger(`${this.ADAPTER}.adapter`);
+  }
+
+  createEngines() {
+    return this.ENGINES.map((Engine) => this.createEngine(Engine));
+  }
+
+  createEngine(Engine) {
+    const instance = new Engine(this.userConfiguration, this.osType);
+    instance.ADAPTER = this.ADAPTER;
+    instance.id = `engine.default.${instance.ENGINE}`;
+    return instance;
+  }
+
+  createEngineByName(engine) {
+    const Engine = this.ENGINES.find((it) => it.ENGINE === engine);
+    if (!Engine) {
+      this.logger.error(
+        "Unable to find specified engine",
+        engine,
+        this.ENGINES.map((it) => it.ENGINE)
+      );
+      throw new Error("Unable to find specified engine");
+    }
+    return this.createEngine(Engine);
   }
 }
 

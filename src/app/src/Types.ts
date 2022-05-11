@@ -74,6 +74,7 @@ export interface EngineUserSettingsOptions {
 }
 
 export interface EngineApiOptions {
+  adapter: ContainerAdapter;
   engine: ContainerEngine;
   scope: string; // ControllerScope Name
   id: string; // engine client instance id
@@ -82,6 +83,7 @@ export interface EngineApiOptions {
 }
 
 export interface EngineProgramOptions {
+  adapter: ContainerAdapter;
   engine: ContainerEngine;
   id: string; // engine client instance id
   program: Partial<Program>;

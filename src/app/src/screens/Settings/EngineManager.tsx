@@ -36,7 +36,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const { automatic, current } = connector.settings;
   const { api, program, controller } = current;
 
-  const testEngineProgramReachability = useStoreActions((actions) => actions.testEngineProgramReachability);
+  const testProgramReachability = useStoreActions((actions) => actions.testProgramReachability);
   const testApiReachability = useStoreActions((actions) => actions.testApiReachability);
   const findProgram = useStoreActions((actions) => actions.findProgram);
 
@@ -115,6 +115,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
     const programTest: any = {
+      adapter: connector.adapter,
       engine,
       scope: values.scope,
       id: connector.id,
@@ -127,17 +128,18 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         path: values.controllerPath
       };
     }
-    const result: TestResult = await testEngineProgramReachability(programTest);
+    const result: TestResult = await testProgramReachability(programTest);
     if (result.success) {
       Notification.show({ message: t("Program was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
     }
-  }, [engine, controller, connector, testEngineProgramReachability, getValues, t]);
+  }, [engine, controller, connector, testProgramReachability, getValues, t]);
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
     const result: TestResult = await testApiReachability({
+      adapter: connector.adapter,
       engine,
       scope: values.scope,
       id: connector.id,

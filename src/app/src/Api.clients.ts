@@ -823,7 +823,7 @@ export class ContainerClient {
     });
   }
 
-  async testEngineProgramReachability(opts: EngineProgramOptions) {
+  async testProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<TestResult>(async () => {
       const reply = await Native.getInstance().proxyService<TestResult>({
         method: "test",

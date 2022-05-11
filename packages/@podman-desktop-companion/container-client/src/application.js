@@ -595,7 +595,7 @@ class Application {
         result = this.testApiReachability(payload);
         break;
       case "reachability.program":
-        result = this.testEngineProgramReachability(payload);
+        result = this.testProgramReachability(payload);
         break;
       default:
         result.details = `Unable to perform unknown test subject "${subject}"`;
@@ -604,16 +604,17 @@ class Application {
     return result;
   }
 
-  async testEngineProgramReachability(opts) {
+  async testProgramReachability(opts) {
     const result = { success: false };
     this.logger.debug("Testing if program is reachable", opts);
-    const { engine, id, controller, program } = opts;
+    const { adapter, engine, id, controller, program } = opts;
     const testController =
       controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
     if (testController) {
       try {
         const version = await findProgramVersion(controller.path);
         if (!version) {
+          this.logger.error("[C] Program test failed - no version");
           throw new Error("Test failed - no version");
         }
         if (version) {
@@ -621,25 +622,26 @@ class Application {
           result.details = `Program has been found - version ${version}`;
         }
       } catch (error) {
-        this.logger.error("Testing if program is reachable - failed during detection", error.message);
+        this.logger.error("[C] Testing if program is reachable - failed during detection", error.message);
         result.details = "Program detection error";
       }
     } else if (program.path) {
       try {
-        const engines = await this.getEngines();
-        const engine = engines.find((it) => it.id === id);
-        if (!engine) {
-          this.logger.error("Unable to test engine program reachability - no engine", opts);
-          throw new Error("Test failed - no engine");
-        }
-        const check = await engine.runScopedCommand(program.path, ["--version"]);
-        this.logger.debug("Testing if program is reachable - completed", check);
-        if (check.success) {
-          result.success = true;
-          result.details = "Program has been found";
+        // Always instantiate engines for tests
+        const adapterEngine = this.getAdapterEngine(adapter, engine);
+        if (!adapterEngine.engine) {
+          result.success = false;
+          result.details = "Adapter engine is not accessible";
+        } else {
+          const check = await adapterEngine.engine.runScopedCommand(program.path, ["--version"]);
+          this.logger.debug("[P] Testing if program is reachable - completed", check);
+          if (check.success) {
+            result.success = true;
+            result.details = "Program has been found";
+          }
         }
       } catch (error) {
-        this.logger.error("Testing if program is reachable - failed during detection", error.message);
+        this.logger.error("[P] Testing if program is reachable - failed during detection", error.message);
         result.details = "Program detection error";
       }
     }
@@ -647,31 +649,53 @@ class Application {
   }
 
   async testApiReachability(opts) {
-    const engines = await this.getEngines();
-    const engine = engines.find((it) => it.id === opts.id);
-    if (!engine) {
-      this.logger.error("Unable to find a matching engine", opts.id);
-      throw new Error("Find failed - no engine");
-    }
-
     const result = { success: false };
-    const config = getApiConfig(opts.baseURL, opts.connectionString);
-    this.logger.debug("Testing if API is reachable", config);
-    const driver = await engine.getApiDriver(config);
-    try {
-      const response = await driver.request({ method: "GET", url: "/_ping" });
-      result.success = response?.data === "OK";
-      result.details = response?.data || "Api reached";
-    } catch (error) {
-      result.details = "API is not reachable - start manually or connect";
-      this.logger.error(
-        "Reachability test failed",
-        opts,
-        error.message,
-        error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
-      );
+    const { adapter, engine, id, controller, program } = opts;
+    this.logger.debug("Testing if api is reachable", opts);
+    // Always instantiate engines for tests
+    const adapterEngine = this.getAdapterEngine(adapter, engine);
+    if (!adapterEngine.engine) {
+      result.success = false;
+      result.details = "Adapter engine is not accessible";
+    } else {
+      const config = getApiConfig(opts.baseURL, opts.connectionString);
+      const driver = await adapterEngine.engine.getApiDriver(config);
+      try {
+        const response = await driver.request({ method: "GET", url: "/_ping" });
+        result.success = response?.data === "OK";
+        result.details = response?.data || "Api reached";
+      } catch (error) {
+        result.details = "API is not reachable - start manually or connect";
+        this.logger.error(
+          "Reachability test failed",
+          opts,
+          error.message,
+          error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+        );
+      }
+      this.logger.debug("[P] Testing if api is reachable - completed", result.success);
     }
     return result;
+  }
+
+  getAdapterEngine(adapterName, engineName) {
+    // Always instantiate engines for tests
+    let adapter;
+    let engine;
+    const Adapter = this.adaptersList.find((it) => it.ADAPTER === adapterName);
+    if (!Adapter) {
+      this.logger.error("[P] No adapter", adapter);
+    } else {
+      adapter = new Adapter(this.configuration, this.osType);
+      engine = adapter.createEngineByName(engineName);
+      if (!engine) {
+        this.logger.error("[P] No adapter engine", adapterName, engineName);
+      }
+    }
+    return {
+      adapter,
+      engine
+    };
   }
 
   // cleanup
