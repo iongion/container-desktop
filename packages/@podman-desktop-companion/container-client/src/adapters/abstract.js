@@ -862,7 +862,7 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     const settings = await this.getCurrentSettings();
     const instances = await this.getControllerScopes();
     const target = instances.find((it) => it.Name === settings.controller.scope);
-    return target.Status === "Running";
+    return !!target && target.Status === "Running";
   }
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
