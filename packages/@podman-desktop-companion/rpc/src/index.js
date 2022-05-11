@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
-const DEFAULT_MAX_EXECUTION_TIME = 30000;
+const DEFAULT_MAX_EXECUTION_TIME = 60000;
 
 class RPCWorkerGateway {
   constructor(factory) {

@@ -795,7 +795,6 @@ export class ContainerClient {
         method: "generateKube",
         params: opts
       });
-      console.debug(reply);
       return reply.result;
     });
   }
@@ -842,7 +841,6 @@ export class ContainerClient {
           settings
         }
       });
-      console.debug(reply);
       return reply.result;
     });
   }
