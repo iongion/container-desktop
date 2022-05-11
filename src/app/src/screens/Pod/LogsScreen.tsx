@@ -43,6 +43,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   if (!pod) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader pod={pod} currentScreen={ID} />

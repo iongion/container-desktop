@@ -1,7 +1,7 @@
 // node
 const os = require("os");
 // vendors
-require("fix-path")();
+// require("fix-path")();
 const merge = require("lodash.merge");
 // project
 const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;

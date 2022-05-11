@@ -4,13 +4,14 @@ const { v4: uuidv4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
-const DEFAULT_MAX_EXECUTION_TIME = 15000;
+const DEFAULT_MAX_EXECUTION_TIME = 30000;
 
 class RPCWorkerGateway {
   constructor(factory) {
     this.factory = factory;
     this.invocations = {};
     this.worker = null;
+    this.keepAlive = false;
     this.logger = createLogger("rpc.gateway");
   }
   async getWorker() {
@@ -25,9 +26,13 @@ class RPCWorkerGateway {
         const invocation = this.invocations[response.guid];
         if (invocation) {
           await invocation.clear(true);
-          this.logger.debug("Worker complete - sweeping");
-          this.worker.terminate();
-          this.worker = undefined;
+          if (this.keepAlive) {
+            this.logger.debug("Worker complete - keep alive");
+          } else {
+            this.logger.debug("Worker complete - terminate");
+            this.worker.terminate();
+            this.worker = undefined;
+          }
           // clear the stack
           if (response.type === "rpc.response.result") {
             invocation.done(null, response.payload);
@@ -111,6 +116,7 @@ class RPCWorkerGateway {
     return invocation;
   }
   async invoke(payload, context, opts) {
+    this.keepAlive = !!opts?.keepAlive;
     const invocation = await this.createInvocation({ payload, context }, opts);
     return await invocation.send();
   }

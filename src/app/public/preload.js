@@ -1,5 +1,4 @@
 // vendors
-const path = require("path");
 // require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
@@ -98,7 +97,7 @@ async function main() {
             logger.error("Unable to openTerminal", error);
           }
         },
-        proxy: async (req, ctx) => {
+        proxy: async (req, ctx, opts) => {
           const gateway = createWorkerGateway(() => new Worker("worker.js"));
           // Inject configuration
           ctx.configuration = {
@@ -106,7 +105,7 @@ async function main() {
             version,
             environment
           };
-          return await gateway.invoke(req, ctx);
+          return await gateway.invoke(req, ctx, opts);
         }
       }
     };

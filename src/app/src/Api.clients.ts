@@ -175,7 +175,7 @@ export class ApiDriver {
         data
       },
     };
-    const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, true);
+    const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(request, { http: true });
     return reply.result;
   }
   public async get<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
@@ -540,7 +540,7 @@ export class ContainerClient {
       const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
         method: "start",
         params: opts
-      });
+      }, { keepAlive: true });
       return reply.result;
     });
   }

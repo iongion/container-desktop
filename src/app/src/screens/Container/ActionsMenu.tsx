@@ -117,6 +117,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
     performActionCommand("container.connect", { confirm: { success: false } });
   }, [performActionCommand]);
 
+  const isKubeAvailable = currentAdapter === ContainerAdapter.PODMAN;
+  const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available when using {{currentAdapter}} engine", {currentAdapter});
   const expandAsButtons = expand ? (
     <>
       <AnchorButton
@@ -146,16 +148,17 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
         icon={IconNames.TEXT_HIGHLIGHT}
         text={t("Kube")}
         href={getContainerUrl(container.Id, "kube")}
+        disabled={!isKubeAvailable}
+        title={kubeDisabledTitle}
       />
     </>
   ) : undefined;
-  const isKubeAvailable = currentAdapter === ContainerAdapter.PODMAN;
   const expandAsMenuItems = expand ? undefined : (
     <>
       <MenuItem icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getContainerUrl(container.Id, "inspect")} />
       <MenuItem icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
-      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} disabled={!isKubeAvailable} title={t("Not available when using {{currentAdapter}} engine", {currentAdapter})} />
+      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} disabled={!isKubeAvailable} title={kubeDisabledTitle} />
     </>
   );
 

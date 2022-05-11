@@ -302,7 +302,7 @@ class Application {
 
   async getConnectors() {
     if (this.connectors.length) {
-      this.logger.debug("Reusing connectors list", this.connectors);
+      this.logger.debug("Reusing connectors list");
     } else {
       this.logger.debug("Computing connectors list");
       const items = [];

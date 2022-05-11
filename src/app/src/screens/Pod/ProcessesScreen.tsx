@@ -1,11 +1,12 @@
 import { useRef, useMemo, useState, useCallback, useEffect } from "react";
-import { Button, HTMLTable, Intent, Spinner } from "@blueprintjs/core";
+import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 import { AppScreenProps, AppScreen, Pod, PodProcessReport } from "../../Types";
 import { ScreenHeader } from ".";
+import { ScreenLoader } from "../../components/ScreenLoader";
 
 import { Notification } from "../../Notification";
 import { useStoreActions } from "../../domain/types";
@@ -74,6 +75,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
     }
     return report;
   }, [pod]);
+
+  if (!pod) {
+    return <ScreenLoader screen={ID} pending={pending} />;
+  }
 
   const contents = (
     <>
