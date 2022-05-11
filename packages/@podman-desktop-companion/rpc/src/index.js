@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
-const DEFAULT_MAX_EXECUTION_TIME = 60000;
+const DEFAULT_MAX_EXECUTION_TIME = 15000;
 
 class RPCWorkerGateway {
   constructor(factory) {
@@ -16,23 +16,28 @@ class RPCWorkerGateway {
   async getWorker() {
     if (!this.worker) {
       this.worker = await this.factory();
-      this.worker.addEventListener("message", (evt) => {
+      this.worker.addEventListener("error", (evt) => {
+        this.logger.error("Worker response - gateway error", evt);
+      });
+      this.worker.addEventListener("message", async (evt) => {
         const response = evt.data;
+        this.logger.debug("Worker response - gateway received message", response);
         const invocation = this.invocations[response.guid];
         if (invocation) {
-          invocation.clear(true);
+          await invocation.clear(true);
+          this.logger.debug("Worker complete - sweeping");
+          this.worker.terminate();
+          this.worker = undefined;
           // clear the stack
-          setTimeout(() => {
-            if (response.type === "rpc.response.result") {
-              invocation.done(null, response.payload);
-            } else {
-              invocation.done(null, {
-                result: response.payload,
-                success: false,
-                warnings: []
-              });
-            }
-          });
+          if (response.type === "rpc.response.result") {
+            invocation.done(null, response.payload);
+          } else {
+            invocation.done(null, {
+              result: response.payload,
+              success: false,
+              warnings: []
+            });
+          }
         } else {
           this.logger.error("No invocation for current response", response);
         }
@@ -56,7 +61,8 @@ class RPCWorkerGateway {
       message,
       handled: false,
       timeout: undefined,
-      clear: (markHandled) => {
+      clear: async (markHandled) => {
+        this.logger.warn(guid, "Worker request - timeout clearing");
         clearTimeout(invocation.timeout);
         if (markHandled) {
           invocation.handled = markHandled;
@@ -67,7 +73,7 @@ class RPCWorkerGateway {
       send: () =>
         new Promise(async (resolve, reject) => {
           this.invocations[guid] = invocation;
-          this.logger.debug(guid, "Message timeout monitor started");
+          this.logger.debug(guid, "Worker request - timeout monitor started");
           // register timeout monitor
           invocation.done = (err, res) => {
             if (err) {
@@ -76,23 +82,29 @@ class RPCWorkerGateway {
               resolve(res);
             }
           };
-          invocation.timeout = setTimeout(() => {
-            invocation.clear();
+          invocation.timeout = setTimeout(async () => {
+            await invocation.clear();
             if (invocation.handled) {
-              this.logger.debug(guid, "Message timed-out - skip handling(already handled)");
+              this.logger.debug(guid, "Worker request timed-out - skip handling(already handled)");
             } else {
-              this.logger.debug(guid, "Message timed-out - marking as handled(notifying timeout)");
+              this.logger.error(guid, "Worker request timed-out - marking as handled(notifying timeout)");
               invocation.handled = true;
+              const worker = await this.getWorker();
+              if (worker) {
+                this.logger.error(guid, "Worker request timed-out - terminating");
+                worker.terminate();
+                this.worker = undefined;
+              }
               reject(new Error("Worker communication timeout"));
             }
           }, maxExecutionTime);
           // deliver message and wait for reply
           const worker = await this.getWorker();
           try {
-            this.logger.debug(guid, "Message delivery started", message);
+            this.logger.debug(guid, "Worker request - message delivery started", message);
             worker.postMessage(message);
           } catch (error) {
-            this.logger.error(guid, "Message post error", error.message, error.stack);
+            this.logger.error(guid, "Worker request - message delivery error", error.message, error.stack);
           }
         })
     };
@@ -133,6 +145,7 @@ async function createWorkerClient(scope, onMessage, id) {
         }
       }
     };
+    logger.debug(message.guid, "Worker processing started", message);
     try {
       await onMessage(ctx, message);
     } catch (error) {
@@ -140,10 +153,15 @@ async function createWorkerClient(scope, onMessage, id) {
       ctx.done({ message: error.message, stack: error.stack });
     }
   }
+  function scopeErrorListener(evt) {
+    logger.error(message.guid, "Worker client error", evt);
+  }
   scope.addEventListener("message", scopeMessageListener);
+  scope.addEventListener("error", scopeErrorListener);
   return {
     release: () => {
       scope.removeEventListener("message", scopeMessageListener);
+      scope.removeEventListener("error", scopeErrorListener);
     }
   };
 }

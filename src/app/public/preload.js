@@ -1,5 +1,6 @@
 // vendors
-require("fix-path")();
+const path = require("path");
+// require("fix-path")();
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
@@ -8,7 +9,6 @@ const { createWorkerGateway } = require("@podman-desktop-companion/rpc");
 const { userConfiguration, osType, version, environment } = require("./configuration");
 const logger = createLogger("shell.preload");
 // Using worker to avoid users perceive the app as stuck during long operations
-const gateway = createWorkerGateway(() => new Worker("worker.js"));
 
 async function main() {
   logger.debug("Starting renderer process");
@@ -98,14 +98,15 @@ async function main() {
             logger.error("Unable to openTerminal", error);
           }
         },
-        proxy: async (req) => {
-          // Using worker to avoid users perceive the app as stuck during long operations
-          const context = {
+        proxy: async (req, ctx) => {
+          const gateway = createWorkerGateway(() => new Worker("worker.js"));
+          // Inject configuration
+          ctx.configuration = {
+            osType,
             version,
-            environment,
-            osType
+            environment
           };
-          return await gateway.invoke(req, context);
+          return await gateway.invoke(req, ctx);
         }
       }
     };

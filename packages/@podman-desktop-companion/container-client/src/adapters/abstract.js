@@ -75,6 +75,11 @@ class AbstractClientEngine {
     this.detectedSettings = undefined; // CACHE value - avoid program detection multiple times after init
   }
 
+  // Restore to avoid expensive computation
+  setDetectedSettings(settings) {
+    this.detectedSettings = settings;
+  }
+
   // Lazy factory
   async getApiDriver() {
     const settings = await this.getCurrentSettings();

@@ -89,7 +89,7 @@ function wrapSpawnSync(launcher, launcherArgs, launcherOpts) {
   const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
   const command = [spawnLauncher, ...spawnArgs].join(" ");
   // logger.debug("[SC.S][>]", command);
-  logger.debug("[SC.S][>][spawnSync]", { spawnLauncher, spawnArgs, spawnLauncherOpts });
+  logger.debug("[SC.S][>][spawnSync]", command);
   const child = spawnSync(spawnLauncher, spawnArgs, spawnLauncherOpts);
   child.command = command;
   return child;

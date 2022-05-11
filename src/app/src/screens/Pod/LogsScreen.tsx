@@ -7,7 +7,6 @@ import { AppScreenProps, AppScreen, Pod } from "../../Types";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { CodeEditor } from "../../components/CodeEditor";
-import { pathTo } from "../../Navigator";
 
 import { useStoreActions } from "../../domain/types";
 
@@ -23,6 +22,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [pod, setPod] = useState<Pod>();
   const { id } = useParams<{ id: string }>();
   const podFetch = useStoreActions((actions) => actions.pod.podFetch);
+
   useEffect(() => {
     (async () => {
       try {
@@ -39,6 +39,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       }
     })();
   }, [podFetch, id]);
+
   if (!pod) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }

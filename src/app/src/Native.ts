@@ -50,7 +50,7 @@ interface NativeBridge {
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
     getGlobalUserSettings: () => Promise<GlobalUserSettings>;
-    proxy: <T>(request: any) => Promise<T>;
+    proxy: <T>(request: any, context: any) => Promise<T>;
     getEngine: () => Promise<ContainerEngine>;
   };
 }
@@ -58,6 +58,7 @@ interface NativeBridge {
 export class Native {
   private static instance: Native;
   private bridge: NativeBridge;
+  private proxyContext: any = {};
   constructor() {
     if (Native.instance) {
       throw new Error("Cannot have multiple instances");
@@ -80,7 +81,7 @@ export class Native {
         relaunch: () => { throw new Error("Not bridged"); },
         openFileSelector: (options?: OpenFileSelectorOptions) => { throw new Error("Not bridged"); },
         openTerminal: (options?: OpenTerminalOptions) => { throw new Error("Not bridged"); },
-        proxy: (request: any) => { throw new Error("Not bridged"); },
+        proxy: (request: any, context: any) => { throw new Error("Not bridged"); },
         getEngine: () => { throw new Error("Not bridged"); },
       }
     };
@@ -156,11 +157,20 @@ export class Native {
     let reply: ContainerClientResult<T>;
     try {
       console.debug("[>]", request);
-      reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request);
+      reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request, this.proxyContext);
       if (http) {
         reply.success = (reply.result as any).ok;
       }
       console.debug("[<]", reply);
+      if (request.method === "start") {
+        this.proxyContext = {
+          inited: true, // consider already initialized
+          started: (reply.result as any).running,
+          connectors: (reply.result as any).connectors,
+          currentConnector: (reply.result as any).currentConnector,
+        };
+        console.error("KEEP CONTEXT AND RE-USE IN NEXT CALLS", this.proxyContext);
+      }
     } catch (error: any) {
       console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
       error.http = !!http;
