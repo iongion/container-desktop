@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.9] - 2022-05-11
+
+* Fix UI blocking when server detections fail abruptly
+* Moved all time consuming operations to web-workers
+* Call socket api when possible
+
 ## [4.1.0-rc.8] - 2022-05-09
 
 * Attempt solving startup issues
