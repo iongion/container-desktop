@@ -1,4 +1,4 @@
-import { ApplicationDescriptor, EngineConnectorApiSettings, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings } from "./Types";
+import { ApplicationDescriptor, EngineConnectorApiSettings, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings, EngineConnectorSettings } from "./Types";
 
 export enum Platforms {
   Browser = "browser",
@@ -56,10 +56,14 @@ interface NativeBridge {
     openDevTools: () => void;
     openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
     openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
-    getGlobalUserSettings: () => Promise<GlobalUserSettings>;
     proxyHTTPRequest: <T>(request: any) => Promise<T>;
     proxy: <T>(request: any, context: any, opts?: ProxyServiceOptions) => Promise<T>;
     getEngine: () => Promise<ContainerEngine>;
+    // settings
+    setGlobalUserSettings: (settings: Partial<GlobalUserSettings>) => Promise<GlobalUserSettings>;
+    getGlobalUserSettings: () => Promise<GlobalUserSettings>;
+    setEngineUserSettings: (id: string, settings: Partial<EngineConnectorSettings>) => Promise<EngineConnectorSettings>;
+    getEngineUserSettings: (id: string) => Promise<EngineConnectorSettings>;
   };
 }
 
@@ -262,5 +266,18 @@ export class Native {
       throw error;
     }
     return reply;
+  }
+
+  public async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
+    return this.bridge.application.setGlobalUserSettings(settings);
+  };
+  public async getGlobalUserSettings() {
+    return this.bridge.application.getGlobalUserSettings();
+  }
+  public async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
+    return this.bridge.application.setEngineUserSettings(id, settings);
+  }
+  public async getEngineUserSettings(id: string) {
+    return this.bridge.application.getEngineUserSettings(id);
   }
 }

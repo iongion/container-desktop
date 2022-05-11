@@ -3,7 +3,7 @@ const os = require("os");
 // vendors
 const merge = require("lodash.merge");
 // project
-const { setLevel, getLevel, createLogger } = require("@podman-desktop-companion/logger");
+const { createLogger } = require("@podman-desktop-companion/logger");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 // module
 const { Podman, Docker } = require("./adapters");
@@ -513,50 +513,6 @@ class Application {
     return result;
   }
 
-  // configuration
-
-  async setGlobalUserSettings(opts) {
-    this.logger.debug("Updating global user settings", opts);
-    Object.keys(opts).forEach((key) => {
-      const value = opts[key];
-      this.configuration.setKey(key, value);
-      if (key === "logging") {
-        setLevel(value.level);
-      }
-    });
-    return await this.getGlobalUserSettings();
-  }
-
-  async getGlobalUserSettings() {
-    return {
-      startApi: this.configuration.getKey("startApi", false),
-      minimizeToSystemTray: this.configuration.getKey("minimizeToSystemTray", false),
-      path: this.configuration.getStoragePath(),
-      logging: {
-        level: getLevel()
-      },
-      connector: {
-        default: this.configuration.getKey("connector.default")
-      }
-    };
-  }
-
-  async setEngineUserSettings({ id, settings }) {
-    const engines = await this.getEngines();
-    const engine = engines.find((it) => it.id === id);
-    if (!engine) {
-      this.logger.error("Unable to update settings of missing engine instance", id);
-      throw new Error("Update failed - no engine");
-    }
-    return await engine.setUserSettings(settings);
-  }
-
-  async getEngineUserSettings(id) {
-    const engines = await this.getEngines();
-    const engine = engines.find((it) => it.id === id);
-    return await engine.getUserSettings();
-  }
-
   // introspection
 
   async getSystemInfo() {
@@ -842,8 +798,7 @@ class Application {
       provisioned,
       running,
       connectors: this.connectors,
-      currentConnector,
-      userSettings: await this.getGlobalUserSettings()
+      currentConnector
     };
   }
 
@@ -854,9 +809,6 @@ class Application {
     const environment = opts.environment;
     const defaultConnectorId =
       osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
-
-    const configuration = new UserConfiguration(version, environment);
-
     return {
       environment: environment,
       version: version,
@@ -864,16 +816,7 @@ class Application {
       provisioned: !!opts?.provisioned,
       running: !!opts?.provisioned,
       connectors: DEFAULT_CONNECTORS,
-      currentConnector: DEFAULT_CONNECTORS.find((it) => it.id === defaultConnectorId),
-      userSettings: {
-        connector: {
-          default: defaultConnectorId
-        },
-        logging: { level: "error" },
-        minimizeToSystemTray: false,
-        path: configuration.getStoragePath(),
-        startApi: false
-      }
+      currentConnector: DEFAULT_CONNECTORS.find((it) => it.id === defaultConnectorId)
     };
   }
 }

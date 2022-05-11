@@ -109,7 +109,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
         try {
           const updated = await registry.api.setEngineUserSettings(options.id, options.settings);
           actions.syncEngineUserSettings(options);
-          console.debug(getState());
           return updated;
         } catch (error) {
           // TODO: Notify the user

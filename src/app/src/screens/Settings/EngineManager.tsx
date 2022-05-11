@@ -550,15 +550,18 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
       );
     }
     try {
-      const settings: EngineConnectorSettings = await setEngineUserSettings({ id: connector.id, settings: engineUserSettings });
+      const nextSettings = { id: connector.id, settings: engineUserSettings };
+      const settings: EngineConnectorSettings = await setEngineUserSettings(nextSettings);
+      console.debug("Post update settings are", settings, "vs", nextSettings);
       reset({
         scope: connector.settings.current.controller?.scope,
         controllerPath: connector.settings.current.controller?.path,
-        programPath: settings.program.path,
-        connectionString: settings.api.connectionString
+        programPath: settings.program?.path,
+        connectionString: settings.api?.connectionString
       });
       Notification.show({ message: t("Container engine settings have been updated"), intent: Intent.SUCCESS });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Container engine settings updated failed", error.message, error.stack);
       Notification.show({ message: t("Container engine settings update has failed"), intent: Intent.DANGER });
     }
   });

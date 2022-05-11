@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.10] - 2022-05-11
+
+* issue #73 - Read and write settings without needing to spawn a worker
+
 ## [4.1.0-rc.9] - 2022-05-11
 
 * Fix UI blocking when server detections fail abruptly

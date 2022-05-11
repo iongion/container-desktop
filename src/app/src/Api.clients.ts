@@ -558,6 +558,7 @@ export class ContainerClient {
         method: "start",
         params: opts
       }, { keepAlive: true });
+      reply.result.userSettings = await Native.getInstance().getGlobalUserSettings();
       return reply.result;
     });
   }
@@ -795,46 +796,30 @@ export class ContainerClient {
   // Configuration globals
   async getGlobalUserSettings() {
     return this.withResult<GlobalUserSettings>(async () => {
-      const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
-        method: "getGlobalUserSettings",
-      });
-      return reply.result;
+      const reply = await Native.getInstance().getGlobalUserSettings();
+      return reply;
     });
   }
 
   async setGlobalUserSettings(options: Partial<GlobalUserSettingsOptions>) {
     return this.withResult<GlobalUserSettings>(async () => {
-      const reply = await Native.getInstance().proxyService<GlobalUserSettings>({
-        method: "setGlobalUserSettings",
-        params: options
-      });
-      return reply.result;
+      const reply = await Native.getInstance().setGlobalUserSettings(options);
+      return reply;
     });
   }
 
   // Configuration per engine
   async getEngineUserSettings(id: string) {
     return this.withResult<any>(async () => {
-      const reply = await Native.getInstance().proxyService<any>({
-        method: "getEngineUserSettings",
-        params: {
-          id
-        },
-      });
-      return reply.result;
+      const reply = await Native.getInstance().getEngineUserSettings(id);
+      return reply;
     });
   }
 
   async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
     return this.withResult<EngineConnectorSettings>(async () => {
-      const reply = await Native.getInstance().proxyService<EngineConnectorSettings>({
-        method: "setEngineUserSettings",
-        params: {
-          id,
-          settings
-        }
-      });
-      return reply.result;
+      const reply = await Native.getInstance().setEngineUserSettings(id, settings);
+      return reply;
     });
   }
 
