@@ -6,6 +6,7 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 const { createWorkerGateway } = require("@podman-desktop-companion/rpc");
 // locals
 const { userConfiguration, osType, version, environment } = require("./configuration");
+const { Application } = require("@podman-desktop-companion/container-client").application;
 const logger = createLogger("shell.preload");
 // Using worker to avoid users perceive the app as stuck during long operations
 
@@ -16,7 +17,13 @@ async function main() {
       available: true,
       platform: osType,
       defaults: {
-        connector: userConfiguration.getKey("connector.default")
+        connector: userConfiguration.getKey("connector.default"),
+        // This must not fail - prevents startup failures to put the app in an undefined state
+        descriptor: Application.getDefaultDescriptor({
+          osType,
+          version,
+          environment
+        })
       },
       application: {
         setup: function () {

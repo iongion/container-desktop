@@ -194,13 +194,6 @@ class Application {
     };
     const service = this[method];
     if (service) {
-      /*
-      if (method !== "init" && method !== "start" && !this.inited) {
-        this.logger.warn("*** Application is not initialized - attempting initialize from context ***", context);
-        const startup = await this.start();
-        this.logger.debug("--------- startup finished", startup);
-      }
-      */
       try {
         // logger.debug("Invoking", method, params);
         reply.success = true;
@@ -331,29 +324,6 @@ class Application {
       });
     }
     return this.currentConnector;
-  }
-
-  async getDescriptor() {
-    let running = false;
-    let provisioned = false;
-    const currentConnector = this.currentConnector;
-    if (currentConnector) {
-      provisioned = currentConnector.availability.program;
-      if (typeof currentConnector.availability.controller !== "undefined") {
-        provisioned = currentConnector.availability.program && currentConnector.availability.controller;
-      }
-      running = currentConnector.availability.api;
-    }
-    return {
-      environment: this.environment,
-      version: this.version,
-      platform: this.osType,
-      provisioned,
-      running,
-      connectors: this.connectors,
-      currentConnector,
-      userSettings: await this.getGlobalUserSettings()
-    };
   }
 
   // init
@@ -827,6 +797,60 @@ class Application {
     args.push("-f", opts.Id);
     const result = await currentEngine.runScopedCommand(program.path, args);
     return result;
+  }
+
+  // STARTUP BEHAVIOR
+  async getDescriptor() {
+    let running = false;
+    let provisioned = false;
+    const currentConnector = this.currentConnector;
+    if (currentConnector) {
+      provisioned = currentConnector.availability.program;
+      if (typeof currentConnector.availability.controller !== "undefined") {
+        provisioned = currentConnector.availability.program && currentConnector.availability.controller;
+      }
+      running = currentConnector.availability.api;
+    }
+    return {
+      environment: this.environment,
+      version: this.version,
+      platform: this.osType,
+      provisioned,
+      running,
+      connectors: this.connectors,
+      currentConnector,
+      userSettings: await this.getGlobalUserSettings()
+    };
+  }
+
+  static getDefaultDescriptor(opts) {
+    // THIS MUST NEVER FAIL
+    const osType = opts.osType;
+    const version = opts.version;
+    const environment = opts.environment;
+    const defaultConnectorId =
+      osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
+
+    const configuration = new UserConfiguration(version, environment);
+
+    return {
+      environment: environment,
+      version: version,
+      platform: osType,
+      provisioned: !!opts?.provisioned,
+      running: !!opts?.provisioned,
+      connectors: DEFAULT_CONNECTORS,
+      currentConnector: DEFAULT_CONNECTORS.find((it) => it.id === defaultConnectorId),
+      userSettings: {
+        connector: {
+          default: defaultConnectorId
+        },
+        logging: { level: "error" },
+        minimizeToSystemTray: false,
+        path: configuration.getStoragePath(),
+        startApi: false
+      }
+    };
   }
 }
 

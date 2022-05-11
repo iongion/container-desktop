@@ -40,6 +40,7 @@ interface NativeBridge {
   available: boolean;
   defaults: {
     connector: string | undefined;
+    descriptor: ApplicationDescriptor;
   };
   ipcRenderer: {
     send: (message: any) => any;
@@ -86,6 +87,7 @@ export class Native {
       available: false,
       defaults: {
         connector: undefined,
+        descriptor: {} as any,
       },
       ipcRenderer: {
         send: (message: any) => { throw new Error("Not bridged"); }
@@ -145,6 +147,9 @@ export class Native {
   public getDefaultConnector() {
     return this.bridge.defaults.connector;
   }
+  public getDefaultApplicationDescriptor() {
+    return this.bridge.defaults.descriptor;
+  }
   public withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());
   }
@@ -186,13 +191,18 @@ export class Native {
       }
       reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request, this.proxyContext, opts);
       if (request.method === "start") {
-        const descriptor = (reply.result as unknown) as ApplicationDescriptor;
-        this.proxyContext = {
-          inited: true, // consider already initialized
-          started: descriptor.running,
-          connectors: descriptor.connectors,
-          currentConnector: descriptor.currentConnector,
-        };
+        if (reply.success) {
+          const descriptor = (reply.result as unknown) as ApplicationDescriptor;
+          this.proxyContext = {
+            inited: true, // consider already initialized
+            started: descriptor.running,
+            connectors: descriptor.connectors,
+            currentConnector: descriptor.currentConnector,
+          };
+          console.debug("Proxy context cache performed(proxying to next calls)", this.proxyContext);
+        } else {
+          console.error("Proxy context cache skipped - start failed", reply);
+        }
       }
       if (isHTTP) {
         reply.success = (reply.result as any).ok;

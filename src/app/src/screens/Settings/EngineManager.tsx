@@ -490,13 +490,12 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
   // if no connector found - pick first usable
   let connector = connectors.find(it => it.id === selectedConnectorId);
   if (!connector) {
-    connector = connectors.find(({ availability }) => {
-      let usable = availability.api;
-      if (typeof availability.controller !== "undefined") {
-        usable = availability.controller;
-      }
-      return usable;
-    });
+    // Pick first enabled engine
+    const engine = engines.find(it => it.enabled);
+    if (engine) {
+      // Pick first connector matching engine
+      connector = connectors.find(it => it.adapter === engine.adapter && it.engine === engine.engine);
+    }
   }
 
   const methods = useForm<ConnectorFormData>({
@@ -504,10 +503,10 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     reValidateMode: "onChange",
     shouldUseNativeValidation: false,
     defaultValues: {
-      scope: currentConnector.settings.current.controller?.scope,
-      controllerPath: currentConnector.settings.current.controller?.path,
-      programPath: currentConnector.settings.current.program.path,
-      connectionString: currentConnector.settings.current.api.connectionString
+      scope: connector?.settings.current.controller?.scope,
+      controllerPath: connector?.settings.current.controller?.path,
+      programPath: connector?.settings.current.program.path,
+      connectionString: connector?.settings.current.api.connectionString
     },
     criteriaMode: "firstError"
   });
@@ -551,8 +550,8 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     try {
       const settings: EngineConnectorSettings = await setEngineUserSettings({ id: connector.id, settings: engineUserSettings });
       reset({
-        scope: currentConnector.settings.current.controller?.scope,
-        controllerPath: currentConnector.settings.current.controller?.path,
+        scope: connector.settings.current.controller?.scope,
+        controllerPath: connector.settings.current.controller?.path,
         programPath: settings.program.path,
         connectionString: settings.api.connectionString
       });
@@ -771,8 +770,8 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
   }, []);
 
   const connectors = useStoreState((state) => state.descriptor.connectors);
-  const podmanConnectors = useMemo(() => connectors.filter(it => it.engine.startsWith(containerAdapter)), [connectors, containerAdapter]);
-  const dockerConnectors = useMemo(() => connectors.filter(it => it.engine.startsWith(containerAdapter)), [connectors, containerAdapter]);
+  const podmanConnectors = useMemo(() => connectors.filter(it => it.adapter === ContainerAdapter.PODMAN), [connectors]);
+  const dockerConnectors = useMemo(() => connectors.filter(it => it.adapter === ContainerAdapter.DOCKER), [connectors]);
 
   useEffect(() => {
     setContainerAdapter(adapter);
