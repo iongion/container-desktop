@@ -166,7 +166,7 @@ class Application {
     this.osType = opts.osType || os.type();
     this.logger = createLogger("container-client.Application");
     this.configuration = new UserConfiguration(opts.version, opts.environment);
-    this.adaptersList = [Podman.Adapter /*, Docker.Adapter*/];
+    this.adaptersList = [Podman.Adapter, Docker.Adapter];
     // available only after start - hydrated in this order
     this.adapters = [];
     this.currentAdapter = undefined;
