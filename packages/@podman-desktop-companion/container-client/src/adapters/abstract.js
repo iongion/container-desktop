@@ -6,7 +6,7 @@ const merge = require("lodash.merge");
 const { v4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { isFilePresent, exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
 const { createApiDriver, getApiConfig, Runner } = require("../api");
 const { getAvailableLIMAInstances, getAvailableWSLDistributions } = require("../shared");
@@ -52,6 +52,7 @@ class AbstractAdapter {
     /** @access protected */
     this.osType = osType || os.type();
     this.logger = createLogger(`${this.ADAPTER}.adapter`);
+    this.logger.debug("Created adapter");
   }
 
   createEngines() {
@@ -96,6 +97,7 @@ class AbstractClientEngine {
     this.logger = createLogger(`${this.PROGRAM}.${this.ENGINE || "Engine"}.client`);
     /** @access private */
     this.runner = new Runner(this);
+    this.logger.debug("Created engine");
   }
 
   // Lazy factory
@@ -180,6 +182,7 @@ class AbstractClientEngine {
             version: undefined
           }
         },
+        expected,
         user
       )
     };
@@ -192,11 +195,8 @@ class AbstractClientEngine {
    * @return {Settings} Settings - Actual settings
    */
   async getCurrentSettings() {
-    if (!this.currentSettings) {
-      const settings = await this.getSettings();
-      this.currentSettings = settings.current;
-    }
-    return this.currentSettings;
+    const settings = await this.getSettings();
+    return settings.current;
   }
 
   /**
@@ -520,6 +520,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
             version: undefined
           }
         },
+        expected,
         user
       )
     };
@@ -547,50 +548,27 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     throw new Error("isControllerScopeAvailable must be implemented");
   }
   async isProgramAvailable(settings) {
-    // Controller must be proper
-    const controller = await this.isControllerAvailable(settings);
-    if (!controller.success) {
-      return controller;
-    }
-    // Perform actual program check
-    const result = { success: false, details: undefined };
-    const scope = await this.isControllerScopeAvailable(settings);
-    if (scope) {
-      result.success = true;
-      result.details = `Controller scope ${settings.controller.scope} is running`;
+    let success = false;
+    let details;
+    if (settings?.program?.path) {
+      success = true;
     } else {
-      result.flag = false;
-      if (settings.controller.scope) {
-        result.details = `Controller scope ${settings.controller.scope} is not available`;
-      } else {
-        result.details = `Controller scope is not set`;
-      }
-      return result;
+      details = "Program path not set";
     }
-    // Only if scope is available
-    if (!settings.program.path) {
-      result.details = "Program path is not set";
-    }
-    // Controlled path to program
-    const check = await this.runScopedCommand("test", ["-f", settings.program.path]);
-    if (check.success) {
-      result.success = true;
-      result.details = "Program is available";
-    } else {
-      result.details = check.stderr;
-    }
-    return result;
+    return { success, details };
   }
   async getAvailability(settings) {
     const availability = {
       all: false,
       engine: false,
       controller: false,
+      controllerScope: false,
       program: false,
       api: false,
       report: {
         engine: "Not checked",
         controller: "Not checked",
+        controllerScope: "Not checked",
         program: "Not checked",
         api: "Not checked"
       }
@@ -610,13 +588,22 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       availability.report.controller = "Not checked - engine not available";
     }
     if (availability.controller) {
+      const controllerScope = await this.isControllerAvailable(settings);
+      availability.report.controllerScope = controllerScope.details;
+      if (controllerScope.success) {
+        availability.controllerScope = true;
+      }
+    } else {
+      availability.report.controllerScope = "Not checked - controller not available";
+    }
+    if (availability.controllerScope) {
       const program = await this.isProgramAvailable(settings);
       availability.report.program = program.details;
       if (program.success) {
         availability.program = true;
       }
     } else {
-      availability.report.program = "Not checked - controller not available";
+      availability.report.program = "Not checked - controller scope not available";
     }
     if (availability.program) {
       const api = await this.isApiRunning();
@@ -733,12 +720,16 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   }
   // Availability
   async isControllerScopeAvailable(settings) {
+    const result = { success: false, details: "Scope is not available" };
     if (settings?.controller?.scope) {
       const instances = await this.getControllerScopes();
       const target = instances.find((it) => it.Name === settings.controller.scope);
-      return !!target;
+      if (!!target) {
+        result.success = true;
+        result.details = "Scope is available";
+      }
     }
-    return false;
+    return result;
   }
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
@@ -752,7 +743,8 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   async getControllerScopes() {
     const settings = await this.getCurrentSettings();
     const available = await this.isEngineAvailable();
-    const items = available ? await getAvailableWSLDistributions(settings.controller.path) : [];
+    const canListScopes = available.success && settings.controller.path;
+    const items = canListScopes ? await getAvailableWSLDistributions(settings.controller.path) : [];
     return items;
   }
   // Executes command inside controller scope
@@ -775,7 +767,6 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
         }
         settings.controller.name = WSL_PROGRAM;
         settings.controller.path = this._detectedControllerProgram?.path;
-        this.currentSettings = settings;
       }
       settings.controller.version = this._detectedControllerProgram?.version;
     } else {
@@ -813,12 +804,16 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   }
   // Availability
   async isControllerScopeAvailable(settings) {
+    const result = { success: false, details: "Scope is not available" };
     if (settings?.controller?.scope) {
       const instances = await this.getControllerScopes();
-      const target = instances.find((it) => it.Name === settings.controller.scope);
-      return target?.Status === "Running";
+      const target = instances.find((it) => it.Name === settings.controller.scope && target?.Status === "Running");
+      if (!!target) {
+        result.success = true;
+        result.details = "Scope is available";
+      }
     }
-    return false;
+    return result;
   }
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
@@ -832,7 +827,7 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   async getControllerScopes() {
     const settings = await this.getCurrentSettings();
     const available = await this.isEngineAvailable();
-    const canListScopes = available && settings.controller.path;
+    const canListScopes = available.success && settings.controller.path;
     const items = canListScopes ? await getAvailableLIMAInstances(settings.controller.path) : [];
     return items;
   }
@@ -856,7 +851,6 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
         }
         settings.controller.name = LIMA_PROGRAM;
         settings.controller.path = this._detectedControllerProgram?.path;
-        this.currentSettings = settings;
       }
       settings.controller.version = this._detectedControllerProgram?.version;
     } else {

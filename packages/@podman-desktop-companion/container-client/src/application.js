@@ -166,7 +166,7 @@ class Application {
     this.osType = opts.osType || os.type();
     this.logger = createLogger("container-client.Application");
     this.configuration = new UserConfiguration(opts.version, opts.environment);
-    this.adaptersList = [Podman.Adapter, Docker.Adapter];
+    this.adaptersList = [Podman.Adapter /*, Docker.Adapter*/];
     // available only after start - hydrated in this order
     this.adapters = [];
     this.currentAdapter = undefined;
@@ -241,9 +241,13 @@ class Application {
     if (this.currentAdapter) {
       this.logger.debug("Reusing current adapter");
     } else {
-      this.logger.debug("Computing current adapter");
-      const adapters = await this.getAdapters();
-      this.currentAdapter = adapters.find((it) => it.ADAPTER === this.currentConnector.adapter);
+      this.logger.debug("Computing current adapter from connector", this.currentConnector);
+      if (this.currentConnector) {
+        const adapters = await this.getAdapters();
+        this.currentAdapter = adapters.find((it) => it.ADAPTER === this.currentConnector.adapter);
+      } else {
+        this.logger.warn("No current connector");
+      }
     }
     return this.currentAdapter;
   }
@@ -268,9 +272,11 @@ class Application {
     if (this.currentEngine) {
       this.logger.debug("Reusing current engine");
     } else {
-      this.logger.debug("Computing current engine");
-      const engines = await this.getEngines();
-      this.currentEngine = engines.find((it) => it.id === this.currentConnector.id);
+      this.logger.debug("Computing current engine from current connector", this.currentConnector);
+      if (this.currentConnector) {
+        const engines = await this.getEngines();
+        this.currentEngine = engines.find((it) => it.id === this.currentConnector.id);
+      }
     }
     return this.currentEngine;
   }
@@ -293,7 +299,6 @@ class Application {
         })
       );
       this.connectors = items;
-      this.logger.error(">>> COMPUTED CONNECTORS", this.connectors);
     }
     return this.connectors;
   }
@@ -309,6 +314,15 @@ class Application {
         }
         return id === "engine.default.podman.native";
       });
+      // default to first
+      if (!this.currentConnector) {
+        if (connectors.length) {
+          this.logger.warn("Defaulting to first connector");
+          this.currentConnector = connectors[0];
+        } else {
+          this.logger.error("No connectors");
+        }
+      }
     }
     return this.currentConnector;
   }
@@ -334,15 +348,7 @@ class Application {
       });
     }
     // Factory preferred - favor podman
-    if (!this.currentConnector) {
-      this.logger.error("Unable to init without any usable connector - picking preferred(favor podman)");
-      this.currentConnector = this.connectors.find(({ id }) => {
-        if (this.osType === "Windows_NT" || this.osType === "Darwin") {
-          return id === "engine.default.podman.virtualized";
-        }
-        return id === "engine.default.podman.native";
-      });
-    }
+    this.currentConnector = await this.getCurrentConnector();
     // current adapter inferred from connector
     this.currentAdapter = await this.getCurrentAdapter();
     // current engine

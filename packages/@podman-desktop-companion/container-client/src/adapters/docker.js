@@ -83,7 +83,7 @@ class DockerClientEngineNative extends AbstractClientEngine {
   }
 
   async getCurrentSettings() {
-    const settings = super.getCurrentSettings();
+    const settings = await super.getCurrentSettings();
     if (this.osType === "Linux" && !this._detectedProgram) {
       try {
         this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
@@ -95,8 +95,7 @@ class DockerClientEngineNative extends AbstractClientEngine {
       settings.program.path = this._detectedProgram?.path;
       settings.program.version = this._detectedProgram?.version;
     }
-    this.currentSettings = settings;
-    return this.currentSettings;
+    return settings;
   }
   // Runtime
   async startApi() {

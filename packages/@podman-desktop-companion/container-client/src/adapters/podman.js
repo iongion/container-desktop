@@ -63,16 +63,6 @@ const ENGINE_PODMAN_VIRTUALIZED = `${PROGRAM}.virtualized`;
 const ENGINE_PODMAN_SUBSYSTEM_WSL = `${PROGRAM}.subsystem.wsl`;
 const ENGINE_PODMAN_SUBSYSTEM_LIMA = `${PROGRAM}.subsystem.lima`;
 
-class AbstractPodmanControlledClientEngine extends AbstractControlledClientEngine {
-  PROGRAM = PROGRAM;
-  async getControllerScopes() {
-    const settings = await this.getCurrentSettings();
-    const available = await this.isEngineAvailable();
-    const scopes = available ? await getAvailablePodmanMachines(settings.controller.path) : [];
-    return scopes;
-  }
-}
-
 class PodmanClientEngineNative extends AbstractClientEngine {
   static ENGINE = ENGINE_PODMAN_NATIVE;
   ENGINE = ENGINE_PODMAN_NATIVE;
@@ -102,6 +92,23 @@ class PodmanClientEngineNative extends AbstractClientEngine {
       }
     };
   }
+  async getCurrentSettings() {
+    const settings = await super.getCurrentSettings();
+    if (this.osType === "Linux") {
+      if (!this._detectedProgram) {
+        try {
+          this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
+        } catch (error) {
+          this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
+        }
+      } else {
+        settings.program.name = PROGRAM;
+        settings.program.path = this._detectedProgram?.path;
+        settings.program.version = this._detectedProgram?.version;
+      }
+    }
+    return settings;
+  }
   // Runtime
   async startApi(opts) {
     const running = await this.isApiRunning();
@@ -124,26 +131,9 @@ class PodmanClientEngineNative extends AbstractClientEngine {
     }
     return result;
   }
-
-  async getCurrentSettings() {
-    const settings = super.getCurrentSettings();
-    if (this.osType === "Linux" && !this._detectedProgram) {
-      try {
-        this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
-      } catch (error) {
-        this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
-      }
-    } else if (this._detectedProgram) {
-      settings.program.name = PROGRAM;
-      settings.program.path = this._detectedProgram?.path;
-      settings.program.version = this._detectedProgram?.version;
-    }
-    this.currentSettings = settings;
-    return this.currentSettings;
-  }
 }
 
-class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine {
+class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
   static ENGINE = ENGINE_PODMAN_VIRTUALIZED;
   ENGINE = ENGINE_PODMAN_VIRTUALIZED;
   PROGRAM = PROGRAM;
@@ -218,13 +208,14 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
         }
       };
     }
-    return merge({}, defaults, {
+    const expected = merge({}, defaults, {
       api: {
         baseURL: API_BASE_URL,
         connectionString: connectionString
       },
       ...config
     });
+    return expected;
   }
   async getCurrentSettings() {
     const settings = await super.getCurrentSettings();
@@ -238,18 +229,29 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
     } else {
       this.logger.warn(this.id, "DETECT VIRTUALIZED CONTROLLER PROGRAM VERSION CACHE MISS");
       try {
-        this.logger.debug("Detecting current controller version", settings);
+        this.logger.debug(this.id, "Detecting current controller version", settings);
         this._detectedControllerProgramVersion = await findProgramVersion(settings.controller.path, {
           osType: this.osType
         });
       } catch (error) {
-        this.logger.error("Unable to find controller version", settings.controller, error.message, error.stack);
+        this.logger.error(
+          this.id,
+          "Unable to find controller version",
+          settings.controller,
+          error.message,
+          error.stack
+        );
       }
-      this.currentSettings = settings;
     }
     settings.controller.version = this._detectedControllerProgramVersion;
-    this.currentSettings = settings;
     return settings;
+  }
+  async getControllerScopes() {
+    const settings = await this.getCurrentSettings();
+    const available = await this.isEngineAvailable();
+    const canListScopes = available.success && settings.controller.path;
+    const items = canListScopes ? await getAvailablePodmanMachines(settings.controller.path) : [];
+    return items;
   }
   // Runtime
   async startApi(opts) {
@@ -272,26 +274,22 @@ class PodmanClientEngineVirtualized extends AbstractPodmanControlledClientEngine
       args: ["machine", "stop", settings.controller.scope]
     });
   }
-  // Override
-  async getControllerScopes() {
-    const settings = await this.getCurrentSettings();
-    const available = await this.isEngineAvailable();
-    const canListScopes = available && settings.controller.path;
-    const items = canListScopes ? await getAvailablePodmanMachines(settings.controller.path) : [];
-    return items;
-  }
   // Availability
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
     return result;
   }
   async isControllerScopeAvailable(settings) {
+    const result = { success: false, details: "Scope is not available" };
     if (settings?.controller?.scope) {
-      const machines = await this.getControllerScopes();
-      const target = machines.find((it) => it.Name === settings.controller.scope);
-      return !!target?.Running;
+      const instances = await this.getControllerScopes();
+      const target = instances.find((it) => it.Name === settings.controller.scope && !!target?.Running);
+      if (!!target) {
+        result.success = true;
+        result.details = "Scope is available";
+      }
     }
-    return false;
+    return result;
   }
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {
