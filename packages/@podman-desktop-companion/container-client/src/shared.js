@@ -1,6 +1,9 @@
 const os = require("os");
 // project
 const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { createLogger } = require("@podman-desktop-companion/logger");
+// locals
+const logger = createLogger("shared");
 
 async function getAvailableLIMAInstances(limactlPath) {
   let items = [];

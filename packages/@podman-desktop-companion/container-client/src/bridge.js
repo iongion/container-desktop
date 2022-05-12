@@ -44,11 +44,10 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
         // if none found - default
         if (!currentConnector) {
           logger.debug("No default user connector - picking preferred(favor podman)");
+          const defaultConnectorId =
+            osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
           currentConnector = connectors.find(({ id }) => {
-            if (osType === "Windows_NT" || osType === "Darwin") {
-              return id === "engine.default.podman.virtualized";
-            }
-            return id === "engine.default.podman.native";
+            return id === defaultConnectorId;
           });
         }
         if (!currentConnector) {
