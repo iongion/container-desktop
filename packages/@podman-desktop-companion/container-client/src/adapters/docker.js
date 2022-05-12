@@ -23,6 +23,7 @@ const {
   AbstractClientEngineSubsystemLIMA
 } = require("./abstract");
 const { findProgram, findProgramVersion } = require("../detector");
+const { createApiAdapter } = require("../api");
 // locals
 const PROGRAM = "docker";
 const API_BASE_URL = "http://localhost";
@@ -56,6 +57,15 @@ class DockerClientEngineNative extends AbstractClientEngine {
   static ENGINE = ENGINE_DOCKER_NATIVE;
   ENGINE = ENGINE_DOCKER_NATIVE;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineNative(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -99,7 +109,7 @@ class DockerClientEngineNative extends AbstractClientEngine {
   }
   // Runtime
   async startApi() {
-    this.logger.debug(this.ADAPTER, this.ENGINE, "Start api skipped - not required");
+    this.logger.debug(this.id, "Start api skipped - not required");
     return true;
   }
   // Availability
@@ -121,6 +131,15 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
   static ENGINE = ENGINE_DOCKER_VIRTUALIZED;
   ENGINE = ENGINE_DOCKER_VIRTUALIZED;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineVirtualized(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     let settings = {};
@@ -185,6 +204,15 @@ class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
   static ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineSubsystemWSL(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -215,6 +243,15 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
   static ENGINE = ENGINE_DOCKER_SUBSYSTEM_LIMA;
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_LIMA;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineSubsystemLIMA(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -242,6 +279,7 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 }
 
 class Adapter extends AbstractAdapter {
+  static ADAPTER = PROGRAM;
   ADAPTER = PROGRAM;
   ENGINES = [
     DockerClientEngineNative,
@@ -249,9 +287,13 @@ class Adapter extends AbstractAdapter {
     DockerClientEngineSubsystemWSL,
     DockerClientEngineSubsystemLIMA
   ];
+
+  static create(userConfiguration, osType) {
+    const instance = new Adapter(userConfiguration, osType);
+    instance.setup();
+    return instance;
+  }
 }
-// Expose as static
-Adapter.ADAPTER = PROGRAM;
 
 module.exports = {
   // adapters

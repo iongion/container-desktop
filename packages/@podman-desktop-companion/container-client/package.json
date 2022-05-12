@@ -15,6 +15,7 @@
     "@podman-desktop-companion/terminal": "file:../terminal",
     "@podman-desktop-companion/user-settings": "file:../user-settings",
     "@podman-desktop-companion/utils": "file:../utils",
+    "@podman-desktop-companion/rpc": "file:../rpc",
     "axios": "^0.25.0",
     "lodash.merge": "^4.6.2",
     "uuid": "^8.3.2"

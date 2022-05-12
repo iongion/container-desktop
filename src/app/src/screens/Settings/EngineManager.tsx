@@ -580,8 +580,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     if (!connector) {
       return;
     }
-    // setEngineUserSettings
-    const engineUserSettings: Partial<EngineConnectorSettings> = {
+    const engineUserSettings: EngineConnectorSettings = {
       program: merge(
         {},
         connector.settings.current.program,
@@ -624,7 +623,36 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
 
   const onConnectClick = handleSubmit(async (data) => {
     if (connector) {
-      await start({ startApi: true, adapter, connector: connector.id });
+      const engineUserSettings: EngineConnectorSettings = {
+        program: merge(
+          {},
+          connector.settings.current.program,
+          {
+            path: data.programPath,
+          }
+        ),
+        api: merge(
+          {},
+          connector.settings.current.api,
+          {
+            connectionString: data.connectionString,
+          }
+        ),
+      };
+      if (connector.settings.current.controller) {
+        engineUserSettings.controller = merge(
+          {},
+          connector.settings.current.controller,
+          {
+            path: data.controllerPath,
+          }
+        );
+      }
+      await start({
+        startApi: true,
+        id: connector.id,
+        settings: merge({}, connector.settings.current, engineUserSettings)
+      });
     }
     return true;
   });
@@ -652,14 +680,8 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     await setGlobalUserSettings({ connector: { default: isChecked ? connector?.id : undefined } });
   }, [setGlobalUserSettings, connector]);
 
-  let programIsAvailable = true;
-  if (connector?.settings?.current?.controller) {
-    programIsAvailable = !!connector?.availability?.controller;
-  } else {
-    programIsAvailable = !!connector?.availability?.program;
-  }
 
-  const canConnect = formState.isValid && !formState.isDirty && programIsAvailable && !pending;
+  const canConnect = formState.isValid && !pending;
   const canSave = formState.isValid && formState.isDirty && !pending;
   const canReset = !pending;
   const isDefaultConnector = connector && defaultConnector === connector.id;

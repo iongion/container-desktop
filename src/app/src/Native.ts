@@ -1,4 +1,4 @@
-import { ApplicationDescriptor, EngineConnectorApiSettings, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings, EngineConnectorSettings } from "./Types";
+import { ApplicationDescriptor, EngineConnectorApiSettings, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings, EngineConnectorSettings, ConnectOptions } from "./Types";
 
 export enum Platforms {
   Browser = "browser",
@@ -64,6 +64,8 @@ interface NativeBridge {
     getGlobalUserSettings: () => Promise<GlobalUserSettings>;
     setEngineUserSettings: (id: string, settings: Partial<EngineConnectorSettings>) => Promise<EngineConnectorSettings>;
     getEngineUserSettings: (id: string) => Promise<EngineConnectorSettings>;
+    // startup
+    start: (opts?: ConnectOptions) => Promise<ApplicationDescriptor>;
   };
 }
 
@@ -279,5 +281,8 @@ export class Native {
   }
   public async getEngineUserSettings(id: string) {
     return this.bridge.application.getEngineUserSettings(id);
+  }
+  public async start(opts?: ConnectOptions) {
+    return this.bridge.application.start(opts);
   }
 }

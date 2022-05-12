@@ -41,8 +41,8 @@ export interface Connector {
 
 export interface ConnectOptions {
   startApi: boolean;
-  adapter: ContainerAdapter;
-  connector: string;
+  id: string;
+  settings: EngineConnectorSettings;
 }
 
 export interface GlobalUserSettings {

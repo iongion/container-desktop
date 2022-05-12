@@ -225,11 +225,11 @@ class Application {
       if (currentConnector) {
         this.logger.debug("Computing single adapter for current connector", currentConnector.adapter);
         const Adapter = this.adaptersList.find((it) => it.ADAPTER === currentConnector.adapter);
-        this.adapters = [new Adapter(this.configuration, this.osType)];
+        this.adapters = [Adapter.create(this.configuration, this.osType)];
       } else {
         this.logger.debug("Computing all adapters list");
         this.adapters = this.adaptersList.map((Adapter) => {
-          const adapter = new Adapter(this.configuration, this.osType);
+          const adapter = Adapter.create(this.configuration, this.osType);
           return adapter;
         });
       }

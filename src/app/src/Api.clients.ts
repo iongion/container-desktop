@@ -555,12 +555,8 @@ export class ContainerClient {
 
   async start(opts: ConnectOptions | undefined) {
     return this.withResult<ApplicationDescriptor>(async () => {
-      const reply = await Native.getInstance().proxyService<ApplicationDescriptor>({
-        method: "start",
-        params: opts
-      }, { keepAlive: true });
-      reply.result.userSettings = await Native.getInstance().getGlobalUserSettings();
-      return reply.result;
+      const descriptor = await Native.getInstance().start(opts);
+      return descriptor;
     });
   }
 

@@ -67,6 +67,15 @@ class PodmanClientEngineNative extends AbstractClientEngine {
   static ENGINE = ENGINE_PODMAN_NATIVE;
   ENGINE = ENGINE_PODMAN_NATIVE;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new PodmanClientEngineNative(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -113,7 +122,7 @@ class PodmanClientEngineNative extends AbstractClientEngine {
   async startApi(opts) {
     const running = await this.isApiRunning();
     if (running.success) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "API is already running");
+      this.logger.debug(this.id, "API is already running");
       return true;
     }
     const settings = await this.getCurrentSettings();
@@ -137,6 +146,15 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
   static ENGINE = ENGINE_PODMAN_VIRTUALIZED;
   ENGINE = ENGINE_PODMAN_VIRTUALIZED;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new PodmanClientEngineVirtualized(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Helpers
   async getConnectionString(scope) {
     let connectionString = NATIVE_PODMAN_SOCKET_PATH;
@@ -257,7 +275,7 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
   async startApi(opts) {
     const running = await this.isApiRunning();
     if (running.success) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "API is already running");
+      this.logger.debug(this.id, "API is already running");
       return true;
     }
     const settings = await this.getCurrentSettings();
@@ -303,6 +321,15 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
   static ENGINE = ENGINE_PODMAN_SUBSYSTEM_WSL;
   ENGINE = ENGINE_PODMAN_SUBSYSTEM_WSL;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new PodmanClientEngineSubsystemWSL(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -345,6 +372,15 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
   static ENGINE = ENGINE_PODMAN_SUBSYSTEM_LIMA;
   ENGINE = ENGINE_PODMAN_SUBSYSTEM_LIMA;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new PodmanClientEngineSubsystemLIMA(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -368,6 +404,7 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 }
 
 class Adapter extends AbstractAdapter {
+  static ADAPTER = PROGRAM;
   ADAPTER = PROGRAM;
   ENGINES = [
     PodmanClientEngineNative,
@@ -376,21 +413,21 @@ class Adapter extends AbstractAdapter {
     PodmanClientEngineSubsystemLIMA
   ];
 
+  static create(userConfiguration, osType) {
+    const instance = new Adapter(userConfiguration, osType);
+    instance.setup();
+    return instance;
+  }
+
   async getControllerScopes(engine) {
     if (engine instanceof AbstractControlledClientEngine) {
       const items = await engine.getControllerScopes();
       return items;
     }
-    this.logger.warn(
-      this.ADAPTER,
-      this.ENGINE,
-      "Unable to get list of controller scopes - current engine is not scoped."
-    );
+    this.logger.warn(this.id, "Unable to get list of controller scopes - current engine is not scoped.");
     return [];
   }
 }
-// Expose as static
-Adapter.ADAPTER = PROGRAM;
 
 module.exports = {
   // adapters

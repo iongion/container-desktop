@@ -46,13 +46,20 @@ class AbstractAdapter {
   /** @access public */
   ENGINES = [];
 
+  static create() {
+    throw new Error("Must implement");
+  }
+
   constructor(userConfiguration, osType) {
     /** @access protected */
     this.userConfiguration = userConfiguration;
     /** @access protected */
     this.osType = osType || os.type();
+  }
+
+  setup() {
     this.logger = createLogger(`${this.ADAPTER}.adapter`);
-    this.logger.debug("Created adapter");
+    this.logger.debug(this.ADAPTER, "Created adapter");
   }
 
   createEngines() {
@@ -60,10 +67,7 @@ class AbstractAdapter {
   }
 
   createEngine(Engine) {
-    const instance = new Engine(this.userConfiguration, this.osType);
-    instance.ADAPTER = this.ADAPTER;
-    instance.id = `engine.default.${instance.ENGINE}`;
-    return instance;
+    return Engine.create("default", this.userConfiguration, this.osType);
   }
 
   createEngineByName(engine) {
@@ -88,16 +92,26 @@ class AbstractClientEngine {
   /** @access public */
   ENGINE = undefined;
 
+  /** @access public */
+  id = undefined;
+
+  static create() {
+    throw new Error("Must implement");
+  }
+
   constructor(userConfiguration, osType) {
     /** @access protected */
     this.userConfiguration = userConfiguration;
     /** @access protected */
     this.osType = osType || os.type();
-    /** @access protected */
-    this.logger = createLogger(`${this.PROGRAM}.${this.ENGINE || "Engine"}.client`);
+  }
+
+  setup() {
     /** @access private */
     this.runner = new Runner(this);
-    this.logger.debug("Created engine");
+    /** @access protected */
+    this.logger = createLogger("engine.client");
+    this.logger.debug(this.id, "Created");
   }
 
   // Lazy factory
@@ -330,7 +344,7 @@ class AbstractClientEngine {
     // Guard configuration
     const available = await this.isApiAvailable();
     if (!available.success) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "API is not available - unable to ping", available);
+      this.logger.debug(this.id, "API is not available - unable to ping", available);
       return available;
     }
     // Test reachability
@@ -346,8 +360,7 @@ class AbstractClientEngine {
     } catch (error) {
       result.details = "API is not reachable - start manually or connect";
       this.logger.error(
-        this.ADAPTER,
-        this.ENGINE,
+        this.id,
         "API ping service failed",
         error.message,
         error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
@@ -402,13 +415,13 @@ class AbstractClientEngine {
     const { program } = await this.getCurrentSettings();
     const result = await this.runScopedCommand(program.path, ["system", "info", "--format", customFormat || "json"]);
     if (!result.success) {
-      this.logger.error(this.ADAPTER, this.ENGINE, "Unable to get system info", result);
+      this.logger.error(this.id, "Unable to get system info", result);
       return info;
     }
     try {
       info = result.stdout ? JSON.parse(result.stdout) : info;
     } catch (error) {
-      this.logger.error(this.ADAPTER, this.ENGINE, "Unable to decode system info", error, result);
+      this.logger.error(this.id, "Unable to decode system info", error, result);
     }
     return info;
   }
@@ -442,25 +455,25 @@ class AbstractClientEngine {
     const { program } = await this.getCurrentSettings();
     const result = await this.runScopedCommand(program.path, args);
     if (result.success) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "System prune complete");
+      this.logger.debug(this.id, "System prune complete");
     } else {
-      this.logger.error(this.ADAPTER, this.ENGINE, "System prune error", result);
+      this.logger.error(this.id, "System prune error", result);
     }
     return result.success;
   }
 
   async resetSystem() {
     if (this.PROGRAM === "docker") {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "No such concept for current engine - skipping");
+      this.logger.debug(this.id, "No such concept for current engine - skipping");
       return true;
     }
     const { program } = await this.getCurrentSettings();
     const args = ["system", "reset", "--force", "--log-level=debug"];
     const result = await this.runScopedCommand(program.path, args);
     if (result.success) {
-      logger.debug(this.ADAPTER, this.ENGINE, "System reset success", result);
+      logger.debug(this.id, "System reset success", result);
     } else {
-      logger.error(this.ADAPTER, this.ENGINE, "System reset error", result);
+      logger.error(this.id, "System reset error", result);
     }
     return result.success;
   }
@@ -711,11 +724,11 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   }
   // Runtime
   async startApi() {
-    this.logger.debug(this.ADAPTER, this.ENGINE, "Start api skipped - not required");
+    this.logger.debug(this.id, "Start api skipped - not required");
     return true;
   }
   async stopApi() {
-    this.logger.debug(this.ADAPTER, this.ENGINE, "Stop api skipped - not required");
+    this.logger.debug(this.id, "Stop api skipped - not required");
     return true;
   }
   // Availability
@@ -785,7 +798,7 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   async startApi(opts) {
     const running = await this.isApiRunning();
     if (running.success) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "API is already running");
+      this.logger.debug(this.id, "API is already running");
       return true;
     }
     const settings = await this.getCurrentSettings();
