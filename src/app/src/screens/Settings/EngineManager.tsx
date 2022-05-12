@@ -6,7 +6,7 @@ import { useForm, useFormContext, FormProvider, Controller } from "react-hook-fo
 import merge from "lodash.merge";
 
 // project
-import { Connector, ContainerAdapter, ContainerEngine, TestResult, Program, EngineConnectorSettings } from "../../Types";
+import { Connector, ContainerAdapter, ContainerEngine, TestResult, ProgramTestResult, Program, EngineProgramOptions, EngineConnectorSettings, ControllerScope } from "../../Types";
 import { Native, Platforms } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
 import { RadioLabel } from "../../components/RadioLabel";
@@ -29,19 +29,35 @@ export interface ConnectorFormData {
   useAsDefault: boolean;
 }
 
+
+const coerceScope = (scope: string | undefined, scopes?: ControllerScope[]) => {
+  if (scope === undefined) {
+    return "";
+  }
+  const isPresent = !!(scopes || []).find(it => it.Name === scope);
+  // console.debug("isPresent", { isPresent, scope });
+  return isPresent ? scope : "";
+};
+
 export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettingsProps> = ({ connector, disabled }) => {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
   const { availability, engine, scopes } = connector;
-  const { automatic, current } = connector.settings;
+  const { expected, current } = connector.settings;
   const { api, program, controller } = current;
 
   const testProgramReachability = useStoreActions((actions) => actions.testProgramReachability);
   const testApiReachability = useStoreActions((actions) => actions.testApiReachability);
   const findProgram = useStoreActions((actions) => actions.findProgram);
+  const connectorUpdate = useStoreActions((actions) => actions.connectorUpdate);
 
   // Form setup
   const { reset, control, getValues, setValue } = useFormContext<ConnectorFormData>();
+
+  // State
+  const [programTestResult, setProgramTestResult] = useState<ProgramTestResult>();
+
+  const programScopes = scopes || [];
 
   // locals
   const isLIMA = [ContainerEngine.PODMAN_SUBSYSTEM_LIMA, ContainerEngine.DOCKER_SUBSYSTEM_LIMA].includes(engine);
@@ -50,12 +66,13 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const isScoped = isLIMA || isWSL || isMachine;
 
   useEffect(() => {
+    let controllerPath = controller?.path || "";
     reset({
-      scope: controller?.scope && (scopes || []).find(it => it.Name === controller?.scope) ? controller?.scope : "",
-      controllerPath: controller?.path,
+      scope: coerceScope(controller?.scope, scopes),
+      controllerPath: controllerPath,
       programPath: program.path,
       connectionString: api.connectionString
-    })
+    });
   }, [api, controller, program, scopes, reset]);
 
   const onProgramSelectClick = useCallback(
@@ -114,10 +131,9 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
-    const programTest: any = {
+    const programTest: EngineProgramOptions = {
       adapter: connector.adapter,
       engine,
-      scope: values.scope,
       id: connector.id,
       program: {
         path: values.programPath
@@ -125,16 +141,36 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     };
     if (controller) {
       programTest.controller = {
-        path: values.controllerPath
+        path: values.controllerPath,
+        scope: values.scope,
       };
     }
-    const result: TestResult = await testProgramReachability(programTest);
+    const result: ProgramTestResult = await testProgramReachability(programTest);
     if (result.success) {
       Notification.show({ message: t("Program was reached successfully"), intent: Intent.SUCCESS });
     } else {
       Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
     }
-  }, [engine, controller, connector, testProgramReachability, getValues, t]);
+
+    const currentConnector = { ...connector };
+    if (controller) {
+      if (currentConnector.settings.user.controller) {
+        currentConnector.settings.user.controller.path = result.program?.path;
+        currentConnector.settings.user.controller.version = result.program?.version;
+        currentConnector.scopes = result.scopes || [];
+      }
+      currentConnector.availability.controller = result.success;
+    } else {
+      if (currentConnector.settings.user.program) {
+        currentConnector.settings.user.program.path = result.program?.path;
+        currentConnector.settings.user.program.version = result.program?.version;
+      }
+      currentConnector.availability.program = result.success;
+    }
+    const updated = await connectorUpdate(currentConnector);
+    console.debug("connector update", updated);
+    setProgramTestResult(result);
+  }, [engine, controller, connector, testProgramReachability, getValues, t, connectorUpdate]);
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
@@ -154,22 +190,20 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   }, [engine, connector, api, testApiReachability, getValues, t]);
 
   let scopeSelectorWidget: any = undefined;
-  if (isScoped && Array.isArray(scopes)) {
+  let scopeSelectorHelperText = "";
+  if (isScoped && Array.isArray(programScopes)) {
     let scopeLabel = t("Scope");
     let scopeTitle = "";
-    let scopeRequired = "";
     if (isLIMA) {
       scopeLabel = t("LIMA instance");
       scopeTitle = t("The LIMA instance in which the current engine is running");
-      scopeRequired = t("A LIMA instance must be selected");
     } else if (isWSL) {
       scopeLabel = t("WSL distribution");
       scopeTitle = t("The WSL distribution in which the current engine is running");
-      scopeRequired = t("A WSL distribution must be selected");
     } else if (isMachine) {
       scopeLabel = t("Podman machines");
       scopeTitle = t("The podman machine in which the current engine is running");
-      scopeRequired = t("A podman machine must be selected");
+      scopeSelectorHelperText = programScopes.length ? "" : t("Podman machine is required");
     }
     scopeSelectorWidget = (
       <Controller
@@ -178,8 +212,17 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         defaultValue=""
         rules={{ required: true }}
         render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { isDirty, error } }) => {
+          if (!value) {
+            if (isLIMA) {
+              scopeSelectorHelperText = t("A LIMA instance is required");
+            } else if (isWSL) {
+              scopeSelectorHelperText = t("A WSL distribution is required");
+            } else if (isMachine) {
+              scopeSelectorHelperText = t("Podman machine is required");
+            }
+          }
           return (
-            <FormGroup className="ProgramScopeLocator" label={scopeLabel} labelFor="scopeSelector" helperText={value ? "" : scopeRequired}>
+            <FormGroup className="ProgramScopeLocator" label={scopeLabel} labelFor="scopeSelector" intent={Intent.DANGER} helperText={scopeSelectorHelperText}>
               <ControlGroup>
                 <HTMLSelect
                   name={name}
@@ -189,9 +232,10 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                   value={value}
                   onChange={onChange}
                   onBlur={onBlur}
+                  disabled={pending}
                 >
                   <option value="">{t("-- select --")}</option>
-                  {scopes.map((it) => {
+                  {programScopes.map((it) => {
                     return (
                       <option key={it.Name} value={it.Name}>{it.Name}</option>
                     );
@@ -200,7 +244,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                 <Button
                   className="ScopeSelectorFindButton"
                   minimal
-                  disabled={!value}
+                  disabled={!value || pending}
                   icon={IconNames.TARGET}
                   intent={Intent.PRIMARY}
                   title={t("Click to trigger automatic detection")}
@@ -223,7 +267,6 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         defaultValue=""
         rules={{ required: t("Controller path must be set") }}
         render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { isDirty, error } }) => {
-          let canTest = true;
           let valid = true;
           let message;
           if (error?.message) {
@@ -239,16 +282,20 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           let helperText = availability.controller ? (
             <div className="AppSettingsFieldProgramHelper">
               {controller?.version ? (
-                <>
-                  <span>{t("Detected version {{version}}", controller)}</span>
-                </>
+                <span>{t("Detected version {{version}}", controller)}</span>
               ) : (
                 t("Could not detect current version")
               )}
             </div>
           ) : message;
-          if (isDirty) {
-            helperText = t("Version needs detection");
+          if (programTestResult && programTestResult.program?.path === value) {
+            if (programTestResult.success) {
+              helperText = t("Detected version {{version}}", programTestResult.program);
+            } else {
+              helperText = t("No valid version");
+            }
+          } else if (isDirty) {
+            helperText = t("Version needs detection - press Test");
           }
           let controllerPathLabel = t("Path to {{name}} CLI", controller);
           if (isScoped) {
@@ -264,6 +311,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           if (!isScoped || (isScoped && isMachine)) {
             programSelectButton = (
               <Button
+                disabled={pending}
                 icon={IconNames.LOCATE}
                 text={t("Select")}
                 title={t("Select controller")}
@@ -284,6 +332,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
               >
                 <ControlGroup fill={true} vertical={false}>
                   <InputGroup
+                    disabled={pending}
                     fill
                     id={name}
                     name={name}
@@ -291,12 +340,12 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                     value={value}
                     onChange={onChange}
                     onBlur={onBlur}
-                    placeholder={automatic.controller?.path || ""}
+                    placeholder={expected.controller?.path || ""}
                     intent={valid ? undefined : Intent.DANGER}
                     title={message}
                     rightElement={
                       <>
-                        <Button disabled={!canTest} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
+                        <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
                       </>
                     }
                   />
@@ -353,6 +402,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
               >
                 <ControlGroup fill={true} vertical={false}>
                   <InputGroup
+                    disabled={pending}
                     fill
                     id={name}
                     name={name}
@@ -360,7 +410,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                     value={value}
                     onChange={onChange}
                     onBlur={onBlur}
-                    placeholder={automatic.program?.path || ""}
+                    placeholder={expected.program?.path || ""}
                     intent={valid ? undefined : Intent.DANGER}
                     title={message}
                     rightElement={
@@ -368,6 +418,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                     }
                   />
                   {isScoped ? null : <Button
+                    disabled={pending}
                     icon={IconNames.LOCATE}
                     text={t("Select")}
                     title={t("Select program")}
@@ -397,8 +448,8 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         rules={{ required: t("Connection string must be set") }}
         render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { isDirty, error, invalid } }) => {
           let helperText = "";
-          if (value && automatic.api?.connectionString) {
-            if (automatic.api?.connectionString !== value) {
+          if (value && expected.api?.connectionString) {
+            if (expected.api?.connectionString !== value) {
               helperText = t("Overriding default");
             }
           }
@@ -427,6 +478,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
             >
               <ControlGroup fill={true} vertical={false}>
                 <InputGroup
+                  disabled={pending}
                   fill
                   id={name}
                   name={name}
@@ -434,7 +486,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                   value={value}
                   onChange={onChange}
                   onBlur={onBlur}
-                  placeholder={automatic.api?.connectionString || ""}
+                  placeholder={expected.api?.connectionString || ""}
                   intent={valid ? undefined : Intent.DANGER}
                   title={message}
                   rightElement={
@@ -510,7 +562,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     reValidateMode: "onChange",
     shouldUseNativeValidation: false,
     defaultValues: {
-      scope: connector?.settings.current.controller?.scope,
+      scope: connector?.settings.current.controller?.scope || "",
       controllerPath: connector?.settings.current.controller?.path,
       programPath: connector?.settings.current.program.path,
       connectionString: connector?.settings.current.api.connectionString
@@ -557,14 +609,15 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     try {
       const nextSettings = { id: connector.id, settings: engineUserSettings };
       const settings: EngineConnectorSettings = await setEngineUserSettings(nextSettings);
+      console.debug("Post update settings are", settings);
       reset({
-        scope: connector.settings.current.controller?.scope,
-        controllerPath: connector.settings.current.controller?.path,
+        controllerPath: settings.controller?.path,
         programPath: settings.program?.path,
         connectionString: settings.api?.connectionString
       });
       Notification.show({ message: t("Container engine settings have been updated"), intent: Intent.SUCCESS });
     } catch (error: any) {
+      console.error("Container engine settings updated failed", error.message, error.stack);
       Notification.show({ message: t("Container engine settings update has failed"), intent: Intent.DANGER });
     }
   });
@@ -581,8 +634,9 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
       return;
     }
     try {
-      const settings: EngineConnectorSettings = await setEngineUserSettings({ id: connector.id, settings: connector?.settings.automatic });
+      const settings: EngineConnectorSettings = await setEngineUserSettings({ id: connector.id, settings: connector?.settings.expected });
       reset({
+        scope: settings.controller?.scope || "",
         programPath: settings.program.path,
         connectionString: settings.api.connectionString
       });
@@ -598,8 +652,15 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     await setGlobalUserSettings({ connector: { default: isChecked ? connector?.id : undefined } });
   }, [setGlobalUserSettings, connector]);
 
-  const canAct = formState.isValid && !pending;
-  const canSave = canAct && formState.isDirty && !pending;
+  let programIsAvailable = true;
+  if (connector?.settings?.current?.controller) {
+    programIsAvailable = !!connector?.availability?.controller;
+  } else {
+    programIsAvailable = !!connector?.availability?.program;
+  }
+
+  const canConnect = formState.isValid && !formState.isDirty && programIsAvailable && !pending;
+  const canSave = formState.isValid && formState.isDirty && !pending;
   const canReset = !pending;
   const isDefaultConnector = connector && defaultConnector === connector.id;
 
@@ -652,7 +713,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
           </div>
           <div className="AppSettingsFormViewFooter">
             <ButtonGroup className="ContainerEngineSettingsActions">
-              <Button disabled={!canAct} intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
+              <Button disabled={!canConnect} intent={Intent.SUCCESS} text={t("Connect")} icon={IconNames.DATA_CONNECTION} onClick={onConnectClick} />
               <Button disabled={!canSave} intent={Intent.PRIMARY} text={t("Save")} icon={IconNames.FLOPPY_DISK} onClick={onSaveClick} />
             </ButtonGroup>
             <FormGroup className="ContainerEngineSettingsSetDefault">

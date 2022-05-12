@@ -6,10 +6,12 @@ const merge = require("lodash.merge");
 // module
 const {
   // WSL - common
+  WSL_PROGRAM,
   WSL_PATH,
   WSL_VERSION,
   WSL_DISTRIBUTION,
   // LIMA - common
+  LIMA_PROGRAM,
   LIMA_PATH,
   LIMA_VERSION
 } = require("../constants");
@@ -20,6 +22,7 @@ const {
   AbstractClientEngineSubsystemWSL,
   AbstractClientEngineSubsystemLIMA
 } = require("./abstract");
+const { findProgram, findProgramVersion } = require("../detector");
 // locals
 const PROGRAM = "docker";
 const API_BASE_URL = "http://localhost";
@@ -77,6 +80,23 @@ class DockerClientEngineNative extends AbstractClientEngine {
         path: this.userConfiguration.getKey(`${this.id}.program.path`)
       }
     };
+  }
+
+  async getCurrentSettings() {
+    const settings = super.getCurrentSettings();
+    if (this.osType === "Linux" && !this._detectedProgram) {
+      try {
+        this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
+      } catch (error) {
+        this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
+      }
+    } else if (this._detectedProgram) {
+      settings.program.name = PROGRAM;
+      settings.program.path = this._detectedProgram?.path;
+      settings.program.version = this._detectedProgram?.version;
+    }
+    this.currentSettings = settings;
+    return this.currentSettings;
   }
   // Runtime
   async startApi() {
@@ -174,6 +194,7 @@ class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
         connectionString: NATIVE_DOCKER_SOCKET_PATH
       },
       controller: {
+        name: WSL_PROGRAM,
         path: WSL_PATH,
         version: WSL_VERSION,
         scope: WSL_DISTRIBUTION
@@ -203,6 +224,7 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
         connectionString: await this.getConnectionString(LIMA_DOCKER_INSTANCE)
       },
       controller: {
+        name: LIMA_PROGRAM,
         path: LIMA_PATH,
         version: LIMA_VERSION,
         scope: LIMA_DOCKER_INSTANCE
@@ -228,10 +250,6 @@ class Adapter extends AbstractAdapter {
     DockerClientEngineSubsystemWSL,
     DockerClientEngineSubsystemLIMA
   ];
-  async getMachines(engine, customFormat) {
-    this.logger.warn(`${PROGRAM} does not support machines concept`);
-    return [];
-  }
 }
 // Expose as static
 Adapter.ADAPTER = PROGRAM;

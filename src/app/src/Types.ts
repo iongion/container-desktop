@@ -15,8 +15,6 @@ export interface EngineConnectorSettings {
 }
 export interface EngineConnectorSettingsMap {
   expected: EngineConnectorSettings;
-  detected: Partial<EngineConnectorSettings>;
-  automatic: Partial<EngineConnectorSettings>;
   user: Partial<EngineConnectorSettings>;
   current: EngineConnectorSettings;
 }
@@ -65,6 +63,14 @@ export interface TestResult {
   details?: any;
 }
 
+export interface ProgramTestResult extends TestResult {
+  program?: {
+    path: string;
+    version: string;
+  }
+  scopes?: ControllerScope[];
+}
+
 export interface GlobalUserSettingsOptions extends GlobalUserSettings {
   program: Partial<Program>;
   engine: Partial<ContainerEngine>;
@@ -78,8 +84,9 @@ export interface EngineUserSettingsOptions {
 export interface EngineApiOptions {
   adapter: ContainerAdapter;
   engine: ContainerEngine;
-  scope: string; // ControllerScope Name
   id: string; // engine client instance id
+  //
+  scope: string; // ControllerScope Name
   baseURL: string;
   connectionString: string;
 }
@@ -88,6 +95,7 @@ export interface EngineProgramOptions {
   adapter: ContainerAdapter;
   engine: ContainerEngine;
   id: string; // engine client instance id
+  //
   program: Partial<Program>;
   controller?: Partial<Controller>;
 }

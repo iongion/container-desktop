@@ -9,6 +9,21 @@ const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
 const logger = createLogger("container-client.Detector");
 
 // must return undefined when nothing is found - NOT empty string
+const parseProgramVersion = (input) => {
+  let parsed = undefined;
+  if (!input) {
+    return parsed;
+  }
+  try {
+    parsed = (`${input}`.trim().split(",")?.[0].split(" ")?.[2] || "").trim();
+  } catch (error) {
+    logger.error("Unable to parse program version", error.message);
+  }
+  if (!parsed) {
+    return undefined;
+  }
+  return parsed;
+};
 const findProgramPath = async (program, opts) => {
   let result;
   let programPath = undefined;
@@ -78,18 +93,11 @@ const findProgramVersion = async (program, opts, defaultValue) => {
   }
   const result = await exec_launcher_sync(program, ["--version"], opts);
   if (result.success) {
-    version = `${result.stdout}`.trim().split(",")?.[0].split(" ")?.[2] || "";
+    version = parseProgramVersion(result.stdout);
   } else {
     logger.error(`Unable to detect ${program} cli program version`, result);
   }
-  if (typeof version === "undefined") {
-    return undefined;
-  }
-  const cleared = version.trim();
-  if (!cleared) {
-    return undefined;
-  }
-  return cleared;
+  return version;
 };
 const findProgram = async (program, opts) => {
   let version = undefined;
@@ -115,6 +123,7 @@ const findProgram = async (program, opts) => {
 };
 
 module.exports = {
+  parseProgramVersion,
   findProgramPath,
   findProgramVersion,
   findProgram

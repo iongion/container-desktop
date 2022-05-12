@@ -1,4 +1,3 @@
-const fs = require("fs");
 const net = require("net");
 const os = require("os");
 const path = require("path");
@@ -9,10 +8,10 @@ const { v4 } = require("uuid");
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { isFilePresent, exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // module
-const { findProgram, findProgramVersion, findProgramPath } = require("../detector");
 const { createApiDriver, getApiConfig, Runner } = require("../api");
 const { getAvailableLIMAInstances, getAvailableWSLDistributions } = require("../shared");
-const { WSL_VERSION } = require("../constants");
+const { findProgram } = require("../detector");
+const { LIMA_PROGRAM, WSL_PROGRAM } = require("../constants");
 
 /**
  *
@@ -36,10 +35,8 @@ const { WSL_VERSION } = require("../constants");
  *
  * @typedef {Object} SettingsDictionary
  * @property {Settings} expected - suggested
- * @property {Settings} detected - computed
- * @property {Settings} automatic - merging of suggested and computed
  * @property {Settings} user - user overrides
- * @property {Settings} current - merging of expected, detected, automatic and user
+ * @property {Settings} current - merging of expected and user
  *
  */
 
@@ -99,13 +96,6 @@ class AbstractClientEngine {
     this.logger = createLogger(`${this.PROGRAM}.${this.ENGINE || "Engine"}.client`);
     /** @access private */
     this.runner = new Runner(this);
-    /** @access protected */
-    this.detectedSettings = undefined; // CACHE value - avoid program detection multiple times after init
-  }
-
-  // Restore to avoid expensive computation
-  setDetectedSettings(settings) {
-    this.detectedSettings = settings;
   }
 
   // Lazy factory
@@ -124,48 +114,6 @@ class AbstractClientEngine {
    */
   async getExpectedSettings() {
     throw new Error("getExpectedSettings must be implemented");
-  }
-
-  /**
-   * Creates a dictionary with configuration resulting from probing the system
-   * @protected
-   * @return {Settings}
-   */
-  async getDetectedSettings(settings, detect, started) {
-    const available = await this.isEngineAvailable();
-    if (!available.success) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings detect ignore - not applicable for this engine");
-      return {};
-    }
-    this.logger.debug(this.ADAPTER, this.ENGINE, "Engine is available");
-    if (detect) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache skip");
-    } else {
-      if (this.detectedSettings) {
-        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache hit");
-        return this.detectedSettings;
-      } else {
-        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache miss");
-      }
-    }
-    let info = {};
-    if (settings.program.path && isFilePresent(settings.program.path)) {
-      const detectVersion = await findProgramVersion(settings.program.path, { osType: this.osType });
-      info.program = {
-        version: detectVersion
-      };
-    } else {
-      const detectPath = await findProgramPath(settings.program.name || this.PROGRAM, { osType: this.osType });
-      let detectVersion;
-      if (detectPath) {
-        detectVersion = await findProgramVersion(settings.program.path, { osType: this.osType });
-      }
-      info.program = {
-        path: detectPath,
-        version: detectVersion
-      };
-    }
-    return info;
   }
 
   /**
@@ -205,14 +153,12 @@ class AbstractClientEngine {
   }
 
   /**
-   * Creates a dictionary with all configurations and an additional current key made of merging of expected > detected > automatic > user
+   * Creates a dictionary with all configurations and an additional current key made of merging of expected > user
    * @public
    * @return {SettingsDictionary}
    */
-  async getSettings({ detect, started }) {
+  async getSettings() {
     const expected = await this.getExpectedSettings();
-    const detected = await this.getDetectedSettings(expected, detect, started);
-    const automatic = merge({}, expected, detected);
     // Optimization - apply user overrides only if engine is available
     let user = {};
     const available = await this.isEngineAvailable();
@@ -221,8 +167,6 @@ class AbstractClientEngine {
     }
     const settings = {
       expected,
-      detected,
-      automatic,
       user,
       current: merge(
         {
@@ -236,7 +180,6 @@ class AbstractClientEngine {
             version: undefined
           }
         },
-        automatic,
         user
       )
     };
@@ -250,7 +193,7 @@ class AbstractClientEngine {
    */
   async getCurrentSettings() {
     if (!this.currentSettings) {
-      const settings = await this.getSettings({ detect: false });
+      const settings = await this.getSettings();
       this.currentSettings = settings.current;
     }
     return this.currentSettings;
@@ -298,18 +241,17 @@ class AbstractClientEngine {
    * @public
    * @return {bool} flag representing availability
    */
-  async isProgramAvailable() {
+  async isProgramAvailable(settings) {
     const result = { success: false, details: undefined };
-    const settings = await this.getCurrentSettings();
     // Native path to program
     if (!settings.program.path) {
       result.details = "Program path is not set";
       return result;
     }
-    if (!isFilePresent(settings.program.path)) {
-      result.details = "Program is not accessible";
-      return result;
-    }
+    // if (!isFilePresent(settings.program.path)) {
+    //   result.details = "Program is not accessible";
+    //   return result;
+    // }
     result.success = true;
     result.details = "Program is available";
     return result;
@@ -346,7 +288,7 @@ class AbstractClientEngine {
     return result;
   }
 
-  async getAvailability() {
+  async getAvailability(settings) {
     const availability = {
       all: false,
       engine: false,
@@ -364,7 +306,7 @@ class AbstractClientEngine {
       availability.engine = true;
     }
     if (availability.engine) {
-      const program = await this.isProgramAvailable();
+      const program = await this.isProgramAvailable(settings);
       availability.report.program = program.details;
       if (program.success) {
         availability.program = true;
@@ -418,9 +360,22 @@ class AbstractClientEngine {
       id: this.id,
       adapter: this.ADAPTER, // injected by factory
       engine: this.ENGINE,
-      availability: await this.getAvailability(),
       settings: await this.getSettings(opts)
     };
+    try {
+      const current = await this.getCurrentSettings(opts);
+      connector.settings.current = merge(
+        {},
+        connector.settings.expected,
+        connector.settings.user,
+        connector.settings.current,
+        current
+      );
+    } catch (error) {
+      this.logger.error("Unable to inject current settings", error.message, error.stack);
+    }
+    // IMPORTANT - compute availability only after computing current settings
+    connector.availability = await this.getAvailability(connector.settings.current);
     return connector;
   }
   // Executes command inside controller scope
@@ -458,7 +413,7 @@ class AbstractClientEngine {
     return info;
   }
 
-  async getMachines() {
+  async getControllerScopes() {
     return [];
   }
 
@@ -535,69 +490,9 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       }
     };
   }
-  async getDetectedSettings(settings, detect, started) {
-    const available = await this.isEngineAvailable();
-    if (!available.success) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings detect ignore - not applicable for this engine");
-      return {};
-    }
-    this.logger.debug(this.ADAPTER, this.ENGINE, "Engine is available");
-    if (detect) {
-      this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache skip");
-    } else {
-      if (this.detectedSettings) {
-        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache hit");
-        return this.detectedSettings;
-      } else {
-        this.logger.debug(this.ADAPTER, this.ENGINE, "Detected settings cache miss");
-      }
-    }
-    const controller = settings.controller.path;
-    let info = {};
-    // controller
-    if (controller && isFilePresent(controller)) {
-      const detectVersion = await findProgramVersion(
-        controller,
-        { osType: this.osType },
-        this.osType === "Windows_NT" ? WSL_VERSION : undefined
-      );
-      info.controller = {
-        version: detectVersion
-      };
-    } else {
-      const detectPath = await findProgramPath(settings.controller.name, { osType: this.osType });
-      let detectVersion;
-      if (detectPath) {
-        detectVersion = await findProgramVersion(detectPath, { osType: this.osType });
-      }
-      info.controller = {
-        path: detectPath,
-        version: detectVersion
-      };
-    }
-    // program - only if started
-    if (started) {
-      const program = await findProgram(settings.program.path || settings.program.name || this.PROGRAM, {
-        osType: this.osType,
-        wrapper: async (launcher, args) => {
-          const scoped = await this.getScopedCommand(launcher, args);
-          return { launcher: scoped.launcher, args: scoped.command };
-        }
-      });
-      info.program = {
-        path: program.path,
-        version: program.version
-      };
-    } else {
-      this.logger.warn("API not started - program detection skipped", settings.program);
-    }
-    return info;
-  }
 
-  async getSettings({ detect, started }) {
+  async getSettings() {
     const expected = await this.getExpectedSettings();
-    const detected = await this.getDetectedSettings(expected, detect, started);
-    const automatic = merge({}, expected, detected);
     // Optimization - apply user overrides only if engine is available
     let user = {};
     const available = await this.isEngineAvailable();
@@ -606,8 +501,6 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     }
     const settings = {
       expected,
-      detected,
-      automatic,
       user,
       current: merge(
         {
@@ -616,6 +509,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
             connectionString: undefined
           },
           controller: {
+            name: expected?.controller?.name,
             path: undefined,
             scope: undefined,
             version: undefined
@@ -626,7 +520,6 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
             version: undefined
           }
         },
-        automatic,
         user
       )
     };
@@ -634,41 +527,44 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
   }
 
   // Availability
-  async isControllerAvailable() {
-    const settings = await this.getCurrentSettings();
+  async isControllerAvailable(settings) {
     let success = false;
     let details;
-    if (settings.controller.path) {
-      if (isFilePresent(settings.controller.path)) {
-        success = true;
-        details = "Controller is available";
-      } else {
-        details = `Controller not found in expected ${settings.controller.path} location`;
-      }
+    if (settings?.controller?.path) {
+      success = true;
+      // if (isFilePresent(settings.controller.path)) {
+      //   success = true;
+      //   details = "Controller is available";
+      // } else {
+      //   details = `Controller not found`;
+      // }
     } else {
       details = "Controller path not set";
     }
     return { success, details };
   }
-  async isControllerScopeAvailable() {
+  async isControllerScopeAvailable(settings) {
     throw new Error("isControllerScopeAvailable must be implemented");
   }
-  async isProgramAvailable() {
+  async isProgramAvailable(settings) {
     // Controller must be proper
-    const controller = await this.isControllerAvailable();
+    const controller = await this.isControllerAvailable(settings);
     if (!controller.success) {
       return controller;
     }
     // Perform actual program check
     const result = { success: false, details: undefined };
-    const settings = await this.getCurrentSettings();
-    const scope = await this.isControllerScopeAvailable();
+    const scope = await this.isControllerScopeAvailable(settings);
     if (scope) {
       result.success = true;
       result.details = `Controller scope ${settings.controller.scope} is running`;
     } else {
       result.flag = false;
-      result.details = `Controller scope ${settings.controller.scope} is not available`;
+      if (settings.controller.scope) {
+        result.details = `Controller scope ${settings.controller.scope} is not available`;
+      } else {
+        result.details = `Controller scope is not set`;
+      }
       return result;
     }
     // Only if scope is available
@@ -685,7 +581,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     }
     return result;
   }
-  async getAvailability() {
+  async getAvailability(settings) {
     const availability = {
       all: false,
       engine: false,
@@ -705,7 +601,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       availability.engine = true;
     }
     if (availability.engine) {
-      const controller = await this.isControllerAvailable();
+      const controller = await this.isControllerAvailable(settings);
       availability.report.controller = controller.details;
       if (controller.success) {
         availability.controller = true;
@@ -714,7 +610,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       availability.report.controller = "Not checked - engine not available";
     }
     if (availability.controller) {
-      const program = await this.isProgramAvailable();
+      const program = await this.isProgramAvailable(settings);
       availability.report.program = program.details;
       if (program.success) {
         availability.program = true;
@@ -836,11 +732,13 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     return true;
   }
   // Availability
-  async isControllerScopeAvailable() {
-    const settings = await this.getCurrentSettings();
-    const instances = await this.getControllerScopes();
-    const target = instances.find((it) => it.Name === settings.controller.scope);
-    return !!target;
+  async isControllerScopeAvailable(settings) {
+    if (settings?.controller?.scope) {
+      const instances = await this.getControllerScopes();
+      const target = instances.find((it) => it.Name === settings.controller.scope);
+      return !!target;
+    }
+    return false;
   }
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
@@ -862,6 +760,28 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     const { controller } = await this.getCurrentSettings();
     const command = ["--distribution", opts?.scope || controller.scope, program, ...args];
     return { launcher: controller.path, command };
+  }
+  async getCurrentSettings() {
+    const settings = await super.getCurrentSettings();
+    if (this.osType === "Windows_NT") {
+      if (this._detectedControllerProgram) {
+        this.logger.debug(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
+      } else {
+        this.logger.warn(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE MISS");
+        try {
+          this._detectedControllerProgram = await findProgram(WSL_PROGRAM, { osType: this.osType });
+        } catch (error) {
+          this.logger.error("Unable to find WSL", error.message, error.stack);
+        }
+        settings.controller.name = WSL_PROGRAM;
+        settings.controller.path = this._detectedControllerProgram?.path;
+        this.currentSettings = settings;
+      }
+      settings.controller.version = this._detectedControllerProgram?.version;
+    } else {
+      this.logger.debug("WSL program detection skipped on", this.osType);
+    }
+    return settings;
   }
 }
 
@@ -892,11 +812,13 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     });
   }
   // Availability
-  async isControllerScopeAvailable() {
-    const settings = await this.getCurrentSettings();
-    const instances = await this.getControllerScopes();
-    const target = instances.find((it) => it.Name === settings.controller.scope);
-    return target?.Status === "Running";
+  async isControllerScopeAvailable(settings) {
+    if (settings?.controller?.scope) {
+      const instances = await this.getControllerScopes();
+      const target = instances.find((it) => it.Name === settings.controller.scope);
+      return target?.Status === "Running";
+    }
+    return false;
   }
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
@@ -919,6 +841,28 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     const { controller } = await this.getCurrentSettings();
     const command = ["shell", opts?.scope || controller.scope, program, ...args];
     return { launcher: controller.path, command };
+  }
+  async getCurrentSettings() {
+    const settings = await super.getCurrentSettings();
+    if (this.osType === "Darwin") {
+      if (this._detectedControllerProgram) {
+        this.logger.debug(this.id, "DETECT PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
+      } else {
+        this.logger.warn(this.id, "DETECT PROGRAM CONTROLLER CACHE MISS");
+        try {
+          this._detectedControllerProgram = await findProgram(LIMA_PROGRAM, { osType: this.osType });
+        } catch (error) {
+          this.logger.error("Unable to find LIMA", error.message, error.stack);
+        }
+        settings.controller.name = LIMA_PROGRAM;
+        settings.controller.path = this._detectedControllerProgram?.path;
+        this.currentSettings = settings;
+      }
+      settings.controller.version = this._detectedControllerProgram?.version;
+    } else {
+      this.logger.debug("LIMA program detection skipped on", this.osType);
+    }
+    return settings;
   }
 }
 

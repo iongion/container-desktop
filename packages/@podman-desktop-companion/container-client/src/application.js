@@ -9,7 +9,8 @@ const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { Podman, Docker } = require("./adapters");
 const { UserConfiguration } = require("./configuration");
 const { getApiConfig } = require("./api");
-const { findProgram, findProgramVersion } = require("./detector");
+const { findProgram, findProgramVersion, parseProgramVersion } = require("./detector");
+const { getAvailablePodmanMachines } = require("./shared");
 // locals
 const DEFAULT_CONNECTORS = [
   // Podman
@@ -31,8 +32,6 @@ const DEFAULT_CONNECTORS = [
     },
     settings: {
       expected: {},
-      detected: {},
-      automatic: {},
       user: {},
       current: {
         api: {
@@ -67,8 +66,6 @@ const DEFAULT_CONNECTORS = [
     },
     settings: {
       expected: {},
-      detected: {},
-      automatic: {},
       user: {},
       current: {
         api: {
@@ -107,8 +104,6 @@ const DEFAULT_CONNECTORS = [
     },
     settings: {
       expected: {},
-      detected: {},
-      automatic: {},
       user: {},
       current: {
         api: {
@@ -143,8 +138,6 @@ const DEFAULT_CONNECTORS = [
     },
     settings: {
       expected: {},
-      detected: {},
-      automatic: {},
       user: {},
       current: {
         api: {
@@ -266,15 +259,6 @@ class Application {
         acc.push(...adapterEngines);
         return acc;
       }, []);
-      if (this.connectors.length) {
-        items.forEach((engine) => {
-          const connector = this.connectors.find((it) => it.id === engine.id);
-          if (connector) {
-            this.logger.debug("Restore engine detected settings", engine.id, connector.settings.detected);
-            engine.setDetectedSettings(connector.settings.detected);
-          }
-        });
-      }
       this.engines = items;
     }
     return this.engines;
@@ -301,15 +285,15 @@ class Application {
       await Promise.all(
         engines.map(async (engine) => {
           try {
-            this.logger.debug("Creating engine connector", engine.ENGINE);
-            const connector = await engine.getConnector({ detect: true });
+            const connector = await engine.getConnector();
             items.push(connector);
           } catch (error) {
-            this.logger.error("Unable to get engine connector", engine.ENGINE);
+            this.logger.error("Unable to get engine connector", engine.ENGINE, error.message, error.stack);
           }
         })
       );
       this.connectors = items;
+      this.logger.error(">>> COMPUTED CONNECTORS", this.connectors);
     }
     return this.connectors;
   }
@@ -392,7 +376,7 @@ class Application {
       if (this.started) {
         this.logger.debug("Updating connector post successful start-up to get updated details");
         const currentEngine = await this.getCurrentEngine();
-        this.currentConnector = await currentEngine.getConnector({ detect: true, started: this.started });
+        this.currentConnector = await currentEngine.getConnector();
         // Update connector state
         this.connectors = this.connectors.map((it) => {
           if (it.id === this.currentConnector.id) {
@@ -522,10 +506,9 @@ class Application {
     const currentEngine = await this.getCurrentEngine();
     return await currentEngine.getSystemInfo();
   }
-  async getMachines() {
-    const currentAdapter = await this.getCurrentAdapter();
+  async getControllerScopes() {
     const currentEngine = await this.getCurrentEngine();
-    return await currentAdapter.getMachines(currentEngine);
+    return await currentEngine.getControllerScopes();
   }
 
   // finders & testers
@@ -564,24 +547,40 @@ class Application {
   }
 
   async testProgramReachability(opts) {
-    const result = { success: false };
-    this.logger.debug("Testing if program is reachable", opts);
-    const { adapter, engine, id, controller, program } = opts;
+    const result = { success: false, program: undefined };
+    const { adapter, engine, controller, program } = opts;
+    this.logger.debug(adapter, engine, "Testing if program is reachable", opts);
     const testController =
       controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
     if (testController) {
       try {
-        const version = await findProgramVersion(controller.path);
+        const version = await findProgramVersion(controller.path, { osType: this.osType });
         if (!version) {
-          this.logger.error("[C] Program test failed - no version", controller);
+          this.logger.error(adapter, engine, "[C] Program test failed - no version", controller);
           throw new Error("Test failed - no version");
         }
         if (version) {
+          let scopes = [];
+          try {
+            scopes = await getAvailablePodmanMachines(controller.path);
+          } catch (error) {
+            this.logger.error(adapter, engine, "[C] Unable to list podman machines", error.message, error.stack);
+          }
           result.success = true;
           result.details = `Program has been found - version ${version}`;
+          result.scopes = scopes;
+          result.program = {
+            path: controller.path,
+            version
+          };
         }
       } catch (error) {
-        this.logger.error("[C] Testing if program is reachable - failed during detection", error.message);
+        this.logger.error(
+          adapter,
+          engine,
+          "[C] Testing if program is reachable - failed during detection",
+          error.message
+        );
         result.details = "Program detection error";
       }
     } else if (program.path) {
@@ -592,15 +591,27 @@ class Application {
           result.success = false;
           result.details = "Adapter engine is not accessible";
         } else {
-          const check = await adapterEngine.engine.runScopedCommand(program.path, ["--version"]);
-          this.logger.debug("[P] Testing if program is reachable - completed", check);
-          if (check.success) {
+          const check = await adapterEngine.engine.runScopedCommand(program.path, ["--version"], {
+            scope: controller?.scope
+          });
+          this.logger.debug(adapter, engine, "[P] Testing if program is reachable - completed", check);
+          const version = check.success ? parseProgramVersion(check.stdout) : undefined;
+          if (check.success && version) {
             result.success = true;
-            result.details = "Program has been found";
+            result.details = `Program has been found - version ${version}`;
+            result.program = {
+              path: program.path,
+              version
+            };
           }
         }
       } catch (error) {
-        this.logger.error("[P] Testing if program is reachable - failed during detection", error.message);
+        this.logger.error(
+          adapter,
+          engine,
+          "[P] Testing if program is reachable - failed during detection",
+          error.message
+        );
         result.details = "Program detection error";
       }
     }

@@ -29,6 +29,7 @@ import {
   //
   ContainerStateList,
   TestResult,
+  ProgramTestResult,
   Program,
   ProgramExecutionResult,
   ConnectOptions,
@@ -600,7 +601,7 @@ export class ContainerClient {
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
       const reply = await Native.getInstance().proxyService<Machine[]>({
-        method: "getMachines"
+        method: "getControllerScopes"
       });
       return reply.result;
     });
@@ -824,8 +825,8 @@ export class ContainerClient {
   }
 
   async testProgramReachability(opts: EngineProgramOptions) {
-    return this.withResult<TestResult>(async () => {
-      const reply = await Native.getInstance().proxyService<TestResult>({
+    return this.withResult<ProgramTestResult>(async () => {
+      const reply = await Native.getInstance().proxyService<ProgramTestResult>({
         method: "test",
         params: {
           subject: "reachability.program",
