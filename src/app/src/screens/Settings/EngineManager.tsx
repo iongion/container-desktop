@@ -51,12 +51,12 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
   useEffect(() => {
     reset({
-      scope: controller?.scope,
+      scope: controller?.scope && (scopes || []).find(it => it.Name === controller?.scope) ? controller?.scope : "",
       controllerPath: controller?.path,
       programPath: program.path,
       connectionString: api.connectionString
     })
-  }, [api, controller, program, reset]);
+  }, [api, controller, program, scopes, reset]);
 
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -157,25 +157,29 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   if (isScoped && Array.isArray(scopes)) {
     let scopeLabel = t("Scope");
     let scopeTitle = "";
+    let scopeRequired = "";
     if (isLIMA) {
       scopeLabel = t("LIMA instance");
       scopeTitle = t("The LIMA instance in which the current engine is running");
+      scopeRequired = t("A LIMA instance must be selected");
     } else if (isWSL) {
       scopeLabel = t("WSL distribution");
       scopeTitle = t("The WSL distribution in which the current engine is running");
+      scopeRequired = t("A WSL distribution must be selected");
     } else if (isMachine) {
       scopeLabel = t("Podman machines");
       scopeTitle = t("The podman machine in which the current engine is running");
+      scopeRequired = t("A podman machine must be selected");
     }
     scopeSelectorWidget = (
       <Controller
         control={control}
         name="scope"
         defaultValue=""
-        rules={{ required: isScoped ? t("Controller path must be set") : false }}
+        rules={{ required: true }}
         render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { isDirty, error } }) => {
           return (
-            <FormGroup className="ProgramScopeLocator" label={scopeLabel} labelFor="scopeSelector">
+            <FormGroup className="ProgramScopeLocator" label={scopeLabel} labelFor="scopeSelector" helperText={value ? "" : scopeRequired}>
               <ControlGroup>
                 <HTMLSelect
                   name={name}
@@ -219,6 +223,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         defaultValue=""
         rules={{ required: t("Controller path must be set") }}
         render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { isDirty, error } }) => {
+          let canTest = true;
           let valid = true;
           let message;
           if (error?.message) {
@@ -291,7 +296,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                     title={message}
                     rightElement={
                       <>
-                        <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
+                        <Button disabled={!canTest} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
                       </>
                     }
                   />
@@ -552,7 +557,6 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     try {
       const nextSettings = { id: connector.id, settings: engineUserSettings };
       const settings: EngineConnectorSettings = await setEngineUserSettings(nextSettings);
-      console.debug("Post update settings are", settings, "vs", nextSettings);
       reset({
         scope: connector.settings.current.controller?.scope,
         controllerPath: connector.settings.current.controller?.path,
@@ -561,7 +565,6 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
       });
       Notification.show({ message: t("Container engine settings have been updated"), intent: Intent.SUCCESS });
     } catch (error: any) {
-      console.error("Container engine settings updated failed", error.message, error.stack);
       Notification.show({ message: t("Container engine settings update has failed"), intent: Intent.DANGER });
     }
   });

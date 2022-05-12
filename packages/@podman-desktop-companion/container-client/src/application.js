@@ -225,7 +225,7 @@ class Application {
 
   async getAdapters() {
     if (this.adapters.length) {
-      this.logger.debug("Reusing adapters list", this.adapters);
+      this.logger.debug("Reusing adapters list");
     } else {
       // Optimize if current cached connector exists - only instantiate a single adapter
       const currentConnector = this.currentConnector;
@@ -246,7 +246,7 @@ class Application {
 
   async getCurrentAdapter() {
     if (this.currentAdapter) {
-      this.logger.debug("Reusing current adapter", this.currentAdapter);
+      this.logger.debug("Reusing current adapter");
     } else {
       this.logger.debug("Computing current adapter");
       const adapters = await this.getAdapters();
@@ -257,17 +257,15 @@ class Application {
 
   async getEngines() {
     if (this.engines.length) {
-      this.logger.debug("Reusing engines list", this.engines);
+      this.logger.debug("Reusing engines list");
     } else {
       this.logger.debug("Computing engines list");
-      const items = [];
       const adapters = await this.getAdapters();
-      await Promise.all(
-        adapters.map(async (adapter) => {
-          const adapterEngines = await adapter.createEngines();
-          items.push(...adapterEngines);
-        })
-      );
+      const items = adapters.reduce((acc, adapter) => {
+        const adapterEngines = adapter.createEngines();
+        acc.push(...adapterEngines);
+        return acc;
+      }, []);
       if (this.connectors.length) {
         items.forEach((engine) => {
           const connector = this.connectors.find((it) => it.id === engine.id);
@@ -284,7 +282,7 @@ class Application {
 
   async getCurrentEngine() {
     if (this.currentEngine) {
-      this.logger.debug("Reusing current engine", this.currentEngine);
+      this.logger.debug("Reusing current engine");
     } else {
       this.logger.debug("Computing current engine");
       const engines = await this.getEngines();
@@ -302,8 +300,13 @@ class Application {
       const engines = await this.getEngines();
       await Promise.all(
         engines.map(async (engine) => {
-          const connector = await engine.getConnector({ detect: true });
-          items.push(connector);
+          try {
+            this.logger.debug("Creating engine connector", engine.ENGINE);
+            const connector = await engine.getConnector({ detect: true });
+            items.push(connector);
+          } catch (error) {
+            this.logger.error("Unable to get engine connector", engine.ENGINE);
+          }
         })
       );
       this.connectors = items;
@@ -570,7 +573,7 @@ class Application {
       try {
         const version = await findProgramVersion(controller.path);
         if (!version) {
-          this.logger.error("[C] Program test failed - no version");
+          this.logger.error("[C] Program test failed - no version", controller);
           throw new Error("Test failed - no version");
         }
         if (version) {

@@ -86,7 +86,7 @@ const findProgramVersion = async (program, opts, defaultValue) => {
     return undefined;
   }
   const cleared = version.trim();
-  if (cleared) {
+  if (!cleared) {
     return undefined;
   }
   return cleared;
