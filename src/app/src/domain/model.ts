@@ -3,8 +3,9 @@ import { action, thunk } from "easy-peasy";
 import merge from "lodash.merge";
 import produce from "immer";
 // project
+import { Connector } from "../Types.container-app";
+// module
 import { Native } from "../Native";
-import { Connector } from "../Types";
 import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types";
 
 export const createModel = (registry: AppRegistry): AppModel => {
@@ -16,6 +17,10 @@ export const createModel = (registry: AppRegistry): AppModel => {
     descriptor: Native.getInstance().getDefaultApplicationDescriptor(),
     // Actions
     setPhase: action((state, phase) => {
+      if (phase === AppBootstrapPhase.CONNECTING) {
+        state.descriptor.provisioned = false;
+        state.descriptor.running = false;
+      }
       state.phase = phase;
     }),
     setPending: action((state, flag) => {
@@ -52,6 +57,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
       return registry.withPending(async () => {
         try {
           await actions.setPhase(nextPhase);
+          // offload
           const startup = await registry.api.start(options);
           if (startup.currentConnector) {
             registry.api.setConnector(startup.currentConnector);
@@ -80,6 +86,16 @@ export const createModel = (registry: AppRegistry): AppModel => {
         }
       });
     }),
+    // Injections
+    connectorUpdate: action((state, opts: Connector) => {
+      console.debug("Must update connector", opts);
+      state.descriptor.connectors = produce(state.descriptor.connectors, (draft: Connector[]) => {
+        const index = draft.findIndex(it => it.id === opts.id)
+        if (index !== -1) {
+          draft[index] = merge(draft[index], opts);
+        }
+      });
+    }),
     // Global
     setGlobalUserSettings: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
@@ -94,12 +110,13 @@ export const createModel = (registry: AppRegistry): AppModel => {
     }),
     getGlobalUserSettings: thunk(async (actions) => {
       return registry.withPending(async () => {
-        // try {
-        //   const configuration = await registry.api.getGlobalUserSettings();
-        //   return configuration;
-        // } catch (error) {
-        //   console.error("Error during user configuration reading", error);
-        // }
+        try {
+          const userSettings = await registry.api.getGlobalUserSettings();
+          await actions.syncGlobalUserSettings(userSettings);
+          return userSettings;
+        } catch (error) {
+          console.error("Error during global user preferences update", error);
+        }
         return {} as any;
       });
     }),

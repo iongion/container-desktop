@@ -8,22 +8,26 @@ interface AppScreenHeaderProps {
   onSearch?: React.ChangeEventHandler<HTMLInputElement> | undefined;
   withoutSearch?: boolean;
   withBack?: boolean;
+  leftText?: string;
   titleText?: string;
   titleIcon?: any;
   rightContent?: React.ReactNode;
   listRoutePath?: string;
   listRouteIcon?: IconName;
+  children?: any;
 }
 
 export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   onSearch,
   withBack,
   withoutSearch,
+  leftText,
   titleText,
   titleIcon,
   rightContent,
   listRoutePath,
-  listRouteIcon
+  listRouteIcon,
+  children
 }) => {
   const { t } = useTranslation();
   const history = useHistory();
@@ -66,8 +70,11 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   return (
     <div className="AppScreenHeader">
       <Navbar>
-        {backButton}
-        {searchWidget}
+        <div className="NavbarLeft">
+          {backButton}
+          {searchWidget}
+          {children}
+        </div>
         <div className="NavbarCenter" data-with-back="yes">
           <div className="NavbarCenterContent">{titleWidget}</div>
         </div>

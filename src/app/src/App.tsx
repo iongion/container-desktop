@@ -6,9 +6,10 @@ import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { HashRouter as Router, Switch, Route, useLocation } from "react-router-dom";
 
+import { Program } from "./Types.container-app";
+
 import { StoreProvider } from "./domain/store";
 import { AppBootstrapPhase, AppStore, useStoreActions, useStoreState } from "./domain/types";
-import { Program } from "./Types";
 import { pathTo } from "./Navigator";
 
 import "./App.i18n";
@@ -153,7 +154,7 @@ export function AppMainScreen() {
 
   const provisioned = descriptor.provisioned;
   const running = descriptor.running;
-  const platform = descriptor.platform;
+  const osType = descriptor.osType;
   const currentConnector = descriptor.currentConnector;
   const program = currentConnector?.settings?.current?.program;
 
@@ -174,7 +175,7 @@ export function AppMainScreen() {
       data-engine={currentConnector.engine}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
-      data-platform={platform}
+      data-os={osType}
       data-phase={phase}
       data-running={running ? "yes" : "no"}
       data-provisioned={provisioned ? "yes" : "no"}

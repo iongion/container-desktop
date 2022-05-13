@@ -4,7 +4,7 @@ const os = require("os");
 // require("fix-path")();
 const merge = require("lodash.merge");
 // project
-const { UserConfiguration } = require("@podman-desktop-companion/container-client").configuration;
+const { UserConfiguration } = require("@podman-desktop-companion/container-config");
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
 const logger = createLogger("app.configuration");

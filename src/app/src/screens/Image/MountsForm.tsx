@@ -7,11 +7,11 @@ import { v4 } from "uuid";
 
 // project
 import { Native } from "../../Native";
-import { ContainerImageMount } from "../../Types";
 import { useStoreState } from "../../domain/types";
 
 // local
 import "./MountsForm.css";
+import { ContainerImageMount } from "../../Types.container-app";
 
 export const createMount = (): MountFormContainerImageMount => {
   return {

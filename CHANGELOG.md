@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Fixed
+
+# issue #64 - Blank page after loading
+
+## Added
+
+* Show program version in settings screen header left column
+
 ## [4.1.0-rc.11] - 2022-05-11
 
 * issue #73 - Prevent crashing if no programs or versions are found - do not merge empty strings, default as `undefined` is required for proper merge

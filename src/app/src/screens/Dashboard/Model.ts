@@ -1,8 +1,8 @@
 // vendors
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
+import { ContainerStateList } from "../../Types.container-app";
 import { AppRegistry } from "../../domain/types";
-import { ContainerStateList } from "../../Types";
 
 export interface ContainerStats {
   paused: number;

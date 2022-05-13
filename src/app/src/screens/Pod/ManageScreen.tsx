@@ -5,14 +5,18 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Pod, ApplicationDescriptor } from "../../Types";
+import { ApplicationDescriptor } from "../../Types.container-app";
+
+// module
+
+import { Pod } from "../../Types.container-app";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
 import { pathTo } from "../../Navigator";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
-// module
 import { ListActionsMenu, ItemActionsMenu } from ".";
 
 import "./ManageScreen.css";

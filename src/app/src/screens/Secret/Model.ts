@@ -2,8 +2,8 @@
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
-import { Secret } from "../../Types";
 import { FetchSecretOptions, CreateSecretOptions } from "../../Api.clients";
+import { Secret } from "../../Types.container-app";
 
 export interface SecretsModelState {
   secrets: Secret[];

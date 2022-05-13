@@ -6,6 +6,12 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 const logger = createLogger("container-client.Configuration");
 
 class UserConfiguration {
+  static getInstance(version, environment) {
+    if (!UserConfiguration.instance) {
+      UserConfiguration.instance = new UserConfiguration(version, environment);
+    }
+    return UserConfiguration.instance;
+  }
   constructor(version, stage) {
     this.version = version || "1.0.0";
     this.stage = stage || "production";

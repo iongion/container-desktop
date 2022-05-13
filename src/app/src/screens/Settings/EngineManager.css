@@ -34,6 +34,7 @@
 }
 .ProgramScopeLocator {
   display: inline-flex;
+  margin-bottom: 0;
 }
 .ProgramScopeLocator .ScopeSelectorFindButton {
   width: 30px;

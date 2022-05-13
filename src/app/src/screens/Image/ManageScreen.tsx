@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
 
 // project
-import { AppScreenProps, AppScreen, ContainerImage } from "../../Types";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -16,6 +16,7 @@ import { useStoreActions, useStoreState } from "../../domain/types";
 import { getImageUrl, ActionsMenu } from ".";
 
 import "./ManageScreen.css";
+import { ContainerImage } from "../../Types.container-app";
 
 export const ID = "images";
 

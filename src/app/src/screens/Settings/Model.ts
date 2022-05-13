@@ -1,8 +1,9 @@
 // vendors
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
+import { ContainerEngine, SystemInfo } from "../../Types.container-app";
+// module
 import { AppRegistry } from "../../domain/types";
-import { ContainerEngine, SystemInfo } from "../../Types";
 
 export interface SettingsModelState {
   engine?: ContainerEngine;

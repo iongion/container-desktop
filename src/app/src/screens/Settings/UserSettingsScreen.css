@@ -119,3 +119,17 @@
 .AppSettingsForm[data-form="logging"] .bp4-form-group:first-child {
   flex: 1;
 }
+[data-screen="settings.user-settings"] .NavbarLeft {
+  display: flex;
+  align-items: center;
+  align-content: center;
+}
+[data-screen="settings.user-settings"] .AppScreenHeaderText {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  color: #999;
+}

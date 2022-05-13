@@ -3,12 +3,27 @@ const path = require("path");
 const os = require("os");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_launcher } = require("@podman-desktop-companion/executor");
 // modules
 // locals
 const logger = createLogger("container-client.Detector");
 
 // must return undefined when nothing is found - NOT empty string
+const parseProgramVersion = (input) => {
+  let parsed = undefined;
+  if (!input) {
+    return parsed;
+  }
+  try {
+    parsed = (`${input}`.trim().split(",")?.[0].split(" ")?.[2] || "").trim();
+  } catch (error) {
+    logger.error("Unable to parse program version", error.message);
+  }
+  if (!parsed) {
+    return undefined;
+  }
+  return parsed;
+};
 const findProgramPath = async (program, opts) => {
   let result;
   let programPath = undefined;
@@ -19,7 +34,7 @@ const findProgramPath = async (program, opts) => {
   const osType = opts.osType || os.type();
   const useWhere = osType === "Windows_NT" && !opts?.wrapper;
   if (useWhere) {
-    result = await exec_launcher_sync("where", [program], opts);
+    result = await exec_launcher("where", [program], opts);
     logger.debug("Detecting", program, "using - where >", result);
     if (result.success) {
       const output = result.stdout || "";
@@ -38,7 +53,7 @@ const findProgramPath = async (program, opts) => {
     }
   }
   if (!programPath) {
-    result = await exec_launcher_sync("which", [program], opts);
+    result = await exec_launcher("which", [program], opts);
     logger.debug("Detecting", program, "using - which >", result);
     if (result.success) {
       programPath = result.stdout || "";
@@ -47,7 +62,7 @@ const findProgramPath = async (program, opts) => {
     }
   }
   if (!programPath) {
-    result = await exec_launcher_sync("whereis", [program], opts);
+    result = await exec_launcher("whereis", [program], opts);
     logger.debug("Detecting", program, "using - whereis >", result);
     if (result.success) {
       programPath = result.stdout.split(" ")?.[1] || "";
@@ -76,20 +91,13 @@ const findProgramVersion = async (program, opts, defaultValue) => {
     logger.warn("wsl.exe does not report a version - defaulting", defaultValue);
     return defaultValue;
   }
-  const result = await exec_launcher_sync(program, ["--version"], opts);
+  const result = await exec_launcher(program, ["--version"], opts);
   if (result.success) {
-    version = `${result.stdout}`.trim().split(",")?.[0].split(" ")?.[2] || "";
+    version = parseProgramVersion(result.stdout);
   } else {
     logger.error(`Unable to detect ${program} cli program version`, result);
   }
-  if (typeof version === "undefined") {
-    return undefined;
-  }
-  const cleared = version.trim();
-  if (cleared) {
-    return undefined;
-  }
-  return cleared;
+  return version;
 };
 const findProgram = async (program, opts) => {
   let version = undefined;
@@ -115,6 +123,7 @@ const findProgram = async (program, opts) => {
 };
 
 module.exports = {
+  parseProgramVersion,
   findProgramPath,
   findProgramVersion,
   findProgram

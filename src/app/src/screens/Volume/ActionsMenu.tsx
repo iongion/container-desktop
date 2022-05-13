@@ -6,13 +6,13 @@ import { useTranslation } from "react-i18next";
 // project
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
-import { Volume } from "../../Types";
 import { goToScreen } from "../../Navigator";
 import { useStoreActions } from "../../domain/types";
 
 // module
 import { getVolumeUrl } from "./Navigation";
 import { CreateDrawer } from "./CreateDrawer";
+import { Volume } from "../../Types.container-app";
 
 export interface VolumeActionsMenuProps {
   volume?: Volume;

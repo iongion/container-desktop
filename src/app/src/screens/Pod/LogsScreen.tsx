@@ -3,7 +3,8 @@ import { IconNames } from "@blueprintjs/icons";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { AppScreenProps, AppScreen, Pod } from "../../Types";
+import { Pod } from "../../Types.container-app";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { CodeEditor } from "../../components/CodeEditor";

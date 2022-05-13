@@ -1,42 +1,24 @@
-import { ApplicationDescriptor, EngineConnectorApiSettings, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings, EngineConnectorSettings } from "./Types";
-
-export enum Platforms {
-  Browser = "browser",
-  Linux = "Linux",
-  Mac = "Darwin",
-  Windows = "Windows_NT",
-  Unknown = "unknown"
-}
-
-export enum WindowAction {
-  Minimize = "window.minimize",
-  Maximize = "window.maximize",
-  Restore = "window.restore",
-  Close = "window.close"
-}
-
-export interface FileSelection {
-  canceled: boolean;
-  filePaths: string[];
-}
-
-export interface OpenFileSelectorOptions {
-  directory?: boolean;
-}
-
-export interface OpenTerminalOptions {
-  command?: string;
-  // terminal inside machine
-  machine?: string;
-}
-
-export interface ProxyServiceOptions {
-  http?: boolean;
-  keepAlive?: boolean;
-}
+import Application, {
+  ApplicationDescriptor,
+  ConnectOptions,
+  Connector,
+  ContainerClientResult,
+  ContainerConnectOptions,
+  CreateMachineOptions,
+  EngineApiOptions,
+  EngineConnectorSettings,
+  EngineProgramOptions,
+  FileSelection,
+  FindProgramOptions,
+  GlobalUserSettings,
+  OpenFileSelectorOptions,
+  OpenTerminalOptions,
+  Platforms,
+  ProxyRequest
+} from "./Types.container-app";
 
 interface NativeBridge {
-  platform: Platforms;
+  osType: Platforms;
   available: boolean;
   defaults: {
     connector: string | undefined;
@@ -45,50 +27,18 @@ interface NativeBridge {
   ipcRenderer: {
     send: (message: any) => any;
   };
-  application: {
-    setup: () => any;
-    minimize: () => void;
-    maximize: () => void;
-    restore: () => void;
-    close: () => void;
-    exit: () => void;
-    relaunch: () => void;
-    openDevTools: () => void;
-    openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
-    openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
-    proxyHTTPRequest: <T>(request: any) => Promise<T>;
-    proxy: <T>(request: any, context: any, opts?: ProxyServiceOptions) => Promise<T>;
-    getEngine: () => Promise<ContainerEngine>;
-    // settings
-    setGlobalUserSettings: (settings: Partial<GlobalUserSettings>) => Promise<GlobalUserSettings>;
-    getGlobalUserSettings: () => Promise<GlobalUserSettings>;
-    setEngineUserSettings: (id: string, settings: Partial<EngineConnectorSettings>) => Promise<EngineConnectorSettings>;
-    getEngineUserSettings: (id: string) => Promise<EngineConnectorSettings>;
-  };
-}
-
-export interface NativeProxyPostStartupContext {
-  inited: boolean;
-  started: boolean;
-  connectors: Connector[];
-  currentConnector?: Connector;
+  application: Application;
 }
 
 export class Native {
   private static instance: Native;
   private bridge: NativeBridge;
-  private proxyContext: NativeProxyPostStartupContext = {
-    inited: false,
-    started: false,
-    connectors: [],
-    currentConnector: undefined,
-  };
   constructor() {
     if (Native.instance) {
       throw new Error("Cannot have multiple instances");
     }
     this.bridge = (globalThis as any)?.nativeBridge || {
-      platform: "browser",
+      osType: "browser",
       available: false,
       defaults: {
         connector: undefined,
@@ -97,18 +47,7 @@ export class Native {
       ipcRenderer: {
         send: (message: any) => { throw new Error("Not bridged"); }
       },
-      application: {
-        minimize: () => { throw new Error("Not bridged"); },
-        maximize: () => { throw new Error("Not bridged"); },
-        restore: () => { throw new Error("Not bridged"); },
-        close: () => { throw new Error("Not bridged"); },
-        exit: () => { throw new Error("Not bridged"); },
-        relaunch: () => { throw new Error("Not bridged"); },
-        openFileSelector: (options?: OpenFileSelectorOptions) => { throw new Error("Not bridged"); },
-        openTerminal: (options?: OpenTerminalOptions) => { throw new Error("Not bridged"); },
-        proxy: (request: any, context: any, opts: any) => { throw new Error("Not bridged"); },
-        getEngine: () => { throw new Error("Not bridged"); },
-      }
+      application: {} as any, // Injected by expose
     };
     Native.instance = this;
   }
@@ -151,8 +90,8 @@ export class Native {
   public isNative() {
     return this.bridge.available === true;
   }
-  public getPlatform() {
-    return this.bridge.platform || Platforms.Unknown;
+  public getOperatingSystem() {
+    return this.bridge.osType || Platforms.Unknown;
   }
   public getDefaultConnector() {
     return this.bridge.defaults.connector;
@@ -161,7 +100,7 @@ export class Native {
     return this.bridge.defaults.descriptor;
   }
   public withWindowControls() {
-    return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());
+    return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getOperatingSystem());
   }
   public openDevTools() {
     return this.bridge.application.openDevTools();
@@ -186,15 +125,92 @@ export class Native {
     }
     return result;
   }
-  public async proxyHTTPRequest<T>(request: any, api: EngineConnectorApiSettings) {
+
+  public async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
+    return this.bridge.application.setGlobalUserSettings(settings);
+  };
+  public async getGlobalUserSettings() {
+    return this.bridge.application.getGlobalUserSettings();
+  }
+  public async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
+    return this.bridge.application.setEngineUserSettings(id, settings);
+  }
+  public async getEngineUserSettings(id: string) {
+    return this.bridge.application.getEngineUserSettings(id);
+  }
+  public async start(opts?: ConnectOptions) {
+    return this.bridge.application.start(opts);
+  }
+  public async getPodLogs(Id: string, tail?: number) {
+    return await this.bridge.application.getPodLogs(Id, tail);
+  }
+  public async generateKube(Id: string) {
+    return await this.bridge.application.generateKube(Id);
+  }
+  public async getControllerScopes() {
+    return await this.bridge.application.getControllerScopes();
+  }
+  public async getMachines() {
+    return await this.bridge.application.getMachines();
+  }
+  public async connectToMachine(Name: string) {
+    return await this.bridge.application.connectToMachine(Name);
+  }
+  public async restartMachine(Name: string) {
+    return await this.bridge.application.restartMachine(Name);
+  }
+  public async startMachine(Name: string) {
+    return await this.bridge.application.startMachine(Name);
+  }
+  public async stopMachine(Name: string) {
+    return await this.bridge.application.stopMachine(Name);
+  }
+  public async removeMachine(Name: string) {
+    return await this.bridge.application.removeMachine(Name);
+  }
+  public async createMachine(opts : CreateMachineOptions) {
+    return await this.bridge.application.createMachine(opts);
+  }
+  public async inspectMachine(Name: string) {
+    return await this.bridge.application.inspectMachine(Name);
+  }
+  public async getSystemInfo() {
+    return await this.bridge.application.getSystemInfo();
+  }
+  public async connectToContainer(item: ContainerConnectOptions) {
+    return await this.bridge.application.connectToContainer(item);
+  }
+  public async testProgramReachability(opts: EngineProgramOptions) {
+    return await this.bridge.application.testProgramReachability(opts);
+  }
+  public async testApiReachability(opts: EngineApiOptions) {
+    return await this.bridge.application.testApiReachability(opts);
+  }
+  public async findProgram(opts: FindProgramOptions) {
+    return await this.bridge.application.findProgram(opts);
+  }
+  public async pruneSystem() {
+    return await this.bridge.application.pruneSystem();
+  }
+  public async resetSystem() {
+    return await this.bridge.application.resetSystem();
+  }
+  public async createApiRequest(service: { method: string; params: any }, opts?: { http?: boolean; }) {
+    return await this.bridge.application.createApiRequest(service, opts);
+  }
+  public async proxyHTTPRequest<T>(request: any, connector: Connector) {
+    console.debug()
     let reply: ContainerClientResult<T>;
     const isHTTP = true;
     try {
-      const configured = {
-        ...request,
-        baseURL: api.baseURL,
-        socketPath: api.connectionString,
-      }
+      const configured: ProxyRequest = {
+        request,
+        baseURL: connector.settings.current.api.baseURL,
+        socketPath: connector.settings.current.api.connectionString,
+        engine: connector.engine,
+        scope: connector.settings.current.controller?.scope,
+        adapter: connector.adapter,
+      };
       console.debug("[>]", configured);
       reply = await this.bridge.application.proxyHTTPRequest<ContainerClientResult<T>>(configured);
       reply.success = (reply.result as any).ok;
@@ -210,74 +226,13 @@ export class Native {
       throw error;
     }
     if (!reply.success) {
-      const error = new Error(isHTTP ? "HTTP proxy service error" : "Application proxy service error");
-      (error as any).http = isHTTP;
-      (error as any).result = reply;
-      throw error;
-    }
-    return reply;
-  }
-  public async proxyService<T>(request: any, opts?: ProxyServiceOptions) {
-    let reply: ContainerClientResult<T>;
-    const isHTTP = !!opts?.http;
-    try {
-      console.debug("[>]", request);
-      if (request.method === "start") {
-        this.proxyContext = {
-          inited: false,
-          started: false,
-          connectors: [],
-          currentConnector: undefined,
-        };
-      }
-      reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request, this.proxyContext, opts);
-      if (request.method === "start") {
-        if (reply.success) {
-          const descriptor = (reply.result as unknown) as ApplicationDescriptor;
-          this.proxyContext = {
-            inited: true, // consider already initialized
-            started: descriptor.running,
-            connectors: descriptor.connectors,
-            currentConnector: descriptor.currentConnector,
-          };
-          console.debug("Proxy context cache performed(proxying to next calls)", this.proxyContext);
-        } else {
-          console.error("Proxy context cache skipped - start failed", reply);
-        }
-      }
-      if (isHTTP) {
-        reply.success = (reply.result as any).ok;
-      }
-      console.debug("[<]", reply);
-    } catch (error: any) {
-      console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
-      error.http = isHTTP;
-      error.result = {
-        result: "Proxy service internal error",
+      console.error("HTTP proxy service error", reply);
+      return {
+        result: (reply as unknown) as T,
         success: false,
         warnings: [],
       }
-      throw error;
-    }
-    if (!reply.success) {
-      const error = new Error(isHTTP ? "HTTP proxy service error" : "Application proxy service error");
-      (error as any).http = isHTTP;
-      (error as any).result = reply;
-      throw error;
     }
     return reply;
-  }
-
-  public async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
-    return this.bridge.application.setGlobalUserSettings(settings);
-  };
-  public async getGlobalUserSettings() {
-    return this.bridge.application.getGlobalUserSettings();
-  }
-  public async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
-    return this.bridge.application.setEngineUserSettings(id, settings);
-  }
-  public async getEngineUserSettings(id: string) {
-    return this.bridge.application.getEngineUserSettings(id);
   }
 }

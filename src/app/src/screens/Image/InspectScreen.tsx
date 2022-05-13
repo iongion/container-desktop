@@ -3,11 +3,12 @@ import { IconNames } from "@blueprintjs/icons";
 import { useParams } from "react-router-dom";
 
 // project
-import { AppScreenProps, AppScreen, ContainerImage } from "../../Types";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { CodeEditor } from "../../components/CodeEditor";
 import { useStoreActions } from "../../domain/types";
 
+import { ContainerImage } from "../../Types.container-app";
 // module
 import { ScreenHeader } from ".";
 

@@ -6,12 +6,12 @@ import { useTranslation } from "react-i18next";
 // project
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
-import { Pod, PodStatusList } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
 import { useStoreActions } from "../../domain/types";
 import { getPodUrl } from "./Navigation";
 import { CreateDrawer } from "./CreateDrawer";
+import { Pod, PodStatusList } from "../../Types.container-app";
 
 // Actions menu
 interface ListActionsMenuProps {

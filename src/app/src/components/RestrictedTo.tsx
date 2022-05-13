@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
 import { mdiLinux, mdiMicrosoftWindows, mdiApple } from "@mdi/js";
 
-import { ContainerEngine } from "../Types";
+import { ContainerEngine } from "../Types.container-app";
 
 import "./RestrictedTo.css";
 
@@ -69,7 +69,7 @@ export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine, withTitle })
   };
   const info = platformsMap[engine];
   return !info || info.ignore ? null : (
-    <div className="RestrictedTo" data-platform={engine} title={info.title}>
+    <div className="RestrictedTo" data-engine={engine} title={info.title}>
       {info.icon && <ReactIcon.Icon path={info.icon} size={0.75} />}
       {withTitle && <span className="RestrictedToEngineTitle">{info.title}</span>}
     </div>

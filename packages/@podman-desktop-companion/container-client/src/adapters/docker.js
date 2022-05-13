@@ -3,13 +3,16 @@ const fs = require("fs");
 // vendors
 const merge = require("lodash.merge");
 // project
+const { findProgram } = require("@podman-desktop-companion/detector");
 // module
 const {
   // WSL - common
+  WSL_PROGRAM,
   WSL_PATH,
   WSL_VERSION,
   WSL_DISTRIBUTION,
   // LIMA - common
+  LIMA_PROGRAM,
   LIMA_PATH,
   LIMA_VERSION
 } = require("../constants");
@@ -53,6 +56,15 @@ class DockerClientEngineNative extends AbstractClientEngine {
   static ENGINE = ENGINE_DOCKER_NATIVE;
   ENGINE = ENGINE_DOCKER_NATIVE;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineNative(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -78,9 +90,28 @@ class DockerClientEngineNative extends AbstractClientEngine {
       }
     };
   }
+
+  async getCurrentSettings() {
+    if (!this.currentSettings) {
+      const settings = await super.getCurrentSettings();
+      if (this.osType === "Linux" && !this._detectedProgram) {
+        try {
+          this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
+        } catch (error) {
+          this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
+        }
+      } else if (this._detectedProgram) {
+        settings.program.name = PROGRAM;
+        settings.program.path = this._detectedProgram?.path;
+        settings.program.version = this._detectedProgram?.version;
+      }
+      this.currentSettings = settings;
+    }
+    return this.currentSettings;
+  }
   // Runtime
-  async startApi() {
-    this.logger.debug(this.ADAPTER, this.ENGINE, "Start api skipped - not required");
+  async startApi(customSettings, opts) {
+    this.logger.debug(this.id, "Start api skipped - not required");
     return true;
   }
   // Availability
@@ -102,6 +133,15 @@ class DockerClientEngineVirtualized extends DockerClientEngineNative {
   static ENGINE = ENGINE_DOCKER_VIRTUALIZED;
   ENGINE = ENGINE_DOCKER_VIRTUALIZED;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineVirtualized(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     let settings = {};
@@ -166,6 +206,15 @@ class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
   static ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_WSL;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineSubsystemWSL(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -174,6 +223,7 @@ class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
         connectionString: NATIVE_DOCKER_SOCKET_PATH
       },
       controller: {
+        name: WSL_PROGRAM,
         path: WSL_PATH,
         version: WSL_VERSION,
         scope: WSL_DISTRIBUTION
@@ -195,6 +245,15 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
   static ENGINE = ENGINE_DOCKER_SUBSYSTEM_LIMA;
   ENGINE = ENGINE_DOCKER_SUBSYSTEM_LIMA;
   PROGRAM = PROGRAM;
+
+  static create(id, userConfiguration, osType) {
+    const instance = new DockerClientEngineSubsystemLIMA(userConfiguration, osType);
+    instance.id = `engine.${id}.${instance.ENGINE}`;
+    instance.ADAPTER = PROGRAM;
+    instance.setup();
+    return instance;
+  }
+
   // Settings
   async getExpectedSettings() {
     return {
@@ -203,6 +262,7 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
         connectionString: await this.getConnectionString(LIMA_DOCKER_INSTANCE)
       },
       controller: {
+        name: LIMA_PROGRAM,
         path: LIMA_PATH,
         version: LIMA_VERSION,
         scope: LIMA_DOCKER_INSTANCE
@@ -221,6 +281,7 @@ class DockerClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
 }
 
 class Adapter extends AbstractAdapter {
+  static ADAPTER = PROGRAM;
   ADAPTER = PROGRAM;
   ENGINES = [
     DockerClientEngineNative,
@@ -228,13 +289,13 @@ class Adapter extends AbstractAdapter {
     DockerClientEngineSubsystemWSL,
     DockerClientEngineSubsystemLIMA
   ];
-  async getMachines(engine, customFormat) {
-    this.logger.warn(`${PROGRAM} does not support machines concept`);
-    return [];
+
+  static create(userConfiguration, osType) {
+    const instance = new Adapter(userConfiguration, osType);
+    instance.setup();
+    return instance;
   }
 }
-// Expose as static
-Adapter.ADAPTER = PROGRAM;
 
 module.exports = {
   // adapters

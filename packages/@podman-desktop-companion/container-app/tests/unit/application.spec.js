@@ -21,9 +21,4 @@ describe("Application", () => {
     const connectors = await app.getConnectors();
     expect(connectors.length).toBeGreaterThan(0);
   });
-  testOnLinux("getCurrentConnector", () => {
-    const app = new Application("1.0.0", "testing");
-    const connector = await app.getCurrentConnector();
-    expect(connector.id).toBe("podman.native");
-  });
 });

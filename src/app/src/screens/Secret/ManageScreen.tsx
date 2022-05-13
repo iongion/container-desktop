@@ -5,7 +5,10 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Secret, ApplicationDescriptor } from "../../Types";
+import { ApplicationDescriptor, Secret } from "../../Types.container-app";
+
+// module
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";

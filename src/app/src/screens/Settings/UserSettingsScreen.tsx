@@ -6,8 +6,10 @@ import * as ReactIcon from "@mdi/react";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
-import { LOGGING_LEVELS } from "../../Environment";
-import { AppScreen, AppScreenProps, GlobalUserSettingsOptions } from "../../Types";
+import { GlobalUserSettingsOptions } from "../../Types.container-app";
+
+import { CURRENT_ENVIRONMENT, LOGGING_LEVELS, PROJECT_VERSION } from "../../Environment";
+import { AppScreen, AppScreenProps } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
@@ -76,7 +78,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader currentScreen={ID} />
+      <ScreenHeader currentScreen={ID}>
+        <div className="AppScreenHeaderText">{`${PROJECT_VERSION}.${CURRENT_ENVIRONMENT[0]}`}</div>
+      </ScreenHeader>
       <div className="AppScreenContent">
         {contentWidget}
         <ContainerEngineManager/>

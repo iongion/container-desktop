@@ -2,9 +2,9 @@
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
-import { ContainerImage } from "../../Types";
 import { Native } from "../../Native";
 import { FetchImageOptions } from "../../Api.clients";
+import { ContainerImage } from "../../Types.container-app";
 
 export interface ImagesModelState {
   native: boolean;

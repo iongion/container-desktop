@@ -16,13 +16,13 @@ import { useTranslation } from "react-i18next";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 
 // project
-import { ContainerImage, ContainerImagePortMapping } from "../../Types";
 import { useStoreActions } from "../../domain/types";
 import { Notification } from "../../Notification";
 
 // module
 import { MountsForm, MountFormContainerImageMount, createMount } from "./MountsForm";
 import { toPortMappings, PortMappingsForm } from "./PortMappingsForm";
+import { ContainerImage, ContainerImagePortMapping } from "../../Types.container-app";
 
 export interface CreateFormData {
   imageContainerName: string;

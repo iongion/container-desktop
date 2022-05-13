@@ -2,8 +2,8 @@
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
-import { Container, ContainerStats } from "../../Types";
 import { FetchContainerOptions, CreateContainerOptions } from "../../Api.clients";
+import { Container, ContainerStats } from "../../Types.container-app";
 
 export interface ContainersModelState {
   containers: Container[];

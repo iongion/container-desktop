@@ -15,7 +15,7 @@
   width: 130px;
   height: 100%;
 }
-[data-platform="Darwin"] .AppHeader .bp4-navbar {
+[data-os="Darwin"] .AppHeader .bp4-navbar {
   background-position-x: center;
 }
 .AppHeaderActions {

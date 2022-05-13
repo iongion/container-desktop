@@ -8,14 +8,17 @@ import { ActionsMenu } from "./ActionsMenu";
 interface ScreenHeaderProps {
   currentScreen: string;
   titleText?: string;
+  children?: any;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ currentScreen, titleText }) => {
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ currentScreen, titleText, children }) => {
   return (
     <AppScreenHeader
       titleText={titleText}
       withoutSearch
       rightContent={<ActionsMenu expand isActive={(input) => input === currentScreen} />}
-    />
+    >
+      {children}
+    </AppScreenHeader>
   );
 };

@@ -2,7 +2,7 @@
 const axios = require("axios");
 const adapter = require("axios/lib/adapters/http");
 // project
-const { exec_service, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_service, exec_launcher } = require("@podman-desktop-companion/executor");
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 const { createLogger } = require("@podman-desktop-companion/logger");
 // module
@@ -96,30 +96,46 @@ class Runner {
       ...(opts || {})
     };
     this.logger.debug("System service start requested", clientOpts);
-    const client = await exec_service(clientOpts);
-    return new Promise((resolve, reject) => {
-      client.on("ready", async ({ process, child }) => {
-        try {
-          this.logger.debug("System service start read", process);
-          this.nativeApiStarterProcess = process;
-          this.nativeApiStarterProcessChild = child;
-          resolve(true);
-        } catch (error) {
-          this.logger.error("System service ready error", error.message, error.stack);
-          reject(error);
-        }
+    try {
+      const client = await exec_service(clientOpts);
+      const started = await new Promise((resolve, reject) => {
+        let rejected = false;
+        client.on("ready", async ({ process, child }) => {
+          try {
+            this.nativeApiStarterProcess = process;
+            this.nativeApiStarterProcessChild = child;
+            this.logger.debug("System service start ready", process);
+            resolve(true);
+          } catch (error) {
+            if (rejected) {
+              this.logger.warn("System service start - already rejected");
+            } else {
+              rejected = true;
+              reject(error);
+            }
+          }
+        });
+        client.on("error", (info) => {
+          this.logger.error("System service start - process error", info);
+          if (rejected) {
+            this.logger.warn("System service start - already rejected");
+          } else {
+            rejected = true;
+            reject(new Error("Unable to start system service"));
+          }
+        });
       });
-      client.on("error", (info) => {
-        this.logger.error("Process error", info);
-        reject(new Error("Unable to start system service"));
-      });
-    });
+      return started;
+    } catch (error) {
+      this.logger.error("System service start failed", error.message);
+    }
+    return false;
   }
   async stopApi(opts, stopper) {
     this.logger.debug("Stopping API");
     let flag = false;
     if (stopper) {
-      const result = await exec_launcher_sync(stopper.path, stopper.args);
+      const result = await exec_launcher(stopper.path, stopper.args);
       flag = result.success;
     } else {
       this.logger.warn("Stopping API - no stopper specified");

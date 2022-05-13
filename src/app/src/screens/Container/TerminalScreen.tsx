@@ -6,7 +6,8 @@ import { FitAddon } from "xterm-addon-fit";
 import { useParams } from "react-router-dom";
 
 // project
-import { AppScreenProps, AppScreen, Container } from "../../Types";
+import { Container } from "../../Types.container-app";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { useStoreActions } from "../../domain/types";
 

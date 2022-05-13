@@ -1,6 +1,9 @@
 const os = require("os");
 // project
-const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_launcher } = require("@podman-desktop-companion/executor");
+const { createLogger } = require("@podman-desktop-companion/logger");
+// locals
+const logger = createLogger("shared");
 
 async function getAvailableLIMAInstances(limactlPath) {
   let items = [];
@@ -12,7 +15,7 @@ async function getAvailableLIMAInstances(limactlPath) {
     return items;
   }
   try {
-    const result = await exec_launcher_sync(limactlPath, ["list"], { encoding: "utf8" });
+    const result = await exec_launcher(limactlPath, ["list"], { encoding: "utf8" });
     if (result.success) {
       const output = result.stdout.trim().split("\n").slice(1);
       items = output.map((it) => {
@@ -38,7 +41,7 @@ async function getAvailableLIMAInstances(limactlPath) {
   return items;
 }
 
-async function getAvailablePodmanMachines(podmanPath, customFormat) {
+async function getAvailablePodmanMachines(podmanPath, customFormat, opts) {
   let items = [];
   if (!podmanPath) {
     logger.error("Unable to get machines list - no program");
@@ -46,7 +49,7 @@ async function getAvailablePodmanMachines(podmanPath, customFormat) {
   }
   try {
     const command = ["machine", "list", "--format", customFormat || "json"];
-    const result = await exec_launcher_sync(podmanPath, command);
+    const result = await exec_launcher(podmanPath, command, opts);
     if (!result.success) {
       logger.error("Unable to get machines list", result);
       return items;
@@ -81,7 +84,7 @@ async function getAvailableWSLDistributions(wslPath) {
       [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
       [Console]::Write("$distributions")
     `;
-    const result = await exec_launcher_sync("powershell", ["-Command", script], { encoding: "utf8" });
+    const result = await exec_launcher("powershell", ["-Command", script], { encoding: "utf8" });
     if (result.success) {
       try {
         const lines = JSON.parse(result.stdout);
