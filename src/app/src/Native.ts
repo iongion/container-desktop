@@ -1,7 +1,24 @@
-import Application, { ApplicationDescriptor, ConnectOptions, Connector, ContainerClientResult, ContainerConnectOptions, CreateMachineOptions, EngineApiOptions, EngineConnectorApiSettings, EngineConnectorSettings, EngineProgramOptions, FileSelection, FindProgramOptions, GlobalUserSettings, OpenFileSelectorOptions, OpenTerminalOptions, Platforms, ProxyServiceOptions } from "./Types.container-app";
+import Application, {
+  ApplicationDescriptor,
+  ConnectOptions,
+  Connector,
+  ContainerClientResult,
+  ContainerConnectOptions,
+  CreateMachineOptions,
+  EngineApiOptions,
+  EngineConnectorSettings,
+  EngineProgramOptions,
+  FileSelection,
+  FindProgramOptions,
+  GlobalUserSettings,
+  OpenFileSelectorOptions,
+  OpenTerminalOptions,
+  Platforms,
+  ProxyRequest
+} from "./Types.container-app";
 
 interface NativeBridge {
-  platform: Platforms;
+  osType: Platforms;
   available: boolean;
   defaults: {
     connector: string | undefined;
@@ -13,28 +30,15 @@ interface NativeBridge {
   application: Application;
 }
 
-export interface NativeProxyPostStartupContext {
-  inited: boolean;
-  started: boolean;
-  connectors: Connector[];
-  currentConnector?: Connector;
-}
-
 export class Native {
   private static instance: Native;
   private bridge: NativeBridge;
-  private proxyContext: NativeProxyPostStartupContext = {
-    inited: false,
-    started: false,
-    connectors: [],
-    currentConnector: undefined,
-  };
   constructor() {
     if (Native.instance) {
       throw new Error("Cannot have multiple instances");
     }
     this.bridge = (globalThis as any)?.nativeBridge || {
-      platform: "browser",
+      osType: "browser",
       available: false,
       defaults: {
         connector: undefined,
@@ -86,8 +90,8 @@ export class Native {
   public isNative() {
     return this.bridge.available === true;
   }
-  public getPlatform() {
-    return this.bridge.platform || Platforms.Unknown;
+  public getOperatingSystem() {
+    return this.bridge.osType || Platforms.Unknown;
   }
   public getDefaultConnector() {
     return this.bridge.defaults.connector;
@@ -96,7 +100,7 @@ export class Native {
     return this.bridge.defaults.descriptor;
   }
   public withWindowControls() {
-    return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getPlatform());
+    return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getOperatingSystem());
   }
   public openDevTools() {
     return this.bridge.application.openDevTools();
@@ -120,87 +124,6 @@ export class Native {
       throw new Error("Bridge communication error");
     }
     return result;
-  }
-  public async proxyHTTPRequest<T>(request: any, api: EngineConnectorApiSettings) {
-    let reply: ContainerClientResult<T>;
-    const isHTTP = true;
-    try {
-      const configured = {
-        ...request,
-        baseURL: api.baseURL,
-        socketPath: api.connectionString,
-      }
-      console.debug("[>]", configured);
-      reply = await this.bridge.application.proxyHTTPRequest<ContainerClientResult<T>>(configured);
-      reply.success = (reply.result as any).ok;
-      console.debug("[<]", reply);
-    } catch (error: any) {
-      console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
-      error.http = isHTTP;
-      error.result = {
-        result: "Proxy service internal error",
-        success: false,
-        warnings: [],
-      }
-      throw error;
-    }
-    if (!reply.success) {
-      const error = new Error(isHTTP ? "HTTP proxy service error" : "Application proxy service error");
-      (error as any).http = isHTTP;
-      (error as any).result = reply;
-      throw error;
-    }
-    return reply;
-  }
-  public async proxyService<T>(request: any, opts?: ProxyServiceOptions) {
-    let reply: ContainerClientResult<T>;
-    const isHTTP = !!opts?.http;
-    try {
-      console.debug("[>]", request);
-      if (request.method === "start") {
-        this.proxyContext = {
-          inited: false,
-          started: false,
-          connectors: [],
-          currentConnector: undefined,
-        };
-      }
-      reply = await this.bridge.application.proxy<ContainerClientResult<T>>(request, this.proxyContext, opts);
-      if (request.method === "start") {
-        if (reply.success) {
-          const descriptor = (reply.result as unknown) as ApplicationDescriptor;
-          this.proxyContext = {
-            inited: true, // consider already initialized
-            started: descriptor.running,
-            connectors: descriptor.connectors,
-            currentConnector: descriptor.currentConnector,
-          };
-          console.debug("Proxy context cache performed(proxying to next calls)", this.proxyContext);
-        } else {
-          console.error("Proxy context cache skipped - start failed", reply);
-        }
-      }
-      if (isHTTP) {
-        reply.success = (reply.result as any).ok;
-      }
-      console.debug("[<]", reply);
-    } catch (error: any) {
-      console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
-      error.http = isHTTP;
-      error.result = {
-        result: "Proxy service internal error",
-        success: false,
-        warnings: [],
-      }
-      throw error;
-    }
-    if (!reply.success) {
-      const error = new Error(isHTTP ? "HTTP proxy service error" : "Application proxy service error");
-      (error as any).http = isHTTP;
-      (error as any).result = reply;
-      throw error;
-    }
-    return reply;
   }
 
   public async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
@@ -226,6 +149,9 @@ export class Native {
   }
   public async getControllerScopes() {
     return await this.bridge.application.getControllerScopes();
+  }
+  public async getMachines() {
+    return await this.bridge.application.getMachines();
   }
   public async connectToMachine(Name: string) {
     return await this.bridge.application.connectToMachine(Name);
@@ -271,5 +197,42 @@ export class Native {
   }
   public async createApiRequest(service: { method: string; params: any }, opts?: { http?: boolean; }) {
     return await this.bridge.application.createApiRequest(service, opts);
+  }
+  public async proxyHTTPRequest<T>(request: any, connector: Connector) {
+    console.debug()
+    let reply: ContainerClientResult<T>;
+    const isHTTP = true;
+    try {
+      const configured: ProxyRequest = {
+        request,
+        baseURL: connector.settings.current.api.baseURL,
+        socketPath: connector.settings.current.api.connectionString,
+        engine: connector.engine,
+        scope: connector.settings.current.controller?.scope,
+        adapter: connector.adapter,
+      };
+      console.debug("[>]", configured);
+      reply = await this.bridge.application.proxyHTTPRequest<ContainerClientResult<T>>(configured);
+      reply.success = (reply.result as any).ok;
+      console.debug("[<]", reply);
+    } catch (error: any) {
+      console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
+      error.http = isHTTP;
+      error.result = {
+        result: "Proxy service internal error",
+        success: false,
+        warnings: [],
+      }
+      throw error;
+    }
+    if (!reply.success) {
+      console.error("HTTP proxy service error", reply);
+      return {
+        result: (reply as unknown) as T,
+        success: false,
+        warnings: [],
+      }
+    }
+    return reply;
   }
 }

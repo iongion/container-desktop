@@ -154,16 +154,16 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
 
     const currentConnector = { ...connector };
     if (controller) {
-      if (currentConnector.settings.user.controller) {
-        currentConnector.settings.user.controller.path = result.program?.path;
-        currentConnector.settings.user.controller.version = result.program?.version;
+      if (currentConnector.settings.current.controller) {
+        currentConnector.settings.current.controller.path = result.program?.path;
+        currentConnector.settings.current.controller.version = result.program?.version;
         currentConnector.scopes = result.scopes || [];
       }
       currentConnector.availability.controller = result.success;
     } else {
-      if (currentConnector.settings.user.program) {
-        currentConnector.settings.user.program.path = result.program?.path;
-        currentConnector.settings.user.program.version = result.program?.version;
+      if (currentConnector.settings.current.program) {
+        currentConnector.settings.current.program.path = result.program?.path;
+        currentConnector.settings.current.program.version = result.program?.version;
       }
       currentConnector.availability.program = result.success;
     }
@@ -682,7 +682,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
 
 
   const canConnect = formState.isValid && !pending;
-  const canSave = formState.isValid && formState.isDirty && !pending;
+  const canSave = formState.isValid && !pending;
   const canReset = !pending;
   const isDefaultConnector = connector && defaultConnector === connector.id;
 
@@ -763,7 +763,7 @@ export interface ContainerEngineManagerProps {
 
 export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ disabled, helperText }) => {
   const { t } = useTranslation();
-  const platform = useStoreState((state) => state.descriptor.platform);
+  const osType = useStoreState((state) => state.descriptor.osType);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
   const PodmanContainerEngines = useMemo(
     () => {
@@ -774,7 +774,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
           engine: ContainerEngine.PODMAN_NATIVE,
           label: t("Native"),
           active: false,
-          enabled: platform === Platforms.Linux
+          enabled: osType === Platforms.Linux
         },
         {
           adapter: ContainerAdapter.PODMAN,
@@ -795,19 +795,19 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
           engine: ContainerEngine.PODMAN_SUBSYSTEM_LIMA,
           label: t("Custom LIMA"),
           active: false,
-          enabled: platform === Platforms.Mac
+          enabled: osType === Platforms.Mac
         },
         {
           adapter: ContainerAdapter.PODMAN,
           engine: ContainerEngine.PODMAN_SUBSYSTEM_WSL,
           label: t("Custom WSL"),
           active: false,
-          enabled: platform === Platforms.Windows
+          enabled: osType === Platforms.Windows
         },
       ];
       return engines;
     },
-    [t, platform]
+    [t, osType]
   );
   const DockerContainerEngines = useMemo(
     () => {
@@ -818,14 +818,14 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
           engine: ContainerEngine.DOCKER_NATIVE,
           label: t("Native"),
           active: false,
-          enabled: platform === Platforms.Linux
+          enabled: osType === Platforms.Linux
         },
         {
           adapter: ContainerAdapter.DOCKER,
           engine: ContainerEngine.DOCKER_VIRTUALIZED,
           label: t("Virtualized"),
           active: false,
-          enabled: platform === Platforms.Windows || platform === Platforms.Mac
+          enabled: osType === Platforms.Windows || osType === Platforms.Mac
         },
         {
           adapter: ContainerAdapter.DOCKER,
@@ -839,19 +839,19 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({ 
           engine: ContainerEngine.DOCKER_SUBSYSTEM_LIMA,
           label: t("Custom LIMA"),
           active: false,
-          enabled: platform === Platforms.Mac
+          enabled: osType === Platforms.Mac
         },
         {
           adapter: ContainerAdapter.DOCKER,
           engine: ContainerEngine.DOCKER_SUBSYSTEM_WSL,
           label: t("Custom WSL"),
           active: false,
-          enabled: platform === Platforms.Windows
+          enabled: osType === Platforms.Windows
         },
       ];
       return engines;
     },
-    [t, platform]
+    [t, osType]
   );
 
   const adapter = useStoreState((state) => state.descriptor.currentConnector.adapter);

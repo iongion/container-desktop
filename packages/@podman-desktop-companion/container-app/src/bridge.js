@@ -1,122 +1,197 @@
 // project
 const { getApiConfig } = require("@podman-desktop-companion/container-client/src/api");
-const { findProgram, findProgramVersion, parseProgramVersion } = require("@podman-desktop-companion/detector");
+const {
+  findProgram,
+  findProgramVersion,
+  parseProgramVersion,
+  getAvailablePodmanMachines
+} = require("@podman-desktop-companion/detector");
 const { setLevel, getLevel, createLogger } = require("@podman-desktop-companion/logger");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { Podman, Docker } = require("@podman-desktop-companion/container-client").adapters;
 // locals
 const { getDefaultDescriptor } = require("./bridge/descriptor");
 const { createMachineActions } = require("./bridge/machine");
-const proxyActions = require("./bridge/proxy");
 const { createWindowActions } = require("./bridge/window");
 const adaptersList = [Podman.Adapter, Docker.Adapter];
 
 const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environment }) => {
+  const logger = createLogger("bridge");
+  const defaultConnectorId = osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
   let adapters = [];
   let engines = [];
   let connectors = [];
-  let currentConnector;
-  let currentEngine;
+  let inited = false;
+  let currentApi = {
+    provisioned: false,
+    running: false,
+    started: false,
+    connector: undefined,
+    engine: undefined,
+    destroy: async () => {
+      logger.debug("API not started");
+      return false;
+    }
+  };
+  let descriptor = getDefaultDescriptor({
+    osType,
+    version,
+    environment
+  });
   const windowActions = createWindowActions(ipcRenderer);
-  const machineActions = createMachineActions({ getCurrentEngine: () => currentEngine });
-  const logger = createLogger("bridge");
-  const bridge = {
-    ...windowActions,
-    ...machineActions,
-    ...proxyActions,
-    async start(opts) {
-      logger.debug("*** starting", opts);
-      let descriptor = getDefaultDescriptor({ userConfiguration, osType, version, environment });
+  const machineActions = createMachineActions({ getCurrentEngine: () => currentApi?.engine });
+  const init = async () => {
+    if (inited) {
+      logger.debug("Init skipping - already initialized");
+      return inited;
+    }
+    try {
+      adapters = adaptersList.map((Adapter) => Adapter.create(userConfiguration, osType));
+      engines = adapters.reduce((acc, adapter) => {
+        const adapterEngines = adapter.createEngines();
+        acc.push(...adapterEngines);
+        return acc;
+      }, []);
+      await Promise.all(
+        engines.map(async (engine) => {
+          try {
+            const connector = await engine.getConnector();
+            connectors.push(connector);
+          } catch (error) {
+            logger.error("Init - Unable to get engine connector", engine.ENGINE, error.message, error.stack);
+          }
+        })
+      );
+    } catch (error) {
+      logger.error("Init - Unable to initialize", error.message, error.stack);
+    }
+    inited = true;
+    return inited;
+  };
+  const getCurrentConnector = (opts) => {
+    // decide current connector
+    let connector;
+    // if from start function argument
+    let userConnectorId = opts?.id;
+    // if from saved preferences
+    if (!userConnectorId) {
+      userConnectorId = userConfiguration.getKey("connector.default");
+    }
+    if (userConnectorId) {
+      connector = connectors.find((it) => it.id === userConnectorId);
+    }
+    // if none found - default
+    if (!connector) {
+      logger.debug("No default user connector - picking preferred(favor podman)");
+      connector = connectors.find(({ id }) => id === defaultConnectorId);
+    }
+    if (!connector) {
+      logger.warn("Defaulting to first connector");
+      connector = connectors[0];
+    }
+    if (opts?.settings) {
+      logger.debug("Using custom connector settings", opts.settings);
+      connector.settings.current = opts.settings;
+    }
+    return connector;
+  };
+  const createConnectorEngineApi = async (connector, opts) => {
+    logger.debug("Creating connector engine api", connector?.id);
+    const startApi = !!opts?.startApi || userConfiguration.getKey("startApi", false);
+    let provisioned = false;
+    let running = false;
+    let started = false;
+    let engine;
+    if (connector) {
       try {
-        adapters = adaptersList.map((Adapter) => Adapter.create(userConfiguration, osType));
-        engines = adapters.reduce((acc, adapter) => {
-          const adapterEngines = adapter.createEngines();
-          acc.push(...adapterEngines);
-          return acc;
-        }, []);
-        await Promise.all(
-          engines.map(async (engine) => {
-            try {
-              const connector = await engine.getConnector();
-              connectors.push(connector);
-            } catch (error) {
-              logger.error("Unable to get engine connector", engine.ENGINE, error.message, error.stack);
-            }
-          })
-        );
-        // decide current connector
-        // if from start function argument
-        let userConnector = opts?.id;
-        // if from saved preferences
-        if (!userConnector) {
-          userConnector = userConfiguration.getKey("connector.default");
-        }
-        if (userConnector) {
-          currentConnector = connectors.find((it) => it.id === userConnector);
-        }
-        // if none found - default
-        if (!currentConnector) {
-          logger.debug("No default user connector - picking preferred(favor podman)");
-          const defaultConnectorId =
-            osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
-          currentConnector = connectors.find(({ id }) => {
-            return id === defaultConnectorId;
-          });
-        }
-        if (!currentConnector) {
-          logger.warn("Defaulting to first connector");
-          currentConnector = connectors[0];
-        }
-        const startApi = !!opts?.startApi || userConfiguration.getKey("startApi", false);
-        let provisioned = false;
-        let running = false;
-        if (currentConnector) {
+        engine = engines.find((it) => it.id === connector.id);
+        if (engine) {
           if (opts?.settings) {
-            logger.debug("Using custom connector settings", startApi, opts.settings);
-            currentConnector.settings.current = opts.settings;
+            logger.debug("Using custom current engine settings", opts.settings);
+            await engine.setCurrentSettings(connector.settings.current);
           }
-          currentEngine = engines.find((it) => it.id === currentConnector.id);
-          if (currentEngine) {
-            if (startApi) {
-              let started = false;
-              try {
-                started = await currentEngine.startApi();
-              } catch (error) {
-                logger.error("Unable to start the api", error.message, error.stack);
-              }
-              if (started) {
-                currentConnector.availability.api = true;
-              }
+          if (startApi) {
+            try {
+              logger.debug(connector.id, "Creating connector engine api start - trigger");
+              started = await engine.startApi();
+            } catch (error) {
+              logger.error(connector.id, "Creating connector engine api start - failed", error.message, error.stack);
+            }
+            if (started) {
+              connector.availability.api = true;
             }
           }
-          if (typeof currentConnector.availability.controller !== "undefined") {
-            provisioned = currentConnector.availability.controller;
-          } else {
-            provisioned = currentConnector.availability.program;
-          }
-          running = currentConnector.availability.api;
         }
-        descriptor = {
-          environment,
-          version,
-          platform: osType,
-          provisioned,
-          running,
-          connectors,
-          currentConnector
-        };
+        if (typeof connector.availability.controller !== "undefined") {
+          provisioned = connector.availability.controller;
+        } else {
+          provisioned = connector.availability.program;
+        }
+        running = connector.availability.api;
       } catch (error) {
-        logger.error("Startup error", error);
-      } finally {
-        descriptor.userSettings = await bridge.getGlobalUserSettings();
+        logger.error("Connector engine api creation error", error.message, error.stack);
       }
+    }
+    const host = {
+      provisioned,
+      running,
+      started,
+      connector,
+      engine,
+      destroy: async () => {
+        if (host.started) {
+          if (engine) {
+            try {
+              logger.debug(host.connector?.id, "Stopping existing API");
+              await engine.stopApi();
+              connector.availability.api = false;
+              host.running = false;
+              host.started = false;
+            } catch (error) {
+              logger.error(host.connector?.id, "Stopping existing API failed", error.message, error.stack);
+            }
+          } else {
+            logger.warn("Stopping existing API- skipped(not engine)");
+          }
+        } else {
+          logger.debug("Stopping existing API- skipped(not started)");
+        }
+        return true;
+      }
+    };
+    return host;
+  };
+  const bridge = {
+    async start(opts) {
+      logger.debug("Bridge startup - begin", opts);
+      try {
+        await init();
+        if (currentApi) {
+          await currentApi.destroy();
+        }
+        logger.debug("Bridge startup - creating current");
+        currentApi = await createConnectorEngineApi(getCurrentConnector(opts), opts);
+      } catch (error) {
+        logger.error("Bridge startup error", error);
+      }
+      logger.debug("Bridge startup - creating descriptor", opts);
+      descriptor = {
+        environment,
+        version,
+        osType,
+        provisioned: !!currentApi?.provisioned,
+        running: !!currentApi?.running,
+        connectors,
+        currentConnector: currentApi?.connector,
+        userSettings: bridge.getGlobalUserSettings()
+      };
       return descriptor;
     },
     setup() {
       logger.error("Application setup");
       return { logger: createLogger("shell.ui") };
     },
-    async setGlobalUserSettings(opts) {
+    setGlobalUserSettings(opts) {
       Object.keys(opts).forEach((key) => {
         const value = opts[key];
         userConfiguration.setKey(key, value);
@@ -124,9 +199,9 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
           setLevel(value.level);
         }
       });
-      return await bridge.getGlobalUserSettings();
+      return bridge.getGlobalUserSettings();
     },
-    async getGlobalUserSettings() {
+    getGlobalUserSettings() {
       return {
         startApi: userConfiguration.getKey("startApi", false),
         minimizeToSystemTray: userConfiguration.getKey("minimizeToSystemTray", false),
@@ -135,56 +210,60 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
           level: getLevel()
         },
         connector: {
-          default: userConfiguration.getKey("connector.default")
+          default: userConfiguration.getKey("connector.default", defaultConnectorId)
         }
       };
     },
     // configuration
-    async setEngineUserSettings(id, settings) {
-      await userConfiguration.setKey(id, settings);
+    setEngineUserSettings(id, settings) {
+      userConfiguration.setKey(id, settings);
       return userConfiguration.getKey(id);
     },
-    async getEngineUserSettings(id) {
-      return await userConfiguration.getKey(id);
+    getEngineUserSettings(id) {
+      return userConfiguration.getKey(id);
     },
     // extras
     async getPodLogs(id, tail) {
-      const { program } = await currentEngine.getCurrentSettings();
+      const { program } = await currentApi.engine.getCurrentSettings();
       const args = ["pod", "logs"];
       if (typeof tail !== "undefined") {
         args.push(`--tail=${tail}`);
       }
       args.push("-f", id);
-      const result = await currentEngine.runScopedCommand(program.path, args);
+      const result = await currentApi.engine.runScopedCommand(program.path, args);
       return result;
     },
     async generateKube(entityId) {
-      const capable = currentEngine.ADAPTER === Podman.Adapter.ADAPTER;
+      const capable = currentApi.engine.ADAPTER === Podman.Adapter.ADAPTER;
       if (!capable) {
-        logger.error("Current engine is not able to generate kube yaml", currentEngine.ADAPTER, Podman.Adapter.ADAPTER);
+        logger.error(
+          "Current engine is not able to generate kube yaml",
+          currentApi.engine.ADAPTER,
+          Podman.Adapter.ADAPTER
+        );
         return null;
       }
-      const { program } = await currentEngine.getCurrentSettings();
-      const result = await currentEngine.runScopedCommand(program.path, ["generate", "kube", entityId]);
+      const { program } = await currentApi.engine.getCurrentSettings();
+      const result = await currentApi.engine.runScopedCommand(program.path, ["generate", "kube", entityId]);
       if (!result.success) {
         logger.error("Unable to generate kube", entityId, result);
       }
       return result;
     },
     async getControllerScopes() {
-      if (!currentEngine) {
+      if (!currentApi.engine) {
         logger.error("No current engine");
         return [];
       }
-      logger.debug("Listing controller scopes of current engine", currentEngine);
-      return await currentEngine.getControllerScopes();
+      logger.debug("Listing controller scopes of current engine", currentApi.engine);
+      return await currentApi.engine.getControllerScopes();
     },
 
     async connectToContainer(opts) {
       const { id, title, shell } = opts || {};
       logger.debug("Connecting to container", opts);
-      const { program } = await currentEngine.getCurrentSettings();
-      const { launcher, command } = await currentEngine.getScopedCommand(program.path, [
+      const { program } = await currentApi.engine.getCurrentSettings();
+      const { launcher, command } = await currentApi.engine.getScopedCommand(program.path, [
         "exec",
         "-it",
         id,
@@ -192,7 +271,7 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
       ]);
       logger.debug("Launching terminal for", { launcher, command });
       const output = await launchTerminal(launcher, command, {
-        title: title || `${currentEngine.ADAPTER} container`
+        title: title || `${currentApi.engine.ADAPTER} container`
       });
       if (!output.success) {
         logger.error("Unable to connect to container", id, output);
@@ -200,7 +279,7 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
       return output.success;
     },
     async getSystemInfo() {
-      return await currentEngine.getSystemInfo();
+      return await currentApi.engine.getSystemInfo();
     },
     //// TEST
     async test({ subject, payload }) {
@@ -226,7 +305,7 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
         controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
       if (testController) {
         try {
-          const version = await findProgramVersion(controller.path, { osType: osType });
+          const version = await findProgramVersion(controller.path, { osType });
           if (!version) {
             logger.error(adapter, engine, "[C] Program test failed - no version", controller);
             throw new Error("Test failed - no version");
@@ -329,14 +408,15 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
     },
     // System
     async pruneSystem() {
-      return await currentEngine.pruneSystem();
+      return await currentApi.engine.pruneSystem();
     },
     async resetSystem() {
-      return await currentEngine.resetSystem();
+      return await currentApi.engine.resetSystem();
     },
     // proxying
-    async createApiRequest(opts, driverOpts) {
-      // Normalize response
+    ...windowActions,
+    ...machineActions,
+    proxyHTTPRequest: async (proxyRequest) => {
       let result = {
         ok: false,
         data: undefined,
@@ -344,13 +424,13 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
         status: 500,
         statusText: "API request error"
       };
+      const { request, baseURL, socketPath, engine, adapter, scope } = proxyRequest;
       try {
-        if (!currentEngine) {
-          logger.error("Cannot create api request - no valid client for current engine");
-          throw new Error("No valid client for current engine");
-        }
-        const driver = await currentEngine.getApiDriver(driverOpts);
-        const response = await driver.request(opts);
+        const driver = await currentApi.engine.getApiDriver({
+          baseURL,
+          socketPath
+        });
+        const response = await driver.request(request);
         result = {
           ok: response.status >= 200 && response.status < 300,
           data: response.data,
@@ -371,26 +451,33 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
           result.statusText = error.message || "API request error";
         }
       }
-      return result;
+      return {
+        result: result,
+        success: result.ok,
+        warnings: []
+      };
     }
   };
   return bridge;
 };
 
 function createContext(opts) {
+  const descriptor = getDefaultDescriptor({
+    osType: opts.osType,
+    version: opts.version,
+    environment: opts.environment
+  });
+  const bridge = createBridge(opts);
+  descriptor.userSettings = bridge.getGlobalUserSettings();
   return {
     available: true,
-    platform: opts.osType,
+    osType: opts.osType,
     defaults: {
       connector: opts.userConfiguration.getKey("connector.default"),
       // This must not fail - prevents startup failures to put the app in an undefined state
-      descriptor: getDefaultDescriptor({
-        osType: opts.osType,
-        version: opts.version,
-        environment: opts.environment
-      })
+      descriptor
     },
-    application: createBridge(opts)
+    application: bridge
   };
 }
 

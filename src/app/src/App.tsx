@@ -154,7 +154,7 @@ export function AppMainScreen() {
 
   const provisioned = descriptor.provisioned;
   const running = descriptor.running;
-  const platform = descriptor.platform;
+  const osType = descriptor.osType;
   const currentConnector = descriptor.currentConnector;
   const program = currentConnector?.settings?.current?.program;
 
@@ -175,7 +175,7 @@ export function AppMainScreen() {
       data-engine={currentConnector.engine}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
-      data-platform={platform}
+      data-os={osType}
       data-phase={phase}
       data-running={running ? "yes" : "no"}
       data-provisioned={provisioned ? "yes" : "no"}

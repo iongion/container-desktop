@@ -92,22 +92,25 @@ class DockerClientEngineNative extends AbstractClientEngine {
   }
 
   async getCurrentSettings() {
-    const settings = await super.getCurrentSettings();
-    if (this.osType === "Linux" && !this._detectedProgram) {
-      try {
-        this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
-      } catch (error) {
-        this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
+    if (!this.currentSettings) {
+      const settings = await super.getCurrentSettings();
+      if (this.osType === "Linux" && !this._detectedProgram) {
+        try {
+          this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
+        } catch (error) {
+          this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
+        }
+      } else if (this._detectedProgram) {
+        settings.program.name = PROGRAM;
+        settings.program.path = this._detectedProgram?.path;
+        settings.program.version = this._detectedProgram?.version;
       }
-    } else if (this._detectedProgram) {
-      settings.program.name = PROGRAM;
-      settings.program.path = this._detectedProgram?.path;
-      settings.program.version = this._detectedProgram?.version;
+      this.currentSettings = settings;
     }
-    return settings;
+    return this.currentSettings;
   }
   // Runtime
-  async startApi() {
+  async startApi(customSettings, opts) {
     this.logger.debug(this.id, "Start api skipped - not required");
     return true;
   }

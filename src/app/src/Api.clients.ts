@@ -3,7 +3,6 @@
 import {
   SystemInfo,
   Connector,
-  ContainerEngine,
   ControllerScope,
   EngineApiOptions,
   EngineConnectorSettings,
@@ -172,12 +171,16 @@ interface ApiDriverConfig<D> {
 export class ApiDriver {
   private connector?: Connector;
   public async request<T = any, D = any>(method: string, url: string, data?: D, config?: ApiDriverConfig<D>) {
+    if (!this.connector) {
+      throw new Error("Connector is required");
+    }
     const request = {
       method,
       url,
       ...config,
       data
     }
+    /*
     // Direct HTTP invocations where possible
     if (this.connector && ![ContainerEngine.PODMAN_SUBSYSTEM_WSL, ContainerEngine.DOCKER_SUBSYSTEM_WSL].includes(this.connector.engine)) {
       const reply = await Native.getInstance().proxyHTTPRequest<ContainerClientResponse<T>>(request, this.connector.settings.current.api);
@@ -190,6 +193,10 @@ export class ApiDriver {
       const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(service, { http: true });
       return reply.result;
     }
+    */
+    // Direct HTTP invocations where possible
+    const reply = await Native.getInstance().proxyHTTPRequest<ContainerClientResponse<T>>(request, this.connector);
+    return reply.result;
   }
   public async get<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
     return this.request<T, D>("GET", url, undefined, config);
@@ -564,7 +571,7 @@ export class ContainerClient {
   // Machines
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
-      const items = await Native.getInstance().getControllerScopes();
+      const items = await Native.getInstance().getMachines();
       return items as Machine[];
     });
   }

@@ -26,7 +26,7 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const clipboardRef = useRef<ClipboardJS>();
-  const platform = Native.getInstance().getPlatform();
+  const osType = Native.getInstance().getOperatingSystem();
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
@@ -55,10 +55,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   let commandPrefix;
   let exampleTitle;
-  if (platform === Platforms.Linux && currentConnector.engine === ContainerEngine.PODMAN_VIRTUALIZED && machine) {
+  if (osType === Platforms.Linux && currentConnector.engine === ContainerEngine.PODMAN_VIRTUALIZED && machine) {
     commandPrefix = `podman machine ssh ${machine}`;
     exampleTitle = t("On Linux, to dissociated between commands targeting the native podman engine, a machine prefix must be used.");
-  } else if (platform === Platforms.Mac) {
+  } else if (osType === Platforms.Mac) {
     commandPrefix = `limactl shell podman`;
     exampleTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
   }

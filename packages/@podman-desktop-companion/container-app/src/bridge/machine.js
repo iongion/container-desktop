@@ -63,6 +63,15 @@ async function createMachine(currentEngine, opts) {
   }
   return output.success;
 }
+async function getMachines(currentEngine) {
+  let machines = [];
+  logger.debug("Listing machines engine", currentEngine);
+  if (currentEngine.ADAPTER !== "podman") {
+    logger.debug("Only podman supports machines");
+    return [];
+  }
+  return await currentEngine.getMachines();
+}
 
 function createMachineActions(scope) {
   return {
@@ -72,7 +81,8 @@ function createMachineActions(scope) {
     stopMachine: (...rest) => stopMachine(scope.getCurrentEngine(), ...rest),
     removeMachine: (...rest) => removeMachine(scope.getCurrentEngine(), ...rest),
     inspectMachine: (...rest) => inspectMachine(scope.getCurrentEngine(), ...rest),
-    createMachine: (...rest) => createMachine(scope.getCurrentEngine(), ...rest)
+    createMachine: (...rest) => createMachine(scope.getCurrentEngine(), ...rest),
+    getMachines: (...rest) => getMachines(scope.getCurrentEngine(), ...rest)
   };
 }
 
@@ -84,5 +94,6 @@ module.exports = {
   removeMachine,
   inspectMachine,
   createMachine,
+  getMachines,
   createMachineActions
 };

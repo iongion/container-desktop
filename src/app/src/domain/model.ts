@@ -53,7 +53,6 @@ export const createModel = (registry: AppRegistry): AppModel => {
     }),
     // Thunks
     start: thunk(async (actions, options) => {
-      console.error("STarting", options);
       let nextPhase = AppBootstrapPhase.STARTING;
       return registry.withPending(async () => {
         try {

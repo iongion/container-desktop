@@ -41,7 +41,7 @@ async function getAvailableLIMAInstances(limactlPath) {
   return items;
 }
 
-async function getAvailablePodmanMachines(podmanPath, customFormat) {
+async function getAvailablePodmanMachines(podmanPath, customFormat, opts) {
   let items = [];
   if (!podmanPath) {
     logger.error("Unable to get machines list - no program");
@@ -49,7 +49,7 @@ async function getAvailablePodmanMachines(podmanPath, customFormat) {
   }
   try {
     const command = ["machine", "list", "--format", customFormat || "json"];
-    const result = await exec_launcher(podmanPath, command);
+    const result = await exec_launcher(podmanPath, command, opts);
     if (!result.success) {
       logger.error("Unable to get machines list", result);
       return items;

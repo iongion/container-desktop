@@ -214,7 +214,7 @@ export interface Connector {
 export interface ApplicationDescriptor {
   environment: string;
   version: string;
-  platform: Platforms;
+  osType: Platforms;
   provisioned: boolean;
   running: boolean;
   // computed
@@ -661,6 +661,15 @@ export interface ContainerClientResult<T = unknown> {
   warnings: any[];
 }
 
+export interface ProxyRequest {
+  request: any;
+  baseURL: string;
+  socketPath: string;
+  engine: ContainerEngine;
+  adapter: ContainerAdapter;
+  scope?: string;
+}
+
 export default interface Application {
   setup: () => any;
   minimize: () => void;
@@ -672,8 +681,6 @@ export default interface Application {
   openDevTools: () => void;
   openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
   openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
-  proxyHTTPRequest: <T>(request: any) => Promise<T>;
-  proxy: <T>(request: any, context: any, opts?: ProxyServiceOptions) => Promise<T>;
   getEngine: () => Promise<ContainerEngine>;
   // settings
   setGlobalUserSettings: (settings: Partial<GlobalUserSettings>) => Promise<GlobalUserSettings>;
@@ -683,6 +690,7 @@ export default interface Application {
   getPodLogs: (Id: string, tail?: number) => Promise<ProgramExecutionResult>;
   generateKube: (Id: string) => Promise<ProgramExecutionResult>;
   getControllerScopes: () => Promise<ControllerScope[]>;
+  getMachines: () => Promise<Machine[]>;
   connectToMachine: (Name: string) => Promise<boolean>;
   restartMachine: (Name: string) => Promise<boolean>;
   stopMachine: (Name: string) => Promise<boolean>;
@@ -698,7 +706,7 @@ export default interface Application {
   pruneSystem: () => Promise<SystemPruneReport>;
   resetSystem: () => Promise<SystemResetReport>;
   // proxy
-  proxyService: <T>(request: any, opts?: ProxyServiceOptions) => Promise<ContainerClientResult<T>>;
+  proxyHTTPRequest: <T>(request: ProxyRequest) => Promise<T>;
   createApiRequest: <T>(request: any, opts?: ProxyServiceOptions) => Promise<ContainerClientResponse<T>>;
   // startup
   start: (opts?: ConnectOptions) => Promise<ApplicationDescriptor>;

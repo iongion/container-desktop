@@ -154,9 +154,9 @@ function getDefaultDescriptor(opts) {
   const environment = opts.environment;
   const defaultConnectorId = osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
   return {
-    environment: environment,
-    version: version,
-    platform: osType,
+    environment,
+    version,
+    osType,
     provisioned: !!opts?.provisioned,
     running: !!opts?.provisioned,
     connectors: DEFAULT_CONNECTORS,

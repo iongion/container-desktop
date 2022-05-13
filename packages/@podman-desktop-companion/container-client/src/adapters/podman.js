@@ -101,30 +101,33 @@ class PodmanClientEngineNative extends AbstractClientEngine {
     };
   }
   async getCurrentSettings() {
-    const settings = await super.getCurrentSettings();
-    if (this.osType === "Linux") {
-      if (!this._detectedProgram) {
-        try {
-          this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
-        } catch (error) {
-          this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
+    if (!this.currentSettings) {
+      const settings = await super.getCurrentSettings();
+      if (this.osType === "Linux") {
+        if (!this._detectedProgram) {
+          try {
+            this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
+          } catch (error) {
+            this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
+          }
+        } else {
+          settings.program.name = PROGRAM;
+          settings.program.path = this._detectedProgram?.path;
+          settings.program.version = this._detectedProgram?.version;
         }
-      } else {
-        settings.program.name = PROGRAM;
-        settings.program.path = this._detectedProgram?.path;
-        settings.program.version = this._detectedProgram?.version;
       }
+      this.currentSettings = settings;
     }
-    return settings;
+    return this.currentSettings;
   }
   // Runtime
-  async startApi(opts) {
+  async startApi(customSettings, opts) {
     const running = await this.isApiRunning();
     if (running.success) {
       this.logger.debug(this.id, "API is already running");
       return true;
     }
-    const settings = await this.getCurrentSettings();
+    const settings = customSettings || (await this.getCurrentSettings());
     return await this.runner.startApi(opts, {
       path: settings.program.path,
       args: ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"]
@@ -141,6 +144,10 @@ class PodmanClientEngineNative extends AbstractClientEngine {
   }
 
   async getControllerScopes(customFormat) {
+    return await this.getMachines(customFormat);
+  }
+
+  async getMachines(customFormat) {
     const settings = await this.getCurrentSettings();
     const available = await this.isEngineAvailable();
     const canListScopes = available.success && settings.program.path;
@@ -243,59 +250,63 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
     return expected;
   }
   async getCurrentSettings() {
-    const settings = await super.getCurrentSettings();
-    // Detect current program version
-    if (this._detectedControllerProgramVersion) {
-      this.logger.debug(
-        this.id,
-        "DETECT VIRTUALIZED CONTROLLER PROGRAM VERSION CACHE HIT",
-        this._detectedControllerProgramVersion
-      );
-    } else {
-      this.logger.warn(this.id, "DETECT VIRTUALIZED CONTROLLER PROGRAM VERSION CACHE MISS");
-      try {
-        this.logger.debug(this.id, "Detecting current controller version", settings);
-        this._detectedControllerProgramVersion = await findProgramVersion(settings.controller.path, {
-          osType: this.osType
-        });
-      } catch (error) {
-        this.logger.error(
+    if (!this.currentSettings) {
+      const settings = await super.getCurrentSettings();
+      // Detect current program version
+      if (this._detectedControllerProgramVersion) {
+        this.logger.debug(
           this.id,
-          "Unable to find controller version",
-          settings.controller,
-          error.message,
-          error.stack
+          "DETECT VIRTUALIZED CONTROLLER PROGRAM VERSION CACHE HIT",
+          this._detectedControllerProgramVersion
         );
+      } else {
+        this.logger.warn(this.id, "DETECT VIRTUALIZED CONTROLLER PROGRAM VERSION CACHE MISS");
+        try {
+          this.logger.debug(this.id, "Detecting current controller version", settings);
+          this._detectedControllerProgramVersion = await findProgramVersion(settings.controller.path, {
+            osType: this.osType
+          });
+        } catch (error) {
+          this.logger.error(
+            this.id,
+            "Unable to find controller version",
+            settings.controller,
+            error.message,
+            error.stack
+          );
+        }
       }
+      settings.controller.version = this._detectedControllerProgramVersion;
+      this.currentSettings = settings;
     }
-    settings.controller.version = this._detectedControllerProgramVersion;
-    return settings;
+    return this.currentSettings;
   }
   async getControllerScopes() {
-    this.logger.debug("getControllerScopes");
+    return await this.getMachines();
+  }
+  async getMachines(customFormat) {
+    this.logger.debug(this.id, "getMachines with controller", this.currentSettings);
     const settings = await this.getCurrentSettings();
-    this.logger.debug("getControllerScopes", settings);
     const available = await this.isEngineAvailable();
-    this.logger.debug("getControllerScopes", available);
     const canListScopes = available.success && settings.controller.path;
     const items = canListScopes ? await getAvailablePodmanMachines(settings.controller.path) : [];
     return items;
   }
   // Runtime
-  async startApi(opts) {
+  async startApi(customSettings, opts) {
     const running = await this.isApiRunning();
     if (running.success) {
       this.logger.debug(this.id, "API is already running");
       return true;
     }
-    const settings = await this.getCurrentSettings();
+    const settings = customSettings || (await this.getCurrentSettings());
     // TODO: Safe to stop first before starting ?
     return await this.runner.startApi(opts, {
       path: settings.controller.path,
       args: ["machine", "start", settings.controller.scope]
     });
   }
-  async stopApi(opts) {
+  async stopApi(customSettings, opts) {
     const settings = await this.getCurrentSettings();
     return await this.runner.stopApi(opts, {
       path: settings.controller.path,
@@ -322,7 +333,13 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
-    const command = ["machine", "ssh", opts?.scope || controller.scope, "-o", "LogLevel=ERROR", program, ...args];
+    const command = ["machine", "ssh", opts?.scope || controller.scope, "-o", "LogLevel=ERROR"];
+    if (program) {
+      command.push(program);
+    }
+    if (args) {
+      command.push(...args);
+    }
     return { launcher: controller.path, command };
   }
 }
@@ -361,14 +378,32 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
     };
   }
 
+  async getMachines(customFormat) {
+    this.logger.debug(this.id, "getMachines with controller", this.currentSettings);
+    const settings = await this.getCurrentSettings();
+    const available = await this.isEngineAvailable();
+    const canListScopes = available.success && settings.program.path;
+    let items = [];
+    if (canListScopes) {
+      const command = await this.getScopedCommand();
+      items = await getAvailablePodmanMachines(settings.program.path, customFormat, {
+        wrapper: {
+          launcher: command.launcher,
+          args: command.command
+        }
+      });
+    }
+    return items;
+  }
+
   // Runtime
-  async startApi(opts) {
+  async startApi(customSettings, opts) {
     const running = await this.isApiRunning();
     if (running.success) {
       this.logger.debug("API is already running");
       return true;
     }
-    const settings = await this.getCurrentSettings();
+    const settings = customSettings || (await this.getCurrentSettings());
     const args = ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"];
     const { launcher, command } = await this.getScopedCommand(settings.program.path, args);
     return await this.runner.startApi(opts, {

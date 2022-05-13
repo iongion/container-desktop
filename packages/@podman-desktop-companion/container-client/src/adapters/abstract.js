@@ -212,8 +212,16 @@ class AbstractClientEngine {
    * @return {Settings} Settings - Actual settings
    */
   async getCurrentSettings() {
-    const settings = await this.getSettings();
-    return settings.current;
+    if (!this.currentSettings) {
+      const settings = await this.getSettings();
+      this.currentSettings = settings.current;
+    }
+    return this.currentSettings;
+  }
+
+  async setCurrentSettings(settings) {
+    this.currentSettings = settings;
+    return this.currentSettings;
   }
 
   /**
@@ -223,7 +231,7 @@ class AbstractClientEngine {
    * @public
    * @return {bool} flag representing success or failure during startup
    */
-  async startApi() {
+  async startApi(customSettings, opts) {
     throw new Error("startApi must be implemented");
   }
 
@@ -233,11 +241,11 @@ class AbstractClientEngine {
    * @public
    * @return {bool} flag representing success or failure during cleanup
    */
-  async stopApi() {
+  async stopApi(customSettings, opts) {
     if (!this.runner) {
       return true;
     }
-    return await this.runner.stopApi();
+    return await this.runner.stopApi(customSettings, opts);
   }
 
   /**
@@ -727,7 +735,7 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     return undefined;
   }
   // Runtime
-  async startApi() {
+  async startApi(customSettings, opts) {
     this.logger.debug(this.id, "Start api skipped - not required");
     return true;
   }
@@ -767,29 +775,38 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
-    const command = ["--distribution", opts?.scope || controller.scope, program, ...args];
+    const command = ["--distribution", opts?.scope || controller.scope];
+    if (program) {
+      command.push(program);
+    }
+    if (args) {
+      command.push(...args);
+    }
     return { launcher: controller.path, command };
   }
   async getCurrentSettings() {
-    const settings = await super.getCurrentSettings();
-    if (this.osType === "Windows_NT") {
-      if (this._detectedControllerProgram) {
-        this.logger.debug(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
-      } else {
-        this.logger.warn(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE MISS");
-        try {
-          this._detectedControllerProgram = await findProgram(WSL_PROGRAM, { osType: this.osType });
-        } catch (error) {
-          this.logger.error("Unable to find WSL", error.message, error.stack);
+    if (!this.currentSettings) {
+      const settings = await super.getCurrentSettings();
+      if (this.osType === "Windows_NT") {
+        if (this._detectedControllerProgram) {
+          this.logger.debug(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
+        } else {
+          this.logger.warn(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE MISS");
+          try {
+            this._detectedControllerProgram = await findProgram(WSL_PROGRAM, { osType: this.osType });
+          } catch (error) {
+            this.logger.error("Unable to find WSL", error.message, error.stack);
+          }
+          settings.controller.name = WSL_PROGRAM;
+          settings.controller.path = this._detectedControllerProgram?.path;
         }
-        settings.controller.name = WSL_PROGRAM;
-        settings.controller.path = this._detectedControllerProgram?.path;
+        settings.controller.version = this._detectedControllerProgram?.version;
+      } else {
+        this.logger.debug("WSL program detection skipped on", this.osType);
       }
-      settings.controller.version = this._detectedControllerProgram?.version;
-    } else {
-      this.logger.debug("WSL program detection skipped on", this.osType);
+      this.currentSettings = settings;
     }
-    return settings;
+    return this.currentSettings;
   }
 }
 
@@ -799,21 +816,21 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     return path.join(process.env.HOME, ".lima", scope, "sock", `${scope}.sock`);
   }
   // Runtime
-  async startApi(opts) {
+  async startApi(customSettings, opts) {
     const running = await this.isApiRunning();
     if (running.success) {
       this.logger.debug(this.id, "API is already running");
       return true;
     }
-    const settings = await this.getCurrentSettings();
+    const settings = customSettings || (await this.getCurrentSettings());
     // TODO: Safe to stop first before starting ?
     return await this.runner.startApi(opts, {
       path: settings.controller.path,
       args: ["start", settings.controller.scope]
     });
   }
-  async stopApi(opts) {
-    const settings = await this.getCurrentSettings();
+  async stopApi(customSettings, opts) {
+    const settings = customSettings || (await this.getCurrentSettings());
     return await this.runner.stopApi(opts, {
       path: settings.controller.path,
       args: ["stop", settings.controller.scope]
@@ -851,29 +868,38 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   // Executes command inside controller scope
   async getScopedCommand(program, args, opts) {
     const { controller } = await this.getCurrentSettings();
-    const command = ["shell", opts?.scope || controller.scope, program, ...args];
+    const command = ["shell", opts?.scope || controller.scope];
+    if (program) {
+      command.push(program);
+    }
+    if (args) {
+      command.push(...args);
+    }
     return { launcher: controller.path, command };
   }
   async getCurrentSettings() {
-    const settings = await super.getCurrentSettings();
-    if (this.osType === "Darwin") {
-      if (this._detectedControllerProgram) {
-        this.logger.debug(this.id, "DETECT PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
-      } else {
-        this.logger.warn(this.id, "DETECT PROGRAM CONTROLLER CACHE MISS");
-        try {
-          this._detectedControllerProgram = await findProgram(LIMA_PROGRAM, { osType: this.osType });
-        } catch (error) {
-          this.logger.error("Unable to find LIMA", error.message, error.stack);
+    if (!this.currentSettings) {
+      const settings = await super.getCurrentSettings();
+      if (this.osType === "Darwin") {
+        if (this._detectedControllerProgram) {
+          this.logger.debug(this.id, "DETECT PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
+        } else {
+          this.logger.warn(this.id, "DETECT PROGRAM CONTROLLER CACHE MISS");
+          try {
+            this._detectedControllerProgram = await findProgram(LIMA_PROGRAM, { osType: this.osType });
+          } catch (error) {
+            this.logger.error("Unable to find LIMA", error.message, error.stack);
+          }
+          settings.controller.name = LIMA_PROGRAM;
+          settings.controller.path = this._detectedControllerProgram?.path;
         }
-        settings.controller.name = LIMA_PROGRAM;
-        settings.controller.path = this._detectedControllerProgram?.path;
+        settings.controller.version = this._detectedControllerProgram?.version;
+      } else {
+        this.logger.debug("LIMA program detection skipped on", this.osType);
       }
-      settings.controller.version = this._detectedControllerProgram?.version;
-    } else {
-      this.logger.debug("LIMA program detection skipped on", this.osType);
+      this.currentSettings = settings;
     }
-    return settings;
+    return this.currentSettings;
   }
 }
 

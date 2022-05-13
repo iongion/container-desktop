@@ -17,14 +17,13 @@ function isFilePresent(filePath) {
   return fs.existsSync(vfsFilePath);
 }
 
-async function createWrapper(opts, launcher, args) {
+async function createWrapper(launcher, args, opts) {
   let wrapper;
   if (opts?.wrapper) {
-    if (typeof opts.wrapper === "function") {
-      wrapper = await opts.wrapper(launcher, args);
-    } else {
-      wrapper = opts.wrapper;
-    }
+    wrapper = {
+      ...opts.wrapper
+    };
+    wrapper.args.push(launcher, ...args);
   }
   return wrapper;
 }
@@ -102,7 +101,8 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
     env: opts?.env,
     detached: opts?.detached
   };
-  const wrapper_next = await createWrapper(opts, launcher, launcherArgs);
+  const wrapper_next = await createWrapper(launcher, launcherArgs, opts);
+
   return new Promise((resolve) => {
     let resolved = false;
     const process = {
@@ -136,8 +136,9 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
     child.on("exit", (code) => processResolve("exit", code));
     // child.on("close", (code) => processResolve("close", code));
     child.on("error", (error) => {
-      logger.error(child.command, "spawning error", error);
+      logger.error(child.command, "spawning error", error.message);
       process.error = error;
+      processResolve("error", error);
     });
     child.stdout.on("data", (data) => {
       // logger.debug(child.command, "spawning stdout", data);
