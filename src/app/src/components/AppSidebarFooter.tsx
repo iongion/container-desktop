@@ -1,9 +1,9 @@
 import { Alignment, Navbar, NavbarGroup, NavbarHeading, Spinner, SpinnerSize, Intent } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
+import { ContainerEngine } from "../Types.container-app";
 
 import { useStoreState } from "../domain/types";
 import CurrentEnvironment, { PROJECT_VERSION } from "../Environment";
-import { ContainerEngine } from "../Types";
 
 import "./AppSidebarFooter.css";
 

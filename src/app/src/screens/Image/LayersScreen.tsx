@@ -8,7 +8,7 @@ import ClipboardJS from "clipboard";
 import { useParams } from "react-router-dom";
 
 // project
-import { AppScreenProps, AppScreen, ContainerImage } from "../../Types";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { Notification } from "../../Notification";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { useStoreActions } from "../../domain/types";
@@ -17,6 +17,7 @@ import { useStoreActions } from "../../domain/types";
 import { ScreenHeader } from ".";
 
 import "./LayersScreen.css";
+import { ContainerImage } from "../../Types.container-app";
 
 
 export const ID = "image.layers";

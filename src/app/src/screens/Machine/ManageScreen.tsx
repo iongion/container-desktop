@@ -5,13 +5,15 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Machine, ApplicationDescriptor } from "../../Types";
+import { ApplicationDescriptor, Machine } from "../../Types.container-app";
+
+// module
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
-// module
 import { MachineActionsMenu } from ".";
 
 import "./ManageScreen.css";

@@ -5,14 +5,17 @@ import ClipboardJS from "clipboard";
 import { useTranslation } from "react-i18next";
 
 // project
-import { AppScreenProps, AppScreen, ContainerEngine } from "../../Types";
+import { ContainerEngine, Platforms } from "../../Types.container-app";
+
+// module
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { Notification } from "../../Notification";
-import { Native, Platforms } from "../../Native";
+import { Native } from "../../Native";
 import { CONTAINER_DOCS_URL, CONTAINER_DOCS_EXAMPLE_CODE } from "../../Environment";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
-// module
+// locals
 import "./Dashboard.css";
 
 export const ID = "dashboard";

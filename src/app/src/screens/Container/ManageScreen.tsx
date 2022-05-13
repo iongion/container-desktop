@@ -6,7 +6,7 @@ import { useMediaQuery } from "react-responsive";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Container } from "../../Types";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";
@@ -17,6 +17,7 @@ import { useStoreActions, useStoreState } from "../../domain/types";
 import { ActionsMenu } from ".";
 
 import "./ManageScreen.css";
+import { Container } from "../../Types.container-app";
 
 export interface ScreenProps extends AppScreenProps {}
 

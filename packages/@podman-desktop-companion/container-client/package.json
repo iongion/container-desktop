@@ -10,6 +10,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@podman-desktop-companion/detector": "file:../detector",
     "@podman-desktop-companion/executor": "file:../executor",
     "@podman-desktop-companion/logger": "file:../logger",
     "@podman-desktop-companion/terminal": "file:../terminal",

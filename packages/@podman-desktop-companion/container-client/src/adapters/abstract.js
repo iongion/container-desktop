@@ -7,10 +7,13 @@ const { v4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const {
+  findProgram,
+  getAvailableLIMAInstances,
+  getAvailableWSLDistributions
+} = require("@podman-desktop-companion/detector");
 // module
 const { createApiDriver, getApiConfig, Runner } = require("../api");
-const { getAvailableLIMAInstances, getAvailableWSLDistributions } = require("../shared");
-const { findProgram } = require("../detector");
 const { LIMA_PROGRAM, WSL_PROGRAM } = require("../constants");
 
 /**
@@ -400,10 +403,10 @@ class AbstractClientEngine {
   async runScopedCommand(program, args, opts) {
     const { launcher, command } = await this.getScopedCommand(program, args, opts);
     let result;
-    if (opts?.async) {
-      result = await exec_launcher_async(launcher, command, opts);
-    } else {
+    if (opts?.sync) {
       result = await exec_launcher_sync(launcher, command, opts);
+    } else {
+      result = await exec_launcher_async(launcher, command, opts);
     }
     return result;
   }
@@ -427,7 +430,8 @@ class AbstractClientEngine {
   }
 
   async getControllerScopes() {
-    return [];
+    this.logger.error(this.id, "getControllerScopes is not implemented");
+    throw new Error("Must implement");
   }
 
   // Clean-up

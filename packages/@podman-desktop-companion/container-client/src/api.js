@@ -2,7 +2,7 @@
 const axios = require("axios");
 const adapter = require("axios/lib/adapters/http");
 // project
-const { exec_service, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_service, exec_launcher } = require("@podman-desktop-companion/executor");
 const { axiosConfigToCURL } = require("@podman-desktop-companion/utils");
 const { createLogger } = require("@podman-desktop-companion/logger");
 // module
@@ -135,7 +135,7 @@ class Runner {
     this.logger.debug("Stopping API");
     let flag = false;
     if (stopper) {
-      const result = await exec_launcher_sync(stopper.path, stopper.args);
+      const result = await exec_launcher(stopper.path, stopper.args);
       flag = result.success;
     } else {
       this.logger.warn("Stopping API - no stopper specified");

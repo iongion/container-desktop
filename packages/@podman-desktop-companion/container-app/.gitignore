@@ -1,0 +1,12 @@
+coverage
+node_modules
+build
+temp
+.secrets
+.env.local
+# Developer tools' files
+.lite_workspace.lua
+
+
+github-repo-containers-podman-cache.json
+playground.js

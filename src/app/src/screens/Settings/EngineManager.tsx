@@ -6,8 +6,8 @@ import { useForm, useFormContext, FormProvider, Controller } from "react-hook-fo
 import merge from "lodash.merge";
 
 // project
-import { Connector, ContainerAdapter, ContainerEngine, TestResult, ProgramTestResult, Program, EngineProgramOptions, EngineConnectorSettings, ControllerScope } from "../../Types";
-import { Native, Platforms } from "../../Native";
+import { Platforms, Connector, ContainerAdapter, ContainerEngine, TestResult, ProgramTestResult, Program, EngineProgramOptions, EngineConnectorSettings, ControllerScope } from "../../Types.container-app";
+import { Native } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";
 import { RadioLabel } from "../../components/RadioLabel";
 import { RestrictedTo } from "../../components/RestrictedTo";

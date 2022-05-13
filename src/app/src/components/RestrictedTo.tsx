@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
 import { mdiLinux, mdiMicrosoftWindows, mdiApple } from "@mdi/js";
 
-import { ContainerEngine } from "../Types";
+import { ContainerEngine } from "../Types.container-app";
 
 import "./RestrictedTo.css";
 

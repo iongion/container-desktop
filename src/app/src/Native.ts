@@ -1,39 +1,4 @@
-import { ApplicationDescriptor, EngineConnectorApiSettings, Connector, ContainerClientResult, ContainerEngine, GlobalUserSettings, EngineConnectorSettings, ConnectOptions } from "./Types";
-
-export enum Platforms {
-  Browser = "browser",
-  Linux = "Linux",
-  Mac = "Darwin",
-  Windows = "Windows_NT",
-  Unknown = "unknown"
-}
-
-export enum WindowAction {
-  Minimize = "window.minimize",
-  Maximize = "window.maximize",
-  Restore = "window.restore",
-  Close = "window.close"
-}
-
-export interface FileSelection {
-  canceled: boolean;
-  filePaths: string[];
-}
-
-export interface OpenFileSelectorOptions {
-  directory?: boolean;
-}
-
-export interface OpenTerminalOptions {
-  command?: string;
-  // terminal inside machine
-  machine?: string;
-}
-
-export interface ProxyServiceOptions {
-  http?: boolean;
-  keepAlive?: boolean;
-}
+import Application, { ApplicationDescriptor, ConnectOptions, Connector, ContainerClientResult, ContainerConnectOptions, CreateMachineOptions, EngineApiOptions, EngineConnectorApiSettings, EngineConnectorSettings, EngineProgramOptions, FileSelection, FindProgramOptions, GlobalUserSettings, OpenFileSelectorOptions, OpenTerminalOptions, Platforms, ProxyServiceOptions } from "./Types.container-app";
 
 interface NativeBridge {
   platform: Platforms;
@@ -45,28 +10,7 @@ interface NativeBridge {
   ipcRenderer: {
     send: (message: any) => any;
   };
-  application: {
-    setup: () => any;
-    minimize: () => void;
-    maximize: () => void;
-    restore: () => void;
-    close: () => void;
-    exit: () => void;
-    relaunch: () => void;
-    openDevTools: () => void;
-    openFileSelector: (options?: OpenFileSelectorOptions) => Promise<FileSelection>;
-    openTerminal: (options?: OpenTerminalOptions) => Promise<boolean>;
-    proxyHTTPRequest: <T>(request: any) => Promise<T>;
-    proxy: <T>(request: any, context: any, opts?: ProxyServiceOptions) => Promise<T>;
-    getEngine: () => Promise<ContainerEngine>;
-    // settings
-    setGlobalUserSettings: (settings: Partial<GlobalUserSettings>) => Promise<GlobalUserSettings>;
-    getGlobalUserSettings: () => Promise<GlobalUserSettings>;
-    setEngineUserSettings: (id: string, settings: Partial<EngineConnectorSettings>) => Promise<EngineConnectorSettings>;
-    getEngineUserSettings: (id: string) => Promise<EngineConnectorSettings>;
-    // startup
-    start: (opts?: ConnectOptions) => Promise<ApplicationDescriptor>;
-  };
+  application: Application;
 }
 
 export interface NativeProxyPostStartupContext {
@@ -99,18 +43,7 @@ export class Native {
       ipcRenderer: {
         send: (message: any) => { throw new Error("Not bridged"); }
       },
-      application: {
-        minimize: () => { throw new Error("Not bridged"); },
-        maximize: () => { throw new Error("Not bridged"); },
-        restore: () => { throw new Error("Not bridged"); },
-        close: () => { throw new Error("Not bridged"); },
-        exit: () => { throw new Error("Not bridged"); },
-        relaunch: () => { throw new Error("Not bridged"); },
-        openFileSelector: (options?: OpenFileSelectorOptions) => { throw new Error("Not bridged"); },
-        openTerminal: (options?: OpenTerminalOptions) => { throw new Error("Not bridged"); },
-        proxy: (request: any, context: any, opts: any) => { throw new Error("Not bridged"); },
-        getEngine: () => { throw new Error("Not bridged"); },
-      }
+      application: {} as any, // Injected by expose
     };
     Native.instance = this;
   }
@@ -284,5 +217,59 @@ export class Native {
   }
   public async start(opts?: ConnectOptions) {
     return this.bridge.application.start(opts);
+  }
+  public async getPodLogs(Id: string, tail?: number) {
+    return await this.bridge.application.getPodLogs(Id, tail);
+  }
+  public async generateKube(Id: string) {
+    return await this.bridge.application.generateKube(Id);
+  }
+  public async getControllerScopes() {
+    return await this.bridge.application.getControllerScopes();
+  }
+  public async connectToMachine(Name: string) {
+    return await this.bridge.application.connectToMachine(Name);
+  }
+  public async restartMachine(Name: string) {
+    return await this.bridge.application.restartMachine(Name);
+  }
+  public async startMachine(Name: string) {
+    return await this.bridge.application.startMachine(Name);
+  }
+  public async stopMachine(Name: string) {
+    return await this.bridge.application.stopMachine(Name);
+  }
+  public async removeMachine(Name: string) {
+    return await this.bridge.application.removeMachine(Name);
+  }
+  public async createMachine(opts : CreateMachineOptions) {
+    return await this.bridge.application.createMachine(opts);
+  }
+  public async inspectMachine(Name: string) {
+    return await this.bridge.application.inspectMachine(Name);
+  }
+  public async getSystemInfo() {
+    return await this.bridge.application.getSystemInfo();
+  }
+  public async connectToContainer(item: ContainerConnectOptions) {
+    return await this.bridge.application.connectToContainer(item);
+  }
+  public async testProgramReachability(opts: EngineProgramOptions) {
+    return await this.bridge.application.testProgramReachability(opts);
+  }
+  public async testApiReachability(opts: EngineApiOptions) {
+    return await this.bridge.application.testApiReachability(opts);
+  }
+  public async findProgram(opts: FindProgramOptions) {
+    return await this.bridge.application.findProgram(opts);
+  }
+  public async pruneSystem() {
+    return await this.bridge.application.pruneSystem();
+  }
+  public async resetSystem() {
+    return await this.bridge.application.resetSystem();
+  }
+  public async createApiRequest(service: { method: string; params: any }, opts?: { http?: boolean; }) {
+    return await this.bridge.application.createApiRequest(service, opts);
   }
 }

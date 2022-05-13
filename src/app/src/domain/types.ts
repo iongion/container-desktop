@@ -1,7 +1,8 @@
 // vendors
 import { Action, Thunk, Store, EasyPeasyConfig, createTypedHooks } from "easy-peasy";
 // project
-import { ConnectOptions, ContainerEngine, ApplicationDescriptor, GlobalUserSettings, GlobalUserSettingsOptions, EngineUserSettingsOptions, EngineApiOptions, EngineProgramOptions, Connector } from "../Types";
+import { ConnectOptions, ApplicationDescriptor, GlobalUserSettings, GlobalUserSettingsOptions, EngineUserSettingsOptions, EngineApiOptions, EngineProgramOptions, Connector, FindProgramOptions, GenerateKubeOptions } from "../Types.container-app";
+
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -31,16 +32,8 @@ export interface AppModelState {
   descriptor: ApplicationDescriptor;
 }
 
-export interface FindProgramOptions {
-  engine: ContainerEngine;
-  id: string; // connector id
-  program: string;
-  scope?: string;
-}
 
-export interface GenerateKubeOptions {
-  entityId: string;
-}
+
 
 export interface AppModel extends AppModelState {
   // actions

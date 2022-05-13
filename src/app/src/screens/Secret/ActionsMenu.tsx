@@ -6,13 +6,13 @@ import { useTranslation } from "react-i18next";
 // project
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
-import { Secret } from "../../Types";
 import { goToScreen } from "../../Navigator";
 import { useStoreActions } from "../../domain/types";
 
 // module
 import { CreateDrawer } from "./CreateDrawer";
 import { getSecretUrl } from "./Navigation";
+import { Secret } from "../../Types.container-app";
 
 // Secret actions menu
 

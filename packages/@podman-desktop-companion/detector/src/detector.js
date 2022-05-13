@@ -3,7 +3,7 @@ const path = require("path");
 const os = require("os");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { exec_launcher } = require("@podman-desktop-companion/executor");
 // modules
 // locals
 const logger = createLogger("container-client.Detector");
@@ -34,7 +34,7 @@ const findProgramPath = async (program, opts) => {
   const osType = opts.osType || os.type();
   const useWhere = osType === "Windows_NT" && !opts?.wrapper;
   if (useWhere) {
-    result = await exec_launcher_sync("where", [program], opts);
+    result = await exec_launcher("where", [program], opts);
     logger.debug("Detecting", program, "using - where >", result);
     if (result.success) {
       const output = result.stdout || "";
@@ -53,7 +53,7 @@ const findProgramPath = async (program, opts) => {
     }
   }
   if (!programPath) {
-    result = await exec_launcher_sync("which", [program], opts);
+    result = await exec_launcher("which", [program], opts);
     logger.debug("Detecting", program, "using - which >", result);
     if (result.success) {
       programPath = result.stdout || "";
@@ -62,7 +62,7 @@ const findProgramPath = async (program, opts) => {
     }
   }
   if (!programPath) {
-    result = await exec_launcher_sync("whereis", [program], opts);
+    result = await exec_launcher("whereis", [program], opts);
     logger.debug("Detecting", program, "using - whereis >", result);
     if (result.success) {
       programPath = result.stdout.split(" ")?.[1] || "";
@@ -91,7 +91,7 @@ const findProgramVersion = async (program, opts, defaultValue) => {
     logger.warn("wsl.exe does not report a version - defaulting", defaultValue);
     return defaultValue;
   }
-  const result = await exec_launcher_sync(program, ["--version"], opts);
+  const result = await exec_launcher(program, ["--version"], opts);
   if (result.success) {
     version = parseProgramVersion(result.stdout);
   } else {

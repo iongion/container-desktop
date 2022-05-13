@@ -5,9 +5,11 @@ import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
 import { mdiBug, mdiWindowMinimize, mdiWindowMaximize, mdiWindowClose } from "@mdi/js";
 
-import { AppScreen, Program } from "../Types";
+import { Program, WindowAction } from "../Types.container-app";
+
+import { AppScreen } from "../Types";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
-import { Native, WindowAction } from "../Native";
+import { Native } from "../Native";
 import { pathTo } from "../Navigator";
 
 import "./AppHeader.css";

@@ -6,9 +6,10 @@ import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { HashRouter as Router, Switch, Route, useLocation } from "react-router-dom";
 
+import { Program } from "./Types.container-app";
+
 import { StoreProvider } from "./domain/store";
 import { AppBootstrapPhase, AppStore, useStoreActions, useStoreState } from "./domain/types";
-import { Program } from "./Types";
 import { pathTo } from "./Navigator";
 
 import "./App.i18n";

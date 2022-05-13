@@ -2,8 +2,8 @@
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
-import { Volume } from "../../Types";
 import { FetchVolumeOptions, CreateVolumeOptions } from "../../Api.clients";
+import { Volume } from "../../Types.container-app";
 
 export interface VolumesModelState {
   volumes: Volume[];

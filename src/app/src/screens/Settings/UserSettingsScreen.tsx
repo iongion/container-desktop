@@ -6,8 +6,10 @@ import * as ReactIcon from "@mdi/react";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 
 // project
+import { GlobalUserSettingsOptions } from "../../Types.container-app";
+
 import { CURRENT_ENVIRONMENT, LOGGING_LEVELS, PROJECT_VERSION } from "../../Environment";
-import { AppScreen, AppScreenProps, GlobalUserSettingsOptions } from "../../Types";
+import { AppScreen, AppScreenProps } from "../../Types";
 import { ScreenHeader } from "./ScreenHeader";
 import { Native } from "../../Native";
 import { useStoreActions, useStoreState } from "../../domain/types";

@@ -3,7 +3,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { createContext } = require("@podman-desktop-companion/container-client").bridge;
+const { createContext } = require("@podman-desktop-companion/container-app").bridge;
 // locals
 // Using worker to avoid users perceive the app as stuck during long operations
 const { userConfiguration, osType, version, environment } = require("./configuration");

@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
 
 // project
-import { ContainerImagePortMapping } from "../../Types";
+import { ContainerImagePortMapping } from "../../Types.container-app";
 
 // locals
 import "./PortMappingsForm.css";

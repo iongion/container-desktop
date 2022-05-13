@@ -3,8 +3,9 @@ import { action, thunk } from "easy-peasy";
 import merge from "lodash.merge";
 import produce from "immer";
 // project
+import { Connector } from "../Types.container-app";
+// module
 import { Native } from "../Native";
-import { Connector } from "../Types";
 import { AppModel, AppModelState, AppBootstrapPhase, AppRegistry } from "./types";
 
 export const createModel = (registry: AppRegistry): AppModel => {
@@ -57,30 +58,26 @@ export const createModel = (registry: AppRegistry): AppModel => {
       return registry.withPending(async () => {
         try {
           await actions.setPhase(nextPhase);
-          await new Promise((resolve) => {
-            // offload
-            setTimeout(async () => {
-              const startup = await registry.api.start(options);
-              if (startup.currentConnector) {
-                registry.api.setConnector(startup.currentConnector);
-                let nextPhase = AppBootstrapPhase.STARTED;
-                if (startup.provisioned) {
-                  if (startup.running) {
-                    nextPhase = AppBootstrapPhase.READY;
-                  } else {
-                    nextPhase = AppBootstrapPhase.FAILED;
-                  }
-                } else {
-                  nextPhase = AppBootstrapPhase.FAILED;
-                }
-                await actions.domainUpdate({
-                  phase: nextPhase,
-                  descriptor: startup
-                });
+          // offload
+          const startup = await registry.api.start(options);
+          if (startup.currentConnector) {
+            registry.api.setConnector(startup.currentConnector);
+            let nextPhase = AppBootstrapPhase.STARTED;
+            if (startup.provisioned) {
+              if (startup.running) {
+                nextPhase = AppBootstrapPhase.READY;
+              } else {
+                nextPhase = AppBootstrapPhase.FAILED;
               }
-              resolve(startup);
-            }, 1);
-          });
+            } else {
+              nextPhase = AppBootstrapPhase.FAILED;
+            }
+            await actions.domainUpdate({
+              phase: nextPhase,
+              descriptor: startup
+            });
+          }
+          return startup;
         } catch (error: any) {
           console.error("Error during application startup", error.message, error.result);
           nextPhase = AppBootstrapPhase.FAILED;

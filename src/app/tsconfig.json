@@ -17,7 +17,11 @@
     "moduleResolution": "node",
     "isolatedModules": true,
     "noEmit": true,
-    "types": []
+    "types": [
+    ],
+    "typeRoots": [
+      "./node_modules/@types/"
+    ]
   },
   "exclude": [
     "node_modules",

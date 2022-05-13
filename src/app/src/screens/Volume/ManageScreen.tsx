@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 
 // project
-import { AppScreenProps, AppScreen, Volume } from "../../Types";
+import { Volume } from "../../Types.container-app";
+import { AppScreenProps, AppScreen } from "../../Types";
 import { usePoller } from "../../Hooks";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { useAppScreenSearch } from "../../components/AppScreenHooks";

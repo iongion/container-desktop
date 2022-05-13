@@ -3,6 +3,7 @@ const fs = require("fs");
 // vendors
 const merge = require("lodash.merge");
 // project
+const { findProgram } = require("@podman-desktop-companion/detector");
 // module
 const {
   // WSL - common
@@ -22,8 +23,6 @@ const {
   AbstractClientEngineSubsystemWSL,
   AbstractClientEngineSubsystemLIMA
 } = require("./abstract");
-const { findProgram, findProgramVersion } = require("../detector");
-const { createApiAdapter } = require("../api");
 // locals
 const PROGRAM = "docker";
 const API_BASE_URL = "http://localhost";

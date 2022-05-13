@@ -5,10 +5,11 @@ import * as ReactIcon from "@mdi/react";
 import { mdiConsole } from "@mdi/js";
 import { useTranslation } from "react-i18next";
 
+import { Machine } from "../../Types.container-app";
+
 // project
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
-import { Machine } from "../../Types";
 import { goToScreen } from "../../Navigator";
 import { useStoreActions, useStoreState } from "../../domain/types";
 
@@ -34,7 +35,7 @@ export const MachineActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withou
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
   const isNative = useStoreState((state) => state.native);
-  const machineFetch = useStoreActions((actions) => actions.machine.machineFetch);
+  const machineInspect = useStoreActions((actions) => actions.machine.machineInspect);
   const machineRemove = useStoreActions((actions) => actions.machine.machineRemove);
   const machineStop = useStoreActions((actions) => actions.machine.machineStop);
   const machineRestart = useStoreActions((actions) => actions.machine.machineRestart);
@@ -52,7 +53,7 @@ export const MachineActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withou
             break;
           case "machine.inspect":
             if (machine) {
-              result = await machineFetch(machine);
+              result = await machineInspect(machine);
             }
             break;
           case "machine.stop":
@@ -91,7 +92,7 @@ export const MachineActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withou
       }
       setDisabledAction(undefined);
     },
-    [machine, machineFetch, machineRemove, machineRestart, machineStop, machineConnect, t]
+    [machine, machineInspect, machineRemove, machineRestart, machineStop, machineConnect, t]
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);

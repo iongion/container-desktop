@@ -1,9 +1,9 @@
 import { IconName, IconNames } from "@blueprintjs/icons";
 
 // project
-import { ContainerImage } from "../../Types";
 import { AppScreenHeader } from "../../components/AppScreenHeader";
 import { pathTo } from "../../Navigator";
+import { ContainerImage } from "../../Types.container-app";
 
 import { ActionsMenu } from "./ActionsMenu";
 

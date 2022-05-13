@@ -1,14 +1,21 @@
 // vendors
 // project
 import {
-  //
-  Domain,
+  SystemInfo,
+  Connector,
+  ContainerEngine,
+  ControllerScope,
+  EngineApiOptions,
+  EngineConnectorSettings,
+  EngineProgramOptions,
   GlobalUserSettings,
   GlobalUserSettingsOptions,
-  EngineConnectorSettings,
-  ControllerScope,
+  Machine,
+  Program,
+  ProgramExecutionResult,
+  ProgramTestResult,
+  TestResult,
   //
-  ContainerClientResponse,
   Container,
   ContainerStats,
   ContainerImageMount,
@@ -19,28 +26,28 @@ import {
   //
   Secret,
   Volume,
-  ApplicationDescriptor,
-  SystemInfo,
   SystemPruneReport,
   SystemResetReport,
-  Machine,
   Pod,
   PodProcessReport,
   //
   ContainerStateList,
-  TestResult,
-  ProgramTestResult,
-  Program,
-  ProgramExecutionResult,
   ConnectOptions,
-  EngineApiOptions,
-  EngineProgramOptions,
-  Connector,
-  ContainerEngine,
+  ApplicationDescriptor,
+  GenerateKubeOptions,
+  FindProgramOptions,
+  CreateMachineOptions,
+  ContainerClientResponse,
+} from "./Types.container-app";
+// module
+import {
+  //
+  Domain,
+  //
 } from "./Types";
 
 import { Native } from "./Native";
-import { FindProgramOptions, GenerateKubeOptions } from "./domain/types";
+
 
 export interface FetchDomainOptions {}
 
@@ -91,11 +98,6 @@ export interface CreateSecretOptions {
   name: string;
   Secret: string;
 }
-
-export interface FetchMachineOptions {
-  Name: string; // name or id
-}
-export interface CreateMachineOptions {}
 
 export interface FetchPodOptions {
   Id: string;
@@ -534,39 +536,12 @@ export class ContainerClient {
   // System
   async getSystemInfo() {
     return this.withResult<SystemInfo>(async () => {
-      const reply = await Native.getInstance().proxyService<SystemInfo>({
-        method: "getSystemInfo",
-      });
-      return reply.result;
+      return await Native.getInstance().getSystemInfo();
     });
   }
   async pruneSystem() {
-    // return this.withResult<SystemPruneReport>(async () => {
-    //   const result = await this.dataApiDriver.post<SystemPruneReport>(`/system/prune`);
-    //   return result.data;
-    // });
     return this.withResult<SystemPruneReport>(async () => {
-      const reply = await Native.getInstance().proxyService<SystemPruneReport>({
-        method: "pruneSystem",
-      });
-      return reply.result;
-    });
-  }
-
-  async start(opts: ConnectOptions | undefined) {
-    return this.withResult<ApplicationDescriptor>(async () => {
-      const descriptor = await Native.getInstance().start(opts);
-      return descriptor;
-    });
-  }
-
-  async connect(opts: ConnectOptions) {
-    return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "connect",
-        params: opts
-      });
-      return reply.result;
+      return await Native.getInstance().pruneSystem();
     });
   }
 
@@ -575,85 +550,52 @@ export class ContainerClient {
   // Containers
   async connectToContainer(item: Container) {
     return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "connectToContainer",
-        params: { id: item.Id, title: item.Name || item.Names?.[0], shell: undefined }
-      });
-      return reply.result;
+      return await Native.getInstance().connectToContainer({ id: item.Id, title: item.Name || item.Names?.[0], shell: undefined });
     });
   }
 
   // Controller scopes - WSL distributions, LIMA instances and podman machines
   async getControllerScopes() {
     return this.withResult<ControllerScope[]>(async () => {
-      const reply = await Native.getInstance().proxyService<ControllerScope[]>({
-        method: "getControllerScopes"
-      });
-      return reply.result;
+      return await Native.getInstance().getControllerScopes();
     });
   }
 
   // Machines
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
-      const reply = await Native.getInstance().proxyService<Machine[]>({
-        method: "getControllerScopes"
-      });
-      return reply.result;
+      const items = await Native.getInstance().getControllerScopes();
+      return items as Machine[];
     });
   }
-  async getMachine(Name: string) {
+  async inspectMachine(Name: string) {
     return this.withResult<Machine>(async () => {
-      const reply = await Native.getInstance().proxyService<Machine>({
-        method: "inspectMachine",
-        params: { Name }
-      });
-      return reply.result;
+      return await Native.getInstance().inspectMachine(Name);
     });
   }
   async createMachine(opts: CreateMachineOptions) {
     return this.withResult<Machine>(async () => {
-      const reply = await Native.getInstance().proxyService<Machine>({
-        method: "createMachine",
-        params: opts
-      });
-      return reply.result;
+      return await Native.getInstance().createMachine(opts);
     });
   }
   async removeMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "removeMachine",
-        params: { Name, force: true }
-      });
-      return reply.result;
+      return await Native.getInstance().removeMachine(Name);
     });
   }
   async stopMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "stopMachine",
-        params: { Name }
-      });
-      return reply.result;
+      return await Native.getInstance().stopMachine(Name);
     });
   }
   async restartMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "restartMachine",
-        params: { Name }
-      });
-      return reply.result;
+      return await Native.getInstance().restartMachine(Name);
     });
   }
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      const reply = await Native.getInstance().proxyService<boolean>({
-        method: "connectToMachine",
-        params: { Name }
-      });
-      return reply.result;
+      return await Native.getInstance().connectToMachine(Name);
     });
   }
 
@@ -689,14 +631,8 @@ export class ContainerClient {
   }
   async getPodLogs(Id: string, tail?: number) {
     return this.withResult<ProgramExecutionResult>(async () => {
-      const reply = await Native.getInstance().proxyService<ProgramExecutionResult>({
-        method: "getPodLogs",
-        params: {
-          Id,
-          Tail: tail
-        }
-      });
-      return reply.result;
+      const reply = await Native.getInstance().getPodLogs(Id, tail);
+      return reply;
     });
   }
   async createPod(opts: CreatePodOptions) {
@@ -772,21 +708,15 @@ export class ContainerClient {
   // System
   async resetSystem() {
     return this.withResult<SystemResetReport>(async () => {
-      const reply = await Native.getInstance().proxyService<SystemResetReport>({
-        method: "resetSystem"
-      });
-      return reply.result;
+      return await Native.getInstance().resetSystem();
     });
   }
 
   // Generators
   async generateKube(opts: GenerateKubeOptions) {
     return this.withResult<ProgramExecutionResult>(async () => {
-      const reply = await Native.getInstance().proxyService<ProgramExecutionResult>({
-        method: "generateKube",
-        params: opts
-      });
-      return reply.result;
+      const reply = await Native.getInstance().generateKube(opts.entityId);
+      return reply;
     });
   }
 
@@ -822,37 +752,26 @@ export class ContainerClient {
 
   async testProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<ProgramTestResult>(async () => {
-      const reply = await Native.getInstance().proxyService<ProgramTestResult>({
-        method: "test",
-        params: {
-          subject: "reachability.program",
-          payload: opts
-        }
-      });
-      return reply.result;
+      return await Native.getInstance().testProgramReachability(opts);
     });
   }
 
   async testApiReachability(opts: EngineApiOptions) {
     return this.withResult<TestResult>(async () => {
-      const reply = await Native.getInstance().proxyService<TestResult>({
-        method: "test",
-        params: {
-          subject: "reachability.api",
-          payload: opts
-        }
-      });
-      return reply.result;
+      return await Native.getInstance().testApiReachability(opts);
     });
   }
 
-  async findProgram(options: FindProgramOptions) {
+  async findProgram(opts: FindProgramOptions) {
     return this.withResult<Program>(async () => {
-      const reply = await Native.getInstance().proxyService<Program>({
-        method: "findProgram",
-        params: options
-      });
-      return reply.result;
+      return await Native.getInstance().findProgram(opts);
+    });
+  }
+
+  async start(opts: ConnectOptions | undefined) {
+    return this.withResult<ApplicationDescriptor>(async () => {
+      const descriptor = await Native.getInstance().start(opts);
+      return descriptor;
     });
   }
 

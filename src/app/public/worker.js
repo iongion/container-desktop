@@ -1,7 +1,7 @@
 // node
 // vendors
 // project
-const { Application } = require("@podman-desktop-companion/container-client").application;
+const { Application } = require("@podman-desktop-companion/container-app").application;
 const { createWorkerClient } = require("@podman-desktop-companion/rpc");
 const { createLogger } = require("@podman-desktop-companion/logger");
 // locals

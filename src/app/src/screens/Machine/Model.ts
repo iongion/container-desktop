@@ -1,10 +1,10 @@
 // vendors
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
+import { Machine, FetchMachineOptions, CreateMachineOptions } from "../../Types.container-app";
+// module
 import { AppRegistry } from "../../domain/types";
-import { Machine } from "../../Types";
 import { Native } from "../../Native";
-import { FetchMachineOptions, CreateMachineOptions } from "../../Api.clients";
 
 export interface MachinesModelState {
   native: boolean;
@@ -19,7 +19,7 @@ export interface MachinesModel extends MachinesModelState {
   machineDelete: Action<MachinesModel, Partial<Machine>>;
   // thunks
   machinesFetch: Thunk<MachinesModel>;
-  machineFetch: Thunk<MachinesModel, FetchMachineOptions>;
+  machineInspect: Thunk<MachinesModel, FetchMachineOptions>;
   machineCreate: Thunk<MachinesModel, CreateMachineOptions>;
   machineRemove: Thunk<MachinesModel, Partial<Machine>>;
   machineStop: Thunk<MachinesModel, Partial<Machine>>;
@@ -93,9 +93,9 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
         return connected;
       })
     ),
-    machineFetch: thunk(async (actions, options) =>
+    machineInspect: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const machine = await registry.api.getMachine(options.Name);
+        const machine = await registry.api.inspectMachine(options.Name);
         return machine;
       })
     ),

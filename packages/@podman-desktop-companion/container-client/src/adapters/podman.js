@@ -6,8 +6,8 @@ const merge = require("lodash.merge");
 // project
 const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
 const userSettings = require("@podman-desktop-companion/user-settings");
+const { findProgram, findProgramVersion, getAvailablePodmanMachines } = require("@podman-desktop-companion/detector");
 // module
-const { getAvailablePodmanMachines } = require("../shared");
 const {
   // WSL - common
   WSL_PROGRAM,
@@ -26,7 +26,6 @@ const {
   AbstractClientEngineSubsystemWSL,
   AbstractClientEngineSubsystemLIMA
 } = require("./abstract");
-const { findProgram, findProgramVersion } = require("../detector");
 // locals
 const PROGRAM = "podman";
 const API_BASE_URL = "http://d/v3.0.0/libpod";
@@ -139,6 +138,14 @@ class PodmanClientEngineNative extends AbstractClientEngine {
       result.details = `Engine is not available on ${this.osType}`;
     }
     return result;
+  }
+
+  async getControllerScopes(customFormat) {
+    const settings = await this.getCurrentSettings();
+    const available = await this.isEngineAvailable();
+    const canListScopes = available.success && settings.program.path;
+    const items = canListScopes ? await getAvailablePodmanMachines(settings.program.path) : [];
+    return items;
   }
 }
 
@@ -265,8 +272,11 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
     return settings;
   }
   async getControllerScopes() {
+    this.logger.debug("getControllerScopes");
     const settings = await this.getCurrentSettings();
+    this.logger.debug("getControllerScopes", settings);
     const available = await this.isEngineAvailable();
+    this.logger.debug("getControllerScopes", available);
     const canListScopes = available.success && settings.controller.path;
     const items = canListScopes ? await getAvailablePodmanMachines(settings.controller.path) : [];
     return items;
@@ -417,15 +427,6 @@ class Adapter extends AbstractAdapter {
     const instance = new Adapter(userConfiguration, osType);
     instance.setup();
     return instance;
-  }
-
-  async getControllerScopes(engine) {
-    if (engine instanceof AbstractControlledClientEngine) {
-      const items = await engine.getControllerScopes();
-      return items;
-    }
-    this.logger.warn(this.id, "Unable to get list of controller scopes - current engine is not scoped.");
-    return [];
   }
 }
 

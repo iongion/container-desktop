@@ -5,10 +5,11 @@ import { useTranslation } from "react-i18next";
 import * as ReactIcon from "@mdi/react";
 import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 
+import { Container, ContainerStateList, ContainerAdapter } from "../../Types.container-app";
+
 // project
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
-import { Container, ContainerAdapter, ContainerStateList } from "../../Types";
 import { goToScreen } from "../../Navigator";
 
 import { useStoreActions, useStoreState } from "../../domain/types";
