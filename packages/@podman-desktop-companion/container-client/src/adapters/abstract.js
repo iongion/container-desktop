@@ -107,6 +107,7 @@ class AbstractClientEngine {
     this.userConfiguration = userConfiguration;
     /** @access protected */
     this.osType = osType || os.type();
+    this.apiStarted = false;
   }
 
   setup() {
@@ -245,6 +246,11 @@ class AbstractClientEngine {
     if (!this.runner) {
       return true;
     }
+    if (!this.apiStarted) {
+      this.logger.debug("Stopping API - skip(not started here)");
+      return false;
+    }
+    this.logger.debug("Stopping API - begin");
     return await this.runner.stopApi(customSettings, opts);
   }
 
@@ -824,12 +830,20 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     }
     const settings = customSettings || (await this.getCurrentSettings());
     // TODO: Safe to stop first before starting ?
-    return await this.runner.startApi(opts, {
+    const started = await this.runner.startApi(opts, {
       path: settings.controller.path,
       args: ["start", settings.controller.scope]
     });
+    this.apiStarted = started;
+    this.logger.debug("Start API complete", started);
+    return started;
   }
   async stopApi(customSettings, opts) {
+    if (!this.apiStarted) {
+      this.logger.debug("Stopping API - skip(not started here)");
+      return false;
+    }
+    this.logger.debug("Stopping API - begin");
     const settings = customSettings || (await this.getCurrentSettings());
     return await this.runner.stopApi(opts, {
       path: settings.controller.path,

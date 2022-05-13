@@ -132,7 +132,7 @@ class Runner {
     return false;
   }
   async stopApi(opts, stopper) {
-    this.logger.debug("Stopping API");
+    this.logger.debug("Stopping API - begin");
     let flag = false;
     if (stopper) {
       const result = await exec_launcher(stopper.path, stopper.args);

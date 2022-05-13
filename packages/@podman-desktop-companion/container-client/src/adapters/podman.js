@@ -128,10 +128,13 @@ class PodmanClientEngineNative extends AbstractClientEngine {
       return true;
     }
     const settings = customSettings || (await this.getCurrentSettings());
-    return await this.runner.startApi(opts, {
+    const started = await this.runner.startApi(opts, {
       path: settings.program.path,
       args: ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"]
     });
+    this.apiStarted = started;
+    this.logger.debug("Start API complete", started);
+    return started;
   }
   // Availability
   async isEngineAvailable() {
@@ -301,12 +304,20 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
     }
     const settings = customSettings || (await this.getCurrentSettings());
     // TODO: Safe to stop first before starting ?
-    return await this.runner.startApi(opts, {
+    const started = await this.runner.startApi(opts, {
       path: settings.controller.path,
       args: ["machine", "start", settings.controller.scope]
     });
+    this.apiStarted = started;
+    this.logger.debug("Start API complete", started);
+    return started;
   }
   async stopApi(customSettings, opts) {
+    if (!this.apiStarted) {
+      this.logger.debug("Stopping API - skip(not started here)");
+      return false;
+    }
+    this.logger.debug("Stopping API - begin");
     const settings = await this.getCurrentSettings();
     return await this.runner.stopApi(opts, {
       path: settings.controller.path,
@@ -406,10 +417,13 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
     const settings = customSettings || (await this.getCurrentSettings());
     const args = ["system", "service", "--time=0", `unix://${settings.api.connectionString}`, "--log-level=debug"];
     const { launcher, command } = await this.getScopedCommand(settings.program.path, args);
-    return await this.runner.startApi(opts, {
+    const started = await this.runner.startApi(opts, {
       path: launcher,
       args: command
     });
+    this.apiStarted = started;
+    this.logger.debug("Start API complete", started);
+    return started;
   }
 }
 
