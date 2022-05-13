@@ -57,6 +57,6 @@ Screen.Route = {
   Path: `/screens/network/:name/inspect`
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.BOX,
+  LeftIcon: IconNames.GRAPH,
   ExcludeFromSidebar: true
 };

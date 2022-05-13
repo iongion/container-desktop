@@ -33,20 +33,26 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader onSearch={onSearchChange} />
+      <AppScreenHeader
+        onSearch={onSearchChange}
+        titleIcon={IconNames.HEAT_GRID}
+        rightContent={<ActionsMenu />}
+      />
       <div className="AppScreenContent">
         <HTMLTable condensed striped className="AppDataTable" data-table="networks">
           <thead>
             <tr>
               <th data-column="name">{t("Name")}</th>
+              <th data-column="id">{t("Id")}</th>
+              <th data-column="driver">{t("Driver")}</th>
+              <th data-column="network_interface">{t("Interface")}</th>
               <th data-column="created">{t("Created")}</th>
               <th data-column="Actions">&nbsp;</th>
             </tr>
           </thead>
           <tbody>
-            {networks.map((network) => {
+            {(networks || []).map((network) => {
               const creationDate = typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
-
               return (
                 <tr key={network.id} data-network={network.id}>
                   <td>
@@ -59,9 +65,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       icon={IconNames.BOX}
                     />
                   </td>
+                  <td>{network.id}</td>
+                  <td>{network.driver}</td>
+                  <td>{network.network_interface}</td>
                   <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                   <td>
-                    <ActionsMenu network={network} />
+                    <ActionsMenu withoutCreate network={network} />
                   </td>
                 </tr>
               );
@@ -79,5 +88,5 @@ Screen.Route = {
   Path: `/screens/${ID}`
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.CUBE
+  LeftIcon: IconNames.GRAPH
 };

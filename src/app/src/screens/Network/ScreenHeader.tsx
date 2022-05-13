@@ -27,9 +27,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ network, currentScre
       withoutSearch
       listRoutePath={currentListRoutePath}
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
-      titleIcon={IconNames.BOX}
+      titleIcon={IconNames.GRAPH}
       titleText={network.name || network.id || ""}
-      rightContent={<ActionsMenu network={network} expand isActive={(input) => input === currentScreen} />}
+      rightContent={<ActionsMenu withoutCreate network={network} />}
     />
   );
 };

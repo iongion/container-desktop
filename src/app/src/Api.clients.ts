@@ -38,6 +38,7 @@ import {
   CreateMachineOptions,
   ContainerClientResponse,
   Network,
+  ContainerAdapter,
 } from "./Types.container-app";
 // module
 import {
@@ -798,12 +799,35 @@ export class ContainerClient {
   // Network
   async getNetworks() {
     return this.withResult<Network[]>(async () => {
+      if (this.connector?.adapter === ContainerAdapter.DOCKER) {
+        const result = await this.dataApiDriver.get<Network[]>("/networks", { baseURL: "http://localhost" });
+        return (result.data as any[]).map(it => {
+          return {
+            dns_enabled: false,
+            driver: it.Driver,
+            id: it.Id,
+            internal: it.Internal,
+            ipam_options: it.IPAM as any,
+            ipv6_enabled: it.EnabledIPv6,
+            labels: it.Labels,
+            name: it.Name,
+            network_interface: "n/a",
+            options: {},
+            subnets: [],
+            created: it.Created
+          };
+        });
+      }
       const result = await this.dataApiDriver.get<Network[]>("/networks/json", { baseURL: "http://d/v4.0.0/libpod" });
       return result.data;
     });
   }
   async getNetwork(name: string) {
     return this.withResult<Network>(async () => {
+      if (this.connector?.adapter === ContainerAdapter.DOCKER) {
+        const result = await this.dataApiDriver.get<Network[]>(`/networks/${encodeURIComponent(name)}`, { baseURL: "http://localhost" });
+        return result.data as any;
+      }
       const result = await this.dataApiDriver.get<Network>(`/networks/${encodeURIComponent(name)}/json`, { baseURL: "http://d/v4.0.0/libpod" });
       return result.data;
     });

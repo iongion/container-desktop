@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
-import { AnchorButton, ButtonGroup, MenuItem, Intent } from "@blueprintjs/core";
+import { ButtonGroup, MenuItem, Button, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import * as ReactIcon from "@mdi/react";
+import { mdiConsole } from "@mdi/js";
 import { useTranslation } from "react-i18next";
 
 import { Network } from "../../Types.container-app";
@@ -9,15 +11,16 @@ import { Network } from "../../Types.container-app";
 import { ConfirmMenu } from "../../components/ConfirmMenu";
 import { Notification } from "../../Notification";
 import { goToScreen } from "../../Navigator";
-
 import { useStoreActions } from "../../domain/types";
-import { getNetworkUrl } from "./Navigation";
 
-// Actions menu
+// module
+import { CreateDrawer } from "./CreateDrawer";
+
+// Network actions menu
+
 interface ActionsMenuProps {
-  network: Network;
-  expand?: boolean;
-  isActive?: (screen: string) => boolean;
+  network?: Network;
+  withoutCreate?: boolean;
 }
 
 interface PerformActionOptions {
@@ -27,30 +30,33 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, expand, isActive }) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate }) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
+  const [withCreate, setWithCreate] = useState(false);
   const networkFetch = useStoreActions((actions) => actions.network.networkFetch);
   const networkRemove = useStoreActions((actions) => actions.network.networkRemove);
   const performActionCommand = useCallback(
     async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
+      let result = { success: false, message: `No action handler for ${action}` };
       setDisabledAction(action);
       try {
-        // TODO: Improve notifications
-        let success = false;
-        let notifyFailure = true;
         switch (action) {
-          case "network.inspect":
-            await networkFetch(network.name);
-            break;
           case "network.remove":
-            success = await networkRemove(network.name);
+            if (network) {
+              result = await networkRemove(network.name);
+            }
+            break;
+          case "network.inspect":
+            if (network) {
+              result = await networkFetch(network.name);
+            }
             break;
           default:
             break;
         }
-        if (notifyFailure && !success) {
-          Notification.show({ message: t("Command failed"), intent: Intent.DANGER });
+        if (confirm?.success) {
+          Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
         }
         if (action === "network.remove") {
           goToScreen("/screens/networks");
@@ -69,6 +75,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, expand, isAct
     },
     [network, networkFetch, networkRemove, t]
   );
+  const onCreateClick = useCallback(() => {
+    setWithCreate(true);
+  }, []);
+  const onCreateClose = useCallback(() => {
+    setWithCreate(false);
+  }, []);
   const onRemove = useCallback(
     (tag, confirmed) => {
       if (confirmed) {
@@ -77,38 +89,20 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, expand, isAct
     },
     [performActionCommand]
   );
-  const onActionClick = useCallback(
-    async (e) => {
-      const sender = e.currentTarget;
-      const action = sender.getAttribute("data-action");
-      performActionCommand(action);
-    },
-    [performActionCommand]
+  const startButton = withoutCreate ? null : (
+    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
-
-  const expandAsButtons = expand ? (
-    <>
-      <AnchorButton
-        minimal
-        active={isActive ? isActive("network.inspect") : false}
-        icon={IconNames.EYE_OPEN}
-        text={t("Inspect")}
-        href={getNetworkUrl(network.id, "inspect")}
-      />
-    </>
+  const removeWidget = network ? (
+    <ConfirmMenu onConfirm={onRemove} tag={network.name} disabled={disabledAction === "network.remove"}>
+    </ConfirmMenu>
   ) : undefined;
-  const expandAsMenuItems = expand ? undefined : (
-    <>
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getNetworkUrl(network.id, "inspect")} />
-    </>
-  );
-
   return (
-    <ButtonGroup>
-      {expandAsButtons}
-      <ConfirmMenu onConfirm={onRemove} tag={network.id} disabled={disabledAction === "network.remove"}>
-        {expandAsMenuItems}
-      </ConfirmMenu>
-    </ButtonGroup>
+    <>
+      <ButtonGroup>
+        {startButton}
+        {removeWidget}
+      </ButtonGroup>
+      {withCreate && <CreateDrawer onClose={onCreateClose} />}
+    </>
   );
 };
