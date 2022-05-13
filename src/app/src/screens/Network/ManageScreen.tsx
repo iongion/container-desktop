@@ -1,4 +1,4 @@
-import { HTMLTable } from "@blueprintjs/core";
+import { AnchorButton, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
@@ -16,6 +16,7 @@ import { ActionsMenu } from ".";
 
 import "./ManageScreen.css";
 import { Network } from "../../Types.container-app";
+import { getNetworkUrl } from "./Navigation";
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -37,8 +38,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <HTMLTable condensed striped className="AppDataTable" data-table="networks">
           <thead>
             <tr>
-              <th data-column="id">{t("id")}</th>
-              <th data-column="Created">{t("Created")}</th>
+              <th data-column="name">{t("Name")}</th>
+              <th data-column="created">{t("Created")}</th>
               <th data-column="Actions">&nbsp;</th>
             </tr>
           </thead>
@@ -48,7 +49,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
               return (
                 <tr key={network.id} data-network={network.id}>
-                  <td>{network.id}</td>
+                  <td>
+                    <AnchorButton
+                      minimal
+                      small
+                      href={getNetworkUrl(network.id, "inspect")}
+                      text={network.name}
+                      intent={Intent.PRIMARY}
+                      icon={IconNames.BOX}
+                    />
+                  </td>
                   <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                   <td>
                     <ActionsMenu network={network} />

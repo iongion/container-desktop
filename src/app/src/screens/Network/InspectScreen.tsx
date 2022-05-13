@@ -1,31 +1,29 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Button, HTMLTable, Intent } from "@blueprintjs/core";
+import { useEffect, useState } from "react";
 import { IconNames } from "@blueprintjs/icons";
-import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
-import ClipboardJS from "clipboard";
 
+// project
 import { AppScreenProps, AppScreen } from "../../Types";
-import { ScreenHeader } from ".";
 import { ScreenLoader } from "../../components/ScreenLoader";
-import { Notification } from "../../Notification";
-
+import { CodeEditor } from "../../components/CodeEditor";
 import { useStoreActions } from "../../domain/types";
 
-import "./InspectScreen.css";
 import { Network } from "../../Types.container-app";
+// module
+import { ScreenHeader } from ".";
+
+import "./InspectScreen.css";
+
 
 export const ID = "network.inspect";
+export const Title = "Network Inspect";
 
-interface ScreenProps extends AppScreenProps {}
+export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [network, setNetwork] = useState<Network>();
-  const { t } = useTranslation();
   const { name } = useParams<{ name: string }>();
-  const clipboardRef = useRef<ClipboardJS>();
-  const screenRef = useRef<HTMLDivElement>(null);
   const networkFetch = useStoreActions((actions) => actions.network.networkFetch);
   useEffect(() => {
     (async () => {
@@ -40,47 +38,25 @@ export const Screen: AppScreen<ScreenProps> = () => {
       }
     })();
   }, [networkFetch, name]);
-  useEffect(() => {
-    if (!network || !screenRef.current) {
-      return;
-    }
-    if (clipboardRef.current) {
-      clipboardRef.current.destroy();
-    }
-    clipboardRef.current = new ClipboardJS(screenRef.current.querySelectorAll('[data-action="copy.to.clipboard"]'), {
-      text: (trigger: Element): string => {
-        Notification.show({ message: t("The value was copied to clipboard"), intent: Intent.SUCCESS });
-        return (
-          trigger.parentElement?.parentElement?.querySelector<HTMLTableCellElement>("tr td:nth-child(2)")?.innerText ||
-          ""
-        );
-      }
-    });
-  }, [network, t]);
   if (!network) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
-
   return (
-    <div className="AppScreen" data-screen={ID} ref={screenRef}>
+    <div className="AppScreen" data-screen={ID}>
       <ScreenHeader network={network} currentScreen={ID} />
       <div className="AppScreenContent">
-        <HTMLTable condensed striped className="AppDataTable" data-table="network.inspect">
-          <tbody>
-
-          </tbody>
-        </HTMLTable>
+        <CodeEditor value={JSON.stringify(network, null, 2)} />
       </div>
     </div>
   );
 };
 
 Screen.ID = ID;
-Screen.Title = "Network Inspect";
+Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/network/:id/inspect`
+  Path: `/screens/network/:name/inspect`
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.AREA_OF_INTEREST,
+  LeftIcon: IconNames.BOX,
   ExcludeFromSidebar: true
 };

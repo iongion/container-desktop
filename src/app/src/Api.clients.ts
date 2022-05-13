@@ -804,20 +804,20 @@ export class ContainerClient {
   }
   async getNetwork(name: string) {
     return this.withResult<Network>(async () => {
-      const result = await this.dataApiDriver.get<Network>(`/networks/${encodeURIComponent(name)}/json`);
+      const result = await this.dataApiDriver.get<Network>(`/networks/${encodeURIComponent(name)}/json`, { baseURL: "http://d/v4.0.0/libpod" });
       return result.data;
     });
   }
   async createNetwork(opts: CreateNetworkOptions) {
     return this.withResult<Network>(async () => {
       const creator = opts;
-      const result = await this.dataApiDriver.post<Network>("/networks/create", creator);
+      const result = await this.dataApiDriver.post<Network>("/networks/create", creator, { baseURL: "http://d/v4.0.0/libpod" });
       return result.data;
     });
   }
   async removeNetwork(name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await this.dataApiDriver.delete<boolean>(`/networks/${name}`);
+      const result = await this.dataApiDriver.delete<boolean>(`/networks/${name}`, { baseURL: "http://d/v4.0.0/libpod" });
       return result.ok;
     });
   }
