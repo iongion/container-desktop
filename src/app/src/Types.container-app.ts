@@ -670,6 +670,36 @@ export interface ProxyRequest {
   scope?: string;
 }
 
+export interface NetworkIPAMOptions {
+  [key: string]: string;
+}
+
+export interface NetworkSubnetLeaseRange {
+  end_ip: string;
+  start_ip: string;
+}
+
+export interface NetworkSubnet {
+  gateway: string;
+  lease_range: NetworkSubnetLeaseRange;
+  subnet: string;
+}
+
+export interface Network {
+  created: string;
+  dns_enabled: boolean;
+  driver: string;
+  id: string;
+  internal: boolean;
+  ipam_options: NetworkIPAMOptions;
+  ipv6_enabled: boolean;
+  labels: { [key:string]: string};
+  name: string;
+  network_interface: string;
+  options: { [key:string]: string};
+  subnets: NetworkSubnet[];
+}
+
 export default interface Application {
   setup: () => any;
   minimize: () => void;

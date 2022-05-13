@@ -1,0 +1,20 @@
+[data-screen="networks"] .AppScreenContent th:nth-child(3),
+[data-screen="networks"] .AppScreenContent td:nth-child(3),
+[data-screen="networks"] .AppScreenContent th:nth-child(4),
+[data-screen="networks"] .AppScreenContent td:nth-child(4) {
+  width: 70px;
+}
+[data-screen="networks"] .AppScreenContent th:nth-child(5),
+[data-screen="networks"] .AppScreenContent td:nth-child(5),
+[data-screen="networks"] .AppScreenContent th:nth-child(7),
+[data-screen="networks"] .AppScreenContent td:nth-child(7) {
+  width: 140px;
+}
+[data-table="networks"] thead th:nth-child(2),
+[data-table="networks"] tbody td:nth-child(2) {
+  text-align: left;
+}
+[data-table="networks"] thead th:last-child,
+[data-table="networks"] tbody td:last-child {
+  width: 1px;
+}

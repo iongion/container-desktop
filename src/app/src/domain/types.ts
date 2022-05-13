@@ -13,6 +13,7 @@ import { SecretsModel } from "../screens/Secret/Model";
 import { SettingsModel } from "../screens/Settings/Model";
 import { TroubleshootModel } from "../screens/Troubleshoot/Model";
 import { ContainerClient } from "../Api.clients";
+import { NetworksModel } from "../screens/Network/Model";
 
 
 export enum AppBootstrapPhase {
@@ -87,6 +88,7 @@ export interface DomainModel extends AppModel {
   troubleshoot: TroubleshootModel;
   volume: VolumesModel;
   pod: PodsModel;
+  network: NetworksModel;
 }
 
 export const { useStoreActions, useStoreDispatch, useStoreState } = createTypedHooks<DomainModel>();

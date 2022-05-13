@@ -37,6 +37,7 @@ import {
   FindProgramOptions,
   CreateMachineOptions,
   ContainerClientResponse,
+  Network,
 } from "./Types.container-app";
 // module
 import {
@@ -114,6 +115,17 @@ export interface InvocationOptions<T = unknown> {
   params?: T;
 }
 
+export interface CreateNetworkOptions {
+  // see https://docs.podman.io/en/latest/_static/api.html?version=v4.1#operation/NetworkCreateLibpod
+  created: string;
+  dns_enabled: boolean;
+  driver: string;
+  id: string;
+  internal: boolean;
+  name: string;
+  network_interface: string;
+}
+
 export const coerceContainer = (container: Container) => {
   if (container.ImageName) {
     container.Image = container.ImageName;
@@ -166,6 +178,7 @@ interface ApiDriverConfig<D> {
   timeout?: number;
   headers?: { [key: string]: any};
   params?: URLSearchParams | D;
+  baseURL?: string;
 }
 
 export class ApiDriver {
@@ -782,4 +795,30 @@ export class ContainerClient {
     });
   }
 
+  // Network
+  async getNetworks() {
+    return this.withResult<Network[]>(async () => {
+      const result = await this.dataApiDriver.get<Network[]>("/networks/json", { baseURL: "http://d/v4.0.0/libpod" });
+      return result.data;
+    });
+  }
+  async getNetwork(name: string) {
+    return this.withResult<Network>(async () => {
+      const result = await this.dataApiDriver.get<Network>(`/networks/${encodeURIComponent(name)}/json`);
+      return result.data;
+    });
+  }
+  async createNetwork(opts: CreateNetworkOptions) {
+    return this.withResult<Network>(async () => {
+      const creator = opts;
+      const result = await this.dataApiDriver.post<Network>("/networks/create", creator);
+      return result.data;
+    });
+  }
+  async removeNetwork(name: string) {
+    return this.withResult<boolean>(async () => {
+      const result = await this.dataApiDriver.delete<boolean>(`/networks/${name}`);
+      return result.ok;
+    });
+  }
 }
