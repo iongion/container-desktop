@@ -8,13 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.20] - 2022-05-13
+
 ## Fixed
 
-# issue #64 - Blank page after loading
+* issue #64 - Blank page after loading
+* issue #77 - Missing podman-machine-default machine
+* issue #73 - "Path to native podman CLI" disappears after saving
+* issue #56 - UI freezes and cannot get back to configuration menu
 
 ## Added
 
 * Show program version in settings screen header left column
+
+## Changed
+
+* Connection methods
+* Upgraded electron engine
+* Separated concerns (some)
+* Moved back to IPC instead of works as they are faster
+* Changed bootstrap method to be more stable in case of program failures
 
 ## [4.1.0-rc.11] - 2022-05-11
 
