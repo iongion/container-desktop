@@ -483,9 +483,9 @@ class AbstractClientEngine {
     const args = ["system", "reset", "--force", "--log-level=debug"];
     const result = await this.runScopedCommand(program.path, args);
     if (result.success) {
-      logger.debug(this.id, "System reset success", result);
+      this.logger.debug(this.id, "System reset success", result);
     } else {
-      logger.error(this.id, "System reset error", result);
+      this.logger.error(this.id, "System reset error", result);
     }
     return result.success;
   }

@@ -446,6 +446,24 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
       }
     };
   }
+
+  async getMachines(customFormat) {
+    this.logger.debug(this.id, "getMachines with controller", this.currentSettings);
+    const settings = await this.getCurrentSettings();
+    const available = await this.isEngineAvailable();
+    const canListScopes = available.success && settings.program.path;
+    let items = [];
+    if (canListScopes) {
+      const command = await this.getScopedCommand();
+      items = await getAvailablePodmanMachines(settings.program.path, customFormat, {
+        wrapper: {
+          launcher: command.launcher,
+          args: command.command
+        }
+      });
+    }
+    return items;
+  }
 }
 
 class Adapter extends AbstractAdapter {
