@@ -37,6 +37,8 @@ import {
   FindProgramOptions,
   CreateMachineOptions,
   ContainerClientResponse,
+  Network,
+  ContainerAdapter,
 } from "./Types.container-app";
 // module
 import {
@@ -114,6 +116,8 @@ export interface InvocationOptions<T = unknown> {
   params?: T;
 }
 
+export type CreateNetworkOptions = Partial<Network>;
+
 export const coerceContainer = (container: Container) => {
   if (container.ImageName) {
     container.Image = container.ImageName;
@@ -161,11 +165,28 @@ export const coercePod = (pod: Pod) => {
   return pod;
 }
 
+export const coerceNetwork = (it: any): Network => {
+  return {
+    dns_enabled: false,
+    driver: it.Driver,
+    id: it.Id,
+    internal: it.Internal,
+    ipam_options: it.IPAM as any,
+    ipv6_enabled: it.EnabledIPv6,
+    labels: it.Labels,
+    name: it.Name,
+    network_interface: "n/a",
+    options: {},
+    subnets: [],
+    created: it.Created
+  };
+}
 
 interface ApiDriverConfig<D> {
   timeout?: number;
   headers?: { [key: string]: any};
   params?: URLSearchParams | D;
+  baseURL?: string;
 }
 
 export class ApiDriver {
@@ -782,4 +803,58 @@ export class ContainerClient {
     });
   }
 
+  // Network
+  async getNetworks() {
+    return this.withResult<Network[]>(async () => {
+      if (this.connector?.adapter === ContainerAdapter.DOCKER) {
+        const result = await this.dataApiDriver.get<Network[]>("/networks", { baseURL: "http://localhost" });
+        return (result.data as any[]).map(coerceNetwork);
+      }
+      const result = await this.dataApiDriver.get<Network[]>("/networks/json", { baseURL: "http://d/v4.0.0/libpod" });
+      return result.data;
+    });
+  }
+  async getNetwork(name: string) {
+    return this.withResult<Network>(async () => {
+      if (this.connector?.adapter === ContainerAdapter.DOCKER) {
+        const result = await this.dataApiDriver.get<Network[]>(`/networks/${encodeURIComponent(name)}`, { baseURL: "http://localhost" });
+        return result.data as any;
+      }
+      const result = await this.dataApiDriver.get<Network>(`/networks/${encodeURIComponent(name)}/json`, { baseURL: "http://d/v4.0.0/libpod" });
+      return result.data;
+    });
+  }
+  async createNetwork(opts: CreateNetworkOptions) {
+    return this.withResult<Network>(async () => {
+      const creator = opts;
+      if (this.connector?.adapter === ContainerAdapter.DOCKER) {
+        const creatorDocker = {
+          Name: creator.name,
+          Driver: creator.driver,
+          Internal: creator.internal,
+          EnableIPv6: creator.ipv6_enabled,
+        };
+        // TODO: Subnets
+        const result = await this.dataApiDriver.post<Network>("/networks/create", creatorDocker, { baseURL: "http://localhost" });
+        if (result.ok) {
+          const network = await this.getNetwork((result.data as any).Id);
+          return coerceNetwork(network);
+        }
+        console.error("Unable to create network", result);
+        throw new Error("Unable to create network");
+      }
+      const result = await this.dataApiDriver.post<Network>("/networks/create", creator, { baseURL: "http://d/v4.0.0/libpod" });
+      return result.data;
+    });
+  }
+  async removeNetwork(name: string) {
+    return this.withResult<boolean>(async () => {
+      if (this.connector?.adapter === ContainerAdapter.DOCKER) {
+        const result = await this.dataApiDriver.delete<Network[]>(`/networks/${encodeURIComponent(name)}`, { baseURL: "http://localhost" });
+        return result.ok;
+      }
+      const result = await this.dataApiDriver.delete<boolean>(`/networks/${encodeURIComponent(name)}`, { baseURL: "http://d/v4.0.0/libpod" });
+      return result.ok;
+    });
+  }
 }

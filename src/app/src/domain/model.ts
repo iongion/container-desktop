@@ -78,7 +78,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
           }
           return startup;
         } catch (error: any) {
-          console.error("Error during application startup", error.message, error.result);
+          console.error("Error during application startup", error.message, error.details);
           nextPhase = AppBootstrapPhase.FAILED;
           await actions.domainUpdate({
             phase: nextPhase,

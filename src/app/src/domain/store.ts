@@ -16,6 +16,7 @@ import { createModel as createSettingsModel } from "../screens/Settings/Model";
 import { createModel as createTroubleshootModel } from "../screens/Troubleshoot/Model";
 import { createModel as createVolumesModel } from "../screens/Volume/Model";
 import { createModel as createPodsModel } from "../screens/Pod/Model";
+import { createModel as createNetworksModel } from "../screens/Network/Model";
 
 // TODO: Improve typings
 export const withPending = async (store: AppStore, operation: AppStorePendingOperation) => {
@@ -24,7 +25,7 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
   try {
     result = await operation(store);
   } catch (error: any) {
-    console.error("Pending operation error", error.result, error.message, error.stack);
+    console.error("Pending operation error", error.details, error.message, error.stack);
     store.getActions().setPending(false);
     throw error;
   } finally {
@@ -55,6 +56,7 @@ export const createAppStore = (env: Environments) => {
   store.addModel("troubleshoot", createTroubleshootModel(registry));
   store.addModel("volume", createVolumesModel(registry));
   store.addModel("pod", createPodsModel(registry));
+  store.addModel("network", createNetworksModel(registry));
   return store;
 };
 

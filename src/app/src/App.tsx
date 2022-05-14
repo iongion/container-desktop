@@ -41,6 +41,8 @@ import { Screen as PodGenerateKubeScreen } from "./screens/Pod/GenerateKubeScree
 import { Screen as VolumesScreen } from "./screens/Volume/ManageScreen";
 import { Screen as VolumeInspectScreen } from "./screens/Volume/InspectScreen";
 import { Screen as MachinesScreen } from "./screens/Machine/ManageScreen";
+import { Screen as NetworksScreen } from "./screens/Network/ManageScreen";
+import { Screen as NetworkInspectScreen } from "./screens/Network/InspectScreen";
 import { Screen as UserSettingsScreen } from "./screens/Settings/UserSettingsScreen";
 import { Screen as SystemInfoScreen } from "./screens/Settings/SystemInfoScreen";
 import { Screen as SecretsScreen } from "./screens/Secret/ManageScreen";
@@ -64,6 +66,8 @@ const Screens = [
   PodProcessesScreen,
   PodGenerateKubeScreen,
   MachinesScreen,
+  NetworksScreen,
+  NetworkInspectScreen,
   SecretsScreen,
   SecretInspectScreen,
   VolumesScreen,

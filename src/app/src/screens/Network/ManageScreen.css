@@ -1,0 +1,22 @@
+[data-table="networks"] thead th:nth-child(6),
+[data-table="networks"] tbody td:nth-child(3),
+[data-table="networks"] tbody td:nth-child(6) {
+  white-space: nowrap;
+}
+[data-table="networks"] thead th:last-child,
+[data-table="networks"] tbody td:last-child {
+  width: 1px;
+  white-space: nowrap;
+}
+[data-table="networks"] .InspectNetworkButton {
+  text-align: left;
+  font-weight: normal;
+  font-size: 13px;
+  overflow: hidden;
+}
+[data-table="networks"] .InspectNetworkId {
+  color: #aaa;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
