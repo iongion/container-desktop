@@ -80,12 +80,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
                   name="secretName"
                   rules={{ required: true }}
                   defaultValue=""
-                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid }, formState }) => {
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                     return (
                       <InputGroup
                         fill
                         autoFocus
-                        disabled={pending || formState.isSubmitting || formState.isValidating}
+                        disabled={pending}
                         id={name}
                         className="secretName"
                         placeholder={t("Type to set a name")}
@@ -107,12 +107,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
                   name="secretBody"
                   rules={{ required: true }}
                   defaultValue=""
-                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid }, formState }) => {
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                     return (
                       <TextArea
                         fill
                         autoFocus
-                        disabled={pending || formState.isSubmitting || formState.isValidating}
+                        disabled={pending}
                         id={name}
                         className="secretBody"
                         placeholder={t("Type to set a body")}

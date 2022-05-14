@@ -6,6 +6,8 @@ import { useParams } from "react-router-dom";
 import ClipboardJS from "clipboard";
 
 import { AppScreenProps, AppScreen } from "../../Types";
+import { sortAlphaNum } from "../../domain/utils";
+
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { Notification } from "../../Notification";
@@ -14,8 +16,6 @@ import { useStoreActions } from "../../domain/types";
 
 import "./InspectScreen.css";
 import { Container } from "../../Types.container-app";
-
-const sortAlphaNum = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true });
 
 interface InspectGroupValues {
   key: string;

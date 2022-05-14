@@ -141,11 +141,11 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
       processResolve("error", error);
     });
     child.stdout.on("data", (data) => {
-      // logger.debug(child.command, "spawning stdout", data);
+      logger.debug(child.command, "spawning stdout", data);
       process.stdout += `${data}`;
     });
     child.stderr.on("data", (data) => {
-      // logger.error(child.command, "spawning stderr", data);
+      logger.error(child.command, "spawning stderr", data);
       process.stderr += `${data}`;
     });
   });
@@ -205,16 +205,16 @@ async function exec_service(opts) {
       em.emit("error", { type: "process.error", code: error.code });
     };
     const onProcessExit = (child, code) => {
-      // logger.debug("Child process exit", code);
+      logger.debug("Child process exit", code);
       em.emit("exit", { code, managed: isManagedExit });
       isManagedExit = false;
     };
     const onProcessClose = (child, code) => {
-      // logger.debug("Child process close", code);
+      logger.debug("Child process close", code);
       em.emit("close", { code });
     };
     const onProcessData = (child, from, data) => {
-      // logger.debug("Child process data", child.pid, from, data);
+      logger.debug("Child process data", child.pid, from, data);
       em.emit("data", { from, data });
     };
     const waitForProcess = (child) => {

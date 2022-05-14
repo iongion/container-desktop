@@ -79,12 +79,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
                 name="podName"
                 rules={{ required: true }}
                 defaultValue=""
-                render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid }, formState }) => {
+                render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                   return (
                     <InputGroup
                       fill
                       autoFocus
-                      disabled={pending || formState.isSubmitting || formState.isValidating}
+                      disabled={pending}
                       id={name}
                       className="podName"
                       placeholder={t("Type to set a name")}

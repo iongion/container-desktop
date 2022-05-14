@@ -25,7 +25,7 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
   try {
     result = await operation(store);
   } catch (error: any) {
-    console.error("Pending operation error", error.result, error.message, error.stack);
+    console.error("Pending operation error", error.details, error.message, error.stack);
     store.getActions().setPending(false);
     throw error;
   } finally {

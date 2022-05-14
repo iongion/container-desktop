@@ -2,6 +2,7 @@
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
+import { sortAlphaNum } from "../../domain/utils";
 import { CreateNetworkOptions } from "../../Api.clients";
 import { Network } from "../../Types.container-app";
 
@@ -13,6 +14,7 @@ export interface NetworksModelState {
 export interface NetworksModel extends NetworksModelState {
   // Actions
   setNetworks: Action<NetworksModel, Network[]>;
+  networkAdd: Action<NetworksModel, Network>;
   networkUpdate: Action<NetworksModel, Partial<Network>>;
   networkDelete: Action<NetworksModel, string>;
   networksSearchByTerm: Computed<NetworksModel, (searchTerm: string) => Network[]>;
@@ -27,11 +29,14 @@ export const createModel = (registry: AppRegistry): NetworksModel => ({
   networks: [],
   networksMap: {},
   // Actions
+  networkAdd: action((state, network) => {
+    state.networks.push(network)
+  }),
   setNetworks: action((state, networks) => {
     state.networks = networks;
   }),
   networkUpdate: action((state, network) => {
-    const existing = state.networks.find((it) => it.id === network.id);
+    const existing = state.networks.find((it) => it.name === network.id);
     if (existing) {
       // Transfer all keys
       Object.entries(network).forEach(([k, v]) => {
@@ -40,28 +45,35 @@ export const createModel = (registry: AppRegistry): NetworksModel => ({
     }
   }),
   networkDelete: action((state, network) => {
-    const existingPos = state.networks.findIndex((it) => it.id === network);
+    const existingPos = state.networks.findIndex((it) => it.name === network);
     if (existingPos !== -1) {
       state.networks.splice(existingPos, 1);
     }
   }),
   networksSearchByTerm: computed((state) => {
     return (searchTerm: string) => {
+      let items: Network[] = [];
       if (!searchTerm) {
-        return state.networks;
+        items = state.networks;
+      } else {
+        items = state.networks.filter((it) => {
+          const haystacks = [it.name || "", it.id].map((t) => t.toLowerCase());
+          const matching = haystacks.find((it) => it.includes(searchTerm));
+          return !!matching;
+        });
       }
-      return state.networks.filter((it) => {
-        const haystacks = [it.name || "", it.id].map((t) => t.toLowerCase());
-        const matching = haystacks.find((it) => it.includes(searchTerm));
-        return !!matching;
-      });
+      return items.sort((a, b) => {
+        return sortAlphaNum(a.name, b.name);
+      })
     };
   }),
 
   // Thunks
   networksFetch: thunk(async (actions) => {
     return registry.withPending(async () => {
-      const networks = await registry.api.getNetworks();
+      const networks = (await registry.api.getNetworks()).sort((a, b) => {
+        return sortAlphaNum(a.name, b.name);
+      });
       actions.setNetworks(networks);
       return networks;
     });
@@ -84,8 +96,11 @@ export const createModel = (registry: AppRegistry): NetworksModel => ({
   ),
   networkCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const create = await registry.api.createNetwork(options);
-      return create;
+      const item = await registry.api.createNetwork(options);
+      if (item) {
+        actions.networkAdd(item);
+      }
+      return item;
     })
   ),
 });

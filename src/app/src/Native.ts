@@ -199,7 +199,6 @@ export class Native {
     return await this.bridge.application.createApiRequest(service, opts);
   }
   public async proxyHTTPRequest<T>(request: any, connector: Connector) {
-    console.debug()
     let reply: ContainerClientResult<T>;
     const isHTTP = true;
     try {
@@ -218,7 +217,7 @@ export class Native {
     } catch (error: any) {
       console.error("Proxy service internal error", { request, error: { message: error.message, stack: error.stack } });
       error.http = isHTTP;
-      error.result = {
+      error.details = {
         result: "Proxy service internal error",
         success: false,
         warnings: [],
@@ -227,11 +226,13 @@ export class Native {
     }
     if (!reply.success) {
       console.error("HTTP proxy service error", reply);
-      return {
+      const error: any = new Error("HTTP proxy service error");
+      error.details = {
         result: (reply as unknown) as T,
         success: false,
         warnings: [],
       }
+      throw error;
     }
     return reply;
   }

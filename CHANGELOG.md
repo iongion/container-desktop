@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+* Network creation for podman end docker engines (no subnet support for docker for now)
+
+## Changed
+
+* Activated stdout / stderr logging when level is debug for what is output coming from locally started apis for better tracing
+
 ## [4.1.0-rc.21] - 2022-05-13
 
 ## Changed

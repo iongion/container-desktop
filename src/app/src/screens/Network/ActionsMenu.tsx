@@ -1,8 +1,6 @@
 import { useCallback, useState } from "react";
-import { ButtonGroup, MenuItem, Button, Intent } from "@blueprintjs/core";
+import { ButtonGroup, Button, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import * as ReactIcon from "@mdi/react";
-import { mdiConsole } from "@mdi/js";
 import { useTranslation } from "react-i18next";
 
 import { Network } from "../../Types.container-app";

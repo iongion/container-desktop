@@ -87,12 +87,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
                 name="machineName"
                 rules={{ required: true }}
                 defaultValue=""
-                render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid }, formState }) => {
+                render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                   return (
                     <InputGroup
                       fill
                       autoFocus
-                      disabled={pending || formState.isSubmitting || formState.isValidating}
+                      disabled={pending}
                       id={name}
                       className="machineName"
                       placeholder={t("Type to set a name")}
@@ -115,12 +115,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
                   name="machineCPUs"
                   rules={{ required: true }}
                   defaultValue={1}
-                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid }, formState }) => {
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                     return (
                       <NumericInput
                         fill
                         autoFocus
-                        disabled={pending || formState.isSubmitting || formState.isValidating}
+                        disabled={pending}
                         id={name}
                         name={name}
                         value={value}
@@ -144,12 +144,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
                   name="machineRAMSize"
                   rules={{ required: true }}
                   defaultValue={2048}
-                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid }, formState }) => {
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                     return (
                       <NumericInput
                         fill
                         autoFocus
-                        disabled={pending || formState.isSubmitting || formState.isValidating}
+                        disabled={pending}
                         id={name}
                         name={name}
                         value={value}
@@ -174,12 +174,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
                   name="machineDiskSize"
                   rules={{ required: true }}
                   defaultValue={10}
-                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid }, formState }) => {
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                     return (
                       <NumericInput
                         fill
                         autoFocus
-                        disabled={pending || formState.isSubmitting || formState.isValidating}
+                        disabled={pending}
                         id={name}
                         name={name}
                         value={value}

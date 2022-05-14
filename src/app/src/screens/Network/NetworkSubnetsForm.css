@@ -1,0 +1,39 @@
+.NetworkSubnetProtocol {
+  margin: 0 !important;
+}
+
+.NetworkSubnets .bp4-label {
+  text-transform: uppercase;
+  margin-right: 7px !important;
+}
+
+.NetworkSubnets .bp4-form-content {
+  display: flex;
+}
+
+.NetworkSubnet {
+  display: flex;
+  vertical-align: middle;
+  margin-bottom: 5px;
+}
+.NetworkSubnetProperties {
+  flex: 1;
+  vertical-align: middle;
+}
+.NetworkSubnetActions {
+  display: flex;
+  vertical-align: middle;
+}
+.NetworkSubnetProperties .bp4-form-group {
+  margin-bottom: 0;
+}
+.ContainerNetworkSubnetField {
+  display: flex;
+  align-items: center;
+}
+.ContainerNetworkSubnetField > span {
+  padding-left: 5px;
+  padding-right: 10px;
+  white-space: nowrap;
+  min-width: 70px;
+}

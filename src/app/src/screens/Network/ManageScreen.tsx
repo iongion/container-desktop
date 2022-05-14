@@ -43,9 +43,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <thead>
             <tr>
               <th data-column="name">{t("Name")}</th>
-              <th data-column="id">{t("Id")}</th>
               <th data-column="driver">{t("Driver")}</th>
               <th data-column="network_interface">{t("Interface")}</th>
+              <th data-column="internal">{t("Internal")}</th>
+              <th data-column="dns_enabled">{t("DNS")}</th>
               <th data-column="created">{t("Created")}</th>
               <th data-column="Actions">&nbsp;</th>
             </tr>
@@ -57,17 +58,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <tr key={network.id} data-network={network.id}>
                   <td>
                     <AnchorButton
+                      className="InspectNetworkButton"
                       minimal
                       small
                       href={getNetworkUrl(network.id, "inspect")}
-                      text={network.name}
                       intent={Intent.PRIMARY}
-                      icon={IconNames.BOX}
-                    />
+                      icon={IconNames.GRAPH}
+                    >
+                      <strong>{network.name}</strong>
+                      <div className="InspectNetworkId" title={network.id}>{network.id?.substring(0, 32)}...</div>
+                      </AnchorButton>
+
                   </td>
-                  <td>{network.id}</td>
                   <td>{network.driver}</td>
-                  <td>{network.network_interface}</td>
+                  <td><code>{network.network_interface}</code></td>
+                  <td>{network.internal ? t("Yes") : t("No")}</td>
+                  <td>{network.dns_enabled ? t("Yes") : t("No")}</td>
                   <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                   <td>
                     <ActionsMenu withoutCreate network={network} />
