@@ -11,7 +11,7 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
 const logger = createLogger("bridge.test");
 
-async function testProgramReachability(adapters, opts) {
+async function testProgramReachability(adapters, osType, opts) {
   const result = { success: false, program: undefined };
   const { adapter, engine, controller, program } = opts;
   logger.debug(adapter, engine, "Testing if program is reachable", opts);
@@ -74,7 +74,7 @@ async function testProgramReachability(adapters, opts) {
   return result;
 }
 
-async function testApiReachability(adapters, opts) {
+async function testApiReachability(adapters, osType, opts) {
   const result = { success: false };
   const { adapter, engine } = opts;
   logger.debug("Testing if api is reachable", opts);
@@ -105,14 +105,14 @@ async function testApiReachability(adapters, opts) {
   return result;
 }
 
-async function test(adapters, { subject, payload }) {
+async function test(adapters, osType, { subject, payload }) {
   let result = { success: false };
   switch (subject) {
     case "reachability.api":
-      result = testApiReachability(adapters, payload);
+      result = testApiReachability(adapters, osType, payload);
       break;
     case "reachability.program":
-      result = testProgramReachability(adapters, payload);
+      result = testProgramReachability(adapters, osType, payload);
       break;
     default:
       result.details = `Unable to perform unknown test subject "${subject}"`;
@@ -124,9 +124,9 @@ async function test(adapters, { subject, payload }) {
 function createActions(context, { ipcRenderer, userConfiguration, osType, version, environment }) {
   // Do not access the context at creation - it is lazy
   return {
-    test: (...rest) => test(context.getAdapters(), ...rest),
-    testProgramReachability: (...rest) => testProgramReachability(context.getAdapters(), ...rest),
-    testApiReachability: (...rest) => testApiReachability(context.getAdapters(), ...rest)
+    test: (...rest) => test(context.getAdapters(), osType, ...rest),
+    testProgramReachability: (...rest) => testProgramReachability(context.getAdapters(), osType, ...rest),
+    testApiReachability: (...rest) => testApiReachability(context.getAdapters(), osType, ...rest)
   };
 }
 
