@@ -700,6 +700,53 @@ export interface Network {
   subnets: NetworkSubnet[];
 }
 
+export interface SecurityVulnerability {
+  Severity: string;
+  Published: string;
+  Description: string;
+  VulnerabilityID: string;
+  PrimaryURL: string;
+  // injected
+  guid: string;
+}
+export interface SecurityReportResultGroup {
+  Class: string;
+  Target: string;
+  Type: string;
+  Vulnerabilities: SecurityVulnerability[];
+  // injected
+  guid: string;
+}
+export interface SecurityReportResult {
+  Results: SecurityReportResultGroup[];
+}
+export interface SecurityReport {
+  provider: string;
+  status: "success" | "failure";
+  fault?: {
+    details: string;
+    error: string;
+  };
+  result?: SecurityReportResult;
+  scanner: {
+    database: {
+      DownloadedAt: string;
+      NextUpdate: string;
+      UpdatedAt: string;
+      Version: string;
+    },
+    name: string;
+    path: string;
+    version: string;
+  },
+  counts: {
+    CRITICAL: number;
+    HIGH: number;
+    MEDIUM: number;
+    LOW: number;
+  }
+}
+
 export default interface Application {
   setup: () => any;
   minimize: () => void;
@@ -737,7 +784,7 @@ export default interface Application {
   resetSystem: () => Promise<SystemResetReport>;
   // proxy
   proxyHTTPRequest: <T>(request: ProxyRequest) => Promise<T>;
-  createApiRequest: <T>(request: any, opts?: ProxyServiceOptions) => Promise<ContainerClientResponse<T>>;
+  checkSecurity: (opts?: any) => Promise<SecurityReport>;
   // startup
   start: (opts?: ConnectOptions) => Promise<ApplicationDescriptor>;
 };

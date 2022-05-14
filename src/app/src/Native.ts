@@ -195,8 +195,8 @@ export class Native {
   public async resetSystem() {
     return await this.bridge.application.resetSystem();
   }
-  public async createApiRequest(service: { method: string; params: any }, opts?: { http?: boolean; }) {
-    return await this.bridge.application.createApiRequest(service, opts);
+  public async checkSecurity(opts: any) {
+    return await this.bridge.application.checkSecurity(opts);
   }
   public async proxyHTTPRequest<T>(request: any, connector: Connector) {
     let reply: ContainerClientResult<T>;

@@ -45,3 +45,11 @@ body[data-adapter="docker"] .AppDrawer {
   background-color: #0b1942 !important;
   box-shadow: none;
 }
+
+body[data-adapter="docker"] .SecurityDetails {
+  background: #030d2a !important;
+}
+
+body[data-adapter="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
+  background-color: #0f1c3f;
+}

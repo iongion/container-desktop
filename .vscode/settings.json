@@ -39,6 +39,7 @@
         ".pytest_cache": true
     },
     "cSpell.words": [
+        "aquasec",
         "autofocus",
         "autoos",
         "blkio",
@@ -104,6 +105,7 @@
         "themelink",
         "TLDR",
         "tmpfs",
+        "trivy",
         "usehooks",
         "usermode",
         "uuidv",

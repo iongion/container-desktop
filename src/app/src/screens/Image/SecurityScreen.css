@@ -1,0 +1,81 @@
+.AppDataTable[data-table="image.scanning.report"] {
+  color: #ccc;
+}
+.AppDataTable[data-table="image.scanning.report"] tr th {
+  text-align: center !important;
+}
+.AppDataTable[data-table="image.scanning.report"] tr td:first-child {
+  width: 1px;
+}
+.AppDataTable[data-table="image.scanning.report"] tr th:last-child {
+  text-align: center;
+}
+.AppDataTable[data-table="image.scanning.report"] tr td:nth-child(5),
+.AppDataTable[data-table="image.scanning.report"] tr td:last-child {
+  white-space: nowrap;
+}
+.AppDataTable[data-table="image.scanning.report"] tr td[data-field="Description"] {
+  text-align: left;
+  width: 100% !important;
+  white-space: initial;
+  text-overflow: ellipsis;
+}
+.AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
+  background-color: #1f131f;
+}
+.AppDataTable[data-table="image.scanning.report"] .OpenURLButton {
+  white-space: nowrap;
+}
+.Severity {
+  font-weight: bold;
+  font-family: monospace;
+  border: 1px solid transparent;
+  min-width: 80px;
+  display: inline-block;
+  border-radius: 5px;
+  padding: 3px;
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+.AppDataTable[data-table="image.scanning.report"] tr[data-severity="CRITICAL"] .Severity,
+table[data-table="image.scanning.report.counts"] tr[data-severity="CRITICAL"] td .Severity {
+  background-color: #c40000;
+}
+.AppDataTable[data-table="image.scanning.report"] tr[data-severity="HIGH"] .Severity,
+table[data-table="image.scanning.report.counts"] tr[data-severity="HIGH"] td .Severity {
+  background-color: #590000;
+}
+.AppDataTable[data-table="image.scanning.report"] tr[data-severity="MEDIUM"] .Severity,
+table[data-table="image.scanning.report.counts"] tr[data-severity="MEDIUM"] td .Severity {
+  background-color: #300606;
+}
+.SecurityDetails {
+  background: #1a051c;
+  padding: 10px;
+  display: flex;
+  font-size: 12px;
+}
+.SecurityDetails table {
+  font-size: 12px;
+  color: #222;
+}
+.SecurityDetails table tr td {
+  vertical-align: middle;
+}
+.SecurityDetails table tr td:first-child {
+  font-weight: bold;
+}
+.SecurityDetails table tr td:last-child {
+  font-family: monospace;
+  font-size: 10px !important;
+}
+.SecurityList {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+}
+.HeaderSeparator {
+  display: flex;
+  flex: 1;
+}

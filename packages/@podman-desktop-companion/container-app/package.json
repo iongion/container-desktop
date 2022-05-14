@@ -13,10 +13,12 @@
     "@podman-desktop-companion/container-client": "file:../container-client",
     "@podman-desktop-companion/container-config": "file:../container-config",
     "@podman-desktop-companion/detector": "file:../detector",
+    "@podman-desktop-companion/executor": "file:../executor",
     "@podman-desktop-companion/logger": "file:../logger",
     "@podman-desktop-companion/rpc": "file:../rpc",
     "@podman-desktop-companion/terminal": "file:../terminal",
-    "lodash.merge": "^4.6.2"
+    "lodash.merge": "^4.6.2",
+    "uuid": "^8.3.2"
   },
   "engines": {
     "node": "~16"

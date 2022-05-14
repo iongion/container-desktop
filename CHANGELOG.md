@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.23] - 2022-05-14
+
+## Added
+
+* Container Image security scan screen with Trivy
+
+## Fixed
+
+* Machine commands were broken (restart, stop, remove)
+
+## Others
+
+* Separated responsibilities
+* Started work on plugin architecture
+
 ## [4.1.0-rc.22] - 2022-05-14
 
 ## Added

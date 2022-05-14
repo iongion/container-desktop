@@ -114,12 +114,21 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
         text={t("Inspect")}
         href={getImageUrl(image.Id, "inspect")}
       />
+      <AnchorButton
+        minimal
+        active={isActive ? isActive("image.security") : false}
+        icon={IconNames.CONFIRM}
+        text={t("Security")}
+        intent={Intent.DANGER}
+        href={getImageUrl(image.Id, "security")}
+      />
     </>
   ) : undefined;
   const expandAsMenuItems = expand ? undefined : (
     <>
       <MenuItem icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
+      <MenuItem icon={IconNames.CONFIRM} text={t("Security check")} href={getImageUrl(image.Id, "security")} />
     </>
   );
   return (

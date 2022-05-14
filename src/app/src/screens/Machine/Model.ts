@@ -77,8 +77,7 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
       registry.withPending(async () => {
         let restarted = false;
         if (options.Name) {
-          const result = await registry.api.restartMachine(options.Name);
-          restarted = true;
+          restarted = await registry.api.restartMachine(options.Name);
         }
         return restarted;
       })
@@ -87,8 +86,7 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
       registry.withPending(async () => {
         let connected = false;
         if (options.Name) {
-          const result = await registry.api.connectToMachine(options.Name);
-          connected = true;
+          connected = await registry.api.connectToMachine(options.Name);
         }
         return connected;
       })

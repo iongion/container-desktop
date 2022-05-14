@@ -15,34 +15,34 @@ async function connectToMachine(currentEngine, name, title) {
   }
   return output.success;
 }
-async function restartMachine(currentEngine, opts) {
-  const stop = await stopMachine(currentEngine, opts);
-  const start = await startMachine(currentEngine, opts);
+async function restartMachine(currentEngine, name) {
+  const stop = await stopMachine(currentEngine, name);
+  const start = await startMachine(currentEngine, name);
   return start.success;
 }
-async function startMachine(currentEngine, { Name }) {
+async function startMachine(currentEngine, name) {
   const { program } = await currentEngine.getCurrentSettings();
-  const check = await currentEngine.runScopedCommand(program.path, ["machine", "start", Name], {
+  const check = await currentEngine.runScopedCommand(program.path, ["machine", "start", name], {
     async: true
   });
   return check.success;
 }
-async function stopMachine(currentEngine, { Name }) {
+async function stopMachine(currentEngine, name) {
   const { program } = await currentEngine.getCurrentSettings();
-  const check = await currentEngine.runScopedCommand(program.path, ["machine", "stop", Name]);
+  const check = await currentEngine.runScopedCommand(program.path, ["machine", "stop", name]);
   return check.success;
 }
-async function removeMachine(currentEngine, opts) {
-  const stopped = await stopMachine(currentEngine, opts);
+async function removeMachine(currentEngine, name) {
+  const stopped = await stopMachine(currentEngine, name);
   if (!stopped) {
     logger.warn("Unable to stop machine before removal");
     return false;
   }
   const { program } = await currentEngine.getCurrentSettings();
-  const check = await currentEngine.runScopedCommand(program.path, ["machine", "rm", opts.Name, "--force"]);
+  const check = await currentEngine.runScopedCommand(program.path, ["machine", "rm", name, "--force"]);
   return check.success;
 }
-async function inspectMachine(currentEngine, Name) {
+async function inspectMachine(currentEngine, name) {
   throw new Error("Not implemented");
 }
 async function createMachine(currentEngine, opts) {
@@ -73,16 +73,16 @@ async function getMachines(currentEngine) {
   return await currentEngine.getMachines();
 }
 
-function createMachineActions(scope) {
+function createActions(context) {
   return {
-    connectToMachine: (...rest) => connectToMachine(scope.getCurrentEngine(), ...rest),
-    restartMachine: (...rest) => restartMachine(scope.getCurrentEngine(), ...rest),
-    startMachine: (...rest) => startMachine(scope.getCurrentEngine(), ...rest),
-    stopMachine: (...rest) => stopMachine(scope.getCurrentEngine(), ...rest),
-    removeMachine: (...rest) => removeMachine(scope.getCurrentEngine(), ...rest),
-    inspectMachine: (...rest) => inspectMachine(scope.getCurrentEngine(), ...rest),
-    createMachine: (...rest) => createMachine(scope.getCurrentEngine(), ...rest),
-    getMachines: (...rest) => getMachines(scope.getCurrentEngine(), ...rest)
+    connectToMachine: (...rest) => connectToMachine(context.getCurrentApi()?.engine, ...rest),
+    restartMachine: (...rest) => restartMachine(context.getCurrentApi()?.engine, ...rest),
+    startMachine: (...rest) => startMachine(context.getCurrentApi()?.engine, ...rest),
+    stopMachine: (...rest) => stopMachine(context.getCurrentApi()?.engine, ...rest),
+    removeMachine: (...rest) => removeMachine(context.getCurrentApi()?.engine, ...rest),
+    inspectMachine: (...rest) => inspectMachine(context.getCurrentApi()?.engine, ...rest),
+    createMachine: (...rest) => createMachine(context.getCurrentApi()?.engine, ...rest),
+    getMachines: (...rest) => getMachines(context.getCurrentApi()?.engine, ...rest)
   };
 }
 
@@ -95,5 +95,5 @@ module.exports = {
   inspectMachine,
   createMachine,
   getMachines,
-  createMachineActions
+  createActions
 };

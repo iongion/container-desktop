@@ -4,7 +4,7 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 const logger = createLogger("bridge.window");
 
 module.exports = {
-  createWindowActions: (ipcRenderer) => {
+  createActions: (context, { ipcRenderer }) => {
     return {
       minimize() {
         logger.debug("Application minimize");

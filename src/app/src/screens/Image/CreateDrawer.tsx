@@ -36,7 +36,7 @@ export interface CreateDrawerProps {
 export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }) => {
   const { t } = useTranslation();
   const containerCreate = useStoreActions((actions) => actions.container.containerCreate);
-  const fetchOne = useStoreActions((actions) => actions.image.fetchOne);
+  const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
 
   const [state, setState] = useState<{ template?: ContainerImage; pending: boolean }>({
     template: undefined,
@@ -94,14 +94,14 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }) =>
   useEffect(() => {
     (async() => {
       try {
-        const template = await fetchOne({ Id });
+        const template = await imageFetch({ Id });
         setState({ template, pending: false });
       } catch (error) {
         console.error("Unable to load container image", error);
         Notification.show({ message: t("Unable to load container image"), intent: Intent.DANGER });
       }
     })();
-  }, [t, fetchOne, Id]);
+  }, [t, imageFetch, Id]);
 
   // Change over time - form fields
   useEffect(() => {

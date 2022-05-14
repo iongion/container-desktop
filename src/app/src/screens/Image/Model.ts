@@ -20,7 +20,7 @@ export interface ImagesModel extends ImagesModelState {
   searchByTerm: Computed<ImagesModel, (searchTerm: string) => ContainerImage[]>;
   // thunks
   fetchAll: Thunk<ImagesModel>;
-  fetchOne: Thunk<ImagesModel, FetchImageOptions>;
+  imageFetch: Thunk<ImagesModel, FetchImageOptions>;
   fetchHistory: Thunk<ImagesModel, FetchImageOptions>;
   imagePull: Thunk<ImagesModel, Partial<ContainerImage>>;
   imagePush: Thunk<ImagesModel, Partial<ContainerImage>>;
@@ -74,7 +74,7 @@ export const createModel = (registry: AppRegistry): ImagesModel => {
         return images;
       })
     ),
-    fetchOne: thunk(async (actions, options) =>
+    imageFetch: thunk(async (actions, options) =>
       registry.withPending(async () => {
         const image = await registry.api.getImage(options.Id, options);
         actions.update(image);

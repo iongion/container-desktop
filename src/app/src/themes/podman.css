@@ -48,6 +48,6 @@ body[data-adapter="podman"] .AppScreen .bp4-navbar {
   background: #4f175b;
 }
 
-.AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
+body[data-adapter="podman"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
   background: #4f175b;
 }

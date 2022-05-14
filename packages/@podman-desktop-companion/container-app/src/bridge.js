@@ -1,23 +1,24 @@
 // project
-const { getApiConfig } = require("@podman-desktop-companion/container-client/src/api");
-const {
-  findProgram,
-  findProgramVersion,
-  parseProgramVersion,
-  getAvailablePodmanMachines
-} = require("@podman-desktop-companion/detector");
-const { setLevel, getLevel, createLogger } = require("@podman-desktop-companion/logger");
+const { findProgram } = require("@podman-desktop-companion/detector");
+const { createLogger } = require("@podman-desktop-companion/logger");
 const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { Podman, Docker } = require("@podman-desktop-companion/container-client").adapters;
 // locals
 const { getDefaultDescriptor } = require("./bridge/descriptor");
-const { createMachineActions } = require("./bridge/machine");
-const { createWindowActions } = require("./bridge/window");
+const machine = require("./bridge/machine");
+const proxy = require("./bridge/proxy");
+const security = require("./bridge/security");
+const settings = require("./bridge/settings");
+const system = require("./bridge/system");
+const test = require("./bridge/test");
+const window = require("./bridge/window");
+
 const adaptersList = [Podman.Adapter, Docker.Adapter];
 
-const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environment }) => {
-  const logger = createLogger("bridge");
+const createBridge = (bridgeOpts) => {
+  const { ipcRenderer, userConfiguration, osType, version, environment } = bridgeOpts;
   const defaultConnectorId = osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
+  const logger = createLogger("bridge");
   let adapters = [];
   let engines = [];
   let connectors = [];
@@ -38,8 +39,25 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
     version,
     environment
   });
-  const windowActions = createWindowActions(ipcRenderer);
-  const machineActions = createMachineActions({ getCurrentEngine: () => currentApi?.engine });
+  const actionContext = {
+    getCurrentApi: () => currentApi,
+    getAdapters: () => adapters,
+    getEngines: () => engines,
+    getConnector: () => connectors,
+    userConfiguration,
+    osType,
+    version,
+    environment,
+    defaultConnectorId
+  };
+  const actionOptions = bridgeOpts;
+  const machineActions = machine.createActions(actionContext, actionOptions);
+  const proxyActions = proxy.createActions(actionContext, actionOptions);
+  const securityActions = security.createActions(actionContext, actionOptions);
+  const settingsActions = settings.createActions(actionContext, actionOptions);
+  const systemActions = system.createActions(actionContext, actionOptions);
+  const testActions = test.createActions(actionContext, actionOptions);
+  const windowActions = window.createActions(actionContext, actionOptions);
   const init = async () => {
     if (inited) {
       logger.debug("Init skipping - already initialized");
@@ -162,6 +180,15 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
     return host;
   };
   const bridge = {
+    // plugins
+    ...machineActions,
+    ...proxyActions,
+    ...securityActions,
+    ...settingsActions,
+    ...systemActions,
+    ...testActions,
+    ...windowActions,
+    // extras
     async start(opts) {
       logger.debug("Bridge startup - begin", opts);
       try {
@@ -183,44 +210,13 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
         running: !!currentApi?.running,
         connectors,
         currentConnector: currentApi?.connector,
-        userSettings: bridge.getGlobalUserSettings()
+        userSettings: settingsActions.getGlobalUserSettings()
       };
       return descriptor;
     },
     setup() {
       logger.error("Application setup");
       return { logger: createLogger("shell.ui") };
-    },
-    setGlobalUserSettings(opts) {
-      Object.keys(opts).forEach((key) => {
-        const value = opts[key];
-        userConfiguration.setKey(key, value);
-        if (key === "logging") {
-          setLevel(value.level);
-        }
-      });
-      return bridge.getGlobalUserSettings();
-    },
-    getGlobalUserSettings() {
-      return {
-        startApi: userConfiguration.getKey("startApi", false),
-        minimizeToSystemTray: userConfiguration.getKey("minimizeToSystemTray", false),
-        path: userConfiguration.getStoragePath(),
-        logging: {
-          level: getLevel()
-        },
-        connector: {
-          default: userConfiguration.getKey("connector.default", defaultConnectorId)
-        }
-      };
-    },
-    // configuration
-    setEngineUserSettings(id, settings) {
-      userConfiguration.setKey(id, settings);
-      return userConfiguration.getKey(id);
-    },
-    getEngineUserSettings(id) {
-      return userConfiguration.getKey(id);
     },
     // extras
     async getPodLogs(id, tail) {
@@ -258,7 +254,6 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
       logger.debug("Listing controller scopes of current engine", currentApi.engine);
       return await currentApi.engine.getControllerScopes();
     },
-
     async connectToContainer(opts) {
       const { id, title, shell } = opts || {};
       logger.debug("Connecting to container", opts);
@@ -278,118 +273,7 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
       }
       return output.success;
     },
-    async getSystemInfo() {
-      return await currentApi.engine.getSystemInfo();
-    },
-    //// TEST
-    async test({ subject, payload }) {
-      let result = { success: false };
-      switch (subject) {
-        case "reachability.api":
-          result = bridge.testApiReachability(payload);
-          break;
-        case "reachability.program":
-          result = bridge.testProgramReachability(payload);
-          break;
-        default:
-          result.details = `Unable to perform unknown test subject "${subject}"`;
-          break;
-      }
-      return result;
-    },
-    async testProgramReachability(opts) {
-      const result = { success: false, program: undefined };
-      const { adapter, engine, controller, program } = opts;
-      logger.debug(adapter, engine, "Testing if program is reachable", opts);
-      const testController =
-        controller?.path && [Podman.ENGINE_PODMAN_VIRTUALIZED, Docker.ENGINE_DOCKER_VIRTUALIZED].includes(engine);
-      if (testController) {
-        try {
-          const version = await findProgramVersion(controller.path, { osType });
-          if (!version) {
-            logger.error(adapter, engine, "[C] Program test failed - no version", controller);
-            throw new Error("Test failed - no version");
-          }
-          if (version) {
-            let scopes = [];
-            try {
-              scopes = await getAvailablePodmanMachines(controller.path);
-            } catch (error) {
-              logger.error(adapter, engine, "[C] Unable to list podman machines", error.message, error.stack);
-            }
-            result.success = true;
-            result.details = `Program has been found - version ${version}`;
-            result.scopes = scopes;
-            result.program = {
-              path: controller.path,
-              version
-            };
-          }
-        } catch (error) {
-          logger.error(adapter, engine, "[C] Testing if program is reachable - failed during detection", error.message);
-          result.details = "Program detection error";
-        }
-      } else if (program.path) {
-        try {
-          // Always instantiate engines for tests
-          const adapterInstance = adapters.find((it) => it.ADAPTER === adapter);
-          const adapterEngine = adapterInstance.createEngineByName(engine);
-          if (!adapterEngine) {
-            result.success = false;
-            result.details = "Adapter engine is not accessible";
-          } else {
-            const check = await adapterEngine.runScopedCommand(program.path, ["--version"], {
-              scope: controller?.scope
-            });
-            logger.debug(adapter, engine, "[P] Testing if program is reachable - completed", check);
-            const version = check.success ? parseProgramVersion(check.stdout) : undefined;
-            if (check.success && version) {
-              result.success = true;
-              result.details = `Program has been found - version ${version}`;
-              result.program = {
-                path: program.path,
-                version
-              };
-            }
-          }
-        } catch (error) {
-          logger.error(adapter, engine, "[P] Testing if program is reachable - failed during detection", error.message);
-          result.details = "Program detection error";
-        }
-      }
-      return result;
-    },
-    async testApiReachability(opts) {
-      const result = { success: false };
-      const { adapter, engine } = opts;
-      logger.debug("Testing if api is reachable", opts);
-      // Always instantiate engines for tests
-      const adapterInstance = adapters.find((it) => it.ADAPTER === adapter);
-      const adapterEngine = adapterInstance.createEngineByName(engine);
-      if (!adapterEngine) {
-        result.success = false;
-        result.details = "Adapter engine is not accessible";
-      } else {
-        const config = getApiConfig(opts.baseURL, opts.connectionString);
-        const driver = await adapterEngine.getApiDriver(config);
-        try {
-          const response = await driver.request({ method: "GET", url: "/_ping" });
-          result.success = response?.data === "OK";
-          result.details = response?.data || "Api reached";
-        } catch (error) {
-          result.details = "API is not reachable - start manually or connect";
-          logger.error(
-            "Reachability test failed",
-            opts,
-            error.message,
-            error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
-          );
-        }
-        logger.debug("[P] Testing if api is reachable - completed", result.success);
-      }
-      return result;
-    },
-    /// FIND
+    // FIND
     async findProgram(opts) {
       const engine = engines.find((it) => it.id === opts.id);
       if (!engine) {
@@ -405,57 +289,6 @@ const createBridge = ({ ipcRenderer, userConfiguration, osType, version, environ
       } catch (error) {
         logger.error("Unable to find program", error.message);
       }
-    },
-    // System
-    async pruneSystem() {
-      return await currentApi.engine.pruneSystem();
-    },
-    async resetSystem() {
-      return await currentApi.engine.resetSystem();
-    },
-    // proxying
-    ...windowActions,
-    ...machineActions,
-    proxyHTTPRequest: async (proxyRequest) => {
-      let result = {
-        ok: false,
-        data: undefined,
-        headers: [],
-        status: 500,
-        statusText: "API request error"
-      };
-      const { request, baseURL, socketPath, engine, adapter, scope } = proxyRequest;
-      try {
-        const driver = await currentApi.engine.getApiDriver({
-          baseURL,
-          socketPath
-        });
-        const response = await driver.request(request);
-        result = {
-          ok: response.status >= 200 && response.status < 300,
-          data: response.data,
-          headers: response.headers,
-          status: response.status,
-          statusText: response.statusText
-        };
-      } catch (error) {
-        if (error.response) {
-          result = {
-            ok: false,
-            data: error.response.data,
-            headers: error.response.headers,
-            status: error.response.status,
-            statusText: error.response.statusText
-          };
-        } else {
-          result.statusText = error.message || "API request error";
-        }
-      }
-      return {
-        result: result,
-        success: result.ok,
-        warnings: []
-      };
     }
   };
   return bridge;

@@ -31,12 +31,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { id } = useParams<{ id: string }>();
   const clipboardRef = useRef<ClipboardJS>();
   const screenRef = useRef<HTMLDivElement>(null);
-  const fetchOne = useStoreActions((actions) => actions.image.fetchOne);
+  const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
   useEffect(() => {
     (async () => {
       try {
         setPending(true);
-        const image = await fetchOne({
+        const image = await imageFetch({
           Id: id,
           withHistory: true
         });
@@ -47,7 +47,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setPending(false);
       }
     })();
-  }, [fetchOne, id]);
+  }, [imageFetch, id]);
   useEffect(() => {
     if (!image || !screenRef.current) {
       return;

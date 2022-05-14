@@ -33,6 +33,7 @@ import { Screen as ContainerTerminalScreen } from "./screens/Container/TerminalS
 import { Screen as ImagesScreen } from "./screens/Image/ManageScreen";
 import { Screen as ImageLayersScreen } from "./screens/Image/LayersScreen";
 import { Screen as ImageInspectScreen } from "./screens/Image/InspectScreen";
+import { Screen as ImageSecurityScreen } from "./screens/Image/SecurityScreen";
 import { Screen as PodsScreen } from "./screens/Pod/ManageScreen";
 import { Screen as PodLogsScreen } from "./screens/Pod/LogsScreen";
 import { Screen as PodInspectScreen } from "./screens/Pod/InspectScreen";
@@ -60,6 +61,7 @@ const Screens = [
   ImagesScreen,
   ImageLayersScreen,
   ImageInspectScreen,
+  ImageSecurityScreen,
   PodsScreen,
   PodLogsScreen,
   PodInspectScreen,

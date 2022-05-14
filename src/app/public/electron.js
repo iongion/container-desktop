@@ -13,7 +13,7 @@ const userSettings = require("@podman-desktop-companion/user-settings");
 // shared
 const { userConfiguration, osType } = require("./configuration");
 // locals
-const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io"];
+const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
 const logger = createLogger("shell.main");
 let window;
 const isHideToTrayOnClose = () => userConfiguration.getKey("minimizeToSystemTray", false);

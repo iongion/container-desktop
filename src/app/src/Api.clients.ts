@@ -201,20 +201,6 @@ export class ApiDriver {
       ...config,
       data
     }
-    /*
-    // Direct HTTP invocations where possible
-    if (this.connector && ![ContainerEngine.PODMAN_SUBSYSTEM_WSL, ContainerEngine.DOCKER_SUBSYSTEM_WSL].includes(this.connector.engine)) {
-      const reply = await Native.getInstance().proxyHTTPRequest<ContainerClientResponse<T>>(request, this.connector.settings.current.api);
-      return reply.result;
-    } else {
-      const service = {
-        method: "createApiRequest",
-        params: request,
-      };
-      const reply = await Native.getInstance().proxyService<ContainerClientResponse<T>>(service, { http: true });
-      return reply.result;
-    }
-    */
     // Direct HTTP invocations where possible
     const reply = await Native.getInstance().proxyHTTPRequest<ContainerClientResponse<T>>(request, this.connector);
     return reply.result;

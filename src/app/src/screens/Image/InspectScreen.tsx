@@ -24,12 +24,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [image, setImage] = useState<ContainerImage>();
   const { id } = useParams<{ id: string }>();
-  const fetchOne = useStoreActions((actions) => actions.image.fetchOne);
+  const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
   useEffect(() => {
     (async () => {
       try {
         setPending(true);
-        const image = await fetchOne({
+        const image = await imageFetch({
           Id: id,
           withHistory: true
         });
@@ -40,7 +40,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setPending(false);
       }
     })();
-  }, [fetchOne, id]);
+  }, [imageFetch, id]);
   if (!image) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
