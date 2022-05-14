@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.22] - 2022-05-14
+
 ## Added
 
 * Network creation for podman end docker engines (no subnet support for docker for now)
