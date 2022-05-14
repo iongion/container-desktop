@@ -540,7 +540,7 @@ export interface ContainerEngineManagerSettingsProps {
 export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSettingsProps> = ({ adapter, disabled, connectors, currentConnector, engines }) => {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
-  const defaultConnector = useStoreState((state) => state.descriptor.userSettings.connector.default);
+  const connectorUserSettings = useStoreState((state) => state.descriptor.userSettings.connector);
   const start = useStoreActions((actions) => actions.start);
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const setEngineUserSettings = useStoreActions((actions) => actions.setEngineUserSettings);
@@ -675,16 +675,27 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     return true;
   });
 
+
+  const userSettingsConnector = connectorUserSettings.default;
+
+  const useAsDefault = userSettingsConnector !== undefined && userSettingsConnector === connector?.id;
+
   const onUseAsDefaultChange = useCallback(async (e) => {
+    if (!connector) {
+      console.error("Unable to set default - no connector");
+      return;
+    }
     const isChecked = e.currentTarget.checked;
-    await setGlobalUserSettings({ connector: { default: isChecked ? connector?.id : undefined } });
-  }, [setGlobalUserSettings, connector]);
+    const nextDefault = isChecked ? connector.id : undefined;
+    const next = { connector: { default: nextDefault } };
+    console.debug({ isChecked, connector, useAsDefault, nextDefault });
+    await setGlobalUserSettings(next);
+  }, [setGlobalUserSettings, useAsDefault, connector]);
 
 
   const canConnect = formState.isValid && !pending;
   const canSave = formState.isValid && !pending;
   const canReset = !pending;
-  const isDefaultConnector = connector && defaultConnector === connector.id;
 
   let settingsWidget: any = null;
   if (connector && ContainerEngineSettingsRegistry[connector.engine]) {
@@ -711,7 +722,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
                     const label = containerEngine ? containerEngine.label : "Unsupported";
                     const disabled = containerEngine ? !containerEngine.enabled : true;
                     const restrict = <RestrictedTo engine={containerEngine.engine} />;
-                    const important = defaultConnector !== undefined && defaultConnector === engineConnector?.id;
+                    const important = userSettingsConnector !== undefined && userSettingsConnector === engineConnector?.id;
                     return (
                       <Radio
                         key={containerEngine.engine}
@@ -743,7 +754,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
                 <Checkbox
                   label={t("Use as default")}
                   onChange={onUseAsDefaultChange}
-                  checked={isDefaultConnector}
+                  checked={useAsDefault}
                 />
               </ControlGroup>
             </FormGroup>

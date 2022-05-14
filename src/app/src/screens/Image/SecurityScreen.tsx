@@ -106,15 +106,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <tbody>
                 <tr>
                   <td>{t("Scanner")}</td>
-                  <td>{report?.scanner.name}</td>
+                  <td>{report?.scanner?.name}</td>
                 </tr>
                 <tr>
                   <td>{t("Path")}</td>
-                  <td>{report?.scanner.path}</td>
+                  <td>{report?.scanner?.path}</td>
                 </tr>
                 <tr>
                   <td>{t("Version")}</td>
-                  <td>{report?.scanner.version}</td>
+                  <td>{report?.scanner?.version}</td>
                 </tr>
               </tbody>
             </HTMLTable>
@@ -123,15 +123,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <tbody>
                 <tr>
                   <td>{t("Database")}</td>
-                  <td>{report?.scanner.database.Version}</td>
+                  <td>{report?.scanner?.database?.Version}</td>
                 </tr>
                 <tr>
                   <td>{t("Downloaded")}</td>
-                  <td>{report?.scanner.database.DownloadedAt}</td>
+                  <td>{report?.scanner?.database?.DownloadedAt}</td>
                 </tr>
                 <tr>
                   <td>{t("Updated")}</td>
-                  <td>{report?.scanner.database.UpdatedAt}</td>
+                  <td>{report?.scanner?.database?.UpdatedAt}</td>
                 </tr>
               </tbody>
             </HTMLTable>
@@ -194,8 +194,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <p>{t("An internal error occurred, please report the issue.")}</p>
                 ) : (
                   <>
-                    <p>{t("Please install trivy and the revisit this screen")}</p>
-                    <AnchorButton href="" rel="noOpener" target="_blank">{t("Go to trivy homepage")}</AnchorButton>
+                    <p>{t("Please install trivy and then revisit this screen")}</p>
                   </>
                 )
               }

@@ -193,6 +193,15 @@
   justify-content: center;
   color: #ae69d6;
 }
+
+.AppErrorBoundaryCallout {
+  text-align: center;
+  padding: 15px !important;
+  margin: 0;
+  min-width: 380px;
+  border-radius: 15px;
+}
+
 .bp4-disabled .AppFormFieldMeasureUnit {
   color: #798192;
   background-color: #36334d;

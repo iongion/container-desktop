@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { Helmet } from "react-helmet";
@@ -49,6 +49,7 @@ import { Screen as SystemInfoScreen } from "./screens/Settings/SystemInfoScreen"
 import { Screen as SecretsScreen } from "./screens/Secret/ManageScreen";
 import { Screen as SecretInspectScreen } from "./screens/Secret/InspectScreen";
 import { Screen as TroubleshootScreen } from "./screens/Troubleshoot/Troubleshoot";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 
 const Screens = [
   DashboardScreen,
@@ -152,6 +153,8 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
 };
 
 export function AppMainScreen() {
+  const { t } = useTranslation();
+
   const startRef = useRef(false);
   const phase = useStoreState((state) => state.phase);
   const native = useStoreState((state) => state.native);
@@ -174,6 +177,10 @@ export function AppMainScreen() {
     }
   }, [start]);
 
+  const onReconnect = useCallback(() => {
+    start();
+  }, [start]);
+
   return (
     <div
       className="App"
@@ -190,7 +197,14 @@ export function AppMainScreen() {
         <body className="bp4-dark" data-adapter={currentConnector.adapter} />
       </Helmet>
       <Router>
-        <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
+        <AppErrorBoundary
+          onReconnect={onReconnect}
+          reconnect={t("Try to recover")}
+          title={t("An uncaught error showed up")}
+          suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
+        >
+          <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
+        </AppErrorBoundary>
       </Router>
     </div>
   );

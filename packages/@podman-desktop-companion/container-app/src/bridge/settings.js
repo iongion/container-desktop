@@ -1,6 +1,10 @@
-const { setLevel, getLevel } = require("@podman-desktop-companion/logger");
+// project
+const { setLevel, getLevel, createLogger } = require("@podman-desktop-companion/logger");
+// local
+const logger = createLogger("bridge.settings");
 
 function setGlobalUserSettings(userConfiguration, opts, defaultConnectorId) {
+  logger.debug("Update global user settings", opts, defaultConnectorId);
   Object.keys(opts).forEach((key) => {
     const value = opts[key];
     userConfiguration.setKey(key, value);
@@ -20,7 +24,7 @@ function getGlobalUserSettings(userConfiguration, defaultConnectorId) {
       level: getLevel()
     },
     connector: {
-      default: userConfiguration.getKey("connector.default", defaultConnectorId)
+      default: userConfiguration.getKey("connector.default", undefined)
     }
   };
 }

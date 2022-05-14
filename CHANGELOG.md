@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-rc.24] - 2022-05-14
+
+## Added
+
+* Error boundary to gracefully crash
+
+## Fixed
+
+* Regression with default connector being always checked even if the user did not set one
+* No more crashes in image security screen
+
 ## [4.1.0-rc.23] - 2022-05-14
 
 ## Added
