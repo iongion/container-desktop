@@ -472,8 +472,21 @@ export interface Container {
   Status: string;
   //
   NetworkSettings?: ContainerNetworkSettings;
-  DecodedState: ContainerStateList;
   Kube?: string;
+  // Computed
+  Computed: {
+    Name?: string;
+    Group?: string;
+    NameInGroup?: string;
+    DecodedState: ContainerStateList;
+  }
+}
+
+export interface ContainerGroup {
+  Id: string; // uuid v4
+  Name?: string;
+  Items: Container[];
+  Report: { [key in ContainerStateList]: number };
 }
 
 export interface ContainerImageHistory {

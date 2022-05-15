@@ -1,7 +1,6 @@
-import { AnchorButton, Intent, HTMLTable, Code } from "@blueprintjs/core";
+import { AnchorButton, Intent, HTMLTable, Code, Button } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
-import { useMediaQuery } from "react-responsive";
 
 import dayjs from "dayjs";
 
@@ -17,20 +16,23 @@ import { useStoreActions, useStoreState } from "../../domain/types";
 import { ActionsMenu } from ".";
 
 import "./ManageScreen.css";
-import { Container } from "../../Types.container-app";
+import { ContainerGroup, ContainerStateList } from "../../Types.container-app";
+import React, { useCallback, useState } from "react";
 
 export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "containers";
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const [collapse, setCollapse] = useState<{ [key: string]: boolean | undefined }>({});
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const isCondensed = useMediaQuery({
-    query: "(max-width: 1280px)"
-  });
   const containersFetch = useStoreActions((actions) => actions.container.containersFetch);
-  const containers: Container[] = useStoreState((state) => state.container.containersSearchByTerm(searchTerm));
+  const groups: ContainerGroup[] = useStoreState((state) => state.container.containersGroupedByPrefix(searchTerm));
+  const onGroupToggleClick = useCallback((e) => {
+    const groupName = e.currentTarget.getAttribute("data-group");
+    setCollapse((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
+  }, []);
 
   // Change hydration
   usePoller({ poller: containersFetch });
@@ -42,14 +44,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <HTMLTable condensed striped className="AppDataTable" data-table="containers">
           <thead>
             <tr>
-              {isCondensed ? (
-                <th data-column="NameImage">{t("Name & Image")}</th>
-              ) : (
-                <>
-                  <th data-column="Name">{t("Name")}</th>
-                  <th data-column="Image">{t("Image")}</th>
-                </>
-              )}
+              <th data-column="Name">{t("Name")}</th>
+              <th data-column="Image">{t("Image")}</th>
               <th data-column="Pid">{t("Pid")}</th>
               <th data-column="State">{t("State")}</th>
               <th data-column="Digest">{t("Digest")}</th>
@@ -58,56 +54,116 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </tr>
           </thead>
           <tbody>
-            {containers.map((container) => {
-              const creationDate = typeof container.Created === "string" ? dayjs(container.Created) : dayjs(Number(container.Created) * 1000);
-              const image = container.Image;
-              const containerLogsButton = (
-                <AnchorButton
-                  minimal
-                  small
-                  href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`)}
-                  text={container.Names[0] || t("- n/a -")}
-                  intent={Intent.SUCCESS}
-                  icon={IconNames.CUBE}
-                  title={t("Container logs")}
-                />
-              );
-              const containerLayersButton = (
-                <AnchorButton
-                  className="ContainerLayersButton"
-                  minimal
-                  small
-                  href={pathTo(`/screens/image/${encodeURIComponent(container.ImageID)}/layers`)}
-                  text={image.split("@")[0]}
-                  intent={Intent.PRIMARY}
-                  icon={IconNames.BOX}
-                  title={t("Image layers history")}
-                />
-              );
+            {groups.map((group) => {
+              const containers = group.Items;
+              const isPartOfGroup = group.Items.length > 1;
               return (
-                <tr key={container.Id} data-container={container.Id} data-state={container.DecodedState}>
-                  {isCondensed ? (
-                    <td>
-                      {containerLogsButton} {containerLayersButton}
-                    </td>
-                  ) : (
-                    <>
-                      <td>{containerLogsButton}</td>
-                      <td>{containerLayersButton}</td>
-                    </>
-                  )}
-                  <td>
-                    <Code title={container.Pid ? "" : t("Not available")}>{container.Pid || "n/a"}</Code>
-                  </td>
-                  <td>
-                    <span className="ContainerState" data-state={container.DecodedState}>{container.DecodedState}</span>
-                  </td>
-                  <td>{container.Id.substr(0, 12)}</td>
-                  <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
-                  <td>
-                    <ActionsMenu container={container} />
-                  </td>
-                </tr>
+                <React.Fragment key={group.Name || group.Id}>
+                  {containers.map((container, index) => {
+                    const groupName = container.Computed.Group;
+                    const isCollapsed = groupName && !!collapse[groupName];
+                    const containerGroupRow =
+                      isPartOfGroup && index === 0 ? (
+                        <tr className="AppDataTableGroupRow">
+                          <td className="AppDataTableGroupName">
+                            <Button
+                              minimal
+                              icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
+                              text={groupName}
+                              onClick={onGroupToggleClick}
+                              data-group={groupName}
+                            />
+                          </td>
+                          <td className="AppDataTableGroupDetails" colSpan={6}>
+                            <ul className="ContainerReportStateCounts">
+                              <li title={t("Total number of containers in this group")}># <span>{group.Items.length}</span></li>
+                              <li data-state={ContainerStateList.RUNNING} data-count={group.Report.running}>{t("Running")} <span>{group.Report.running}</span></li>
+                              <li data-state={ContainerStateList.EXITED} data-count={group.Report.exited}>{t("Exited")}<span>{group.Report.exited}</span></li>
+                            </ul>
+                          </td>
+                        </tr>
+                      ) : undefined;
+                    let containerGroupData;
+                    if (!isCollapsed) {
+                      // ui
+                      const creationDate =
+                        typeof container.Created === "string"
+                          ? dayjs(container.Created)
+                          : dayjs(Number(container.Created) * 1000);
+                      const image = container.Image;
+                      const nameText =
+                        (isPartOfGroup ? container.Computed.NameInGroup : container.Computed.Name) || t("- n/a -");
+                      const containerLogsButton = (
+                        <AnchorButton
+                          className="ContainerLogsButton"
+                          minimal
+                          small
+                          href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`)}
+                          text={nameText}
+                          intent={Intent.SUCCESS}
+                          icon={IconNames.CUBE}
+                          title={t("Container logs")}
+                        />
+                      );
+                      const containerLayersButton = (
+                        <AnchorButton
+                          className="ContainerLayersButton"
+                          minimal
+                          small
+                          href={pathTo(`/screens/image/${encodeURIComponent(container.ImageID)}/layers`)}
+                          text={image.split("@")[0]}
+                          intent={Intent.PRIMARY}
+                          icon={IconNames.BOX}
+                          title={t("Image layers history")}
+                        />
+                      );
+                      const isFirst = index === 0;
+                      let linkLocation = isFirst ? "first" : undefined;
+                      if (index === containers.length - 1) {
+                        linkLocation = "last";
+                      }
+                      const groupLink = isPartOfGroup ? (
+                        <div className="AppDataTableGroupLink" data-link-location={linkLocation}>
+                          <div className="AppDataTableGroupLinkVertical"></div>
+                          <div className="AppDataTableGroupLinkHorizontal"></div>
+                        </div>
+                      ) : undefined;
+                      containerGroupData = (
+                        <tr
+                          data-group={isPartOfGroup ? groupName : undefined}
+                          data-container={container.Id}
+                          data-state={container.Computed.DecodedState}
+                        >
+                          <td>
+                            {groupLink}
+                            {containerLogsButton}
+                          </td>
+                          <td>{containerLayersButton}</td>
+                          <td>
+                            <Code title={container.Pid ? "" : t("Not available")}>{container.Pid || "n/a"}</Code>
+                          </td>
+                          <td>
+                            <span className="ContainerState" data-state={container.Computed.DecodedState}>
+                              {container.Computed.DecodedState}
+                            </span>
+                          </td>
+                          <td>{container.Id.substring(0, 12)}</td>
+                          <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
+                          <td>
+                            <ActionsMenu container={container} />
+                          </td>
+                        </tr>
+                      );
+                    }
+                    const row = (
+                      <React.Fragment key={container.Id}>
+                        {containerGroupRow}
+                        {containerGroupData}
+                      </React.Fragment>
+                    );
+                    return row;
+                  })}
+                </React.Fragment>
               );
             })}
           </tbody>

@@ -164,9 +164,9 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
   );
 
   const containerServiceUrl = getContainerServiceUrl(container);
-  const isRunning = container.DecodedState === ContainerStateList.RUNNING;
-  const isPaused = container.DecodedState === ContainerStateList.PAUSED;
-  const isStopped = container.DecodedState === ContainerStateList.STOPPED;
+  const isRunning = container.Computed.DecodedState === ContainerStateList.RUNNING;
+  const isPaused = container.Computed.DecodedState === ContainerStateList.PAUSED;
+  const isStopped = container.Computed.DecodedState === ContainerStateList.STOPPED;
   // TODO: State machine - manage transitional states
   const canPauseUnpause = isRunning || isPaused;
   const canStop = isRunning && !isStopped;

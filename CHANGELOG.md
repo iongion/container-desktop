@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 4.1.0-rc.26 - 2022-05-15
+
+## Fixed
+
+* Missing scan report journal update dates and version on non-linux
+* When connecting to docker engine - the app did not check if api is available and it was always connecting creating confusion
+
+## Added
+
+* Issue #79 as per Issue #57 - Add container grouping by prefix, only a single prefix is supported to single level depth (first part after split by `_`)
+
+## Changed
+
+* Improved pending indicators for long operations
+* Added sorting by name for containers list
+* Removed dead CSS
+
 ## [4.1.0-rc.25] - 2022-05-14
 
 ## Fixed

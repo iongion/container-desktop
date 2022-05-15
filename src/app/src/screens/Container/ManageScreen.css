@@ -18,16 +18,27 @@
 [data-table="containers"] tbody td:last-child {
   width: 1px;
 }
+[data-table="containers"] .ContainerLogsButton,
 [data-table="containers"] .ContainerLayersButton {
   max-width: 240px;
   font-size: 11px;
 }
+[data-table="containers"] .ContainerLogsButton,
 [data-table="containers"] .ContainerLayersButton .bp4-button-text {
   max-width: 100%;
   text-overflow: ellipsis;
   overflow: hidden;
   display: inline-block;
   white-space: nowrap;
+}
+[data-table="containers"] .ContainerLogsButton {
+  padding-top: 4px;
+  font-size: 14px;
+  min-width: 140px;
+  text-align: left;
+}
+[data-table="containers"] .ContainerLogsButton .bp4-button-text {
+  text-align: left;
 }
 [data-table="containers"] .ContainerState {
   border-radius: 6px;
@@ -52,4 +63,42 @@
 }
 [data-table="containers"] .ContainerState[data-state="paused"] {
   color: orange;
+}
+[data-table="containers"] .ContainerReportStateCounts {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+[data-table="containers"] .ContainerReportStateCounts li {
+  display: inline-block;
+  border-radius: 5px;
+  background: #111;
+  margin-right: 5px;
+  padding-left:  5px;
+}
+[data-table="containers"] .ContainerReportStateCounts li:last-child {
+  margin-right: 0;
+}
+[data-table="containers"] .ContainerReportStateCounts li span {
+  display: inline-block;
+  padding: 4px;
+  text-align: center;
+  min-width: 30px;
+  border: 1px solid #666;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  margin-left: 5px;
+  background-color: #111;
+}
+[data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
+  color: #60ff45;
+}
+[data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
+  background-color: #8b104c;
+}
+[data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
+[data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
+  background-color: #111;
+  color: #fff;
 }

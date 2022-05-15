@@ -73,14 +73,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
   let count = 0;
-  console.debug(report);
 
 
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader image={image} currentScreen={ID} />
       <div className="AppScreenContent">
-        {scanning ? <ScreenLoader screen={ID} pending /> : (
+        {scanning ? <ScreenLoader screen={ID} pending={pending || scanning} description={t("Scanning for vulnerabilities")} /> : (
 
           <>
 

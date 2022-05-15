@@ -53,3 +53,7 @@ body[data-adapter="docker"] .SecurityDetails {
 body[data-adapter="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: #0f1c3f;
 }
+
+body[data-adapter="docker"] .AppDataTableGroupRow {
+  background-color: #030d2a;
+}

@@ -125,64 +125,68 @@
 .AppDataTable thead th[data-column="Size"] {
   min-width: 60px;
 }
-.AppDataFormTable {
-  width: 100%;
-  font-size: 11px !important;
+
+
+.AppDataTableGroupRow {
+  background-color: #000;
+  font-size: 14px !important;
 }
-.AppDataFormTable tr th {
-  margin: 0;
-  padding: 0 !important;
-  padding-top: 5px !important;
-  padding-bottom: 5px !important;
+.AppDataTableGroupCell {
+  width: 50px !important;
+  vertical-align: top !important;
+  font-weight: bold;
 }
-.AppDataFormTableHeader {
-  display: flex;
-  align-items: center;
-  width: 100%;
+.AppDataTableGroupName {
+  padding-left: 4px !important;
 }
-.AppDataFormTableHeader h5 {
-  padding: 0;
-  padding-left: 5px;
-  margin: 0;
+.AppDataTableGroupName .bp4-button {
+  padding-left: 4px;
+  min-width: 120px;
+  justify-content: flex-start;
 }
-.AppDataFormTable tr td {
-  vertical-align: middle;
-  padding: 0 !important;
-  padding-top: 3px !important;
-  padding-right: 3px !important;
-}
-.AppDataFormTable tr td:first-child {
-  padding-left: 3px !important;
-  padding-right: 3px !important;
-  min-width: 80px;
-}
-.AppDataFormTable tr td:last-child {
-  padding-bottom: 3px !important;
-}
-.AppDataFormTable tr td.AppDataFormTableActionCell {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-.AppDataFormTable tr td.AppDataFormTableIndexCell {
-  width: 1px !important;
-  min-width: 1px;
-  background: #3a294b;
-  table-layout: fixed;
-  vertical-align: top;
-  border-left: 1px solid #463153;
-  border-right: 1px solid #463153;
-}
-.AppDataFormTable tr label {
-  padding-left: 5px !important;
-}
-.AppDataFormTable tr[data-is-even="no"] td.AppDataFormTableIndexCell {
-  background: #2b1339;
-}
-.AppDataFormTableInputCell select {
-  background-color: #2c233b !important;
-  color: #57a1ce !important;
+.AppDataTableGroupDetails {
+  text-align: right !important;
 }
 
+.AppDataTable tbody tr td {
+  position: relative;
+}
+.AppDataTableGroupLink {
+  position: absolute;
+  display: inline-block;
+  top: 0;
+  left: 5px;
+  width: 20px;
+  bottom: 0;
+  font-size: 20px;
+  opacity: 0.5;
+}
+.AppDataTableGroupLinkVertical {
+  width: 3px;
+  height: 100%;
+  margin-left: 50%;
+  background-image: url("./images/group-link.png");
+  background-repeat: repeat-y;
+  background-position: center;
+}
+.AppDataTableGroupLinkHorizontal {
+  position: relative;
+  height: 1px;
+  width: calc(50% - 2px);
+  left: calc(50% + 3px);
+  bottom: 50%;
+  background-image: url("./images/group-link.png");
+  background-repeat: repeat-x;
+}
+.AppDataTable tbody tr[data-group] td:first-child {
+  padding-left: 30px;
+}
+.AppDataTableGroupLink[data-link-location="last"] .AppDataTableGroupLinkVertical {
+  height: 50%;
+}
+.AppDataTableGroupLink[data-link-location="last"] .AppDataTableGroupLinkHorizontal {
+  bottom: 0;
+}
 .AppFormFieldMeasureUnit {
   height: 30px;
   background: #0b020c;

@@ -111,8 +111,13 @@ class DockerClientEngineNative extends AbstractClientEngine {
   }
   // Runtime
   async startApi(customSettings, opts) {
-    this.logger.debug(this.id, "Start api skipped - not required");
-    return true;
+    const running = await this.isApiRunning(customSettings);
+    if (running.success) {
+      this.logger.debug("API is running");
+      return true;
+    }
+    this.logger.error(this.id, "Start api failed - must start engine manually");
+    return false;
   }
   // Availability
   async isEngineAvailable() {
