@@ -94,9 +94,11 @@
 [data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
   color: #60ff45;
 }
-[data-table="containers"] .ContainerReportStateCounts li[data-state="paused"] {
-  color: orange;
-}
 [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
   background-color: #8b104c;
+}
+[data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
+[data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
+  background-color: #111;
+  color: #fff;
 }
