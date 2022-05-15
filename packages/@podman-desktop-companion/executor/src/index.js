@@ -87,7 +87,6 @@ function wrapSpawnSync(launcher, launcherArgs, launcherOpts) {
   }
   const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
   const command = [spawnLauncher, ...spawnArgs].join(" ");
-  // logger.debug("[SC.S][>]", command);
   logger.debug("[SC.S][>][spawnSync]", command);
   const child = spawnSync(spawnLauncher, spawnArgs, spawnLauncherOpts);
   child.command = command;
@@ -141,7 +140,7 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
       processResolve("error", error);
     });
     child.stdout.on("data", (data) => {
-      logger.debug(child.command, "spawning stdout", data);
+      // logger.debug(child.command, "spawning stdout", data);
       process.stdout += `${data}`;
     });
     child.stderr.on("data", (data) => {
@@ -214,7 +213,13 @@ async function exec_service(opts) {
       em.emit("close", { code });
     };
     const onProcessData = (child, from, data) => {
-      logger.debug("Child process data", child.pid, from, data);
+      if (from !== "stdout") {
+        if (from === "stderr") {
+          logger.error("Child process data", child.pid, from, data);
+        } else {
+          logger.debug("Child process data", child.pid, from, data);
+        }
+      }
       em.emit("data", { from, data });
     };
     const waitForProcess = (child) => {
