@@ -49,6 +49,8 @@ import {
 
 import { Native } from "./Native";
 
+export const CONTAINER_GROUP_SEPARATOR = "_";
+
 
 export interface FetchDomainOptions {}
 
@@ -124,11 +126,28 @@ export const coerceContainer = (container: Container) => {
   }
   container.Logs = container.Logs || [];
   container.Ports = container.Ports || [];
-  if (typeof container.State === "object") {
-    container.DecodedState = container.State.Status as ContainerStateList;
-  } else {
-    container.DecodedState = container.State as ContainerStateList;
+
+  if (!container.Computed) {
+    container.Computed = {} as any;
   }
+
+  if (typeof container.State === "object") {
+    container.Computed.DecodedState = container.State.Status as ContainerStateList;
+  } else {
+    container.Computed.DecodedState = container.State as ContainerStateList;
+  }
+
+  const containerName = `${container.Names?.[0] || container.Name}`;
+  if (containerName) {
+    container.Computed.Name = containerName;
+    // Compute group name (name prefix)
+    const [groupName, ...containerNameInGroupParts] = containerName.split(CONTAINER_GROUP_SEPARATOR)
+    const containerNameInGroup = containerNameInGroupParts.join(CONTAINER_GROUP_SEPARATOR);
+    container.Computed.Group = groupName;
+    container.Computed.NameInGroup = containerNameInGroup;
+  }
+
+
   return container;
 };
 

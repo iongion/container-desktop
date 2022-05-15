@@ -28,7 +28,6 @@
 }
 .Severity {
   font-weight: bold;
-  font-family: monospace;
   border: 1px solid transparent;
   min-width: 80px;
   display: inline-block;
@@ -37,6 +36,7 @@
   padding-left: 4px;
   padding-right: 4px;
   text-align: center;
+  color: #fff;
 }
 .AppDataTable[data-table="image.scanning.report"] tr[data-severity="CRITICAL"] .Severity,
 table[data-table="image.scanning.report.counts"] tr[data-severity="CRITICAL"] td .Severity {
@@ -49,6 +49,9 @@ table[data-table="image.scanning.report.counts"] tr[data-severity="HIGH"] td .Se
 .AppDataTable[data-table="image.scanning.report"] tr[data-severity="MEDIUM"] .Severity,
 table[data-table="image.scanning.report.counts"] tr[data-severity="MEDIUM"] td .Severity {
   background-color: #300606;
+}
+.AppDataTable[data-table="image.scanning.report"] tr td {
+  color: #789;
 }
 .SecurityDetails {
   background: #1a051c;

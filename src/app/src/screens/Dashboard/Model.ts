@@ -50,10 +50,10 @@ export const createModel = (registry: AppRegistry): DashboardModel => ({
       console.debug("Fetching");
       // TODO: Optimize this - avoid loading all containers data, avoid multi-traversal
       const containers = await registry.api.getContainers();
-      const pausedContainers = containers.filter(c => c.DecodedState === ContainerStateList.PAUSED);
-      const runningContainers = containers.filter(c => c.DecodedState === ContainerStateList.RUNNING);
-      const exitedContainers = containers.filter(c => c.DecodedState === ContainerStateList.EXITED);
-      const createdContainers = containers.filter(c => c.DecodedState === ContainerStateList.CREATED);
+      const pausedContainers = containers.filter(c => c.Computed.DecodedState === ContainerStateList.PAUSED);
+      const runningContainers = containers.filter(c => c.Computed.DecodedState === ContainerStateList.RUNNING);
+      const exitedContainers = containers.filter(c => c.Computed.DecodedState === ContainerStateList.EXITED);
+      const createdContainers = containers.filter(c => c.Computed.DecodedState === ContainerStateList.CREATED);
       actions.setContainersStats({
         paused: pausedContainers.length,
         running: runningContainers.length,

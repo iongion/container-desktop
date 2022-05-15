@@ -17,10 +17,10 @@ const checkSecurity = async (api, options) => {
       database: undefined
     },
     counts: {
-      Critical: 0,
-      High: 0,
-      Medium: 0,
-      Low: 0
+      CRITICAL: 0,
+      HIGH: 0,
+      MEDIUM: 0,
+      LOW: 0
     },
     result: undefined,
     fault: undefined
@@ -63,16 +63,18 @@ const checkSecurity = async (api, options) => {
             };
             try {
               let data = JSON.parse(analysis.stdout);
-              data.Results = data.Results.map((it) => {
+              data.Results = (data.Results || []).map((it) => {
                 it.guid = v4();
-                it.Vulnerabilities = it.Vulnerabilities.map((v) => {
-                  v.guid = v4();
-                  if (typeof report.counts[v.Severity] === "undefined") {
-                    report.counts[v.Severity] = 0;
-                  }
-                  report.counts[v.Severity] += 1;
-                  return v;
-                }).sort(sorter);
+                it.Vulnerabilities = (it.Vulnerabilities || [])
+                  .map((v) => {
+                    v.guid = v4();
+                    if (typeof report.counts[v.Severity] === "undefined") {
+                      report.counts[v.Severity] = 0;
+                    }
+                    report.counts[v.Severity] += 1;
+                    return v;
+                  })
+                  .sort(sorter);
                 return it;
               });
               report.result = data;

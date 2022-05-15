@@ -3,7 +3,18 @@ import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
 import { AppRegistry } from "../../domain/types";
 import { FetchContainerOptions, CreateContainerOptions } from "../../Api.clients";
-import { Container, ContainerStats } from "../../Types.container-app";
+import { Container, ContainerGroup, ContainerStateList, ContainerStats } from "../../Types.container-app";
+import { sortAlphaNum } from "../../domain/utils";
+import { v4 } from "uuid";
+
+
+const createContainerSearchFilter = (searchTerm: string) => {
+  return (it: Container) => {
+    const haystacks = [it.Names[0] || "", it.Image, it.Id, `${it.Pid}`, `${it.Size}`].map((t) => t.toLowerCase());
+    const matching = haystacks.find((it) => it.includes(searchTerm));
+    return !!matching;
+  };
+}
 
 export interface ContainersModelState {
   containers: Container[];
@@ -16,6 +27,7 @@ export interface ContainersModel extends ContainersModelState {
   containerUpdate: Action<ContainersModel, Partial<Container>>;
   containerDelete: Action<ContainersModel, Partial<Container>>;
   containersSearchByTerm: Computed<ContainersModel, (searchTerm: string) => Container[]>;
+  containersGroupedByPrefix: Computed<ContainersModel, (searchTerm: string) => ContainerGroup[]>;
   // Thunks
   containersFetch: Thunk<ContainersModel>;
   containerFetch: Thunk<ContainersModel, FetchContainerOptions>;
@@ -33,7 +45,12 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
   containersMap: {},
   // Actions
   setContainers: action((state, containers) => {
-    state.containers = containers;
+    state.containers = containers.sort((a, b) => {
+      if (a.Computed.Name && b.Computed.Name) {
+        return sortAlphaNum(a.Computed.Name, b.Computed.Name);
+      }
+      return sortAlphaNum(a.CreatedAt, b.CreatedAt);
+    })
   }),
   containerUpdate: action((state, container) => {
     const existing = state.containers.find((it) => it.Id === container.Id);
@@ -57,11 +74,48 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
       if (!searchTerm) {
         return state.containers;
       }
-      return state.containers.filter((it) => {
-        const haystacks = [it.Names[0] || "", it.Image, it.Id, `${it.Pid}`, `${it.Size}`].map((t) => t.toLowerCase());
-        const matching = haystacks.find((it) => it.includes(searchTerm));
-        return !!matching;
+      return state.containers.filter(createContainerSearchFilter(searchTerm));
+    };
+  }),
+  containersGroupedByPrefix: computed((state) => {
+    return (searchTerm: string) => {
+      let source: Container[] = state.containers;
+      if (searchTerm) {
+        source = state.containers.filter(createContainerSearchFilter(searchTerm));
+      }
+      const groups: ContainerGroup[] = [];
+      const groupsMap: {[key: string]: ContainerGroup} = {};
+      source.forEach((it) => {
+        if (!it.Computed.Group) {
+          return;
+        }
+        let group = groupsMap[it.Computed.Group];
+        if (!group) {
+          group = {
+            Id: v4(),
+            Name: it.Computed.Group,
+            Items: [],
+            Report: {
+              [ContainerStateList.CREATED]: 0,
+              [ContainerStateList.ERROR]: 0,
+              [ContainerStateList.EXITED]: 0,
+              [ContainerStateList.PAUSED]: 0,
+              [ContainerStateList.RUNNING]: 0,
+              [ContainerStateList.DEGRADED]: 0,
+              [ContainerStateList.STOPPED]: 0,
+            }
+          };
+          groups.push(group);
+          groupsMap[it.Computed.Group] = group;
+        }
+        if (typeof it.State === "object") {
+          group.Report[it.State.Status] += 1;
+        } else {
+          group.Report[it.State] += 1;
+        }
+        group.Items.push(it);
       });
+      return groups;
     };
   }),
 
