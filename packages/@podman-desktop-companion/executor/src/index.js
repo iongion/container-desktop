@@ -215,7 +215,7 @@ async function exec_service(opts) {
     const onProcessData = (child, from, data) => {
       if (from !== "stdout") {
         if (from === "stderr") {
-          logger.error("Child process data", child.pid, from, data);
+          logger.warn("Child process data", child.pid, from, data);
         } else {
           logger.debug("Child process data", child.pid, from, data);
         }
