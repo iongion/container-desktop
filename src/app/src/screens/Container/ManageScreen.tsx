@@ -76,6 +76,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           </td>
                           <td className="AppDataTableGroupDetails" colSpan={6}>
                             <ul className="ContainerReportStateCounts">
+                              <li title={t("Total number of containers in this group")}># <span>{group.Items.length}</span></li>
                               <li data-state={ContainerStateList.RUNNING}>{t("Running")} <span>{group.Report.running}</span></li>
                               <li data-state={ContainerStateList.EXITED}>{t("Exited")}<span>{group.Report.exited}</span></li>
                             </ul>
