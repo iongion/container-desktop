@@ -110,7 +110,6 @@
 .AppDataTable tbody td:first-child {
   width: auto;
   text-align: left;
-  white-space: nowrap;
 }
 .AppDataTable thead th:last-child,
 .AppDataTable tbody td:last-child {
@@ -176,7 +175,7 @@
   background-image: url("./images/group-link.png");
   background-repeat: repeat-x;
 }
-.AppDataTable tbody tr[data-group] td:first-child {
+.AppDataTable tbody tr[data-prefix-group] td:first-child {
   padding-left: 30px;
 }
 .AppDataTableGroupLink[data-link-location="last"] .AppDataTableGroupLinkVertical {

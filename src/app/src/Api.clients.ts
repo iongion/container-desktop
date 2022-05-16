@@ -179,8 +179,10 @@ export const coerceImage = (image: ContainerImage) => {
 export const coercePod = (pod: Pod) => {
   pod.Processes = {
     Processes: [],
-    Titles: []
+    Titles: [],
   };
+  // See issue #54 - it returns null on failure
+  pod.Containers = Array.isArray(pod.Containers) ? pod.Containers : [];
   return pod;
 }
 

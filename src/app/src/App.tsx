@@ -80,13 +80,10 @@ const Screens = [
   TroubleshootScreen
 ];
 
-interface AppMainScreenContentProps {
+interface AppContentProps {
   phase: AppBootstrapPhase;
-  program: Program;
-  running: boolean;
-  provisioned: boolean;
 }
-export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, phase, provisioned, running }) => {
+export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const ready = phase === AppBootstrapPhase.READY;
@@ -140,21 +137,51 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
   }
 
   return (
+    <div className="AppContent">
+      {sidebar}
+      <div className="AppContentDocument">
+        {content}
+      </div>
+    </div>
+  );
+}
+
+
+interface AppMainScreenContentProps {
+  phase: AppBootstrapPhase;
+  program: Program;
+  running: boolean;
+  provisioned: boolean;
+}
+export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, phase, provisioned, running }) => {
+  const start = useStoreActions((actions) => actions.start);
+  const { t } = useTranslation();
+  const location = useLocation();
+
+  const onReconnect = useCallback(() => {
+    start();
+  }, [start]);
+
+  const currentScreen = Screens.find((screen) =>
+    matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true })
+  );
+
+  return (
     <>
       <AppHeader program={program} provisioned={provisioned} running={running} screens={Screens} currentScreen={currentScreen} />
-      <div className="AppContent">
-        {sidebar}
-        <div className="AppContentDocument">
-          {content}
-        </div>
-      </div>
+      <AppErrorBoundary
+        onReconnect={onReconnect}
+        reconnect={t("Try to recover")}
+        title={t("An uncaught error showed up")}
+        suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
+      >
+        <AppContent phase={phase} />
+      </AppErrorBoundary>
     </>
   );
 };
 
 export function AppMainScreen() {
-  const { t } = useTranslation();
-
   const startRef = useRef(false);
   const phase = useStoreState((state) => state.phase);
   const native = useStoreState((state) => state.native);
@@ -177,10 +204,6 @@ export function AppMainScreen() {
     }
   }, [start]);
 
-  const onReconnect = useCallback(() => {
-    start();
-  }, [start]);
-
   return (
     <div
       className="App"
@@ -197,14 +220,7 @@ export function AppMainScreen() {
         <body className="bp4-dark" data-adapter={currentConnector.adapter} />
       </Helmet>
       <Router>
-        <AppErrorBoundary
-          onReconnect={onReconnect}
-          reconnect={t("Try to recover")}
-          title={t("An uncaught error showed up")}
-          suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
-        >
-          <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
-        </AppErrorBoundary>
+        <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
       </Router>
     </div>
   );

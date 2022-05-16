@@ -8,6 +8,7 @@ const actionsList = [
   require("./controller"),
   require("./generate"),
   require("./machine"),
+  require("./pod"),
   require("./program"),
   require("./proxy"),
   require("./security"),
