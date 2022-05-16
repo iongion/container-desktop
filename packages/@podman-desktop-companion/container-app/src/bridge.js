@@ -195,6 +195,7 @@ const createBridge = (bridgeOpts) => {
         await init();
         if (currentApi) {
           await currentApi.destroy();
+          currentApi = null;
         }
         logger.debug("Bridge startup - creating current");
         currentApi = await createConnectorEngineApi(getCurrentConnector(opts), opts);
