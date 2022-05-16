@@ -24,14 +24,6 @@ export function AppSidebarFooter() {
   } else {
     programInfo.version = program?.version || "";
   }
-  const pendingIndicatorStyle: React.CSSProperties = {
-    visibility: pending ? "visible" : "hidden"
-  };
-  const pendingIndicator = (
-    <div className="AppSidebarFooterPendingIndicator" style={pendingIndicatorStyle}>
-      <Spinner intent={Intent.PRIMARY} size={SpinnerSize.SMALL} />
-    </div>
-  );
   const versionString = `GUI v${PROJECT_VERSION}.${CurrentEnvironment.name[0]}`;
   const programString = `CLI ${programInfo.name} ${programInfo.version}`;
   return (
@@ -44,7 +36,9 @@ export function AppSidebarFooter() {
           </NavbarHeading>
         </NavbarGroup>
         <NavbarGroup align={Alignment.RIGHT} className="AppSidebarFooterRightColumn">
-          {pendingIndicator}
+          <div className="AppSidebarFooterPendingIndicator">
+            {pending ? <Spinner intent={Intent.PRIMARY} size={SpinnerSize.SMALL} /> : <>&nbsp;</>}
+          </div>
         </NavbarGroup>
       </Navbar>
     </div>

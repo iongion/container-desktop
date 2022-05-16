@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { FetchContainerOptions, CreateContainerOptions } from "../../Api.clients";
 import { Container, ContainerGroup, ContainerStateList, ContainerStats } from "../../Types.container-app";
 import { sortAlphaNum } from "../../domain/utils";
@@ -21,7 +21,7 @@ export interface ContainersModelState {
   containersMap: { [key: string]: Container };
 }
 
-export interface ContainersModel extends ContainersModelState {
+export interface ContainersModel extends ContainersModelState, ResetableModel<ContainersModel> {
   // Actions
   setContainers: Action<ContainersModel, Container[]>;
   containerUpdate: Action<ContainersModel, Partial<Container>>;
@@ -44,6 +44,10 @@ export const createModel = (registry: AppRegistry): ContainersModel => ({
   containers: [],
   containersMap: {},
   // Actions
+  reset: action((state) => {
+    state.containers = [];
+    state.containersMap = {};
+  }),
   setContainers: action((state, containers) => {
     state.containers = containers.sort((a, b) => {
       if (a.Computed.Name && b.Computed.Name) {

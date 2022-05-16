@@ -61,7 +61,6 @@ function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   logger.debug("[SC.A][>][spawn]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
   const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
   child.command = command;
-  logger.debug("[SC.A][<][spawn]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts }, { pid: child.pid });
   return child;
 }
 

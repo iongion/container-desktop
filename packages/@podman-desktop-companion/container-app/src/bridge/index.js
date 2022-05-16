@@ -1,17 +1,23 @@
 // project
-const { findProgram } = require("@podman-desktop-companion/detector");
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { launchTerminal } = require("@podman-desktop-companion/terminal");
 const { Podman, Docker } = require("@podman-desktop-companion/container-client").adapters;
 // locals
-const { getDefaultDescriptor } = require("./bridge/descriptor");
-const machine = require("./bridge/machine");
-const proxy = require("./bridge/proxy");
-const security = require("./bridge/security");
-const settings = require("./bridge/settings");
-const system = require("./bridge/system");
-const test = require("./bridge/test");
-const window = require("./bridge/window");
+const { getDefaultDescriptor } = require("./descriptor");
+const actionsList = [
+  require("./connect"),
+  require("./controller"),
+  require("./generate"),
+  require("./machine"),
+  require("./pod"),
+  require("./program"),
+  require("./proxy"),
+  require("./security"),
+  require("./setup"),
+  require("./settings"),
+  require("./system"),
+  require("./test"),
+  require("./window")
+];
 
 const adaptersList = [Podman.Adapter, Docker.Adapter];
 
@@ -23,6 +29,7 @@ const createBridge = (bridgeOpts) => {
   let engines = [];
   let connectors = [];
   let inited = false;
+  let detected = false;
   let currentApi = {
     provisioned: false,
     running: false,
@@ -51,14 +58,8 @@ const createBridge = (bridgeOpts) => {
     defaultConnectorId
   };
   const actionOptions = bridgeOpts;
-  const machineActions = machine.createActions(actionContext, actionOptions);
-  const proxyActions = proxy.createActions(actionContext, actionOptions);
-  const securityActions = security.createActions(actionContext, actionOptions);
-  const settingsActions = settings.createActions(actionContext, actionOptions);
-  const systemActions = system.createActions(actionContext, actionOptions);
-  const testActions = test.createActions(actionContext, actionOptions);
-  const windowActions = window.createActions(actionContext, actionOptions);
   const init = async () => {
+    // All logic is done only once at application startup - can be updated during engine changes by the start logic
     if (inited) {
       logger.debug("Init skipping - already initialized");
       return inited;
@@ -73,10 +74,18 @@ const createBridge = (bridgeOpts) => {
       await Promise.all(
         engines.map(async (engine) => {
           try {
+            // detect settings
+            try {
+              await engine.updateSettings();
+              // Update cached
+            } catch (error) {
+              logger.error(engine.id, "Init - Unable to complete detection", error.message, error.stack);
+            }
+            // update upon detection
             const connector = await engine.getConnector();
             connectors.push(connector);
           } catch (error) {
-            logger.error("Init - Unable to get engine connector", engine.ENGINE, error.message, error.stack);
+            logger.error(engine.id, "Init - Unable to get engine connector", error.message, error.stack);
           }
         })
       );
@@ -181,13 +190,11 @@ const createBridge = (bridgeOpts) => {
   };
   const bridge = {
     // plugins
-    ...machineActions,
-    ...proxyActions,
-    ...securityActions,
-    ...settingsActions,
-    ...systemActions,
-    ...testActions,
-    ...windowActions,
+    ...actionsList.reduce((acc, it) => {
+      const actions = it.createActions(actionContext, actionOptions);
+      acc = { ...acc, ...actions };
+      return acc;
+    }, {}),
     // extras
     async start(opts) {
       logger.debug("Bridge startup - begin", opts);
@@ -211,85 +218,9 @@ const createBridge = (bridgeOpts) => {
         running: !!currentApi?.running,
         connectors,
         currentConnector: currentApi?.connector,
-        userSettings: settingsActions.getGlobalUserSettings()
+        userSettings: bridge.getGlobalUserSettings()
       };
       return descriptor;
-    },
-    setup() {
-      logger.error("Application setup");
-      return { logger: createLogger("shell.ui") };
-    },
-    // extras
-    async getPodLogs(id, tail) {
-      const { program } = await currentApi.engine.getCurrentSettings();
-      const args = ["pod", "logs"];
-      if (typeof tail !== "undefined") {
-        args.push(`--tail=${tail}`);
-      }
-      args.push("-f", id);
-      const result = await currentApi.engine.runScopedCommand(program.path, args);
-      return result;
-    },
-    async generateKube(entityId) {
-      const capable = currentApi.engine.ADAPTER === Podman.Adapter.ADAPTER;
-      if (!capable) {
-        logger.error(
-          "Current engine is not able to generate kube yaml",
-          currentApi.engine.ADAPTER,
-          Podman.Adapter.ADAPTER
-        );
-        return null;
-      }
-      const { program } = await currentApi.engine.getCurrentSettings();
-      const result = await currentApi.engine.runScopedCommand(program.path, ["generate", "kube", entityId]);
-      if (!result.success) {
-        logger.error("Unable to generate kube", entityId, result);
-      }
-      return result;
-    },
-    async getControllerScopes() {
-      if (!currentApi.engine) {
-        logger.error("No current engine");
-        return [];
-      }
-      logger.debug("Listing controller scopes of current engine", currentApi.engine);
-      return await currentApi.engine.getControllerScopes();
-    },
-    async connectToContainer(opts) {
-      const { id, title, shell } = opts || {};
-      logger.debug("Connecting to container", opts);
-      const { program } = await currentApi.engine.getCurrentSettings();
-      const { launcher, command } = await currentApi.engine.getScopedCommand(program.path, [
-        "exec",
-        "-it",
-        id,
-        shell || "/bin/sh"
-      ]);
-      logger.debug("Launching terminal for", { launcher, command });
-      const output = await launchTerminal(launcher, command, {
-        title: title || `${currentApi.engine.ADAPTER} container`
-      });
-      if (!output.success) {
-        logger.error("Unable to connect to container", id, output);
-      }
-      return output.success;
-    },
-    // FIND
-    async findProgram(opts) {
-      const engine = engines.find((it) => it.id === opts.id);
-      if (!engine) {
-        logger.error("Unable to find a matching engine", opts.id);
-        throw new Error("Find failed - no engine");
-      }
-      try {
-        const locator = opts.engine === Podman.ENGINE_PODMAN_VIRTUALIZED ? "whereis" : "which";
-        const result = await engine.getScopedCommand(locator, [opts.program], { scope: opts.scope });
-        const wrapper = { launcher: result.launcher, args: result.command.slice(0, -2) };
-        const detect = await findProgram(opts.program, { wrapper });
-        return detect;
-      } catch (error) {
-        logger.error("Unable to find program", error.message);
-      }
     }
   };
   return bridge;

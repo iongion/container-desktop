@@ -145,7 +145,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
       />
       <AnchorButton
         minimal
-        active={isActive ? isActive("pod.kube") : false}
+        active={isActive ? isActive("container.kube") : false}
         icon={IconNames.TEXT_HIGHLIGHT}
         text={t("Kube")}
         href={getContainerUrl(container.Id, "kube")}

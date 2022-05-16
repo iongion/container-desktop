@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { FetchVolumeOptions, CreateVolumeOptions } from "../../Api.clients";
 import { Volume } from "../../Types.container-app";
 
@@ -9,7 +9,7 @@ export interface VolumesModelState {
   volumes: Volume[];
 }
 
-export interface VolumesModel extends VolumesModelState {
+export interface VolumesModel extends VolumesModelState, ResetableModel<VolumesModel>{
   volumes: Volume[];
   // actions
   setVolumes: Action<VolumesModel, Volume[]>;
@@ -26,6 +26,9 @@ export interface VolumesModel extends VolumesModelState {
 export const createModel = (registry: AppRegistry): VolumesModel => ({
   volumes: [],
   // actions
+  reset: action((state) => {
+    state.volumes = [];
+  }),
   setVolumes: action((state, volumes) => {
     state.volumes = volumes;
   }),

@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { sortAlphaNum } from "../../domain/utils";
 import { CreateNetworkOptions } from "../../Api.clients";
 import { Network } from "../../Types.container-app";
@@ -11,7 +11,7 @@ export interface NetworksModelState {
   networksMap: { [key: string]: Network };
 }
 
-export interface NetworksModel extends NetworksModelState {
+export interface NetworksModel extends NetworksModelState, ResetableModel<NetworksModel> {
   // Actions
   setNetworks: Action<NetworksModel, Network[]>;
   networkAdd: Action<NetworksModel, Network>;
@@ -29,6 +29,10 @@ export const createModel = (registry: AppRegistry): NetworksModel => ({
   networks: [],
   networksMap: {},
   // Actions
+  reset: action((state) => {
+    state.networks = [];
+    state.networksMap = {};
+  }),
   networkAdd: action((state, network) => {
     state.networks.push(network)
   }),

@@ -2,7 +2,7 @@
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
 import { ContainerStateList } from "../../Types.container-app";
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 
 export interface ContainerStats {
   paused: number;
@@ -14,7 +14,7 @@ export interface DashboardModelState {
   containerStats: ContainerStats;
 }
 
-export interface DashboardModel extends DashboardModelState {
+export interface DashboardModel extends DashboardModelState, ResetableModel<DashboardModel>{
   // Actions
   setContainersStats: Action<DashboardModel, Partial<ContainerStats>>;
   // Thunks
@@ -29,6 +29,14 @@ export const createModel = (registry: AppRegistry): DashboardModel => ({
     created: 0
   },
   // Actions
+  reset: action((state) => {
+    state.containerStats = {
+      paused: 0,
+      running: 0,
+      exited: 0,
+      created: 0
+    }
+  }),
   setContainersStats: action((state, value) => {
     if (value.paused !== undefined) {
       state.containerStats.paused = value.paused;

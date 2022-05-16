@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { IconNames } from "@blueprintjs/icons";
 import { useParams } from "react-router-dom";
+import { Spinner } from "@blueprintjs/core";
 
 import { AppScreenProps, AppScreen } from "../../Types";
+import { Container } from "../../Types.container-app";
 import { ScreenHeader } from ".";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { CodeEditor } from "../../components/CodeEditor";
@@ -10,8 +12,6 @@ import { CodeEditor } from "../../components/CodeEditor";
 import { useStoreActions } from "../../domain/types";
 
 import "./GenerateKubeScreen.css";
-import { Spinner } from "@blueprintjs/core";
-import { Container } from "../../Types.container-app";
 
 export const ID = "container.kube";
 

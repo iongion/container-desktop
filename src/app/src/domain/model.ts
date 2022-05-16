@@ -52,11 +52,24 @@ export const createModel = (registry: AppRegistry): AppModel => {
       }
     }),
     // Thunks
+    reset: thunk(async (actions) => {
+      actions.container.reset();
+      actions.dashboard.reset();
+      actions.image.reset();
+      actions.machine.reset();
+      actions.network.reset();
+      actions.pod.reset();
+      actions.secret.reset();
+      actions.settings.reset();
+      actions.troubleshoot.reset();
+      actions.volume.reset();
+    }),
     start: thunk(async (actions, options) => {
       let nextPhase = AppBootstrapPhase.STARTING;
       return registry.withPending(async () => {
         try {
           await actions.setPhase(nextPhase);
+          await actions.reset();
           // offload
           const startup = await registry.api.start(options);
           if (startup.currentConnector) {

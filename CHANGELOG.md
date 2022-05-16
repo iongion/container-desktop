@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Fixed
+
+* Issue #84 - Detection of versions is now handled properly
+* Issue #54 - Pods tab: list with stats/start/stop
+* Models reset on engine change not to confuse the users keeping old values
+* Containers group header color for podman engine
+* Pending indicator in the sidebar footer was a bit off vertically, now is centered
+* Indentation due to css class name clashes
+* Set active tab for container kube
+* Ports map undefined coercion
+
+## Changed
+
+* Moved actions as plugins of bridge using lambda architecture - an async function with context and parameters
+* Clear bridge bootstrap phase, split into `init` happening only once and `start`, each time engines are switched
+* Faster and more reliable startup, less prone to crashes and easier to read
+* New models should implement `ResetableModel`
+* Lift error boundary so that the app still has custom title bar even when it crashes
+
 ## 4.1.0-rc.26 - 2022-05-15
 
 ## Fixed

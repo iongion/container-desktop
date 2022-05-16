@@ -33,8 +33,9 @@ export interface AppModelState {
   descriptor: ApplicationDescriptor;
 }
 
-
-
+export interface ResetableModel<T extends object> {
+  reset: Action<T>;
+}
 
 export interface AppModel extends AppModelState {
   // actions
@@ -47,6 +48,7 @@ export interface AppModel extends AppModelState {
   connectorUpdate: Action<AppModel, Partial<Connector>>;
 
   // thunks
+  reset: Thunk<DomainModel>;
   start: Thunk<AppModel, ConnectOptions | undefined>;
   // configure: Thunk<AppModel>;
 

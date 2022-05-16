@@ -92,7 +92,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const ports = container.NetworkSettings?.Ports;
   if (ports) {
     Object.keys(ports).forEach((portProtocol) => {
-      const info = ports[portProtocol];
+      const info = Array.isArray(ports[portProtocol]) ? ports[portProtocol] : [];
       info.forEach((info) => {
         const item = {
           key: `${portProtocol}`,
@@ -127,7 +127,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               });
               return (
                 <React.Fragment key={group.name}>
-                  <tr key={`group_${group.name}`} data-table-row="group.name" data-group={group.name}>
+                  <tr key={`group_${group.name}`} data-table-row="group.name" data-prefix-group={group.name}>
                     <td colSpan={3}>{group.title}</td>
                   </tr>
                   {items}

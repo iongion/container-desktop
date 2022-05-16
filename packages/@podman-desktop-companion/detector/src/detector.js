@@ -3,7 +3,7 @@ const path = require("path");
 const os = require("os");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { exec_launcher } = require("@podman-desktop-companion/executor");
+const { exec_launcher, exec_launcher_sync } = require("@podman-desktop-companion/executor");
 // modules
 // locals
 const logger = createLogger("container-client.Detector");
@@ -91,7 +91,7 @@ const findProgramVersion = async (program, opts, defaultValue) => {
     logger.warn("wsl.exe does not report a version - defaulting", defaultValue);
     return defaultValue;
   }
-  const result = await exec_launcher(program, ["--version"], opts);
+  const result = await exec_launcher_sync(program, ["--version"], opts);
   if (result.success) {
     version = parseProgramVersion(result.stdout);
   } else {
@@ -110,6 +110,8 @@ const findProgram = async (program, opts) => {
     const supportsVersion = program !== "wsl";
     if (supportsVersion) {
       version = await findProgramVersion(programPath, opts);
+    } else {
+      logger.warn(`Program ${program} does not report a version`);
     }
   } else {
     logger.error(`No path found for ${program} cli program - version check skipped`);

@@ -30,7 +30,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const containersFetch = useStoreActions((actions) => actions.container.containersFetch);
   const groups: ContainerGroup[] = useStoreState((state) => state.container.containersGroupedByPrefix(searchTerm));
   const onGroupToggleClick = useCallback((e) => {
-    const groupName = e.currentTarget.getAttribute("data-group");
+    const groupName = e.currentTarget.getAttribute("data-prefix-group");
     setCollapse((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
   }, []);
 
@@ -71,7 +71,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                               icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
                               text={groupName}
                               onClick={onGroupToggleClick}
-                              data-group={groupName}
+                              data-prefix-group={groupName}
                             />
                           </td>
                           <td className="AppDataTableGroupDetails" colSpan={6}>
@@ -130,7 +130,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       ) : undefined;
                       containerGroupData = (
                         <tr
-                          data-group={isPartOfGroup ? groupName : undefined}
+                          data-prefix-group={isPartOfGroup ? groupName : undefined}
                           data-container={container.Id}
                           data-state={container.Computed.DecodedState}
                         >

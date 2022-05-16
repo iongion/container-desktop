@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { FetchSecretOptions, CreateSecretOptions } from "../../Api.clients";
 import { Secret } from "../../Types.container-app";
 
@@ -9,7 +9,7 @@ export interface SecretsModelState {
   secrets: Secret[];
 }
 
-export interface SecretsModel extends SecretsModelState {
+export interface SecretsModel extends SecretsModelState, ResetableModel<SecretsModel> {
   secrets: Secret[];
   // actions
   setSecrets: Action<SecretsModel, Secret[]>;
@@ -26,6 +26,9 @@ export interface SecretsModel extends SecretsModelState {
 export const createModel = (registry: AppRegistry): SecretsModel => ({
   secrets: [],
   // actions
+  reset: action((state) => {
+    state.secrets = [];
+  }),
   setSecrets: action((state, secrets) => {
     state.secrets = secrets;
   }),

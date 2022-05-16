@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { Native } from "../../Native";
 import { FetchImageOptions } from "../../Api.clients";
 import { ContainerImage } from "../../Types.container-app";
@@ -11,8 +11,7 @@ export interface ImagesModelState {
   images: ContainerImage[];
 }
 
-export interface ImagesModel extends ImagesModelState {
-  images: ContainerImage[];
+export interface ImagesModel extends ImagesModelState, ResetableModel<ImagesModel> {
   // actions
   setImages: Action<ImagesModel, ContainerImage[]>;
   update: Action<ImagesModel, Partial<ContainerImage>>;
@@ -35,6 +34,9 @@ export const createModel = (registry: AppRegistry): ImagesModel => {
     native,
     images: [],
     // actions
+    reset: action((state) => {
+      state.images = [];
+    }),
     setImages: action((state, images) => {
       state.images = images;
     }),
