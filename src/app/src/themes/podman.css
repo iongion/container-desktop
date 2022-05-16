@@ -51,3 +51,7 @@ body[data-adapter="podman"] .AppScreen .bp4-navbar {
 body[data-adapter="podman"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
   background: #4f175b;
 }
+
+body[data-adapter="podman"] .AppDataTableGroupRow {
+  background-color: #1a051c;
+}

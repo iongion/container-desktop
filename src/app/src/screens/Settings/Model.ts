@@ -3,14 +3,14 @@ import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
 import { ContainerEngine, SystemInfo } from "../../Types.container-app";
 // module
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 
 export interface SettingsModelState {
   engine?: ContainerEngine;
   systemInfo?: SystemInfo;
 }
 
-export interface SettingsModel extends SettingsModelState {
+export interface SettingsModel extends SettingsModelState, ResetableModel<SettingsModel> {
   // actions
   setSystemInfo: Action<SettingsModel, SystemInfo>;
   // thunks
@@ -19,6 +19,10 @@ export interface SettingsModel extends SettingsModelState {
 
 export const createModel = (registry: AppRegistry): SettingsModel => {
   return {
+    reset: action((state) => {
+      state.engine = undefined;
+      state.systemInfo = undefined;
+    }),
     setSystemInfo: action((state, systemInfo) => {
       state.systemInfo = systemInfo;
     }),

@@ -14,7 +14,7 @@ const {
 } = require("@podman-desktop-companion/detector");
 // module
 const { createApiDriver, getApiConfig, Runner } = require("../api");
-const { LIMA_PROGRAM, WSL_PROGRAM } = require("../constants");
+const { LIMA_PROGRAM, WSL_PROGRAM, WSL_VERSION, LIMA_VERSION } = require("../constants");
 
 /**
  *
@@ -108,6 +108,7 @@ class AbstractClientEngine {
     /** @access protected */
     this.osType = osType || os.type();
     this.apiStarted = false;
+    this.detectedSettings = {};
   }
 
   setup() {
@@ -134,6 +135,36 @@ class AbstractClientEngine {
    */
   async getExpectedSettings() {
     throw new Error("getExpectedSettings must be implemented");
+  }
+
+  setDetectedSettings(settings) {
+    this.detectedSettings = settings;
+  }
+
+  async detect(expected) {
+    const detected = {
+      program: {
+        name: expected.program.name,
+        path: undefined,
+        version: undefined
+      }
+    };
+    const available = await this.isEngineAvailable();
+    if (available.success) {
+      try {
+        this.logger.warn(this.id, "Find program MISS", expected.program.name);
+        const program = await findProgram(expected.program.name, { osType: this.osType });
+        this.logger.warn(this.id, "Find program CACHE", program);
+        detected.program.name = expected.program.name;
+        detected.program.path = program.path;
+        detected.program.version = program.version;
+      } catch (error) {
+        this.logger.error(this.id, `Unable to find ${expected.program.name}`, error.message, error.stack);
+      }
+    } else {
+      this.logger.warn(this.id, "Engine is not available - detection skipped");
+    }
+    return detected;
   }
 
   /**
@@ -180,6 +211,7 @@ class AbstractClientEngine {
   async getSettings() {
     const expected = await this.getExpectedSettings();
     // Optimization - apply user overrides only if engine is available
+    let detected = this.detectedSettings || {};
     let user = {};
     const available = await this.isEngineAvailable();
     if (available.success) {
@@ -187,6 +219,7 @@ class AbstractClientEngine {
     }
     const settings = {
       expected,
+      detected,
       user,
       current: merge(
         {
@@ -201,6 +234,7 @@ class AbstractClientEngine {
           }
         },
         expected,
+        detected,
         user
       )
     };
@@ -208,9 +242,9 @@ class AbstractClientEngine {
   }
 
   /**
-   * Extracts only the current settings representing actual configuration
+   * Caches and retrieves current settings
    * @public
-   * @return {Settings} Settings - Actual settings
+   * @return {Settings} Settings - Current settings
    */
   async getCurrentSettings() {
     if (!this.currentSettings) {
@@ -220,9 +254,33 @@ class AbstractClientEngine {
     return this.currentSettings;
   }
 
-  async setCurrentSettings(settings) {
+  /**
+   * Retrieves current cached settings
+   * @public
+   * @param {Settings} settings
+   *        The current settings
+   * @return {Settings} Settings - Current settings
+   */
+  setCurrentSettings(settings) {
     this.currentSettings = settings;
-    return this.currentSettings;
+    return settings;
+  }
+
+  /**
+   * Performs detections and recomputes settings
+   * @public
+   * @return {Settings} Settings - All settings
+   */
+  async updateSettings() {
+    // Creates merged settings - without detections
+    const initialSettings = await this.getSettings();
+    // Performs detections
+    const detected = await this.detect(initialSettings.expected);
+    this.setDetectedSettings(detected);
+    // Re-merges - now with detections performed
+    const updatedSettings = await this.getSettings();
+    this.setCurrentSettings(updatedSettings.current);
+    return updatedSettings;
   }
 
   /**
@@ -393,10 +451,11 @@ class AbstractClientEngine {
       settings: await this.getSettings(opts)
     };
     try {
-      const current = await this.getCurrentSettings(opts);
+      const current = await this.getCurrentSettings();
       connector.settings.current = merge(
         {},
         connector.settings.expected,
+        connector.settings.detected,
         connector.settings.user,
         connector.settings.current,
         current
@@ -506,6 +565,47 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
   async getExpectedSettings() {
     throw new Error("getExpectedSettings must be implemented");
   }
+  async detect(expected) {
+    const detected = {
+      controller: {
+        name: expected.controller.name,
+        path: undefined,
+        version: expected.controller.version
+      },
+      program: {
+        name: expected.program.name,
+        path: undefined,
+        version: expected.program.version
+      }
+    };
+    const available = await this.isEngineAvailable();
+    if (available.success) {
+      try {
+        this.logger.debug(this.id, "Find controller MISS", expected.controller.name);
+        const controller = await findProgram(expected.controller.name, { osType: this.osType });
+        detected.controller.path = controller.path;
+        detected.controller.version = controller.version;
+        try {
+          this.logger.debug(this.id, "Find controller program MISS", expected.program.name);
+          const program = await findProgram(
+            expected.program.name,
+            { osType: this.osType },
+            {
+              wrapper: controller.path
+            }
+          );
+          this.logger.debug(this.id, "Find controller program CACHE", expected.program.name, program);
+          detected.program.path = program.path;
+          detected.program.version = program.version;
+        } catch (error) {
+          this.logger.error(`Unable to find controller program ${expected.program.name}`, error.message, error.stack);
+        }
+      } catch (error) {
+        this.logger.error(`Unable to find controller ${expected.controller.name}`, error.message, error.stack);
+      }
+    }
+    return detected;
+  }
   async getUserSettings() {
     return {
       api: {
@@ -521,10 +621,10 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
       }
     };
   }
-
   async getSettings() {
     const expected = await this.getExpectedSettings();
     // Optimization - apply user overrides only if engine is available
+    let detected = this.detectedSettings || {};
     let user = {};
     const available = await this.isEngineAvailable();
     if (available.success) {
@@ -532,6 +632,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     }
     const settings = {
       expected,
+      detected,
       user,
       current: merge(
         {
@@ -552,6 +653,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
           }
         },
         expected,
+        detected,
         user
       )
     };
@@ -790,29 +892,14 @@ class AbstractClientEngineSubsystemWSL extends AbstractControlledClientEngine {
     }
     return { launcher: controller.path, command };
   }
-  async getCurrentSettings() {
-    if (!this.currentSettings) {
-      const settings = await super.getCurrentSettings();
-      if (this.osType === "Windows_NT") {
-        if (this._detectedControllerProgram) {
-          this.logger.debug(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
-        } else {
-          this.logger.warn(this.id, "DETECT WSL PROGRAM CONTROLLER CACHE MISS");
-          try {
-            this._detectedControllerProgram = await findProgram(WSL_PROGRAM, { osType: this.osType });
-          } catch (error) {
-            this.logger.error("Unable to find WSL", error.message, error.stack);
-          }
-          settings.controller.name = WSL_PROGRAM;
-          settings.controller.path = this._detectedControllerProgram?.path;
-        }
-        settings.controller.version = this._detectedControllerProgram?.version;
-      } else {
-        this.logger.debug("WSL program detection skipped on", this.osType);
+  async getExpectedSettings() {
+    return {
+      controller: {
+        name: WSL_PROGRAM,
+        path: WSL_PATH,
+        version: WSL_VERSION
       }
-      this.currentSettings = settings;
-    }
-    return this.currentSettings;
+    };
   }
 }
 
@@ -891,29 +978,14 @@ class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
     }
     return { launcher: controller.path, command };
   }
-  async getCurrentSettings() {
-    if (!this.currentSettings) {
-      const settings = await super.getCurrentSettings();
-      if (this.osType === "Darwin") {
-        if (this._detectedControllerProgram) {
-          this.logger.debug(this.id, "DETECT PROGRAM CONTROLLER CACHE HIT", this._detectedControllerProgram);
-        } else {
-          this.logger.warn(this.id, "DETECT PROGRAM CONTROLLER CACHE MISS");
-          try {
-            this._detectedControllerProgram = await findProgram(LIMA_PROGRAM, { osType: this.osType });
-          } catch (error) {
-            this.logger.error("Unable to find LIMA", error.message, error.stack);
-          }
-          settings.controller.name = LIMA_PROGRAM;
-          settings.controller.path = this._detectedControllerProgram?.path;
-        }
-        settings.controller.version = this._detectedControllerProgram?.version;
-      } else {
-        this.logger.debug("LIMA program detection skipped on", this.osType);
+  async getExpectedSettings() {
+    return {
+      controller: {
+        name: LIMA_PROGRAM,
+        path: LIMA_PATH,
+        version: LIMA_VERSION
       }
-      this.currentSettings = settings;
-    }
-    return this.currentSettings;
+    };
   }
 }
 

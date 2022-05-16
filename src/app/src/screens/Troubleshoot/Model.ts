@@ -1,11 +1,11 @@
 // vendors
-import { Thunk, thunk } from "easy-peasy";
+import { Thunk, action, thunk } from "easy-peasy";
 // project
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 
 export interface TroubleshootModelState {}
 
-export interface TroubleshootModel extends TroubleshootModelState {
+export interface TroubleshootModel extends TroubleshootModelState, ResetableModel<TroubleshootModel> {
   // actions
   // thunks
   troubleShootPrune: Thunk<TroubleshootModel>;
@@ -14,6 +14,8 @@ export interface TroubleshootModel extends TroubleshootModelState {
 
 export const createModel = (registry: AppRegistry): TroubleshootModel => {
   return {
+    reset: action((state) => {
+    }),
     troubleShootPrune: thunk(async (actions) =>
       registry.withPending(async () => {
         await registry.api.pruneSystem();

@@ -6,7 +6,7 @@ const merge = require("lodash.merge");
 // project
 const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
 const userSettings = require("@podman-desktop-companion/user-settings");
-const { findProgram, findProgramVersion, getAvailablePodmanMachines } = require("@podman-desktop-companion/detector");
+const { findProgram, getAvailablePodmanMachines } = require("@podman-desktop-companion/detector");
 // module
 const {
   // WSL - common
@@ -99,26 +99,6 @@ class PodmanClientEngineNative extends AbstractClientEngine {
         path: this.userConfiguration.getKey(`${this.id}.program.path`)
       }
     };
-  }
-  async getCurrentSettings() {
-    if (!this.currentSettings) {
-      const settings = await super.getCurrentSettings();
-      if (this.osType === "Linux") {
-        if (!this._detectedProgram) {
-          try {
-            this._detectedProgram = await findProgram(this.PROGRAM, { osType: this.osType });
-          } catch (error) {
-            this.logger.error(`Unable to find ${this.PROGRAM}`, error.message, error.stack);
-          }
-        } else {
-          settings.program.name = PROGRAM;
-          settings.program.path = this._detectedProgram?.path;
-          settings.program.version = this._detectedProgram?.version;
-        }
-      }
-      this.currentSettings = settings;
-    }
-    return this.currentSettings;
   }
   // Runtime
   async startApi(customSettings, opts) {
@@ -252,43 +232,11 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
     });
     return expected;
   }
-  async getCurrentSettings() {
-    if (!this.currentSettings) {
-      const settings = await super.getCurrentSettings();
-      // Detect current program version
-      if (this._detectedControllerProgramVersion) {
-        this.logger.debug(
-          this.id,
-          "DETECT VIRTUALIZED CONTROLLER PROGRAM VERSION CACHE HIT",
-          this._detectedControllerProgramVersion
-        );
-      } else {
-        this.logger.warn(this.id, "DETECT VIRTUALIZED CONTROLLER PROGRAM VERSION CACHE MISS");
-        try {
-          this.logger.debug(this.id, "Detecting current controller version", settings);
-          this._detectedControllerProgramVersion = await findProgramVersion(settings.controller.path, {
-            osType: this.osType
-          });
-        } catch (error) {
-          this.logger.error(
-            this.id,
-            "Unable to find controller version",
-            settings.controller,
-            error.message,
-            error.stack
-          );
-        }
-      }
-      settings.controller.version = this._detectedControllerProgramVersion;
-      this.currentSettings = settings;
-    }
-    return this.currentSettings;
-  }
   async getControllerScopes() {
     return await this.getMachines();
   }
   async getMachines(customFormat) {
-    this.logger.debug(this.id, "getMachines with controller", this.currentSettings);
+    this.logger.debug(this.id, "getMachines with controller");
     const settings = await this.getCurrentSettings();
     const available = await this.isEngineAvailable();
     const canListScopes = available.success && settings.controller.path;
@@ -390,7 +338,7 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
   }
 
   async getMachines(customFormat) {
-    this.logger.debug(this.id, "getMachines with controller", this.currentSettings);
+    this.logger.debug(this.id, "getMachines with controller");
     const settings = await this.getCurrentSettings();
     const available = await this.isEngineAvailable();
     const canListScopes = available.success && settings.program.path;
@@ -462,7 +410,7 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
   }
 
   async getMachines(customFormat) {
-    this.logger.debug(this.id, "getMachines with controller", this.currentSettings);
+    this.logger.debug(this.id, "getMachines with controller");
     const settings = await this.getCurrentSettings();
     const available = await this.isEngineAvailable();
     const canListScopes = available.success && settings.program.path;

@@ -43,3 +43,6 @@
   font-size: 10px;
   white-space: nowrap;
 }
+.AppSidebarFooterPendingIndicator {
+  padding-top: 2px;
+}

@@ -3,7 +3,7 @@ import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
 import { Machine, FetchMachineOptions, CreateMachineOptions } from "../../Types.container-app";
 // module
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { Native } from "../../Native";
 
 export interface MachinesModelState {
@@ -11,7 +11,7 @@ export interface MachinesModelState {
   machines: Machine[];
 }
 
-export interface MachinesModel extends MachinesModelState {
+export interface MachinesModel extends MachinesModelState, ResetableModel<MachinesModel>  {
   machines: Machine[];
   // actions
   setMachines: Action<MachinesModel, Machine[]>;
@@ -34,6 +34,9 @@ export const createModel = (registry: AppRegistry): MachinesModel => {
     native,
     machines: [],
     // actions
+    reset: action((state) => {
+      state.machines = [];
+    }),
     setMachines: action((state, machines) => {
       state.machines = machines;
     }),

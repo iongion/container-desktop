@@ -1,7 +1,7 @@
 // vendors
 import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
 // project
-import { AppRegistry } from "../../domain/types";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { FetchPodOptions, CreatePodOptions } from "../../Api.clients";
 import { Pod, PodStatusList } from "../../Types.container-app";
 
@@ -10,7 +10,7 @@ export interface PodsModelState {
   podsMap: { [key: string]: Pod };
 }
 
-export interface PodsModel extends PodsModelState {
+export interface PodsModel extends PodsModelState, ResetableModel<PodsModel> {
   // Actions
   setPods: Action<PodsModel, Pod[]>;
   podUpdate: Action<PodsModel, Partial<Pod>>;
@@ -33,6 +33,10 @@ export const createModel = (registry: AppRegistry): PodsModel => ({
   pods: [],
   podsMap: {},
   // Actions
+  reset: action((state) => {
+    state.pods = [];
+    state.podsMap = {};
+  }),
   setPods: action((state, pods) => {
     state.pods = pods;
   }),
