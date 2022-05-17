@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 // project
 
 import { getSettingsUrl } from "./Navigation";
+import { useStoreState } from "../../domain/types";
 
 // Actions menu
 interface ActionsMenuProps {
@@ -14,6 +15,7 @@ interface ActionsMenuProps {
 
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, isActive }) => {
   const { t } = useTranslation();
+  const isRunning = useStoreState((state) => state.descriptor.running);
 
   const expandAsButtons = expand ? (
     <>
@@ -26,10 +28,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, isActive }) =>
       />
       <AnchorButton
         minimal
+        disabled={!isRunning}
         active={isActive ? isActive("settings.system-info") : false}
         icon={IconNames.EYE_OPEN}
         text={t("System info")}
         href={getSettingsUrl("system-info")}
+        title={isRunning ? t("") : t("Access to this screen requires connection")}
       />
     </>
   ) : undefined;

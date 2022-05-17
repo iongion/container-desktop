@@ -10,7 +10,8 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@podman-desktop-companion/logger": "file:../logger"
+    "@podman-desktop-companion/logger": "file:../logger",
+    "@podman-desktop-companion/utils": "file:../utils"
   },
   "engines": {
     "node": "~16"

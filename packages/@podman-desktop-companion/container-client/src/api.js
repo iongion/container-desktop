@@ -74,9 +74,14 @@ class Runner {
       this.logger.error("Starting API - API is not configured");
       return false;
     }
-    this.logger.debug("Starting API - check if already running");
-    const running = await this.client.isApiRunning();
-    if (running.success) {
+    const settings = await this.client.getCurrentSettings();
+    const availability = await this.client.getAvailability(settings);
+    if (!availability.program) {
+      this.logger.error("Starting API - start skipped when no program is available", availability);
+      return false;
+    }
+    this.logger.debug("Starting API - check if already running using availability", availability);
+    if (availability.api) {
       this.logger.debug("Starting API - already running(returning)");
       return true;
     }

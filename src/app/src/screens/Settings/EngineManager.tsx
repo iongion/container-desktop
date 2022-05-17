@@ -365,6 +365,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         defaultValue=""
         rules={{ required: t("Program path must be set") }}
         render={({ field: { onChange, onBlur, value, name, ref, }, fieldState: { isDirty, error } }) => {
+          let programPathHelperText = "";
           let valid = true;
           let message;
           if (error?.message) {
@@ -373,9 +374,11 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           }
           if (valid) {
             valid = availability.program;
+            programPathHelperText = t("Path to {{name}} CLI", program);
           }
           if (!availability.program) {
             message = availability.report.program;
+            programPathHelperText = t("The {{name}} CLI could not be found", program);
           }
           let helperText = availability.program ? (
             <div className="AppSettingsFieldProgramHelper">
@@ -396,7 +399,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
               {scopeSelectorWidget}
               <FormGroup
                 helperText={helperText}
-                label={t("Path to {{name}} CLI", program)}
+                label={programPathHelperText}
                 labelFor="programPath"
                 className="ProgramPathLocator"
               >

@@ -4,9 +4,9 @@ const path = require("path");
 // vendors
 const merge = require("lodash.merge");
 // project
-const isFlatpak = !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
+const { isFlatpak } = require("@podman-desktop-companion/utils");
 const userSettings = require("@podman-desktop-companion/user-settings");
-const { findProgram, getAvailablePodmanMachines } = require("@podman-desktop-companion/detector");
+const { getAvailablePodmanMachines } = require("@podman-desktop-companion/detector");
 // module
 const {
   // WSL - common
@@ -34,7 +34,7 @@ const PODMAN_API_SOCKET = `podman-desktop-companion-${PROGRAM}-rest-api.sock`;
 // Native
 const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
 const NATIVE_PODMAN_CLI_VERSION = "4.0.3";
-const NATIVE_PODMAN_SOCKET_PATH = isFlatpak
+const NATIVE_PODMAN_SOCKET_PATH = isFlatpak()
   ? path.join("/tmp", PODMAN_API_SOCKET)
   : path.join(userSettings.getPath(), PODMAN_API_SOCKET);
 const NATIVE_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
@@ -132,8 +132,9 @@ class PodmanClientEngineNative extends AbstractClientEngine {
 
   async getMachines(customFormat) {
     const settings = await this.getCurrentSettings();
-    const available = await this.isEngineAvailable();
-    const canListScopes = available.success && settings.program.path;
+    const availableEngine = await this.isEngineAvailable();
+    const availableProgram = await this.isProgramAvailable();
+    const canListScopes = availableEngine.success && availableProgram.success && settings.program.path;
     const items = canListScopes ? await getAvailablePodmanMachines(settings.program.path) : [];
     return items;
   }
@@ -238,8 +239,9 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
   async getMachines(customFormat) {
     this.logger.debug(this.id, "getMachines with controller");
     const settings = await this.getCurrentSettings();
-    const available = await this.isEngineAvailable();
-    const canListScopes = available.success && settings.controller.path;
+    const availableEngine = await this.isEngineAvailable();
+    const availableController = await this.isControllerAvailable(settings);
+    const canListScopes = availableEngine.success && availableController.success && settings.controller.path;
     const items = canListScopes ? await getAvailablePodmanMachines(settings.controller.path) : [];
     return items;
   }
@@ -340,8 +342,10 @@ class PodmanClientEngineSubsystemWSL extends AbstractClientEngineSubsystemWSL {
   async getMachines(customFormat) {
     this.logger.debug(this.id, "getMachines with controller");
     const settings = await this.getCurrentSettings();
-    const available = await this.isEngineAvailable();
-    const canListScopes = available.success && settings.program.path;
+    const availableEngine = await this.isEngineAvailable();
+    const availableController = await this.isControllerAvailable(settings);
+    const canListScopes =
+      availableEngine.success && availableController.success && settings.controller.path && settings.program.path;
     let items = [];
     if (canListScopes) {
       const command = await this.getScopedCommand();
@@ -412,8 +416,10 @@ class PodmanClientEngineSubsystemLIMA extends AbstractClientEngineSubsystemLIMA 
   async getMachines(customFormat) {
     this.logger.debug(this.id, "getMachines with controller");
     const settings = await this.getCurrentSettings();
-    const available = await this.isEngineAvailable();
-    const canListScopes = available.success && settings.program.path;
+    const availableEngine = await this.isEngineAvailable();
+    const availableController = await this.isControllerAvailable(settings);
+    const canListScopes =
+      availableEngine.success && availableController.success && settings.controller.path && settings.program.path;
     let items = [];
     if (canListScopes) {
       const command = await this.getScopedCommand();

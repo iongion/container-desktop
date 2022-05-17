@@ -1,4 +1,5 @@
 // node
+const fs = require("fs");
 const path = require("path");
 const os = require("os");
 // project
@@ -65,7 +66,15 @@ const findProgramPath = async (program, opts) => {
     result = await exec_launcher("whereis", [program], opts);
     logger.debug("Detecting", program, "using - whereis >", result);
     if (result.success) {
-      programPath = result.stdout.split(" ")?.[1] || "";
+      const decodedPath = result.stdout.split(" ")?.[1] || "";
+      try {
+        const stat = fs.lstatSync(decodedPath);
+        if (stat.isFile()) {
+          programPath = decodedPath;
+        }
+      } catch (error) {
+        logger.error(`Unable to verify if ${program} program path is a file`, error.message);
+      }
     } else {
       logger.warn(`Unable to detect ${program} cli program path - using whereis`, result);
     }

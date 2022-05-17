@@ -1,3 +1,18 @@
+// node
+const fs = require("fs");
+const path = require("path");
+// locals
+const isFlatpak = () => !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
+
+function isFilePresent(filePath) {
+  let vfsFilePath = filePath;
+  if (isFlatpak()) {
+    vfsFilePath = path.join("/var/run/host", filePath);
+  }
+  console.debug("Checking file presence", { filePath, vfsFilePath });
+  return fs.existsSync(vfsFilePath);
+}
+
 function axiosConfigToCURL(config) {
   let requestUrl = `${config.baseURL}${config.url}`;
   if (Object.keys(config.params || {}).length) {
@@ -41,5 +56,7 @@ function axiosConfigToCURL(config) {
 }
 
 module.exports = {
+  isFlatpak,
+  isFilePresent,
   axiosConfigToCURL
 };
