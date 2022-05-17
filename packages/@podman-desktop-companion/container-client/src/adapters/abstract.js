@@ -675,7 +675,6 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     } else {
       details = "Path not set";
     }
-    console.error(">>>> is controller available", settings.controller.path, { success, details });
     return { success, details };
   }
   async isControllerScopeAvailable(settings) {
