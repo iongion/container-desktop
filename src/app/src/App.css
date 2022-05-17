@@ -141,6 +141,11 @@
   min-width: 120px;
   justify-content: flex-start;
 }
+.AppDataTableGroupName .bp4-button .bp4-button-text .buttonTextLabel {
+  color: #dcdcdc;
+  font-weight: bold;
+  font-size: 13px;
+}
 .AppDataTableGroupDetails {
   text-align: right !important;
 }

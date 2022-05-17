@@ -69,7 +69,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             <Button
                               minimal
                               icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
-                              text={groupName}
+                              text={<span className="buttonTextLabel">{groupName}</span>}
+                              title={t("{{name}} containers group", { name: groupName })}
                               onClick={onGroupToggleClick}
                               data-prefix-group={groupName}
                             />
