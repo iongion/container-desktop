@@ -21,7 +21,7 @@
 [data-table="containers"] .ContainerLogsButton,
 [data-table="containers"] .ContainerLayersButton {
   max-width: 240px;
-  font-size: 11px;
+  font-size: 12px;
 }
 [data-table="containers"] .ContainerLogsButton,
 [data-table="containers"] .ContainerLayersButton .bp4-button-text {
@@ -33,7 +33,7 @@
 }
 [data-table="containers"] .ContainerLogsButton {
   padding-top: 4px;
-  font-size: 14px;
+  font-size: 12px;
   min-width: 140px;
   text-align: left;
 }
