@@ -133,9 +133,9 @@ class PodmanClientEngineNative extends AbstractClientEngine {
   async getMachines(customFormat) {
     const settings = await this.getCurrentSettings();
     const availableEngine = await this.isEngineAvailable();
-    const availableProgram = await this.isProgramAvailable();
+    const availableProgram = await this.isProgramAvailable(settings);
     const canListScopes = availableEngine.success && availableProgram.success && settings.program.path;
-    const items = canListScopes ? await getAvailablePodmanMachines(settings.program.path) : [];
+    const items = canListScopes ? await getAvailablePodmanMachines(settings.program.path, customFormat) : [];
     return items;
   }
 }
@@ -242,7 +242,7 @@ class PodmanClientEngineVirtualized extends AbstractControlledClientEngine {
     const availableEngine = await this.isEngineAvailable();
     const availableController = await this.isControllerAvailable(settings);
     const canListScopes = availableEngine.success && availableController.success && settings.controller.path;
-    const items = canListScopes ? await getAvailablePodmanMachines(settings.controller.path) : [];
+    const items = canListScopes ? await getAvailablePodmanMachines(settings.controller.path, customFormat) : [];
     return items;
   }
   // Runtime

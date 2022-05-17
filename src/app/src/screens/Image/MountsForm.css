@@ -22,6 +22,10 @@
 .ContainerMountProperties {
   flex: 1;
 }
+.ContainerMountProperties .bp4-form-group.bp4-inline .bp4-label {
+  min-width: 70px;
+  display: inline-block;
+}
 .ContainerMountActions {
   display: flex;
   vertical-align: middle;

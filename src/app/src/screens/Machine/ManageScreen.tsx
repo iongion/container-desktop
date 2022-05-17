@@ -30,6 +30,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
   // Change hydration
   usePoller({ poller: machinesFetch });
 
+  console.debug(">>> render", machines);
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <AppScreenHeader

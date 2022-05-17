@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 4.1.0-rc.28 - 2022-05-17
+
 ## Fixed
 
 * Issue #84 - Detection of versions is now handled properly
@@ -18,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Indentation due to css class name clashes
 * Set active tab for container kube
 * Ports map undefined coercion
+* Detection avoids baseline versions from being reported to the user
 
 ## Changed
 
@@ -26,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Faster and more reliable startup, less prone to crashes and easier to read
 * New models should implement `ResetableModel`
 * Lift error boundary so that the app still has custom title bar even when it crashes
+* Improved detection flow - test paths presence on disk for required executables
+* Visual improvements
 
 ## 4.1.0-rc.26 - 2022-05-15
 
