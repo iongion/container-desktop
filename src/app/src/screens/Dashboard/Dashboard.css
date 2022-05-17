@@ -30,10 +30,11 @@
   margin: 0 auto;
   margin-bottom: 10px;
   font-size: 11px !important;
-  font-family: monospace;
+  font-family: sans-serif;
   min-width: 50%;
   border: 1px solid;
 }
 .DashboardContainersReportTable tr td:last-child {
   text-align: center;
+  font-family: monospace;
 }

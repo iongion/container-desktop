@@ -23,7 +23,8 @@ const adaptersList = [Podman.Adapter, Docker.Adapter];
 
 const createBridge = (bridgeOpts) => {
   const { ipcRenderer, userConfiguration, osType, version, environment } = bridgeOpts;
-  const defaultConnectorId = osType === "Linux" ? "engine.default.podman.native" : "engine.default.podman.virtualized";
+  const alternativeConnectorId = "engine.default.podman.virtualized";
+  const defaultConnectorId = osType === "Linux" ? "engine.default.podman.native" : alternativeConnectorId;
   const logger = createLogger("bridge");
   let adapters = [];
   let engines = [];
@@ -109,11 +110,17 @@ const createBridge = (bridgeOpts) => {
     }
     // if none found - default
     if (!connector) {
-      logger.debug("No default user connector - picking preferred(favor podman)");
+      logger.warn("No default user connector - picking preferred(favor podman)", defaultConnectorId);
       connector = connectors.find(({ id }) => id === defaultConnectorId);
     }
+    // if no default found - alternative (this can happen if detection crashes)
     if (!connector) {
-      logger.warn("Defaulting to first connector");
+      logger.warn("No default user connector - picking preferred(favor podman)", alternativeConnectorId);
+      connector = connectors.find(({ id }) => id === alternativeConnectorId);
+    }
+    // this is last resort - bad
+    if (!connector) {
+      logger.error("Defaulting to first connector");
       connector = connectors[0];
     }
     if (opts?.settings) {
@@ -141,11 +148,11 @@ const createBridge = (bridgeOpts) => {
             try {
               logger.debug(connector.id, "Creating connector engine api start - trigger");
               started = await engine.startApi();
+              // After start - availability must be re-computed
+              connector.availability = await engine.getAvailability(connector.settings.current);
+              logger.debug(connector.id, "Creating connector engine api post-start", connector);
             } catch (error) {
               logger.error(connector.id, "Creating connector engine api start - failed", error.message, error.stack);
-            }
-            if (started) {
-              connector.availability.api = true;
             }
           }
         }
@@ -166,12 +173,12 @@ const createBridge = (bridgeOpts) => {
       connector,
       engine,
       destroy: async () => {
-        if (host.started) {
+        if (host.connector && host.started) {
           if (engine) {
             try {
               logger.debug(host.connector?.id, "Stopping existing API");
               await engine.stopApi();
-              connector.availability.api = false;
+              host.connector.availability.api = false;
               host.running = false;
               host.started = false;
             } catch (error) {

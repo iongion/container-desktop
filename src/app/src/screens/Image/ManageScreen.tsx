@@ -74,7 +74,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   {isCondensed ? (
                     <td>
                       {imageLayersButton}
-                      <div>{image.Registry}</div>
+                      <div className="ContainerImageRegistry" title={t("Registry")}>{image.Registry}</div>
                     </td>
                   ) : (
                     <>

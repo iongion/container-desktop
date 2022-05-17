@@ -29,6 +29,7 @@
   white-space: nowrap;
   text-align: left;
   min-width: 120px;
+  font-size: 12px;
 }
 [data-table="pods"] .PodState {
   border-radius: 6px;

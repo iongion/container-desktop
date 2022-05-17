@@ -7,6 +7,7 @@ const { v4 } = require("uuid");
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
 const { exec_launcher_async, exec_launcher_sync } = require("@podman-desktop-companion/executor");
+const { isFilePresent } = require("@podman-desktop-companion/utils");
 const {
   findProgram,
   getAvailableLIMAInstances,
@@ -334,13 +335,13 @@ class AbstractClientEngine {
     const result = { success: false, details: undefined };
     // Native path to program
     if (!settings.program.path) {
-      result.details = "Program path is not set";
+      result.details = "Path not set";
       return result;
     }
-    // if (!isFilePresent(settings.program.path)) {
-    //   result.details = "Program is not accessible";
-    //   return result;
-    // }
+    if (!isFilePresent(settings.program.path)) {
+      result.details = "Not present in path";
+      return result;
+    }
     result.success = true;
     result.details = "Program is available";
     return result;
@@ -410,7 +411,7 @@ class AbstractClientEngine {
         availability.api = true;
       }
     } else {
-      availability.report.api = "Not checked - program not available";
+      availability.report.api = "API check skipped";
     }
     availability.all = availability.engine && availability.program && availability.api;
     return availability;
@@ -665,15 +666,14 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
     let success = false;
     let details;
     if (settings?.controller?.path) {
-      success = true;
-      // if (isFilePresent(settings.controller.path)) {
-      //   success = true;
-      //   details = "Controller is available";
-      // } else {
-      //   details = `Controller not found`;
-      // }
+      if (isFilePresent(settings.controller.path)) {
+        success = true;
+        details = "Controller is available";
+      } else {
+        details = "Not present in path";
+      }
     } else {
-      details = "Controller path not set";
+      details = "Path not set";
     }
     return { success, details };
   }
@@ -745,7 +745,7 @@ class AbstractControlledClientEngine extends AbstractClientEngine {
         availability.api = true;
       }
     } else {
-      availability.report.api = `Not checked - ${availability.report.program}`;
+      availability.report.api = "API check skipped";
     }
     availability.all = availability.engine && availability.controller && availability.program && availability.api;
     return availability;
