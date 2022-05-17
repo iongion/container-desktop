@@ -5,7 +5,7 @@ const { createLogger } = require("@podman-desktop-companion/logger");
 // locals
 const logger = createLogger("bridge.connect");
 
-const connectFunction = async (currentApi, options) => {
+const connectFunction = async (currentApi, opts) => {
   const { id, title, shell } = opts || {};
   logger.debug("Connecting to container", opts);
   const { program } = await currentApi.engine.getCurrentSettings();
