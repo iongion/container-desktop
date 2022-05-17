@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 4.1.0-rc.29 - 2022-05-17
+
+## Fixed
+
+* Issue #85 - Detection of paths is now handled properly
+
 ## 4.1.0-rc.28 - 2022-05-17
 
 ## Fixed
