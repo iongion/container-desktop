@@ -25,6 +25,30 @@ const parseProgramVersion = (input) => {
   }
   return parsed;
 };
+
+const isPathToExecutable = async (filePath, wrapper) => {
+  let flag = false;
+  logger.debug(`Checking if ${filePath} is an executable`);
+  if (wrapper) {
+    try {
+      const result = await exec_launcher_sync("stat", ["-c", "'%A'", filePath], { wrapper });
+      if (result.success) {
+        flag = (result.stdout || "").indexOf("x") !== -1;
+      }
+    } catch (error) {
+      logger.error(`Unable to verify if ${filePath} is an executable file using wrapper`, error.message);
+    }
+  } else {
+    try {
+      const stat = fs.lstatSync(decodedPath);
+      flag = stat.isFile(); // TODO: check also executable bit
+    } catch (error) {
+      logger.error(`Unable to verify if ${filePath} is an executable file`, error.message);
+    }
+  }
+  return flag;
+};
+
 const findProgramPath = async (program, opts) => {
   let result;
   let programPath = undefined;
@@ -67,13 +91,10 @@ const findProgramPath = async (program, opts) => {
     logger.debug("Detecting", program, "using - whereis >", result);
     if (result.success) {
       const decodedPath = result.stdout.split(" ")?.[1] || "";
-      try {
-        const stat = fs.lstatSync(decodedPath);
-        if (stat.isFile()) {
-          programPath = decodedPath;
-        }
-      } catch (error) {
-        logger.error(`Unable to verify if ${program} program path is a file`, error.message);
+      if (isPathToExecutable(decodedPath, opts?.wrapper)) {
+        programPath = decodedPath;
+      } else {
+        logger.warn(`Found path ${decodedPath} is not an executable - assuming not present`);
       }
     } else {
       logger.warn(`Unable to detect ${program} cli program path - using whereis`, result);

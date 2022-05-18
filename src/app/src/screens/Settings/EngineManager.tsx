@@ -100,6 +100,29 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
     [setValue, t]
   );
 
+  const updateConnectorByResult = useCallback(async (success: boolean, path?: string, version?: string, scopes?: ControllerScope[]) => {
+    const currentConnector = { ...connector };
+    const shouldUpdateController = controller && !isLIMA && !isWSL;
+    if (shouldUpdateController) {
+      console.debug("Updating controller", engine);
+      if (currentConnector.settings.current.controller) {
+        currentConnector.settings.current.controller.path = path;
+        currentConnector.settings.current.controller.version = version;
+        currentConnector.scopes = scopes || [];
+      }
+      currentConnector.availability.controller = success;
+    } else {
+      console.debug("Updating program", engine);
+      if (currentConnector.settings.current.program) {
+        currentConnector.settings.current.program.path = path;
+        currentConnector.settings.current.program.version = version;
+      }
+      currentConnector.availability.program = success;
+    }
+    const updated = await connectorUpdate(currentConnector);
+    console.debug("connector update", { path, version, scopes }, updated);
+  }, [connector, connectorUpdate, controller, engine, isLIMA, isWSL]);
+
   const onFindControllerProgram = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
     const result: Program = await findProgram({
@@ -126,8 +149,18 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         intent: Intent.DANGER
       });
     }
-    // setProgram(result);
-  }, [engine, program, connector, getValues, setValue, findProgram, t]);
+
+    updateConnectorByResult(!!result, result?.path, result?.version);
+    setProgramTestResult({
+      success: !!result,
+      program: result ? {
+        path: result.path || "",
+        version: result.version || "",
+      } : undefined,
+      subject: "local"
+    });
+
+  }, [engine, program, connector, getValues, setValue, findProgram, t, updateConnectorByResult]);
 
   const onProgramPathTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
@@ -152,25 +185,9 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
     }
 
-    const currentConnector = { ...connector };
-    if (controller) {
-      if (currentConnector.settings.current.controller) {
-        currentConnector.settings.current.controller.path = result.program?.path;
-        currentConnector.settings.current.controller.version = result.program?.version;
-        currentConnector.scopes = result.scopes || [];
-      }
-      currentConnector.availability.controller = result.success;
-    } else {
-      if (currentConnector.settings.current.program) {
-        currentConnector.settings.current.program.path = result.program?.path;
-        currentConnector.settings.current.program.version = result.program?.version;
-      }
-      currentConnector.availability.program = result.success;
-    }
-    const updated = await connectorUpdate(currentConnector);
-    console.debug("connector update", updated);
+    updateConnectorByResult(result.success, result.program?.path, result.program?.version, result.scopes);
     setProgramTestResult(result);
-  }, [engine, controller, connector, testProgramReachability, getValues, t, connectorUpdate]);
+  }, [engine, controller, connector, testProgramReachability, getValues, t, updateConnectorByResult]);
 
   const onConnectionStringTestClick = useCallback(async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     const values = getValues();
@@ -344,9 +361,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
                     intent={valid ? undefined : Intent.DANGER}
                     title={message}
                     rightElement={
-                      <>
-                        <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
-                      </>
+                      <Button disabled={value.length === 0 || pending} minimal intent={Intent.PRIMARY} text={t("Test")} onClick={onProgramPathTestClick} />
                     }
                   />
                   {programSelectButton}
@@ -383,9 +398,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
           let helperText = availability.program ? (
             <div className="AppSettingsFieldProgramHelper">
               {program?.version ? (
-                <>
-                  <span>{t("Detected version {{version}}", program)}</span>
-                </>
+                <span>{t("Detected version {{version}}", program)}</span>
               ) : (
                 t("Could not detect current version")
               )}

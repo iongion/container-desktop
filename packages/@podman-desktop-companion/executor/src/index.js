@@ -4,24 +4,23 @@ const { spawn, spawnSync } = require("child_process");
 // vendors
 // project
 const { createLogger } = require("@podman-desktop-companion/logger");
-const { isFlatpak, isFilePresent } = require("@podman-desktop-companion/utils");
+const { isFlatpak } = require("@podman-desktop-companion/utils");
 // locals
 const logger = createLogger("executor");
 
-async function createWrapper(launcher, args, opts) {
-  let wrapper;
+function createWrapper(launcher, args, opts) {
+  let commandLauncher = launcher;
+  let commandArgs = args || [];
   if (opts?.wrapper) {
-    wrapper = {
-      ...opts.wrapper
-    };
-    wrapper.args.push(launcher, ...args);
+    commandArgs = [...(opts.wrapper.args || []), commandLauncher, ...commandArgs];
+    commandLauncher = opts.wrapper.launcher;
   }
-  return wrapper;
+  return [commandLauncher, commandArgs];
 }
 
 function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   let spawnLauncher;
-  let spawnArgs;
+  let spawnArgs = [];
   let spawnOpts;
   if (isFlatpak()) {
     const hostLauncher = "flatpak-spawn";
@@ -84,14 +83,13 @@ function wrapSpawnSync(launcher, launcherArgs, launcherOpts) {
 }
 
 async function exec_launcher_async(launcher, launcherArgs, opts) {
-  const launcherOpts = {
+  const spawnOpts = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
     env: opts?.env,
     detached: opts?.detached
   };
-  const wrapper_next = await createWrapper(launcher, launcherArgs, opts);
-
+  const [spawnLauncher, spawnArgs] = createWrapper(launcher, launcherArgs, opts);
   return new Promise((resolve) => {
     let resolved = false;
     const process = {
@@ -102,10 +100,7 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
       stderr: "",
       command: "" // Decorated by child process
     };
-
-    const child = wrapper_next
-      ? wrapSpawnAsync(wrapper_next.launcher, wrapper_next.args, launcherOpts)
-      : wrapSpawnAsync(launcher, launcherArgs, launcherOpts);
+    const child = wrapSpawnAsync(spawnLauncher, spawnArgs, spawnOpts);
     const processResolve = (from, data) => {
       if (resolved) {
         logger.error(child.command, "spawning already resolved", { from, data });
@@ -141,16 +136,14 @@ async function exec_launcher_async(launcher, launcherArgs, opts) {
 }
 
 async function exec_launcher_sync(launcher, launcherArgs, opts) {
-  const launcherOpts = {
+  const spawnOpts = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
     env: opts?.env,
     detached: opts?.detached
   };
-  const wrapper_next = await createWrapper(opts, launcher, launcherArgs);
-  const child = opts?.wrapper
-    ? wrapSpawnSync(wrapper_next.launcher, wrapper_next.args, launcherOpts)
-    : wrapSpawnSync(launcher, launcherArgs, launcherOpts);
+  const [spawnLauncher, spawnArgs] = createWrapper(launcher, launcherArgs, opts);
+  const child = wrapSpawnSync(spawnLauncher, spawnArgs, spawnOpts);
   const process = {
     pid: child.pid,
     code: child.status,
@@ -159,7 +152,7 @@ async function exec_launcher_sync(launcher, launcherArgs, opts) {
     stderr: child.stderr,
     command: child.command
   };
-  logger.debug("[SC.S][<]", process);
+  logger.debug("[SC.A][<]", process);
   return process;
 }
 
