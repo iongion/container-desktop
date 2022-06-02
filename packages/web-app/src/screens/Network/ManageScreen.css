@@ -1,0 +1,24 @@
+.AppDataTable[data-table="networks"] th {
+  padding-left: var(--app-data-table-items-padding);
+  padding-right: var(--app-data-table-items-padding);
+}
+.AppDataTable[data-table="networks"] th:first-child {
+  padding-left: 6px;
+}
+.AppDataTable[data-table="networks"] th:last-child {
+  padding-left: initial;
+  min-width: 1px;
+}
+
+[data-table="networks"] .InspectNetworkButton {
+  text-align: left;
+  font-weight: normal;
+  font-size: 13px;
+  overflow: hidden;
+}
+[data-table="networks"] .InspectNetworkId {
+  color: #aaa;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}

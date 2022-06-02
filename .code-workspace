@@ -2,27 +2,31 @@
   "folders": [
     {
       "name": "Backend",
-      "path": "${workspaceFolder}/src/api"
+      "path": "${workspaceFolder}/packages/api"
     },
     {
       "name": "Application",
-      "path": "${workspaceFolder}/src/app"
+      "path": "${workspaceFolder}/packages/web-app"
+    },
+    {
+      "name": "Electron shell",
+      "path": "${workspaceFolder}/packages/electron-shell"
     },
     {
       "name": "Container client",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/container-client"
+      "path": "${workspaceFolder}/packages/container-client"
     },
     {
       "name": "Executor",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/executor"
+      "path": "${workspaceFolder}/packages/executor"
     },
     {
       "name": "Terminal",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/terminal"
+      "path": "${workspaceFolder}/packages/terminal"
     },
     {
       "name": "Utils",
-      "path": "${workspaceFolder}/packages/@podman-desktop-companion/utils"
+      "path": "${workspaceFolder}/packages/utils"
     }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "name": "@podman-desktop-companion/user-settings",
+  "version": "1.0.0",
+  "author": "Ionut Stoica <stoica.ionut@gmail.com>",
+  "description": "Container desktop settings utils",
+  "main": "src/index.js",
+  "typings": "./src/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "electron-cfg": "^1.2.7"
+  },
+  "engines": {
+    "node": "~16"
+  },
+  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+}

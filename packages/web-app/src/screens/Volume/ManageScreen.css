@@ -1,0 +1,11 @@
+.AppDataTable[data-table="volumes"] th {
+  padding-left: var(--app-data-table-items-padding);
+  padding-right: var(--app-data-table-items-padding);
+}
+.AppDataTable[data-table="volumes"] th:first-child {
+  padding-left: 6px;
+}
+.AppDataTable[data-table="volumes"] th:last-child {
+  padding-left: initial;
+  min-width: 1px;
+}

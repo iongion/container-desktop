@@ -1,0 +1,29 @@
+.AppDataTable[data-table="images"] th {
+  padding-left: var(--app-data-table-items-padding);
+  padding-right: var(--app-data-table-items-padding);
+}
+.AppDataTable[data-table="images"] th:first-child {
+  padding-left: 6px;
+}
+.AppDataTable[data-table="images"] th:last-child {
+  padding-left: initial;
+  min-width: 1px;
+}
+
+.ActionMenuItemConfirm {
+  margin: 0;
+  padding: 3px;
+  padding-left: 7px;
+  padding-right: 3px;
+  height: 30px;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+}
+.AppDataTable[data-table="images"] td:first-child .bp4-button-text {
+  white-space: nowrap;
+  text-align: left;
+}
+.AppDataTable[data-table="images"] .ContainerImageRegistry {
+  padding-top: 3px;
+}

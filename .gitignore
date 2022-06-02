@@ -2,7 +2,8 @@
 **/.env.local/**
 **/__pycache__/**
 temp
-
+build
+dist
 # Logs
 logs
 *.log
@@ -107,5 +108,3 @@ dist
 
 # TernJS port file
 .tern-port
-
-src/app/public/runtime.json

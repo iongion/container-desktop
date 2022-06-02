@@ -1,0 +1,80 @@
+[data-screen="registries"] .AppScreenContent {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+[data-screen="registries"] .AppScreenContentView[data-column="left"] {
+  width: 100%;
+  overflow: auto;
+}
+[data-table="search.results"] {
+  width: 100%;
+}
+[data-table="search.results"] tr th,
+[data-table="search.results"] tr td {
+  text-align: center;
+  white-space: nowrap;
+  width: 1px;
+}
+[data-table="search.results"] tr td:first-child {
+  text-align: left;
+}
+[data-table="search.results"] tr td:first-child {
+  width: 1px;
+}
+[data-table="search.results"] tr td:last-child {
+  text-align: center;
+}
+[data-table="search.results"] [data-column="Name"] {
+  text-align: left;
+}
+
+.RegistrySearchResultButton {
+  font-size: 12px;
+}
+
+[data-table="registries"] {
+  width: 300px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+[data-table="registries"] thead th:nth-child(6),
+[data-table="registries"] tbody td:nth-child(3),
+[data-table="registries"] tbody td:nth-child(6) {
+  white-space: nowrap;
+}
+[data-table="registries"] thead th:last-child,
+[data-table="registries"] tbody td:last-child {
+  width: 1px;
+  white-space: nowrap;
+}
+[data-table="registries"] tbody td {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+[data-table="registries"] .InspectNetworkButton {
+  text-align: left;
+  font-weight: normal;
+  font-size: 13px;
+  overflow: hidden;
+}
+[data-table="registries"] .InspectNetworkId {
+  color: #aaa;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+[data-table="registries"] .InspectRegistryButton {
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  max-width: 100%;
+}
+[data-table="registries"] .CurrentRegistryRadio {
+  margin: 0;
+}
+.RegistriesTableHeader {
+  display: flex;
+  vertical-align: middle;
+}

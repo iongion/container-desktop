@@ -1,0 +1,33 @@
+.AppDataTable[data-table="pods"] th {
+  padding-left: var(--app-data-table-items-padding);
+  padding-right: var(--app-data-table-items-padding);
+}
+.AppDataTable[data-table="pods"] th:first-child {
+  padding-left: 6px;
+}
+.AppDataTable[data-table="pods"] th:last-child {
+  padding-left: initial;
+  min-width: 1px;
+}
+
+[data-table="pods"] .PodDetailsButton {
+  max-width: 240px;
+}
+[data-table="pods"] .PodDetailsButton .bp4-button-text {
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: inline-block;
+  white-space: nowrap;
+  text-align: left;
+  min-width: 120px;
+}
+[data-table="pods"] .PodState {
+  border-radius: 6px;
+  padding: 3px;
+  text-align: center;
+  font-size: 11px;
+  min-width: 50px;
+  display: inline-block;
+  border: 1px solid transparent;
+}

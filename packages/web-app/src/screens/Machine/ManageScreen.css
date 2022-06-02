@@ -1,0 +1,15 @@
+.AppDataTable[data-table="machines"] th {
+  padding-left: var(--app-data-table-items-padding);
+  padding-right: var(--app-data-table-items-padding);
+}
+.AppDataTable[data-table="machines"] th:first-child {
+  padding-left: 6px;
+}
+.AppDataTable[data-table="machines"] th:last-child {
+  padding-left: initial;
+  min-width: 1px;
+}
+
+.InspectMachineButton {
+  white-space: nowrap;
+}

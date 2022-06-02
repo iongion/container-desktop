@@ -1,0 +1,37 @@
+{
+  "name": "podman-desktop-companion",
+  "version": "4.1.0-rc.30",
+  "author": "Ionut Stoica <stoica.ionut@gmail.com>",
+  "description": "Container desktop helper app",
+  "scripts": {
+    "start": "inv start",
+    "release": "inv release",
+    "app:start": "inv app.app-start",
+    "app:build": "inv app.app-build",
+    "shell:start": "inv shell.shell-start",
+    "shell:build": "inv shell.shell-build",
+    "shell:bundle": "inv shell.shell-bundle"
+  },
+  "license": "MIT",
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": "~16"
+  },
+  "repository": "https://github.com/iongion/podman-desktop-companion.git",
+  "workspaces": [
+    "./packages/container-app",
+    "./packages/container-client",
+    "./packages/container-config",
+    "./packages/detector",
+    "./packages/electron-shell",
+    "./packages/executor",
+    "./packages/logger",
+    "./packages/rpc",
+    "./packages/terminal",
+    "./packages/user-settings",
+    "./packages/utils",
+    "./packages/web-app"
+  ]
+}

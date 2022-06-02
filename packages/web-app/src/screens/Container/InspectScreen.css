@@ -1,0 +1,17 @@
+.ContainerInspectDisplay {
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.4em;
+}
+[data-table="container.inspect"] tr td {
+  text-align: left;
+  font-family: monospace;
+}
+[data-table="container.inspect"] tr td:first-child {
+  width: 50%;
+}
+[data-table="container.inspect"] [data-table-row="group.name"] td {
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+}

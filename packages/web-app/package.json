@@ -1,0 +1,119 @@
+{
+  "name": "@podman-desktop-companion/web-app",
+  "version": "4.1.0-rc.30",
+  "author": "Ionut Stoica <stoica.ionut@gmail.com>",
+  "description": "Podman Desktop Companion",
+  "keywords": [],
+  "homepage": "https://iongion.github.io/podman-desktop-companion",
+  "main": "src/index.tsx",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@babel/core": "^7.18.5",
+    "@blueprintjs/eslint-plugin": "^2.1.1",
+    "@hookform/devtools": "^4.1.0",
+    "@types/lodash": "4.14.182",
+    "@types/lodash.merge": "^4.6.7",
+    "@types/react": "17.0.2",
+    "@types/react-dom": "17.0.2",
+    "@types/react-helmet": "^6.1.5",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/uuid": "8.3.4",
+    "@typescript-eslint/eslint-plugin": "^5.29.0",
+    "@typescript-eslint/parser": "^5.29.0",
+    "eslint": "^8.18.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-react-app": "^7.0.1",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-react": "^7.30.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "nodemon": "^2.0.16",
+    "prettier": "^2.7.1",
+    "prettier-eslint": "^15.0.1",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@babel/plugin-syntax-flow": "^7.17.12",
+    "@babel/plugin-transform-react-jsx": "^7.17.12",
+    "@blueprintjs/core": "4.5.1",
+    "@blueprintjs/icons": "4.3.0",
+    "@blueprintjs/popover2": "^1.4.1",
+    "@blueprintjs/select": "4.4.1",
+    "@mdi/js": "^6.7.96",
+    "@mdi/react": "^1.6.0",
+    "@monaco-editor/react": "^4.4.5",
+    "@podman-desktop-companion/container-app": "link:../container-app",
+    "@podman-desktop-companion/container-client": "link:../container-client",
+    "@podman-desktop-companion/container-config": "link:../container-config",
+    "@podman-desktop-companion/detector": "link:../detector",
+    "@podman-desktop-companion/logger": "link:../logger",
+    "@podman-desktop-companion/rpc": "link:../rpc",
+    "@podman-desktop-companion/terminal": "link:../terminal",
+    "@podman-desktop-companion/user-settings": "link:../user-settings",
+    "ajv": "8.11.0",
+    "clipboard": "^2.0.11",
+    "dayjs": "^1.11.3",
+    "easy-peasy": "5.0.4",
+    "fix-path": "^3.0.0",
+    "history": "^5.3.0",
+    "i18next": "21.8.10",
+    "lodash.merge": "^4.6.2",
+    "monaco-editor": "^0.33.0",
+    "pretty-bytes": "^5.6.0",
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
+    "react-fast-compare": "^3.2.0",
+    "react-helmet": "^6.1.0",
+    "react-hook-form": "^7.32.2",
+    "react-i18next": "11.17.2",
+    "react-responsive": "^9.0.0-beta.10",
+    "react-router-dom": "^5.3.0",
+    "react-scripts": "5.0.1",
+    "usehooks-ts": "^2.6.0",
+    "uuid": "8.3.2",
+    "xterm": "^4.18.0",
+    "xterm-addon-fit": "^0.5.0"
+  },
+  "optionalDependencies": {
+    "dmg-license": "^1.0.10"
+  },
+  "engines": {
+    "node": "~16"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+  "browserslist": [
+    "last 1 electron version",
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ],
+  "eslintConfig": {
+    "ignorePatterns": [
+      "..//**"
+    ],
+    "extends": [
+      "react-app",
+      "react-app/jest",
+      "plugin:jsx-a11y/recommended"
+    ],
+    "plugins": [
+      "jsx-a11y"
+    ],
+    "rules": {
+      "react-hooks/exhaustive-deps": "error",
+      "jsx-a11y/no-autofocus": "off",
+      "jsx-a11y/click-events-have-key-events": "off",
+      "jsx-a11y/no-noninteractive-tabindex": "off",
+      "jsx-a11y/no-noninteractive-element-interactions": "off"
+    }
+  },
+  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+}

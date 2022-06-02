@@ -1,0 +1,42 @@
+.AppHeader {
+  margin: 0;
+  padding: 0;
+  -webkit-app-region: drag;
+}
+.AppHeader .bp4-navbar {
+  display: flex;
+  background: url("../images/podman-desktop-companion.svg") no-repeat 0 center;
+  background-size: contain;
+  background-position-x: 7px;
+}
+.AppHeader .bp4-navbar-heading {
+  height: 100%;
+}
+.App-companyLogoBrand {
+  width: 200px;
+  height: 100%;
+}
+[data-os="Darwin"] .AppHeader .bp4-navbar {
+  background-position-x: center;
+}
+.AppHeaderActions {
+  -webkit-app-region: no-drag;
+}
+.App-projectNameVersion {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+}
+[data-provisioned="yes"] .App-projectNameVersion {
+  padding-right: 88px;
+}
+[data-provisioned="no"] .App-projectNameVersion {
+  padding-right: 145px !important;
+}
+[data-native="yes"] .AppHeader {
+  user-select: none;
+}
+[data-native="yes"] .App-projectNameVersion span {
+  display: none;
+}

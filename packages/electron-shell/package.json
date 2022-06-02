@@ -1,0 +1,66 @@
+{
+  "name": "@podman-desktop-companion/electron-shell",
+  "version": "4.1.0-rc.30",
+  "author": "Ionut Stoica <stoica.ionut@gmail.com>",
+  "description": "Podman Desktop Companion",
+  "keywords": [],
+  "homepage": "https://iongion.github.io/podman-desktop-companion",
+  "main": "index.cjs",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@rollup/plugin-replace": "^4.0.0",
+    "@types/lodash": "4.14.182",
+    "@types/lodash.merge": "^4.6.7",
+    "@types/node": "^18.0.0",
+    "@types/uuid": "8.3.4",
+    "@typescript-eslint/eslint-plugin": "^5.29.0",
+    "@typescript-eslint/parser": "^5.29.0",
+    "electron": "19.0.5",
+    "electron-builder": "^23.0.3",
+    "electron-packager": "^15.5.1",
+    "electron-reloader": "^1.2.3",
+    "eslint": "^8.18.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "nodemon": "^2.0.16",
+    "prettier": "^2.7.1",
+    "prettier-eslint": "^15.0.1",
+    "rollup": "^2.75.7",
+    "rollup-plugin-eslint": "^7.0.0",
+    "rollup-plugin-node-externals": "^4.0.0",
+    "rollup-plugin-ts": "^3.0.2",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@podman-desktop-companion/container-app": "link:../container-app",
+    "@podman-desktop-companion/container-config": "link:../container-config",
+    "@podman-desktop-companion/logger": "link:../logger",
+    "@podman-desktop-companion/rpc": "link:../rpc",
+    "@podman-desktop-companion/terminal": "link:../terminal",
+    "@podman-desktop-companion/user-settings": "link:../user-settings",
+    "@podman-desktop-companion/web-app": "link:../web-app",
+    "electron-context-menu": "^3.2.0",
+    "fix-path": "^3.0.0",
+    "lodash.merge": "^4.6.2",
+    "private-ip": "^2.3.3"
+  },
+  "optionalDependencies": {
+    "dmg-license": "^1.0.10"
+  },
+  "engines": {
+    "node": "~16"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "start": "electron build/renderer.js",
+    "package:mac_x86": "electron-builder --publish never --macos --x64 -c.extraMetadata.main=build/renderer.js",
+    "package:mac_arm": "electron-builder --publish never --macos --arm64 -c.extraMetadata.main=build/renderer.js",
+    "package:win_x86": "electron-builder --publish never --windows --x64 -c.extraMetadata.main=build/renderer.js",
+    "package:linux_x86": "electron-builder --publish never --linux --x64 -c.extraMetadata.main=build/renderer.js",
+    "package:linux_arm": "electron-builder --publish never --linux --arm64 -c.extraMetadata.main=build/renderer.js"
+  },
+  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+}

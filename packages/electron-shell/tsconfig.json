@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "lib": ["dom", "es2017"],
+    "target": "ESNext",
+    "allowJs": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types/"]
+  },
+  "include": ["src", "types/**/*.d.ts"],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "node_modules",
+    "example",
+    "rollup.config.js",
+    "**/*.spec.tsx",
+    "**/*.spec.ts",
+    "**/*.stories.tsx"
+  ]
+}

@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+* Registries support(define / search / pull) - search using podman configuration for podman engine only, inline configuration(custom) for all engines
+* Overlay quick start container actions on hover and tap for table users
+* Expand / collapse sidebar support for more work space horizontally (persist settings across restart)
+* Light mode / Dark mode toggle (already supported by the blueprintjs framework but not enabled) - for all engines
+* Icons for some table views headers
+* Unified navigation / inspect for all entities that support it
+
+## Changed
+
+* More compact lists and table views
+* Unified headers with tables / lists
+* Containers groups show first (like folders first in file managers)
+* Pod infrastructure containers are placed in their special group, showing first if they exist
+* Container logs use VT100 emulator for displaying `ansi-colors` properly (service is consuming byte array data instead of strings)
+
+## Fixed
+
+* Open terminal on some platforms
+* Open browser on some platforms
+* Main window shows up only when UI has received all init data to avoid showing incomplete windows
+* Detail tables in Drawers didn't size properly - first column was taking too much space
+
 ## 4.1.0-rc.29 - 2022-05-17
 
 ## Fixed
