@@ -14,8 +14,5 @@
     "@podman-desktop-companion/user-settings": "link:../user-settings",
     "electron-log": "^4.4.6"
   },
-  "engines": {
-    "node": "~16"
-  },
   "repository": "https://github.com/iongion/podman-desktop-companion.git"
 }

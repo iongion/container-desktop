@@ -125,7 +125,7 @@
   "yaml.customTags": ["!Secret scalar", "!Env scalar"],
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.markdownlint": true
+    "source.fixAll.markdownlint": "explicit"
   },
   "search.followSymlinks": false,
   "python.formatting.provider": "black",

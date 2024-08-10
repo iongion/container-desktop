@@ -10,9 +10,6 @@
   },
   "license": "MIT",
   "private": true,
-  "engines": {
-    "node": "~16"
-  },
   "repository": "https://github.com/iongion/podman-desktop-companion.git",
   "dependencies": {
     "axios": "^0.27.2"

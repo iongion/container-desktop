@@ -13,8 +13,5 @@
   "dependencies": {
     "@podman-desktop-companion/executor": "link:../executor"
   },
-  "engines": {
-    "node": "~16"
-  },
   "repository": "https://github.com/iongion/podman-desktop-companion.git"
 }

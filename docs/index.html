@@ -1,369 +1,383 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
 
-  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.15.0/css/all.css" />
+    <link rel="preconnect" href="//fonts.googleapis.com" />
+    <link rel="preconnect" href="//fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css2?family=Montserrat:wght@100;300;500;700&display=swap" />
+    <link rel="stylesheet" href="css/common.css?v=4.1.0-rc.29" />
+    <link rel="stylesheet" href="css/dark-theme.css?v=4.1.0-rc.29" id="themelink" />
+    <link rel="stylesheet" href="css/responsive.css?v=4.1.0-rc.29" />
+    <title>Podman Desktop Companion</title>
+  </head>
 
-  <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.15.0/css/all.css" />
-  <link rel="preconnect" href="//fonts.googleapis.com" />
-  <link rel="preconnect" href="//fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="//fonts.googleapis.com/css2?family=Montserrat:wght@100;300;500;700&display=swap" />
-  <link rel="stylesheet" href="css/common.css?v=4.1.0-rc.28" />
-  <link rel="stylesheet" href="css/dark-theme.css?v=4.1.0-rc.28" id="themelink" />
-  <link rel="stylesheet" href="css/responsive.css?v=4.1.0-rc.28" />
-  <title>Podman Desktop Companion</title>
-</head>
-
-<body>
-  <div class="navbar">
-    <img class="logo" src="img/logo.svg" alt="logo" />
-    <div class="header-buttons">
-      <div class="supporters">
-        <div class="supporter" data-supported="ko-fi">
-          <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
-          <script
-            type='text/javascript'>kofiwidget2.init('Support me on Ko-fi', '#3f0b4f', 'G2G4C894W'); kofiwidget2.draw();</script>
+  <body>
+    <div class="navbar">
+      <img class="logo" src="img/logo.svg" alt="logo" />
+      <div class="header-buttons">
+        <div class="github-button-container">
+          <a
+            class="github-button"
+            href="https://github.com/iongion/podman-desktop-companion"
+            data-color-scheme="no-preference: dark; light: dark; dark: dark;"
+            data-size="large"
+            data-show-count="true"
+            aria-label="Star iongion/podman-desktop-companion on GitHub"
+            >Star</a
+          >
         </div>
-        &nbsp;
-        <div class="supporter" data-supported="patreon">
-          <a class="patreon-button" href="https://www.patreon.com/bePatron?u=62928185"
-            data-patreon-widget-type="become-patron-button">Become a Patron!</a>
-        </div>
-      </div>
-      <div class="github-button-container">
-        <a class="github-button" href="https://github.com/iongion/podman-desktop-companion"
-          data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true"
-          aria-label="Star iongion/podman-desktop-companion on GitHub">Star</a>
       </div>
     </div>
-  </div>
-  <div class="intro">
-    <h1>The super duper<br /><a href="https://podman.io/" target="_blank">Podman</a> Desktop Companion</h1>
-    <p>
-      A familiar desktop graphical interface for the free and open container manager -
-      <a href="https://podman.io/" target="_blank">Podman</a>!
-    </p>
-    <div class="installationSection">
-      <a href="https://podman.io/getting-started/installation" target="_blank">Getting started with podman</a>
-      &nbsp;
-      <a href="https://github.com/containers/podman/releases" target="_blank">
-        Podman releases and downloads
-      </a>
-    </div>
-    <div class="downloadSection">
-      <div class="download">
-        <a class="downloadButton"
-          href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x86_64-4.1.0-rc.28.AppImage">
-          <i class="fab fa-linux"></i>
-          &nbsp;Download for Linux
-        </a>
-        <ul class="downloadBundles">
-          <li>
-            <a
-              href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x86_64-4.1.0-rc.28.AppImage">AppImage</a>
-          </li>
-          <li>
-            <a
-              href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x86_64-4.1.0-rc.28.flatpak">Flatpak</a>
-          </li>
 
-          <li>
-            <a
-              href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x86_64-4.1.0-rc.28.rpm">rpm</a>
-          </li>
-          <li>
-            <a
-              href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-amd64-4.1.0-rc.28.deb">deb</a>
-          </li>
-        </ul>
+    <div class="intro">
+      <h1>The super duper<br /><a target="_blank" href="https://podman.io/">Podman</a> Desktop Companion</h1>
+      <div class="callout">
+        <p class="cp1">
+          Podman world has changed and now offers an official cross-platform desktop UI, please favor it!
+        </p>
+        <p class="cp2">
+          Official version is available at <br />
+          <a class="pd" target="_blank" href="https://podman-desktop.io/">Podman Desktop</a><br />
+          It is developed and maintained by the <a target="_blank" href="https://podman.io/">Podman</a> team itself.
+        </p>
+        <p class="cp3">
+          This project is now considered complete and will not receive any further functional updates besides fixing
+          bugs or addressing incompatibilities.
+        </p>
       </div>
-      <div class="download">
-        <a class="downloadButton"
-          href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x64-4.1.0-rc.28.exe">
-          <i class="fab fa-windows"></i>
-          &nbsp;Download for Windows
-        </a>
-        <ul class="downloadBundles">
-          <li>
-            <a
-              href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x64-4.1.0-rc.28.exe">Installer
-              - exe</a>
-          </li>
-        </ul>
-      </div>
-      <div class="download">
-        <a class="downloadButton"
-          href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x64-4.1.0-rc.28.dmg">
-          <i class="fab fa-apple"></i>
-          &nbsp;Download for Mac
-        </a>
-        <ul class="downloadBundles">
-          <li>
-            Disk image
-          </li>
-          <li>
-            <a
-              href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-x64-4.1.0-rc.28.dmg">Intel</a>
-          </li>
-          <li class="alternative">
-            <a
-              href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.28/podman-desktop-companion-arm64-4.1.0-rc.28.dmg">Apple</a>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="content">
-    <div class="section0">
-      <div class="column1">
-        <h2>Cross-platform desktop integrated application with consistent UI</h2>
-        <p>Podman Desktop Companion works on Windows, Mac and Linux providing the same graphical interface.</p>
-      </div>
-      <div class="column2">
-        <h2>Learning tool for the powerful <span class="command-line">podman</span> command line interface</h2>
-        <p>Podman Desktop Companion is great for skills improvement and learning features of 'podman'.</p>
-      </div>
-    </div>
-    <div class="section00">
-      <h2>Essentials at your fingertips</h2>
       <p>
-        The dashboard offers just the essential features so that the users can feel right at home.
-        <br />
-        See below what you can manage with Podman Desktop Companion.
+        A familiar desktop graphical interface for the free and open container manager -
+        <a href="https://podman.io/" target="_blank">Podman</a>!
       </p>
-      <video controls poster="videos/demo.png" width="100%" autoplay>
-        <source src="videos/demo.mp4" type="video/mp4" />
-      </video>
-    </div>
+      <div class="installationSection">
+        <a href="https://podman.io/getting-started/installation" target="_blank">Getting started with podman</a>
+        &nbsp;
+        <a href="https://github.com/containers/podman/releases" target="_blank"> Podman releases and downloads </a>
+      </div>
+      <div class="downloadSection">
+        <div class="download">
+          <a
+            class="downloadButton"
+            href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x86_64-4.1.0-rc.29.AppImage"
+          >
+            <i class="fab fa-linux"></i>
+            &nbsp;Download for Linux
+          </a>
+          <ul class="downloadBundles">
+            <li>
+              <a
+                href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x86_64-4.1.0-rc.29.AppImage"
+                >AppImage</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x86_64-4.1.0-rc.29.flatpak"
+                >Flatpak</a
+              >
+            </li>
 
-    <div class="section2">
-      <div class="column1">
-        <img class="imgPost" src="img/000-CrossPlatform.png" />
-      </div>
-      <div class="column2">
-        <h2>Cross Platform</h2>
-        <ul>
-          <li>Application looks the same everywhere, no mental mapping!</li>
-          <li>Completely informs its users of where it stores logs and settings.</li>
-          <li>Allows users to debug and understand what is happening behind the scenes.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="section1">
-      <div class="column1">
-        <h2>Multiple engines</h2>
-        <ul>
-          <li>Fast native on <strong>Linux</strong> only</li>
-          <li>Virtualized for any OS</li>
-          <li>LIMA for MacOS</li>
-          <li>WSL for Windows</li>
-          <li>Both <strong>podman</strong> and <strong>docker</strong> engines</li>
-          <li>Others are planned</li>
-        </ul>
-      </div>
-      <div class="column2">
-        <img class="imgPost" src="img/DockerSettings.png" />
-      </div>
-    </div>
-
-
-    <div class="section2">
-      <div class="column1">
-        <img class="imgPost" src="img/PodmanContainers.png" />
-      </div>
-      <div class="column2">
-        <h2>Containers</h2>
-        <ul>
-          <li>Be informed about the origin and status of your container environment.</li>
-          <li>Quickly access logs, environment variables, mounts, opened ports and monitoring stats.</li>
-          <li>Perform common maintenance operations, stop, restart and remove easily.</li>
-          <li>Direct access to the exposed services using your browser.</li>
-          <li>Gain control of all that happens in the container using the terminal console.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="section2">
-      <div class="column1">
-        <h2>Images</h2>
-        <ul>
-          <li>Be informed about the origin and status of local image store, their registry, name and tag.</li>
-          <li>Immediately spawn new containers from image, customize name, port mappings and available mounts.</li>
-          <li>Quickly access image build-up, check their impact and debug their setup.</li>
-          <li>In-depth configuration viewer.</li>
-          <li>
-            Perform common maintenance operations, pull latest updates to refresh the images, push latest changes to a
-            distributed image project.
-          </li>
-        </ul>
-      </div>
-      <div class="column2">
-        <img class="imgPost" src="img/006-ImageActions.png" />
-      </div>
-    </div>
-
-    <div class="section2">
-      <div class="column1">
-        <img class="imgPost" src="img/ImageSecurity.png" />
-      </div>
-      <div class="column2">
-        <h2>Security</h2>
-        <ul>
-          <li>In-depth awareness of security checks</li>
-          <li>Be informed of know vulnerabilities</li>
-          <li>Helps creating and maintaining secure systems</li>
-        </ul>
-      </div>
-    </div>
-
-
-    <div class="section2">
-      <div class="column1">
-        <h2>Networks</h2>
-        <ul>
-          <li>Create and reuse networks at any moment.</li>
-          <li>Know detailed setup of each network</li>
-        </ul>
-      </div>
-      <div class="column2">
-        <img class="imgPost" src="img/NetworkCreate.png" />
-      </div>
-    </div>
-
-    <div class="section2">
-      <div class="column1">
-        <img class="imgPost" src="img/PodmanPods.png" />
-      </div>
-      <div class="column2">
-        <h2>Pods</h2>
-        <ul>
-          <li>Full power of pods on supported engines</li>
-          <li>Access logs, processes and details.</li>
-          <li>Generate kube and perform common actions</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="section2">
-      <div class="column1">
-        <h2>Machines</h2>
-        <ul>
-          <li>Manage all available podman virtual machines, create new ones or decommission what is redundant.</li>
-        </ul>
-      </div>
-      <div class="column2">
-        <img class="imgPost" src="img/011-MachineTerminal.png" />
-      </div>
-    </div>
-
-    <div class="section4">
-      <div class="column1">
-        <img class="imgPost" src="img/013-SecretsInspect.png" />
-      </div>
-      <div class="column2">
-        <h2>Secrets</h2>
-        <p>Be aware of all available secrets, define new ones or purge old from existence.</p>
-      </div>
-    </div>
-
-    <div class="section5">
-      <div class="column1">
-        <h2>Volumes</h2>
-        <p>Manage shared volumes across containers, limit repetition and also be portable.</p>
-      </div>
-      <div class="column2">
-        <img class="imgPost" src="img/015-VolumeActions.png" />
-      </div>
-    </div>
-  </div>
-
-  <div class="sectionHighlightContainer">
-    <div class="sectionHighlight">
-      <div class="column1Highlight">
-        <img class="imgHighlight" src="img/nopopup3.png" />
-      </div>
-      <div class="column2Highlight">
-        <h2>Super efficient UX</h2>
-        <p>No popups to annoy you, in-depth details only when needed.</p>
-      </div>
-    </div>
-    <div class="sectionHighlight">
-      <div class="column2Highlight">
-        <h2>System tray support</h2>
-      </div>
-      <div class="column1Highlight">
-        <img class="imgHighlight2" src="img/SystemTray.png" />
-      </div>
-    </div>
-  </div>
-
-  <div class="content">
-    <div class="contact">
-      <div class="beta">
-        <p>
-          <span>Podman Desktop is currently in Beta version.</span><br />
-          Stay tuned for more releases.
-        </p>
-      </div>
-      <div class="mailme">
-        <h2>Have a question?</h2>
-        <p>Or do you want to collaborate? Let's talk.</p>
-        <div class="cta">
-          <a href="https://twitter.com/iongion">Get in touch</a>
+            <li>
+              <a
+                href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x86_64-4.1.0-rc.29.rpm"
+                >rpm</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-amd64-4.1.0-rc.29.deb"
+                >deb</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div class="download">
+          <a
+            class="downloadButton"
+            href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x64-4.1.0-rc.29.exe"
+          >
+            <i class="fab fa-windows"></i>
+            &nbsp;Download for Windows
+          </a>
+          <ul class="downloadBundles">
+            <li>
+              <a
+                href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x64-4.1.0-rc.29.exe"
+                >Installer - exe</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div class="download">
+          <a
+            class="downloadButton"
+            href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x64-4.1.0-rc.29.dmg"
+          >
+            <i class="fab fa-apple"></i>
+            &nbsp;Download for Mac
+          </a>
+          <ul class="downloadBundles">
+            <li>Disk image</li>
+            <li>
+              <a
+                href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-x64-4.1.0-rc.29.dmg"
+                >Intel</a
+              >
+            </li>
+            <li class="alternative">
+              <a
+                href="https://github.com/iongion/podman-desktop-companion/releases/download/4.1.0-rc.29/podman-desktop-companion-arm64-4.1.0-rc.29.dmg"
+                >Apple</a
+              >
+            </li>
+          </ul>
         </div>
       </div>
     </div>
-    <div class="mode">
-      <span class="modeText">light mode</span>
-      <label class="switch">
-        <input type="checkbox" />
-        <span class="slider"></span>
-      </label>
-    </div>
 
-    <div class="footer">
-      <div class="author1">
-        <p>
-          &copy; 2021 |
-          <a href="//github.com/iongion" target="_blank">Ionut Stoica</a>
-        </p>
-      </div>
-      <ul class="footerMenu">
-        <li>MIT License</li>
+    <p class="publications">Publications</p>
+    <div class="books">
+      <ul>
+        <li>
+          <a href="https://www.manning.com/books/podman-in-action" target="_blank">
+            <img src="img/book-podman-in-action.png" width="200" />
+            <p>Podman in Action</p>
+          </a>
+        </li>
+        <li>
+          <a href="https://www.packtpub.com/en-be/product/podman-for-devops-9781803248233" target="_blank">
+            <img src="img/book-podman-for-devops.png" width="200" />
+            <p>Podman for Devops</p>
+          </a>
+        </li>
       </ul>
-      <div class="author2">
+    </div>
+
+    <div class="content">
+      <div class="section0">
+        <div class="column1">
+          <h2>Cross-platform desktop integrated application with consistent UI</h2>
+          <p>Podman Desktop Companion works on Windows, Mac and Linux providing the same graphical interface.</p>
+        </div>
+        <div class="column2">
+          <h2>Learning tool for the powerful <span class="command-line">podman</span> command line interface</h2>
+          <p>Podman Desktop Companion is great for skills improvement and learning features of 'podman'.</p>
+        </div>
+      </div>
+      <div class="section00">
+        <h2>Essentials at your fingertips</h2>
         <p>
-          Webpage by
-          <a href="//github.com/teodorapletosu" target="_blank">Teodora Pletosu</a>
+          The dashboard offers just the essential features so that the users can feel right at home.
+          <br />
+          See below what you can manage with Podman Desktop Companion.
         </p>
+        <video controls poster="videos/demo.png" width="100%" autoplay>
+          <source src="videos/demo.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      <div class="section2">
+        <div class="column1">
+          <img class="imgPost" src="img/000-CrossPlatform.png" />
+        </div>
+        <div class="column2">
+          <h2>Cross Platform</h2>
+          <ul>
+            <li>Application looks the same everywhere, no mental mapping!</li>
+            <li>Completely informs its users of where it stores logs and settings.</li>
+            <li>Allows users to debug and understand what is happening behind the scenes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section1">
+        <div class="column1">
+          <h2>Multiple engines</h2>
+          <ul>
+            <li>Fast native on <strong>Linux</strong> only</li>
+            <li>Virtualized for any OS</li>
+            <li>LIMA for MacOS</li>
+            <li>WSL for Windows</li>
+            <li>Both <strong>podman</strong> and <strong>docker</strong> engines</li>
+            <li>Others are planned</li>
+          </ul>
+        </div>
+        <div class="column2">
+          <img class="imgPost" src="img/DockerSettings.png" />
+        </div>
+      </div>
+
+      <div class="section2">
+        <div class="column1">
+          <img class="imgPost" src="img/PodmanContainers.png" />
+        </div>
+        <div class="column2">
+          <h2>Containers</h2>
+          <ul>
+            <li>Be informed about the origin and status of your container environment.</li>
+            <li>Quickly access logs, environment variables, mounts, opened ports and monitoring stats.</li>
+            <li>Perform common maintenance operations, stop, restart and remove easily.</li>
+            <li>Direct access to the exposed services using your browser.</li>
+            <li>Gain control of all that happens in the container using the terminal console.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section2">
+        <div class="column1">
+          <h2>Images</h2>
+          <ul>
+            <li>Be informed about the origin and status of local image store, their registry, name and tag.</li>
+            <li>Immediately spawn new containers from image, customize name, port mappings and available mounts.</li>
+            <li>Quickly access image build-up, check their impact and debug their setup.</li>
+            <li>In-depth configuration viewer.</li>
+            <li>
+              Perform common maintenance operations, pull latest updates to refresh the images, push latest changes to a
+              distributed image project.
+            </li>
+          </ul>
+        </div>
+        <div class="column2">
+          <img class="imgPost" src="img/006-ImageActions.png" />
+        </div>
+      </div>
+
+      <div class="section2">
+        <div class="column1">
+          <img class="imgPost" src="img/ImageSecurity.png" />
+        </div>
+        <div class="column2">
+          <h2>Security</h2>
+          <ul>
+            <li>In-depth awareness of security checks</li>
+            <li>Be informed of know vulnerabilities</li>
+            <li>Helps creating and maintaining secure systems</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section2">
+        <div class="column1">
+          <h2>Networks</h2>
+          <ul>
+            <li>Create and reuse networks at any moment.</li>
+            <li>Know detailed setup of each network</li>
+          </ul>
+        </div>
+        <div class="column2">
+          <img class="imgPost" src="img/NetworkCreate.png" />
+        </div>
+      </div>
+
+      <div class="section2">
+        <div class="column1">
+          <img class="imgPost" src="img/PodmanPods.png" />
+        </div>
+        <div class="column2">
+          <h2>Pods</h2>
+          <ul>
+            <li>Full power of pods on supported engines</li>
+            <li>Access logs, processes and details.</li>
+            <li>Generate kube and perform common actions</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section2">
+        <div class="column1">
+          <h2>Machines</h2>
+          <ul>
+            <li>Manage all available podman virtual machines, create new ones or decommission what is redundant.</li>
+          </ul>
+        </div>
+        <div class="column2">
+          <img class="imgPost" src="img/011-MachineTerminal.png" />
+        </div>
+      </div>
+
+      <div class="section4">
+        <div class="column1">
+          <img class="imgPost" src="img/013-SecretsInspect.png" />
+        </div>
+        <div class="column2">
+          <h2>Secrets</h2>
+          <p>Be aware of all available secrets, define new ones or purge old from existence.</p>
+        </div>
+      </div>
+
+      <div class="section5">
+        <div class="column1">
+          <h2>Volumes</h2>
+          <p>Manage shared volumes across containers, limit repetition and also be portable.</p>
+        </div>
+        <div class="column2">
+          <img class="imgPost" src="img/015-VolumeActions.png" />
+        </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    const btn = document.querySelector(".slider");
-    const theme = document.querySelector("#themelink");
-    const txt = document.querySelector(".modeText");
-    btn.addEventListener("click", function () {
-      // Swap out the URL for the different stylesheets
-      if (theme.getAttribute("href") == "css/dark-theme.css") {
-        theme.href = "css/light-theme.css";
-        txt.innerHTML = "dark mode";
-      } else {
-        theme.href = "css/dark-theme.css";
-        txt.innerHTML = "light mode";
-      }
-    });
-  </script>
+    <div class="sectionHighlightContainer">
+      <div class="sectionHighlight">
+        <div class="column1Highlight">
+          <img class="imgHighlight" src="img/nopopup3.png" />
+        </div>
+        <div class="column2Highlight">
+          <h2>Super efficient UX</h2>
+          <p>No popups to annoy you, in-depth details only when needed.</p>
+        </div>
+      </div>
+      <div class="sectionHighlight">
+        <div class="column2Highlight">
+          <h2>System tray support</h2>
+        </div>
+        <div class="column1Highlight">
+          <img class="imgHighlight2" src="img/SystemTray.png" />
+        </div>
+      </div>
+    </div>
 
-  <script async defer src="https://buttons.github.io/buttons.js"></script>
-  <script async src="https://c6.patreon.com/becomePatronButton.bundle.js"></script>
-</body>
+    <div class="content">
+      <div class="contact">
+        <div class="beta">
+          <p>
+            <span>Podman Desktop is currently in Beta version.</span><br />
+            Stay tuned for more releases.
+          </p>
+        </div>
+        <div class="mailme">
+          <h2>Have a question?</h2>
+          <p>Or do you want to collaborate? Let's talk.</p>
+          <div class="cta">
+            <a href="https://twitter.com/iongion">Get in touch</a>
+          </div>
+        </div>
+      </div>
 
+      <div class="footer">
+        <div class="author1">
+          <p>
+            &copy; 2024 |
+            <a href="//github.com/iongion" target="_blank">Ionut Stoica</a>
+          </p>
+        </div>
+        <ul class="footerMenu">
+          <li>MIT License</li>
+        </ul>
+        <div class="author2">
+          <p>
+            Webpage by
+            <a href="//github.com/teodorapletosu" target="_blank">Teodora Pletosu</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+  </body>
 </html>

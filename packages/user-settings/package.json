@@ -13,8 +13,5 @@
   "dependencies": {
     "electron-cfg": "^1.2.7"
   },
-  "engines": {
-    "node": "~16"
-  },
   "repository": "https://github.com/iongion/podman-desktop-companion.git"
 }
