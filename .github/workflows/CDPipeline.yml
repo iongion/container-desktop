@@ -4,21 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       git-ref:
-        description: 'Git ref'
+        description: "Git ref"
         required: true
-        default: 'latest'
+        default: "latest"
       stage:
-        description: 'Stage'
+        description: "Stage"
         required: true
-        default: 'production'
+        default: "production"
       target:
-        description: 'Target'
+        description: "Target"
         required: true
-        default: 'linux'
+        default: "linux"
 
 jobs:
   bundle:
-
     timeout-minutes: 15
 
     runs-on: ubuntu-latest
@@ -27,7 +26,7 @@ jobs:
       CI: true
       CD: true
       NODE_ENV: ${{github.event.inputs.stage}}
-      REACT_APP_ENV: ${{github.event.inputs.stage}}
+      ENVIRONMENT: ${{github.event.inputs.stage}}
 
     steps:
       - name: Clone Repository (latest)
@@ -41,8 +40,8 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '16.11.1'
-          registry-url: 'https://npm.pkg.github.com'
+          node-version: "20.16.0"
+          registry-url: "https://npm.pkg.github.com"
       - name: Prepare api ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
         run: inv prepare
       - name: Build ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
@@ -56,4 +55,4 @@ jobs:
       - name: Publish ${{github.event.inputs.stage}} ${{github.event.inputs.target}} artifacts
         uses: actions/upload-artifact@v2
         with:
-          path: shell/dist/podman-desktop-companion*
+          path: release/podman-desktop-companion*

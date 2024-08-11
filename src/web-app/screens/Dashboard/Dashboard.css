@@ -1,0 +1,40 @@
+.AppScreen[data-screen="dashboard"] {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.AppScreen[data-screen="dashboard"] .bp5-non-ideal-state > * {
+  max-width: 100%;
+}
+.AppScreen[data-screen="dashboard"] .AppScreenContent p {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.DashboardContainerExampleCode {
+  background: black;
+}
+.DashboardContainerExampleCode input {
+  font-family: monospace;
+  font-size: 12px;
+  text-align: center;
+}
+.DashboardContainerDocsUrl {
+  margin-top: 20px;
+}
+.DashboardContainersReportTable {
+  border: 1px solid;
+  text-align: center;
+  margin: 0 auto;
+  margin-bottom: 10px;
+  font-size: 11px !important;
+  font-family: sans-serif;
+  min-width: 50%;
+  border: 1px solid;
+}
+.DashboardContainersReportTable tr td:last-child {
+  text-align: center;
+  font-family: monospace;
+}

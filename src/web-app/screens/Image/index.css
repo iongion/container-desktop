@@ -1,0 +1,18 @@
+.AppDataFormFields .bp5-form-group {
+  margin-bottom: 5px;
+}
+.AppDataFormFields .bp5-form-group .bp5-form-content {
+  width: 100%;
+}
+.AppDataFormHeader {
+  display: flex;
+  margin-bottom: 5px;
+  align-items: center;
+  padding: 5px;
+}
+.AppDataFormHeader h5 {
+  margin: 0;
+  padding-left: 2px;
+  font-size: 14px;
+  font-weight: bold;
+}

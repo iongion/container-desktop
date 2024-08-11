@@ -1,0 +1,11 @@
+[data-screen="registries"] .NavbarLeft {
+  display: flex;
+  align-items: center;
+  align-content: center;
+}
+[data-screen="registries"] .SearchFilters {
+  padding-left: 20px;
+}
+[data-screen="registries"] .SearchFilters .bp5-control {
+  margin-bottom: 0;
+}

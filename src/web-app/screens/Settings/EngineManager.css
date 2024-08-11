@@ -1,0 +1,45 @@
+.ContainerEngineSettingsActions .bp5-button {
+  min-width: 110px;
+}
+.ContainerEngineSettingsActions .bp5-button[data-action="reset"] {
+  min-width: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+.ContainerEngineSettingsSetDefault {
+  margin: 0;
+  display: inline-block;
+  padding-left: 10px;
+}
+.ContainerEngineSettingsSetDefault .bp5-checkbox {
+  margin: 0;
+}
+.ContainerEngineSettingsActionsSpacer {
+  display: flex;
+  flex: 1;
+}
+.ContainerEngineSettings[data-settings="program.local"] .bp5-form-group:last-child {
+  margin-bottom: 0;
+}
+.ContainerEngineSettings[data-settings="program.local"] .bp5-form-helper-text {
+  min-height: 1em;
+}
+.ProgramLocator {
+  display: flex;
+  column-gap: 5px;
+  margin-bottom: 15px;
+}
+.ProgramPathLocator {
+  flex: 1;
+}
+.ProgramScopeLocator {
+  display: inline-flex;
+  margin-bottom: 0;
+}
+.ProgramScopeLocator .ScopeSelectorFindButton {
+  width: 30px;
+}
+.ProgramScopeLocator .bp5-html-select {
+  min-width: 200px;
+  max-width: 200px;
+}

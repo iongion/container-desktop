@@ -8,11 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 5.2.0-rc.1- 2024-08-10
+## 5.2.0-rc.1- 2024-08-12
 
 ## Added
 
-* Home page not to favor podman-desktop
+* Home page note to favor podman-desktop - major feature freezing note added.
 * README.md note to favor podman-desktop
 * TODO.md update to release binaries for `5.2.0-rc1`
 * Links to Podman in action and Podman for DevOps books
@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Upgraded node to 20
 * Upgrades to be compatible with podman `5.2.0`
+* Migrated all code to typescript (basic)
+* Migrated infra to use vite instead of react-scripts
+* Upgraded react blueprint framework to 5.x
+* Upgraded all upgradable dependencies
+* Modified CI/CD pipeline to support current version
 * Modified example to work on Ubuntu 22.04 (my current OS)
 * More compact lists and table views
 * Unified headers with tables / lists

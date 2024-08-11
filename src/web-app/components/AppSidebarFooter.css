@@ -1,0 +1,101 @@
+.AppSidebarFooter {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  height: 32px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.AppSidebarFooter .bp5-navbar {
+  margin: 0;
+  padding: 0;
+  background-image: url("../images/podman-logo.svg");
+  background-repeat: no-repeat;
+  background-position: center left;
+  background-position-x: 4px;
+  background-position-y: 4px;
+  background-size: 26px;
+  height: 32px;
+}
+.AppSidebarFooter .bp5-navbar-group {
+  height: 32px;
+  padding-left: 32px;
+  padding-right: 0;
+}
+.AppSidebarFooter .AppSidebarFooterRightColumn {
+  display: flex;
+  align-items: center;
+  vertical-align: middle;
+  justify-content: center;
+  min-width: 32px;
+}
+.AppSidebarFooter .bp5-navbar-heading {
+  font-size: 12px;
+}
+.AppSidebarVersionString {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.AppSidebarProgramString {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.AppSidebarFooterOverlay {
+  position: absolute;
+  top: -34px;
+  right: 4px;
+}
+.AppSidebarFooterNavbar {
+  white-space: nowrap;
+  padding: 2px;
+  display: flex;
+}
+.AppSidebarFooterVersions {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  width: calc(100% - 30px);
+  outline: none;
+}
+.AppSidebarFooterVersions > .bp5-navbar-heading {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  column-gap: 4px;
+}
+.AppSidebar[data-expanded="no"] .AppSidebarFooterVersions {
+  display: none;
+}
+.AppSidebar[data-expanded="no"] .AppSidebarFooterRightColumn {
+  width: 100%;
+  justify-content: flex-end;
+  padding-left: 0;
+}
+.AppSidebar[data-expanded="no"] .AppSidebarFooterPendingIndicator {
+  position: relative;
+  margin-right: 4px;
+  right: 3px;
+  outline: none;
+}
+.AppSidebarInfoButton {
+  position: relative;
+  right: 3px;
+  outline: none;
+}
+.AppSidebarFooterVersionsMenu {
+  position: relative;
+}
+.AppSidebarFooterVersionsMenu .AppSidebarVersionString,
+.AppSidebarFooterVersionsMenu .AppSidebarProgramString {
+  font-size: 14px;
+}
+.AppSidebarFooterNavbar .bp5-popover-content {
+  padding: 5px !important;
+}
+.AppSidebarInfoPopover {
+  background-color: #ccc;
+  max-width: 140px;
+}
+
+.AppSidebar[data-expanded="yes"] .AppSidebarFooterRightColumn {
+  padding-left: 0;
+}

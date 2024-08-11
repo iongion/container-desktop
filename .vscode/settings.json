@@ -1,60 +1,55 @@
 {
-  "editor.suggestSelection": "first",
-  "editor.insertSpaces": true,
-  "editor.renderWhitespace": "all",
-  "files.eol": "\n",
-  "files.exclude": {
-    "**/__pycache__/**": true,
-    "**/.git/**": true,
-    "**/.DS_Store": true,
-    "**/*.egg-info": true,
-    ".pytest_cache": true
+  "[html]": {
+    "editor.defaultFormatter": "j69.ejs-beautify"
   },
-  "files.watcherExclude": {
-    "**/coverage/**": true,
-    "**/build/**": true,
-    "**/dist/**": true,
-    "**/__pycache__/**": true,
-    "**/.git/**": true,
-    "**/.docker/**": true,
-    "**/.venv/**": true,
-    "**/.DS_Store": true,
-    ".pytest_cache": true
+  "[javascript]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "always",
+      "source.fixAll.eslint": "always",
+      "source.organizeImports": "always"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "files.associations": {
-    "*.env": "ini",
-    "*.env.local": "ini",
-    "*.runtime": "ini",
-    "*.mk": "makefile",
-    "docker-compose.override.yml.template": "dockercompose"
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "search.exclude": {
-    "**/coverage/**": true,
-    "**/build/**": true,
-    "**/dist/**": true,
-    "**/.git/**": true,
-    "**/__pycache__/**": true,
-    "**/.venv/**": true,
-    "**/.DS_Store": true,
-    ".pytest_cache": true,
-    "yarn.lock": true,
-    "package.lock": true
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "[typescript]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "always",
+      "source.fixAll.eslint": "always",
+      "source.organizeImports": "always"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[typescriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "always",
+      "source.fixAll.eslint": "always",
+      "source.organizeImports": "always"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml",
+    "editor.formatOnSave": true
+  },
+  "biome.enabled": false,
+  "cSpell.ignorePaths": ["src/web-app/assets/languages.json"],
   "cSpell.words": [
     "aquasec",
     "aquasecurity",
-    "autofocus",
-    "autoos",
+    "asar",
     "blkio",
     "blueprintjs",
-    "browserslist",
-    "buildah",
-    "Callout",
-    "cgroupfs",
+    "csstools",
     "devel",
     "devpts",
-    "draggable",
     "electronjs",
+    "elfutils",
     "flathub",
     "flatpak",
     "freedesktop",
@@ -63,71 +58,94 @@
     "Healthcheck",
     "hookform",
     "icns",
-    "iife",
     "immer",
+    "Indo",
     "inited",
     "iongion",
     "Ionut",
     "IPAM",
-    "ipvlan",
-    "istoica",
-    "jsonpath",
+    "Japonic",
     "kernelmode",
-    "Kube",
+    "keystyle",
     "libpod",
     "limactl",
-    "localdomain",
-    "macvlan",
-    "markdownlint",
     "Minimizable",
     "Mountpoint",
-    "noconflict",
-    "noheading",
-    "noninteractive",
+    "netns",
+    "nodemon",
     "npipe",
     "nsis",
     "nvmrc",
+    "originjs",
     "osascript",
     "pacman",
     "peasy",
     "percpu",
     "pids",
-    "Pletosu",
-    "podman",
     "podstate",
     "portmappings",
     "precpu",
     "preread",
     "procs",
-    "proxying",
+    "Proxying",
     "pulseaudio",
-    "rcedit",
+    "pyenv",
     "Resetable",
-    "scrollback",
+    "rimraf",
+    "slirp",
     "Stoica",
+    "stylelint",
     "svgr",
-    "systeminfo",
-    "tabindex",
-    "Teodora",
-    "themelink",
     "TLDR",
     "tmpfs",
     "trivy",
     "usehooks",
     "usermode",
-    "uuidv",
-    "vite",
-    "vitejs",
     "whereis",
     "wslg"
   ],
-  "jshint.enable": false,
-  "yaml.customTags": ["!Secret scalar", "!Env scalar"],
-  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.markdownlint": "explicit"
+    "source.fixAll": "always",
+    "source.fixAll.eslint": "always",
+    "source.fixAll.stylelint": "always",
+    "source.fixAll.tslint": "always"
   },
-  "search.followSymlinks": false,
-  "python.formatting.provider": "black",
-  "python.languageServer": "Default"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.insertSpaces": true,
+  "editor.renderWhitespace": "all",
+  "editor.suggestSelection": "first",
+  "editor.tabSize": 2,
+  "eslint.enable": true,
+  "eslint.options": {},
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+  "files.associations": {
+    "*.env": "ini",
+    "*.env.**": "ini",
+    "*.mk": "makefile",
+    "*.runtime": "ini"
+  },
+  "files.eol": "\n",
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/.git/**": true
+  },
+  "files.watcherExclude": {
+    "**/.git/**": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/node_modules/**": true
+  },
+  "i18n-ally.keystyle": "nested",
+  "i18n-ally.localesPaths": ["./src/web-app/translations"],
+  "prettier.documentSelectors": ["*.{tsx,ts}", "*.{jsx,js}"],
+  "search.exclude": {
+    "**/.DS_Store": true,
+    "**/.git/**": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/node_modules/**": true,
+    ".eslintcache": true
+  },
+  "typescript.preferences.importModuleSpecifier": "non-relative"
 }

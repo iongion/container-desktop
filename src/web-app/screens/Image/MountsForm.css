@@ -1,0 +1,32 @@
+.ContainerFileSystemSize,
+.ContainerFileSystemSize .bp5-input-group {
+  flex-grow: inherit !important;
+  flex-shrink: inherit !important;
+}
+.VolumeTypeInput {
+  vertical-align: middle;
+}
+.VolumeTypeInput .bp5-checkbox {
+  margin-bottom: 0;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+.VolumeTypeInput .bp5-divider {
+  border-color: #4c3d5c;
+}
+
+.ContainerMount {
+  display: flex;
+}
+.ContainerMountProperties {
+  flex: 1;
+}
+.ContainerMountProperties .bp5-form-group.bp5-inline .bp5-label {
+  min-width: 70px;
+  display: inline-block;
+}
+.ContainerMountActions {
+  display: flex;
+  vertical-align: middle;
+}
