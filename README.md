@@ -8,7 +8,7 @@
 
 ## Author notes
 
-* Podman **Desktop Companion** is now considered **complete**. It **is not dead**, it is still fun and a place to play with tech._
+* Podman **Desktop Companion** is now considered **complete**. It **is not dead**, it is still fun and a place to play with tech.
 * _It will not be killed, shut-down or archived unless required, it was **the first cross-platform container UI** before any other existing solution._
 * _There is **great pride in this**(mom is proud), no other benefits were obtained, no donations on patreon or ko-fi since inception._
 * _It was my first experience with the open source world as a creator and the one that made me **never do it again**, at least not on my own._
