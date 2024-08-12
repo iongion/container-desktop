@@ -1,0 +1,11 @@
+.RestrictedTo {
+  display: flex;
+  vertical-align: middle;
+  margin-left: 20px;
+  color: #999;
+}
+.RestrictedToEngineTitle {
+  padding-left: 5px;
+  font-size: 10px;
+  padding-top: 3px;
+}

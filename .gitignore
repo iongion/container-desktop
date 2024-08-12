@@ -5,6 +5,7 @@
 temp
 build
 dist
+release
 # Logs
 logs
 *.log

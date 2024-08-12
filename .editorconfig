@@ -1,29 +1,28 @@
-# EditorConfig is awesome: https://EditorConfig.org
-
-# This is the project's root directory
 root = true
 
 [*]
-# Use spaces for indentation
 indent_style = space
-# Each indent should contain 2 spaces
 indent_size = 2
-# Use Unix line endings
 end_of_line = lf
-# The files are utf-8 encoded
 charset = utf-8
-# No whitespace at the end of line
 trim_trailing_whitespace = true
-# A file must end with an empty line - this is good for version control systems
 insert_final_newline = true
-# A line should not have more than this amount of chars (not supported by all plugins)
-max_line_length = 120
 
-# 4 space indentation
-[*.{json,py,rs}]
+[*.py]
+indent_style = space
 indent_size = 4
 
-# Tab indentation
-[{Makefile,**.mk}]
+[*.c]
+indent_style = space
+indent_size = 4
+
+[*.sh]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_size = 2
 indent_style = tab
-indent_size = 4

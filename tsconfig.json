@@ -1,0 +1,63 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "downlevelIteration": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "strictNullChecks": true,
+    "noImplicitAny": false,
+
+    /* Paths */
+    "baseUrl": "src",
+    "paths": {
+      "@/container-app": ["container-app"],
+      "@/container-app/*": ["container-app/*"],
+      "@/container-client": ["container-client"],
+      "@/container-client/*": ["container-client/*"],
+      "@/container-config": ["container-config"],
+      "@/container-config/*": ["container-config/*"],
+      "@/detector": ["detector"],
+      "@/detector/*": ["detector/*"],
+      "@/electron-shell": ["electron-shell"],
+      "@/electron-shell/*": ["electron-shell/*"],
+      "@/electron-cfg": ["electron-cfg"],
+      "@/electron-cfg/*": ["electron-cfg/*"],
+      "@/executor": ["executor"],
+      "@/executor/*": ["executor/*"],
+      "@/logger": ["logger"],
+      "@/logger/*": ["logger/*"],
+      "@/resources": ["resources"],
+      "@/resources/*": ["resources/*"],
+      "@/rpc": ["rpc"],
+      "@/rpc/*": ["rpc/*"],
+      "@/terminal": ["terminal"],
+      "@/terminal/*": ["terminal/*"],
+      "@/user-settings": ["user-settings"],
+      "@/user-settings/*": ["user-settings/*"],
+      "@/utils": ["utils"],
+      "@/utils/*": ["utils/*"],
+      "@/web-app/*": ["web-app/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

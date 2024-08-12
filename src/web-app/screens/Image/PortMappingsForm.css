@@ -1,0 +1,38 @@
+.ContainerPortMappingProtocol {
+  margin: 0 !important;
+  font-size: 11px !important;
+  min-width: 70px;
+}
+.ContainerPortMappingPort:first-child {
+  margin-right: 3px;
+}
+.ContainerPortMappingPort .bp5-input {
+  width: 55px;
+  margin-left: 3px;
+}
+.ContainerPortMappings .bp5-label {
+  text-transform: uppercase;
+  margin-right: 7px !important;
+}
+.ContainerPortMappings .bp5-label:first-child {
+  margin-right: 0px !important;
+}
+.ContainerPortMappings .bp5-form-content {
+  display: flex;
+}
+.ContainerImagePortMapping {
+  display: flex;
+  vertical-align: middle;
+  margin-bottom: 5px;
+}
+.ContainerImagePortMappingProperties {
+  flex: 1;
+  vertical-align: middle;
+}
+.ContainerImagePortMappingActions {
+  display: flex;
+  vertical-align: middle;
+}
+.ContainerImagePortMappingProperties .bp5-form-group {
+  margin-bottom: 0;
+}

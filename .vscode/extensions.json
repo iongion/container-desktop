@@ -1,15 +1,17 @@
 {
-    "recommendations": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "streetsidesoftware.code-spell-checker",
-        "editorconfig.editorconfig",
-        "VisualStudioExptTeam.vscodeintellicode",
-        "davidanson.vscode-markdownlint",
-        "timonwong.shellcheck",
-        "redhat.vscode-yaml",
-        "ms-azuretools.vscode-docker",
-        "alexkrechik.cucumberautocomplete",
-        "wix.vscode-import-cost"
-    ]
+  "recommendations": [
+    "rvest.vs-code-prettier-eslint",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "csstools.postcss",
+    "orta.vscode-jest",
+    "editorconfig.editorconfig",
+    "redhat.vscode-xml",
+    "j69.ejs-beautify",
+    "streetsidesoftware.code-spell-checker",
+    "VisualStudioExptTeam.vscodeintellicode",
+    "davidanson.vscode-markdownlint",
+    "timonwong.shellcheck",
+    "ms-vscode.makefile-tools"
+  ]
 }

@@ -1,0 +1,65 @@
+table[data-table="image.layers"] {
+  margin: 0;
+  padding: 0;
+  border: 1px solid #cccccc2f;
+  margin-right: 14px;
+}
+[data-table="image.layers"] tr {
+  font-size: 10px;
+}
+[data-table="image.layers"] tr th,
+[data-table="image.layers"] tr td {
+  margin: 0;
+  padding: 4px !important;
+  padding-left: 4px;
+  padding-right: 4px;
+  color: #dedede !important;
+  font-family: monospace;
+}
+
+[data-table="image.layers.history"] {
+  width: 100%;
+}
+[data-table="image.layers.history"] tr th,
+[data-table="image.layers.history"] tr td {
+  vertical-align: middle;
+  font-size: 11px;
+  font-family: monospace;
+  text-align: left;
+}
+[data-table="image.layers.history"] tr th:first-child,
+[data-table="image.layers.history"] tr td:first-child {
+  width: 1px;
+  min-width: 40px;
+  text-align: center;
+  color: #fff;
+  vertical-align: top;
+}
+/* Size column */
+[data-table="image.layers.history"] tr th:nth-last-child(2),
+[data-table="image.layers.history"] tr td:nth-last-child(2) {
+  width: 120px;
+  text-align: center;
+}
+[data-table="image.layers.history"] tr th:nth-last-child(3),
+[data-table="image.layers.history"] tr td:nth-last-child(3) {
+  width: 100%;
+  text-align: left;
+}
+[data-table="image.layers.history"] tr th:last-child,
+[data-table="image.layers.history"] tr td:last-child {
+  min-width: 80px;
+  padding: 2px;
+  margin: 0;
+}
+[data-table="image.layers.history"] .LayerHistory {
+  font-family: monospace;
+  font-size: 11px;
+  width: 100% !important;
+  border: none;
+  padding: 4px;
+  resize: none;
+  overflow: hidden;
+  min-height: 50px;
+  max-height: 100px;
+}

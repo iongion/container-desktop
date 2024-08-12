@@ -1,0 +1,7 @@
+.AppDataForm[data-form="registry.properties.manage"] .bp5-label {
+  white-space: nowrap;
+  min-width: 70px;
+}
+.AppDataForm[data-form="registry.properties.manage"] .bp5-label strong {
+  font-weight: bold;
+}
