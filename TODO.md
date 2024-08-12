@@ -1,5 +1,6 @@
 # This file collects missing features and technical debt
 
+* Release `5.2.0-rc1` binaries
 * MacOS binary with official digital signature
 * Testing
 * More efficient container info than poling

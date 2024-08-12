@@ -1997,7 +1997,7 @@
     axios "^0.27.2"
 
 "@podman-desktop-companion/web-app@link:packages/web-app":
-  version "4.1.0-rc.30"
+  version "5.2.0-rc.1"
   dependencies:
     "@babel/plugin-syntax-flow" "^7.17.12"
     "@babel/plugin-transform-react-jsx" "^7.17.12"

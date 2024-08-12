@@ -8,8 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.0-rc.1- 2024-08-10
+
 ## Added
 
+* Home page not to favor podman-desktop
+* README.md note to favor podman-desktop
+* TODO.md update to release binaries for `5.2.0-rc1`
+* Links to Podman in action and Podman for DevOps books
 * Registries support(define / search / pull) - search using podman configuration for podman engine only, inline configuration(custom) for all engines
 * Overlay quick start container actions on hover and tap for table users
 * Expand / collapse sidebar support for more work space horizontally (persist settings across restart)
@@ -19,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Changed
 
+* Upgraded node to 20
+* Upgrades to be compatible with podman `5.2.0`
+* Modified example to work on Ubuntu 22.04 (my current OS)
 * More compact lists and table views
 * Unified headers with tables / lists
 * Containers groups show first (like folders first in file managers)
@@ -27,10 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Fixed
 
+* Merged all dependabot PRs
 * Open terminal on some platforms
 * Open browser on some platforms
 * Main window shows up only when UI has received all init data to avoid showing incomplete windows
 * Detail tables in Drawers didn't size properly - first column was taking too much space
+
+## Removed
+
+* Sponsors
 
 ## 4.1.0-rc.29 - 2022-05-17
 

@@ -1,6 +1,7 @@
 **/.secrets.local/**
 **/.env.local/**
 **/__pycache__/**
+.venv
 temp
 build
 dist

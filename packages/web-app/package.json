@@ -1,6 +1,6 @@
 {
   "name": "@podman-desktop-companion/web-app",
-  "version": "4.1.0-rc.30",
+  "version": "5.2.0-rc.1",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman Desktop Companion",
   "keywords": [],
@@ -78,9 +78,6 @@
   },
   "optionalDependencies": {
     "dmg-license": "^1.0.10"
-  },
-  "engines": {
-    "node": "~16"
   },
   "scripts": {
     "start": "react-scripts start",

@@ -53,6 +53,22 @@ h1 {
   text-decoration: none;
 }
 
+.callout {
+  margin-top: 40px;
+  margin-bottom: 40px;
+  color: #e7ff00;
+  text-align: center;
+}
+
+.callout a {
+  text-decoration: underline;
+}
+.callout a.pd {
+  font-size: 48px;
+}
+.callout p.cp1 {
+  font-size: 14px !important;
+}
 
 .downloadSection {
   display: flex;
@@ -98,6 +114,35 @@ ul.downloadBundles li a {
 }
 ul.downloadBundles {
   padding: 10px;
+}
+
+.publications {
+  text-align: center;
+  color: #eee;
+  font-size: 40px;
+  margin-bottom: 0;
+}
+
+.books {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.books ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-top: 10px;
+}
+.books ul li {
+  display: inline-block;
+  text-align: center;
+  margin-right: 20px;
+}
+.books ul li:last-child {
+  margin-right: 0;
 }
 
 .content {
@@ -278,7 +323,6 @@ p {
   width: 100%;
 }
 
-
 .imgHighlight2 {
   border-radius: 15px;
   opacity: 0.5;
@@ -351,7 +395,6 @@ p {
   border-radius: 5px;
   display: inline-block;
 }
-
 
 .mode {
   margin-bottom: 30px;

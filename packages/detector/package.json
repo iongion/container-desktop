@@ -14,9 +14,6 @@
     "@podman-desktop-companion/executor": "link:../executor",
     "@podman-desktop-companion/logger": "link:../logger"
   },
-  "engines": {
-    "node": "~16"
-  },
   "repository": "https://github.com/iongion/podman-desktop-companion.git",
   "devDependencies": {
     "jest": "^27.5.0"
