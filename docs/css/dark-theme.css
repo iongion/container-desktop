@@ -35,7 +35,13 @@ h1 {
   color: #e7ff00;
 }
 .callout .cp3 {
+  font-weight: normal;
+  color: gray;
+  font-size: 16px;
+}
+.callout .cp3 strong {
   font-weight: bold;
+  color: white;
 }
 
 .download a.downloadButton {
