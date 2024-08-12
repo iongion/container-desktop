@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * README.md note to favor podman-desktop
 * TODO.md update to release binaries for `5.2.0-rc1`
 * Links to Podman in action and Podman for DevOps books
+* Changed all logos and icons to distinguish from podman desktop
+* Fixed minor bugs with copy-to-clipboard, visual inconsistencies, terminal launching and shortcut entries
 * Registries support(define / search / pull) - search using podman configuration for podman engine only, inline configuration(custom) for all engines
 * Overlay quick start container actions on hover and tap for table users
 * Expand / collapse sidebar support for more work space horizontally (persist settings across restart)
