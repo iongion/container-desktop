@@ -61,7 +61,6 @@ def build(ctx, env=None):
             shutil.copy(file, "./build")
         for file in glob.glob("./src/resources/icons/trayIcon.*"):
             shutil.copy(file, "./build")
-        # shutil.copytree("build", "release")
 
 
 @task
@@ -74,7 +73,7 @@ def bundle(ctx, env=None):
             run_env(ctx, "yarn package:mac_arm", env)
         elif system == "Linux":
             run_env(ctx, "yarn package:linux_x86", env)
-            # run_env(ctx, "yarn package:linux_arm", env)
+            run_env(ctx, "yarn package:linux_arm", env)
         else:
             run_env(ctx, "yarn package:win_x86", env)
 

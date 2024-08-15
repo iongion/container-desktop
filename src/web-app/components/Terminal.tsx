@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
 import { ResizeEntry, ResizeSensor } from "@blueprintjs/core";
-import { Terminal as XTermTerminal } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
+import { FitAddon } from "@xterm/addon-fit";
+// import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { Terminal as XTermTerminal } from "@xterm/xterm";
 
-import "xterm/css/xterm.css";
+import { useEffect, useRef } from "react";
+
+import "@xterm/xterm/css/xterm.css";
 
 import "./Terminal.css";
 
@@ -11,8 +13,9 @@ export interface TerminalProps {
   value?: string | Uint8Array;
 }
 
-export const Terminal: React.FC<TerminalProps> = ({ value }) => {
-  const ref = useRef<HTMLDivElement>(null);
+export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<HTMLDivElement>();
   const term = useRef<XTermTerminal>();
   const fit = useRef<FitAddon>();
   const handleResize = (entries: ResizeEntry[]) => {
@@ -22,25 +25,39 @@ export const Terminal: React.FC<TerminalProps> = ({ value }) => {
     }
   };
   useEffect(() => {
-    if (ref.current) {
-      if (!term.current) {
-        const fitAddon = new FitAddon();
-        const terminal = new XTermTerminal({
-          convertEol: true,
-          // fontFamily: `monospace`,
-          fontSize: 11,
-          disableStdin: true,
-          scrollback: 16 * 1024
-          // logLevel: "debug",
-          // rendererType: "canvas",
-        });
-        terminal.loadAddon(fitAddon);
-        terminal.open(ref.current);
-        fitAddon.fit();
-        terminal.focus();
-        term.current = terminal;
-        fit.current = fitAddon;
+    if (!wrapRef.current) {
+      return;
+    }
+    if (!viewRef.current) {
+      viewRef.current = wrapRef.current.querySelector<HTMLDivElement>(".TerminalViewContent") ?? undefined;
+    }
+    console.debug("Mounting term", viewRef);
+    if (!term.current) {
+      const fitAddon = new FitAddon();
+      const webglAddon = new FitAddon();
+      // const unicode11Addon = new Unicode11Addon();
+      const terminal = new XTermTerminal({
+        convertEol: true,
+        fontSize: 11,
+        disableStdin: true,
+        scrollback: 16 * 1024,
+        logLevel: "trace",
+        allowProposedApi: true
+      });
+      terminal.loadAddon(fitAddon);
+      // terminal.loadAddon(unicode11Addon);
+      try {
+        terminal.loadAddon(webglAddon);
+      } catch (error: any) {
+        console.error("Unable to activate web gl");
       }
+      // terminal.unicode.activeVersion = "11";
+      terminal.open(viewRef.current!);
+      fitAddon.fit();
+      terminal.focus();
+      term.current = terminal;
+      fit.current = fitAddon;
+      console.debug("Registered terminal", term);
     }
     if (value) {
       term.current?.write(value);
@@ -55,9 +72,9 @@ export const Terminal: React.FC<TerminalProps> = ({ value }) => {
 
   return (
     <div className="TerminalView">
-      <div className="TerminalViewContentWrap">
+      <div className="TerminalViewContentWrap" ref={wrapRef}>
         <ResizeSensor onResize={handleResize}>
-          <div className="TerminalViewContent" ref={ref}></div>
+          <div className="TerminalViewContent"></div>
         </ResizeSensor>
       </div>
     </div>

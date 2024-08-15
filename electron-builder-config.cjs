@@ -7,7 +7,7 @@ const artifactName = [pkg.name, "${arch}", pkg.version].join("-");
 
 const config = {
   appId: "io.github.iongion.PodmanDesktopCompanion",
-  productName: pkg.title,
+  productName: process.platform === "linux" ? pkg.name : pkg.title,
   buildVersion: pkg.version,
   artifactName: artifactName + ".${ext}",
   copyright: "../LICENSE",
@@ -15,7 +15,7 @@ const config = {
     releaseName: `${pkg.title} ${pkg.version}`,
     releaseDate: dayjs().format("MMM DD, YYYY")
   },
-  files: ["build"],
+  files: ["build", "LICENSE", "!**/node_modules/*"],
   extraMetadata: {
     version: pkg.version,
     main: `build/main-${pkg.version}.mjs`
@@ -77,8 +77,17 @@ const config = {
   },
   linux: {
     icon: "icons/appIcon.svg",
-    target: ["AppImage", "flatpak", "deb", "rpm"],
-    category: "Utility"
+    target: ["deb", "rpm", "flatpak", "AppImage"],
+    category: "Utility",
+    extraResources: ["support/templates"],
+    desktop: {
+      Name: pkg.title
+    },
+    executableArgs: ["--no-sandbox"]
+  },
+  deb: {
+    afterInstall: "support/templates/after-install.sh",
+    afterRemove: "support/templates/after-remove.sh"
   }
 };
 

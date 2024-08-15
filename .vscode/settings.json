@@ -92,6 +92,7 @@
     "pyenv",
     "Resetable",
     "rimraf",
+    "scrollback",
     "slirp",
     "Stoica",
     "stylelint",
@@ -101,6 +102,7 @@
     "trivy",
     "usehooks",
     "usermode",
+    "webgl",
     "whereis",
     "wslg"
   ],

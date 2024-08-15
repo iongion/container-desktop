@@ -6,6 +6,8 @@ temp
 build
 dist
 release
+squashfs-root
+
 # Logs
 logs
 *.log

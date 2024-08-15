@@ -106,18 +106,17 @@ function createWindow() {
     backgroundColor: "#1a051c",
     width: 1024,
     height: 768,
+    show: false,
+    ...windowConfigOptions.options(),
     webPreferences: {
       preload: path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`),
       devTools: true,
       nodeIntegration: true,
       nodeIntegrationInWorker: true,
       contextIsolation: true,
-      // nativeWindowOpen: true,
       sandbox: false
     },
-    icon: iconPath,
-    ...windowConfigOptions.options(),
-    show: false
+    icon: iconPath
   };
   if (osType === "Linux" || osType === "Windows_NT") {
     windowOptions.frame = false;
