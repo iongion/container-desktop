@@ -40,12 +40,14 @@
   "biome.enabled": false,
   "cSpell.ignorePaths": ["src/web-app/assets/languages.json"],
   "cSpell.words": [
+    "ALLUSERS",
     "aquasec",
     "aquasecurity",
     "asar",
     "blkio",
     "blueprintjs",
     "csstools",
+    "CURRENTUSER",
     "devel",
     "devpts",
     "electronjs",
@@ -61,6 +63,7 @@
     "immer",
     "Indo",
     "inited",
+    "inno",
     "iongion",
     "Ionut",
     "IPAM",
@@ -104,6 +107,7 @@
     "usermode",
     "webgl",
     "whereis",
+    "winget",
     "wslg"
   ],
   "editor.codeActionsOnSave": {

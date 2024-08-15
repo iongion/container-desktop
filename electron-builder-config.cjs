@@ -5,8 +5,9 @@ const pkg = require("./package.json");
 // module
 const artifactName = [pkg.name, "${arch}", pkg.version].join("-");
 
+const applicationId = "io.github.iongion.PodmanDesktopCompanion";
 const config = {
-  appId: "io.github.iongion.PodmanDesktopCompanion",
+  appId: applicationId,
   productName: process.platform === "linux" ? pkg.name : pkg.title,
   buildVersion: pkg.version,
   artifactName: artifactName + ".${ext}",
@@ -72,8 +73,12 @@ const config = {
     shortcutName: pkg.title
   },
   win: {
-    target: ["nsis"],
+    target: ["nsis", "appx"],
     icon: "icons/icon.png"
+  },
+  appx: {
+    applicationId,
+    identityName: pkg.title
   },
   linux: {
     icon: "icons/appIcon.svg",
