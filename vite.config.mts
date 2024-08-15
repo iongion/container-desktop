@@ -4,7 +4,7 @@ import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import inject from "@rollup/plugin-inject";
 import react from "@vitejs/plugin-react";
 import { ModuleFormat, RollupOptions } from "rollup";
-import { defineConfig, UserConfig } from "vite";
+import { UserConfig, defineConfig } from "vite";
 import { checker } from "vite-plugin-checker";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import electron from "vite-plugin-electron/simple";
@@ -165,7 +165,7 @@ export const createConfig = ({ mode, command, host, port }) => {
 
 export default ({ mode, command }) => {
   let host = process.env.HOST || "0.0.0.0";
-  const port = Number(process.env.PORT) || 5000;
+  const port = Number(process.env.PORT) || 3000;
   const config = createConfig({ mode, command, host, port });
   return defineConfig({
     ...config,

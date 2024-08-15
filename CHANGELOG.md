@@ -15,9 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Changed
 
+- MacOS default podman cli path
+- Current version to `5.2.0` in defaults
+- Changed default development port to use 3000
 - Linux shortcut name changed to use project title
 - Enabled ARM build for linux releases
 - Upgraded dependencies
+- Memory usage in human form
 
 ## 5.2.0-rc.1- 2024-08-12
 

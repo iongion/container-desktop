@@ -167,7 +167,7 @@ function createWindow() {
     ensureWindow();
   });
   const appURL = isDevelopment()
-    ? "http://localhost:5000"
+    ? `http://localhost:${process.env.PORT}`
     : url.format({
         pathname: path.join(__dirname, "index.html"),
         protocol: "file:",

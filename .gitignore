@@ -7,6 +7,7 @@ build
 dist
 release
 squashfs-root
+.DS_Store
 
 # Logs
 logs

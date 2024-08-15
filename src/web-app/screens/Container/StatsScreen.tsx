@@ -1,5 +1,6 @@
 import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import prettyBytes from "pretty-bytes";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
@@ -60,7 +61,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <div data-metric="label">{t("CPU Usage")}</div>
               </td>
               <td className="AppContainerStatsViewPort" data-view="view.memory">
-                <div data-metric="value">{mem_usage}</div>
+                <div data-metric="value">{prettyBytes(mem_usage ?? 0)}</div>
                 <div data-metric="label">{t("MEM Usage")}</div>
               </td>
             </tr>

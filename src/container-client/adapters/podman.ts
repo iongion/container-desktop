@@ -1,4 +1,5 @@
 // nodejs
+import fs from "node:fs";
 import path from "node:path";
 // vendors
 import merge from "lodash.merge";
@@ -32,21 +33,21 @@ const PODMAN_MACHINE_DEFAULT = "podman-machine-default";
 const PODMAN_API_SOCKET = `podman-desktop-companion-${PROGRAM}-rest-api.sock`;
 // Native
 const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
-const NATIVE_PODMAN_CLI_VERSION = "4.0.3";
+const NATIVE_PODMAN_CLI_VERSION = "5.2.0";
 const NATIVE_PODMAN_SOCKET_PATH = isFlatpak()
   ? path.join("/tmp", PODMAN_API_SOCKET)
   : path.join(userSettings.getPath(), PODMAN_API_SOCKET);
-const NATIVE_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
+const NATIVE_PODMAN_MACHINE_CLI_VERSION = "5.2.0";
 const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 // Windows virtualized
-const WINDOWS_PODMAN_NATIVE_CLI_VERSION = "4.0.3-dev";
+const WINDOWS_PODMAN_NATIVE_CLI_VERSION = "5.2.0-dev";
 const WINDOWS_PODMAN_NATIVE_CLI_PATH = "C:\\Program Files\\RedHat\\Podman\\podman.exe";
-const WINDOWS_PODMAN_MACHINE_CLI_VERSION = "4.0.3";
+const WINDOWS_PODMAN_MACHINE_CLI_VERSION = "5.2.0";
 const WINDOWS_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 // MacOS virtualized
-const MACOS_PODMAN_NATIVE_CLI_VERSION = "4.0.3";
-const MACOS_PODMAN_NATIVE_CLI_PATH = "/usr/local/bin/podman";
-const MACOS_PODMAN_MACHINE_CLI_VERSION = "4.0.2";
+const MACOS_PODMAN_NATIVE_CLI_VERSION = "5.2.0";
+const MACOS_PODMAN_NATIVE_CLI_PATH = "/opt/podman/bin/podman";
+const MACOS_PODMAN_MACHINE_CLI_VERSION = "5.2.0";
 const MACOS_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 // Windows WSL
 const WSL_PODMAN_CLI_PATH = "/usr/bin/podman";
@@ -158,7 +159,18 @@ export class PodmanClientEngineVirtualized extends AbstractControlledClientEngin
     if (this.osType === "Windows_NT") {
       connectionString = `//./pipe/${scope}`;
     } else {
-      connectionString = path.join(process.env.HOME!, ".local/share/containers/podman/machine/", scope, "podman.sock");
+      connectionString = path.join(process.env.HOME!, ".local/share/containers/podman/machine/podman.sock");
+      if (scope) {
+        const machineSockPath = path.join(
+          process.env.HOME!,
+          ".local/share/containers/podman/machine",
+          scope,
+          "podman.sock"
+        );
+        if (fs.existsSync(machineSockPath)) {
+          connectionString = machineSockPath;
+        }
+      }
     }
     return connectionString;
   }

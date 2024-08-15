@@ -8,12 +8,12 @@ from invoke import task, Collection
 
 PROJECT_HOME = os.path.dirname(__file__)
 PROJECT_CODE = "podman-desktop-companion"
-PROJECT_VERSION = Path(os.path.join(PROJECT_HOME, "VERSION")).read_text().strip()
+PROJECT_VERSION = Path(os.path.join(PROJECT_HOME, "VERSION")).read_text(encoding="utf-8").strip()
 NODE_ENV = os.environ.get("NODE_ENV", "development")
 ENVIRONMENT = os.environ.get("ENVIRONMENT", NODE_ENV)
 APP_PROJECT_VERSION = PROJECT_VERSION
 TARGET = os.environ.get("TARGET", "linux")
-PORT = 5000
+PORT = int(os.environ.get("PROT", str(3000)))
 
 
 def get_env():
