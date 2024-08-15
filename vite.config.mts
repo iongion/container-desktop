@@ -28,7 +28,6 @@ export function createEJSContext() {
     description: pkg.description,
     version: pkg.version,
     environment: ENVIRONMENT,
-    env_code: ENVIRONMENT[0].toLowerCase(),
     PUBLIC_URL: ".",
     PROJECT_VERSION: pkg.version,
     PROJECT_TITLE: pkg.title,

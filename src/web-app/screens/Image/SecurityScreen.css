@@ -38,17 +38,17 @@
   text-align: center;
   color: #fff;
 }
-.AppDataTable[data-table="image.scanning.report"] tr[data-severity="CRITICAL"] .Severity,
-table[data-table="image.scanning.report.counts"] tr[data-severity="CRITICAL"] td .Severity {
+table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="CRITICAL"] {
   background-color: #c40000;
 }
-.AppDataTable[data-table="image.scanning.report"] tr[data-severity="HIGH"] .Severity,
-table[data-table="image.scanning.report.counts"] tr[data-severity="HIGH"] td .Severity {
+table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="HIGH"] {
   background-color: #590000;
 }
-.AppDataTable[data-table="image.scanning.report"] tr[data-severity="MEDIUM"] .Severity,
-table[data-table="image.scanning.report.counts"] tr[data-severity="MEDIUM"] td .Severity {
+table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="MEDIUM"] {
   background-color: #300606;
+}
+table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="LOW"] {
+  background-color: #200303;
 }
 .AppDataTable[data-table="image.scanning.report"] tr td {
   color: #789;

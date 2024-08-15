@@ -1,5 +1,6 @@
 import glob
 import shutil
+import hashlib
 import platform
 import os
 from pathlib import Path
@@ -77,6 +78,18 @@ def bundle(ctx, env=None):
         else:
             run_env(ctx, "yarn package:win_x86", env)
 
+@task
+def checksums(ctx, env=None):
+    items = glob.glob(os.path.join(PROJECT_HOME, "release", "podman-desktop-companion-*"))
+    for installer_path in items:
+        checksum_path = f"{installer_path}.sha256"
+        print(f"Creating checksum for {installer_path}")
+        file_contents = open(installer_path, "rb").read()
+        checksum = hashlib.sha256(file_contents).hexdigest()
+        with open(checksum_path, "w", encoding="utf-8") as fp:
+            fp.write(checksum)
+
+
 
 @task(default=True)
 def help(ctx):
@@ -100,6 +113,7 @@ def release(ctx, docs=False):
     }
     build(ctx, env)
     bundle(ctx, env)
+    checksums(ctx, env)
 
 
 @task
@@ -139,4 +153,4 @@ def start(ctx, docs=False):
     )
     run_env(ctx, launcher)
 
-namespace = Collection(clean, prepare, build, bundle, release, docs_start, app_start, start)
+namespace = Collection(clean, prepare, build, bundle, release, docs_start, app_start, start, checksums)

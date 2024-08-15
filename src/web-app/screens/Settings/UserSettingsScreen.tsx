@@ -1,18 +1,18 @@
-import { useCallback } from "react";
-import { Icon, Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect } from "@blueprintjs/core";
+import { Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect, Icon } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useTranslation } from "react-i18next";
-import * as ReactIcon from "@mdi/react";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
+import * as ReactIcon from "@mdi/react";
+import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 // project
 import { GlobalUserSettingsOptions } from "../../Types.container-app";
 
-import { CURRENT_ENVIRONMENT, LOGGING_LEVELS, PROJECT_VERSION } from "../../Environment";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { ScreenHeader } from "./ScreenHeader";
+import { LOGGING_LEVELS, PROJECT_VERSION } from "../../Environment";
 import { Native } from "../../Native";
+import { AppScreen, AppScreenProps } from "../../Types";
 import { useStoreActions, useStoreState } from "../../domain/types";
+import { ScreenHeader } from "./ScreenHeader";
 
 // module
 import { ContainerEngineManager } from "./EngineManager";
@@ -84,7 +84,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader currentScreen={ID}>
-        <div className="AppScreenHeaderText">{`${PROJECT_VERSION}.${CURRENT_ENVIRONMENT[0]}`}</div>
+        <div className="AppScreenHeaderText">{PROJECT_VERSION}</div>
       </ScreenHeader>
       <div className="AppScreenContent">
         {contentWidget}

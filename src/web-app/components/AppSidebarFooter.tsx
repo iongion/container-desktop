@@ -16,7 +16,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppTheme, useStoreActions, useStoreState } from "../domain/types";
-import CurrentEnvironment, { PROJECT_VERSION } from "../Environment";
+import { PROJECT_VERSION } from "../Environment";
 import { ContainerEngine } from "../Types.container-app";
 
 import "./AppSidebarFooter.css";
@@ -53,7 +53,7 @@ export function AppSidebarFooter() {
   } else {
     programInfo.version = program?.version || "";
   }
-  const versionString = `v${PROJECT_VERSION}.${CurrentEnvironment.name[0]}`;
+  const versionString = `v${PROJECT_VERSION}`;
   const programString = `${programInfo.name} ${programInfo.version}`;
   let rightContent = pending ? (
     <div className="AppSidebarFooterPendingIndicator">

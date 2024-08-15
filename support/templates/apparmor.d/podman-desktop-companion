@@ -4,7 +4,7 @@
 abi <abi/4.0>,
 include <tunables/global>
 
-profile podman-desktop-companion /usr/bin/podman-desktop-companion flags=(unconfined) {
+profile podman-desktop-companion /opt/podman-desktop-companion/podman-desktop-companion flags=(unconfined) {
   userns,
 
   # Site-specific additions and overrides. See local/README for details.

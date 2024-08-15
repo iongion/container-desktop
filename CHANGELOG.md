@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.0-rc.3 - 2024-08-15
+
+## Fixed
+
+- Ubuntu 24.04 - apparmor template executable path was wrong
+- Silenced apparmor errors where service is present / enabled but reported as not available (WSL + apparmor) - during reload
+
+## Changed
+
+- Included `LOW` security reporting priority counts
+- Removed environment letter suffix form version reporting
+- Moved helper scripts outside sources
+- Updated trivy homepage URL
+
+## Added
+
+- Checksum generation for binaries
+
 ## 5.2.0-rc.2 - 2024-08-15
 
 ## Fixed

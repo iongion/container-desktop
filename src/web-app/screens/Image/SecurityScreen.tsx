@@ -89,23 +89,39 @@ export const Screen: AppScreen<ScreenProps> = () => {
             <div className="SecurityDetails">
               <HTMLTable compact striped data-table="image.scanning.report.counts">
                 <tbody>
-                  <tr data-severity="CRITICAL">
+                  <tr>
                     <td>{t("Critical")}</td>
                     <td>
-                      <span className="Severity">{report?.counts.CRITICAL}</span>
+                      <span className="Severity" data-severity="CRITICAL">
+                        {report?.counts.CRITICAL}
+                      </span>
+                    </td>
+                    <td>{t("Low")}</td>
+                    <td>
+                      <span className="Severity" data-severity="LOW">
+                        {report?.counts.LOW}
+                      </span>
                     </td>
                   </tr>
-                  <tr data-severity="HIGH">
+                  <tr>
                     <td>{t("High")}</td>
                     <td>
-                      <span className="Severity">{report?.counts.HIGH}</span>
+                      <span className="Severity" data-severity="HIGH">
+                        {report?.counts.HIGH}
+                      </span>
                     </td>
+                    <td></td>
+                    <td></td>
                   </tr>
-                  <tr data-severity="MEDIUM">
+                  <tr>
                     <td>{t("Medium")}</td>
                     <td>
-                      <span className="Severity">{report?.counts.MEDIUM}</span>
+                      <span className="Severity" data-severity="MEDIUM">
+                        {report?.counts.MEDIUM}
+                      </span>
                     </td>
+                    <td></td>
+                    <td></td>
                   </tr>
                 </tbody>
               </HTMLTable>
@@ -147,7 +163,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <AnchorButton
                 icon={IconNames.HOME}
                 intent={Intent.PRIMARY}
-                href="https://aquasecurity.github.io/trivy/v0.27.1/"
+                href="https://trivy.dev"
                 target="_blank"
                 rel="noOpener"
               >
