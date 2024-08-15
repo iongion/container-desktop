@@ -108,7 +108,8 @@
     "webgl",
     "whereis",
     "winget",
-    "wslg"
+    "wslg",
+    "xattr"
   ],
   "editor.codeActionsOnSave": {
     "source.fixAll": "always",

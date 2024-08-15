@@ -26,6 +26,10 @@ Main goals
 - Cross-platform desktop integrated application with consistent UI
 - Learning tool for the powerful `podman` command line interface
 
+## Usage
+
+- See [USAGE.md](./USAGE.md)
+
 ## Podman is the driving engine
 
 ![Podman Desktop Companion Dashboard](docs/img/001-Dashboard.png?raw=true)
