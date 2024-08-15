@@ -1,10 +1,10 @@
 {
   "name": "podman-desktop-companion",
   "title": "Podman Desktop Companion",
-  "version": "5.2.0-rc.1",
+  "version": "5.2.0-rc.2",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Container desktop helper app",
-  "main": "build/main-5.2.0-rc.1.mjs",
+  "main": "build/main-5.2.0-rc.2.mjs",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
