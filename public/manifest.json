@@ -1,15 +1,15 @@
 {
-  "version": "5.2.0-rc.2",
-  "manifest_version": 2,
-  "name": "Podman desktop companion",
+  "default_locale": "en",
   "description": "Podman desktop companion",
   "icons": [
     {
-      "src": "appIcon.svg",
       "sizes": "any",
+      "src": "appIcon.svg",
       "type": "image/svg"
     }
   ],
-  "default_locale": "en",
-  "permissions": ["webNavigation"]
+  "manifest_version": 2,
+  "name": "Podman desktop companion",
+  "permissions": ["webNavigation"],
+  "version": "5.2.0-rc.3"
 }
