@@ -70,6 +70,12 @@
   sudo apt-get install rpm
   ```
 
+- Ensure `libarchive-tools` is installed to be able to create `pacman` packages
+
+  ```bash
+  sudo apt-get install -y libarchive-tools
+  ```
+
 ### Other useful info
 
 - Start API as socket (`socketPath` for axios)

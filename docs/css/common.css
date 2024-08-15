@@ -511,6 +511,7 @@ ul.footerMenu {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: "Montserrat", sans-serif;
 }
 .installationSection a {
   font-weight: normal;

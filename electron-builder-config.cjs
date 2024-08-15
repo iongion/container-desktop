@@ -82,7 +82,7 @@ const config = {
   },
   linux: {
     icon: "icons/appIcon.svg",
-    target: ["deb", "rpm", "flatpak", "AppImage"],
+    target: ["deb", "pacman", "rpm", "flatpak", "AppImage"],
     category: "Utility",
     extraResources: ["support/templates"],
     desktop: {
