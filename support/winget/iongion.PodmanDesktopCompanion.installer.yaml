@@ -1,0 +1,26 @@
+PackageIdentifier: iongion.PodmanDesktopCompanion
+PackageVersion: <VERSION>
+ReleaseDate: <DATE>
+Platform:
+  - Windows.Desktop
+MinimumOSVersion: 10.0.0.0
+InstallerType: inno
+InstallModes:
+  - interactive
+  - silent
+  - silentWithProgress
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/iongion/podman-desktop-companion/releases/download/<VERSION>/podman-desktop-companion-x64-<VERSION>.exe
+    InstallerSha256: <HASH-AMD64>
+    Scope: machine
+    InstallerSwitches:
+      Custom: /INSTALLER=winget /ALLUSERS
+  - Architecture: x64
+    InstallerUrl: https://github.com/iongion/podman-desktop-companion/releases/download/<VERSION>/podman-desktop-companion-x64-<VERSION>.exe
+    InstallerSha256: <HASH-AMD64>
+    Scope: user
+    InstallerSwitches:
+      Custom: /INSTALLER=winget /CURRENTUSER
+ManifestType: installer
+ManifestVersion: 1.6.0

@@ -38,17 +38,21 @@
   text-align: center;
   color: #fff;
 }
+.AppDataTable[data-table="image.scanning.report"] tr[data-severity="CRITICAL"] td .Severity,
 table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="CRITICAL"] {
   background-color: #c40000;
 }
+.AppDataTable[data-table="image.scanning.report"] tr[data-severity="HIGH"] td .Severity,
 table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="HIGH"] {
   background-color: #590000;
 }
+.AppDataTable[data-table="image.scanning.report"] tr[data-severity="MEDIUM"] td .Severity,
 table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="MEDIUM"] {
   background-color: #300606;
 }
+.AppDataTable[data-table="image.scanning.report"] tr[data-severity="LOW"] td .Severity,
 table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="LOW"] {
-  background-color: #200303;
+  background-color: #1a0f0f;
 }
 .AppDataTable[data-table="image.scanning.report"] tr td {
   color: #789;

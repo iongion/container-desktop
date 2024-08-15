@@ -82,6 +82,8 @@ def bundle(ctx, env=None):
 def checksums(ctx, env=None):
     items = glob.glob(os.path.join(PROJECT_HOME, "release", "podman-desktop-companion-*"))
     for installer_path in items:
+        if installer_path.endswith(".sha256"):
+            continue
         checksum_path = f"{installer_path}.sha256"
         print(f"Creating checksum for {installer_path}")
         file_contents = open(installer_path, "rb").read()
