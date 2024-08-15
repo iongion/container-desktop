@@ -78,7 +78,7 @@ const config = {
   },
   appx: {
     applicationId,
-    identityName: pkg.title
+    identityName: pkg.name
   },
   linux: {
     icon: "icons/appIcon.svg",
