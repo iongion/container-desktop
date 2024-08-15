@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.0-rc.2 - 2024-08-15
+
 ## Fixed
 
 - Ubuntu 24.04 launching issues(added apparmor profile, electron sandbox disabling)
@@ -23,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded dependencies
 - Memory usage in human form
 
-## 5.2.0-rc.1- 2024-08-12
+## 5.2.0-rc.1 - 2024-08-12
 
 ## Added
 
