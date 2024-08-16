@@ -6,12 +6,15 @@
 
 ### MacOS
 
-* `xattr -d com.apple.quarantine /Applications/Podman\ Desktop\ Companion.app`
+- Allow unsigned application to execute - `xattr -d com.apple.quarantine /Applications/Podman\ Desktop\ Companion.app`
 
 ### Windows
 
-* TODO
+- TODO
 
 ### Linux
 
-* TODO
+- Allow `*.AppImage` to execute - see <https://github.com/AppImage/AppImageKit/wiki/FUSE>
+- See <https://github.com/boredsquirrel/dont-use-appimages> for some critique of `*.AppImage` format - see <https://mijorus.it/projects/gearlever/>
+- Allow `*.flatpak` on Ubuntu - see <https://flatpak.org/setup/Ubuntu> - See <https://github.com/tchx84/Flatseal>
+- See <https://ludocode.com/blog/flatpak-is-not-the-future> for some critique of `*.flatpak` format
