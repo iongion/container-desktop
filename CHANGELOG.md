@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Fixed
+
+- Issue #109 - Allow flatpak version to start/stop podman native binary
+
 ## 5.2.0-rc.3 - 2024-08-15
 
 ## Fixed

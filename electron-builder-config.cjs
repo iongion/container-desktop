@@ -48,6 +48,7 @@ const config = {
       "--filesystem=host-etc",
       "--filesystem=home",
       "--filesystem=/tmp",
+      "--filesystem=xdg-run/podman",
       "--talk-name=org.freedesktop.Notifications"
     ]
   },
