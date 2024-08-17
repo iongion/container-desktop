@@ -1,0 +1,94 @@
+{
+  "analytics": {},
+  "artifacts": [
+    {
+      "uninstall": [
+        {
+          "delete": "/Applications/Podman Desktop Companion.app",
+          "quit": "io.github.iongion.PodmanDesktopCompanion"
+        }
+      ]
+    },
+    {
+      "app": ["Podman Desktop Companion.app"]
+    },
+    {
+      "zap": [
+        {
+          "trash": [
+            "~/.local/share/podman-desktop-companion",
+            "~/Library/Application Support/Podman Desktop Companion",
+            "~/Library/Preferences/io.github.iongion.PodmanDesktopCompanion.plist",
+            "~/Library/Saved Application State/io.github.iongion.PodmanDesktopCompanion.savedState"
+          ]
+        }
+      ]
+    }
+  ],
+  "auto_updates": true,
+  "bundle_short_version": null,
+  "bundle_version": null,
+  "caveats": null,
+  "conflicts_with": null,
+  "container": null,
+  "depends_on": {
+    "macos": {
+      ">=": ["10.15"]
+    }
+  },
+  "deprecated": false,
+  "deprecation_date": null,
+  "deprecation_reason": null,
+  "desc": "General purpose container operations",
+  "disable_date": null,
+  "disable_reason": null,
+  "disabled": false,
+  "full_token": "podman-desktop-companion",
+  "generated_date": "2024-08-17",
+  "homepage": "https://iongion.github.io/podman-desktop-companion/",
+  "installed": null,
+  "installed_time": null,
+  "languages": [],
+  "name": ["Podman Desktop Companion"],
+  "old_tokens": [],
+  "outdated": false,
+  "ruby_source_checksum": {
+    "sha256": "2c501587794b56644a72f3b741ecd499d6e75c2c518495535bdd3df259ffa435"
+  },
+  "ruby_source_path": "Casks/p/podman-desktop-companion.rb",
+  "sha256": "766e95f921ec223ade4ba06e82558a77cd890962f2a4e25d41a047d88c1b10bf",
+  "tap": "homebrew/cask",
+  "tap_git_head": "2e01e559350aa6f88679fcc94a5e74b90c432cc6",
+  "token": "podman-desktop-companion",
+  "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-arm64-5.2.0-rc.3.dmg",
+  "url_specs": {
+    "verified": "github.com/iongion/podman-desktop-companion/"
+  },
+  "variations": {
+    "big_sur": {
+      "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.0-rc.3.dmg"
+    },
+    "catalina": {
+      "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.0-rc.3.dmg"
+    },
+    "monterey": {
+      "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.0-rc.3.dmg"
+    },
+    "sequoia": {
+      "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.0-rc.3.dmg"
+    },
+    "sonoma": {
+      "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.0-rc.3.dmg"
+    },
+    "ventura": {
+      "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.0-rc.3.dmg"
+    }
+  },
+  "version": "5.2.0-rc.3"
+}
