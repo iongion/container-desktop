@@ -1,5 +1,10 @@
 # Podman Desktop Companion
 
+![GitHub Release](https://img.shields.io/github/v/release/iongion/podman-desktop-companion)
+![GitHub repo size](https://img.shields.io/github/repo-size/iongion/podman-desktop-companion)
+![Github All Releases](https://img.shields.io/github/downloads/iongion/podman-desktop-companion/total.svg)
+![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/iongion/podman-desktop-companion)
+
 ## **IMPORTANT**
 
 - [Podman](https://podman.io/) world has changed and now offers an official cross-platform desktop UI available at [Podman Desktop](https://podman-desktop.io/)
