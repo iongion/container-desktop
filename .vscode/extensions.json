@@ -12,6 +12,9 @@
     "VisualStudioExptTeam.vscodeintellicode",
     "davidanson.vscode-markdownlint",
     "timonwong.shellcheck",
-    "ms-vscode.makefile-tools"
+    "ms-vscode.makefile-tools",
+    "tauri-apps.tauri-vscode",
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml"
   ]
 }

@@ -1,5 +1,5 @@
 // node
-import * as os from "os";
+import * as os from "node:os";
 // vendors
 // project
 import { UserConfiguration } from "@/container-config";

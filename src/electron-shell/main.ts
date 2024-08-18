@@ -1,7 +1,7 @@
 // node
-import * as path from "path";
-import * as url from "url";
-import { fileURLToPath } from "url";
+import * as path from "node:path";
+import * as url from "node:url";
+import { fileURLToPath } from "node:url";
 // vendors
 import { BrowserWindow, Menu, Tray, app, dialog, ipcMain, shell } from "electron";
 import contextMenu from "electron-context-menu";
