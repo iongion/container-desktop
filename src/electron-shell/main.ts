@@ -24,6 +24,9 @@ const ensureWindow = () => {
   window.show();
   // }
 };
+const DEV_HOST = process.env.HOST || "0.0.0.0";
+const DEV_PORT = process.env.PORT || 3000;
+const devUrl = `http://${DEV_HOST}:${DEV_PORT}`;
 const isHideToTrayOnClose = () => userConfiguration.getKey("minimizeToSystemTray", false);
 const isDebug = !!process.env.PODMAN_DESKTOP_COMPANION_DEBUG;
 const isDevelopment = () => {
@@ -167,7 +170,7 @@ function createWindow() {
     ensureWindow();
   });
   const appURL = isDevelopment()
-    ? `http://localhost:${process.env.PORT}`
+    ? devUrl
     : url.format({
         pathname: path.join(__dirname, "index.html"),
         protocol: "file:",

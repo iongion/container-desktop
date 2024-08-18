@@ -2253,7 +2253,7 @@
   dependencies:
     defer-to-connect "^2.0.0"
 
-"@tauri-apps/api@>=2.0.0-rc.3", "@tauri-apps/api@^2.0.0-rc.0":
+"@tauri-apps/api@>=2.0.0-rc.0", "@tauri-apps/api@^2.0.0-rc.0":
   version "2.0.0-rc.1"
   resolved "https://registry.yarnpkg.com/@tauri-apps/api/-/api-2.0.0-rc.1.tgz#ec858f239e34792625e311f687fcaca0581e0904"
   integrity sha512-qubAWjM9sqofUh7fe+7UAbBY3wlkfCyxm+PNRYpq9mnNng7lvSQq3sYsFUEB12AYvgGARZSb54VMVUvRuVLi7w==
@@ -2308,7 +2308,7 @@
   resolved "https://registry.yarnpkg.com/@tauri-apps/cli-win32-x64-msvc/-/cli-win32-x64-msvc-2.0.0-rc.4.tgz#8e6de2159f9c1091704a829512253df559ff73d6"
   integrity sha512-sK7UcoTJVhMyfqUQNq6jo49n4BT1pDwjd4Ns0f2xYxhqWe+J9aC5055bWqGnClIrzf44Wji3APkk5TfpSQczpg==
 
-"@tauri-apps/cli@>=2.0.0-rc.3":
+"@tauri-apps/cli@>=2.0.0-rc.0":
   version "2.0.0-rc.4"
   resolved "https://registry.yarnpkg.com/@tauri-apps/cli/-/cli-2.0.0-rc.4.tgz#7c00a99f4ce923e4a5b33eb637b3e4183f91f52c"
   integrity sha512-K17SfVvs6eAQfO0rRkunG7D7EPch8TkGasXXYL9PQlAIO6UwBRblcvQpPBwivZG7Piq+DHd+InudDLNbG9Wb0g==
@@ -2324,7 +2324,7 @@
     "@tauri-apps/cli-win32-ia32-msvc" "2.0.0-rc.4"
     "@tauri-apps/cli-win32-x64-msvc" "2.0.0-rc.4"
 
-"@tauri-apps/plugin-shell@>=2.0.0-rc.3":
+"@tauri-apps/plugin-shell@>=2.0.0-rc.0":
   version "2.0.0-rc.0"
   resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-shell/-/plugin-shell-2.0.0-rc.0.tgz#41645da666375930f95ee2155fb9dd5a02874952"
   integrity sha512-bhUcQcrqZoK8H1DFXapr5r1Z75oh6Kd5Tltz97XpZFLREEqp+KhN2Fvyh8r/fKAyenYsTYUIsDsyGdjdueuF9g==

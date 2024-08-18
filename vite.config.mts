@@ -7,7 +7,6 @@ import { ModuleFormat, RollupOptions } from "rollup";
 import { UserConfig, defineConfig } from "vite";
 import { checker } from "vite-plugin-checker";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
-import electron from "vite-plugin-electron/simple";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgrPlugin from "vite-plugin-svgr";
 import topLevelAwait from "vite-plugin-top-level-await";
@@ -119,8 +118,9 @@ export const createConfig = ({ mode, command, host, port }) => {
       nodePolyfills(),
       react(),
       svgrPlugin(),
-      ViteEjsPlugin(ejsContext),
+      ViteEjsPlugin(ejsContext)
       // Electron specific
+      /*
       electron({
         main: {
           // Shortcut of `build.lib.entry`
@@ -141,6 +141,7 @@ export const createConfig = ({ mode, command, host, port }) => {
           vite: getCommonViteConfig({ mode, define, resolve, outputName: "preload" })
         }
       })
+      */
     ],
     publicDir: "./public",
     rollupOptions: {
