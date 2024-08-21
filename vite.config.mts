@@ -7,7 +7,6 @@ import { UserConfig, defineConfig } from "vite";
 import { checker } from "vite-plugin-checker";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import electron from "vite-plugin-electron/simple";
-// import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgrPlugin from "vite-plugin-svgr";
 import topLevelAwait from "vite-plugin-top-level-await";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -119,7 +118,6 @@ export const createConfig = ({ mode, command, host, port }) => {
     plugins: [
       // All current plugins are extending the Vite configuration
       // Frontend specific
-      // nodePolyfills(),
       react(),
       svgrPlugin(),
       ViteEjsPlugin(ejsContext),
