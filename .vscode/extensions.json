@@ -12,6 +12,7 @@
     "VisualStudioExptTeam.vscodeintellicode",
     "davidanson.vscode-markdownlint",
     "timonwong.shellcheck",
-    "ms-vscode.makefile-tools"
+    "ms-vscode.makefile-tools",
+    "aaron-bond.better-comments"
   ]
 }
