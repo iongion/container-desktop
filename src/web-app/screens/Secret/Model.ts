@@ -1,9 +1,9 @@
 // vendors
-import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
+import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
 // project
-import { AppRegistry, ResetableModel } from "../../domain/types";
-import { FetchSecretOptions, CreateSecretOptions } from "../../Api.clients";
+import { CreateSecretOptions, FetchSecretOptions } from "../../Api.clients";
 import { Secret } from "../../Types.container-app";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { sortAlphaNum } from "../../domain/utils";
 
 export interface SecretsModelState {
@@ -24,7 +24,7 @@ export interface SecretsModel extends SecretsModelState, ResetableModel<SecretsM
   secretsSearchByTerm: Computed<SecretsModel, (searchTerm: string) => Secret[]>;
 }
 
-export const createModel = (registry: AppRegistry): SecretsModel => ({
+export const createModel = async (registry: AppRegistry): Promise<SecretsModel> => ({
   secrets: [],
   // actions
   reset: action((state) => {

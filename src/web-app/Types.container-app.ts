@@ -63,8 +63,8 @@ export interface Program {
 }
 
 export interface EngineConnectorApiSettings {
-  baseURL: string;
-  connectionString: string;
+  baseURL?: string;
+  connectionString?: string;
 }
 
 export interface EngineConnectorSettings {
@@ -84,8 +84,8 @@ export interface EngineApiOptions {
   id: string; // engine client instance id
   //
   scope: string; // ControllerScope Name
-  baseURL: string;
-  connectionString: string;
+  baseURL?: string;
+  connectionString?: string;
 }
 
 export interface EngineProgramOptions {
@@ -658,7 +658,7 @@ export interface ContainerClientResponse<T = unknown> {
 export interface ProxyRequest {
   request: any;
   baseURL: string;
-  socketPath: string;
+  socketPath?: string;
   engine: ContainerEngine;
   adapter: ContainerAdapter;
   scope?: string;
@@ -796,8 +796,8 @@ export default interface Application {
   // settings
   setGlobalUserSettings: (settings: Partial<GlobalUserSettings>) => Promise<GlobalUserSettings>;
   getGlobalUserSettings: () => Promise<GlobalUserSettings>;
-  setEngineUserSettings: (id: string, settings: Partial<EngineConnectorSettings>) => Promise<EngineConnectorSettings>;
-  getEngineUserSettings: (id: string) => Promise<EngineConnectorSettings>;
+  setConnectorSettings: (id: string, settings: Partial<EngineConnectorSettings>) => Promise<EngineConnectorSettings>;
+  getConnectorSettings: (id: string) => Promise<EngineConnectorSettings>;
   getPodLogs: (Id: string, tail?: number) => Promise<ProgramExecutionResult>;
   generateKube: (Id: string) => Promise<ProgramExecutionResult>;
   getControllerScopes: () => Promise<ControllerScope[]>;

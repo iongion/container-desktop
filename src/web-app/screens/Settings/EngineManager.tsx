@@ -11,7 +11,8 @@ import {
   Radio,
   RadioGroup,
   Tab,
-  Tabs
+  Tabs,
+  TabsExpander
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import merge from "lodash.merge";
@@ -96,7 +97,8 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
   const onProgramSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const subject = e.currentTarget.getAttribute("data-subject");
-      const result = await Native.getInstance().openFileSelector();
+      const instance = await Native.getInstance();
+      const result = await instance.openFileSelector();
       if (result) {
         const filePath = result?.filePaths[0];
         if (!result.canceled && filePath) {
@@ -171,7 +173,9 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         });
       }
 
-      updateConnectorByResult(!!result, result?.path, result?.version);
+      if (result) {
+        updateConnectorByResult(!!result, result?.path, result?.version);
+      }
       setProgramTestResult({
         success: !!result,
         program: result
@@ -210,7 +214,7 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
         Notification.show({ message: t("Program could not be reached"), intent: Intent.DANGER });
       }
 
-      updateConnectorByResult(result.success, result.program?.path, result.program?.version, result.scopes);
+      updateConnectorByResult(result.success, result.program?.path ?? "", result.program?.version, result.scopes);
       setProgramTestResult(result);
     },
     [engine, controller, connector, testProgramReachability, getValues, t, updateConnectorByResult]
@@ -524,7 +528,6 @@ export const ContainerEngineSettingsProgramLocal: React.FC<ContainerEngineSettin
       <Controller
         control={control}
         name="connectionString"
-        defaultValue=""
         rules={{ required: t("Connection string must be set") }}
         render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { isDirty, error, invalid } }) => {
           let helperText = "";
@@ -628,10 +631,10 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
 }: ContainerEngineManagerSettingsProps) => {
   const { t } = useTranslate();
   const pending = useStoreState((state) => state.pending);
-  const connectorUserSettings = useStoreState((state) => state.descriptor.userSettings.connector);
+  const userSettings = useStoreState((state) => state.descriptor.userSettings);
   const start = useStoreActions((actions) => actions.start);
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
-  const setEngineUserSettings = useStoreActions((actions) => actions.setEngineUserSettings);
+  const setConnectorSettings = useStoreActions((actions) => actions.setConnectorSettings);
   const [selectedConnectorId, setSelectedConnectorId] = useState(currentConnector.id);
 
   // if no connector found - pick first usable
@@ -661,6 +664,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
   const { reset, formState, handleSubmit } = methods;
 
   const onContainerEngineChange = useCallback((e) => {
+    console.debug("Container engine changed", e.currentTarget.value);
     setSelectedConnectorId(e.currentTarget.value);
   }, []);
 
@@ -683,7 +687,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     }
     try {
       const nextSettings = { id: connector.id, settings: engineUserSettings };
-      const settings: EngineConnectorSettings = await setEngineUserSettings(nextSettings);
+      const settings: EngineConnectorSettings = await setConnectorSettings(nextSettings);
       console.debug("Post update settings are", settings);
       reset({
         controllerPath: settings.controller?.path,
@@ -726,7 +730,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
       return;
     }
     try {
-      const settings: EngineConnectorSettings = await setEngineUserSettings({
+      const settings: EngineConnectorSettings = await setConnectorSettings({
         id: connector.id,
         settings: connector?.settings.expected
       });
@@ -742,8 +746,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
     return true;
   });
 
-  const userSettingsConnector = connectorUserSettings.default;
-
+  const userSettingsConnector = userSettings.connector?.default;
   const useAsDefault = userSettingsConnector !== undefined && userSettingsConnector === connector?.id;
 
   const onUseAsDefaultChange = useCallback(
@@ -753,12 +756,11 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
         return;
       }
       const isChecked = e.currentTarget.checked;
-      const nextDefault = isChecked ? connector.id : undefined;
-      const next = { connector: { default: nextDefault } };
-      console.debug({ isChecked, connector, useAsDefault, nextDefault });
-      await setGlobalUserSettings(next);
+      const nextDefault = isChecked ? connector.id : "";
+      console.debug("Next default is", { nextDefault });
+      await setGlobalUserSettings({ connector: { default: nextDefault } });
     },
-    [setGlobalUserSettings, useAsDefault, connector]
+    [setGlobalUserSettings, connector]
   );
 
   const canConnect = formState.isValid && !pending;
@@ -792,6 +794,7 @@ export const ContainerEngineManagerSettings: React.FC<ContainerEngineManagerSett
                     const restrict = <RestrictedTo engine={containerEngine.engine} />;
                     const important =
                       userSettingsConnector !== undefined && userSettingsConnector === engineConnector?.id;
+
                     return (
                       <Radio
                         key={containerEngine.engine}
@@ -956,6 +959,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({
   const adapter = useStoreState((state) => state.descriptor.currentConnector.adapter);
   const [containerAdapter, setContainerAdapter] = useState(adapter || ContainerAdapter.PODMAN);
   const onContainerAdapterChange = useCallback((e) => {
+    console.debug("Changing to", e);
     setContainerAdapter(e);
   }, []);
 
@@ -1002,7 +1006,7 @@ export const ContainerEngineManager: React.FC<ContainerEngineManagerProps> = ({
             />
           }
         />
-        <Tabs.Expander />
+        <TabsExpander />
         <Label>{helperText}</Label>
       </Tabs>
     </div>

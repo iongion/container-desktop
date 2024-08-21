@@ -1,9 +1,9 @@
 // vendors
-import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
+import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
 // project
+import { CreateNetworkOptions } from "../../Api.clients";
 import { AppRegistry, ResetableModel } from "../../domain/types";
 import { sortAlphaNum } from "../../domain/utils";
-import { CreateNetworkOptions } from "../../Api.clients";
 import { Network } from "../../Types.container-app";
 
 export interface NetworksModelState {
@@ -25,7 +25,7 @@ export interface NetworksModel extends NetworksModelState, ResetableModel<Networ
   networkCreate: Thunk<NetworksModel, CreateNetworkOptions>;
 }
 
-export const createModel = (registry: AppRegistry): NetworksModel => ({
+export const createModel = async (registry: AppRegistry): Promise<NetworksModel> => ({
   networks: [],
   networksMap: {},
   // Actions

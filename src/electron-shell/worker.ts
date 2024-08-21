@@ -7,7 +7,7 @@ import { createWorkerClient } from "@/rpc";
 
 // locals
 const { Application } = ((bridge as any) || {}).application || { Application: null };
-const logger = createLogger("worker.mjs");
+const logger = await createLogger("worker.mjs");
 let app: any; // singleton - do not move into function
 
 export default createWorkerClient(

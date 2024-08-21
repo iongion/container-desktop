@@ -23,6 +23,7 @@ import { AppHeader } from "./components/AppHeader";
 import { AppLoading } from "./components/AppLoading";
 import { AppSidebar } from "./components/AppSidebar";
 
+import { DEFAULT_THEME } from "@/web-app/App.config";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import { Screen as ContainerGenerateKubeScreen } from "./screens/Container/GenerateKubeScreen";
 import { Screen as ContainerInspectScreen } from "./screens/Container/InspectScreen";
@@ -193,14 +194,12 @@ export function AppMainScreen() {
   const descriptor = useStoreState((state) => state.descriptor);
   const start = useStoreActions((actions) => actions.start);
 
-  const theme = descriptor.userSettings.theme;
+  const theme = descriptor.userSettings.theme || DEFAULT_THEME;
   const provisioned = descriptor.provisioned;
   const running = descriptor.running;
   const osType = descriptor.osType;
   const currentConnector = descriptor.currentConnector;
   const program = currentConnector?.settings?.current?.program;
-
-  console.debug("Starting", { theme, provisioned, running, osType, currentConnector, program });
 
   useEffect(() => {
     if (startRef.current) {
@@ -225,7 +224,8 @@ export function AppMainScreen() {
       data-provisioned={provisioned ? "yes" : "no"}
     >
       <Helmet>
-        <body className={theme} data-adapter={currentConnector.adapter} />
+        <html data-theme={theme} lang="en" />
+        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-adapter={currentConnector.adapter} />
       </Helmet>
       <Router>
         <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />

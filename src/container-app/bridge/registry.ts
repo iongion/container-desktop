@@ -1,12 +1,13 @@
 // node
-import fs from "node:fs";
-import path from "node:path";
 // vendors
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { adapters } from "@/container-client";
+import { UserConfiguration } from "@/container-config";
 import { createLogger } from "@/logger";
+import { FS, Path } from "@/platform/node";
 // locals
 const { Docker, Podman } = adapters;
-const logger = createLogger("bridge.registry");
+const logger = await createLogger("bridge.registry");
 
 const AUTOMATIC_REGISTRIES = [
   {
@@ -42,15 +43,15 @@ const PROPOSED_REGISTRIES = [
   }
 ];
 
-export const getRegistriesMap = async (currentApi, userConfiguration) => {
+export const getRegistriesMap = async (currentApi, userConfiguration: UserConfiguration) => {
   const isPodman = currentApi.engine.ADAPTER === Podman.Adapter.ADAPTER;
-  const customRegistriesPath = path.join(userConfiguration.getStoragePath(), "registries.json");
+  const customRegistriesPath = await Path.join(await userConfiguration.getStoragePath(), "registries.json");
   const registriesMap = {
     default: AUTOMATIC_REGISTRIES.map((it) => (it.id === "system" && !isPodman ? { ...it, enabled: false } : it)),
     custom: PROPOSED_REGISTRIES
   };
-  if (fs.existsSync(customRegistriesPath)) {
-    const custom = JSON.parse(fs.readFileSync(customRegistriesPath).toString());
+  if (await FS.isFilePresent(customRegistriesPath)) {
+    const custom = JSON.parse(await FS.readTextFile(customRegistriesPath));
     if (custom.length) {
       registriesMap.custom = custom;
     }
@@ -58,10 +59,10 @@ export const getRegistriesMap = async (currentApi, userConfiguration) => {
   return registriesMap;
 };
 
-export const setRegistriesMap = async (currentApi, userConfiguration?: any, registries?: any) => {
-  const customRegistriesPath = path.join(userConfiguration.getStoragePath(), "registries.json");
-  fs.writeFileSync(customRegistriesPath, JSON.stringify(registries.custom));
-  return getRegistriesMap(currentApi, userConfiguration);
+export const setRegistriesMap = async (currentApi, userConfiguration: UserConfiguration, registries?: any) => {
+  const customRegistriesPath = await Path.join(await userConfiguration.getStoragePath(), "registries.json");
+  await FS.writeTextFile(customRegistriesPath, JSON.stringify(registries.custom));
+  return await getRegistriesMap(currentApi, userConfiguration);
 };
 
 export const coerceAndSortSearchResults = (items) => {
@@ -162,11 +163,11 @@ export const pullFromRegistry = async (currentApi, opts?: any) => {
   return result;
 };
 
-export function createActions(context, { userConfiguration }) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   // Do not access the context at creation - it is lazy
   return {
-    getRegistriesMap: (...rest) => getRegistriesMap(context.getCurrentApi(), userConfiguration),
-    setRegistriesMap: (...rest) => setRegistriesMap(context.getCurrentApi(), userConfiguration, ...(rest as [])),
+    getRegistriesMap: (...rest) => getRegistriesMap(context.getCurrentApi(), env.userConfiguration),
+    setRegistriesMap: (...rest) => setRegistriesMap(context.getCurrentApi(), env.userConfiguration, ...(rest as [])),
     searchRegistry: (...rest) => searchRegistry(context.getCurrentApi(), ...(rest as [])),
     pullFromRegistry: (...rest) => pullFromRegistry(context.getCurrentApi(), ...(rest as []))
   };

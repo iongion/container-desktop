@@ -30,7 +30,7 @@ export interface PodsModel extends PodsModelState, ResetableModel<PodsModel> {
   podCreate: Thunk<PodsModel, CreatePodOptions>;
 }
 
-export const createModel = (registry: AppRegistry): PodsModel => ({
+export const createModel = async (registry: AppRegistry): Promise<PodsModel> => ({
   pods: [],
   podsMap: {},
   // Actions
@@ -117,7 +117,7 @@ export const createModel = (registry: AppRegistry): PodsModel => ({
   ),
   podFetchProcesses: thunk(async (actions, pod) =>
     registry.withPending(async () => {
-      let flag = false;
+      const flag = false;
       if (pod.Id) {
         const processes = await registry.api.getPodProcesses(pod.Id);
         if (flag) {

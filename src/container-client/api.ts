@@ -2,15 +2,15 @@
 import axios from "axios";
 
 // project
-import { exec_launcher, exec_service } from "@/executor";
 import { createLogger } from "@/logger";
+import { Command } from "@/platform/node";
 import { axiosConfigToCURL } from "@/utils";
 import adapter from "axios/lib/adapters/http";
 
 // module
 // locals
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const logger = createLogger("container-client.api");
+const logger = await createLogger("container-client.api");
 
 export function createApiDriver(config) {
   const driver = axios.create({
@@ -47,7 +47,8 @@ export function createApiDriver(config) {
   return driver;
 }
 
-export function getApiConfig(baseURL, socketPath) {
+export function getApiConfig(baseURL: string, socketPath: string) {
+  console.debug("Constructing config", { baseURL, socketPath });
   const config = {
     timeout: 60000,
     socketPath: socketPath ? socketPath.replace("unix://", "") : socketPath,
@@ -61,6 +62,8 @@ export function getApiConfig(baseURL, socketPath) {
   return config;
 }
 
+const runnerLogger = await createLogger("container-client.api.Runner");
+
 export class Runner {
   protected client: any;
   protected nativeApiStarterProcess: any;
@@ -70,7 +73,7 @@ export class Runner {
     this.client = client;
     this.nativeApiStarterProcess = undefined;
     this.nativeApiStarterProcessChild = undefined;
-    this.logger = createLogger("container-client.api.Runner");
+    this.logger = runnerLogger;
   }
 
   // API connectivity and startup
@@ -109,7 +112,7 @@ export class Runner {
     };
     this.logger.debug("System service start requested", clientOpts);
     try {
-      const client = await exec_service(clientOpts);
+      const client = await Command.StartService(clientOpts);
       const started = await new Promise((resolve, reject) => {
         let rejected = false;
         client.on("ready", async ({ process, child }) => {
@@ -147,7 +150,7 @@ export class Runner {
     this.logger.debug("Stopping API - begin");
     let flag = false;
     if (stopper) {
-      const result: any = await exec_launcher(stopper.path, stopper.args);
+      const result: any = await Command.Execute(stopper.path, stopper.args);
       flag = result.success;
     } else {
       this.logger.warn("Stopping API - no stopper specified");

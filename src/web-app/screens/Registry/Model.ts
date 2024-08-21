@@ -2,7 +2,7 @@
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
 import { AppRegistry, ResetableModel } from "../../domain/types";
-import { Registry, RegistriesMap, RegistrySearchOptions, RegistrySearchResult } from "../../Types.container-app";
+import { RegistriesMap, Registry, RegistrySearchOptions, RegistrySearchResult } from "../../Types.container-app";
 
 export interface CreateRegistryOptions {}
 export interface RegistriesModelState {
@@ -31,7 +31,7 @@ export interface RegistriesModel extends RegistriesModelState, ResetableModel<Re
   registryCreate: Thunk<RegistriesModel, Registry>;
 }
 
-export const createModel = (registry: AppRegistry): RegistriesModel => ({
+export const createModel = async (registry: AppRegistry): Promise<RegistriesModel> => ({
   term: "",
   official: false,
   automated: false,

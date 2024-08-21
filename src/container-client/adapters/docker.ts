@@ -4,6 +4,7 @@ import merge from "lodash.merge";
 // project
 import { findProgram } from "@/detector";
 // module
+import { EngineConnectorSettings } from "@/web-app/Types.container-app.js";
 import {
   LIMA_PATH,
   // LIMA - common
@@ -72,7 +73,7 @@ export class DockerClientEngineNative extends AbstractClientEngine {
   // Settings
 
   async getExpectedSettings() {
-    return Promise.resolve({
+    return {
       api: {
         baseURL: API_BASE_URL,
         connectionString: NATIVE_DOCKER_SOCKET_PATH
@@ -82,17 +83,19 @@ export class DockerClientEngineNative extends AbstractClientEngine {
         path: NATIVE_DOCKER_CLI_PATH,
         version: NATIVE_DOCKER_CLI_VERSION
       }
-    });
+    } as EngineConnectorSettings;
   }
 
-  async getUserSettings() {
+  async getUserSettings(): Promise<EngineConnectorSettings> {
+    const entry = await this.userConfiguration.getKey<EngineConnectorSettings | undefined>(this.id);
     return {
       api: {
-        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
-        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
+        baseURL: entry?.api?.baseURL,
+        connectionString: entry?.api?.connectionString
       },
       program: {
-        path: this.userConfiguration.getKey(`${this.id}.program.path`)
+        path: entry?.program?.path,
+        name: PROGRAM
       }
     };
   }

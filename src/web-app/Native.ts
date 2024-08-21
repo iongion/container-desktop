@@ -95,23 +95,23 @@ export class Native {
         } as ApplicationDescriptor
       },
       ipcRenderer: {
-        send: (message: any) => {
+        send: async (message: any) => {
           throw new Error("Not bridged");
         }
       },
       application: {
-        start: () => {
+        start: async () => {
           console.error("Bridge application notify.start is a stub");
         },
-        setup: () => {
+        setup: async () => {
           console.error("Bridge application setup is a stub");
           return { logger: console };
         },
-        notify: () => {
+        notify: async () => {
           console.error("Bridge application notify is a stub");
           return {};
         },
-        getGlobalUserSettings: () => {
+        getGlobalUserSettings: async () => {
           console.error("Bridge application getGlobalUserSettings is a stub");
           return {};
         }
@@ -119,44 +119,44 @@ export class Native {
     };
     Native.instance = this;
   }
-  static getInstance() {
+  static async getInstance() {
     if (!Native.instance) {
       Native.instance = new Native();
       try {
-        Native.instance.setup();
+        await Native.instance.setup();
       } catch (error: any) {
         console.error("Bridge setup error", error);
       }
     }
     return Native.instance;
   }
-  public setup() {
-    const { logger } = this.bridge.application.setup();
+  public async setup() {
+    const { logger } = await this.bridge.application.setup();
     // TODO: Is this electron idiomatic ?
     if (logger) {
       Object.assign(console, logger);
     }
   }
-  public notify(message: string, payload?: any) {
-    return this.bridge.application.notify(message, payload);
+  public async notify(message: string, payload?: any) {
+    return await this.bridge.application.notify(message, payload);
   }
-  public minimize() {
-    return this.bridge.application.minimize();
+  public async minimize() {
+    return await this.bridge.application.minimize();
   }
-  public maximize() {
-    return this.bridge.application.maximize();
+  public async maximize() {
+    return await this.bridge.application.maximize();
   }
-  public restore() {
-    return this.bridge.application.restore();
+  public async restore() {
+    return await this.bridge.application.restore();
   }
-  public close() {
-    return this.bridge.application.close();
+  public async close() {
+    return await this.bridge.application.close();
   }
-  public exit() {
-    return this.bridge.application.exit();
+  public async exit() {
+    return await this.bridge.application.exit();
   }
-  public relaunch() {
-    return this.bridge.application.relaunch();
+  public async relaunch() {
+    return await this.bridge.application.relaunch();
   }
   public isNative() {
     return this.bridge.available === true;
@@ -176,11 +176,11 @@ export class Native {
       }
     );
   }
-  public withWindowControls() {
+  public async withWindowControls() {
     return this.isNative() && [Platforms.Linux, Platforms.Windows].includes(this.getOperatingSystem());
   }
-  public openDevTools() {
-    return this.bridge.application.openDevTools();
+  public async openDevTools() {
+    return await this.bridge.application.openDevTools();
   }
   public async openFileSelector(options?: OpenFileSelectorOptions) {
     let result: FileSelection;
@@ -207,12 +207,17 @@ export class Native {
     let reply: ContainerClientResult<T>;
     const isHTTP = true;
     try {
+      const current = connector.settings.current;
+      if (!current || !current.api || !current.api.baseURL) {
+        console.error("Current connector is missing required properties", current);
+        throw new Error("Current connector is not valid");
+      }
       const configured: ProxyRequest = {
         request,
-        baseURL: connector.settings.current.api.baseURL,
-        socketPath: connector.settings.current.api.connectionString,
+        baseURL: current.api.baseURL,
+        socketPath: current.api.connectionString,
         engine: connector.engine,
-        scope: connector.settings.current.controller?.scope,
+        scope: current.controller?.scope,
         adapter: connector.adapter
       };
       console.debug("[>]", configured);
@@ -243,26 +248,26 @@ export class Native {
   }
 
   public async getRegistriesMap() {
-    return this.bridge.application.getRegistriesMap();
+    return await this.bridge.application.getRegistriesMap();
   }
   public async setRegistriesMap(items: RegistriesMap) {
-    return this.bridge.application.setRegistriesMap(items);
+    return await this.bridge.application.setRegistriesMap(items);
   }
 
   public async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
-    return this.bridge.application.setGlobalUserSettings(settings);
+    return await this.bridge.application.setGlobalUserSettings(settings);
   }
   public async getGlobalUserSettings() {
-    return this.bridge.application.getGlobalUserSettings();
+    return await this.bridge.application.getGlobalUserSettings();
   }
-  public async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
-    return this.bridge.application.setEngineUserSettings(id, settings);
+  public async setConnectorSettings(id: string, settings: Partial<EngineConnectorSettings>) {
+    return await this.bridge.application.setConnectorSettings(id, settings);
   }
-  public async getEngineUserSettings(id: string) {
-    return this.bridge.application.getEngineUserSettings(id);
+  public async getConnectorSettings(id: string) {
+    return await this.bridge.application.getConnectorSettings(id);
   }
   public async start(opts?: ConnectOptions) {
-    return this.bridge.application.start(opts);
+    return await this.bridge.application.start(opts);
   }
   public async getPodLogs(Id: string, tail?: number) {
     return await this.bridge.application.getPodLogs(Id, tail);

@@ -11,13 +11,13 @@ import { createModel as createContainerModel } from "../screens/Container/Model"
 import { createModel as createDashboardModel } from "../screens/Dashboard/Model";
 import { createModel as createImageModel } from "../screens/Image/Model";
 import { createModel as createMachineModel } from "../screens/Machine/Model";
+import { createModel as createNetworksModel } from "../screens/Network/Model";
+import { createModel as createPodsModel } from "../screens/Pod/Model";
+import { createModel as createRegistriesModel } from "../screens/Registry/Model";
 import { createModel as createSecretModel } from "../screens/Secret/Model";
 import { createModel as createSettingsModel } from "../screens/Settings/Model";
 import { createModel as createTroubleshootModel } from "../screens/Troubleshoot/Model";
 import { createModel as createVolumesModel } from "../screens/Volume/Model";
-import { createModel as createPodsModel } from "../screens/Pod/Model";
-import { createModel as createRegistriesModel } from "../screens/Registry/Model";
-import { createModel as createNetworksModel } from "../screens/Network/Model";
 
 // TODO: Improve typings
 export const withPending = async (store: AppStore, operation: AppStorePendingOperation) => {
@@ -35,30 +35,31 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
   return result;
 };
 
-export const createAppStore = (env: Environments) => {
+export const createAppStore = async (env: Environments) => {
   const api = new ContainerClient();
   if (api === undefined) {
     console.error("No such API environment", env);
     throw new Error("API instance is mandatory");
   }
+  // eslint-disable-next-line prefer-const
   let store: AppStore;
   const registry: AppRegistry = {
     api,
     getStore: () => store,
     withPending: (operation: AppStorePendingOperation) => withPending(store, operation)
   };
-  store = createStore<AppModel>(createAppModel(registry));
-  store.addModel("container", createContainerModel(registry));
-  store.addModel("dashboard", createDashboardModel(registry));
-  store.addModel("image", createImageModel(registry));
-  store.addModel("machine", createMachineModel(registry));
-  store.addModel("secret", createSecretModel(registry));
-  store.addModel("settings", createSettingsModel(registry));
-  store.addModel("troubleshoot", createTroubleshootModel(registry));
-  store.addModel("volume", createVolumesModel(registry));
-  store.addModel("pod", createPodsModel(registry));
-  store.addModel("registry", createRegistriesModel(registry));
-  store.addModel("network", createNetworksModel(registry));
+  store = createStore<AppModel>(await createAppModel(registry));
+  store.addModel("container", await createContainerModel(registry));
+  store.addModel("dashboard", await createDashboardModel(registry));
+  store.addModel("image", await createImageModel(registry));
+  store.addModel("machine", await createMachineModel(registry));
+  store.addModel("secret", await createSecretModel(registry));
+  store.addModel("settings", await createSettingsModel(registry));
+  store.addModel("troubleshoot", await createTroubleshootModel(registry));
+  store.addModel("volume", await createVolumesModel(registry));
+  store.addModel("pod", await createPodsModel(registry));
+  store.addModel("registry", await createRegistriesModel(registry));
+  store.addModel("network", await createNetworksModel(registry));
   return store;
 };
 

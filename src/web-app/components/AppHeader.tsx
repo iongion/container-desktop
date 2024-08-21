@@ -2,7 +2,7 @@ import { AnchorButton, Button, ButtonGroup, Divider, Navbar, NavbarGroup } from 
 import { IconNames } from "@blueprintjs/icons";
 import { mdiBug, mdiWindowClose, mdiWindowMaximize, mdiWindowMinimize } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Program, WindowAction } from "../Types.container-app";
@@ -22,10 +22,22 @@ interface AppHeaderProps {
 }
 
 const WINDOW_ACTIONS_MAP = {
-  "window.minimize": () => Native.getInstance().minimize(),
-  "window.maximize": () => Native.getInstance().maximize(),
-  "window.restore": () => Native.getInstance().restore(),
-  "window.close": () => Native.getInstance().close()
+  "window.minimize": async () => {
+    const instance = await Native.getInstance();
+    await instance.minimize();
+  },
+  "window.maximize": async () => {
+    const instance = await Native.getInstance();
+    await instance.maximize();
+  },
+  "window.restore": async () => {
+    const instance = await Native.getInstance();
+    await instance.restore();
+  },
+  "window.close": async () => {
+    const instance = await Native.getInstance();
+    await instance.close();
+  }
 };
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -35,7 +47,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   provisioned
 }: AppHeaderProps) => {
   const { t } = useTranslation();
-  const withControls = Native.getInstance().withWindowControls();
+  const [withControls, setWithControls] = useState(true);
   const onWindowControlClick = useCallback((e) => {
     const action: WindowAction = e.currentTarget.getAttribute("data-action");
     const handler = WINDOW_ACTIONS_MAP[action];
@@ -98,6 +110,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </>
     ) : null;
   const screenTitle = provisioned ? currentScreen?.Title : t("Your attention is needed");
+
+  useEffect(() => {
+    (async () => {
+      const instance = await Native.getInstance();
+      const withControls = await instance.withWindowControls();
+      setWithControls(withControls);
+    })();
+  }, []);
+
   return (
     <div className="AppHeader" id="AppHeader">
       <Navbar>

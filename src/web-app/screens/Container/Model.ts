@@ -40,7 +40,7 @@ export interface ContainersModel extends ContainersModelState, ResetableModel<Co
   containerConnect: Thunk<ContainersModel, Container>;
 }
 
-export const createModel = (registry: AppRegistry): ContainersModel => ({
+export const createModel = async (registry: AppRegistry): Promise<ContainersModel> => ({
   containers: [],
   containersMap: {},
   // Actions

@@ -20,13 +20,14 @@ export interface FormActionsProps {
   onClose: () => void;
   searchResult: RegistrySearchResult;
 }
-export const FormActions: React.FC<FormActionsProps> = ({ searchResult, onClose }) => {
+export const FormActions: React.FC<FormActionsProps> = ({ searchResult, onClose }: FormActionsProps) => {
   const [pending, setPending] = useState(false);
   const { t } = useTranslation();
   const onPullClick = useCallback(async () => {
     setPending(true);
     try {
-      const result = await Native.getInstance().pullFromRegistry({ image: searchResult.Name });
+      const instance = await Native.getInstance();
+      const result = await instance.pullFromRegistry({ image: searchResult.Name });
       setPending(false);
       if (result.success) {
         Notification.show({ message: t("Pull completed successfully"), intent: Intent.SUCCESS });
@@ -65,7 +66,10 @@ export interface SearchResultDrawerProps {
   onClose: () => void;
   searchResult: RegistrySearchResult;
 }
-export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({ onClose, searchResult }) => {
+export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({
+  onClose,
+  searchResult
+}: SearchResultDrawerProps) => {
   const { t } = useTranslation();
   return (
     <Drawer

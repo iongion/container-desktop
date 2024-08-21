@@ -1,13 +1,99 @@
-// node
-import { spawn, spawnSync } from "node:child_process";
-import events from "node:events";
-// vendors
-// project
-import { createLogger } from "@/logger";
-import { isFlatpak } from "@/utils";
-// locals
-const logger = createLogger("executor");
+import { EventEmitter } from "eventemitter3";
 
+import { createLogger } from "@/logger";
+import { Platforms } from "@/web-app/Types.container-app";
+import { spawn } from "node:child_process";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+
+const logger = await createLogger("executor");
+
+export interface SpawnedProcess {
+  pid: any;
+  code: any;
+  success: boolean;
+  stdout?: string;
+  stderr?: string;
+  command?: any;
+}
+
+export class Platform {
+  static async getHomeDir() {
+    return await (os.homedir() ?? process.env?.HOME ?? "");
+  }
+
+  static async getEnvironmentVariable(name: string) {
+    return await (process.env || {})[name];
+  }
+
+  static async isFlatpak() {
+    const FLATPAK_ID = await Platform.getEnvironmentVariable("FLATPAK_ID");
+    if (FLATPAK_ID !== undefined) {
+      return true;
+    }
+    try {
+      const flag = await fs.existsSync("/.flatpak-info");
+      return flag;
+    } catch (error: any) {
+      console.error("Unable to detect flatpak-info presence", error);
+    }
+    return false;
+  }
+
+  static async getUserDataPath() {
+    const home = await Platform.getHomeDir();
+    return await Path.join(home, ".config/podman-desktop-companion");
+  }
+
+  static async getOsType(): Promise<Platforms> {
+    return (await os.type()) as Platforms;
+  }
+}
+
+export class FS {
+  static async readTextFile(location: string) {
+    return await fs.readFileSync(location, { encoding: "utf-8" }).toString();
+  }
+
+  static async writeTextFile(location: string, contents: string) {
+    return await fs.writeFileSync(location, contents, { encoding: "utf-8" });
+  }
+
+  static async isFilePresent(filePath: string) {
+    let vfsFilePath: string = filePath;
+    if (await Platform.isFlatpak()) {
+      vfsFilePath = await Path.join("/var/run/host", filePath);
+    }
+    // console.debug("Checking file presence", { filePath, vfsFilePath });
+    return await fs.existsSync(vfsFilePath);
+  }
+
+  static async mkdir(location: string, options?: any) {
+    return await fs.mkdirSync(location, options);
+  }
+
+  static async rename(oldPath: string | URL, newPath: string | URL, options?: any) {
+    return await fs.renameSync(oldPath, newPath);
+  }
+}
+
+export class Path {
+  static async join(...paths: string[]) {
+    return await path.join(...paths);
+  }
+  static async basename(location: string, ext?: string) {
+    return await path.basename(location, ext);
+  }
+  static async dirname(location: string) {
+    return await path.dirname(location);
+  }
+  static async resolve(...paths: string[]) {
+    return await path.resolve(...paths);
+  }
+}
+
+// Commander
 export function createWrapper(launcher, args, opts) {
   let commandLauncher = launcher;
   let commandArgs = args || [];
@@ -18,11 +104,11 @@ export function createWrapper(launcher, args, opts) {
   return [commandLauncher, commandArgs];
 }
 
-export function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
+export async function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   let spawnLauncher;
   let spawnArgs: any[] = [];
   let spawnOpts: any;
-  if (isFlatpak()) {
+  if (await Platform.isFlatpak()) {
     const hostLauncher = "flatpak-spawn";
     const hostArgs = [
       "--host",
@@ -41,44 +127,15 @@ export function wrapSpawnAsync(launcher, launcherArgs, launcherOpts) {
   const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
   const command = [spawnLauncher, ...spawnArgs].join(" ");
   if (!spawnLauncher) {
-    logger.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
+    console.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
     throw new Error("Launcher path must be set");
   }
   if (typeof spawnLauncher !== "string") {
-    logger.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
+    console.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
     throw new Error("Launcher path has invalid type");
   }
-  logger.debug("[SC.A][>][spawn]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
+  console.debug("[SC.A][>][spawn]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
   const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
-  // store for tracing and debugging
-  (child as any).command = command;
-  return child;
-}
-
-export function wrapSpawnSync(launcher, launcherArgs, launcherOpts) {
-  let spawnLauncher;
-  let spawnArgs;
-  let spawnOpts;
-  if (isFlatpak()) {
-    const hostLauncher = "flatpak-spawn";
-    const hostArgs = [
-      "--host",
-      // remove flatpak container VFS prefix when executing
-      launcher.replace("/var/run/host", ""),
-      ...launcherArgs
-    ];
-    spawnLauncher = hostLauncher;
-    spawnArgs = hostArgs;
-    spawnOpts = launcherOpts;
-  } else {
-    spawnLauncher = launcher;
-    spawnArgs = launcherArgs;
-    spawnOpts = launcherOpts;
-  }
-  const spawnLauncherOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
-  const command = [spawnLauncher, ...spawnArgs].join(" ");
-  logger.debug("[SC.S][>][spawnSync]", command);
-  const child = spawnSync(spawnLauncher, spawnArgs, spawnLauncherOpts);
   // store for tracing and debugging
   (child as any).command = command;
   return child;
@@ -92,72 +149,54 @@ export async function exec_launcher_async(launcher, launcherArgs?: any[], opts?:
     detached: opts?.detached
   };
   const [spawnLauncher, spawnArgs] = createWrapper(launcher, launcherArgs, opts);
-  return new Promise((resolve) => {
+  return new Promise<SpawnedProcess>((resolve, reject) => {
     let resolved = false;
-    const process = {
-      pid: undefined,
-      code: undefined,
-      success: false,
-      stdout: "",
-      stderr: "",
-      command: "" // Decorated by child process
-    };
-    const child = wrapSpawnAsync(spawnLauncher, spawnArgs, spawnOpts);
-    const command = (child as any).command;
-    const processResolve = (from, data) => {
-      if (resolved) {
-        logger.error(command, "spawning already resolved", { from, data });
-      } else {
-        process.pid = child.pid as any;
-        process.code = child.exitCode as any;
-        process.stderr = process.stderr || "";
-        process.success = child.exitCode === 0;
-        process.command = command;
-        resolved = true;
-        logger.debug("[SC.A][<]", process);
-        resolve(process);
-      }
-    };
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.on("exit", (code) => processResolve("exit", code));
-    // child.on("close", (code) => processResolve("close", code));
-    child.on("error", (error) => {
-      logger.error(command, "spawning error", error.message);
-      (process as any).error = error;
-      processResolve("error", error);
-    });
-    child.stdout.on("data", (data) => {
-      // logger.debug(command, "spawning stdout", data);
-      process.stdout += `${data}`;
-    });
-    child.stderr.on("data", (data) => {
-      logger.error(command, "spawning stderr", data);
-      process.stderr += `${data}`;
-    });
+    return wrapSpawnAsync(spawnLauncher, spawnArgs, spawnOpts)
+      .then((child) => {
+        //
+        const process: SpawnedProcess = {
+          pid: undefined,
+          code: undefined,
+          success: false,
+          stdout: "",
+          stderr: "",
+          command: "" // Decorated by child process
+        };
+        const command = (child as any).command;
+        const processResolve = (from, data) => {
+          if (resolved) {
+            logger.error(command, "spawning already resolved", { from, data });
+          } else {
+            process.pid = child.pid as any;
+            process.code = child.exitCode as any;
+            process.stderr = process.stderr || "";
+            process.success = child.exitCode === 0;
+            process.command = command;
+            resolved = true;
+            logger.debug("[SC.A][<]", process);
+            resolve(process);
+          }
+        };
+        child.stdout.setEncoding("utf8");
+        child.stderr.setEncoding("utf8");
+        child.on("exit", (code) => processResolve("exit", code));
+        // child.on("close", (code) => processResolve("close", code));
+        child.on("error", (error) => {
+          logger.error(command, "spawning error", error.message);
+          (process as any).error = error;
+          processResolve("error", error);
+        });
+        child.stdout.on("data", (data) => {
+          // logger.debug(command, "spawning stdout", data);
+          process.stdout += `${data}`;
+        });
+        child.stderr.on("data", (data) => {
+          logger.error(command, "spawning stderr", data);
+          process.stderr += `${data}`;
+        });
+      })
+      .catch(reject);
   });
-}
-
-export async function exec_launcher_sync(launcher, launcherArgs, opts) {
-  const spawnOpts = {
-    encoding: "utf-8", // TODO: not working for spawn - find alternative
-    cwd: opts?.cwd,
-    env: opts?.env,
-    detached: opts?.detached
-  };
-  const [spawnLauncher, spawnArgs] = createWrapper(launcher, launcherArgs, opts);
-  const child = wrapSpawnSync(spawnLauncher, spawnArgs, spawnOpts);
-  const command = (child as any).command;
-  const process = {
-    pid: child.pid,
-    code: child.status,
-    success: child.status === 0,
-    stdout: child.stdout,
-    stderr: child.stderr,
-    command
-  };
-  logger.debug("[SC.A][<]", process);
-  return process;
 }
 
 export async function exec_launcher(launcher, launcherArgs, opts?: any) {
@@ -175,7 +214,7 @@ export async function exec_service(opts) {
     stderr: ""
   };
   const { checkStatus, retry, programPath, programArgs } = opts;
-  const em = new events.EventEmitter();
+  const em = new EventEmitter();
   // Check
   const running = await checkStatus();
   if (running) {
@@ -246,13 +285,13 @@ export async function exec_service(opts) {
         }
       }, wait);
     };
-    const onStart = () => {
+    const onStart = async () => {
       const launcherOpts = {
         encoding: "utf-8",
         cwd: opts?.cwd,
         env: opts?.env
       };
-      child = wrapSpawnAsync(programPath, programArgs, launcherOpts);
+      child = await wrapSpawnAsync(programPath, programArgs, launcherOpts);
       process.pid = child.pid;
       process.code = child.exitCode;
       child.on("exit", (code) => onProcessExit(child, code));
@@ -275,4 +314,14 @@ export async function exec_service(opts) {
     em.emit("start");
   }
   return em;
+}
+
+export class Command {
+  static async Execute(launcher: string, args: string[], opts?: any) {
+    return await exec_launcher_async(launcher, args, opts);
+  }
+
+  static async StartService(opts?: any) {
+    return await exec_service(opts);
+  }
 }

@@ -1,9 +1,9 @@
 // vendors
-import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
+import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
 // project
-import { AppRegistry, ResetableModel } from "../../domain/types";
-import { FetchVolumeOptions, CreateVolumeOptions } from "../../Api.clients";
+import { CreateVolumeOptions, FetchVolumeOptions } from "../../Api.clients";
 import { Volume } from "../../Types.container-app";
+import { AppRegistry, ResetableModel } from "../../domain/types";
 import { sortAlphaNum } from "../../domain/utils";
 
 export interface VolumesModelState {
@@ -24,7 +24,7 @@ export interface VolumesModel extends VolumesModelState, ResetableModel<VolumesM
   volumeRemove: Thunk<VolumesModel, Partial<Volume>>;
 }
 
-export const createModel = (registry: AppRegistry): VolumesModel => ({
+export const createModel = async (registry: AppRegistry): Promise<VolumesModel> => ({
   volumes: [],
   // actions
   reset: action((state) => {

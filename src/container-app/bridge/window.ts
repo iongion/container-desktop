@@ -1,9 +1,11 @@
 // project
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { createLogger } from "@/logger";
 // locals
-const logger = createLogger("bridge.window");
+const logger = await createLogger("bridge.window");
 
-export function createActions(context, { ipcRenderer }) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
+  const { ipcRenderer } = env;
   return {
     notify(message, payload) {
       logger.debug("Application notify", message, payload);
@@ -62,8 +64,8 @@ export function createActions(context, { ipcRenderer }) {
       }
     },
     openDevTools() {
-      logger.debug("Application openDevTools");
       try {
+        logger.debug("Application openDevTools");
         ipcRenderer.send("openDevTools");
       } catch (error: any) {
         logger.error("Unable to openDevTools", error);

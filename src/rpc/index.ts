@@ -6,6 +6,8 @@ import { createLogger } from "@/logger";
 // locals
 export const DEFAULT_MAX_EXECUTION_TIME = 60000;
 
+const logger = await createLogger("rpc.gateway");
+
 export class RPCWorkerGateway {
   private factory: any;
   private invocations: any;
@@ -18,7 +20,7 @@ export class RPCWorkerGateway {
     this.invocations = {};
     this.worker = null;
     this.keepAlive = false;
-    this.logger = createLogger("rpc.gateway");
+    this.logger = logger;
   }
   async getWorker() {
     if (!this.worker) {
@@ -135,7 +137,7 @@ export function createWorkerGateway(factory) {
 }
 
 export async function createWorkerClient(scope, onMessage, id) {
-  const logger = createLogger(id || "rpc.worker");
+  const logger = await createLogger(id || "rpc.worker");
   async function scopeMessageListener(event) {
     // message context
     const message = event.data;

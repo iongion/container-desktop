@@ -1,7 +1,7 @@
 // vendors
-import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
+import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
 // project
-import { Machine, FetchMachineOptions, CreateMachineOptions } from "../../Types.container-app";
+import { CreateMachineOptions, FetchMachineOptions, Machine } from "../../Types.container-app";
 // module
 import { AppRegistry, ResetableModel } from "../../domain/types";
 import { Native } from "../../Native";
@@ -28,8 +28,9 @@ export interface MachinesModel extends MachinesModelState, ResetableModel<Machin
   machinesSearchByTerm: Computed<MachinesModel, (searchTerm: string) => Machine[]>;
 }
 
-export const createModel = (registry: AppRegistry): MachinesModel => {
-  const native = Native.getInstance().isNative();
+export const createModel = async (registry: AppRegistry): Promise<MachinesModel> => {
+  const instance = await Native.getInstance();
+  const native = await instance.isNative();
   return {
     native,
     machines: [],

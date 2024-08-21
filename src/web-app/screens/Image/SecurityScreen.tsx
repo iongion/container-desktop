@@ -56,7 +56,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setState((prev) => ({ ...prev, pending: false, scanning: true, image, report: undefined }));
         try {
           // check security
-          const report = await Native.getInstance().checkSecurity({
+          const instance = await Native.getInstance();
+          const report = await instance.checkSecurity({
             scanner: "trivy",
             subject: "image",
             target: image.Name

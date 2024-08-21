@@ -1,9 +1,10 @@
 // project
 import { launchTerminal } from "@/terminal";
 // vendors
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { createLogger } from "@/logger";
 // locals
-const logger = createLogger("bridge.connect");
+const logger = await createLogger("bridge.connect");
 
 export const connectToContainer = async (currentApi, opts?: any) => {
   const { id, title, shell } = opts || {};
@@ -25,7 +26,7 @@ export const connectToContainer = async (currentApi, opts?: any) => {
   return output.success;
 };
 
-export function createActions(context, { ipcRenderer, userConfiguration, osType, version, environment }) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   // Do not access the context at creation - it is lazy
   return {
     connectToContainer: (...rest) => connectToContainer(context.getCurrentApi(), ...(rest as []))

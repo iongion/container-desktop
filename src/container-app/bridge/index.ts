@@ -3,6 +3,7 @@ import { adapters } from "@/container-client";
 import { createLogger } from "@/logger";
 import { getDefaultDescriptor } from "./descriptor";
 // Actions
+import { ActionContext, ActionsEnvironment, BridgeApi, BridgeContext } from "@/container-app/bridge/types";
 import * as connectActions from "./connect";
 import * as controllerActions from "./controller";
 import * as generateActions from "./generate";
@@ -39,16 +40,16 @@ const actionsList = [
 
 const adaptersList = [Podman.Adapter, Docker.Adapter];
 
-export const createBridge = (bridgeOpts) => {
-  const { ipcRenderer, userConfiguration, osType, version, environment } = bridgeOpts;
+export const createBridge = async (bridgeOpts: BridgeContext) => {
+  const { userConfiguration, osType, version, environment } = bridgeOpts;
   const alternativeConnectorId = "engine.default.podman.virtualized";
   const defaultConnectorId = osType === "Linux" ? "engine.default.podman.native" : alternativeConnectorId;
-  const logger = createLogger("bridge");
+  const logger = await createLogger("bridge");
   let adapters: any[] = [];
   let engines: any[] = [];
   const connectors: any[] = [];
   let inited = false;
-  let currentApi: any = {
+  let currentApi: BridgeApi | undefined | null = {
     provisioned: false,
     running: false,
     started: false,
@@ -64,18 +65,24 @@ export const createBridge = (bridgeOpts) => {
     version,
     environment
   });
-  const actionContext = {
-    getCurrentApi: () => currentApi,
+  const actionContext: ActionContext = {
+    getCurrentApi: () => currentApi!,
     getAdapters: () => adapters,
     getEngines: () => engines,
     getConnectors: () => connectors,
     userConfiguration,
     osType,
     version,
+    environment
+  };
+  const actionsEnvironment: ActionsEnvironment = {
+    ipcRenderer: bridgeOpts.ipcRenderer,
+    userConfiguration,
+    osType,
+    version,
     environment,
     defaultConnectorId
   };
-  const actionOptions = bridgeOpts;
   const init = async () => {
     // All logic is done only once at application startup - can be updated during engine changes by the start logic
     if (inited) {
@@ -113,14 +120,15 @@ export const createBridge = (bridgeOpts) => {
     inited = true;
     return inited;
   };
-  const getCurrentConnector = (opts: any) => {
+  const getCurrentConnector = async (opts: any) => {
     // decide current connector
     let connector;
     // if from start function argument
     let userConnectorId = opts?.id;
     // if from saved preferences
     if (!userConnectorId) {
-      userConnectorId = userConfiguration.getKey("connector.default");
+      const connector = await userConfiguration.getKey<any>("connector");
+      userConnectorId = connector?.default;
     }
     if (userConnectorId) {
       connector = connectors.find((it) => it.id === userConnectorId);
@@ -148,7 +156,7 @@ export const createBridge = (bridgeOpts) => {
   };
   const createConnectorEngineApi = async (connector, opts) => {
     logger.debug("Creating connector engine api", connector?.id);
-    const startApi = !!opts?.startApi || userConfiguration.getKey("startApi", false);
+    const startApi = !!opts?.startApi || (await userConfiguration.getKey("startApi", false));
     let provisioned = false;
     let running = false;
     let started = false;
@@ -215,7 +223,7 @@ export const createBridge = (bridgeOpts) => {
   const bridge: any = {
     // plugins
     ...actionsList.reduce((acc, it) => {
-      const actions = it.createActions(actionContext, actionOptions);
+      const actions = it.createActions(actionContext, actionsEnvironment);
       acc = { ...acc, ...actions };
       return acc;
     }, {}),
@@ -226,10 +234,10 @@ export const createBridge = (bridgeOpts) => {
         await init();
         if (currentApi) {
           await currentApi.destroy();
-          currentApi = null;
+          currentApi = undefined;
         }
         logger.debug("Bridge startup - creating current");
-        currentApi = await createConnectorEngineApi(getCurrentConnector(opts), opts);
+        currentApi = await createConnectorEngineApi(await getCurrentConnector(opts), opts);
       } catch (error: any) {
         logger.error("Bridge startup error", error);
       }
@@ -242,7 +250,7 @@ export const createBridge = (bridgeOpts) => {
         running: !!currentApi?.running,
         connectors,
         currentConnector: currentApi?.connector,
-        userSettings: bridge.getGlobalUserSettings() || {}
+        userSettings: (await bridge.getGlobalUserSettings()) || {}
       };
       return descriptor;
     }
@@ -250,19 +258,20 @@ export const createBridge = (bridgeOpts) => {
   return bridge;
 };
 
-export function createContext(opts) {
+export async function createContext(opts: BridgeContext) {
   const descriptor: any = getDefaultDescriptor({
     osType: opts.osType,
     version: opts.version,
     environment: opts.environment
   });
-  const bridge = createBridge(opts);
-  descriptor.userSettings = bridge.getGlobalUserSettings();
+  const bridge = await createBridge(opts);
+  descriptor.userSettings = await bridge.getGlobalUserSettings();
+  const connector = await opts.userConfiguration.getKey<any>("connector");
   return {
     available: true,
     osType: opts.osType,
     defaults: {
-      connector: opts.userConfiguration.getKey("connector.default"),
+      connector: connector?.default,
       // This must not fail - prevents startup failures to put the app in an undefined state
       descriptor
     },

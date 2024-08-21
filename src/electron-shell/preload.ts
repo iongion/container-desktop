@@ -5,14 +5,21 @@ import { bridge } from "@/container-app";
 import { createLogger } from "@/logger";
 // locals
 // Using worker to avoid users perceive the app as stuck during long operations
-import { environment, osType, userConfiguration, version } from "./configuration";
+import { UserConfiguration } from "@/container-config";
+import { CURRENT_OS_TYPE } from "../Environment";
 
 async function main() {
-  const logger = createLogger("preload");
+  const logger = await createLogger("preload");
   logger.debug("Starting renderer process");
   contextBridge.exposeInMainWorld(
     "nativeBridge",
-    bridge.createContext({ ipcRenderer, userConfiguration, osType, version, environment })
+    await bridge.createContext({
+      ipcRenderer,
+      userConfiguration: await UserConfiguration.getInstance(),
+      osType: CURRENT_OS_TYPE,
+      version: import.meta.env.PROJECT_VERSION,
+      environment: import.meta.env.ENVIRONMENT
+    })
   );
   // Wait for window to bbe ready
   window.addEventListener("DOMContentLoaded", () => {
