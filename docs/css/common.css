@@ -53,6 +53,11 @@ h1 {
   text-decoration: none;
 }
 
+.intro h1 a {
+  color: #b682ff;
+  text-decoration: underline;
+}
+
 .callout {
   margin-top: 40px;
   margin-bottom: 40px;
@@ -60,14 +65,20 @@ h1 {
   text-align: center;
 }
 
-.callout a {
-  text-decoration: underline;
-}
 .callout a.pd {
-  font-size: 48px;
+  font-size: 44px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  display: inline-block;
 }
 .callout p.cp1 {
   font-size: 14px !important;
+}
+.callout p.cp2 {
+  font-size: 14px !important;
+}
+.callout p.cp3 {
+  font-size: 13px !important;
 }
 
 .downloadSection {

@@ -44,11 +44,11 @@ def run_env(ctx, cmd, env=None):
             nvm_rc = os.path.join(ctx.cwd, ".nvmrc")
             if os.path.exists(nvm_rc):
                 with ctx.prefix("nvm use"):
-                    ctx.run(cmd, env=cmd_env)
+                    ctx.run(cmd, env=cmd_env, pty=True)
             else:
-                ctx.run(cmd, env=cmd_env)
+                ctx.run(cmd, env=cmd_env, pty=True)
     else:
-        ctx.run(cmd, env=cmd_env)
+        ctx.run(cmd, env=cmd_env, pty=True)
 
 
 

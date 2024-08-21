@@ -111,6 +111,7 @@
     "rollup-plugin-eslint": "^7.0.0",
     "rollup-plugin-node-externals": "^7.1.2",
     "rollup-plugin-ts": "^3.4.5",
+    "svgo": "^3.3.2",
     "tslib": "^2.6.3",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",

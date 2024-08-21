@@ -45,6 +45,7 @@ export function getCommonViteConfig({
 }: Partial<UserConfig> & { outputName: string; rollupOptions?: Partial<RollupOptions> }) {
   const minify = false; // mode === "production";
   const config: Partial<UserConfig> = {
+    clearScreen: false,
     plugins: [
       viteCommonjs(),
       topLevelAwait(),
@@ -84,6 +85,7 @@ export function getCommonViteConfig({
 /** @type {import('vite').UserConfig} */
 export const createConfig = ({ mode, command, host, port }) => {
   console.debug({ PROJECT_HOME, command, host, port });
+  console.debug("Website running at http://localhost:8888");
   // Bootstrap
   // Build context
   const ejsContext = createEJSContext();
