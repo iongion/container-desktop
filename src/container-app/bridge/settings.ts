@@ -1,61 +1,63 @@
 // project
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
+import { UserConfiguration } from "@/container-config";
 import { createLogger, getLevel, setLevel } from "@/logger";
+import { EngineConnectorSettings, GlobalUserSettings } from "@/web-app/Types.container-app";
 // local
-const logger = createLogger("bridge.settings");
+const logger = await createLogger("bridge.settings");
 
-export function setGlobalUserSettings(userConfiguration, opts?: any, defaultConnectorId?: any) {
-  logger.debug("Update global user settings", opts, defaultConnectorId);
-  Object.keys(opts).forEach((key) => {
-    const value = opts[key];
-    userConfiguration.setKey(key, value);
-    if (key === "logging") {
-      setLevel(value.level);
-    }
-  });
-  return getGlobalUserSettings(userConfiguration, defaultConnectorId);
+export async function setGlobalUserSettings(userConfiguration: UserConfiguration, opts: Partial<GlobalUserSettings>) {
+  logger.debug("Update global user settings", { opts, userConfiguration });
+  if (opts && opts?.logging?.level) {
+    await setLevel(opts?.logging?.level);
+  }
+  await userConfiguration.setSettings(opts);
+  return await getGlobalUserSettings(userConfiguration);
 }
 
-export function getGlobalUserSettings(userConfiguration, defaultConnectorId?: any) {
+export async function getGlobalUserSettings(userConfiguration: UserConfiguration) {
   return {
-    theme: userConfiguration.getKey("theme", "bp5-dark"),
-    expandSidebar: userConfiguration.getKey("expandSidebar", true),
-    startApi: userConfiguration.getKey("startApi", false),
-    minimizeToSystemTray: userConfiguration.getKey("minimizeToSystemTray", false),
-    path: userConfiguration.getStoragePath(),
+    theme: await userConfiguration.getKey("theme", "bp5-dark"),
+    expandSidebar: await userConfiguration.getKey("expandSidebar", true),
+    startApi: await userConfiguration.getKey("startApi", false),
+    minimizeToSystemTray: await userConfiguration.getKey("minimizeToSystemTray", false),
+    path: await await userConfiguration.getStoragePath(),
     logging: {
-      level: getLevel()
+      level: await getLevel()
     },
-    connector: {
-      default: userConfiguration.getKey("connector.default", undefined)
-    }
-  };
+    connector: await userConfiguration.getKey("connector")
+  } as GlobalUserSettings;
 }
 
 // configuration
-export function setEngineUserSettings(userConfiguration, id?: any, settings?: any) {
-  userConfiguration.setKey(id, settings);
-  return userConfiguration.getKey(id);
+export async function setConnectorSettings(
+  userConfiguration: UserConfiguration,
+  id: string,
+  settings: EngineConnectorSettings
+) {
+  await userConfiguration.setKey(id, settings);
+  return await userConfiguration.getKey(id);
 }
 
-export function getEngineUserSettings(userConfiguration, id?: any) {
-  return userConfiguration.getKey(id);
+export async function getConnectorSettings(userConfiguration: UserConfiguration, id: string) {
+  return await userConfiguration.getKey(id);
 }
 
-export function createActions(context, options) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   return {
-    setGlobalUserSettings: (...rest) =>
-      setGlobalUserSettings(context.userConfiguration, ...(rest as []), context.defaultConnectorId),
-    getGlobalUserSettings: (...rest) =>
-      getGlobalUserSettings(context.userConfiguration, ...(rest as []), context.defaultConnectorId),
-    setEngineUserSettings: (...rest) => setEngineUserSettings(context.userConfiguration, ...(rest as [])),
-    getEngineUserSettings: (...rest) => getEngineUserSettings(context.userConfiguration, ...(rest as []))
+    setGlobalUserSettings: (settings: Partial<GlobalUserSettings>) =>
+      setGlobalUserSettings(context.userConfiguration, settings),
+    getGlobalUserSettings: () => getGlobalUserSettings(context.userConfiguration),
+    setConnectorSettings: (id: string, settings: EngineConnectorSettings) =>
+      setConnectorSettings(context.userConfiguration, id, settings),
+    getConnectorSettings: (id: string) => getConnectorSettings(context.userConfiguration, id)
   };
 }
 
 export default {
   setGlobalUserSettings,
   getGlobalUserSettings,
-  setEngineUserSettings,
-  getEngineUserSettings,
+  setConnectorSettings,
+  getConnectorSettings,
   createActions
 };

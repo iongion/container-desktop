@@ -115,6 +115,8 @@
   flex-direction: row;
   width: 100%;
   column-gap: 4px;
+  padding-right: 4px;
+  padding-left: 4px;
 }
 .AppSettingsForm[data-form="logging"] .bp5-form-group:first-child {
   flex: 1;

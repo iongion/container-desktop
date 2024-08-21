@@ -1,9 +1,9 @@
 // vendors
-import { Action, Thunk, Computed, action, thunk, computed } from "easy-peasy";
+import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
 // project
+import { FetchImageOptions } from "../../Api.clients";
 import { AppRegistry, ResetableModel } from "../../domain/types";
 import { Native } from "../../Native";
-import { FetchImageOptions } from "../../Api.clients";
 import { ContainerImage } from "../../Types.container-app";
 
 export interface ImagesModelState {
@@ -28,8 +28,9 @@ export interface ImagesModel extends ImagesModelState, ResetableModel<ImagesMode
   containerCreate: Thunk<ImagesModel, any>;
 }
 
-export const createModel = (registry: AppRegistry): ImagesModel => {
-  const native = Native.getInstance().isNative();
+export const createModel = async (registry: AppRegistry): Promise<ImagesModel> => {
+  const instance = await Native.getInstance();
+  const native = await instance.isNative();
   return {
     native,
     images: [],

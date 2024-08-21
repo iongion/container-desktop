@@ -2,16 +2,16 @@
 // vendors
 import logger from "electron-log";
 // project
-import userSettings from "@/user-settings";
+import { UserConfiguration } from "@/container-config";
 // locals
 const loggers: any[] = [];
 
-export function createLogger(name) {
+export async function createLogger(name) {
   // This flag is useful to avoid missing logging origin(file and number) when developing
-  if (process.env.NODE_ENV !== "production") {
+  if (import.meta.env.ENVIRONMENT !== "production") {
     return console;
   }
-  const level = getLevel();
+  const level = await getLevel();
   let instance = logger;
   if (name) {
     instance = logger.create(name);
@@ -30,13 +30,16 @@ function setLoggerInstanceLevel(instance, level) {
   }
 }
 
-export function getLevel() {
-  return userSettings.get("logging.level", "error");
+export async function getLevel() {
+  const configuration = UserConfiguration.getInstance();
+  const logging = await configuration.getKey<any>("logging");
+  return logging?.level ?? "error";
 }
 
-export function setLevel(level) {
+export async function setLevel(level) {
   setLoggerInstanceLevel(logger, level);
   loggers.forEach((instance) => setLoggerInstanceLevel(instance, level));
-  userSettings.set("logging.level", level);
+  const configuration = UserConfiguration.getInstance();
+  await configuration.setKey("logging", { level });
   return level;
 }

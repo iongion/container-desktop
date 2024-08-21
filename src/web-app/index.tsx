@@ -16,10 +16,12 @@ import "./themes/shared.css";
 
 dayjs.extend(relativeTime);
 
-export function renderApplication() {
+export async function renderApplication() {
   const container = document.getElementById("root");
   const root = createRoot(container!);
-  const adapter = (Native.getInstance().getDefaultConnector() || "").split(".")[2] || "";
+  const instance = await Native.getInstance();
+  const defaultConnector = await instance.getDefaultConnector();
+  const adapter = (defaultConnector || "").split(".")[2] || "";
   console.debug("Starting web-app", { adapter });
   root.render(
     // <StrictMode>

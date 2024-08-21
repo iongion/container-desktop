@@ -238,7 +238,8 @@ export class ApiDriver {
       data
     };
     // Direct HTTP invocations where possible
-    const reply = await Native.getInstance().proxyHTTPRequest<ContainerClientResponse<T>>(request, this.connector);
+    const instance = await Native.getInstance();
+    const reply = await instance.proxyHTTPRequest<ContainerClientResponse<T>>(request, this.connector);
     return reply.result;
   }
   public async get<T = any, D = any>(url: string, config?: ApiDriverConfig<D>) {
@@ -591,12 +592,14 @@ export class ContainerClient {
   // System
   async getSystemInfo() {
     return this.withResult<SystemInfo>(async () => {
-      return await Native.getInstance().getSystemInfo();
+      const instance = await Native.getInstance();
+      return await instance.getSystemInfo();
     });
   }
   async pruneSystem() {
     return this.withResult<SystemPruneReport>(async () => {
-      return await Native.getInstance().pruneSystem();
+      const instance = await Native.getInstance();
+      return await instance.pruneSystem();
     });
   }
 
@@ -605,7 +608,8 @@ export class ContainerClient {
   // Containers
   async connectToContainer(item: Container) {
     return this.withResult<boolean>(async () => {
-      return await Native.getInstance().connectToContainer({
+      const instance = await Native.getInstance();
+      return await instance.connectToContainer({
         id: item.Id,
         title: item.Name || item.Names?.[0],
         shell: undefined
@@ -616,45 +620,53 @@ export class ContainerClient {
   // Controller scopes - WSL distributions, LIMA instances and podman machines
   async getControllerScopes() {
     return this.withResult<ControllerScope[]>(async () => {
-      return await Native.getInstance().getControllerScopes();
+      const instance = await Native.getInstance();
+      return await instance.getControllerScopes();
     });
   }
 
   // Machines
   async getMachines() {
     return this.withResult<Machine[]>(async () => {
-      const items = await Native.getInstance().getMachines();
+      const instance = await Native.getInstance();
+      const items = await instance.getMachines();
       return items as Machine[];
     });
   }
   async inspectMachine(Name: string) {
     return this.withResult<Machine>(async () => {
-      return await Native.getInstance().inspectMachine(Name);
+      const instance = await Native.getInstance();
+      return await instance.inspectMachine(Name);
     });
   }
   async createMachine(opts: CreateMachineOptions) {
     return this.withResult<Machine>(async () => {
-      return await Native.getInstance().createMachine(opts);
+      const instance = await Native.getInstance();
+      return await instance.createMachine(opts);
     });
   }
   async removeMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      return await Native.getInstance().removeMachine(Name);
+      const instance = await Native.getInstance();
+      return await instance.removeMachine(Name);
     });
   }
   async stopMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      return await Native.getInstance().stopMachine(Name);
+      const instance = await Native.getInstance();
+      return await instance.stopMachine(Name);
     });
   }
   async restartMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      return await Native.getInstance().restartMachine(Name);
+      const instance = await Native.getInstance();
+      return await instance.restartMachine(Name);
     });
   }
   async connectToMachine(Name: string) {
     return this.withResult<boolean>(async () => {
-      return await Native.getInstance().connectToMachine(Name);
+      const instance = await Native.getInstance();
+      return await instance.connectToMachine(Name);
     });
   }
 
@@ -690,7 +702,8 @@ export class ContainerClient {
   }
   async getPodLogs(Id: string, tail?: number) {
     return this.withResult<ProgramExecutionResult>(async () => {
-      const reply = await Native.getInstance().getPodLogs(Id, tail);
+      const instance = await Native.getInstance();
+      const reply = await instance.getPodLogs(Id, tail);
       return reply;
     });
   }
@@ -767,14 +780,16 @@ export class ContainerClient {
   // System
   async resetSystem() {
     return this.withResult<SystemResetReport>(async () => {
-      return await Native.getInstance().resetSystem();
+      const instance = await Native.getInstance();
+      return await instance.resetSystem();
     });
   }
 
   // Generators
   async generateKube(opts: GenerateKubeOptions) {
     return this.withResult<ProgramExecutionResult>(async () => {
-      const reply = await Native.getInstance().generateKube(opts.entityId);
+      const instance = await Native.getInstance();
+      const reply = await instance.generateKube(opts.entityId);
       return reply;
     });
   }
@@ -782,54 +797,63 @@ export class ContainerClient {
   // Configuration globals
   async getGlobalUserSettings() {
     return this.withResult<GlobalUserSettings>(async () => {
-      const reply = await Native.getInstance().getGlobalUserSettings();
+      const instance = await Native.getInstance();
+      const reply = await instance.getGlobalUserSettings();
       return reply;
     });
   }
 
   async setGlobalUserSettings(options: Partial<GlobalUserSettingsOptions>) {
     return this.withResult<GlobalUserSettings>(async () => {
-      const reply = await Native.getInstance().setGlobalUserSettings(options);
+      const instance = await Native.getInstance();
+      const reply = await instance.setGlobalUserSettings(options);
+      console.debug(">> GOT BACK", { reply, options });
       return reply;
     });
   }
 
   // Configuration per engine
-  async getEngineUserSettings(id: string) {
+  async getConnectorSettings(id: string) {
     return this.withResult<any>(async () => {
-      const reply = await Native.getInstance().getEngineUserSettings(id);
+      const instance = await Native.getInstance();
+      const reply = await instance.getConnectorSettings(id);
       return reply;
     });
   }
 
-  async setEngineUserSettings(id: string, settings: Partial<EngineConnectorSettings>) {
+  async setConnectorSettings(id: string, settings: Partial<EngineConnectorSettings>) {
     return this.withResult<EngineConnectorSettings>(async () => {
-      const reply = await Native.getInstance().setEngineUserSettings(id, settings);
+      const instance = await Native.getInstance();
+      const reply = await instance.setConnectorSettings(id, settings);
       return reply;
     });
   }
 
   async testProgramReachability(opts: EngineProgramOptions) {
     return this.withResult<ProgramTestResult>(async () => {
-      return await Native.getInstance().testProgramReachability(opts);
+      const instance = await Native.getInstance();
+      return await instance.testProgramReachability(opts);
     });
   }
 
   async testApiReachability(opts: EngineApiOptions) {
     return this.withResult<TestResult>(async () => {
-      return await Native.getInstance().testApiReachability(opts);
+      const instance = await Native.getInstance();
+      return await instance.testApiReachability(opts);
     });
   }
 
   async findProgram(opts: FindProgramOptions) {
     return this.withResult<Program>(async () => {
-      return await Native.getInstance().findProgram(opts);
+      const instance = await Native.getInstance();
+      return await instance.findProgram(opts);
     });
   }
 
   async start(opts: ConnectOptions | undefined) {
     return this.withResult<ApplicationDescriptor>(async () => {
-      const descriptor = await Native.getInstance().start(opts);
+      const instance = await Native.getInstance();
+      const descriptor = await instance.start(opts);
       return descriptor ?? {};
     });
   }
@@ -904,37 +928,42 @@ export class ContainerClient {
 
   // Registry
   async getRegistriesMap() {
-    return await Native.getInstance().getRegistriesMap();
+    const instance = await Native.getInstance();
+    return instance.getRegistriesMap();
   }
   async getRegistry(name: string) {
     return {} as Registry;
   }
   async removeRegistry(name: string) {
-    const items = await Native.getInstance().getRegistriesMap();
+    const instance = await Native.getInstance();
+    const items = await instance.getRegistriesMap();
     const pos = items.custom.findIndex((it) => it.name === name);
     if (pos !== -1) {
       items.custom.splice(pos, 1);
     }
-    await Native.getInstance().setRegistriesMap(items);
+    instance.setRegistriesMap(items);
     return items;
   }
   async createRegistry(it: Registry) {
     return this.withResult<Registry>(async () => {
-      const items = await Native.getInstance().getRegistriesMap();
+      const instance = await Native.getInstance();
+      const items = await instance.getRegistriesMap();
       items.custom.push(it);
-      await Native.getInstance().setRegistriesMap(items);
+      instance.setRegistriesMap(items);
       return it;
     });
   }
   async searchRegistry(opts: RegistrySearchOptions) {
     return this.withResult<RegistrySearchResult[]>(async () => {
-      const items = await Native.getInstance().searchRegistry(opts);
+      const instance = await Native.getInstance();
+      const items = await instance.searchRegistry(opts);
       return items.map((it) => coerceRegistrySearchResult(it, opts));
     });
   }
   async pullFromRegistry(opts: RegistryPullOptions) {
     return this.withResult<ProgramExecutionResult>(async () => {
-      const items = await Native.getInstance().pullFromRegistry(opts);
+      const instance = await Native.getInstance();
+      const items = await instance.pullFromRegistry(opts);
       return items;
     });
   }

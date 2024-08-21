@@ -1,17 +1,14 @@
-import os from "node:os";
-// vendors
-// project
-import { exec_launcher } from "@/executor";
+import { Command } from "@/platform/node";
+import { CURRENT_OS_TYPE } from "../Environment";
 
 export async function launchTerminal(command, params?: any[], opts?: any) {
-  const osType = os.type();
   console.debug("Launching terminal", command, params);
   const args = [command].concat(params || []).join(" ");
   let status;
-  if (osType === "Darwin") {
-    status = await exec_launcher("osascript", ["-e", `tell app "Terminal" to do script "${args}"`]);
-  } else if (osType === "Windows_NT") {
-    status = await exec_launcher("wt", [
+  if (CURRENT_OS_TYPE === "Darwin") {
+    status = await Command.Execute("osascript", ["-e", `tell app "Terminal" to do script "${args}"`]);
+  } else if (CURRENT_OS_TYPE === "Windows_NT") {
+    status = await Command.Execute("wt", [
       "-w",
       "nt",
       "--title",
@@ -26,7 +23,7 @@ export async function launchTerminal(command, params?: any[], opts?: any) {
       ...(params || [])
     ]);
   } else {
-    status = await exec_launcher("gnome-terminal", ["-e", args]);
+    status = await Command.Execute("gnome-terminal", ["-e", args]);
   }
   return status;
 }

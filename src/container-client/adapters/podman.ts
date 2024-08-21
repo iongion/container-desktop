@@ -1,13 +1,12 @@
 // nodejs
-import fs from "node:fs";
-import path from "node:path";
 // vendors
 import merge from "lodash.merge";
 // project
 import { getAvailablePodmanMachines } from "@/detector";
-import userSettings from "@/user-settings";
-import { isFlatpak } from "@/utils";
 // module
+import { UserConfiguration } from "@/container-config";
+import { FS, Path, Platform } from "@/platform/node";
+import { EngineConnectorSettings } from "@/web-app/Types.container-app";
 import {
   LIMA_PATH,
   // LIMA - common
@@ -27,6 +26,7 @@ import {
   AbstractControlledClientEngine
 } from "./abstract";
 // locals
+const userConfiguration = await UserConfiguration.getInstance();
 export const PROGRAM = "podman";
 const API_BASE_URL = "http://d/v3.0.0/libpod";
 const PODMAN_MACHINE_DEFAULT = "podman-machine-default";
@@ -34,9 +34,9 @@ const PODMAN_API_SOCKET = `podman-desktop-companion-${PROGRAM}-rest-api.sock`;
 // Native
 const NATIVE_PODMAN_CLI_PATH = "/usr/bin/podman";
 const NATIVE_PODMAN_CLI_VERSION = "5.2.0";
-const NATIVE_PODMAN_SOCKET_PATH = isFlatpak()
-  ? path.join("/tmp", PODMAN_API_SOCKET)
-  : path.join(userSettings.getPath(), PODMAN_API_SOCKET);
+const NATIVE_PODMAN_SOCKET_PATH = (await Platform.isFlatpak())
+  ? await Path.join("/tmp", PODMAN_API_SOCKET)
+  : await Path.join(await userConfiguration.getStoragePath(), PODMAN_API_SOCKET);
 const NATIVE_PODMAN_MACHINE_CLI_VERSION = "5.2.0";
 const NATIVE_PODMAN_MACHINE_CLI_PATH = "/usr/bin/podman";
 // Windows virtualized
@@ -87,18 +87,21 @@ export class PodmanClientEngineNative extends AbstractClientEngine {
         path: NATIVE_PODMAN_CLI_PATH,
         version: NATIVE_PODMAN_CLI_VERSION
       }
-    };
+    } as EngineConnectorSettings;
   }
-  async getUserSettings() {
+
+  async getUserSettings(): Promise<EngineConnectorSettings> {
+    const entry = await this.userConfiguration.getKey<EngineConnectorSettings | undefined>(this.id);
     return {
       api: {
-        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
-        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
+        baseURL: entry?.api?.baseURL,
+        connectionString: entry?.api?.connectionString
       },
       program: {
-        path: this.userConfiguration.getKey(`${this.id}.program.path`)
+        path: entry?.program?.path,
+        name: PROGRAM
       }
-    };
+    } as EngineConnectorSettings;
   }
   // Runtime
   async startApi(customSettings?: any, opts?: any) {
@@ -159,15 +162,16 @@ export class PodmanClientEngineVirtualized extends AbstractControlledClientEngin
     if (this.osType === "Windows_NT") {
       connectionString = `//./pipe/${scope}`;
     } else {
-      connectionString = path.join(process.env.HOME!, ".local/share/containers/podman/machine/podman.sock");
+      const homeDir = await Platform.getHomeDir();
+      connectionString = await Path.join(homeDir, ".local/share/containers/podman/machine/podman.sock");
       if (scope) {
-        const machineSockPath = path.join(
-          process.env.HOME!,
+        const machineSockPath = await Path.join(
+          homeDir,
           ".local/share/containers/podman/machine",
           scope,
           "podman.sock"
         );
-        if (fs.existsSync(machineSockPath)) {
+        if (await FS.isFilePresent(machineSockPath)) {
           connectionString = machineSockPath;
         }
       }

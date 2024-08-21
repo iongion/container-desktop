@@ -1,7 +1,8 @@
 // vendors
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { createLogger } from "@/logger";
 // locals
-const logger = createLogger("bridge.proxy");
+const logger = await createLogger("bridge.proxy");
 
 export async function proxyHTTPRequest(currentApi, proxyRequest?: any) {
   let result = {
@@ -46,7 +47,7 @@ export async function proxyHTTPRequest(currentApi, proxyRequest?: any) {
   };
 }
 
-export function createActions(context) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   return {
     proxyHTTPRequest: (...rest) => proxyHTTPRequest(context.getCurrentApi(), ...(rest as []))
   };

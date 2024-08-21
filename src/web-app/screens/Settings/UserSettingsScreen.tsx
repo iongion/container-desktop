@@ -59,7 +59,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [setGlobalUserSettings]
   );
   const onToggleInspectorClick = useCallback(async (e) => {
-    Native.getInstance().openDevTools();
+    const instance = await Native.getInstance();
+    await instance.openDevTools();
   }, []);
 
   let title = "";
@@ -95,7 +96,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             labelFor="startApi"
             helperText={t("Not needed if container engine is already running as a service")}
           >
-            <ControlGroup fill={true}>
+            <ControlGroup>
               <Checkbox
                 id="startApi"
                 label={t("Automatically start the Api")}
@@ -105,7 +106,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </ControlGroup>
           </FormGroup>
           <FormGroup>
-            <ControlGroup fill={true}>
+            <ControlGroup>
               <Checkbox
                 id="minimizeToSystemTray"
                 label={t("Minimize to System Tray when closing")}
@@ -125,7 +126,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </FormGroup>
           <FormGroup label={t("Level")} labelFor="loggingLevel">
             <ControlGroup>
-              <HTMLSelect id="loggingLevel" value={userSettings.logging.level} onChange={onLoggingLevelChange}>
+              <HTMLSelect
+                id="loggingLevel"
+                value={userSettings.logging.level ?? "error"}
+                onChange={onLoggingLevelChange}
+              >
                 {LOGGING_LEVELS.map((level) => {
                   const key = `logging.${level}`;
                   return (
@@ -140,7 +145,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
           <FormGroup label={t("Debugging")} labelFor="loggingLevel">
             <ControlGroup>
-              <Button icon={IconNames.PANEL_TABLE} text={t("Show inspector")} onClick={onToggleInspectorClick} />
+              <Button icon={IconNames.PANEL_TABLE} text={t("Toggle inspector")} onClick={onToggleInspectorClick} />
             </ControlGroup>
           </FormGroup>
         </div>

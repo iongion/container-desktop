@@ -1,11 +1,12 @@
 // project
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { adapters, api } from "@/container-client";
 import { findProgramVersion, getAvailablePodmanMachines, parseProgramVersion } from "@/detector";
 import { createLogger } from "@/logger";
 
 // locals
 const { Podman, Docker } = adapters;
-const logger = createLogger("bridge.test");
+const logger = await createLogger("bridge.test");
 
 export async function testProgramReachability(adapters, osType, opts?: any) {
   const result: any = { success: false, program: undefined, details: undefined, scopes: undefined };
@@ -118,7 +119,7 @@ export async function test(adapters, osType, opts?: any) {
   return result;
 }
 
-export function createActions(context, { ipcRenderer, userConfiguration, osType, version, environment }) {
+export function createActions(context: ActionContext, { osType }: ActionsEnvironment) {
   // Do not access the context at creation - it is lazy
   return {
     test: (...rest) => test(context.getAdapters(), osType, ...(rest as [])),

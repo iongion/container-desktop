@@ -1,59 +1,98 @@
 // project
 import { createLogger } from "@/logger";
-import userSettings from "@/user-settings";
+import { FS, Path, Platform } from "@/platform/node";
+import { GlobalUserSettings } from "@/web-app/Types.container-app";
+import { merge } from "lodash";
 // module
 // locals
-const logger = createLogger("container-client.Configuration");
+const logger = await createLogger("container-client.Configuration");
+
+function getPrefix() {
+  const version = import.meta.env.PROJECT_VERSION || "1.0.0";
+  const stage = import.meta.env.ENVIRONMENT || "production";
+  const prefix = `${version.replace(/\./g, "|")}.${stage}`;
+  return prefix;
+}
+
+const VERSION = getPrefix();
+
+async function getUserSettingsPath() {
+  const dataPath = await Platform.getUserDataPath();
+  const configPath = await Path.join(dataPath, "electron-cfg.json");
+  return configPath;
+}
+
+async function read() {
+  const configPath = await getUserSettingsPath();
+  const contents = (await FS.isFilePresent(configPath)) ? await FS.readTextFile(configPath) : "{}";
+  try {
+    const config = JSON.parse(contents);
+    // logger.debug("Loaded config is", config);
+    return config;
+  } catch (error: any) {
+    logger.error("Unable to read config", { error, contents });
+  }
+  return {} as any;
+}
+
+async function write(config?: { [key: string]: GlobalUserSettings }) {
+  const configPath = await getUserSettingsPath();
+  try {
+    await FS.writeTextFile(configPath, JSON.stringify(config, null, 2));
+  } catch (error: any) {
+    logger.error("Unable to write config", { error, config });
+  }
+  return config;
+}
+
+export async function update(values: { [key: string]: Partial<GlobalUserSettings> }) {
+  let config = await read();
+  if (values) {
+    config = merge(config, values);
+    console.debug("Updated configuration", { values, config });
+    return await write(config);
+  }
+  return config;
+}
 
 export class UserConfiguration {
-  public static instance;
-  static getInstance(version, environment) {
+  private static instance: UserConfiguration;
+  static getInstance() {
     if (!UserConfiguration.instance) {
-      UserConfiguration.instance = new UserConfiguration(version, environment);
+      UserConfiguration.instance = new UserConfiguration();
     }
     return UserConfiguration.instance;
   }
-
-  protected version: string;
-  protected stage: string;
-  protected prefix: string;
-
-  constructor(version, stage) {
-    this.version = version || "1.0.0";
-    this.stage = stage || "production";
-    this.prefix = `${this.version.replace(/\./g, "|")}.${this.stage}`;
-    logger.debug("Configuration set-up", this.prefix);
+  constructor() {
+    logger.debug("User configuration has been instantiated");
   }
-  getStoragePath() {
-    return userSettings.getPath();
+  async getStoragePath() {
+    const dataPath = await Platform.getUserDataPath();
+    return dataPath;
   }
-  getKeyFQDN(name) {
-    return `${this.prefix}.${name}`;
+  async getSettings() {
+    const settings = await read();
+    return settings?.[VERSION] ?? {};
   }
-  getKey(name, defaultValue) {
-    const fqdn = this.getKeyFQDN(name);
-    const value = userSettings.get(fqdn, defaultValue);
-    // logger.debug("getKey", { fqdn, defaultValue }, "<", value);
-    return value;
+  async getKey<T = unknown>(name: string, defaultValue: any | undefined = undefined) {
+    const settings = await this.getSettings();
+    const stored = settings[name] ?? defaultValue;
+    return stored as T;
   }
-  setKey(name, value) {
-    const fqdn = this.getKeyFQDN(name);
-    // logger.debug("setKey", { fqdn, value });
-    userSettings.set(fqdn, value);
-    return this;
+  async setKey(name: string, value) {
+    const settings = await this.getSettings();
+    const updated = merge(settings, { [name]: value });
+    return await update({ [VERSION]: updated });
   }
-  getSettings(defaultValue) {
-    return userSettings.get(`${this.prefix}`, defaultValue);
-  }
-  setSettings(value) {
-    userSettings.set(`${this.prefix}`, value);
-    return this;
-  }
-  reset(defaults) {
-    userSettings.del(this.prefix);
-    if (defaults) {
-      this.setSettings(defaults);
+  async setSettings(value: Partial<GlobalUserSettings>) {
+    let settings = await read();
+    if (!settings) {
+      settings = {};
     }
-    return this;
+    if (!settings[VERSION]) {
+      settings[VERSION] = {};
+    }
+    settings[VERSION] = merge(settings[VERSION], value);
+    return await update(settings);
   }
 }

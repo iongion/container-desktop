@@ -1,15 +1,15 @@
 import net from "node:net";
-import os from "node:os";
-import path from "node:path";
 // vendors
 import merge from "lodash.merge";
 import { v4 } from "uuid";
 // project
 import { findProgram, getAvailableLIMAInstances, getAvailableWSLDistributions } from "@/detector";
-import { exec_launcher_async, exec_launcher_sync } from "@/executor";
 import { createLogger } from "@/logger";
-import { isFilePresent } from "@/utils";
 // module
+import { UserConfiguration } from "@/container-config";
+import { Command, FS, Path, Platform } from "@/platform/node";
+import { EngineConnectorSettings } from "@/web-app/Types.container-app";
+import { CURRENT_OS_TYPE } from "../../Environment";
 import { createApiDriver, getApiConfig, Runner } from "../api";
 import { LIMA_PATH, LIMA_PROGRAM, LIMA_VERSION, WSL_PATH, WSL_PROGRAM, WSL_VERSION } from "../constants";
 
@@ -17,7 +17,7 @@ export class AbstractAdapter {
   public ADAPTER: any = undefined;
   public ENGINES: any = [];
 
-  public userConfiguration: any;
+  public userConfiguration: UserConfiguration;
   public osType: any;
 
   public logger: any;
@@ -26,13 +26,13 @@ export class AbstractAdapter {
     throw new Error("Must implement");
   }
 
-  constructor(userConfiguration, osType) {
+  constructor(userConfiguration: UserConfiguration, osType) {
     this.userConfiguration = userConfiguration;
-    this.osType = osType || os.type();
+    this.osType = osType || CURRENT_OS_TYPE;
   }
 
-  setup() {
-    this.logger = createLogger(`${this.ADAPTER}.adapter`);
+  async setup() {
+    this.logger = await createLogger(`${this.ADAPTER}.adapter`);
     this.logger.debug(this.ADAPTER, "Created adapter");
   }
 
@@ -64,7 +64,7 @@ export abstract class AbstractClientEngine {
   public ENGINE!: string;
   public id!: string;
 
-  protected userConfiguration: any;
+  protected userConfiguration: UserConfiguration;
   protected osType: any;
   protected apiStarted: any;
   protected detectedSettings: any;
@@ -80,14 +80,14 @@ export abstract class AbstractClientEngine {
 
   constructor(userConfiguration, osType) {
     this.userConfiguration = userConfiguration;
-    this.osType = osType || os.type();
+    this.osType = osType || CURRENT_OS_TYPE;
     this.apiStarted = false;
     this.detectedSettings = {};
   }
 
-  setup() {
+  async setup() {
     this.runner = new Runner(this);
-    this.logger = createLogger("engine.client");
+    this.logger = await createLogger("engine.client");
     this.logger.debug(this.id, "Created");
   }
 
@@ -129,23 +129,24 @@ export abstract class AbstractClientEngine {
     return detected;
   }
 
-  async getUserSettings() {
+  async getUserSettings(): Promise<EngineConnectorSettings> {
     return {
       api: {
-        baseURL: undefined,
-        connectionString: undefined
+        baseURL: "",
+        connectionString: ""
       },
       program: {
-        path: undefined
+        name: "",
+        path: ""
       }
     };
   }
 
-  async setUserSettings(settings) {
+  async setUserSettings(settings): Promise<EngineConnectorSettings> {
     const defaults = await this.getUserSettings();
-    const userSettings = this.userConfiguration.getKey(this.id);
+    const userSettings = await this.userConfiguration.getKey<EngineConnectorSettings | undefined>(this.id);
     const updated = merge(defaults, userSettings, settings || {});
-    this.userConfiguration.setKey(this.id, updated);
+    await this.userConfiguration.setKey(this.id, updated);
     return updated;
   }
 
@@ -226,7 +227,7 @@ export abstract class AbstractClientEngine {
       result.details = "Path not set";
       return result;
     }
-    if (!isFilePresent(settings.program.path)) {
+    if (!(await FS.isFilePresent(settings.program.path))) {
       result.details = "Not present in path";
       return result;
     }
@@ -362,13 +363,7 @@ export abstract class AbstractClientEngine {
 
   async runScopedCommand(program, args, opts?: any) {
     const { launcher, command } = await this.getScopedCommand(program, args, opts);
-    let result;
-    if (opts?.sync) {
-      result = await exec_launcher_sync(launcher, command, opts);
-    } else {
-      result = await exec_launcher_async(launcher, command, opts);
-    }
-    return result;
+    return await Command.Execute(launcher, command, opts);
   }
 
   // Services
@@ -480,19 +475,20 @@ export abstract class AbstractControlledClientEngine extends AbstractClientEngin
     return detected;
   }
   async getUserSettings() {
+    const entry = await this.userConfiguration.getKey<EngineConnectorSettings | undefined>(this.id);
     return {
       api: {
-        baseURL: this.userConfiguration.getKey(`${this.id}.api.baseURL`),
-        connectionString: this.userConfiguration.getKey(`${this.id}.api.connectionString`)
+        baseURL: entry?.api?.baseURL,
+        connectionString: entry?.api?.connectionString
       },
       controller: {
-        path: this.userConfiguration.getKey(`${this.id}.controller.path`),
-        scope: this.userConfiguration.getKey(`${this.id}.controller.scope`)
+        path: entry?.controller?.path,
+        scope: entry?.controller?.scope
       },
       program: {
-        path: this.userConfiguration.getKey(`${this.id}.program.path`)
+        path: entry?.program?.path
       }
-    };
+    } as EngineConnectorSettings;
   }
   async getSettings() {
     const expected: any = await this.getExpectedSettings();
@@ -538,7 +534,7 @@ export abstract class AbstractControlledClientEngine extends AbstractClientEngin
     let success = false;
     let details;
     if (settings?.controller?.path) {
-      if (isFilePresent(settings.controller.path)) {
+      if (await FS.isFilePresent(settings.controller.path)) {
         success = true;
         details = "Controller is available";
       } else {
@@ -663,7 +659,7 @@ export abstract class AbstractClientEngineSubsystemWSL extends AbstractControlle
                   ]);
                   this.logger.debug("Relaying response back to named pipe", result);
                   const output = result.success ? result.stdout : result.stderr;
-                  stream.write(output);
+                  stream.write(output ?? "");
                 } catch (error: any) {
                   this.logger.error(this.ENGINE, "Native communication error", error);
                 } finally {
@@ -775,7 +771,8 @@ export abstract class AbstractClientEngineSubsystemWSL extends AbstractControlle
 export abstract class AbstractClientEngineSubsystemLIMA extends AbstractControlledClientEngine {
   // Helpers
   async getConnectionString(scope) {
-    return path.join(process.env.HOME!, ".lima", scope, "sock", `${scope}.sock`);
+    const homeDir = await Platform.getHomeDir();
+    return await Path.join(homeDir, ".lima", scope, "sock", `${scope}.sock`);
   }
   // Runtime
   async startApi(customSettings?: any, opts?: any) {

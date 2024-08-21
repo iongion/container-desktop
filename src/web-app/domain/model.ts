@@ -8,13 +8,14 @@ import { Connector } from "../Types.container-app";
 import { Native } from "../Native";
 import { AppBootstrapPhase, AppModel, AppModelState, AppRegistry } from "./types";
 
-export const createModel = (registry: AppRegistry): AppModel => {
-  const native = Native.getInstance().isNative();
+export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
+  const instance = await Native.getInstance();
+  const native = await instance.isNative();
   const model: AppModel = {
     phase: AppBootstrapPhase.INITIAL,
     pending: false,
     native,
-    descriptor: Native.getInstance().getDefaultApplicationDescriptor(),
+    descriptor: await instance.getDefaultApplicationDescriptor(),
     // Actions
     setPhase: action((state, phase) => {
       if (phase === AppBootstrapPhase.CONNECTING) {
@@ -28,6 +29,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
     }),
     syncGlobalUserSettings: action((state, values) => {
       state.descriptor.userSettings = values;
+      console.debug("Local global user settings updated", values);
     }),
     syncEngineUserSettings: action((state, values) => {
       state.descriptor.currentConnector.settings.user = merge(
@@ -71,7 +73,7 @@ export const createModel = (registry: AppRegistry): AppModel => {
     start: thunk(async (actions, options) => {
       let nextPhase = AppBootstrapPhase.STARTING;
       return registry.withPending(async () => {
-        Native.getInstance().notify("ready");
+        await instance.notify("ready");
         try {
           await actions.setPhase(nextPhase);
           await actions.reset();
@@ -139,10 +141,10 @@ export const createModel = (registry: AppRegistry): AppModel => {
       });
     }),
     // Engine
-    setEngineUserSettings: thunk(async (actions, options, { getState }) => {
+    setConnectorSettings: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const updated = await registry.api.setEngineUserSettings(options.id, options.settings);
+          const updated = await registry.api.setConnectorSettings(options.id, options.settings);
           actions.syncEngineUserSettings(options);
           return updated;
         } catch (error: any) {

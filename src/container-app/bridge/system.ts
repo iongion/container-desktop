@@ -1,3 +1,5 @@
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
+
 export async function pruneSystem(currentApi) {
   return await currentApi.engine.pruneSystem();
 }
@@ -10,7 +12,7 @@ export async function getSystemInfo(currentApi) {
   return await currentApi.engine.getSystemInfo();
 }
 
-export function createActions(context, { ipcRenderer, userConfiguration, osType, version, environment }) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   // Do not access the context at creation - it is lazy
   return {
     pruneSystem: (...rest) => pruneSystem(context.getCurrentApi(), ...(rest as [])),

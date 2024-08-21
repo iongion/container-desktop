@@ -1,13 +1,13 @@
-import os from "node:os";
 // project
-import { exec_launcher } from "@/executor";
 import { createLogger } from "@/logger";
+import { Command } from "@/platform/node";
+import { CURRENT_OS_TYPE } from "../Environment";
 // locals
-const logger = createLogger("shared");
+const logger = await createLogger("shared");
 
 export async function getAvailableLIMAInstances(limactlPath) {
   let items = [];
-  if (os.type() !== "Darwin") {
+  if (CURRENT_OS_TYPE !== "Darwin") {
     return items;
   }
   if (!limactlPath) {
@@ -15,7 +15,7 @@ export async function getAvailableLIMAInstances(limactlPath) {
     return items;
   }
   try {
-    const result: any = await exec_launcher(limactlPath, ["list"], { encoding: "utf8" });
+    const result: any = await Command.Execute(limactlPath, ["list"], { encoding: "utf8" });
     if (result.success) {
       const output = result.stdout.trim().split("\n").slice(1);
       items = output.map((it) => {
@@ -49,7 +49,7 @@ export async function getAvailablePodmanMachines(podmanPath, customFormat?: any,
   }
   try {
     const command = ["machine", "list", "--format", customFormat || "json"];
-    const result: any = await exec_launcher(podmanPath, command, opts);
+    const result: any = await Command.Execute(podmanPath, command, opts);
     if (!result.success) {
       logger.error("Unable to get machines list", result);
       return items;
@@ -68,7 +68,7 @@ export async function getAvailablePodmanMachines(podmanPath, customFormat?: any,
 export async function getAvailableWSLDistributions(wslPath) {
   let items = [];
   // No WSL distributions on non-windows
-  if (os.type() !== "Windows_NT") {
+  if (CURRENT_OS_TYPE !== "Windows_NT") {
     return [];
   }
   if (!wslPath) {
@@ -84,10 +84,10 @@ export async function getAvailableWSLDistributions(wslPath) {
       [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
       [Console]::Write("$distributions")
     `;
-    const result: any = await exec_launcher("powershell", ["-Command", script], { encoding: "utf8" });
+    const result = await Command.Execute("powershell", ["-Command", script], { encoding: "utf8" });
     if (result.success) {
       try {
-        const lines = JSON.parse(result.stdout);
+        const lines = JSON.parse(result.stdout || "[]");
         items = lines.reduce((acc, it, index) => {
           if (index === 0) {
             return acc;

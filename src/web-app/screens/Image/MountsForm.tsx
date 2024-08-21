@@ -1,8 +1,8 @@
-import { useCallback } from "react";
-import { Button, Icon, InputGroup, FormGroup, H5 } from "@blueprintjs/core";
+import { Button, FormGroup, H5, Icon, InputGroup } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { useFieldArray, useFormContext, Controller } from "react-hook-form";
 import { v4 } from "uuid";
 
 // project
@@ -10,8 +10,8 @@ import { Native } from "../../Native";
 import { useStoreState } from "../../domain/types";
 
 // local
-import "./MountsForm.css";
 import { ContainerImageMount } from "../../Types.container-app";
+import "./MountsForm.css";
 
 export const createMount = (): MountFormContainerImageMount => {
   return {
@@ -41,7 +41,7 @@ export interface MountFormProps {
   action: MountFormAction;
 }
 
-export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountIndex, action }) => {
+export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountIndex, action }: MountFormProps) => {
   const { t } = useTranslation();
   const isNative = useStoreState((state) => state.native);
 
@@ -51,7 +51,8 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
 
   const onVolumeHostPathSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-      const result = await Native.getInstance().openFileSelector({ directory: true });
+      const instance = await Native.getInstance();
+      const result = await instance.openFileSelector({ directory: true });
       const filePath = result.filePaths[0];
       if (!result.canceled && filePath) {
         setValue(`mounts.${mountIndex}.source`, filePath);
@@ -131,7 +132,7 @@ export interface MountsFormProps {
   mounts: MountFormContainerImageMount[];
 }
 
-export const MountsForm: React.FC<MountsFormProps> = ({ disabled, mounts }) => {
+export const MountsForm: React.FC<MountsFormProps> = ({ disabled, mounts }: MountsFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{

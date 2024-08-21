@@ -1,19 +1,10 @@
 // node
-import fs from "node:fs";
-import path from "node:path";
-// locals
-export const isFlatpak = () => !!process.env.FLATPAK_ID || fs.existsSync("/.flatpak-info");
-
-export function isFilePresent(filePath) {
-  let vfsFilePath = filePath;
-  if (isFlatpak()) {
-    vfsFilePath = path.join("/var/run/host", filePath);
-  }
-  console.debug("Checking file presence", { filePath, vfsFilePath });
-  return fs.existsSync(vfsFilePath);
-}
 
 export function axiosConfigToCURL(config) {
+  if (!config || !config.baseURL || !config.socketPath) {
+    console.error("Request config is not valid", config);
+    throw new Error("Unable to construct curl from config");
+  }
   let requestUrl = `${config.baseURL}${config.url}`;
   if (Object.keys(config.params || {}).length) {
     const searchParams = new URLSearchParams();
@@ -56,7 +47,5 @@ export function axiosConfigToCURL(config) {
 }
 
 export default {
-  isFlatpak,
-  isFilePresent,
   axiosConfigToCURL
 };

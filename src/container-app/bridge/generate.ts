@@ -1,10 +1,11 @@
 // project
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { adapters } from "@/container-client";
 // vendors
 import { createLogger } from "@/logger";
 // locals
 const { Podman } = adapters;
-const logger = createLogger("bridge.generate");
+const logger = await createLogger("bridge.generate");
 
 export const generateKube = async (currentApi, entityId?: any) => {
   const capable = currentApi.engine.ADAPTER === Podman.Adapter.ADAPTER;
@@ -20,7 +21,7 @@ export const generateKube = async (currentApi, entityId?: any) => {
   return result;
 };
 
-export function createActions(context, { ipcRenderer, userConfiguration, osType, version, environment }) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   // Do not access the context at creation - it is lazy
   return {
     generateKube: (...rest) => generateKube(context.getCurrentApi(), ...(rest as []))

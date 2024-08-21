@@ -1,8 +1,9 @@
 // project
 // vendors
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { createLogger } from "@/logger";
 // locals
-const logger = createLogger("bridge.pod");
+const logger = await createLogger("bridge.pod");
 
 export const getPodLogs = async (currentApi, id?: any, tail?: any) => {
   logger.debug("Retrieving pod logs", id, tail);
@@ -16,7 +17,7 @@ export const getPodLogs = async (currentApi, id?: any, tail?: any) => {
   return result;
 };
 
-export function createActions(context, { ipcRenderer, userConfiguration, osType, version, environment }) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   // Do not access the context at creation - it is lazy
   return {
     getPodLogs: (...rest) => getPodLogs(context.getCurrentApi(), ...(rest as []))

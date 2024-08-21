@@ -121,3 +121,8 @@ body.bp5-light .AppLabelIcon {
 .AppSidebarInfoPopover {
   width: auto !important;
 }
+
+body.bp5-dark .AppErrorBoundaryCallout .bp5-heading,
+body.bp5-dark .AppErrorBoundaryCallout p {
+  color: #fff !important;
+}

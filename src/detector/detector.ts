@@ -1,13 +1,11 @@
 // node
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 // project
-import { exec_launcher, exec_launcher_sync } from "@/executor";
 import { createLogger } from "@/logger";
+import { Command, FS, Path } from "@/platform/node";
+import { CURRENT_OS_TYPE } from "../Environment";
 // modules
 // locals
-const logger = createLogger("container-client.Detector");
+const logger = await createLogger("container-client.Detector");
 
 // must return undefined when nothing is found - NOT empty string
 export const parseProgramVersion = (input) => {
@@ -30,7 +28,7 @@ export const isPathToExecutable = async (filePath, wrapper) => {
   logger.debug(`Checking if ${filePath} is an executable`);
   if (wrapper) {
     try {
-      const result = await exec_launcher_sync("stat", ["-c", "'%A'", filePath], { wrapper });
+      const result = await Command.Execute("stat", ["-c", "'%A'", filePath], { wrapper });
       if (result.success) {
         flag = (result.stdout || "").indexOf("x") !== -1;
       }
@@ -39,8 +37,8 @@ export const isPathToExecutable = async (filePath, wrapper) => {
     }
   } else {
     try {
-      const stat = fs.lstatSync(filePath);
-      flag = stat.isFile(); // TODO: check also executable bit
+      // TODO: Check executable bit
+      flag = await FS.isFilePresent(filePath);
     } catch (error: any) {
       logger.error(`Unable to verify if ${filePath} is an executable file`, error.message);
     }
@@ -54,10 +52,10 @@ export const findProgramPath = async (program, opts) => {
     logger.error("Unable to detect program path - program must be specified");
     return programPath;
   }
-  const osType = opts.osType || os.type();
+  const osType = opts.osType || CURRENT_OS_TYPE;
   const useWhere = osType === "Windows_NT" && !opts?.wrapper;
   if (useWhere) {
-    result = await exec_launcher("where", [program], opts);
+    result = await Command.Execute("where", [program], opts);
     logger.debug("Detecting", program, "using - where >", result);
     if (result.success) {
       const output = result.stdout || "";
@@ -76,7 +74,7 @@ export const findProgramPath = async (program, opts) => {
     }
   }
   if (!programPath) {
-    result = await exec_launcher("which", [program], opts);
+    result = await Command.Execute("which", [program], opts);
     logger.debug("Detecting", program, "using - which >", result);
     if (result.success) {
       programPath = result.stdout || "";
@@ -85,7 +83,7 @@ export const findProgramPath = async (program, opts) => {
     }
   }
   if (!programPath) {
-    result = await exec_launcher("whereis", [program], opts);
+    result = await Command.Execute("whereis", [program], opts);
     logger.debug("Detecting", program, "using - whereis >", result);
     if (result.success) {
       const decodedPath = result.stdout.split(" ")?.[1] || "";
@@ -120,7 +118,7 @@ export const findProgramVersion = async (program, opts, defaultValue?: any) => {
     logger.warn("wsl.exe does not report a version - defaulting", defaultValue);
     return defaultValue;
   }
-  const result = await exec_launcher_sync(program, ["--version"], opts);
+  const result = await Command.Execute(program, ["--version"], opts);
   if (result.success) {
     version = parseProgramVersion(result.stdout);
   } else {
@@ -145,7 +143,7 @@ export const findProgram = async (program, opts) => {
   } else {
     logger.error(`No path found for ${program} cli program - version check skipped`);
   }
-  const name = path.basename(program).replace(".exe", "");
+  const name = (await Path.basename(program)).replace(".exe", "");
   return {
     name,
     path: programPath,

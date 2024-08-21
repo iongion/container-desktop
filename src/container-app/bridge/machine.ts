@@ -1,7 +1,8 @@
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { createLogger } from "@/logger";
 import { launchTerminal } from "@/terminal";
 // local
-const logger = createLogger("bridge.machine");
+const logger = await createLogger("bridge.machine");
 // machines
 export async function connectToMachine(currentEngine, name?: any, title?: any) {
   logger.debug("Connecting to machine", name, title);
@@ -73,7 +74,7 @@ export async function getMachines(currentEngine) {
   return await currentEngine.getMachines();
 }
 
-export function createActions(context) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   return {
     connectToMachine: (...rest) => connectToMachine(context.getCurrentApi()?.engine, ...(rest as [])),
     restartMachine: (...rest) => restartMachine(context.getCurrentApi()?.engine, ...(rest as [])),

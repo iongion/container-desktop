@@ -1,6 +1,6 @@
 import { AnchorButton, Button, FormGroup, HTMLTable, Icon, InputGroup, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // project
@@ -24,7 +24,7 @@ export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const osType = Native.getInstance().getOperatingSystem();
+  const [osType, setOsType] = useState<string>("");
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
@@ -64,6 +64,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   // Change hydration
   usePoller({ poller: containersFetchStats });
+
+  useEffect(() => {
+    (async () => {
+      const instance = await Native.getInstance();
+      const osType = await instance.getOperatingSystem();
+      setOsType(osType);
+    })();
+  }, []);
 
   return (
     <div className="AppScreen" data-screen={ID}>

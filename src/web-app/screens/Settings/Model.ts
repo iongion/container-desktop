@@ -17,7 +17,7 @@ export interface SettingsModel extends SettingsModelState, ResetableModel<Settin
   getSystemInfo: Thunk<SettingsModel>;
 }
 
-export const createModel = (registry: AppRegistry): SettingsModel => {
+export const createModel = async (registry: AppRegistry): Promise<SettingsModel> => {
   return {
     reset: action((state) => {
       state.engine = undefined;

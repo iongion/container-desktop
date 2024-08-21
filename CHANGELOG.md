@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- Make everything async
+- Increase type safety
+- Drop node polyfills
+- Wrap node direct calls in a single `Platform` module
+
 ## Fixed
 
 - Issue #109 - Allow flatpak version to start/stop podman native binary

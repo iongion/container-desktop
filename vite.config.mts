@@ -1,14 +1,13 @@
 import path from "node:path";
 // vendors
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
-import inject from "@rollup/plugin-inject";
 import react from "@vitejs/plugin-react";
 import { ModuleFormat, RollupOptions } from "rollup";
 import { UserConfig, defineConfig } from "vite";
 import { checker } from "vite-plugin-checker";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import electron from "vite-plugin-electron/simple";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
+// import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgrPlugin from "vite-plugin-svgr";
 import topLevelAwait from "vite-plugin-top-level-await";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -96,7 +95,9 @@ export const createConfig = ({ mode, command, host, port }) => {
     "import.meta.env.PROJECT_VERSION": JSON.stringify(pkg.version),
     "import.meta.env.PROJECT_NAME": JSON.stringify(pkg.name),
     "import.meta.env.PROJECT_TITLE": JSON.stringify(pkg.title),
-    "import.meta.env.PROJECT_DESCRIPTION": JSON.stringify(pkg.description)
+    "import.meta.env.PROJECT_DESCRIPTION": JSON.stringify(pkg.description),
+    // Bugs
+    "process.env.NODE_DEBUG": JSON.stringify(false)
   };
   const resolve = {
     alias: {
@@ -116,7 +117,7 @@ export const createConfig = ({ mode, command, host, port }) => {
     plugins: [
       // All current plugins are extending the Vite configuration
       // Frontend specific
-      nodePolyfills(),
+      // nodePolyfills(),
       react(),
       svgrPlugin(),
       ViteEjsPlugin(ejsContext),
@@ -146,8 +147,8 @@ export const createConfig = ({ mode, command, host, port }) => {
     rollupOptions: {
       input: {
         application: path.join(PROJECT_HOME, "index.html")
-      },
-      plugins: [inject({ Buffer: ["buffer", "Buffer"] })]
+      }
+      // plugins: [inject({ Buffer: ["buffer", "Buffer"] })]
     },
     optimizeDeps: {
       esbuildOptions: {

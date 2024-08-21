@@ -12,7 +12,7 @@ export interface TroubleshootModel extends TroubleshootModelState, ResetableMode
   troubleShootReset: Thunk<TroubleshootModel>;
 }
 
-export const createModel = (registry: AppRegistry): TroubleshootModel => {
+export const createModel = async (registry: AppRegistry): Promise<TroubleshootModel> => {
   return {
     reset: action((state) => {}),
     troubleShootPrune: thunk(async (actions) =>

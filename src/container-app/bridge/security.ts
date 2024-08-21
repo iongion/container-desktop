@@ -1,11 +1,12 @@
 // vendors
 import { v4 } from "uuid";
 // project
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { findProgramPath } from "@/detector";
-import { exec_launcher_async } from "@/executor";
 import { createLogger } from "@/logger";
+import { Command } from "@/platform/node";
 // locals
-const logger = createLogger("bridge.security");
+const logger = await createLogger("bridge.security");
 
 export const checkSecurity = async (api, options?: any) => {
   const report: any = {
@@ -29,7 +30,7 @@ export const checkSecurity = async (api, options?: any) => {
     const programPath = await findProgramPath(options.scanner, { osType: options.osType });
     // support only trivy for now
     if (programPath) {
-      const result: any = await exec_launcher_async(programPath, ["--version"]);
+      const result: any = await Command.Execute(programPath, ["--version"]);
       if (result.success) {
         // Scanner info
         const parsed = (result.stdout || "").split(/\r?\n/);
@@ -49,7 +50,7 @@ export const checkSecurity = async (api, options?: any) => {
         };
         // Scanner analysis
         try {
-          const analysis: any = await exec_launcher_async(programPath, [
+          const analysis: any = await Command.Execute(programPath, [
             "--quiet",
             options.subject,
             "--format",
@@ -112,7 +113,7 @@ export const checkSecurity = async (api, options?: any) => {
   return report;
 };
 
-export function createActions(context) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   return {
     checkSecurity: (...rest) => checkSecurity(context.getCurrentApi(), ...(rest as []))
   };

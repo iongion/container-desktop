@@ -3,7 +3,7 @@
 import { createLogger } from "@/logger";
 // project
 // locals
-const logger = createLogger("worker");
+const logger = await createLogger("worker");
 
 self.onmessage = async function (e) {
   const msg = e.data;

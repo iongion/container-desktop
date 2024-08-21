@@ -1,11 +1,12 @@
 // project
+import { ActionContext, ActionsEnvironment } from "@/container-app/bridge/types";
 import { adapters } from "@/container-client";
 import { findProgram as detectorFindProgram } from "@/detector";
 // vendors
 import { createLogger } from "@/logger";
 // locals
 const { Podman } = adapters;
-const logger = createLogger("bridge.program");
+const logger = await createLogger("bridge.program");
 
 export const findProgram = async (engines, opts?: any) => {
   const engine = engines.find((it) => it.id === opts.id);
@@ -23,7 +24,7 @@ export const findProgram = async (engines, opts?: any) => {
   }
 };
 
-export function createActions(context, { ipcRenderer, userConfiguration, osType, version, environment }) {
+export function createActions(context: ActionContext, env: ActionsEnvironment) {
   // Do not access the context at creation - it is lazy
   return {
     findProgram: (...rest: any[]) => findProgram(context.getEngines(), ...(rest as []))

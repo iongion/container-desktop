@@ -71,7 +71,7 @@ export interface AppModel extends AppModelState {
   setGlobalUserSettings: Thunk<AppModel, Partial<GlobalUserSettingsOptions>>;
   getGlobalUserSettings: Thunk<AppModel>;
 
-  setEngineUserSettings: Thunk<AppModel, EngineUserSettingsOptions>;
+  setConnectorSettings: Thunk<AppModel, EngineUserSettingsOptions>;
 
   testProgramReachability: Thunk<AppModel, EngineProgramOptions>;
   testApiReachability: Thunk<AppModel, EngineApiOptions>;
