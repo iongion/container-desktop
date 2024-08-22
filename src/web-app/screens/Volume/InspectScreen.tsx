@@ -2,17 +2,14 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-// project
-import { AppScreen, AppScreenProps } from "../../Types";
-import { Volume } from "../../Types.container-app";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { CodeEditor } from "../../components/CodeEditor";
-import { ScreenLoader } from "../../components/ScreenLoader";
-import { useStoreActions } from "../../domain/types";
+import { Volume } from "@/env/Types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
 
-// module
 import { VolumeActionsMenu } from ".";
-
 import "./InspectScreen.css";
 
 export const ID = "volume.inspect";
@@ -44,13 +41,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader
-        withoutSearch
-        withBack
-        titleText={volume.Name}
-        titleIcon={IconNames.DATABASE}
-        rightContent={<VolumeActionsMenu volume={volume} withoutCreate />}
-      />
+      <AppScreenHeader withoutSearch withBack titleText={volume.Name} titleIcon={IconNames.DATABASE} rightContent={<VolumeActionsMenu volume={volume} withoutCreate />} />
       <div className="AppScreenContent">
         <CodeEditor value={JSON.stringify(volume, null, 2)} />
       </div>

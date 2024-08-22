@@ -1,22 +1,19 @@
 import { IconName, IconNames } from "@blueprintjs/icons";
 
-// project
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { pathTo } from "../../Navigator";
-import { Machine } from "../../Types.container-app";
+import { PodmanMachine } from "@/env/Types";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { pathTo } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
 
-// Screen header
-
 interface ScreenHeaderProps {
-  machine: Machine;
+  machine: PodmanMachine;
   currentScreen: string;
   listRoutePath?: string;
   listRouteIcon?: IconName;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ machine, currentScreen, listRoutePath, listRouteIcon }) => {
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ machine, currentScreen, listRoutePath, listRouteIcon }: ScreenHeaderProps) => {
   let currentListRoutePath = listRoutePath;
   if (machine && !currentListRoutePath) {
     currentListRoutePath = pathTo("/screens/machines");

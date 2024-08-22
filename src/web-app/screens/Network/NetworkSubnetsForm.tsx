@@ -1,15 +1,13 @@
-import { useCallback } from "react";
-import { Button, Icon, InputGroup, FormGroup, H5, ControlGroup } from "@blueprintjs/core";
+import { Button, ControlGroup, FormGroup, H5, Icon, InputGroup } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
-import { useFieldArray, useFormContext, Controller } from "react-hook-form";
+import { useCallback } from "react";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 // import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
 
-// project
-import { NetworkSubnet } from "../../Types.container-app";
+import { NetworkSubnet } from "@/env/Types";
 
-// locals
 import "./NetworkSubnetsForm.css";
 
 export interface NetworkSubnetItem extends NetworkSubnet {
@@ -33,10 +31,7 @@ export interface NetworkSubnetFormAction {
   data: any;
   handler?: NetworkSubnetFormActionHandler;
 }
-export type NetworkSubnetFormActionHandler = (
-  action: NetworkSubnetFormAction,
-  networkSubnet: NetworkSubnetItem
-) => void;
+export type NetworkSubnetFormActionHandler = (action: NetworkSubnetFormAction, networkSubnet: NetworkSubnetItem) => void;
 
 export interface NetworkSubnetFormProps {
   disabled?: boolean;
@@ -45,12 +40,7 @@ export interface NetworkSubnetFormProps {
   action: NetworkSubnetFormAction;
 }
 
-export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({
-  action,
-  disabled,
-  networkSubnet,
-  networkSubnetIndex
-}) => {
+export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({ action, disabled, networkSubnet, networkSubnetIndex }: NetworkSubnetFormProps) => {
   const { t } = useTranslation();
   const { control } = useFormContext<{
     subnets: NetworkSubnetItem[];
@@ -65,12 +55,7 @@ export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({
   return (
     <div className="NetworkSubnet" data-mount-index={networkSubnetIndex}>
       <div className="NetworkSubnetProperties">
-        <FormGroup
-          inline
-          className="ContainerNetworkSubnets"
-          data-network-subnet={networkSubnetIndex}
-          disabled={disabled}
-        >
+        <FormGroup inline className="ContainerNetworkSubnets" data-network-subnet={networkSubnetIndex} disabled={disabled}>
           <ControlGroup fill className="ContainerNetworkSubnet">
             <Controller
               control={control}
@@ -120,12 +105,7 @@ export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({
             />
           </ControlGroup>
         </FormGroup>
-        <FormGroup
-          inline
-          className="ContainerNetworkSubnets"
-          data-network-subnet={networkSubnetIndex}
-          disabled={disabled}
-        >
+        <FormGroup inline className="ContainerNetworkSubnets" data-network-subnet={networkSubnetIndex} disabled={disabled}>
           <ControlGroup fill>
             <Controller
               control={control}
@@ -189,7 +169,7 @@ export interface NetworkSubnetsFormProps {
   subnets: NetworkSubnetItem[];
 }
 
-export const NetworkSubnetsForm: React.FC<NetworkSubnetsFormProps> = ({ disabled, subnets }) => {
+export const NetworkSubnetsForm: React.FC<NetworkSubnetsFormProps> = ({ disabled, subnets }: NetworkSubnetsFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{

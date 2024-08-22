@@ -80,6 +80,12 @@
   min-width: 420px;
   box-shadow: none;
 }
+.AppDrawer .bp5-drawer-header {
+  -webkit-app-region: none;
+}
+.AppDrawer .bp5-drawer-header button {
+  -webkit-app-region: none !important;
+}
 .AppDrawer .bp5-drawer-body .bp5-dialog-body {
   padding: 5px;
   margin: 0;

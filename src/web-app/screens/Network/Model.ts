@@ -1,10 +1,9 @@
-// vendors
 import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
-// project
-import { CreateNetworkOptions } from "../../Api.clients";
-import { AppRegistry, ResetableModel } from "../../domain/types";
-import { sortAlphaNum } from "../../domain/utils";
-import { Network } from "../../Types.container-app";
+
+import { CreateNetworkOptions } from "@/container-client/Api.clients";
+import { Network } from "@/env/Types";
+import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import { sortAlphaNum } from "@/web-app/domain/utils";
 
 export interface NetworksModelState {
   networks: Network[];
@@ -75,7 +74,7 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
   // Thunks
   networksFetch: thunk(async (actions) => {
     return registry.withPending(async () => {
-      const networks = (await registry.api.getNetworks()).sort((a, b) => {
+      const networks = (await registry.getApi().getNetworks()).sort((a, b) => {
         return sortAlphaNum(a.name, b.name);
       });
       actions.setNetworks(networks);
@@ -84,14 +83,14 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
   }),
   networkFetch: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const network = await registry.api.getNetwork(name);
+      const network = await registry.getApi().getNetwork(name);
       actions.networkUpdate(network);
       return network;
     })
   ),
   networkRemove: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const removed = await registry.api.removeNetwork(name);
+      const removed = await registry.getApi().removeNetwork(name);
       if (removed) {
         actions.networkDelete(name);
       }
@@ -100,7 +99,7 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
   ),
   networkCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const item = await registry.api.createNetwork(options);
+      const item = await registry.getApi().createNetwork(options);
       if (item) {
         actions.networkAdd(item);
       }

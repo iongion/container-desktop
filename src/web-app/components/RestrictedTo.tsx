@@ -1,9 +1,8 @@
-import { useTranslation } from "react-i18next";
+import { mdiApple, mdiLinux, mdiMicrosoftWindows } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
-import { mdiLinux, mdiMicrosoftWindows, mdiApple } from "@mdi/js";
+import { useTranslation } from "react-i18next";
 
-import { ContainerEngine } from "../Types.container-app";
-
+import { ContainerEngine } from "@/env/Types";
 import "./RestrictedTo.css";
 
 interface RestrictedToProps {
@@ -11,7 +10,7 @@ interface RestrictedToProps {
   withTitle?: boolean;
 }
 
-export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine, withTitle }) => {
+export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine, withTitle }: RestrictedToProps) => {
   const { t } = useTranslation();
   const platformsMap: { [key: string]: { icon?: string; title: string; ignore?: boolean } } = {
     // Podman
@@ -20,17 +19,17 @@ export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine, withTitle })
       title: t("Only on Linux"),
       ignore: false
     },
-    [ContainerEngine.PODMAN_SUBSYSTEM_WSL]: {
+    [ContainerEngine.PODMAN_VIRTUALIZED_WSL]: {
       icon: mdiMicrosoftWindows,
       title: t("Only on Microsoft Windows"),
       ignore: false
     },
-    [ContainerEngine.PODMAN_SUBSYSTEM_LIMA]: {
+    [ContainerEngine.PODMAN_VIRTUALIZED_LIMA]: {
       icon: mdiApple,
       title: t("Only on Apple MacOS"),
       ignore: false
     },
-    [ContainerEngine.PODMAN_VIRTUALIZED]: {
+    [ContainerEngine.PODMAN_VIRTUALIZED_VENDOR]: {
       icon: undefined,
       title: "",
       ignore: true
@@ -46,17 +45,17 @@ export const RestrictedTo: React.FC<RestrictedToProps> = ({ engine, withTitle })
       title: t("Only on Linux"),
       ignore: false
     },
-    [ContainerEngine.DOCKER_SUBSYSTEM_WSL]: {
+    [ContainerEngine.DOCKER_VIRTUALIZED_WSL]: {
       icon: mdiMicrosoftWindows,
       title: t("Only on Microsoft Windows"),
       ignore: false
     },
-    [ContainerEngine.DOCKER_SUBSYSTEM_LIMA]: {
+    [ContainerEngine.DOCKER_VIRTUALIZED_LIMA]: {
       icon: mdiApple,
       title: t("Only on Apple MacOS"),
       ignore: false
     },
-    [ContainerEngine.DOCKER_VIRTUALIZED]: {
+    [ContainerEngine.DOCKER_VIRTUALIZED_VENDOR]: {
       icon: undefined,
       title: "",
       ignore: true

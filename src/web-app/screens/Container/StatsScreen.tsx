@@ -5,13 +5,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-// project
-import { AppScreen, AppScreenProps } from "../../Types";
-import { Container } from "../../Types.container-app";
-import { ScreenLoader } from "../../components/ScreenLoader";
-import { useStoreActions } from "../../domain/types";
-
-// module
+import { Container } from "@/env/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./StatsScreen.css";
@@ -31,7 +28,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const container = await containerFetch({
-          Id: id as any,
+          Id: decodeURIComponent(id as any),
           withStats: true
         });
         setContainer(container);

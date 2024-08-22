@@ -1,17 +1,14 @@
-import { useCallback, useState } from "react";
-import { ButtonGroup, Button, Intent } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Registry } from "../../Types.container-app";
+import { Registry } from "@/env/Types";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { useStoreActions } from "@/web-app/domain/types";
+import { goToScreen } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 
-// project
-import { ConfirmMenu } from "../../components/ConfirmMenu";
-import { Notification } from "../../Notification";
-import { goToScreen } from "../../Navigator";
-import { useStoreActions } from "../../domain/types";
-
-// module
 import { CreateDrawer } from "./CreateDrawer";
 
 // Registry actions menu
@@ -28,7 +25,7 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreate }) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreate }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -87,15 +84,9 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
     },
     [performActionCommand]
   );
-  const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Configure")} icon={IconNames.PLUS} onClick={onCreateClick} />
-  );
+  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Configure")} icon={IconNames.PLUS} onClick={onCreateClick} />;
   const removeWidget = registry ? (
-    <ConfirmMenu
-      onConfirm={onRemove}
-      tag={registry.name}
-      disabled={disabledAction === "registry.remove" || !registry.isRemovable}
-    ></ConfirmMenu>
+    <ConfirmMenu onConfirm={onRemove} tag={registry.name} disabled={disabledAction === "registry.remove" || !registry.isRemovable}></ConfirmMenu>
   ) : undefined;
   return (
     <>

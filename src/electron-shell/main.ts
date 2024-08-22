@@ -1,85 +1,92 @@
 // node
+import path from "node:path";
 import * as url from "url";
 // vendors
-import { BrowserWindow, Menu, Tray, app, dialog, ipcMain, shell } from "electron";
+import * as Electron from "electron";
 import contextMenu from "electron-context-menu";
 import is_ip_private from "private-ip";
 // project
+import { userConfiguration } from "@/container-client/config";
 import { createLogger } from "@/logger";
+import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
+import { Command } from "@/platform/node-executor";
 import { launchTerminal } from "@/terminal";
-// shared
-import { UserConfiguration } from "@/container-config";
-import { Path, Platform } from "@/platform/node";
-import { CURRENT_OS_TYPE } from "../Environment";
+import { MessageBus } from "./shared";
+
+// patch global like in preload
+(global as any).Command = Command;
+(global as any).Platform = Platform;
+(global as any).Path = Path;
+(global as any).FS = FS;
+(global as any).CURRENT_OS_TYPE = CURRENT_OS_TYPE;
+(global as any).MessageBus = MessageBus;
 // locals
+const { BrowserWindow, Menu, Tray, app, dialog, ipcMain, shell } = Electron;
 const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = await Path.dirname(__filename);
-const PROJECT_HOME = await Path.dirname(__dirname);
+const __dirname = path.dirname(__filename);
+const PROJECT_HOME = path.dirname(__dirname);
 const URLS_ALLOWED = [
+  "https://stately.ai/inspect",
+  "https://stately.ai/registry/inspect",
   "https://iongion.github.io/podman-desktop-companion/",
   "https://github.com/iongion/podman-desktop-companion/releases"
 ];
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
 const logger = await createLogger("shell.main");
-let window: any;
+let applicationWindow: Electron.BrowserWindow;
 let notified = false;
 const ensureWindow = () => {
-  window.show();
+  applicationWindow.show();
 };
 const isHideToTrayOnClose = async () => {
-  const configuration = UserConfiguration.getInstance();
-  return await configuration.getKey("minimizeToSystemTray", false);
+  return await userConfiguration.getKey("minimizeToSystemTray", false);
 };
 const getWindowConfigOptions = async () => {
-  const configuration = UserConfiguration.getInstance();
-  return await configuration.getKey<Electron.BrowserWindowConstructorOptions>("window", {});
+  return await userConfiguration.getKey<Electron.BrowserWindowConstructorOptions>("window", {});
 };
-
-const isDebug = await Platform.getEnvironmentVariable("PODMAN_DESKTOP_COMPANION_DEBUG");
+const setWindowConfigOptions = async (opts: Electron.BrowserWindowConstructorOptions) => {
+  return await userConfiguration.setKey("window", opts);
+};
+const isDebug = ["yes", "true", "1"].includes(`${process.env.PODMAN_DESKTOP_COMPANION_DEBUG || ""}`.toLowerCase());
 const isDevelopment = () => {
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
 };
-const iconPath = isDevelopment()
-  ? await Path.join(PROJECT_HOME, "src/resources/icons/appIcon.png")
-  : await Path.join(__dirname, "appIcon.png");
-const trayIconPath = isDevelopment()
-  ? await Path.join(PROJECT_HOME, "src/resources/icons/trayIcon.png")
-  : await Path.join(__dirname, "trayIcon.png");
-
-function activateTools() {
+const iconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/appIcon-duotone.png") : path.join(__dirname, "appIcon-duotone.png");
+const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/trayIcon-duotone.png") : path.join(__dirname, "trayIcon-duotone.png");
+const activateTools = () => {
   if (isDevelopment() || isDebug) {
     try {
-      if (window.webContents.isDevToolsOpened()) {
+      if (applicationWindow.webContents.isDevToolsOpened()) {
         logger.debug("Closing dev tools");
-        window.webContents.closeDevTools();
+        applicationWindow.webContents.closeDevTools();
       } else {
         logger.debug("Opening dev tools");
-        window.webContents.openDevTools();
+        applicationWindow.webContents.openDevTools();
       }
     } catch (error: any) {
       logger.error("Unable to open dev tools", error.message, error.stack);
     }
   }
-}
+};
 
 // ipc global setup
 ipcMain.on("window.minimize", () => {
-  if (window.isMinimizable()) {
-    window.minimize();
+  if (applicationWindow.isMinimizable()) {
+    applicationWindow.minimize();
   }
 });
 ipcMain.on("window.maximize", () => {
-  if (window.isMaximized()) {
-    window.restore();
+  if (applicationWindow.isMaximized()) {
+    applicationWindow.restore();
   } else {
-    window.maximize();
+    applicationWindow.maximize();
   }
 });
 ipcMain.on("window.restore", () => {
-  window.restore();
+  applicationWindow.restore();
 });
 ipcMain.on("window.close", (event) => {
-  window.close();
+  applicationWindow.close();
 });
 ipcMain.on("application.exit", () => {
   app.exit();
@@ -101,9 +108,10 @@ ipcMain.on("notify", (event, arg) => {
 });
 ipcMain.handle("openFileSelector", async function (event, options) {
   logger.debug("IPC - openFileSelector - start", options);
-  const selection = await dialog.showOpenDialog(window, {
+  const selection = await dialog.showOpenDialog(applicationWindow, {
     defaultPath: app.getPath("home"),
-    properties: [options?.directory ? "openDirectory" : "openFile"]
+    properties: [options?.directory ? "openDirectory" : "openFile"],
+    filters: options?.filters || []
   });
   logger.debug("IPC - openFileSelector - result", selection);
   return selection;
@@ -116,20 +124,29 @@ ipcMain.handle("openTerminal", async function (event, options) {
 });
 
 async function createWindow() {
+  const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`);
+  const appURL = isDevelopment()
+    ? import.meta.env.VITE_DEV_SERVER_URL
+    : url.format({
+        pathname: path.join(__dirname, "index.html"),
+        protocol: "file:",
+        slashes: true
+      });
   const windowConfigOptions: Partial<Electron.BrowserWindowConstructorOptions> = await getWindowConfigOptions();
   const windowOptions: Electron.BrowserWindowConstructorOptions = {
+    show: false, // Use the 'ready-to-show' event to show the instantiated BrowserWindow.
     backgroundColor: "#1a051c",
     width: 1280,
     height: 800,
-    show: false,
     ...(windowConfigOptions ?? {}),
     webPreferences: {
-      preload: await Path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`),
       devTools: true,
-      nodeIntegration: true,
-      nodeIntegrationInWorker: true,
+      nodeIntegration: false,
+      nodeIntegrationInWorker: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: false, // Sandbox disabled because the demo of preload script depend on the Node.js api
+      webviewTag: false, // The webview tag is not recommended. Consider alternatives like an iframe or Electron's BrowserView. @see https://www.electronjs.org/docs/latest/api/webview-tag#warning
+      preload: preloadURL
     },
     icon: iconPath
   };
@@ -138,32 +155,66 @@ async function createWindow() {
   } else {
     windowOptions.titleBarStyle = "hiddenInset";
   }
+  let closed = false;
   const onMinimizeOrClose = async (event: any, source: any) => {
+    if (closed) {
+      logger.debug("Already closed - skipping event", source);
+      return;
+    }
+    event.preventDefault();
+    logger.debug("Checking if must hide to tray", source);
     if (await isHideToTrayOnClose()) {
       createSystemTray();
-      event.preventDefault();
-      window.setSkipTaskbar(true);
-      window.hide();
+      applicationWindow.setSkipTaskbar(true);
+      applicationWindow.hide();
       event.returnValue = false;
       if (CURRENT_OS_TYPE === "Darwin") {
         app.dock.hide();
       }
     } else if (source === "close") {
-      if (CURRENT_OS_TYPE === "Darwin") {
-        app.quit();
-      }
+      closed = true;
+    } else if (source === "closed") {
+      closed = true;
+    }
+    if (closed) {
+      app.quit();
     }
   };
   // Application window
-  window = new BrowserWindow(windowOptions);
-  window.on("resize", (event: any) => {});
-  window.on("move", (event: any) => {});
-  window.on("close", (event: any) => {});
-  window.on("closed", (event: any) => {});
-  window.on("minimize", (event: any) => onMinimizeOrClose(event, "minimize"));
-  window.on("close", (event: any) => onMinimizeOrClose(event, "close"));
-  // Automatically open Chrome's DevTools in development mode.
-  window.webContents.setWindowOpenHandler((event: any) => {
+  applicationWindow = new BrowserWindow(windowOptions);
+  applicationWindow.on("resize", async (event: any) => {
+    const [width, height] = applicationWindow.getSize();
+    const config = await getWindowConfigOptions();
+    config.width = width;
+    config.height = height;
+    await setWindowConfigOptions(config);
+  });
+  applicationWindow.on("move", async (event: any) => {
+    const [x, y] = applicationWindow.getPosition();
+    const config = await getWindowConfigOptions();
+    config.x = x;
+    config.y = y;
+    await setWindowConfigOptions(config);
+  });
+  applicationWindow.on("minimize", (event: any) => onMinimizeOrClose(event, "minimize"));
+  applicationWindow.on("maximize", async (event: any) => {
+    const isMaximized = applicationWindow.isMaximized();
+    const config = await getWindowConfigOptions();
+    (config as any).isMaximized = isMaximized;
+  });
+  applicationWindow.on("close", (event: any) => onMinimizeOrClose(event, "close"));
+  applicationWindow.once("ready-to-show", () => {
+    logger.debug("window is ready to show - waiting application ready-ness");
+    ensureWindow();
+    if (isDebug || isDevelopment()) {
+      activateTools();
+    }
+    if ((windowConfigOptions as any).isMaximized) {
+      applicationWindow.maximize();
+    }
+  });
+  // Application URL handler
+  applicationWindow.webContents.setWindowOpenHandler((event: any) => {
     const info = new URL(event.url);
     if (!URLS_ALLOWED.includes(event.url)) {
       if (!is_ip_private(info.hostname)) {
@@ -173,31 +224,21 @@ async function createWindow() {
         }
       }
     }
-    logger.debug("window open", info.hostname);
+    // logger.debug("window open", info.hostname);
     // if (url.startsWith(config.fileProtocol)) {
     //   return { action: "allow" };
     // }
-    // open url in a browser and prevent default
-    shell.openExternal(event.url);
+
+    if (isDevelopment()) {
+      return { action: "allow" };
+    }
+
+    shell.openExternal(event.url, { activate: true });
     return { action: "deny" };
   });
-  window.once("ready-to-show", () => {
-    logger.debug("window is ready to show - waiting application ready-ness");
-    ensureWindow();
-    if (isDebug || isDevelopment()) {
-      activateTools();
-    }
-  });
-  const appURL = isDevelopment()
-    ? `http://localhost:${import.meta.env.PORT || 3000}`
-    : url.format({
-        pathname: await Path.join(__dirname, "index.html"),
-        protocol: "file:",
-        slashes: true
-      });
-  logger.debug("Application URL is", appURL);
-  window.loadURL(appURL);
-  return window;
+  logger.debug("Application URL is", { appURL, preloadURL, windowOptions });
+  await applicationWindow.loadURL(appURL);
+  return applicationWindow;
 }
 
 function createSystemTray() {
@@ -211,12 +252,12 @@ function createSystemTray() {
     {
       label: "Show main window",
       click: async () => {
-        mainWindow.excludedFromShownWindowsMenu = true;
-        if (BrowserWindow.getAllWindows().length === 0) {
-          mainWindow = await createWindow();
+        if (!applicationWindow && BrowserWindow.getAllWindows().length === 0) {
+          applicationWindow = await createWindow();
         }
-        mainWindow.show();
-        mainWindow.setSkipTaskbar(false);
+        applicationWindow.excludedFromShownWindowsMenu = true;
+        applicationWindow.show();
+        applicationWindow.setSkipTaskbar(false);
         if (CURRENT_OS_TYPE === "Darwin") {
           app.dock.show();
         }
@@ -226,7 +267,7 @@ function createSystemTray() {
     {
       label: "Quit",
       click: () => {
-        mainWindow.destroy();
+        applicationWindow.destroy();
         app.quit();
       }
     }
@@ -236,7 +277,7 @@ function createSystemTray() {
 }
 
 // see https://mmazzarolo.com/blog/2021-08-12-building-an-electron-application-using-create-react-app/
-let mainWindow: any;
+//let mainWindow: any;
 let tray: any = null;
 (async () => {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
@@ -244,15 +285,19 @@ let tray: any = null;
     showInspectElement: true // Always show to help debugging
   });
   app.commandLine.appendSwitch("ignore-certificate-errors");
+  app.on("activate", async () => {
+    if (!applicationWindow && BrowserWindow.getAllWindows().length === 0) {
+      applicationWindow = await createWindow();
+    }
+  });
   app.whenReady().then(async () => {
     // setup window
-    mainWindow = await createWindow();
-    app.on("activate", async () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        mainWindow = await createWindow();
-      }
-    });
+    applicationWindow = await createWindow();
+    if (applicationWindow) {
+      applicationWindow.focus();
+    }
   });
+  /*
   app.on("window-all-closed", async () => {
     if (await isHideToTrayOnClose()) {
       createSystemTray();
@@ -264,4 +309,5 @@ let tray: any = null;
       app.quit();
     }
   });
+  */
 })();

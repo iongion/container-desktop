@@ -1,32 +1,20 @@
-import {
-  Alignment,
-  Button,
-  ButtonGroup,
-  Intent,
-  Navbar,
-  NavbarGroup,
-  NavbarHeading,
-  Popover,
-  PopoverInteractionKind,
-  Spinner,
-  SpinnerSize
-} from "@blueprintjs/core";
+import { Alignment, Button, ButtonGroup, Intent, Navbar, NavbarGroup, NavbarHeading, Popover, PopoverInteractionKind, Spinner, SpinnerSize } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { AppTheme, useStoreActions, useStoreState } from "../domain/types";
-import { PROJECT_VERSION } from "../Environment";
-import { ContainerEngine } from "../Types.container-app";
+import { ContainerEngine } from "@/env/Types";
+import { AppTheme, useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { PROJECT_VERSION } from "@/web-app/Environment";
 
 import "./AppSidebarFooter.css";
 
 export function AppSidebarFooter() {
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
-  const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
-  const theme = useStoreState((state) => state.descriptor.userSettings.theme);
-  const expandSidebar = useStoreState((state) => state.descriptor.userSettings.expandSidebar);
+  const currentConnector = useStoreState((state) => state.currentConnector);
+  const theme = useStoreState((state) => state.userSettings.theme);
+  const expandSidebar = useStoreState((state) => state.userSettings.expandSidebar);
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const onThemeToggleClick = useCallback(
     (e) => {
@@ -40,14 +28,14 @@ export function AppSidebarFooter() {
     },
     [expandSidebar, setGlobalUserSettings]
   );
-  const controller = currentConnector.settings.current.controller;
-  const program = currentConnector.settings.current.program;
+  const controller = currentConnector?.settings?.controller;
+  const program = currentConnector?.settings?.program;
   const programInfo = {
     name: program?.name || "",
     version: ""
   };
   let programTitle = "";
-  if (currentConnector?.engine === ContainerEngine.PODMAN_VIRTUALIZED) {
+  if (currentConnector?.engine === ContainerEngine.PODMAN_VIRTUALIZED_VENDOR) {
     programInfo.version = controller?.version || "";
     programTitle = t("Machine program version: {{version}}", program);
   } else {

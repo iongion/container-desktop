@@ -3,18 +3,15 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// project
-import { ContainerEngine, Platforms } from "../../Types.container-app";
+import { ContainerEngine } from "@/env/Types";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
+import { usePoller } from "@/web-app/Hooks";
+import { Notification } from "@/web-app/Notification";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-// module
-import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "../../Environment";
-import { usePoller } from "../../Hooks";
-import { Native } from "../../Native";
-import { Notification } from "../../Notification";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { useStoreActions, useStoreState } from "../../domain/types";
-
-// locals
+import { Application } from "@/container-client/Application";
+import { OperatingSystem } from "@/platform";
 import "./Dashboard.css";
 
 export const ID = "dashboard";
@@ -25,28 +22,24 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const [osType, setOsType] = useState<string>("");
-  const userSettings = useStoreState((state) => state.descriptor.userSettings);
+  const userSettings = useStoreState((state) => state.userSettings);
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
-  const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
-  const engine = currentConnector.engine;
-  const program = currentConnector.settings.current.program;
-  const machine = currentConnector.settings.current.controller?.scope || "";
+  const currentConnector = useStoreState((state) => state.currentConnector);
+  const engine = currentConnector?.engine;
+  const program = currentConnector?.settings.program;
+  const machine = currentConnector?.settings.controller?.scope || "";
 
   const { exampleCode, commandPrefix, commandTitle } = useMemo(() => {
     const exampleCode = CONTAINER_DOCS_EXAMPLE_CODE.replace("{program}", program?.name || "podman");
     let commandPrefix;
     let commandTitle;
-    if (osType === Platforms.Linux && engine === ContainerEngine.PODMAN_VIRTUALIZED && machine) {
+    if (osType === OperatingSystem.Linux && engine === ContainerEngine.PODMAN_VIRTUALIZED_VENDOR && machine) {
       commandPrefix = `podman machine ssh ${machine}`;
-      commandTitle = t(
-        "On Linux, to dissociated between commands targeting the native podman engine, a machine prefix must be used."
-      );
-    } else if (osType === Platforms.Mac) {
+      commandTitle = t("On Linux, to dissociated between commands targeting the native podman engine, a machine prefix must be used.");
+    } else if (osType === OperatingSystem.Mac) {
       commandPrefix = `limactl shell podman`;
-      commandTitle = t(
-        "On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used."
-      );
+      commandTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
     }
     return {
       exampleCode,
@@ -68,8 +61,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   useEffect(() => {
     (async () => {
-      const instance = await Native.getInstance();
-      const osType = await instance.getOperatingSystem();
+      const instance = Application.getInstance();
+      const osType = await instance.getOsType();
       setOsType(osType);
     })();
   }, [t]);

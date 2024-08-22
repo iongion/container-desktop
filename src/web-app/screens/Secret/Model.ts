@@ -1,10 +1,9 @@
-// vendors
 import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
-// project
-import { CreateSecretOptions, FetchSecretOptions } from "../../Api.clients";
-import { Secret } from "../../Types.container-app";
-import { AppRegistry, ResetableModel } from "../../domain/types";
-import { sortAlphaNum } from "../../domain/utils";
+
+import { CreateSecretOptions, FetchSecretOptions } from "@/container-client/Api.clients";
+import { Secret } from "@/env/Types";
+import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import { sortAlphaNum } from "@/web-app/domain/utils";
 
 export interface SecretsModelState {
   secrets: Secret[];
@@ -51,20 +50,20 @@ export const createModel = async (registry: AppRegistry): Promise<SecretsModel> 
   // thunks
   secretsFetch: thunk(async (actions) =>
     registry.withPending(async () => {
-      const secrets = await registry.api.getSecrets();
+      const secrets = await registry.getApi().getSecrets();
       actions.setSecrets(secrets);
       return secrets;
     })
   ),
   secretFetch: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const secret = await registry.api.getSecret(options.Id);
+      const secret = await registry.getApi().getSecret(options.Id);
       return secret;
     })
   ),
   secretCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const created = await registry.api.createSecret(options);
+      const created = await registry.getApi().createSecret(options);
       return created;
     })
   ),
@@ -72,7 +71,7 @@ export const createModel = async (registry: AppRegistry): Promise<SecretsModel> 
     registry.withPending(async () => {
       let removed = false;
       if (options.ID) {
-        removed = await registry.api.removeSecret(options.ID);
+        removed = await registry.getApi().removeSecret(options.ID);
         if (removed) {
           actions.secretDelete(options);
         }

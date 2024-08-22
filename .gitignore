@@ -18,6 +18,9 @@ lerna-debug.log*
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
+# Rust
+support/podman-desktop-companion-relay/target
+
 # Runtime data
 pids
 *.pid
@@ -111,3 +114,6 @@ dist
 # dotenv environment variables file
 .env.test
 .env.*.local
+
+# Extras
+.electron-vendors.cache.json

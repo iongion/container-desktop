@@ -2,11 +2,10 @@ import { Switch } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 
-// project
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { pathTo } from "../../Navigator";
-import { Registry, RegistrySearchFilters } from "../../Types.container-app";
-import { useStoreState } from "../../domain/types";
+import { Registry, RegistrySearchFilters } from "@/env/Types";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useStoreState } from "@/web-app/domain/types";
+import { pathTo } from "@/web-app/Navigator";
 
 import "./ScreenHeader.css";
 
@@ -31,7 +30,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   listRoutePath,
   listRouteIcon,
   rightContent
-}) => {
+}: ScreenHeaderProps) => {
   const isOfficial = useStoreState((actions) => actions.registry.official);
   const isAutomated = useStoreState((actions) => actions.registry.automated);
   const [filters, setFilters] = useState<RegistrySearchFilters>({ isOfficial, isAutomated });
@@ -76,20 +75,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       rightContent={rightContent}
     >
       <div className="SearchFilters">
-        <Switch
-          label="Official"
-          inline
-          checked={filters.isOfficial}
-          onChange={onFilterChange}
-          data-filter="isOfficial"
-        />
-        <Switch
-          label="Automated"
-          inline
-          checked={filters.isAutomated}
-          onChange={onFilterChange}
-          data-filter="isAutomated"
-        />
+        <Switch label="Official" inline checked={filters.isOfficial} onChange={onFilterChange} data-filter="isOfficial" />
+        <Switch label="Automated" inline checked={filters.isAutomated} onChange={onFilterChange} data-filter="isAutomated" />
       </div>
     </AppScreenHeader>
   );

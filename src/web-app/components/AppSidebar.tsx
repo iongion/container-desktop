@@ -1,11 +1,10 @@
-import { ButtonGroup, Alignment, AnchorButton } from "@blueprintjs/core";
+import { Alignment, AnchorButton, ButtonGroup } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
+import { pathTo } from "@/web-app/Navigator";
+import { AppScreen } from "@/web-app/Types";
+import { useStoreState } from "@/web-app/domain/types";
 import { AppSidebarFooter } from "./AppSidebarFooter";
-
-import { AppScreen } from "../Types";
-import { pathTo } from "../Navigator";
-import { useStoreState } from "../domain/types";
 
 // locals
 import "./AppSidebar.css";
@@ -15,16 +14,17 @@ interface AppSidebarProps {
   currentScreen: AppScreen<any>;
 }
 
-export const AppSidebar: React.FC<AppSidebarProps> = ({ screens, currentScreen }) => {
+export const AppSidebar: React.FC<AppSidebarProps> = ({ screens, currentScreen }: AppSidebarProps) => {
   const { t } = useTranslation();
-  const descriptor = useStoreState((state) => state.descriptor);
+  const currentConnector = useStoreState((state) => state.currentConnector);
+  const expandSidebar = useStoreState((state) => state.userSettings.expandSidebar);
   const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
   return (
-    <div className="AppSidebar" data-expanded={descriptor.userSettings.expandSidebar ? "yes" : "no"}>
+    <div className="AppSidebar" data-expanded={expandSidebar ? "yes" : "no"}>
       <div className="AppSidebarActions">
         <ButtonGroup vertical>
           {sidebarScreens.map((Screen) => {
-            const isDisabled = Screen.isAvailable ? !Screen.isAvailable(descriptor) : false;
+            const isDisabled = Screen.isAvailable ? !Screen.isAvailable(currentConnector) : false;
             return (
               <AnchorButton
                 disabled={isDisabled}

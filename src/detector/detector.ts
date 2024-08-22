@@ -1,14 +1,9 @@
-// node
-// project
+import { CommandExecutionResult, ProgramOptions } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { Command, FS, Path } from "@/platform/node";
-import { CURRENT_OS_TYPE } from "../Environment";
-// modules
-// locals
+
 const logger = await createLogger("container-client.Detector");
 
-// must return undefined when nothing is found - NOT empty string
-export const parseProgramVersion = (input) => {
+export const parseProgramVersion = (input: string | undefined) => {
   let parsed: any = undefined;
   if (!input) {
     return parsed;
@@ -23,6 +18,7 @@ export const parseProgramVersion = (input) => {
   }
   return parsed;
 };
+
 export const isPathToExecutable = async (filePath, wrapper) => {
   let flag = false;
   logger.debug(`Checking if ${filePath} is an executable`);
@@ -45,60 +41,90 @@ export const isPathToExecutable = async (filePath, wrapper) => {
   }
   return flag;
 };
-export const findProgramPath = async (program, opts) => {
+
+export const findWindowsProgramByRegistryKey = async (programName: string, registryKey: string) => {
+  let programPath: string = "";
+  const script = `
+    $location = Get-ChildItem "${registryKey}*" | % { Get-ItemProperty $_.PsPath } | Select DisplayName,InstallLocation | Sort-Object Displayname -Descending | ConvertTo-JSON -Compress
+    [Console]::Write("$location")
+  `;
+  const result = await Command.Execute("powershell", ["-Command", script], { encoding: "utf8" });
+  if (result.success) {
+    const info = JSON.parse(result.stdout || JSON.stringify({ DisplayName: "", InstallLocation: "" }));
+    if (info.InstallLocation) {
+      programPath = await Path.join(info.InstallLocation, "resources/bin", programName.endsWith(".exe") ? programName : `${programName}.exe`);
+    }
+  }
+  return programPath;
+};
+
+export const findProgramPath = async (
+  programName: string,
+  opts: ProgramOptions,
+  executor?: (path: string, args: string[], opts?: ProgramOptions) => Promise<CommandExecutionResult>
+) => {
   let result;
   let programPath: string | undefined = undefined;
-  if (!program) {
-    logger.error("Unable to detect program path - program must be specified");
-    return programPath;
-  }
+  logger.debug("Finding program path for", programName);
   const osType = opts.osType || CURRENT_OS_TYPE;
-  const useWhere = osType === "Windows_NT" && !opts?.wrapper;
-  if (useWhere) {
-    result = await Command.Execute("where", [program], opts);
-    logger.debug("Detecting", program, "using - where >", result);
-    if (result.success) {
-      const output = result.stdout || "";
-      const items = output.split("\r\n");
-      const firstExe = items.find((it) => it.endsWith(".exe"));
-      const firstItem = items[0];
-      if (firstExe) {
-        programPath = firstExe;
-      } else if (firstItem) {
-        programPath = firstItem;
+  const windowsLookup = osType === "Windows_NT";
+  const lookupProgram = windowsLookup && !programName.endsWith(".exe") ? `${programName}.exe` : programName;
+  const finder = executor ? executor : Command.Execute;
+  if (windowsLookup) {
+    // User registry based search for programs that are not in PATH
+    if (lookupProgram.startsWith("docker")) {
+      programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Docker Desktop");
+    } else if (lookupProgram.startsWith("podman")) {
+      programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Red Hat\\Podman");
+    }
+    if (!programPath) {
+      result = await finder("where", [lookupProgram], opts);
+      logger.debug("Detecting", lookupProgram, "using - where >", result);
+      if (result.success) {
+        const output = result.stdout || "";
+        const items = output.split("\r\n");
+        const firstExe = items.find((it) => it.endsWith(".exe"));
+        const firstItem = items[0];
+        if (firstExe) {
+          programPath = firstExe;
+        } else if (firstItem) {
+          programPath = firstItem;
+        } else {
+          logger.warn(`Unable to detect ${lookupProgram} cli program path path from parts - using where`, result);
+        }
       } else {
-        logger.warn(`Unable to detect ${program} cli program path path from parts - using where`, result);
+        logger.warn(`Unable to detect ${lookupProgram} cli program path - using where`, result);
       }
-    } else {
-      logger.warn(`Unable to detect ${program} cli program path - using where`, result);
     }
-  }
-  if (!programPath) {
-    result = await Command.Execute("which", [program], opts);
-    logger.debug("Detecting", program, "using - which >", result);
-    if (result.success) {
-      programPath = result.stdout || "";
-    } else {
-      logger.warn(`Unable to detect ${program} cli program path - using which`, result);
-    }
-  }
-  if (!programPath) {
-    result = await Command.Execute("whereis", [program], opts);
-    logger.debug("Detecting", program, "using - whereis >", result);
-    if (result.success) {
-      const decodedPath = result.stdout.split(" ")?.[1] || "";
-      const check = await isPathToExecutable(decodedPath, opts?.wrapper);
-      if (check) {
-        programPath = decodedPath;
+  } else {
+    if (!programPath) {
+      result = await finder("which", [lookupProgram], opts);
+      logger.debug("Detecting", lookupProgram, "using - which >", result);
+      if (result.success) {
+        programPath = result.stdout || "";
       } else {
-        logger.warn(`Found path ${decodedPath} is not an executable - assuming not present`);
+        logger.warn(`Unable to detect ${lookupProgram} cli program path - using which`, result);
       }
-    } else {
-      logger.warn(`Unable to detect ${program} cli program path - using whereis`, result);
+    }
+    if (!programPath) {
+      result = await finder("whereis", [lookupProgram], opts);
+      logger.debug("Detecting", lookupProgram, "using - whereis >", result);
+      const output = (result.stdout || "").trim();
+      if (result.success && output) {
+        const decodedPath = output.split(" ")?.[1] || "";
+        const check = await isPathToExecutable(decodedPath, opts?.wrapper);
+        if (check) {
+          programPath = decodedPath;
+        } else {
+          logger.warn(`Found path ${decodedPath} is not an executable - assuming not present`);
+        }
+      } else {
+        logger.warn(`Unable to detect ${lookupProgram} cli program path - using whereis`, result);
+      }
     }
   }
   if (!programPath) {
-    logger.error(`Unable to detect ${program} cli program path with any strategy`, { wrapper: opts?.wrapper });
+    logger.error(`Unable to detect ${lookupProgram} cli program path with any strategy`);
   }
   if (typeof programPath === "undefined") {
     return undefined;
@@ -109,44 +135,32 @@ export const findProgramPath = async (program, opts) => {
   }
   return cleared;
 };
-export const findProgramVersion = async (program, opts, defaultValue?: any) => {
-  let version = undefined;
-  if (!program) {
-    return defaultValue || version;
+
+export const findProgramVersion = async (
+  programPath: string,
+  opts: ProgramOptions,
+  executor?: (path: string, args: string[], opts?: ProgramOptions) => Promise<CommandExecutionResult>
+) => {
+  let version = "";
+  let versionFlag = "--version";
+  if (!programPath) {
+    return version;
   }
-  if (program.endsWith("wsl.exe")) {
-    logger.warn("wsl.exe does not report a version - defaulting", defaultValue);
-    return defaultValue;
+  if (programPath.endsWith("wsl.exe")) {
+    logger.warn("wsl.exe does not report a version - defaulting", version);
+    return version;
   }
-  const result = await Command.Execute(program, ["--version"], opts);
+  let isSSH = false;
+  if (programPath.endsWith("ssh.exe") || programPath.endsWith("ssh")) {
+    versionFlag = "-V";
+    isSSH = true;
+  }
+  const finder = executor ? executor : Command.Execute;
+  const result = await finder(programPath, [versionFlag], opts);
   if (result.success) {
-    version = parseProgramVersion(result.stdout);
+    version = isSSH ? `${result.stderr}`.trim() : parseProgramVersion(result.stdout || result.stderr);
   } else {
-    logger.error(`Unable to detect ${program} cli program version`, result);
+    logger.error(`Unable to detect ${programPath} cli program version`, result);
   }
   return version;
-};
-export const findProgram = async (program, opts) => {
-  let version = undefined;
-  if (!program) {
-    logger.error("Unable to detect program - program must be specified");
-    throw new Error("Unable to detect program - program must be specified");
-  }
-  const programPath = await findProgramPath(program, opts);
-  if (programPath) {
-    const supportsVersion = program !== "wsl";
-    if (supportsVersion) {
-      version = await findProgramVersion(programPath, opts);
-    } else {
-      logger.warn(`Program ${program} does not report a version`);
-    }
-  } else {
-    logger.error(`No path found for ${program} cli program - version check skipped`);
-  }
-  const name = (await Path.basename(program)).replace(".exe", "");
-  return {
-    name,
-    path: programPath,
-    version
-  };
 };

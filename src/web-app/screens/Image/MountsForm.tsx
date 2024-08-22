@@ -5,12 +5,10 @@ import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
 
-// project
-import { Native } from "../../Native";
-import { useStoreState } from "../../domain/types";
+import { ContainerImageMount } from "@/env/Types";
+import { useStoreState } from "@/web-app/domain/types";
 
-// local
-import { ContainerImageMount } from "../../Types.container-app";
+import { Application } from "@/container-client/Application";
 import "./MountsForm.css";
 
 export const createMount = (): MountFormContainerImageMount => {
@@ -51,7 +49,7 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
 
   const onVolumeHostPathSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-      const instance = await Native.getInstance();
+      const instance = Application.getInstance();
       const result = await instance.openFileSelector({ directory: true });
       const filePath = result.filePaths[0];
       if (!result.canceled && filePath) {
@@ -75,9 +73,7 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
           name={`mounts.${mountIndex}.source`}
           defaultValue={mount.source}
           render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-            const pathSelectButton = isNative ? (
-              <Button minimal icon={IconNames.LOCATE} onClick={onVolumeHostPathSelectClick} />
-            ) : undefined;
+            const pathSelectButton = isNative ? <Button minimal icon={IconNames.LOCATE} onClick={onVolumeHostPathSelectClick} /> : undefined;
             return (
               <FormGroup inline disabled={disabled} label={t("Source")} labelFor={name}>
                 <InputGroup
@@ -103,17 +99,7 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
           render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
             return (
               <FormGroup inline disabled={disabled} label={t("Destination")} labelFor={name}>
-                <InputGroup
-                  id={name}
-                  name={name}
-                  inputRef={ref}
-                  disabled={disabled}
-                  value={value}
-                  onChange={onChange}
-                  onBlur={onBlur}
-                  fill
-                  placeholder={t("Path in container")}
-                />
+                <InputGroup id={name} name={name} inputRef={ref} disabled={disabled} value={value} onChange={onChange} onBlur={onBlur} fill placeholder={t("Path in container")} />
               </FormGroup>
             );
           }}

@@ -1,18 +1,16 @@
-import { useCallback, useState } from "react";
-import { ButtonGroup, MenuItem, Button, Intent } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// project
-import { ConfirmMenu } from "../../components/ConfirmMenu";
-import { Notification } from "../../Notification";
-import { goToScreen } from "../../Navigator";
-import { useStoreActions } from "../../domain/types";
+import { Secret } from "@/env/Types";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { useStoreActions } from "@/web-app/domain/types";
+import { goToScreen } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 
-// module
 import { CreateDrawer } from "./CreateDrawer";
 import { getSecretUrl } from "./Navigation";
-import { Secret } from "../../Types.container-app";
 
 // Secret actions menu
 
@@ -21,7 +19,7 @@ export interface SecretActionsMenuProps {
   withoutCreate?: boolean;
 }
 
-export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, withoutCreate }) => {
+export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, withoutCreate }: SecretActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -78,9 +76,7 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
     },
     [performActionCommand]
   );
-  const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
-  );
+  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
   const removeWidget = secret ? (
     <ConfirmMenu onConfirm={onRemove} tag={secret.ID} disabled={disabledAction === "secret.remove"}>
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getSecretUrl(secret.ID, "inspect")} />

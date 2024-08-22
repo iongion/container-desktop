@@ -1,5 +1,5 @@
-import { pathTo } from "../../Navigator";
-import { Container } from "../../Types.container-app";
+import { Container } from "@/env/Types";
+import { pathTo } from "@/web-app/Navigator";
 
 export const getContainerUrl = (id: string, view: string) => {
   return pathTo(`/screens/container/${encodeURIComponent(id)}/${encodeURIComponent(view)}`);

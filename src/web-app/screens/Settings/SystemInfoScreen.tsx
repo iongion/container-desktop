@@ -1,13 +1,10 @@
-import { useEffect } from "react";
 import { IconNames } from "@blueprintjs/icons";
+import { useEffect } from "react";
 
-// project
-import { AppScreen, AppScreenProps } from "../../Types";
+import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from "./ScreenHeader";
-import { CodeEditor } from "../../components/CodeEditor";
-import { useStoreActions, useStoreState } from "../../domain/types";
-
-// module
 
 import "./SystemInfoScreen.css";
 
@@ -20,11 +17,10 @@ export const View = "system-info";
 export const Title = "System info";
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const provisioned = useStoreState((state) => state.descriptor.provisioned);
-  const running = useStoreState((state) => state.descriptor.running);
+  const provisioned = useStoreState((state) => state.provisioned);
+  const running = useStoreState((state) => state.running);
   const systemInfo = useStoreState((state) => state.settings.systemInfo);
-  const systemDetailsViewer =
-    provisioned && running ? <CodeEditor value={JSON.stringify(systemInfo, null, 2)} /> : null;
+  const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(systemInfo, null, 2)} /> : null;
 
   const getSystemInfo = useStoreActions((actions) => actions.settings.getSystemInfo);
 

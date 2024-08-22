@@ -4,15 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
+import { Pod, PodProcessReport } from "@/env/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
+import { usePoller } from "@/web-app/Hooks";
+import { Notification } from "@/web-app/Notification";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
+
 import { ScreenHeader } from ".";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { Pod, PodProcessReport } from "../../Types.container-app";
-import { ScreenLoader } from "../../components/ScreenLoader";
-
-import { Notification } from "../../Notification";
-import { useStoreActions } from "../../domain/types";
-
-import { usePoller } from "../../Hooks";
 import "./ProcessesScreen.css";
 
 export const ID = "pod.processes";
@@ -112,14 +111,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       title === "COMMAND" ? (
                         <div className="CommandColumn">
                           <code title={text}>{text}</code>
-                          <Button
-                            small
-                            minimal
-                            icon={IconNames.CLIPBOARD}
-                            data-action="copy.to.clipboard"
-                            title={t("Copy to clipboard")}
-                            onClick={onCopyToClipboardClick}
-                          />
+                          <Button small minimal icon={IconNames.CLIPBOARD} data-action="copy.to.clipboard" title={t("Copy to clipboard")} onClick={onCopyToClipboardClick} />
                         </div>
                       ) : (
                         text

@@ -3,13 +3,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// project
-import { RegistrySearchResult } from "../../Types.container-app";
+import { RegistrySearchResult } from "@/env/Types";
+import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { Notification } from "@/web-app/Notification";
 
-// Drawer
-import { CodeEditor } from "../../components/CodeEditor";
-import { Native } from "../../Native";
-import { Notification } from "../../Notification";
+import { Application } from "@/container-client/Application";
 import "./SearchResultDrawer.css";
 
 export interface CreateFormData {
@@ -26,7 +24,7 @@ export const FormActions: React.FC<FormActionsProps> = ({ searchResult, onClose 
   const onPullClick = useCallback(async () => {
     setPending(true);
     try {
-      const instance = await Native.getInstance();
+      const instance = Application.getInstance();
       const result = await instance.pullFromRegistry({ image: searchResult.Name });
       setPending(false);
       if (result.success) {
@@ -41,9 +39,7 @@ export const FormActions: React.FC<FormActionsProps> = ({ searchResult, onClose 
       setPending(false);
     }
   }, [onClose, searchResult, t]);
-  const pendingIndicator = (
-    <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
-  );
+  const pendingIndicator = <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>;
   return (
     <>
       <ButtonGroup fill>
@@ -66,10 +62,7 @@ export interface SearchResultDrawerProps {
   onClose: () => void;
   searchResult: RegistrySearchResult;
 }
-export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({
-  onClose,
-  searchResult
-}: SearchResultDrawerProps) => {
+export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({ onClose, searchResult }: SearchResultDrawerProps) => {
   const { t } = useTranslation();
   return (
     <Drawer

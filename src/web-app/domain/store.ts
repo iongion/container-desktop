@@ -1,22 +1,22 @@
 // vendors
 import { createStore, StoreProvider as StoreProviderBase } from "easy-peasy";
 // project
-import { Environments } from "../Types";
-import { AppModel, AppStore, AppStorePendingOperation } from "./types";
-// domain
-import { createModel as createContainerModel } from "../screens/Container/Model";
-import { createModel as createDashboardModel } from "../screens/Dashboard/Model";
-import { createModel as createImageModel } from "../screens/Image/Model";
-import { createModel as createMachineModel } from "../screens/Machine/Model";
-import { createModel as createNetworksModel } from "../screens/Network/Model";
-import { createModel as createPodsModel } from "../screens/Pod/Model";
-import { createModel as createRegistriesModel } from "../screens/Registry/Model";
-import { createModel as createSecretModel } from "../screens/Secret/Model";
-import { createModel as createSettingsModel } from "../screens/Settings/Model";
-import { createModel as createTroubleshootModel } from "../screens/Troubleshoot/Model";
-import { createModel as createVolumesModel } from "../screens/Volume/Model";
+import { Environments } from "@/env/Types";
+import { waitForPreload } from "@/web-app/Native";
+import { createModel as createContainerModel } from "@/web-app/screens/Container/Model";
+import { createModel as createDashboardModel } from "@/web-app/screens/Dashboard/Model";
+import { createModel as createImageModel } from "@/web-app/screens/Image/Model";
+import { createModel as createMachineModel } from "@/web-app/screens/Machine/Model";
+import { createModel as createNetworksModel } from "@/web-app/screens/Network/Model";
+import { createModel as createPodsModel } from "@/web-app/screens/Pod/Model";
+import { createModel as createRegistriesModel } from "@/web-app/screens/Registry/Model";
+import { createModel as createSecretModel } from "@/web-app/screens/Secret/Model";
+import { createModel as createSettingsModel } from "@/web-app/screens/Settings/Model";
+import { createModel as createTroubleshootModel } from "@/web-app/screens/Troubleshoot/Model";
+import { createModel as createVolumesModel } from "@/web-app/screens/Volume/Model";
 import { createModel as createAppModel } from "./model";
 import { registry } from "./registry";
+import { AppModel, AppStore, AppStorePendingOperation } from "./types";
 
 // TODO: Improve typings
 export const withPending = async (store: AppStore, operation: AppStorePendingOperation) => {
@@ -37,6 +37,7 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
 export const createAppStore = async (env: Environments) => {
   // eslint-disable-next-line prefer-const
   let store: AppStore;
+  await waitForPreload();
   registry.getStore = () => store;
   registry.withPending = (operation: AppStorePendingOperation) => withPending(store, operation);
   store = createStore<AppModel>(await createAppModel(registry));

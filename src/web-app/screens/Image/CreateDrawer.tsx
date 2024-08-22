@@ -1,26 +1,15 @@
-import {
-  Button,
-  ButtonGroup,
-  Classes,
-  Drawer,
-  DrawerSize,
-  FormGroup,
-  HTMLTable,
-  InputGroup,
-  Intent,
-  ProgressBar
-} from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Drawer, DrawerSize, FormGroup, HTMLTable, InputGroup, Intent, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 // project
-import { useStoreActions } from "../../domain/types";
-import { Notification } from "../../Notification";
+import { useStoreActions } from "@/web-app/domain/types";
+import { Notification } from "@/web-app/Notification";
 
 // module
-import { ContainerImage, ContainerImagePortMapping } from "../../Types.container-app";
+import { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
 import { MountFormContainerImageMount, MountsForm, createMount } from "./MountsForm";
 import { PortMappingsForm, toPortMappings } from "./PortMappingsForm";
 
@@ -35,7 +24,7 @@ export interface CreateDrawerProps {
   image: ContainerImage;
   onClose: () => void;
 }
-export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }) => {
+export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
   const containerCreate = useStoreActions((actions) => actions.container.containerCreate);
   const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
@@ -141,14 +130,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }) =>
             </tbody>
           </HTMLTable>
           <ButtonGroup fill>
-            <Button
-              type="submit"
-              disabled={pending}
-              intent={Intent.PRIMARY}
-              icon={IconNames.CUBE_ADD}
-              title={t("Click to launch creation")}
-              text={t("Create and start")}
-            />
+            <Button type="submit" disabled={pending} intent={Intent.PRIMARY} icon={IconNames.CUBE_ADD} title={t("Click to launch creation")} text={t("Create and start")} />
           </ButtonGroup>
           <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
           <div className="AppDataForm">

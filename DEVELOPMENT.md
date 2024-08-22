@@ -96,7 +96,7 @@
 
 ## Deployment
 
-podman system connection add default "//wsl.localhost/Ubuntu-20.04/home/$USER/.ssh/id_rsa" --socket-path "\\wsl.localhost\Ubuntu-20.04\mnt\wslg\runtime-dir\podman\podman.sock"
+podman system connection add default "//wsl.localhost/Ubuntu-24.04/home/$USER/.ssh/id_rsa" --socket-path "\\wsl.localhost\Ubuntu-24.04\mnt\wslg\runtime-dir\podman\podman.sock"
 
 ## Get URI
 

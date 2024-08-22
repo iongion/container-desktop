@@ -4,16 +4,13 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { sortAlphaNum } from "../../domain/utils";
-import { AppScreen, AppScreenProps } from "../../Types";
-
+import { Container } from "@/env/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
+import { sortAlphaNum } from "@/web-app/domain/utils";
+import { Notification } from "@/web-app/Notification";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
-import { ScreenLoader } from "../../components/ScreenLoader";
-import { Notification } from "../../Notification";
-
-import { useStoreActions } from "../../domain/types";
-
-import { Container } from "../../Types.container-app";
 import "./InspectScreen.css";
 
 interface InspectGroupValues {
@@ -42,7 +39,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const container = await containerFetch({
-          Id: id as any
+          Id: decodeURIComponent(id as any)
         });
         setContainer(container);
       } catch (error: any) {
@@ -87,10 +84,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       info.forEach((info) => {
         const item = {
           key: `${portProtocol}`,
-          value:
-            `${info.HostIp}`.indexOf("::") !== -1
-              ? `${info.HostIp || "0.0.0.0"}${info.HostPort}`
-              : `${info.HostIp || "0.0.0.0"}:${info.HostPort}`
+          value: `${info.HostIp}`.indexOf("::") !== -1 ? `${info.HostIp || "0.0.0.0"}${info.HostPort}` : `${info.HostIp || "0.0.0.0"}:${info.HostPort}`
         };
         containerPorts.push(item);
       });

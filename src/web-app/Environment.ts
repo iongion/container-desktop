@@ -1,4 +1,4 @@
-import { Environment, Environments } from "./Types";
+import { Environment, Environments } from "@/env/Types";
 
 export const PROJECT_VERSION = import.meta.env.PROJECT_VERSION || "1.0.0";
 export const PROJECT_NAME = import.meta.env.PROJECT_NAME;

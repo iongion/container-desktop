@@ -1,16 +1,15 @@
-import { useState, useMemo } from "react";
-import { ButtonGroup, Button, Intent, Drawer, DrawerSize, ProgressBar, Classes } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Drawer, DrawerSize, Intent, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-// project
-import { useStoreActions } from "../../domain/types";
-import { createNetworkSubnet, NetworkSubnetItem, NetworkSubnetsForm } from "./NetworkSubnetsForm";
+import { NetworkSubnet } from "@/env/Types";
+import { useStoreActions } from "@/web-app/domain/types";
+import { Notification } from "@/web-app/Notification";
 import dayjs from "dayjs";
-import { NetworkSubnet } from "../../Types.container-app";
-import { Notification } from "../../Notification";
 import { NetworkPropertiesForm } from "./NetworkPropertiesForm";
+import { createNetworkSubnet, NetworkSubnetItem, NetworkSubnetsForm } from "./NetworkSubnetsForm";
 
 // Drawer
 
@@ -45,23 +44,14 @@ export function toNetworkSubnets(subnets: NetworkSubnetItem[]) {
 export interface FormActionsProps {
   pending?: boolean;
 }
-export const FormActions: React.FC<FormActionsProps> = ({ pending }) => {
+export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActionsProps) => {
   const { t } = useTranslation();
   const { formState } = useFormContext();
-  const pendingIndicator = (
-    <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
-  );
+  const pendingIndicator = <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>;
   return (
     <>
       <ButtonGroup fill>
-        <Button
-          disabled={pending || !formState.isValid}
-          intent={Intent.PRIMARY}
-          icon={IconNames.GRAPH}
-          title={t("Click to launch creation")}
-          text={t("Create")}
-          type="submit"
-        />
+        <Button disabled={pending || !formState.isValid} intent={Intent.PRIMARY} icon={IconNames.GRAPH} title={t("Click to launch creation")} text={t("Create")} type="submit" />
       </ButtonGroup>
       {pendingIndicator}
     </>
@@ -71,7 +61,7 @@ export const FormActions: React.FC<FormActionsProps> = ({ pending }) => {
 export interface CreateDrawerProps {
   onClose: () => void;
 }
-export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
+export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
   const subnets = useMemo(() => {
     return [createNetworkSubnet()];
@@ -121,16 +111,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
     }
   });
   return (
-    <Drawer
-      className="AppDrawer"
-      icon={IconNames.PLUS}
-      title={t("Create new network")}
-      usePortal
-      size={DrawerSize.SMALL}
-      onClose={onClose}
-      isOpen
-      hasBackdrop={false}
-    >
+    <Drawer className="AppDrawer" icon={IconNames.PLUS} title={t("Create new network")} usePortal size={DrawerSize.SMALL} onClose={onClose} isOpen hasBackdrop={false}>
       <div className={Classes.DRAWER_BODY}>
         <FormProvider {...methods}>
           <form name="CreateNetworkForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>

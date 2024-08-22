@@ -1,7 +1,0 @@
-GET /_ping HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-User-Agent: axios/0.25.0
-Host: localhost
-Connection: close
-

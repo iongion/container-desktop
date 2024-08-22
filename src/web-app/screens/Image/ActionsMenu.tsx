@@ -1,20 +1,18 @@
-import { useCallback, useState } from "react";
-import { AnchorButton, ButtonGroup, MenuItem, Button, Intent } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useTranslation } from "react-i18next";
-import * as ReactIcon from "@mdi/react";
 import { mdiPlayCircle } from "@mdi/js";
+import * as ReactIcon from "@mdi/react";
+import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-// project
-import { ConfirmMenu } from "../../components/ConfirmMenu";
-import { Notification } from "../../Notification";
-import { goToScreen } from "../../Navigator";
-import { useStoreActions } from "../../domain/types";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { useStoreActions } from "@/web-app/domain/types";
+import { goToScreen } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 
-// module
+import { ContainerImage } from "@/env/Types";
 import { CreateDrawer } from "./CreateDrawer";
 import { getImageUrl } from "./Navigation";
-import { ContainerImage } from "../../Types.container-app";
 
 interface ActionsMenuProps {
   image: ContainerImage;
@@ -23,7 +21,7 @@ interface ActionsMenuProps {
   isActive?: (screen: string) => boolean;
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, withoutStart, isActive }) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, withoutStart, isActive }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -89,31 +87,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
     [performActionCommand]
   );
   const startButton = withoutStart ? null : (
-    <Button
-      small
-      minimal
-      intent={Intent.SUCCESS}
-      text={t("Start")}
-      icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />}
-      onClick={onCreateClick}
-    />
+    <Button small minimal intent={Intent.SUCCESS} text={t("Start")} icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />} onClick={onCreateClick} />
   );
   const expandAsButtons = expand ? (
     <>
-      <AnchorButton
-        minimal
-        active={isActive ? isActive("image.layers") : false}
-        icon={IconNames.LAYERS}
-        text={t("Layers")}
-        href={getImageUrl(image.Id, "layers")}
-      />
-      <AnchorButton
-        minimal
-        active={isActive ? isActive("image.inspect") : false}
-        icon={IconNames.EYE_OPEN}
-        text={t("Inspect")}
-        href={getImageUrl(image.Id, "inspect")}
-      />
+      <AnchorButton minimal active={isActive ? isActive("image.layers") : false} icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
+      <AnchorButton minimal active={isActive ? isActive("image.inspect") : false} icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
       <AnchorButton
         minimal
         active={isActive ? isActive("image.security") : false}
@@ -138,14 +117,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
         {expandAsButtons}
         <ConfirmMenu onConfirm={onRemove} tag={image.Id}>
           {expandAsMenuItems}
-          <MenuItem
-            data-image={image.Id}
-            data-action="image.pull"
-            disabled={disabledAction === "image.pull"}
-            icon={IconNames.GIT_PULL}
-            text={t("Pull")}
-            onClick={onActionClick}
-          />
+          <MenuItem data-image={image.Id} data-action="image.pull" disabled={disabledAction === "image.pull"} icon={IconNames.GIT_PULL} text={t("Pull")} onClick={onActionClick} />
           <MenuItem
             data-image={image.Id}
             data-action="image.push"

@@ -1,12 +1,21 @@
-// project
+import { ControllerScopeType, LIMAInstance, PodmanMachine, SSHHost, WSLDistribution } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { Command } from "@/platform/node";
-import { CURRENT_OS_TYPE } from "../Environment";
+
 // locals
 const logger = await createLogger("shared");
 
-export async function getAvailableLIMAInstances(limactlPath) {
-  let items = [];
+export async function getAvailableSSHConnections() {
+  let items: SSHHost[] = [];
+  try {
+    items = await Platform.getSSHConfig();
+  } catch (error: any) {
+    logger.error("Unable to detect SSH hosts - execution error", error.message, error.stack);
+  }
+  return items;
+}
+
+export async function getAvailableLIMAInstances(limactlPath?: string) {
+  let items: LIMAInstance[] = [];
   if (CURRENT_OS_TYPE !== "Darwin") {
     return items;
   }
@@ -23,6 +32,9 @@ export async function getAvailableLIMAInstances(limactlPath) {
         const [Name, Status, SSH, Arch, CPUs, Memory, Disk, Dir] = extracted;
         return {
           Name,
+          Type: ControllerScopeType.LIMAInstance,
+          Usable: Status === "running",
+          // LIMA specific
           Status,
           SSH,
           Arch,
@@ -30,7 +42,7 @@ export async function getAvailableLIMAInstances(limactlPath) {
           Memory,
           Disk,
           Dir
-        };
+        } as LIMAInstance;
       });
     } else {
       logger.error("Unable to detect LIMA instances", result);
@@ -41,8 +53,8 @@ export async function getAvailableLIMAInstances(limactlPath) {
   return items;
 }
 
-export async function getAvailablePodmanMachines(podmanPath, customFormat?: any, opts?: any) {
-  let items = [];
+export async function getAvailablePodmanMachines(podmanPath?: string, customFormat?: string, opts?: any) {
+  let items: PodmanMachine[] = [];
   if (!podmanPath) {
     logger.error("Unable to get machines list - no program");
     return items;
@@ -56,6 +68,11 @@ export async function getAvailablePodmanMachines(podmanPath, customFormat?: any,
     }
     try {
       items = result.stdout ? JSON.parse(result.stdout) : items;
+      items = items.map((it: PodmanMachine) => {
+        it.Type = ControllerScopeType.PodmanMachine;
+        it.Usable = it.Running;
+        return it;
+      });
     } catch (error: any) {
       logger.error("Unable to decode machines list", error, result);
     }
@@ -65,8 +82,8 @@ export async function getAvailablePodmanMachines(podmanPath, customFormat?: any,
   return items;
 }
 
-export async function getAvailableWSLDistributions(wslPath) {
-  let items = [];
+export async function getAvailableWSLDistributions(wslPath?: string) {
+  let items: WSLDistribution[] = [];
   // No WSL distributions on non-windows
   if (CURRENT_OS_TYPE !== "Windows_NT") {
     return [];
@@ -99,6 +116,8 @@ export async function getAvailableWSLDistributions(wslPath) {
           const Version = isDefault ? extracted[3] : extracted[2];
           const distribution = {
             Name,
+            Type: ControllerScopeType.WSLDistribution,
+            Usable: State === "Running",
             State,
             Version,
             Default: isDefault,
@@ -116,9 +135,3 @@ export async function getAvailableWSLDistributions(wslPath) {
   }
   return items;
 }
-
-export default {
-  getAvailableLIMAInstances,
-  getAvailableWSLDistributions,
-  getAvailablePodmanMachines
-};

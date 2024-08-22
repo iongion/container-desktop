@@ -4,19 +4,16 @@ import { mdiScrewdriver } from "@mdi/js";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-// project
-import { usePoller } from "../../Hooks";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { Volume } from "../../Types.container-app";
-import { AppLabel } from "../../components/AppLabel";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
+import { Volume } from "@/env/Types";
+import { usePoller } from "@/web-app/Hooks";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { getVolumeUrl } from "./Navigation";
 
-// module
 import { VolumeActionsMenu } from ".";
-
 import "./ManageScreen.css";
 
 export const ID = "volumes";
@@ -33,12 +30,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader
-        searchTerm={searchTerm}
-        onSearch={onSearchChange}
-        titleIcon={IconNames.DATABASE}
-        rightContent={<VolumeActionsMenu />}
-      />
+      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.DATABASE} rightContent={<VolumeActionsMenu />} />
       <div className="AppScreenContent">
         <HTMLTable interactive compact striped className="AppDataTable" data-table="volumes">
           <thead>

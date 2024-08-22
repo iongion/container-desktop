@@ -1,35 +1,33 @@
-// vendors
 import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
-// project
-import { CreateMachineOptions, FetchMachineOptions, Machine } from "../../Types.container-app";
-// module
-import { AppRegistry, ResetableModel } from "../../domain/types";
-import { Native } from "../../Native";
+
+import { Application } from "@/container-client/Application";
+import { CreateMachineOptions, FetchMachineOptions, PodmanMachine } from "@/env/Types";
+import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface MachinesModelState {
   native: boolean;
-  machines: Machine[];
+  machines: PodmanMachine[];
 }
 
 export interface MachinesModel extends MachinesModelState, ResetableModel<MachinesModel> {
-  machines: Machine[];
+  machines: PodmanMachine[];
   // actions
-  setMachines: Action<MachinesModel, Machine[]>;
-  machineUpdate: Action<MachinesModel, Partial<Machine>>;
-  machineDelete: Action<MachinesModel, Partial<Machine>>;
+  setMachines: Action<MachinesModel, PodmanMachine[]>;
+  machineUpdate: Action<MachinesModel, Partial<PodmanMachine>>;
+  machineDelete: Action<MachinesModel, Partial<PodmanMachine>>;
   // thunks
   machinesFetch: Thunk<MachinesModel>;
   machineInspect: Thunk<MachinesModel, FetchMachineOptions>;
   machineCreate: Thunk<MachinesModel, CreateMachineOptions>;
-  machineRemove: Thunk<MachinesModel, Partial<Machine>>;
-  machineStop: Thunk<MachinesModel, Partial<Machine>>;
-  machineRestart: Thunk<MachinesModel, Partial<Machine>>;
-  machineConnect: Thunk<MachinesModel, Partial<Machine>>;
-  machinesSearchByTerm: Computed<MachinesModel, (searchTerm: string) => Machine[]>;
+  machineRemove: Thunk<MachinesModel, Partial<PodmanMachine>>;
+  machineStop: Thunk<MachinesModel, Partial<PodmanMachine>>;
+  machineRestart: Thunk<MachinesModel, Partial<PodmanMachine>>;
+  machineConnect: Thunk<MachinesModel, Partial<PodmanMachine>>;
+  machinesSearchByTerm: Computed<MachinesModel, (searchTerm: string) => PodmanMachine[]>;
 }
 
 export const createModel = async (registry: AppRegistry): Promise<MachinesModel> => {
-  const instance = await Native.getInstance();
+  const instance = Application.getInstance();
   const native = await instance.isNative();
   return {
     native,
@@ -60,7 +58,8 @@ export const createModel = async (registry: AppRegistry): Promise<MachinesModel>
 
     machinesFetch: thunk(async (actions) =>
       registry.withPending(async () => {
-        const machines = await registry.api.getMachines();
+        const instance = Application.getInstance();
+        const machines = await instance.getPodmanMachines();
         actions.setMachines(machines);
         return machines;
       })
@@ -69,7 +68,8 @@ export const createModel = async (registry: AppRegistry): Promise<MachinesModel>
       registry.withPending(async () => {
         let stopped = false;
         if (options.Name) {
-          stopped = await registry.api.stopMachine(options.Name);
+          const instance = Application.getInstance();
+          stopped = await instance.stopPodmanMachine(options.Name);
           if (stopped) {
             actions.machineUpdate({ Name: options.Name, Running: false });
           }
@@ -81,7 +81,8 @@ export const createModel = async (registry: AppRegistry): Promise<MachinesModel>
       registry.withPending(async () => {
         let restarted = false;
         if (options.Name) {
-          restarted = await registry.api.restartMachine(options.Name);
+          const instance = Application.getInstance();
+          restarted = await instance.restartPodmanMachine(options.Name);
         }
         return restarted;
       })
@@ -90,20 +91,23 @@ export const createModel = async (registry: AppRegistry): Promise<MachinesModel>
       registry.withPending(async () => {
         let connected = false;
         if (options.Name) {
-          connected = await registry.api.connectToMachine(options.Name);
+          const instance = Application.getInstance();
+          connected = await instance.connectToPodmanMachine(options.Name);
         }
         return connected;
       })
     ),
     machineInspect: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const machine = await registry.api.inspectMachine(options.Name);
+        const instance = Application.getInstance();
+        const machine = await instance.inspectPodmanMachine(options.Name);
         return machine;
       })
     ),
     machineCreate: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const created = await registry.api.createMachine(options);
+        const instance = Application.getInstance();
+        const created = await instance.createPodmanMachine(options);
         return created;
       })
     ),
@@ -111,7 +115,8 @@ export const createModel = async (registry: AppRegistry): Promise<MachinesModel>
       registry.withPending(async () => {
         let removed = false;
         if (options.Name) {
-          removed = await registry.api.removeMachine(options.Name);
+          const instance = Application.getInstance();
+          removed = await instance.removePodmanMachine(options.Name);
           if (removed) {
             actions.machineDelete(options);
           }

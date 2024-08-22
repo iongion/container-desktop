@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import Editor, { useMonaco } from "@monaco-editor/react";
+import { useEffect, useState } from "react";
 
+import { AppTheme, useStoreState } from "@/web-app/domain/types";
 import "./CodeEditor.css";
-import { AppTheme, useStoreState } from "../domain/types";
 
 export const DARK_THEME = "vs-dark";
 export const LIGHT_THEME = "vs-light";
@@ -16,8 +16,8 @@ export interface CodeEditorProps {
   withoutLineNumbers?: boolean;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ withoutLineNumbers, value, mode, theme, headerTitle }) => {
-  const userTheme = useStoreState((state) => state.descriptor.userSettings.theme);
+export const CodeEditor: React.FC<CodeEditorProps> = ({ withoutLineNumbers, value, mode, theme, headerTitle }: CodeEditorProps) => {
+  const userTheme = useStoreState((state) => state.userSettings.theme);
   const [currentTheme, setCurrentTheme] = useState(theme || DEFAULT_THEME);
   const monaco = useMonaco();
   useEffect(() => {

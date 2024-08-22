@@ -5,18 +5,15 @@ import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
 import { useTranslation } from "react-i18next";
 
-// project
-import { usePoller } from "../../Hooks";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { AppLabel } from "../../components/AppLabel";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
+import { ContainerImage } from "@/env/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { usePoller } from "@/web-app/Hooks";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-// module
 import { ActionsMenu, getImageUrl } from ".";
-
-import { ContainerImage } from "../../Types.container-app";
 import "./ManageScreen.css";
 
 export const ID = "images";
@@ -63,16 +60,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </thead>
           <tbody>
             {images.map((image) => {
-              const imageLayersButton = (
-                <AnchorButton
-                  minimal
-                  small
-                  href={getImageUrl(image.Id, "layers")}
-                  text={image.Name}
-                  intent={Intent.PRIMARY}
-                  icon={IconNames.LAYERS}
-                />
-              );
+              const imageLayersButton = <AnchorButton minimal small href={getImageUrl(image.Id, "layers")} text={image.Name} intent={Intent.PRIMARY} icon={IconNames.LAYERS} />;
               return (
                 <tr key={image.Id} data-image={image.Id}>
                   <td>{imageLayersButton}</td>

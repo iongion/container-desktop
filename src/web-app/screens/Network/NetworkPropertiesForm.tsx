@@ -1,5 +1,6 @@
-import { InputGroup, FormGroup, Intent, Checkbox, HTMLSelect } from "@blueprintjs/core";
-import { useFormContext, Controller } from "react-hook-form";
+/* eslint-disable jsx-a11y/no-autofocus */
+import { Checkbox, FormGroup, HTMLSelect, InputGroup, Intent } from "@blueprintjs/core";
+import { Controller, useFormContext } from "react-hook-form";
 // import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 
@@ -12,7 +13,7 @@ export interface NetworkPropertiesFormProps {
   pending?: boolean;
 }
 
-export const NetworkPropertiesForm: React.FC<NetworkPropertiesFormProps> = ({ disabled, pending }) => {
+export const NetworkPropertiesForm: React.FC<NetworkPropertiesFormProps> = ({ disabled, pending }: NetworkPropertiesFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{
@@ -53,13 +54,7 @@ export const NetworkPropertiesForm: React.FC<NetworkPropertiesFormProps> = ({ di
             }}
           />
         </FormGroup>
-        <FormGroup
-          inline
-          disabled={pending}
-          label={<strong>{t("Interface")}</strong>}
-          labelFor="networkInterface"
-          labelInfo="*"
-        >
+        <FormGroup inline disabled={pending} label={<strong>{t("Interface")}</strong>} labelFor="networkInterface" labelInfo="*">
           <Controller
             control={control}
             name="networkInterface"
@@ -90,18 +85,7 @@ export const NetworkPropertiesForm: React.FC<NetworkPropertiesFormProps> = ({ di
             control={control}
             name="dnsEnabled"
             render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-              return (
-                <Checkbox
-                  disabled={pending}
-                  id={name}
-                  name={name}
-                  checked={value}
-                  onBlur={onBlur}
-                  onChange={onChange}
-                  inputRef={ref}
-                  label={t("DNS enabled")}
-                />
-              );
+              return <Checkbox disabled={pending} id={name} name={name} checked={value} onBlur={onBlur} onChange={onChange} inputRef={ref} label={t("DNS enabled")} />;
             }}
           />
         </FormGroup>
@@ -110,18 +94,7 @@ export const NetworkPropertiesForm: React.FC<NetworkPropertiesFormProps> = ({ di
             control={control}
             name="internal"
             render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-              return (
-                <Checkbox
-                  disabled={pending}
-                  id={name}
-                  name={name}
-                  checked={value}
-                  onBlur={onBlur}
-                  onChange={onChange}
-                  inputRef={ref}
-                  label={t("Internal")}
-                />
-              );
+              return <Checkbox disabled={pending} id={name} name={name} checked={value} onBlur={onBlur} onChange={onChange} inputRef={ref} label={t("Internal")} />;
             }}
           />
         </FormGroup>

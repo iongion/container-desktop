@@ -1,25 +1,23 @@
-import { useCallback, useState } from "react";
-import { ButtonGroup, MenuItem, Button, Intent } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// project
-import { ConfirmMenu } from "../../components/ConfirmMenu";
-import { Notification } from "../../Notification";
-import { goToScreen } from "../../Navigator";
-import { useStoreActions } from "../../domain/types";
+import { Volume } from "@/env/Types";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { useStoreActions } from "@/web-app/domain/types";
+import { goToScreen } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 
-// module
-import { getVolumeUrl } from "./Navigation";
 import { CreateDrawer } from "./CreateDrawer";
-import { Volume } from "../../Types.container-app";
+import { getVolumeUrl } from "./Navigation";
 
 export interface VolumeActionsMenuProps {
   volume?: Volume;
   withoutCreate?: boolean;
 }
 
-export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, withoutCreate }) => {
+export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, withoutCreate }: VolumeActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -77,9 +75,7 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
     },
     [performActionCommand]
   );
-  const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
-  );
+  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
   const removeWidget = volume ? (
     <ConfirmMenu onConfirm={onRemove} tag={volume.Name} disabled={disabledAction === "volume.remove"}>
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getVolumeUrl(volume.Name, "inspect")} />

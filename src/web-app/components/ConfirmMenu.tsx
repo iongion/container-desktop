@@ -15,15 +15,7 @@ export interface ConfirmMenuItemProps {
   onConfirm?: (tag: any, e: any) => void;
   onCancel?: (tag: any, e: any) => void;
 }
-export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({
-  icon,
-  tag,
-  text,
-  disabled,
-  intent,
-  onConfirm,
-  onCancel
-}: ConfirmMenuItemProps) => {
+export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, text, disabled, intent, onConfirm, onCancel }: ConfirmMenuItemProps) => {
   const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
   const onTrigger = useCallback(
@@ -66,13 +58,7 @@ export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({
       }
     />
   ) : (
-    <MenuItem
-      disabled={disabled}
-      icon={icon || IconNames.TRASH}
-      text={text || t("Remove")}
-      intent={intent || Intent.DANGER}
-      onClick={onTrigger}
-    />
+    <MenuItem disabled={disabled} icon={icon || IconNames.TRASH} text={text || t("Remove")} intent={intent || Intent.DANGER} onClick={onTrigger} />
   );
 };
 export interface ConfirmMenuProps {
