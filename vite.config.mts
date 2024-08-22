@@ -1,9 +1,11 @@
+import fs from "node:fs";
 import path from "node:path";
 // vendors
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import react from "@vitejs/plugin-react";
+import mimeTypes from "mime-types";
 import { ModuleFormat, RollupOptions } from "rollup";
-import { UserConfig, defineConfig } from "vite";
+import { PluginOption, UserConfig, defineConfig } from "vite";
 import { checker } from "vite-plugin-checker";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import electron from "vite-plugin-electron/simple";
@@ -84,7 +86,7 @@ export function getCommonViteConfig({
 /** @type {import('vite').UserConfig} */
 export const createConfig = ({ mode, command, host, port }) => {
   console.debug({ PROJECT_HOME, command, host, port });
-  console.debug("Website running at http://localhost:8888");
+  console.debug(`Website running at http://${host === "0.0.0.0" ? "localhost" : host}:${port}/docs/index.html`);
   // Bootstrap
   // Build context
   const ejsContext = createEJSContext();
@@ -163,10 +165,32 @@ export const createConfig = ({ mode, command, host, port }) => {
   return viteConfig;
 };
 
+function docsServer(): PluginOption {
+  return {
+    apply: "serve",
+    configureServer(server: any) {
+      return () => {
+        server.middlewares.use(async (req, res, next) => {
+          if (req.originalUrl?.includes("/docs")) {
+            const resource = path.join(__dirname, `${req.originalUrl}`);
+            res.setHeader("Content-Type", mimeTypes.lookup(resource) || "application/octet-stream");
+            res.writeHead(200);
+            res.write(fs.readFileSync(resource));
+            res.end();
+          }
+          next();
+        });
+      };
+    },
+    name: "docs-server"
+  };
+}
+
 export default ({ mode, command }) => {
   let host = process.env.HOST || "0.0.0.0";
   const port = Number(process.env.PORT) || 3000;
   const config = createConfig({ mode, command, host, port });
+  config.plugins.push(docsServer());
   return defineConfig({
     ...config,
     clearScreen: false,

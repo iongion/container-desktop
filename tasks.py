@@ -102,7 +102,7 @@ def help(ctx):
 def prepare(ctx, docs=False):
     # Install infrastructure dependencies
     with ctx.cd(PROJECT_HOME):
-        run_env(ctx, "npm install -g yarn@latest concurrently@latest nodemon@latest rimraf@latest")
+        run_env(ctx, "npm install -g yarn@latest rimraf@latest")
         run_env(ctx, "yarn install")
 
 
@@ -129,30 +129,10 @@ def clean(c, docs=False):
 
 
 @task
-def docs_start(c, docs=False):
-    path = Path(os.path.join(PROJECT_HOME, "docs"))
-    print("Starting docs server at http://0.0.0.0:8888")
-    with c.cd(path):
-        run_env(c, "python3 -m http.server --bind 0.0.0.0 8888 -d .")
-
-
-@task
-def app_start(ctx, docs=False):
+def start(ctx, docs=False):
     path = Path(PROJECT_HOME)
     with ctx.cd(path):
         run_env(ctx, "yarn dev")
 
 
-@task
-def start(ctx, docs=False):
-    launcher = " ".join(
-        [
-            "concurrently",
-            "-k",
-            '"inv app-start"',
-            '"inv docs-start"',
-        ]
-    )
-    run_env(ctx, launcher)
-
-namespace = Collection(clean, prepare, build, bundle, release, docs_start, app_start, start, checksums)
+namespace = Collection(clean, prepare, build, bundle, release, start, checksums)
