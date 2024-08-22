@@ -1,4 +1,6 @@
 // vendors
+import axios from "axios";
+import semver from "semver";
 // project
 import {
   ApplicationDescriptor,
@@ -966,5 +968,23 @@ export class ContainerClient {
       const items = await instance.pullFromRegistry(opts);
       return items;
     });
+  }
+}
+
+export class OnlineApi {
+  protected baseUrl: string;
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+  async checkLatestVersion() {
+    const re = await axios.get(this.baseUrl, { headers: { "content-type": "text/plain" } });
+    const text = await re.data;
+    const current = import.meta.env.PROJECT_VERSION;
+    const latest = `${text || ""}`.split("\n")[0] ?? undefined;
+    return {
+      current,
+      latest,
+      hasUpdate: latest ? semver.gt(latest, current) : false
+    };
   }
 }

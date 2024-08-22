@@ -1,12 +1,32 @@
 // vendors
+import { Intent } from "@blueprintjs/core";
 import { action, thunk } from "easy-peasy";
 import produce from "immer";
 import merge from "lodash.merge";
 // project
-import { Connector } from "../Types.container-app";
-// module
+import { registry } from "@/web-app/domain/registry";
+import { Notification } from "@/web-app/Notification";
+import { t } from "../App.i18n";
 import { Native } from "../Native";
+import { Connector } from "../Types.container-app";
 import { AppBootstrapPhase, AppModel, AppModelState, AppRegistry } from "./types";
+
+function delayCheckUpdate() {
+  setTimeout(async () => {
+    try {
+      const check = await registry.onlineApi.checkLatestVersion();
+      console.debug("Checking for new version", check);
+      if (!check.hasUpdate) {
+        Notification.show({
+          message: t("A newer version {{latest}} has been found", check),
+          intent: Intent.PRIMARY
+        });
+      }
+    } catch (error: any) {
+      console.error("Unable to read latest version", error);
+    }
+  }, 1500);
+}
 
 export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
   const instance = await Native.getInstance();
@@ -70,7 +90,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       actions.troubleshoot.reset();
       actions.volume.reset();
     }),
-    start: thunk(async (actions, options) => {
+    start: thunk(async (actions, options, store) => {
       let nextPhase = AppBootstrapPhase.STARTING;
       return registry.withPending(async () => {
         await instance.notify("ready");
@@ -81,7 +101,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           const startup = await registry.api.start(options);
           if (startup.currentConnector) {
             registry.api.setConnector(startup.currentConnector);
-            let nextPhase = AppBootstrapPhase.STARTED;
+            let nextPhase: any = AppBootstrapPhase.STARTED;
             if (startup.provisioned) {
               if (startup.running) {
                 nextPhase = AppBootstrapPhase.READY;
@@ -95,6 +115,13 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               phase: nextPhase,
               descriptor: startup
             });
+            // check for new version if enabled
+            if (nextPhase === AppBootstrapPhase.READY || nextPhase === AppBootstrapPhase.FAILED) {
+              const state = store.getState();
+              if (state.descriptor?.userSettings?.checkLatestVersion) {
+                delayCheckUpdate();
+              }
+            }
           }
           return startup;
         } catch (error: any) {

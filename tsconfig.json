@@ -39,8 +39,6 @@
       "@/detector/*": ["detector/*"],
       "@/electron-shell": ["electron-shell"],
       "@/electron-shell/*": ["electron-shell/*"],
-      "@/electron-cfg": ["electron-cfg"],
-      "@/electron-cfg/*": ["electron-cfg/*"],
       "@/logger": ["logger"],
       "@/logger/*": ["logger/*"],
       "@/resources": ["resources"],

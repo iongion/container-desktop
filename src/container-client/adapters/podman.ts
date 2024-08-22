@@ -2,7 +2,7 @@
 // vendors
 import merge from "lodash.merge";
 // project
-import { getAvailablePodmanMachines } from "@/detector";
+import { findProgram, getAvailablePodmanMachines } from "@/detector";
 // module
 import { UserConfiguration } from "@/container-config";
 import { FS, Path, Platform } from "@/platform/node";
@@ -77,6 +77,7 @@ export class PodmanClientEngineNative extends AbstractClientEngine {
 
   // Settings
   async getExpectedSettings() {
+    const program = await findProgram(PROGRAM, { osType: this.osType });
     return {
       api: {
         baseURL: API_BASE_URL,
@@ -84,8 +85,8 @@ export class PodmanClientEngineNative extends AbstractClientEngine {
       },
       program: {
         name: PROGRAM,
-        path: NATIVE_PODMAN_CLI_PATH,
-        version: NATIVE_PODMAN_CLI_VERSION
+        path: program?.path || NATIVE_PODMAN_CLI_PATH,
+        version: program?.version || NATIVE_PODMAN_CLI_VERSION
       }
     } as EngineConnectorSettings;
   }

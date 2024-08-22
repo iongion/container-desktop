@@ -32,6 +32,7 @@ export interface GlobalUserSettings {
   expandSidebar: boolean;
   startApi: boolean;
   minimizeToSystemTray: boolean;
+  checkLatestVersion: boolean;
   path: string;
   logging: {
     level: string;

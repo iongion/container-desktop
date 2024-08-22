@@ -126,3 +126,7 @@ body.bp5-dark .AppErrorBoundaryCallout .bp5-heading,
 body.bp5-dark .AppErrorBoundaryCallout p {
   color: #fff !important;
 }
+
+body.bp5-dark .AppDataTable[data-table="image.scanning.report"] tr td p {
+  color: #fff;
+}

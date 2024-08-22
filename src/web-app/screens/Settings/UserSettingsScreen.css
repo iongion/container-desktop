@@ -74,6 +74,15 @@
 }
 .AppSettingsForm[data-form="flags"] {
   padding: 10px;
+  display: flex;
+}
+.AppSettingsForm[data-form="flags"] .bp5-form-group {
+  flex-grow: 1;
+  flex-basis: 0;
+}
+.AppSettingsForm[data-form="flags"] .bp5-form-group label {
+  white-space: nowrap;
+  padding-right: 4px;
 }
 .AppSettingUserConfigurationPath {
   width: 100%;

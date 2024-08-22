@@ -15,16 +15,17 @@ import { CURRENT_OS_TYPE } from "../Environment";
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = await Path.dirname(__filename);
 const PROJECT_HOME = await Path.dirname(__dirname);
+const URLS_ALLOWED = [
+  "https://iongion.github.io/podman-desktop-companion/",
+  "https://github.com/iongion/podman-desktop-companion/releases"
+];
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
 const logger = await createLogger("shell.main");
 let window: any;
 let notified = false;
 const ensureWindow = () => {
-  // if (notified) {
   window.show();
-  // }
 };
-console.debug("main.ts DIRNAME", __dirname);
 const isHideToTrayOnClose = async () => {
   const configuration = UserConfiguration.getInstance();
   return await configuration.getKey("minimizeToSystemTray", false);
@@ -36,7 +37,7 @@ const getWindowConfigOptions = async () => {
 
 const isDebug = await Platform.getEnvironmentVariable("PODMAN_DESKTOP_COMPANION_DEBUG");
 const isDevelopment = () => {
-  return !app.isPackaged;
+  return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
 };
 const iconPath = isDevelopment()
   ? await Path.join(PROJECT_HOME, "src/resources/icons/appIcon.png")
@@ -139,9 +140,7 @@ async function createWindow() {
   }
   const onMinimizeOrClose = async (event: any, source: any) => {
     if (await isHideToTrayOnClose()) {
-      if (!tray) {
-        createSystemTray();
-      }
+      createSystemTray();
       event.preventDefault();
       window.setSkipTaskbar(true);
       window.hide();
@@ -166,10 +165,12 @@ async function createWindow() {
   // Automatically open Chrome's DevTools in development mode.
   window.webContents.setWindowOpenHandler((event: any) => {
     const info = new URL(event.url);
-    if (!is_ip_private(info.hostname)) {
-      if (!DOMAINS_ALLOW_LIST.includes(info.hostname)) {
-        logger.error("Security issue - attempt to open a domain that is not allowed", info);
-        return { action: "deny" };
+    if (!URLS_ALLOWED.includes(event.url)) {
+      if (!is_ip_private(info.hostname)) {
+        if (!DOMAINS_ALLOW_LIST.includes(info.hostname)) {
+          logger.error("Security issue - attempt to open a domain that is not allowed", info);
+          return { action: "deny" };
+        }
       }
     }
     logger.debug("window open", info.hostname);
@@ -200,6 +201,11 @@ async function createWindow() {
 }
 
 function createSystemTray() {
+  if (tray) {
+    logger.debug("Creating system tray menu - already created");
+    return;
+  }
+  logger.debug("Creating system tray menu");
   tray = new Tray(trayIconPath);
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -239,10 +245,6 @@ let tray: any = null;
   });
   app.commandLine.appendSwitch("ignore-certificate-errors");
   app.whenReady().then(async () => {
-    // setup tray only when
-    if (await isHideToTrayOnClose()) {
-      createSystemTray();
-    }
     // setup window
     mainWindow = await createWindow();
     app.on("activate", async () => {
@@ -251,9 +253,14 @@ let tray: any = null;
       }
     });
   });
-  app.on("window-all-closed", () => {
-    logger.debug("Can kill processes");
-    if (!isHideToTrayOnClose()) {
+  app.on("window-all-closed", async () => {
+    if (await isHideToTrayOnClose()) {
+      createSystemTray();
+      if (isDevelopment()) {
+        logger.debug("When Hide to tray is set - the application is not quitted");
+      }
+    } else {
+      logger.debug("Quitting the application and killing all nested processes", notified);
       app.quit();
     }
   });

@@ -1,12 +1,9 @@
 // vendors
 import { createStore, StoreProvider as StoreProviderBase } from "easy-peasy";
 // project
-import { ContainerClient } from "../Api.clients";
 import { Environments } from "../Types";
-import { AppModel, AppRegistry, AppStore, AppStorePendingOperation } from "./types";
+import { AppModel, AppStore, AppStorePendingOperation } from "./types";
 // domain
-import { createModel as createAppModel } from "./model";
-
 import { createModel as createContainerModel } from "../screens/Container/Model";
 import { createModel as createDashboardModel } from "../screens/Dashboard/Model";
 import { createModel as createImageModel } from "../screens/Image/Model";
@@ -18,6 +15,8 @@ import { createModel as createSecretModel } from "../screens/Secret/Model";
 import { createModel as createSettingsModel } from "../screens/Settings/Model";
 import { createModel as createTroubleshootModel } from "../screens/Troubleshoot/Model";
 import { createModel as createVolumesModel } from "../screens/Volume/Model";
+import { createModel as createAppModel } from "./model";
+import { registry } from "./registry";
 
 // TODO: Improve typings
 export const withPending = async (store: AppStore, operation: AppStorePendingOperation) => {
@@ -36,18 +35,10 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
 };
 
 export const createAppStore = async (env: Environments) => {
-  const api = new ContainerClient();
-  if (api === undefined) {
-    console.error("No such API environment", env);
-    throw new Error("API instance is mandatory");
-  }
   // eslint-disable-next-line prefer-const
   let store: AppStore;
-  const registry: AppRegistry = {
-    api,
-    getStore: () => store,
-    withPending: (operation: AppStorePendingOperation) => withPending(store, operation)
-  };
+  registry.getStore = () => store;
+  registry.withPending = (operation: AppStorePendingOperation) => withPending(store, operation);
   store = createStore<AppModel>(await createAppModel(registry));
   store.addModel("container", await createContainerModel(registry));
   store.addModel("dashboard", await createDashboardModel(registry));

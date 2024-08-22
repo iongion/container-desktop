@@ -21,6 +21,7 @@ export async function getGlobalUserSettings(userConfiguration: UserConfiguration
     expandSidebar: await userConfiguration.getKey("expandSidebar", true),
     startApi: await userConfiguration.getKey("startApi", false),
     minimizeToSystemTray: await userConfiguration.getKey("minimizeToSystemTray", false),
+    checkLatestVersion: await userConfiguration.getKey("checkLatestVersion", false),
     path: await await userConfiguration.getStoragePath(),
     logging: {
       level: await getLevel()

@@ -25,6 +25,7 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const [osType, setOsType] = useState<string>("");
+  const userSettings = useStoreState((state) => state.descriptor.userSettings);
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
@@ -71,7 +72,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       const osType = await instance.getOperatingSystem();
       setOsType(osType);
     })();
-  }, []);
+  }, [t]);
 
   return (
     <div className="AppScreen" data-screen={ID}>

@@ -3,6 +3,7 @@ import path from "node:path";
 // vendors
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import react from "@vitejs/plugin-react";
+import * as dotenv from "dotenv";
 import mimeTypes from "mime-types";
 import { ModuleFormat, RollupOptions } from "rollup";
 import { PluginOption, UserConfig, defineConfig } from "vite";
@@ -20,6 +21,16 @@ import pkg from "./package.json";
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 const APP_MAIN = "application";
+
+// env based
+function sourceEnv(env: string) {
+  // template
+  dotenv.config({ path: path.join(PROJECT_HOME, ".env") });
+  dotenv.config({ path: path.join(PROJECT_HOME, ".env.local"), override: true });
+  // target env
+  dotenv.config({ path: path.join(PROJECT_HOME, `.env.${env}`), override: true });
+  dotenv.config({ path: path.join(PROJECT_HOME, `.env.${env}.local`), override: true });
+}
 
 export function createEJSContext() {
   return {
@@ -60,7 +71,7 @@ export function getCommonViteConfig({
     build: {
       outDir: path.join(__dirname, "build"),
       emptyOutDir: false,
-      sourcemap: true,
+      sourcemap: mode === "production" && ENVIRONMENT === "production",
       chunkSizeWarningLimit: 50 * 1024,
       reportCompressedSize: mode === "production",
       minify: minify,
@@ -85,6 +96,8 @@ export function getCommonViteConfig({
 
 /** @type {import('vite').UserConfig} */
 export const createConfig = ({ mode, command, host, port }) => {
+  // Bootstrap
+  sourceEnv(ENVIRONMENT);
   console.debug({ PROJECT_HOME, command, host, port });
   console.debug(`Website running at http://${host === "0.0.0.0" ? "localhost" : host}:${port}/docs/index.html`);
   // Bootstrap
@@ -99,6 +112,7 @@ export const createConfig = ({ mode, command, host, port }) => {
     "import.meta.env.PROJECT_NAME": JSON.stringify(pkg.name),
     "import.meta.env.PROJECT_TITLE": JSON.stringify(pkg.title),
     "import.meta.env.PROJECT_DESCRIPTION": JSON.stringify(pkg.description),
+    "import.meta.env.ONLINE_API": JSON.stringify(process.env.ONLINE_API),
     // Bugs
     "process.env.NODE_DEBUG": JSON.stringify(false)
   };
@@ -171,7 +185,12 @@ function docsServer(): PluginOption {
     configureServer(server: any) {
       return () => {
         server.middlewares.use(async (req, res, next) => {
-          if (req.originalUrl?.includes("/docs")) {
+          if (req.originalUrl?.startsWith("/VERSION")) {
+            res.setHeader("Content-Type", "text/plain");
+            res.writeHead(200);
+            res.write(pkg.version);
+            res.end();
+          } else if (req.originalUrl?.includes("/docs")) {
             const resource = path.join(__dirname, `${req.originalUrl}`);
             res.setHeader("Content-Type", mimeTypes.lookup(resource) || "application/octet-stream");
             res.writeHead(200);

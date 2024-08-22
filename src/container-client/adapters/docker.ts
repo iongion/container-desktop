@@ -2,8 +2,9 @@
 // vendors
 import merge from "lodash.merge";
 // project
-import { findProgram } from "@/detector";
 // module
+import { findProgram } from "@/detector";
+import { Platform } from "@/platform/node.js";
 import { EngineConnectorSettings } from "@/web-app/Types.container-app.js";
 import {
   LIMA_PATH,
@@ -29,22 +30,22 @@ const API_BASE_URL = "http://localhost";
 const DOCKER_SCOPE_DEFAULT = "docker_engine";
 // Native
 const NATIVE_DOCKER_CLI_PATH = "/usr/bin/docker";
-const NATIVE_DOCKER_CLI_VERSION = "20.10.14";
-const NATIVE_DOCKER_SOCKET_PATH = `/var/run/${PROGRAM}.sock`;
+const NATIVE_DOCKER_CLI_VERSION = "27.1.1";
+const NATIVE_DOCKER_SOCKET_PATH = (await Platform.getEnvironmentVariable("DOCKER_HOST")) || `/var/run/${PROGRAM}.sock`;
 // Windows virtualized
-const WINDOWS_DOCKER_NATIVE_CLI_VERSION = "20.10.14";
+const WINDOWS_DOCKER_NATIVE_CLI_VERSION = "27.1.1";
 const WINDOWS_DOCKER_NATIVE_CLI_PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe";
 const WINDOWS_DOCKER_NATIVE_SOCKET_PATH = `//./pipe/${DOCKER_SCOPE_DEFAULT}`;
 // MacOS virtualized
-const MACOS_DOCKER_NATIVE_CLI_VERSION = "20.10.8";
+const MACOS_DOCKER_NATIVE_CLI_VERSION = "27.1.1";
 const MACOS_DOCKER_NATIVE_CLI_PATH = "/usr/local/bin/docker";
 const MACOS_DOCKER_NATIVE_SOCKET_PATH = `/var/run/${PROGRAM}.sock`;
 // Windows WSL
 const WSL_DOCKER_CLI_PATH = "/usr/bin/docker";
-const WSL_DOCKER_CLI_VERSION = "20.10.14";
+const WSL_DOCKER_CLI_VERSION = "27.1.1";
 // MacOS LIMA
 const LIMA_DOCKER_CLI_PATH = "/usr/bin/docker";
-const LIMA_DOCKER_CLI_VERSION = "20.10.14";
+const LIMA_DOCKER_CLI_VERSION = "27.1.1";
 const LIMA_DOCKER_INSTANCE = "docker";
 // Engines
 export const ENGINE_DOCKER_NATIVE = `${PROGRAM}.native`;
@@ -73,15 +74,17 @@ export class DockerClientEngineNative extends AbstractClientEngine {
   // Settings
 
   async getExpectedSettings() {
+    const envSock = await Platform.getEnvironmentVariable("DOCKER_HOST");
+    const program = await findProgram(PROGRAM, { osType: this.osType });
     return {
       api: {
         baseURL: API_BASE_URL,
-        connectionString: NATIVE_DOCKER_SOCKET_PATH
+        connectionString: envSock || NATIVE_DOCKER_SOCKET_PATH
       },
       program: {
         name: PROGRAM,
-        path: NATIVE_DOCKER_CLI_PATH,
-        version: NATIVE_DOCKER_CLI_VERSION
+        path: program?.path || NATIVE_DOCKER_CLI_PATH,
+        version: program?.version || NATIVE_DOCKER_CLI_VERSION
       }
     } as EngineConnectorSettings;
   }
@@ -98,28 +101,6 @@ export class DockerClientEngineNative extends AbstractClientEngine {
         name: PROGRAM
       }
     };
-  }
-
-  async getDetectedSettings(expected) {
-    const detected: any = {
-      program: {
-        name: expected.program.name,
-        path: undefined,
-        version: undefined
-      }
-    };
-    const available = await this.isEngineAvailable();
-    if (available.success) {
-      try {
-        const program = await findProgram(expected.program.name, { osType: this.osType });
-        detected.program.name = expected.program.name;
-        detected.program.path = program.path;
-        detected.program.version = program.version;
-      } catch (error: any) {
-        this.logger.error(`Unable to find ${expected.program.name}`, error.message, error.stack);
-      }
-    }
-    return detected;
   }
 
   // Runtime
@@ -164,9 +145,10 @@ export class DockerClientEngineVirtualized extends DockerClientEngineNative {
   async getExpectedSettings() {
     let settings = {};
     if (this.osType === "Linux") {
+      const envSock = await Platform.getEnvironmentVariable("DOCKER_HOST");
       settings = {
         api: {
-          connectionString: NATIVE_DOCKER_SOCKET_PATH
+          connectionString: envSock || NATIVE_DOCKER_SOCKET_PATH
         },
         program: {
           name: PROGRAM,
@@ -236,10 +218,11 @@ export class DockerClientEngineSubsystemWSL extends AbstractClientEngineSubsyste
 
   // Settings
   async getExpectedSettings() {
+    const envSock = await Platform.getEnvironmentVariable("DOCKER_HOST");
     return {
       api: {
         baseURL: API_BASE_URL,
-        connectionString: NATIVE_DOCKER_SOCKET_PATH
+        connectionString: envSock || NATIVE_DOCKER_SOCKET_PATH
       },
       controller: {
         name: WSL_PROGRAM,

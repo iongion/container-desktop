@@ -91,3 +91,5 @@ export const useTranslate = () => {
     i18n
   };
 };
+
+export const t = (key: string, rest?: any) => (i18n as any).t(key, rest, { lng: getCurrentLanguage() });

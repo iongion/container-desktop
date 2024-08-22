@@ -14,7 +14,7 @@ import {
   GlobalUserSettingsOptions
 } from "../Types.container-app";
 
-import { ContainerClient } from "../Api.clients";
+import { ContainerClient, OnlineApi } from "../Api.clients";
 import { ContainersModel } from "../screens/Container/Model";
 import { DashboardModel } from "../screens/Dashboard/Model";
 import { ImagesModel } from "../screens/Image/Model";
@@ -92,6 +92,7 @@ export type AppStorePendingCallback = (operation: AppStorePendingOperation) => P
 
 export interface AppRegistry {
   api: ContainerClient;
+  onlineApi: OnlineApi;
   getStore: () => AppStore;
   withPending: AppStorePendingCallback;
 }

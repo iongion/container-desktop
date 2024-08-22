@@ -1,8 +1,19 @@
-import { Button, Callout, Checkbox, ControlGroup, FormGroup, HTMLSelect, Icon } from "@blueprintjs/core";
+import {
+  AnchorButton,
+  Button,
+  ButtonGroup,
+  Callout,
+  Checkbox,
+  ControlGroup,
+  FormGroup,
+  HTMLSelect,
+  Icon,
+  Intent
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // project
@@ -17,6 +28,8 @@ import { ScreenHeader } from "./ScreenHeader";
 // module
 import { ContainerEngineManager } from "./EngineManager";
 
+import { Notification } from "@/web-app/Notification";
+import { registry } from "@/web-app/domain/registry";
 import "./UserSettingsScreen.css";
 
 // Screen
@@ -29,6 +42,7 @@ export const Title = "Settings";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
+  const [isChecking, setIsChecking] = useState(false);
   const provisioned = useStoreState((state) => state.descriptor.provisioned);
   const running = useStoreState((state) => state.descriptor.running);
   const currentConnector = useStoreState((state) => state.descriptor.currentConnector);
@@ -48,6 +62,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [setGlobalUserSettings]
   );
+  const onCheckLatestVersion = useCallback(
+    async (e) => {
+      await setGlobalUserSettings({ checkLatestVersion: !!e.currentTarget.checked });
+    },
+    [setGlobalUserSettings]
+  );
   const onLoggingLevelChange = useCallback(
     async (e) => {
       const configuration: Partial<GlobalUserSettingsOptions> = {};
@@ -62,6 +82,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const instance = await Native.getInstance();
     await instance.openDevTools();
   }, []);
+  const onVersionCheck = useCallback(async () => {
+    setIsChecking(true);
+    try {
+      const check = await registry.onlineApi.checkLatestVersion();
+      console.debug("Checking for new version", check);
+      if (!check.hasUpdate) {
+        Notification.show({
+          message: t("A newer version {{latest}} has been found", check),
+          intent: Intent.PRIMARY
+        });
+      } else {
+        Notification.show({ message: t("No new version detected"), intent: Intent.SUCCESS });
+      }
+    } catch (error: any) {
+      Notification.show({ message: t("Unable to check latest version"), intent: Intent.DANGER });
+    }
+    setIsChecking(false);
+  }, [t]);
 
   let title = "";
   let errorMessage = "";
@@ -91,11 +129,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         {contentWidget}
         <ContainerEngineManager />
         <div className="AppSettingsForm" data-form="flags">
-          <FormGroup
-            label={t("Startup")}
-            labelFor="startApi"
-            helperText={t("Not needed if container engine is already running as a service")}
-          >
+          <FormGroup labelFor="startApi" helperText={t("If container engine is not running as a service")}>
             <ControlGroup>
               <Checkbox
                 id="startApi"
@@ -105,13 +139,45 @@ export const Screen: AppScreen<ScreenProps> = () => {
               />
             </ControlGroup>
           </FormGroup>
-          <FormGroup>
+          <FormGroup labelFor="minimizeToSystemTray">
             <ControlGroup>
               <Checkbox
                 id="minimizeToSystemTray"
                 label={t("Minimize to System Tray when closing")}
                 checked={!!userSettings.minimizeToSystemTray}
                 onChange={onMinimizeToSystemTray}
+              />
+            </ControlGroup>
+          </FormGroup>
+          <FormGroup
+            labelFor="checkLatestVersion"
+            helperText={
+              <ButtonGroup fill>
+                <Button
+                  loading={isChecking}
+                  disabled={isChecking}
+                  intent={Intent.PRIMARY}
+                  small
+                  text={t("Check now")}
+                  icon={IconNames.UPDATED}
+                  onClick={onVersionCheck}
+                />
+                <AnchorButton
+                  icon={IconNames.DOWNLOAD}
+                  text={t("Versions")}
+                  href="https://github.com/iongion/podman-desktop-companion/releases"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              </ButtonGroup>
+            }
+          >
+            <ControlGroup>
+              <Checkbox
+                id="checkLatestVersion"
+                label={t("Automatically check for new version at startup")}
+                checked={!!userSettings.checkLatestVersion}
+                onChange={onCheckLatestVersion}
               />
             </ControlGroup>
           </FormGroup>

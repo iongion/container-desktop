@@ -83,6 +83,7 @@ export class Native {
             expandSidebar: false,
             startApi: false,
             minimizeToSystemTray: true,
+            checkLatestVersion: false,
             path: "podman",
             logging: {
               level: "debug"

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Enabled latest version check
+- Latest version publishing to static website
+
 ## Changed
 
 - Make everything async
@@ -17,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Fixed
 
 - Issue #109 - Allow flatpak version to start/stop podman native binary
+- Scanner report in light mode using docker engine
+- Programs detection
 
 ## 5.2.0-rc.3 - 2024-08-15
 

@@ -18,7 +18,7 @@ const VERSION = getPrefix();
 
 async function getUserSettingsPath() {
   const dataPath = await Platform.getUserDataPath();
-  const configPath = await Path.join(dataPath, "electron-cfg.json");
+  const configPath = await Path.join(dataPath, "user-settings.json");
   return configPath;
 }
 

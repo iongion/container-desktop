@@ -47,7 +47,7 @@ body.bp5-dark[data-adapter="docker"] .AppDrawer {
   box-shadow: none;
 }
 body.bp5-dark[data-adapter="docker"] .SecurityDetails {
-  background: #fff !important;
+  background: #0d1f47 !important;
 }
 body.bp5-dark[data-adapter="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: #0f1c3f;

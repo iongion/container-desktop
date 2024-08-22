@@ -114,9 +114,9 @@ export abstract class AbstractClientEngine {
     const available = await this.isEngineAvailable();
     if (available.success) {
       try {
-        this.logger.warn(this.id, "Find program MISS", expected.program.name);
+        this.logger.warn(this.id, ">> Finding program", expected.program.name);
         const program = await findProgram(expected.program.name, { osType: this.osType });
-        this.logger.warn(this.id, "Find program CACHE", program);
+        this.logger.warn(this.id, "<< Finding program", program);
         detected.program.name = expected.program.name;
         detected.program.path = program.path;
         detected.program.version = program.version;

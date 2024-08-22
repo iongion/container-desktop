@@ -1,5 +1,3 @@
-**/.secrets.local/**
-**/.env.local/**
 **/__pycache__/**
 .venv
 temp
@@ -79,10 +77,6 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
-.env.test
-
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 
@@ -113,3 +107,7 @@ dist
 
 # TernJS port file
 .tern-port
+
+# dotenv environment variables file
+.env.test
+.env.*.local
