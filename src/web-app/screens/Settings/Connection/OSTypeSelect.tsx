@@ -38,7 +38,7 @@ export const OSTypeSelect: React.FC<OSTypeSelectProps> = ({ inputProps, disabled
     <div className="ConnectionEntitySelect OSTypeSelect">
       <HTMLSelect {...inputProps} disabled={pending || disabled} fill value={osType} onChange={onItemSelect}>
         <option value={OperatingSystem.Browser}>Browser</option>
-        <option value={OperatingSystem.Mac}>MacOS</option>
+        <option value={OperatingSystem.MacOS}>MacOS</option>
         <option value={OperatingSystem.Linux}>Linux</option>
         <option value={OperatingSystem.Unknown}>Unknown</option>
         <option value={OperatingSystem.Windows}>Windows</option>

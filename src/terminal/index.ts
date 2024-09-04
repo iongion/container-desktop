@@ -7,7 +7,7 @@ export async function launchTerminal(command, params?: any[], opts?: any) {
   } else if (CURRENT_OS_TYPE === "Windows_NT") {
     status = await Command.Execute("wt", ["-w", "nt", "--title", opts?.title || "PDC Shell", "-p", "Command Prompt", "-d", ".", "cmd", "/k", command, ...(params || [])]);
   } else {
-    status = await Command.Execute("gnome-terminal", ["-e", args]);
+    status = await Command.Execute("xterm", ["-e", args]);
   }
   return status;
 }

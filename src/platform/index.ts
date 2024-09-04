@@ -1,7 +1,7 @@
 export enum OperatingSystem {
   Browser = "browser",
   Linux = "Linux",
-  Mac = "Darwin",
+  MacOS = "Darwin",
   Windows = "Windows_NT",
   Unknown = "unknown"
 }

@@ -22,6 +22,8 @@ import "./ManageConnectionForm.css";
 
 type DetectTarget = "program" | "controller";
 
+const withRootfulSupport = false;
+
 export interface ManageConnectionFormProps {
   connection?: Connection;
   mode: "create" | "edit";
@@ -857,28 +859,30 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             }}
           />
         </FormGroup>
-        <FormGroup disabled={pending} labelFor="settings.rootfull">
-          <Controller
-            control={control}
-            name="settings.rootfull"
-            render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-              return (
-                <Switch
-                  label={t("Rootful container mode - requires elevation")}
-                  inline
-                  autoFocus
-                  disabled={pending}
-                  id={name}
-                  name={name}
-                  checked={value || false}
-                  onBlur={onBlur}
-                  onChange={onChange}
-                  inputRef={ref}
-                />
-              );
-            }}
-          />
-        </FormGroup>
+        {withRootfulSupport ? (
+          <FormGroup disabled={pending} labelFor="settings.rootfull">
+            <Controller
+              control={control}
+              name="settings.rootfull"
+              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                return (
+                  <Switch
+                    label={t("Rootful container mode - requires elevation")}
+                    inline
+                    autoFocus
+                    disabled={pending}
+                    id={name}
+                    name={name}
+                    checked={value || false}
+                    onBlur={onBlur}
+                    onChange={onChange}
+                    inputRef={ref}
+                  />
+                );
+              }}
+            />
+          </FormGroup>
+        ) : null}
       </div>
     </form>
   );

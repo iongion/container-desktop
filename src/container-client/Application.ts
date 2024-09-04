@@ -85,6 +85,25 @@ export const coerceAndSortSearchResults = (items) => {
   return items;
 };
 
+export function detectOperatingSystem() {
+  let OSName = "Unknown OS";
+  if (navigator.userAgent.indexOf("Win") != -1) OSName = "Windows";
+  if (navigator.userAgent.indexOf("Mac") != -1) OSName = "MacOS";
+  if (navigator.userAgent.indexOf("X11") != -1) OSName = "UNIX";
+  if (navigator.userAgent.indexOf("Linux") != -1) OSName = "Linux";
+  switch (OSName) {
+    case "Windows":
+      return OperatingSystem.Windows;
+    case "MacOS":
+      return OperatingSystem.MacOS;
+    case "Linux":
+    case "Unix":
+      return OperatingSystem.Linux;
+    default:
+      return OperatingSystem.Unknown;
+  }
+}
+
 export class Application {
   private static instance: Application;
 
@@ -112,7 +131,7 @@ export class Application {
   static getInstance() {
     if (!Application.instance) {
       Application.instance = new Application({
-        osType: OperatingSystem.Windows,
+        osType: detectOperatingSystem(),
         version: import.meta.env.PROJECT_VERSION,
         environment: import.meta.env.ENVIRONMENT,
         messageBus: (window as any).MessageBus
@@ -770,6 +789,7 @@ export class Application {
               .catch(cb)
         )
       );
+      // console.debug(">> INIT", { osType: this.osType });
       this.connectors = getDefaultConnectors(this.osType);
     } catch (error: any) {
       this.logger.error("Init - Unable to initialize application runtimes", error.message, error.stack);

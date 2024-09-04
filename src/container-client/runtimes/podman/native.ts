@@ -18,22 +18,16 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
 
   async getApiConnection(): Promise<ApiConnection> {
     const settings = await this.getSettings();
-    const scope = settings.controller?.scope || "";
-    if (!scope) {
-      this.logger.error(this.id, "getApiConnection requires a scope");
-      return {
-        uri: "",
-        relay: undefined
-      };
-    }
     // Get environment variable inside the scope
-    const engine = await this.getScopeEnvironmentVariable(scope, "PODMAN_HOST");
-    const alias = await this.getScopeEnvironmentVariable(scope, "DOCKER_HOST");
+    const engine = await Platform.getEnvironmentVariable("PODMAN_HOST");
+    const alias = await Platform.getEnvironmentVariable("DOCKER_HOST");
     // Inspect machine system info for relay path
     let uri = engine || alias || "";
     try {
       const systemInfo = await this.getSystemInfo();
-      uri = systemInfo?.host?.remoteSocket?.path || uri;
+      if (systemInfo?.host?.remoteSocket?.exists) {
+        uri = systemInfo?.host?.remoteSocket?.path || uri;
+      }
       if (uri) {
         this.logger.debug(this.id, "Using uri from system info", systemInfo);
       }
@@ -55,9 +49,16 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
     }
     const settings = customSettings || (await this.getSettings());
     const programPath = settings.program.path || settings.program.name || "";
+    if (settings.api.connection.uri) {
+      const baseDir = await Path.dirname(settings.api.connection.uri);
+      const baseExists = await FS.isFilePresent(baseDir);
+      if (!baseExists) {
+        await FS.mkdir(baseDir, { recursive: true });
+      }
+    }
     const started = await this.runner.startApi(opts, {
       path: programPath,
-      args: ["system", "service", "--time=0", `unix://${settings.api.connection.relay}`, "--log-level=debug"]
+      args: ["system", "service", "--time=0", `unix://${settings.api.connection.uri}`, "--log-level=debug"]
     });
     this.apiStarted = started;
     this.logger.debug("Start API complete", started);

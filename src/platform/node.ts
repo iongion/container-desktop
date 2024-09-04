@@ -22,9 +22,9 @@ export const Platform: IPlatform = {
   },
 
   async getEnvironmentVariable(name: string) {
-    console.debug("> Reading environment variable", name);
+    // console.debug("> Reading environment variable", name);
     const value = await Promise.resolve((process.env || {})[name]);
-    console.debug("< Reading environment variable", name, value);
+    // console.debug("< Reading environment variable", name, value);
     return value;
   },
 
@@ -64,7 +64,8 @@ export const Platform: IPlatform = {
   },
 
   async getOsType(): Promise<OperatingSystem> {
-    return (await os.type()) as OperatingSystem;
+    const osType = await os.type();
+    return osType as OperatingSystem;
   },
 
   async getSSHConfig() {

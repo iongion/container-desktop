@@ -37,7 +37,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     if (osType === OperatingSystem.Linux && engine === ContainerEngine.PODMAN_VIRTUALIZED_VENDOR && machine) {
       commandPrefix = `podman machine ssh ${machine}`;
       commandTitle = t("On Linux, to dissociated between commands targeting the native podman engine, a machine prefix must be used.");
-    } else if (osType === OperatingSystem.Mac) {
+    } else if (osType === OperatingSystem.MacOS) {
       commandPrefix = `limactl shell podman`;
       commandTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
     }

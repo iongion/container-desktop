@@ -227,7 +227,8 @@ export abstract class AbstractClientEngine implements ClientEngine {
       success: false,
       details: undefined
     };
-    const driver = this.getContainerApiClient().getDriver();
+    const client = this.getContainerApiClient();
+    const driver = client.getDriver();
     try {
       const response = await driver.request({ method: "GET", url: "/_ping" });
       result.success = response?.data === "OK";

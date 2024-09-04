@@ -423,6 +423,8 @@ export const Command: ICommand = {
   async proxyRequest(request: Partial<AxiosRequestConfig>, connection: Connection) {
     let response: AxiosResponse<any, any> | undefined;
     switch (connection.engine) {
+      case ContainerEngine.PODMAN_NATIVE:
+      case ContainerEngine.DOCKER_NATIVE:
       case ContainerEngine.PODMAN_VIRTUALIZED_VENDOR:
       case ContainerEngine.DOCKER_VIRTUALIZED_VENDOR:
         {
@@ -435,6 +437,8 @@ export const Command: ICommand = {
         break;
       case ContainerEngine.PODMAN_VIRTUALIZED_WSL:
       case ContainerEngine.DOCKER_VIRTUALIZED_WSL:
+      case ContainerEngine.PODMAN_VIRTUALIZED_LIMA:
+      case ContainerEngine.DOCKER_VIRTUALIZED_LIMA:
         {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           config.socketPath = connection.settings.api.connection.relay;

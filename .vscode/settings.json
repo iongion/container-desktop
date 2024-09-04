@@ -194,5 +194,6 @@
   },
   "[go]": {
     "editor.defaultFormatter": "golang.go"
-  }
+  },
+  "git.ignoreLimitWarning": true
 }

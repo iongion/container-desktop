@@ -184,7 +184,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       description: "",
       notes: "Podman from LIMA is only available on MacOS",
       availability: {
-        enabled: osType === OperatingSystem.Mac,
+        enabled: osType === OperatingSystem.MacOS,
         api: false,
         engine: false,
         program: false,
@@ -214,8 +214,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       id: createConnectorId("default", ContainerEngine.PODMAN_REMOTE),
       label: "Remote SSH connection",
       description: "",
+      notes: "Remote SSH connection is not yet available",
       availability: {
-        enabled: true,
+        enabled: false,
         api: false,
         engine: false,
         program: false,
@@ -323,7 +324,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       description: "",
       notes: "Docker from LIMA is only available on MacOS",
       availability: {
-        enabled: osType === OperatingSystem.Mac,
+        enabled: osType === OperatingSystem.MacOS,
         api: false,
         engine: false,
         program: false,
@@ -353,8 +354,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       id: createConnectorId("default", ContainerEngine.DOCKER_REMOTE),
       label: "Remote SSH connection",
       description: "",
+      notes: "Remote SSH connection is not yet available",
       availability: {
-        enabled: true,
+        enabled: false,
         api: false,
         engine: false,
         program: false,
@@ -377,7 +379,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       })
     }
   ];
-  // console.debug(">> connectors", connectors);
+  // console.debug(">> connectors", { osType }, connectors);
   return connectors;
 }
 
