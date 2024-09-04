@@ -1,5 +1,5 @@
-import { InputGroup, FormGroup, Intent } from "@blueprintjs/core";
-import { useFormContext, Controller } from "react-hook-form";
+import { FormGroup, InputGroup, Intent } from "@blueprintjs/core";
+import { Controller, useFormContext } from "react-hook-form";
 // import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 
@@ -12,7 +12,7 @@ export interface RegistryPropertiesFormProps {
   pending?: boolean;
 }
 
-export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({ disabled, pending }) => {
+export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({ disabled, pending }: RegistryPropertiesFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{
@@ -27,13 +27,7 @@ export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({ 
   return (
     <div className="AppDataForm" data-form="registry.properties.manage">
       <div className="AppDataFormFields">
-        <FormGroup
-          inline
-          disabled={pending}
-          label={<strong>{t("Registry")}</strong>}
-          labelFor="registryName"
-          labelInfo="*"
-        >
+        <FormGroup inline disabled={pending} label={<strong>{t("Registry")}</strong>} labelFor="registryName" labelInfo="*">
           <Controller
             control={control}
             name="registryName"
@@ -42,6 +36,7 @@ export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({ 
               return (
                 <InputGroup
                   fill
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                   disabled={pending}
                   id={name}

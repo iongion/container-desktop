@@ -1,13 +1,12 @@
-import { useCallback } from "react";
-import { Button, Icon, InputGroup, FormGroup, NumericInput, H5, HTMLSelect } from "@blueprintjs/core";
+import { Button, FormGroup, H5, HTMLSelect, Icon, InputGroup, NumericInput } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
-import { useFieldArray, useFormContext, Controller } from "react-hook-form";
+import { useCallback } from "react";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 // import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
 
-// project
-import { ContainerImagePortMapping } from "../../Types.container-app";
+import { ContainerImagePortMapping } from "@/env/Types";
 
 // locals
 import "./PortMappingsForm.css";
@@ -43,10 +42,7 @@ export interface PortMappingFormAction {
   data: any;
   handler?: PortMappingFormActionHandler;
 }
-export type PortMappingFormActionHandler = (
-  action: PortMappingFormAction,
-  portMapping: ContainerImagePortMapping
-) => void;
+export type PortMappingFormActionHandler = (action: PortMappingFormAction, portMapping: ContainerImagePortMapping) => void;
 
 // Port mapping
 export interface PortMappingFormProps {
@@ -56,12 +52,7 @@ export interface PortMappingFormProps {
   action: PortMappingFormAction;
 }
 
-export const PortMappingForm: React.FC<PortMappingFormProps> = ({
-  action,
-  disabled,
-  portMapping,
-  portMappingIndex
-}) => {
+export const PortMappingForm: React.FC<PortMappingFormProps> = ({ action, disabled, portMapping, portMappingIndex }: PortMappingFormProps) => {
   const { t } = useTranslation();
   const { control } = useFormContext<{
     mappings: ContainerImagePortMapping[];
@@ -194,7 +185,7 @@ export interface PortMappingsFormProps {
   portMappings: ContainerImagePortMapping[];
 }
 
-export const PortMappingsForm: React.FC<PortMappingsFormProps> = ({ disabled, portMappings }) => {
+export const PortMappingsForm: React.FC<PortMappingsFormProps> = ({ disabled, portMappings }: PortMappingsFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{

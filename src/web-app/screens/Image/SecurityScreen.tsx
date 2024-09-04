@@ -1,25 +1,17 @@
+import { AnchorButton, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-// project
-import { AppScreen, AppScreenProps } from "../../Types";
-import { ScreenLoader } from "../../components/ScreenLoader";
-import { useStoreActions } from "../../domain/types";
+import { ContainerImage, SecurityReport, SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-import {
-  ContainerImage,
-  SecurityReport,
-  SecurityReportResultGroup,
-  SecurityVulnerability
-} from "../../Types.container-app";
-// module
+import { Application } from "@/container-client/Application";
 import { ScreenHeader } from ".";
-
-import { AnchorButton, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
-import dayjs from "dayjs";
-import { Native } from "../../Native";
 import "./SecurityScreen.css";
 
 export const ID = "image.security";
@@ -47,21 +39,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const { id } = useParams<{ id: string }>();
   const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
+
   useEffect(() => {
     (async () => {
       try {
         const image = await imageFetch({
-          Id: id as any
+          Id: decodeURIComponent(id as any)
         });
         setState((prev) => ({ ...prev, pending: false, scanning: true, image, report: undefined }));
         try {
           // check security
-          const instance = await Native.getInstance();
+          const instance = Application.getInstance();
           const report = await instance.checkSecurity({
             scanner: "trivy",
             subject: "image",
-            target: image.Name
+            target: image.FullName
           });
+          console.debug(">> report", report);
           setState((prev) => ({ ...prev, pending: false, image, scanning: false, report })); // go to scanning
         } catch (error: any) {
           console.error("Unable to fetch at this moment", error);
@@ -148,27 +142,21 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <tbody>
                   <tr>
                     <td>{t("Database")}</td>
-                    <td>{report?.scanner?.database?.Version}</td>
+                    <td>{report?.scanner?.database?.VulnerabilityDB?.Version || ""}</td>
                   </tr>
                   <tr>
                     <td>{t("Downloaded")}</td>
-                    <td>{report?.scanner?.database?.DownloadedAt}</td>
+                    <td>{report?.scanner?.database?.VulnerabilityDB?.DownloadedAt ? (dayjs(report?.scanner?.database?.VulnerabilityDB?.DownloadedAt) as any).fromNow() : ""}</td>
                   </tr>
                   <tr>
                     <td>{t("Updated")}</td>
-                    <td>{report?.scanner?.database?.UpdatedAt}</td>
+                    <td>{report?.scanner?.database?.VulnerabilityDB?.UpdatedAt ? (dayjs(report?.scanner?.database?.VulnerabilityDB?.UpdatedAt) as any).fromNow() : ""}</td>
                   </tr>
                 </tbody>
               </HTMLTable>
               <Divider />
-              <AnchorButton
-                icon={IconNames.HOME}
-                intent={Intent.PRIMARY}
-                href="https://trivy.dev"
-                target="_blank"
-                rel="noOpener"
-              >
-                <span>{t("Trivy")}</span>
+              <AnchorButton icon={IconNames.HOME} intent={Intent.PRIMARY} href="https://trivy.dev" target="_blank" rel="noOpener">
+                <span>Trivy</span>
               </AnchorButton>
             </div>
 

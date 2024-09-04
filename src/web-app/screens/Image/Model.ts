@@ -1,10 +1,9 @@
-// vendors
 import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
-// project
-import { FetchImageOptions } from "../../Api.clients";
-import { AppRegistry, ResetableModel } from "../../domain/types";
-import { Native } from "../../Native";
-import { ContainerImage } from "../../Types.container-app";
+
+import { FetchImageOptions } from "@/container-client/Api.clients";
+import { Application } from "@/container-client/Application";
+import { ContainerImage } from "@/env/Types";
+import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface ImagesModelState {
   native: boolean;
@@ -29,7 +28,7 @@ export interface ImagesModel extends ImagesModelState, ResetableModel<ImagesMode
 }
 
 export const createModel = async (registry: AppRegistry): Promise<ImagesModel> => {
-  const instance = await Native.getInstance();
+  const instance = Application.getInstance();
   const native = await instance.isNative();
   return {
     native,
@@ -72,21 +71,23 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
     // thunks
     fetchAll: thunk(async (actions) =>
       registry.withPending(async () => {
-        const images = await registry.api.getImages();
+        const images = await registry.getApi().getImages();
         actions.setImages(images);
         return images;
       })
     ),
     imageFetch: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const image = await registry.api.getImage(options.Id, options);
-        actions.update(image);
+        const image = await registry.getApi().getImage(options.Id, options);
+        if (image) {
+          actions.update(image);
+        }
         return image;
       })
     ),
     fetchHistory: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const history = await registry.api.getImageHistory(options.Id);
+        const history = await registry.getApi().getImageHistory(options.Id);
         actions.update({ Id: options.Id, History: history });
         return history;
       })
@@ -95,7 +96,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let pulled = false;
         if (image.Names) {
-          pulled = await registry.api.pullImage(image.Names[0]);
+          pulled = await registry.getApi().pullImage(image.Names[0]);
         }
         if (pulled) {
           actions.update(image);
@@ -107,7 +108,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let pushed = false;
         if (image.Id) {
-          pushed = await registry.api.pushImage(image.Id);
+          pushed = await registry.getApi().pushImage(image.Id);
         }
         return pushed;
       })
@@ -116,7 +117,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let removed = false;
         if (image.Id) {
-          removed = await registry.api.removeImage(image.Id);
+          removed = await registry.getApi().removeImage(image.Id);
         }
         if (removed) {
           actions.delete(image);
@@ -128,7 +129,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let removed = false;
         if (image.Id) {
-          removed = await registry.api.removeImage(image.Id);
+          removed = await registry.getApi().removeImage(image.Id);
         }
         if (removed) {
           actions.delete(image);

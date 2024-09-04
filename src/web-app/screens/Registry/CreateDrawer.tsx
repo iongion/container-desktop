@@ -1,15 +1,14 @@
-import { useState } from "react";
-import { ButtonGroup, Button, Intent, Drawer, DrawerSize, ProgressBar, Classes } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Drawer, DrawerSize, Intent, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import * as ReactIcon from "@mdi/react";
 import { mdiCubeUnfolded } from "@mdi/js";
+import * as ReactIcon from "@mdi/react";
 import dayjs from "dayjs";
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useState } from "react";
+import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-// project
-import { useStoreActions } from "../../domain/types";
-import { Notification } from "../../Notification";
+import { useStoreActions } from "@/web-app/domain/types";
+import { Notification } from "@/web-app/Notification";
 import { RegistryPropertiesForm } from "./RegistryPropertiesForm";
 
 // Drawer
@@ -21,23 +20,14 @@ export interface CreateFormData {
 export interface FormActionsProps {
   pending?: boolean;
 }
-export const FormActions: React.FC<FormActionsProps> = ({ pending }) => {
+export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActionsProps) => {
   const { t } = useTranslation();
   const { formState } = useFormContext();
-  const pendingIndicator = (
-    <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
-  );
+  const pendingIndicator = <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>;
   return (
     <>
       <ButtonGroup fill>
-        <Button
-          disabled={pending || !formState.isValid}
-          intent={Intent.PRIMARY}
-          icon={IconNames.PLUS}
-          title={t("Click to launch creation")}
-          text={t("Create")}
-          type="submit"
-        />
+        <Button disabled={pending || !formState.isValid} intent={Intent.PRIMARY} icon={IconNames.PLUS} title={t("Click to launch creation")} text={t("Create")} type="submit" />
       </ButtonGroup>
       {pendingIndicator}
     </>
@@ -47,7 +37,7 @@ export const FormActions: React.FC<FormActionsProps> = ({ pending }) => {
 export interface CreateDrawerProps {
   onClose: () => void;
 }
-export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }) => {
+export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
   const methods = useForm<CreateFormData>({
     mode: "all",

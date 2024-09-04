@@ -1,45 +1,13 @@
-// vendors
+import { IconName } from "@blueprintjs/icons";
 import React from "react";
-// project
-import { ApplicationDescriptor, Container, ContainerImage, Machine, Volume } from "./Types.container-app";
 
-export enum Environments {
-  DEVELOPMENT = "development",
-  PRODUCTION = "production"
-}
+import { Connector, Container, ContainerImage, ContainerStateList, PodmanMachine, Volume } from "@/env/Types";
 
 export interface Domain {
   containers: Container[];
   images: ContainerImage[];
-  machines: Machine[];
+  machines: PodmanMachine[];
   volumes: Volume[];
-}
-
-export enum Features {
-  polling = "polling"
-}
-export interface Feature {
-  enabled: boolean;
-  opts?: any;
-}
-
-export type FeaturesMap = {
-  [key in Features]?: Feature;
-};
-
-export interface EnvironmentSettings {
-  api: {
-    baseUrl: string;
-  };
-  poll: {
-    rate: number;
-  };
-}
-
-export interface Environment {
-  name: Environments;
-  features: FeaturesMap;
-  settings: EnvironmentSettings;
 }
 
 // Domain
@@ -64,5 +32,14 @@ export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> 
     Path: string;
   };
   Metadata?: Partial<AppScreenMetadata>;
-  isAvailable?: (context: ApplicationDescriptor) => boolean;
+  isAvailable?: (currentConnector?: Connector) => boolean;
 };
+
+export interface ContainerGroup {
+  Id: string; // uuid v4
+  Name?: string;
+  Items: Container[];
+  Report: { [key in ContainerStateList]: number };
+  Weight: number;
+  Icon?: IconName;
+}

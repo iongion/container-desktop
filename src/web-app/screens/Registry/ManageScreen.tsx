@@ -5,18 +5,15 @@ import * as ReactIcon from "@mdi/react";
 import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// project
+import { RegistrySearchFilters, RegistrySearchResult } from "@/env/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
+
 import { ActionsMenu, ScreenHeader } from ".";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
-import { SearchResultDrawer } from "./SearchResultDrawer";
-
-// module
-
-import { RegistrySearchFilters, RegistrySearchResult } from "../../Types.container-app";
-import { AppLabel } from "../../components/AppLabel";
 import "./ManageScreen.css";
+import { SearchResultDrawer } from "./SearchResultDrawer";
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -30,10 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const registriesMap = useStoreState((state) => state.registry.registriesMap);
   const searchResults = useStoreState((state) => state.registry.searchResults);
   const registrySearch = useStoreActions((actions) => actions.registry.registrySearch);
-  const registries = useMemo(
-    () => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])],
-    [registriesMap]
-  );
+  const registries = useMemo(() => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])], [registriesMap]);
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
   const firstEnabledRegistry = useMemo(() => registries.find((it) => it.enabled), [registries]);
   const [currentRegistry, setCurrentRegistry] = useState<string | undefined>(firstEnabledRegistry?.name);
@@ -74,22 +68,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   let content;
   switch (state) {
     case "state.initial":
-      content = (
-        <NonIdealState
-          icon={IconNames.GEOSEARCH}
-          title={t("Search not started")}
-          description={<p>{t("Type a term and click Search")}</p>}
-        />
-      );
+      content = <NonIdealState icon={IconNames.GEOSEARCH} title={t("Search not started")} description={<p>{t("Type a term and click Search")}</p>} />;
       break;
     case "state.no-results":
-      content = (
-        <NonIdealState
-          icon={IconNames.LIST}
-          title={t("No results")}
-          description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>}
-        />
-      );
+      content = <NonIdealState icon={IconNames.LIST} title={t("No results")} description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>} />;
       break;
     case "state.looking-up":
       content = <NonIdealState title={<Spinner size={48} />} description={<p>{t("Looking up")}</p>} />;
@@ -97,11 +79,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     case "state.looked-up":
       content =
         searchResults.length === 0 ? (
-          <NonIdealState
-            icon={IconNames.LIST}
-            title={t("No results")}
-            description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>}
-          />
+          <NonIdealState icon={IconNames.LIST} title={t("No results")} description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>} />
         ) : (
           <HTMLTable interactive compact striped className="AppDataTable" data-table="search.results">
             <thead>
@@ -152,13 +130,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader
-        searchTerm={searchTerm}
-        onSearch={onSearchChange}
-        onSearchTrigger={onSearchTrigger}
-        withSearchTrigger
-        rightContent={<ActionsMenu />}
-      />
+      <ScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} onSearchTrigger={onSearchTrigger} withSearchTrigger rightContent={<ActionsMenu />} />
       <div className="AppScreenContent">
         <div className="AppScreenContentView" data-column="left">
           {content}
@@ -179,9 +151,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               {(registries || []).map((registry) => {
                 let title;
                 if (registry.id === "system") {
-                  title = registry.enabled
-                    ? t("Podman registry.conf file must be adjusted - it allows parallel search")
-                    : t("Not available for current engine");
+                  title = registry.enabled ? t("Podman registry.conf file must be adjusted - it allows parallel search") : t("Not available for current engine");
                 }
                 return (
                   <tr key={registry.id} data-registry={registry.id}>

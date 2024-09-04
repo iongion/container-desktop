@@ -16,7 +16,7 @@ const config = {
     releaseName: `${pkg.title} ${pkg.version}`,
     releaseDate: dayjs().format("MMM DD, YYYY")
   },
-  files: ["build", "LICENSE", "!**/node_modules/*"],
+  files: ["build", "LICENSE", "!node_modules/**/*"],
   extraMetadata: {
     version: pkg.version,
     main: `build/main-${pkg.version}.mjs`

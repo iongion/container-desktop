@@ -1,25 +1,22 @@
-import { useCallback, useState } from "react";
-import { ButtonGroup, MenuItem, Button, Intent } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import * as ReactIcon from "@mdi/react";
 import { mdiConsole } from "@mdi/js";
+import * as ReactIcon from "@mdi/react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Machine } from "../../Types.container-app";
+import { PodmanMachine } from "@/env/Types";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { goToScreen } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 
-// project
-import { ConfirmMenu } from "../../components/ConfirmMenu";
-import { Notification } from "../../Notification";
-import { goToScreen } from "../../Navigator";
-import { useStoreActions, useStoreState } from "../../domain/types";
-
-// module
 import { CreateDrawer } from "./CreateDrawer";
 
 // Machine actions menu
 
 interface ActionsMenuProps {
-  machine?: Machine;
+  machine?: PodmanMachine;
   withoutCreate?: boolean;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
@@ -32,7 +29,7 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate }) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -119,9 +116,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
   const onOpenTerminalConsole = useCallback(async () => {
     performActionCommand("machine.connect", { confirm: { success: false } });
   }, [performActionCommand]);
-  const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
-  );
+  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
   const removeWidget = machine ? (
     <ConfirmMenu onConfirm={onRemove} tag={machine.Name} disabled={disabledAction === "machine.remove"}>
       {isNative ? (

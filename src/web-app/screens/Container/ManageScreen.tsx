@@ -1,23 +1,18 @@
 import { AnchorButton, Button, ButtonGroup, Code, HTMLTable, Icon, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import dayjs from "dayjs";
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import dayjs from "dayjs";
-
-// project
-import { usePoller } from "../../Hooks";
-import { pathTo } from "../../Navigator";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { ContainerGroup, ContainerStateList } from "../../Types.container-app";
-import { AppLabel } from "../../components/AppLabel";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
-
-// module
+import { ContainerStateList } from "@/env/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { usePoller } from "@/web-app/Hooks";
+import { pathTo } from "@/web-app/Navigator";
+import { AppScreen, AppScreenProps, ContainerGroup } from "@/web-app/Types";
 import { ActionsMenu } from ".";
-
 import "./ManageScreen.css";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -131,20 +126,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     let containerGroupData;
                     if (!isCollapsed) {
                       // ui
-                      const creationDate =
-                        typeof container.Created === "string"
-                          ? dayjs(container.Created)
-                          : dayjs(Number(container.Created) * 1000);
+                      const creationDate = typeof container.Created === "string" ? dayjs(container.Created) : dayjs(Number(container.Created) * 1000);
                       const image = container.Image;
-                      const nameText =
-                        (isPartOfGroup ? container.Computed.NameInGroup : container.Computed.Name) || t("- n/a -");
+                      const nameText = (isPartOfGroup ? container.Computed.NameInGroup : container.Computed.Name) || t("- n/a -");
                       const containerLogsButton = (
                         <AnchorButton
                           className="ContainerLogsButton"
                           minimal
                           small
                           href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`)}
-                          text={nameText}
+                          text={nameText.startsWith("/") ? nameText.slice(1) : nameText}
                           intent={Intent.SUCCESS}
                           icon={IconNames.ALIGN_JUSTIFY}
                           title={t("Container logs")}

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-// project
-import Environment from "./Environment";
+
+import Environment from "@/web-app/Environment";
 
 type Poller<T> = () => Promise<T>;
 

@@ -1,25 +1,18 @@
 import { AnchorButton, Code, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-import dayjs from "dayjs";
-
-// project
-import { ApplicationDescriptor } from "../../Types.container-app";
-
-// module
-
-import { usePoller } from "../../Hooks";
-import { pathTo } from "../../Navigator";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { Pod } from "../../Types.container-app";
-import { AppLabel } from "../../components/AppLabel";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
+import { Connector, Pod } from "@/env/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { usePoller } from "@/web-app/Hooks";
+import { pathTo } from "@/web-app/Navigator";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ItemActionsMenu, ListActionsMenu } from ".";
-
 import "./ManageScreen.css";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -37,12 +30,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader
-        searchTerm={searchTerm}
-        onSearch={onSearchChange}
-        titleIcon={IconNames.KEY}
-        rightContent={<ListActionsMenu />}
-      />
+      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.KEY} rightContent={<ListActionsMenu />} />
       <div className="AppScreenContent">
         <HTMLTable interactive compact striped className="AppDataTable" data-table="pods">
           <thead>
@@ -77,8 +65,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   title={t("Pod processes")}
                 />
               );
-              const creationDate =
-                typeof pod.Created === "string" ? dayjs(pod.Created) : dayjs(Number(pod.Created) * 1000);
+              const creationDate = typeof pod.Created === "string" ? dayjs(pod.Created) : dayjs(Number(pod.Created) * 1000);
               return (
                 <tr key={pod.Id} data-pod={pod.Id} data-state={pod.Status}>
                   <td>{podDetailsButton}</td>
@@ -113,6 +100,6 @@ Screen.Route = {
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE_ADD
 };
-Screen.isAvailable = (context: ApplicationDescriptor) => {
-  return !context.currentConnector.engine.startsWith("docker");
+Screen.isAvailable = (currentConnector?: Connector) => {
+  return !(currentConnector?.engine || "").startsWith("docker");
 };

@@ -3,5 +3,3 @@ declare module "i18next" {
     returnNull: false;
   }
 }
-
-declare module "electron-log";

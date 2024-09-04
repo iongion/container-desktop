@@ -124,7 +124,7 @@ def main():
     shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.svg"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.svg"))
     shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.ico"), os.path.join(PROJECT_HOME, "src/resources/icons/favicon.ico"))
     shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/96x96.png"), os.path.join(PROJECT_HOME, "src/resources/icons/favicon.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/96x96.png"), os.path.join(PROJECT_HOME, "src/resources/icons/icon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/512x512.png"), os.path.join(PROJECT_HOME, "src/resources/icons/icon.png"))
     shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/96x96.png"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.png"))
     shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/trayIcon.png"), os.path.join(PROJECT_HOME, "src/resources/icons/trayIcon.png"))
     # Public and docs icons

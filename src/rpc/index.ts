@@ -2,6 +2,7 @@
 // vendors
 import { v4 } from "uuid";
 // project
+import { ILogger } from "@/env/Types";
 import { createLogger } from "@/logger";
 // locals
 export const DEFAULT_MAX_EXECUTION_TIME = 60000;
@@ -13,7 +14,7 @@ export class RPCWorkerGateway {
   private invocations: any;
   private worker: any;
   private keepAlive: boolean;
-  private logger: any;
+  private logger: ILogger;
 
   constructor(factory) {
     this.factory = factory;

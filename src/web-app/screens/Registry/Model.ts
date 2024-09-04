@@ -1,8 +1,7 @@
-// vendors
 import { Action, Thunk, action, thunk } from "easy-peasy";
-// project
-import { AppRegistry, ResetableModel } from "../../domain/types";
-import { RegistriesMap, Registry, RegistrySearchOptions, RegistrySearchResult } from "../../Types.container-app";
+
+import { RegistriesMap, Registry, RegistrySearchOptions, RegistrySearchResult } from "@/env/Types";
+import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface CreateRegistryOptions {}
 export interface RegistriesModelState {
@@ -84,21 +83,21 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
   // Thunks
   registriesFetch: thunk(async (actions) => {
     return registry.withPending(async () => {
-      const registriesMap = await registry.api.getRegistriesMap();
+      const registriesMap = await registry.getApi().getRegistriesMap();
       actions.setRegistriesMap(registriesMap);
       return registriesMap;
     });
   }),
   registryFetch: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const it = await registry.api.getRegistry(name);
+      const it = await registry.getApi().getRegistry(name);
       actions.registryUpdate(it);
       return registry;
     })
   ),
   registryRemove: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const removed = await registry.api.removeRegistry(name);
+      const removed = await registry.getApi().removeRegistry(name);
       if (removed) {
         actions.registryDelete(name);
       }
@@ -107,7 +106,7 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
   ),
   registryCreate: thunk(async (actions, it, { getState }) =>
     registry.withPending(async () => {
-      const item = await registry.api.createRegistry(it);
+      const item = await registry.getApi().createRegistry(it);
       item.weight = Math.max(...getState().registriesMap.custom.map((it) => it.weight)) + 1;
       if (item) {
         actions.registryAdd(item);
@@ -120,7 +119,7 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
       actions.setTerm(options.term || "");
       actions.setOfficial(!!options.filters.isOfficial);
       actions.setAutomated(!!options.filters.isAutomated);
-      const items = await registry.api.searchRegistry(options);
+      const items = await registry.getApi().searchRegistry(options);
       actions.setSearchResults(items);
       return items;
     })

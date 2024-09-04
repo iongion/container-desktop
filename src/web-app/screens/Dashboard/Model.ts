@@ -1,8 +1,8 @@
 // vendors
 import { Action, Thunk, action, thunk } from "easy-peasy";
 // project
-import { ContainerStateList } from "../../Types.container-app";
-import { AppRegistry, ResetableModel } from "../../domain/types";
+import { ContainerStateList } from "@/env/Types";
+import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface ContainerStats {
   paused: number;
@@ -56,7 +56,7 @@ export const createModel = async (registry: AppRegistry): Promise<DashboardModel
   containersFetchStats: thunk(async (actions) =>
     registry.withPending(async () => {
       // TODO: Optimize this - avoid loading all containers data, avoid multi-traversal
-      const containers = await registry.api.getContainers();
+      const containers = await registry.getApi().getContainers();
       const pausedContainers = containers.filter((c) => c.Computed.DecodedState === ContainerStateList.PAUSED);
       const runningContainers = containers.filter((c) => c.Computed.DecodedState === ContainerStateList.RUNNING);
       const exitedContainers = containers.filter((c) => c.Computed.DecodedState === ContainerStateList.EXITED);

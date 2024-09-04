@@ -1,25 +1,19 @@
 import { AnchorButton, Code, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-import dayjs from "dayjs";
+import { Connector, Secret } from "@/env/Types";
+import { usePoller } from "@/web-app/Hooks";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 
-// project
-import { ApplicationDescriptor, Secret } from "../../Types.container-app";
-
-// module
-import { usePoller } from "../../Hooks";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { AppLabel } from "../../components/AppLabel";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
-import { getSecretUrl } from "./Navigation";
-
-// module
 import { SecretActionsMenu } from ".";
-
 import "./ManageScreen.css";
+import { getSecretUrl } from "./Navigation";
 
 export const ID = "secrets";
 
@@ -36,12 +30,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader
-        searchTerm={searchTerm}
-        onSearch={onSearchChange}
-        titleIcon={IconNames.KEY}
-        rightContent={<SecretActionsMenu />}
-      />
+      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.KEY} rightContent={<SecretActionsMenu />} />
       <div className="AppScreenContent">
         <HTMLTable interactive compact striped className="AppDataTable" data-table="secrets">
           <thead>
@@ -102,6 +91,6 @@ Screen.Route = {
 Screen.Metadata = {
   LeftIcon: IconNames.KEY
 };
-Screen.isAvailable = (context: ApplicationDescriptor) => {
-  return !context.currentConnector.engine.startsWith("docker");
+Screen.isAvailable = (currentConnector?: Connector) => {
+  return !(currentConnector?.engine || "").startsWith("docker");
 };

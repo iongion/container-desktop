@@ -9,9 +9,7 @@ import "./AppScreenHeader.css";
 interface AppScreenHeaderProps {
   searchTerm?: string;
   onSearch?: React.ChangeEventHandler<HTMLInputElement> | undefined;
-  onSearchTrigger?:
-    | (((event: React.MouseEvent<HTMLElement, MouseEvent>) => void) & React.MouseEventHandler<HTMLButtonElement>)
-    | undefined;
+  onSearchTrigger?: (((event: React.MouseEvent<HTMLElement, MouseEvent>) => void) & React.MouseEventHandler<HTMLButtonElement>) | undefined;
   withoutSearch?: boolean;
   withSearchTrigger?: boolean;
   withBack?: boolean;
@@ -60,9 +58,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
     <Navbar.Group align={Alignment.LEFT}>
       <Navbar.Heading>
         <Button minimal title={t("Go back")} icon={IconNames.CHEVRON_LEFT} onClick={onGoBackClick} />
-        {withList && (
-          <AnchorButton minimal icon={listRouteIcon || IconNames.LIST} href={listRoutePath} title={t("Jump to list")} />
-        )}
+        {withList && <AnchorButton minimal icon={listRouteIcon || IconNames.LIST} href={listRoutePath} title={t("Jump to list")} />}
       </Navbar.Heading>
     </Navbar.Group>
   ) : null;
@@ -77,13 +73,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
         onKeyPress={onSearchKeyPress}
         rightElement={
           withSearchTrigger ? (
-            <Button
-              minimal
-              text={t("Search")}
-              onClick={onSearchTrigger}
-              className="SearchButtonTrigger"
-              disabled={searchTerm === undefined || searchTerm === ""}
-            />
+            <Button minimal text={t("Search")} onClick={onSearchTrigger} className="SearchButtonTrigger" disabled={searchTerm === undefined || searchTerm === ""} />
           ) : undefined
         }
       />

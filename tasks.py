@@ -15,7 +15,7 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT", NODE_ENV)
 APP_PROJECT_VERSION = PROJECT_VERSION
 TARGET = os.environ.get("TARGET", "linux")
 PORT = int(os.environ.get("PROT", str(3000)))
-
+PTY = os.name != "nt"
 
 def get_env():
     return {
@@ -44,11 +44,11 @@ def run_env(ctx, cmd, env=None):
             nvm_rc = os.path.join(ctx.cwd, ".nvmrc")
             if os.path.exists(nvm_rc):
                 with ctx.prefix("nvm use"):
-                    ctx.run(cmd, env=cmd_env, pty=True)
+                    ctx.run(cmd, env=cmd_env, pty=PTY)
             else:
-                ctx.run(cmd, env=cmd_env, pty=True)
+                ctx.run(cmd, env=cmd_env, pty=PTY)
     else:
-        ctx.run(cmd, env=cmd_env, pty=True)
+        ctx.run(cmd, env=cmd_env, pty=PTY)
 
 
 

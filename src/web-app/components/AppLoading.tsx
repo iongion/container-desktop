@@ -1,6 +1,6 @@
 import { Intent, ProgressBar } from "@blueprintjs/core";
 // project
-import { useStoreState } from "../domain/types";
+import { useStoreState } from "@/web-app/domain/types";
 // module
 import "./AppLoading.css";
 

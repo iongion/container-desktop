@@ -1,12 +1,10 @@
 import i18n from "i18next";
 import React, { useCallback, useContext } from "react";
 import { initReactI18next } from "react-i18next";
-//
+
 import { DEFAULT_LANGUAGE } from "@/web-app/App.config";
 import { Languages } from "@/web-app/App.resources";
 import en from "./translations/en.json";
-
-// module
 
 export const TRANSLATIONS = ["en", "ro"];
 export const TRANSLATION_LANGUAGES = Languages.filter((it) => TRANSLATIONS.includes(it["639-1"]));
@@ -41,8 +39,6 @@ export const getCurrentLanguage = () => {
       escapeValue: false
     }
   });
-
-export default i18n;
 
 export interface II18nContext {
   currentLanguage: string;
@@ -93,3 +89,5 @@ export const useTranslate = () => {
 };
 
 export const t = (key: string, rest?: any) => (i18n as any).t(key, rest, { lng: getCurrentLanguage() });
+
+export default { t };

@@ -1,23 +1,19 @@
 import { AnchorButton, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-import dayjs from "dayjs";
+import { Connector, ContainerEngine, PodmanMachine } from "@/env/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { usePoller } from "@/web-app/Hooks";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-// project
-import { ApplicationDescriptor, Machine } from "../../Types.container-app";
-
-// module
 import { ActionsMenu } from ".";
-import { usePoller } from "../../Hooks";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { AppLabel } from "../../components/AppLabel";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
-import { getMachineUrl } from "./Navigation";
-
 import "./ManageScreen.css";
+import { getMachineUrl } from "./Navigation";
 
 export const ID = "machines";
 
@@ -26,19 +22,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const machinesFetch = useStoreActions((actions) => actions.machine.machinesFetch);
-  const machines: Machine[] = useStoreState((state) => state.machine.machinesSearchByTerm(searchTerm));
+  const machines: PodmanMachine[] = useStoreState((state) => state.machine.machinesSearchByTerm(searchTerm));
 
   // Change hydration
   usePoller({ poller: machinesFetch });
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader
-        searchTerm={searchTerm}
-        onSearch={onSearchChange}
-        titleIcon={IconNames.HEAT_GRID}
-        rightContent={<ActionsMenu />}
-      />
+      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.HEAT_GRID} rightContent={<ActionsMenu />} />
       <div className="AppScreenContent">
         <HTMLTable interactive compact striped className="AppDataTable" data-table="machines">
           <thead>
@@ -50,7 +41,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <th data-column="Active">{t("Active")}</th>
               <th data-column="Running">{t("Running")}</th>
               <th data-column="LastUp">
-                <AppLabel iconName={IconNames.CALENDAR} text={t("Last Up")} />
+                <AppLabel iconName={IconNames.CALENDAR} text={t("titleBarStyle")} />
               </th>
               <th data-column="Created">
                 <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
@@ -63,14 +54,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               return (
                 <tr key={machine.Name}>
                   <td>
-                    <AnchorButton
-                      className="InspectMachineButton"
-                      minimal
-                      small
-                      href={getMachineUrl(machine.Name, "inspect")}
-                      intent={Intent.PRIMARY}
-                      icon={IconNames.EYE_OPEN}
-                    >
+                    <AnchorButton className="InspectMachineButton" minimal small href={getMachineUrl(machine.Name, "inspect")} intent={Intent.PRIMARY} icon={IconNames.EYE_OPEN}>
                       <span>{machine.Name}</span>
                     </AnchorButton>
                   </td>
@@ -100,6 +84,8 @@ Screen.Route = {
 Screen.Metadata = {
   LeftIcon: IconNames.HEAT_GRID
 };
-Screen.isAvailable = (context: ApplicationDescriptor) => {
-  return !context.currentConnector.engine.startsWith("docker");
+Screen.isAvailable = (currentConnector?: Connector) => {
+  const isDocker = (currentConnector?.engine || "").startsWith("docker");
+  const isPodmanWSL = currentConnector?.engine === ContainerEngine.PODMAN_VIRTUALIZED_WSL;
+  return !(isDocker || isPodmanWSL);
 };

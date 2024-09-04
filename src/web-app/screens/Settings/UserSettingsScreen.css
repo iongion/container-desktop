@@ -1,88 +1,36 @@
 .AppSettingsEngineManager {
   margin-top: 10px;
 }
-
-.AppSettingsEngineManager .bp5-tab-list {
-  padding-left: 10px;
+.AppSettingsForm .bp5-form-group {
+  margin: 0;
 }
-.AppSettingsEngineManager .bp5-tab-panel {
-  margin-top: 5px;
-}
-
 .AppSettingsCallout {
   text-align: center;
   padding: 5px !important;
   margin: 0;
 }
-.AppSettingsFormView[data-form-view="container-engine"] {
-  border: 1px solid #111;
-  margin-bottom: 10px;
-}
-.AppSettingsFormView[data-form-view="container-engine"] .AppSettingsFormViewBody {
-  display: flex;
-  padding: 5px;
-}
-.AppSettingsFormView[data-form-view="container-engine"] .AppSettingsFormViewFooter {
-  padding: 5px;
-  background: #141414;
-  padding-left: 210px;
-  display: flex;
-  align-items: center;
-}
 .AppSettingsFormColumn {
   display: flex;
 }
-.AppSettingsForm[data-form="engine"] {
+.AppSettingsFeaturesToggles {
   display: flex;
-  padding: 0;
-}
-.AppSettingsForm[data-form="engine"] > .bp5-form-group {
-  margin: 0;
-}
-.AppSettingsField .bp5-control,
-.AppSettingsForm[data-form="engine"] .AppSettingsField {
-  display: flex;
-  vertical-align: middle;
-  align-items: center;
   flex: 1;
-  margin: 0;
-  padding-top: 7px;
-  padding-bottom: 7px;
-  padding-left: 30px;
-  padding-right: 10px;
-  width: 100%;
-}
-.AppSettingsField .bp5-control-indicator {
-  margin-top: 0;
-}
-.AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
-  border-top-left-radius: 5px;
-  border-bottom-left-radius: 5px;
-}
-.AppSettingsForm[data-form="engine"] .AppSettingsField .RadioLabel {
-  min-width: 130px;
-  display: inline-block;
-}
-.AppSettingsForm[data-form="engine"] .AppSettingsField .bp5-html-select {
-  min-width: 200px;
-}
-.AppSettingsForm[data-form="engine.settings"] {
-  flex: 1;
-  width: 100%;
-  margin-left: -2px;
-  padding: 10px;
-}
-.AppSettingsForm[data-form="flags"] {
-  padding: 10px;
-  display: flex;
-}
-.AppSettingsForm[data-form="flags"] .bp5-form-group {
-  flex-grow: 1;
-  flex-basis: 0;
-}
-.AppSettingsForm[data-form="flags"] .bp5-form-group label {
-  white-space: nowrap;
+  column-gap: 4px;
   padding-right: 4px;
+  padding-left: 4px;
+}
+.AppSettingsFormVersionCheck,
+.AppSettingsFormLoggingLevel {
+  display: flex;
+  width: 215px;
+}
+.AppSettingsFormVersionCheck .bp5-form-group {
+  display: flex;
+  flex: 1;
+}
+.AppSettingsFormVersionCheckActions {
+  display: flex;
+  flex: 1;
 }
 .AppSettingUserConfigurationPath {
   width: 100%;
@@ -119,6 +67,11 @@
   font-family: monospace;
   border-radius: 4px;
 }
+.AppSettingsForm[data-form="flags"] {
+  padding-bottom: 10px;
+  padding-top: 10px;
+}
+.AppSettingsForm[data-form="flags"],
 .AppSettingsForm[data-form="logging"] {
   display: flex;
   flex-direction: row;
@@ -127,18 +80,102 @@
   padding-right: 4px;
   padding-left: 4px;
 }
+.AppSettingsForm[data-form="flags"] .bp5-form-group:first-child,
 .AppSettingsForm[data-form="logging"] .bp5-form-group:first-child {
   flex: 1;
 }
-[data-screen="settings.user-settings"] .NavbarLeft {
+[data-screen="settings-settings"] .NavbarLeft {
   display: flex;
   align-items: center;
   align-content: center;
 }
-[data-screen="settings.user-settings"] .AppScreenHeaderText {
+[data-screen="settings-settings"] .AppScreenHeaderText {
   padding: 10px;
   padding-top: 6px;
   padding-bottom: 6px;
   border-radius: 5px;
   font-size: 11px;
+}
+
+.AppSettingsEngineManagerConnections {
+  height: 300px;
+  border: 1px solid #333;
+  position: relative;
+  background-color: #2a262c;
+  overflow: auto;
+}
+.AppSettingsEngineManagerConnections [data-table="engine.connections"] thead {
+  position: sticky;
+  width: 100%;
+}
+.AppSettingsEngineManagerConnections [data-table="engine.connections"] tbody {
+  vertical-align: top;
+}
+.AppSettingsEngineManagerConnections [data-table="engine.connections"] tbody tr td:nth-child(1) {
+  width: 1px;
+}
+.AppSettingsEngineManagerConnections [data-table="engine.connections"] thead tr th:nth-child(2),
+.AppSettingsEngineManagerConnections [data-table="engine.connections"] tbody tr td:nth-child(2) {
+  text-align: left !important;
+  width: 100%;
+}
+.AppSettingsEngineManagerConnections [data-table="engine.connections"] tr[data-connection-is-default="yes"] {
+  background-color: #670841;
+}
+.AppSettingsEngineManagerConnections [data-table="engine.connections"] tr[data-connection-is-connected="yes"] {
+  background-color: #1b3f1b;
+}
+.AppSettingsEngineManagerConnections .PlatformScopeName,
+.AppSettingsEngineManagerConnections .PlatformScopeLabel {
+  margin: 0;
+  padding: 0;
+}
+.AppSettingsEngineManagerConnections .PlatformScopeName {
+  font-weight: bold;
+}
+.AppSettingsEngineManagerConnections .PlatformScopeLabel {
+  font-size: 9px;
+  color: #999;
+}
+.AppSettingsEngineManagerConnectionsController {
+  padding: 5px;
+}
+.PlatformConnectionName,
+.PlatformConnectionURI {
+  margin: 0;
+  padding: 0;
+}
+.PlatformConnectionName {
+  font-size: 12px;
+  padding-top: 2px;
+  padding-bottom: 5px;
+}
+.PlatformConnectionURI {
+  color: #999;
+}
+
+[data-theme="bp5-dark"] [data-runtime="docker"] .AppSettingsEngineManagerConnections {
+  background-color: var(--docker-dark-bg-color);
+}
+[data-theme="bp5-dark"] [data-runtime="docker"] .AppSettingsEngineManagerConnections [data-table="engine.connections"] tr[data-connection-is-default="yes"] {
+  background-color: #00395a;
+}
+[data-theme="bp5-dark"] [data-runtime="docker"] .AppSettingsEngineManagerConnections [data-table="engine.connections"] tr[data-connection-is-connected="yes"] {
+  background-color: #0b4e0b;
+}
+
+[data-theme="bp5-light"] .AppSettingsEngineManagerConnections {
+  background-color: var(--docker-light-bg-color);
+}
+[data-theme="bp5-light"] .AppSettingsEngineManagerConnections [data-table="engine.connections"] tr[data-connection-is-default="yes"] {
+  background-color: #ffffff;
+}
+[data-theme="bp5-light"] .AppSettingsEngineManagerConnections [data-table="engine.connections"] tr[data-connection-is-connected="yes"] {
+  background-color: #baffba;
+}
+[data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformScopeLabel {
+  color: #333;
+}
+[data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformConnectionURI {
+  color: #777;
 }

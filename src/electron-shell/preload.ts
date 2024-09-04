@@ -1,36 +1,26 @@
-// vendors
-import { contextBridge, ipcRenderer } from "electron";
-// project
-import { bridge } from "@/container-app";
-import { createLogger } from "@/logger";
-// locals
-// Using worker to avoid users perceive the app as stuck during long operations
-import { UserConfiguration } from "@/container-config";
-import { CURRENT_OS_TYPE } from "../Environment";
+import * as Electron from "electron";
 
-async function main() {
-  const logger = await createLogger("preload");
-  logger.debug("Starting renderer process");
-  contextBridge.exposeInMainWorld(
-    "nativeBridge",
-    await bridge.createContext({
-      ipcRenderer,
-      userConfiguration: await UserConfiguration.getInstance(),
-      osType: CURRENT_OS_TYPE,
-      version: import.meta.env.PROJECT_VERSION,
-      environment: import.meta.env.ENVIRONMENT
-    })
-  );
-  // Wait for window to bbe ready
-  window.addEventListener("DOMContentLoaded", () => {
-    const replaceText = (selector: any, text: any) => {
-      const element = document.getElementById(selector);
-      if (element) element.innerText = text;
-    };
-    for (const type of ["chrome", "node", "electron"]) {
-      replaceText(`${type}-version`, process.versions[type]);
-    }
-  });
+import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
+import { Command } from "@/platform/node-executor";
+import { MessageBus } from "./shared";
+
+// patch global like in preload
+(global as any).Command = Command;
+(global as any).Platform = Platform;
+(global as any).Path = Path;
+(global as any).FS = FS;
+(global as any).CURRENT_OS_TYPE = CURRENT_OS_TYPE;
+(global as any).MessageBus = MessageBus;
+
+function main() {
+  console.debug("Preload script loaded");
+  Electron.contextBridge.exposeInMainWorld("Command", Command);
+  Electron.contextBridge.exposeInMainWorld("Platform", Platform);
+  Electron.contextBridge.exposeInMainWorld("Path", Path);
+  Electron.contextBridge.exposeInMainWorld("FS", FS);
+  Electron.contextBridge.exposeInMainWorld("CURRENT_OS_TYPE", CURRENT_OS_TYPE);
+  Electron.contextBridge.exposeInMainWorld("MessageBus", MessageBus);
+  Electron.contextBridge.exposeInMainWorld("Preloaded", true);
 }
 
 main();

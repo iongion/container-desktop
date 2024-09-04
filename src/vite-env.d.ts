@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly PROJECT_TITLE: string;
   readonly PROJECT_DESCRIPTION: string;
   readonly ONLINE_API: string;
+  readonly HOST: string;
+  readonly PORT: string;
 }
 
 interface ImportMeta {

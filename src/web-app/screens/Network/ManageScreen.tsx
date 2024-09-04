@@ -2,22 +2,18 @@ import { AnchorButton, Code, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiDns, mdiEthernet, mdiInfinity, mdiNetwork, mdiScrewdriver } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
+import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-import dayjs from "dayjs";
+import { Network } from "@/env/Types";
+import { AppLabel } from "@/web-app/components/AppLabel";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { usePoller } from "@/web-app/Hooks";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-// project
-import { usePoller } from "../../Hooks";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { useAppScreenSearch } from "../../components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "../../domain/types";
-
-// module
 import { ActionsMenu } from ".";
-
-import { Network } from "../../Types.container-app";
-import { AppLabel } from "../../components/AppLabel";
 import "./ManageScreen.css";
 import { getNetworkUrl } from "./Navigation";
 
@@ -36,12 +32,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader
-        searchTerm={searchTerm}
-        onSearch={onSearchChange}
-        titleIcon={IconNames.HEAT_GRID}
-        rightContent={<ActionsMenu />}
-      />
+      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.HEAT_GRID} rightContent={<ActionsMenu />} />
       <div className="AppScreenContent">
         <HTMLTable interactive compact striped className="AppDataTable" data-table="networks">
           <thead>
@@ -72,19 +63,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </thead>
           <tbody>
             {(networks || []).map((network) => {
-              const creationDate =
-                typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
+              const creationDate = typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
               return (
                 <tr key={network.id} data-network={network.id}>
                   <td>
-                    <AnchorButton
-                      className="InspectNetworkButton"
-                      minimal
-                      small
-                      href={getNetworkUrl(network.id, "inspect")}
-                      intent={Intent.PRIMARY}
-                      icon={IconNames.EYE_OPEN}
-                    >
+                    <AnchorButton className="InspectNetworkButton" minimal small href={getNetworkUrl(network.id, "inspect")} intent={Intent.PRIMARY} icon={IconNames.EYE_OPEN}>
                       <span>{network.name}</span>
                     </AnchorButton>
                   </td>

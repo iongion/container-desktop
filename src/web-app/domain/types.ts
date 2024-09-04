@@ -1,31 +1,30 @@
 // vendors
 import { Action, EasyPeasyConfig, Store, Thunk, createTypedHooks } from "easy-peasy";
 // project
+import { ContainerClient, OnlineApi } from "@/container-client/Api.clients";
 import {
-  ApplicationDescriptor,
   ConnectOptions,
   Connector,
-  EngineApiOptions,
-  EngineProgramOptions,
+  DisconnectOptions,
+  EngineConnectorSettings,
   EngineUserSettingsOptions,
   FindProgramOptions,
   GenerateKubeOptions,
   GlobalUserSettings,
   GlobalUserSettingsOptions
-} from "../Types.container-app";
-
-import { ContainerClient, OnlineApi } from "../Api.clients";
-import { ContainersModel } from "../screens/Container/Model";
-import { DashboardModel } from "../screens/Dashboard/Model";
-import { ImagesModel } from "../screens/Image/Model";
-import { MachinesModel } from "../screens/Machine/Model";
-import { NetworksModel } from "../screens/Network/Model";
-import { PodsModel } from "../screens/Pod/Model";
-import { RegistriesModel } from "../screens/Registry/Model";
-import { SecretsModel } from "../screens/Secret/Model";
-import { SettingsModel } from "../screens/Settings/Model";
-import { TroubleshootModel } from "../screens/Troubleshoot/Model";
-import { VolumesModel } from "../screens/Volume/Model";
+} from "@/env/Types";
+import { OperatingSystem } from "@/platform";
+import { ContainersModel } from "@/web-app/screens/Container/Model";
+import { DashboardModel } from "@/web-app/screens/Dashboard/Model";
+import { ImagesModel } from "@/web-app/screens/Image/Model";
+import { MachinesModel } from "@/web-app/screens/Machine/Model";
+import { NetworksModel } from "@/web-app/screens/Network/Model";
+import { PodsModel } from "@/web-app/screens/Pod/Model";
+import { RegistriesModel } from "@/web-app/screens/Registry/Model";
+import { SecretsModel } from "@/web-app/screens/Secret/Model";
+import { SettingsModel } from "@/web-app/screens/Settings/Model";
+import { TroubleshootModel } from "@/web-app/screens/Troubleshoot/Model";
+import { VolumesModel } from "@/web-app/screens/Volume/Model";
 
 export enum AppBootstrapPhase {
   INITIAL = "initial",
@@ -33,6 +32,8 @@ export enum AppBootstrapPhase {
   CONNECTED = "connected",
   STARTING = "starting",
   STARTED = "started",
+  STOPPING = "stopping",
+  STOPPED = "stopped",
   READY = "ready",
   FAILED = "failed"
 }
@@ -46,7 +47,15 @@ export interface AppModelState {
   phase: AppBootstrapPhase;
   pending: boolean;
   native: boolean;
-  descriptor: ApplicationDescriptor;
+  // Descriptor
+  osType: OperatingSystem;
+  version: string;
+  environment: string;
+  provisioned?: boolean;
+  running?: boolean;
+  connectors: Connector[];
+  currentConnector?: Connector;
+  userSettings: GlobalUserSettings;
 }
 
 export interface ResetableModel<T extends object> {
@@ -61,20 +70,19 @@ export interface AppModel extends AppModelState {
   syncEngineUserSettings: Action<AppModel, EngineUserSettingsOptions>;
 
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
-  connectorUpdate: Action<AppModel, Partial<Connector>>;
+  connectorUpdate: Action<AppModel, Connector>;
+  connectorUpdateSettingsById: Action<AppModel, { id: string; settings: EngineConnectorSettings }>;
 
   // thunks
   reset: Thunk<DomainModel>;
-  start: Thunk<AppModel, ConnectOptions | undefined>;
+  startApplication: Thunk<AppModel, ConnectOptions | undefined>;
+  stopApplication: Thunk<AppModel, DisconnectOptions | undefined>;
   // configure: Thunk<AppModel>;
 
   setGlobalUserSettings: Thunk<AppModel, Partial<GlobalUserSettingsOptions>>;
   getGlobalUserSettings: Thunk<AppModel>;
 
   setConnectorSettings: Thunk<AppModel, EngineUserSettingsOptions>;
-
-  testProgramReachability: Thunk<AppModel, EngineProgramOptions>;
-  testApiReachability: Thunk<AppModel, EngineApiOptions>;
 
   findProgram: Thunk<AppModel, FindProgramOptions>;
 
@@ -91,9 +99,9 @@ export type AppStorePendingOperation = (store: AppStore) => Promise<any>;
 export type AppStorePendingCallback = (operation: AppStorePendingOperation) => Promise<any>;
 
 export interface AppRegistry {
-  api: ContainerClient;
   onlineApi: OnlineApi;
   getStore: () => AppStore;
+  getApi: () => ContainerClient;
   withPending: AppStorePendingCallback;
 }
 

@@ -1,271 +1,216 @@
-body.bp5-dark[data-adapter="docker"] {
+body.bp5-dark[data-runtime="docker"] {
   background-color: #030d2a;
 }
-body.bp5-dark[data-adapter="docker"] .AppHeader,
-body.bp5-dark[data-adapter="docker"] .AppHeader .bp5-navbar {
+body.bp5-dark[data-runtime="docker"] .AppHeader,
+body.bp5-dark[data-runtime="docker"] .AppHeader .bp5-navbar {
   background-color: #030d2a;
 }
-body.bp5-dark[data-adapter="docker"] .AppContent {
+body.bp5-dark[data-runtime="docker"] .AppContent {
   background-color: #0b142f;
 }
-body.bp5-dark[data-adapter="docker"] .AppScreenHeader .bp5-navbar {
+body.bp5-dark[data-runtime="docker"] .AppScreenHeader .bp5-navbar {
   background-color: #1f4374;
 }
-body.bp5-dark[data-adapter="docker"] .AppSidebar {
+body.bp5-dark[data-runtime="docker"] .AppSidebar {
   background-color: #030d2a;
 }
-body.bp5-dark[data-adapter="docker"] .AppSidebarFooter,
-body.bp5-dark[data-adapter="docker"] .AppSidebarFooter .bp5-navbar {
+body.bp5-dark[data-runtime="docker"] .AppSidebarFooter,
+body.bp5-dark[data-runtime="docker"] .AppSidebarFooter .bp5-navbar {
   background-color: #02091f;
 }
-body.bp5-dark[data-adapter="docker"]
-  .AppSettingsFormView[data-form-view="container-engine"]
-  .AppSettingsFormViewFooter {
+body.bp5-dark[data-runtime="docker"] .AppSettingUserConfigurationPath {
   background: #030d2a;
 }
-body.bp5-dark[data-adapter="docker"] .AppSettingUserConfigurationPath {
-  background: #030d2a;
-}
-body.bp5-dark[data-adapter="docker"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive,
-body.bp5-dark[data-adapter="docker"] .AppSettingsForm[data-form="engine.settings"] {
-  background-color: #1f4374;
-}
-body.bp5-dark[data-adapter="docker"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
+body.bp5-dark[data-runtime="docker"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
   color: #6caaff;
 }
-body.bp5-dark[data-adapter="docker"] .DashboardContainersReportTable {
+body.bp5-dark[data-runtime="docker"] .DashboardContainersReportTable {
   border-color: #6caaff;
 }
-body.bp5-dark[data-adapter="docker"] .bp5-popover-content .bp5-menu {
+body.bp5-dark[data-runtime="docker"] .bp5-popover-content .bp5-menu {
   background-color: #1f4374 !important;
 }
-body.bp5-dark[data-adapter="docker"] .bp5-popover-arrow-fill {
+body.bp5-dark[data-runtime="docker"] .bp5-popover-arrow-fill {
   fill: #1f4374 !important;
 }
-body.bp5-dark[data-adapter="docker"] .AppDrawer {
+body.bp5-dark[data-runtime="docker"] .AppDrawer {
   background-color: #0b1942 !important;
   box-shadow: none;
 }
-body.bp5-dark[data-adapter="docker"] .SecurityDetails {
+body.bp5-dark[data-runtime="docker"] .SecurityDetails {
   background: #0d1f47 !important;
 }
-body.bp5-dark[data-adapter="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
+body.bp5-dark[data-runtime="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: #0f1c3f;
 }
-body.bp5-dark[data-adapter="docker"] .AppDataTableGroupRow {
+body.bp5-dark[data-runtime="docker"] .AppDataTableGroupRow {
   background-color: #030d2a;
 }
-body.bp5-dark[data-adapter="docker"] [data-screen="registries"] .AppScreenContentView[data-column="right"] {
+body.bp5-dark[data-runtime="docker"] [data-screen="registries"] .AppScreenContentView[data-column="right"] {
   background: linear-gradient(to bottom, #1f4374, #0b142f, rgba(11, 20, 47, 0));
 }
-body.bp5-dark[data-adapter="docker"] [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
+body.bp5-dark[data-runtime="docker"] [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
   background-color: #1f4374;
   border-color: #5d9ef4;
 }
-body.bp5-dark[data-adapter="docker"] .AppDataTable thead {
+body.bp5-dark[data-runtime="docker"] .AppDataTable thead {
   background: #1f4374;
 }
 
 /* Status colors */
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerState[data-state="exited"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #8b104c;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerState[data-state="running"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerState[data-state="running"] {
   color: #60ff45;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerState[data-state="created"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerState[data-state="created"] {
   color: #00a6ff;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerState[data-state="stopped"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerState[data-state="stopped"] {
   color: #888a83;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerState[data-state="paused"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerState[data-state="paused"] {
   color: orange;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerReportStateCounts li {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerReportStateCounts li {
   background: #111;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerReportStateCounts li span {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerReportStateCounts li span {
   background-color: #111;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
   color: #60ff45;
 }
-body.bp5-dark[data-adapter="docker"] [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
   background-color: #8b104c;
 }
-body.bp5-dark[data-adapter="docker"]
-  [data-table="containers"]
-  .ContainerReportStateCounts
-  li[data-state="running"][data-count="0"],
-body.bp5-dark[data-adapter="docker"]
-  [data-table="containers"]
-  .ContainerReportStateCounts
-  li[data-state="exited"][data-count="0"] {
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
+body.bp5-dark[data-runtime="docker"] [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
   background-color: #111;
   color: #fff;
 }
-body.bp5-dark[data-adapter="docker"] .AppDataFormHeader {
+body.bp5-dark[data-runtime="docker"] .AppDataFormHeader {
   background: #02091f;
 }
 
 /* Light */
 :root {
   --docker-light-bg-color: #c1d2da;
+  --docker-dark-bg-color: #030d2a;
 }
-body.bp5-light[data-adapter="docker"] .AppHeader,
-body.bp5-light[data-adapter="docker"] .AppHeader .bp5-navbar {
+body.bp5-light[data-runtime="docker"] .AppHeader,
+body.bp5-light[data-runtime="docker"] .AppHeader .bp5-navbar {
   background-color: var(--docker-light-bg-color);
 }
-body.bp5-light[data-adapter="docker"] .AppContent {
+body.bp5-light[data-runtime="docker"] .AppContent {
   background-color: #efefef;
 }
-body.bp5-light[data-adapter="docker"] .AppScreenHeader .bp5-navbar {
+body.bp5-light[data-runtime="docker"] .AppScreenHeader .bp5-navbar {
   background-color: var(--docker-light-bg-color);
 }
-body.bp5-light[data-adapter="docker"] .AppSidebar {
+body.bp5-light[data-runtime="docker"] .AppSidebar {
   background-color: var(--docker-light-bg-color);
 }
-body.bp5-light[data-adapter="docker"] .AppSidebarFooter,
-body.bp5-light[data-adapter="docker"] .AppSidebarFooter .bp5-navbar {
+body.bp5-light[data-runtime="docker"] .AppSidebarFooter,
+body.bp5-light[data-runtime="docker"] .AppSidebarFooter .bp5-navbar {
   background-color: #7397a8;
   color: #fff;
 }
-body.bp5-light[data-adapter="docker"] [data-expanded="no"] .AppSidebarFooter .bp5-navbar svg {
+body.bp5-light[data-runtime="docker"] [data-expanded="no"] .AppSidebarFooter .bp5-navbar svg {
   color: #efefef;
 }
-body.bp5-light[data-adapter="docker"]
-  .AppSettingsFormView[data-form-view="container-engine"]
-  .AppSettingsFormViewFooter {
+body.bp5-light[data-runtime="docker"] .AppSettingUserConfigurationPath {
   background-color: var(--docker-light-bg-color);
 }
-body.bp5-light[data-adapter="docker"] .AppSettingUserConfigurationPath {
-  background-color: var(--docker-light-bg-color);
-}
-body.bp5-light[data-adapter="docker"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive,
-body.bp5-light[data-adapter="docker"] .AppSettingsForm[data-form="engine.settings"] {
-  background-color: #efefef;
-}
-body.bp5-light[data-adapter="docker"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
+body.bp5-light[data-runtime="docker"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
   color: #597cd5;
 }
-body.bp5-light[data-adapter="docker"] .DashboardContainersReportTable {
+body.bp5-light[data-runtime="docker"] .DashboardContainersReportTable {
   border-color: #597cd5;
 }
-body.bp5-light[data-adapter="docker"] .bp5-popover-content .bp5-menu,
-body.bp5-light[data-adapter="docker"] .AppSidebarFooterVersionsMenu {
+body.bp5-light[data-runtime="docker"] .bp5-popover-content .bp5-menu,
+body.bp5-light[data-runtime="docker"] .AppSidebarFooterVersionsMenu {
   background-color: #fff !important;
   color: #333;
 }
-body.bp5-light[data-adapter="docker"] .bp5-popover-arrow-fill {
+body.bp5-light[data-runtime="docker"] .bp5-popover-arrow-fill {
   fill: #fff !important;
 }
-body.bp5-light[data-adapter="docker"] .AppDrawer {
+body.bp5-light[data-runtime="docker"] .AppDrawer {
   background-color: #fff !important;
   box-shadow: none;
 }
-body.bp5-light[data-adapter="docker"] .AppScreen .bp5-navbar {
+body.bp5-light[data-runtime="docker"] .AppScreen .bp5-navbar {
   background-color: var(--docker-light-bg-color);
 }
-body.bp5-light[data-adapter="docker"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
+body.bp5-light[data-runtime="docker"] .AppSettingsForm[data-form="engine"] .AppSettingsFieldActive {
   background: #efefef;
 }
-body.bp5-light[data-adapter="docker"] .AppDataTableGroupRow {
+body.bp5-light[data-runtime="docker"] .AppDataTableGroupRow {
   background-color: var(--docker-light-bg-color);
 }
-body.bp5-light[data-adapter="docker"] [data-screen="registries"] .AppScreenContentView[data-column="right"] {
+body.bp5-light[data-runtime="docker"] [data-screen="registries"] .AppScreenContentView[data-column="right"] {
   background: linear-gradient(to bottom, var(--docker-light-bg-color), #efefef);
 }
-body.bp5-light[data-adapter="docker"] .AppDataTableGroupName .bp5-button .bp5-button-text .buttonTextLabel {
+body.bp5-light[data-runtime="docker"] .AppDataTableGroupName .bp5-button .bp5-button-text .buttonTextLabel {
   color: #333;
 }
-body.bp5-light .AppSettingsFormView[data-form-view="container-engine"] {
-  background: #fff;
-}
-
-body.bp5-light[data-adapter="docker"] .AppDataTable[data-table="images"] .ContainerImageRegistry {
+body.bp5-light[data-runtime="docker"] .AppDataTable[data-table="images"] .ContainerImageRegistry {
   color: #888;
 }
-body.bp5-light[data-adapter="docker"] .AppSettingUserConfigurationPath strong {
+body.bp5-light[data-runtime="docker"] .AppSettingUserConfigurationPath strong {
   color: #333;
 }
-body.bp5-light[data-adapter="docker"] .AppSettingUserConfigurationPath input {
+body.bp5-light[data-runtime="docker"] .AppSettingUserConfigurationPath input {
   background: #000;
 }
-body.bp5-light[data-adapter="docker"] [data-screen="settings.user-settings"] .AppScreenHeaderText {
+body.bp5-light[data-runtime="docker"] [data-screen="settings-settings"] .AppScreenHeaderText {
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
 }
-body.bp5-light[data-adapter="docker"] [data-table="container.inspect"] [data-table-row="group.name"] td {
+body.bp5-light[data-runtime="docker"] [data-table="container.inspect"] [data-table-row="group.name"] td {
   background: #96a2b3 !important;
 }
 
 /* Security */
-body.bp5-light[data-adapter="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
+body.bp5-light[data-runtime="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: #d5d6df;
 }
-body.bp5-light[data-adapter="docker"] .Severity {
+body.bp5-light[data-runtime="docker"] .Severity {
   color: #fff;
 }
-body.bp5-light[data-adapter="docker"]
-  .AppDataTable[data-table="image.scanning.report"]
-  tr[data-severity="CRITICAL"]
-  .Severity,
-body.bp5-light[data-adapter="docker"]
-  table[data-table="image.scanning.report.counts"]
-  tr[data-severity="CRITICAL"]
-  td
-  .Severity {
+body.bp5-light[data-runtime="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="CRITICAL"] .Severity,
+body.bp5-light[data-runtime="docker"] table[data-table="image.scanning.report.counts"] tr[data-severity="CRITICAL"] td .Severity {
   background-color: #c40000;
 }
-body.bp5-light[data-adapter="docker"]
-  .AppDataTable[data-table="image.scanning.report"]
-  tr[data-severity="HIGH"]
-  .Severity,
-body.bp5-light[data-adapter="docker"]
-  table[data-table="image.scanning.report.counts"]
-  tr[data-severity="HIGH"]
-  td
-  .Severity {
+body.bp5-light[data-runtime="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="HIGH"] .Severity,
+body.bp5-light[data-runtime="docker"] table[data-table="image.scanning.report.counts"] tr[data-severity="HIGH"] td .Severity {
   background-color: #590000;
 }
-body.bp5-light[data-adapter="docker"]
-  .AppDataTable[data-table="image.scanning.report"]
-  tr[data-severity="MEDIUM"]
-  .Severity,
-body.bp5-light[data-adapter="docker"]
-  table[data-table="image.scanning.report.counts"]
-  tr[data-severity="MEDIUM"]
-  td
-  .Severity {
+body.bp5-light[data-runtime="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="MEDIUM"] .Severity,
+body.bp5-light[data-runtime="docker"] table[data-table="image.scanning.report.counts"] tr[data-severity="MEDIUM"] td .Severity {
   background-color: #300606;
 }
-body.bp5-light[data-adapter="docker"]
-  .AppDataTable[data-table="image.scanning.report"]
-  tr[data-severity="LOW"]
-  .Severity,
-body.bp5-light[data-adapter="docker"]
-  table[data-table="image.scanning.report.counts"]
-  tr[data-severity="LOW"]
-  td
-  .Severity {
+body.bp5-light[data-runtime="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="LOW"] .Severity,
+body.bp5-light[data-runtime="docker"] table[data-table="image.scanning.report.counts"] tr[data-severity="LOW"] td .Severity {
   background-color: #c5c5c5;
   color: #666;
 }
-body.bp5-light[data-adapter="docker"] .AppDataTable[data-table="image.scanning.report"] tr td {
+body.bp5-light[data-runtime="docker"] .AppDataTable[data-table="image.scanning.report"] tr td {
   color: #789;
 }
-body.bp5-light[data-adapter="docker"] .SecurityDetails {
+body.bp5-light[data-runtime="docker"] .SecurityDetails {
   background: #d5d6df;
 }
-body.bp5-light[data-adapter="docker"] .AppDataTableGroupLinkVertical,
-body.bp5-light[data-adapter="docker"] .AppDataTableGroupLinkHorizontal {
+body.bp5-light[data-runtime="docker"] .AppDataTableGroupLinkVertical,
+body.bp5-light[data-runtime="docker"] .AppDataTableGroupLinkHorizontal {
   filter: invert(1);
 }
-body.bp5-light[data-adapter="docker"] [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
+body.bp5-light[data-runtime="docker"] [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
   background-color: #ffffff;
   border-color: #333;
 }
-body.bp5-light[data-adapter="docker"] .AppDataTable thead {
+body.bp5-light[data-runtime="docker"] .AppDataTable thead {
   background: var(--docker-light-bg-color);
 }

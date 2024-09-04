@@ -4,16 +4,13 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-// project
-import { AppScreen, AppScreenProps } from "../../Types";
-import { AppScreenHeader } from "../../components/AppScreenHeader";
-import { CodeEditor } from "../../components/CodeEditor";
-import { useStoreActions } from "../../domain/types";
+import { Secret } from "@/env/Types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { useStoreActions } from "@/web-app/domain/types";
 
-import { Secret } from "../../Types.container-app";
-// module
 import { SecretActionsMenu } from ".";
-
 import "./InspectScreen.css";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -39,23 +36,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
   if (!secret) {
     return (
       <div className="AppScreen" data-screen={ID}>
-        <NonIdealState
-          icon={IconNames.WARNING_SIGN}
-          title={t("There is no such secret")}
-          description={<p>{t("The secret was not found")}</p>}
-        />
+        <NonIdealState icon={IconNames.WARNING_SIGN} title={t("There is no such secret")} description={<p>{t("The secret was not found")}</p>} />
       </div>
     );
   }
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader
-        withoutSearch
-        withBack
-        titleText={secret.Spec.Name}
-        titleIcon={IconNames.KEY}
-        rightContent={<SecretActionsMenu secret={secret} withoutCreate />}
-      />
+      <AppScreenHeader withoutSearch withBack titleText={secret.Spec.Name} titleIcon={IconNames.KEY} rightContent={<SecretActionsMenu secret={secret} withoutCreate />} />
       <div className="AppScreenContent">
         <CodeEditor value={JSON.stringify(secret, null, 2)} />
       </div>

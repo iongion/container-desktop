@@ -4,12 +4,10 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTimeout } from "usehooks-ts";
 
-// project
-import { Notification } from "../../Notification";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { useStoreActions } from "../../domain/types";
+import { useStoreActions } from "@/web-app/domain/types";
+import { Notification } from "@/web-app/Notification";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-// module
 import "./Troubleshoot.css";
 
 export const ID = "troubleshoot";
@@ -22,7 +20,7 @@ interface ConfirmButtonProps extends ButtonProps {
   onCancel?: (event: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
-export const TimeoutButton: React.FC<ButtonProps> = (props) => {
+export const TimeoutButton: React.FC<ButtonProps> = (props: ButtonProps) => {
   const [countDownDisabled, setCountdownDisabled] = useState(true);
   useTimeout(() => {
     setCountdownDisabled(false);
@@ -30,7 +28,7 @@ export const TimeoutButton: React.FC<ButtonProps> = (props) => {
   return <Button {...props} disabled={props.disabled || countDownDisabled} />;
 };
 
-export const ConfirmButton: React.FC<ConfirmButtonProps> = ({ onConfirm, onCancel, ...props }) => {
+export const ConfirmButton: React.FC<ConfirmButtonProps> = ({ onConfirm, onCancel, ...props }: ConfirmButtonProps) => {
   const { t } = useTranslation();
   const [withConfirm, setWithConfirm] = useState(false);
   const onConfirmRequest = useCallback((e) => {

@@ -5,10 +5,9 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Program, WindowAction } from "../Types.container-app";
-
+import { Application } from "@/container-client/Application";
+import { Program, WindowAction } from "@/env/Types";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
-import { Native } from "../Native";
 import { pathTo } from "../Navigator";
 import { AppScreen } from "../Types";
 
@@ -16,36 +15,31 @@ import "./AppHeader.css";
 interface AppHeaderProps {
   screens: AppScreen<any>[];
   currentScreen?: AppScreen<any>;
-  program: Program;
-  running: boolean;
-  provisioned: boolean;
+  program?: Program;
+  provisioned?: boolean;
+  running?: boolean;
 }
 
 const WINDOW_ACTIONS_MAP = {
   "window.minimize": async () => {
-    const instance = await Native.getInstance();
+    const instance = Application.getInstance();
     await instance.minimize();
   },
   "window.maximize": async () => {
-    const instance = await Native.getInstance();
+    const instance = Application.getInstance();
     await instance.maximize();
   },
   "window.restore": async () => {
-    const instance = await Native.getInstance();
+    const instance = Application.getInstance();
     await instance.restore();
   },
   "window.close": async () => {
-    const instance = await Native.getInstance();
+    const instance = Application.getInstance();
     await instance.close();
   }
 };
 
-export const AppHeader: React.FC<AppHeaderProps> = ({
-  currentScreen,
-  program,
-  running,
-  provisioned
-}: AppHeaderProps) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ currentScreen, program, running, provisioned }: AppHeaderProps) => {
   const { t } = useTranslation();
   const [withControls, setWithControls] = useState(true);
   const onWindowControlClick = useCallback((e) => {
@@ -83,16 +77,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     rightSideControls = (
       <>
         {WINDOW_ACTIONS.map((it) => {
-          return (
-            <Button
-              title={it.title}
-              key={it.action}
-              data-action={it.action}
-              minimal
-              icon={it.icon as any}
-              onClick={onWindowControlClick}
-            />
-          );
+          return <Button title={it.title} key={it.action} data-action={it.action} minimal icon={it.icon as any} onClick={onWindowControlClick} />;
         })}
       </>
     );
@@ -102,10 +87,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     provisioned && running ? (
       <>
         <AnchorButton href={pathTo("/screens/settings/user-settings")} icon={IconNames.COG} />
-        <AnchorButton
-          href={pathTo("/screens/troubleshoot")}
-          icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />}
-        />
+        <AnchorButton href={pathTo("/screens/troubleshoot")} icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />} />
         <Divider />
       </>
     ) : null;
@@ -113,7 +95,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   useEffect(() => {
     (async () => {
-      const instance = await Native.getInstance();
+      const instance = Application.getInstance();
       const withControls = await instance.withWindowControls();
       setWithControls(withControls);
     })();

@@ -47,10 +47,15 @@
     "axios",
     "blkio",
     "blueprintjs",
+    "browserslistrc",
+    "CGROUPSV",
+    "cppvsdbg",
     "csstools",
     "CURRENTUSER",
+    "deepmerge",
     "devel",
     "devpts",
+    "Editability",
     "electronjs",
     "elfutils",
     "flathub",
@@ -59,6 +64,7 @@
     "GEOSEARCH",
     "groupinstall",
     "Healthcheck",
+    "HKLM",
     "hookform",
     "icns",
     "icnsutils",
@@ -70,11 +76,16 @@
     "iongion",
     "Ionut",
     "IPAM",
+    "ipvlan",
+    "ISSH",
     "Japonic",
     "kernelmode",
     "keystyle",
     "libpod",
     "limactl",
+    "listoption",
+    "macvlan",
+    "Mergeable",
     "Minimizable",
     "Mountpoint",
     "mstile",
@@ -94,16 +105,21 @@
     "portmappings",
     "precpu",
     "preread",
+    "printenv",
     "procs",
     "Proxying",
     "pulseaudio",
     "pyenv",
     "Resetable",
+    "resty",
     "resvg",
     "rimraf",
+    "rootfull",
+    "RUNTIMES",
     "scrollback",
     "slirp",
     "sonoma",
+    "statelyai",
     "Stoica",
     "stylelint",
     "svgo",
@@ -113,13 +129,15 @@
     "TLDR",
     "tmpfs",
     "trivy",
+    "unplugin",
     "usehooks",
     "usermode",
     "webgl",
     "whereis",
     "winget",
     "wslg",
-    "xattr"
+    "xattr",
+    "xstate"
   ],
   "editor.codeActionsOnSave": {
     "source.fixAll": "always",
@@ -148,9 +166,11 @@
     "**/.git/**": true
   },
   "files.watcherExclude": {
+    "**/.DS_Store": true,
     "**/.git/**": true,
-    "**/build": true,
-    "**/dist": true,
+    "**/build/**": true,
+    "**/release/**": true,
+    "**/dist/**": true,
     "**/node_modules/**": true
   },
   "i18n-ally.keystyle": "nested",
@@ -159,10 +179,21 @@
   "search.exclude": {
     "**/.DS_Store": true,
     "**/.git/**": true,
-    "**/build": true,
-    "**/dist": true,
+    "**/build/**": true,
+    "**/release/**": true,
+    "**/dist/**": true,
     "**/node_modules/**": true,
     ".eslintcache": true
   },
-  "typescript.preferences.importModuleSpecifier": "non-relative"
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp"
+  },
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
+  },
+  "git.ignoreLimitWarning": true
 }

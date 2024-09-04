@@ -2,16 +2,13 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-// project
-import { AppScreen, AppScreenProps } from "../../Types";
-import { CodeEditor } from "../../components/CodeEditor";
-import { ScreenLoader } from "../../components/ScreenLoader";
-import { useStoreActions } from "../../domain/types";
+import { ContainerImage } from "@/env/Types";
+import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-import { ContainerImage } from "../../Types.container-app";
-// module
 import { ScreenHeader } from ".";
-
 import "./InspectScreen.css";
 
 export const ID = "image.inspect";
@@ -29,7 +26,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const image = await imageFetch({
-          Id: id as any,
+          Id: decodeURIComponent(id as any),
           withHistory: true
         });
         setImage(image);

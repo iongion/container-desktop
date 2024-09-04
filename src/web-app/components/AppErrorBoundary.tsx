@@ -43,19 +43,10 @@ export default class AppErrorBoundary extends React.Component<
           <div className="AppContentDocument" data-error="yes">
             <div className="AppScreen" data-pending="yes">
               <div className="AppErrorBoundary">
-                <Callout
-                  className="AppErrorBoundaryCallout"
-                  title={this.props.title}
-                  icon={<ReactIcon.Icon path={mdiEmoticonSad} size={5} />}
-                >
+                <Callout className="AppErrorBoundaryCallout" title={this.props.title} icon={<ReactIcon.Icon path={mdiEmoticonSad} size={5} />}>
                   <h3>{this.props.message}</h3>
                   <p>{this.props.suggestion}</p>
-                  <Button
-                    onClick={this.onReconnectClick}
-                    icon={IconNames.RESOLVE}
-                    text={this.props.reconnect}
-                    intent={Intent.PRIMARY}
-                  />
+                  <Button onClick={this.onReconnectClick} icon={IconNames.RESOLVE} text={this.props.reconnect} intent={Intent.PRIMARY} />
                 </Callout>
               </div>
             </div>

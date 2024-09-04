@@ -1,0 +1,6 @@
+.RuntimeSelect {
+  display: flex;
+}
+.RuntimeSelectMenuItem.bp5-menu-item-is-selectable {
+  padding-left: 5px;
+}

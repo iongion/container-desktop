@@ -2,16 +2,13 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-// project
-import { AppScreen, AppScreenProps } from "../../Types";
-import { Container } from "../../Types.container-app";
-import { ScreenLoader } from "../../components/ScreenLoader";
-import { Terminal } from "../../components/Terminal";
-import { useStoreActions } from "../../domain/types";
+import { Container } from "@/env/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { Terminal } from "@/web-app/components/Terminal";
+import { useStoreActions } from "@/web-app/domain/types";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-// module
 import { ScreenHeader } from ".";
-
 import "./TerminalScreen.css";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -28,7 +25,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const container = await containerFetch({
-          Id: id as any,
+          Id: decodeURIComponent(id as any),
           withStats: true
         });
         setContainer(container);

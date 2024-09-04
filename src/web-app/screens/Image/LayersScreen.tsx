@@ -5,14 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-// project
-import { ScreenLoader } from "../../components/ScreenLoader";
-import { useStoreActions } from "../../domain/types";
-import { Notification } from "../../Notification";
-import { AppScreen, AppScreenProps } from "../../Types";
-import { ContainerImage } from "../../Types.container-app";
+import { ContainerImage } from "@/env/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
+import { Notification } from "@/web-app/Notification";
+import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-// module
 import { ScreenHeader } from ".";
 import "./LayersScreen.css";
 
@@ -27,23 +25,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { id } = useParams<{ id: string }>();
   const screenRef = useRef<HTMLDivElement>(null);
   const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const image = await imageFetch({
-          Id: id as any,
-          withHistory: true
-        });
-        setImage(image);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [imageFetch, id]);
-
   const onCopyToClipboardClick = useCallback(
     async (e) => {
       const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("td:nth-child(2)");
@@ -52,13 +33,30 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [t]
   );
+  const layers = image?.History || [];
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setPending(true);
+        const image = await imageFetch({
+          Id: decodeURIComponent(id as any),
+          withHistory: true
+        });
+        setImage(image);
+      } catch (error: any) {
+        console.error("Unable to fetch at this moment", error);
+        Notification.show({ message: t("Unable to load image - {{message}}", error), intent: Intent.DANGER });
+        history.back();
+      } finally {
+        setPending(false);
+      }
+    })();
+  }, [imageFetch, id, t]);
 
   if (!image) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
-  const layers = image.History || [];
-
-  console.debug("Image history", image);
 
   return (
     <div className="AppScreen" data-screen={ID} ref={screenRef}>
@@ -79,19 +77,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <tr key={index}>
                   <td>{index}</td>
                   <td>
-                    <textarea className="LayerHistory" readOnly rows={3}>
-                      {layer.CreatedBy || ""}
-                    </textarea>
+                    <textarea className="LayerHistory" readOnly rows={3} value={layer.CreatedBy || ""}></textarea>
                   </td>
                   <td>{layer.Size !== undefined ? prettyBytes(layer.Size) : t("- n/a -")}</td>
                   <td>
-                    <Button
-                      small
-                      minimal
-                      icon={IconNames.CLIPBOARD}
-                      data-action="copy.to.clipboard"
-                      onClick={onCopyToClipboardClick}
-                    />
+                    <Button small minimal icon={IconNames.CLIPBOARD} data-action="copy.to.clipboard" onClick={onCopyToClipboardClick} />
                   </td>
                 </tr>
               );

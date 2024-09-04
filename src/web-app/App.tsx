@@ -6,53 +6,46 @@ import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { Route, HashRouter as Router, Switch, useLocation } from "react-router-dom";
 
-import { Program } from "./Types.container-app";
-
-import { StoreProvider } from "./domain/store";
-import { AppBootstrapPhase, AppStore, useStoreActions, useStoreState } from "./domain/types";
-import { pathTo } from "./Navigator";
-
-import "./App.i18n";
-
-// locals
-import "./App.css";
-
-import { CURRENT_ENVIRONMENT } from "./Environment";
-
-import { AppHeader } from "./components/AppHeader";
-import { AppLoading } from "./components/AppLoading";
-import { AppSidebar } from "./components/AppSidebar";
-
+import { Program } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
-import AppErrorBoundary from "./components/AppErrorBoundary";
-import { Screen as ContainerGenerateKubeScreen } from "./screens/Container/GenerateKubeScreen";
-import { Screen as ContainerInspectScreen } from "./screens/Container/InspectScreen";
-import { Screen as ContainerLogsScreen } from "./screens/Container/LogsScreen";
-import { Screen as ContainersScreen } from "./screens/Container/ManageScreen";
-import { Screen as ContainerStatsScreen } from "./screens/Container/StatsScreen";
-import { Screen as ContainerTerminalScreen } from "./screens/Container/TerminalScreen";
-import { Screen as DashboardScreen } from "./screens/Dashboard";
-import { Screen as ImageInspectScreen } from "./screens/Image/InspectScreen";
-import { Screen as ImageLayersScreen } from "./screens/Image/LayersScreen";
-import { Screen as ImagesScreen } from "./screens/Image/ManageScreen";
-import { Screen as ImageSecurityScreen } from "./screens/Image/SecurityScreen";
-import { Screen as MachineInspectScreen } from "./screens/Machine/InspectScreen";
-import { Screen as MachinesScreen } from "./screens/Machine/ManageScreen";
-import { Screen as NetworkInspectScreen } from "./screens/Network/InspectScreen";
-import { Screen as NetworksScreen } from "./screens/Network/ManageScreen";
-import { Screen as PodGenerateKubeScreen } from "./screens/Pod/GenerateKubeScreen";
-import { Screen as PodInspectScreen } from "./screens/Pod/InspectScreen";
-import { Screen as PodLogsScreen } from "./screens/Pod/LogsScreen";
-import { Screen as PodsScreen } from "./screens/Pod/ManageScreen";
-import { Screen as PodProcessesScreen } from "./screens/Pod/ProcessesScreen";
-import { Screen as RegistriesScreen } from "./screens/Registry/ManageScreen";
-import { Screen as SecretInspectScreen } from "./screens/Secret/InspectScreen";
-import { Screen as SecretsScreen } from "./screens/Secret/ManageScreen";
-import { Screen as SystemInfoScreen } from "./screens/Settings/SystemInfoScreen";
-import { Screen as UserSettingsScreen } from "./screens/Settings/UserSettingsScreen";
-import { Screen as TroubleshootScreen } from "./screens/Troubleshoot/Troubleshoot";
-import { Screen as VolumeInspectScreen } from "./screens/Volume/InspectScreen";
-import { Screen as VolumesScreen } from "./screens/Volume/ManageScreen";
+import "@/web-app/App.css";
+import "@/web-app/App.i18n";
+import AppErrorBoundary from "@/web-app/components/AppErrorBoundary";
+import { AppHeader } from "@/web-app/components/AppHeader";
+import { AppLoading } from "@/web-app/components/AppLoading";
+import { AppSidebar } from "@/web-app/components/AppSidebar";
+import { StoreProvider } from "@/web-app/domain/store";
+import { AppBootstrapPhase, AppStore, useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
+import { pathTo } from "@/web-app/Navigator";
+import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Container/GenerateKubeScreen";
+import { Screen as ContainerInspectScreen } from "@/web-app/screens/Container/InspectScreen";
+import { Screen as ContainerLogsScreen } from "@/web-app/screens/Container/LogsScreen";
+import { Screen as ContainersScreen } from "@/web-app/screens/Container/ManageScreen";
+import { Screen as ContainerStatsScreen } from "@/web-app/screens/Container/StatsScreen";
+import { Screen as ContainerTerminalScreen } from "@/web-app/screens/Container/TerminalScreen";
+import { Screen as DashboardScreen } from "@/web-app/screens/Dashboard";
+import { Screen as ImageInspectScreen } from "@/web-app/screens/Image/InspectScreen";
+import { Screen as ImageLayersScreen } from "@/web-app/screens/Image/LayersScreen";
+import { Screen as ImagesScreen } from "@/web-app/screens/Image/ManageScreen";
+import { Screen as ImageSecurityScreen } from "@/web-app/screens/Image/SecurityScreen";
+import { Screen as MachineInspectScreen } from "@/web-app/screens/Machine/InspectScreen";
+import { Screen as MachinesScreen } from "@/web-app/screens/Machine/ManageScreen";
+import { Screen as NetworkInspectScreen } from "@/web-app/screens/Network/InspectScreen";
+import { Screen as NetworksScreen } from "@/web-app/screens/Network/ManageScreen";
+import { Screen as PodGenerateKubeScreen } from "@/web-app/screens/Pod/GenerateKubeScreen";
+import { Screen as PodInspectScreen } from "@/web-app/screens/Pod/InspectScreen";
+import { Screen as PodLogsScreen } from "@/web-app/screens/Pod/LogsScreen";
+import { Screen as PodsScreen } from "@/web-app/screens/Pod/ManageScreen";
+import { Screen as PodProcessesScreen } from "@/web-app/screens/Pod/ProcessesScreen";
+import { Screen as RegistriesScreen } from "@/web-app/screens/Registry/ManageScreen";
+import { Screen as SecretInspectScreen } from "@/web-app/screens/Secret/InspectScreen";
+import { Screen as SecretsScreen } from "@/web-app/screens/Secret/ManageScreen";
+import { Screen as SystemInfoScreen } from "@/web-app/screens/Settings/SystemInfoScreen";
+import { Screen as UserSettingsScreen } from "@/web-app/screens/Settings/UserSettingsScreen";
+import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Troubleshoot";
+import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
+import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 
 const Screens = [
   DashboardScreen,
@@ -92,9 +85,7 @@ export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const ready = phase === AppBootstrapPhase.READY;
-  const currentScreen = Screens.find((screen) =>
-    matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true })
-  );
+  const currentScreen = Screens.find((screen) => matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true }));
   const content = useMemo(() => {
     let content;
     if (ready) {
@@ -149,32 +140,24 @@ export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
 
 interface AppMainScreenContentProps {
   phase: AppBootstrapPhase;
-  program: Program;
-  running: boolean;
-  provisioned: boolean;
+  program?: Program;
+  running?: boolean;
+  provisioned?: boolean;
 }
 export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, phase, provisioned, running }) => {
-  const start = useStoreActions((actions) => actions.start);
+  const startApplication = useStoreActions((actions) => actions.startApplication);
   const { t } = useTranslation();
   const location = useLocation();
 
   const onReconnect = useCallback(() => {
-    start();
-  }, [start]);
+    startApplication();
+  }, [startApplication]);
 
-  const currentScreen = Screens.find((screen) =>
-    matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true })
-  );
+  const currentScreen = Screens.find((screen) => matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true }));
 
   return (
     <>
-      <AppHeader
-        program={program}
-        provisioned={provisioned}
-        running={running}
-        screens={Screens}
-        currentScreen={currentScreen}
-      />
+      <AppHeader program={program} provisioned={provisioned} running={running} screens={Screens} currentScreen={currentScreen} />
       <AppErrorBoundary
         onReconnect={onReconnect}
         reconnect={t("Try to recover")}
@@ -191,15 +174,14 @@ export function AppMainScreen() {
   const startRef = useRef(false);
   const phase = useStoreState((state) => state.phase);
   const native = useStoreState((state) => state.native);
-  const descriptor = useStoreState((state) => state.descriptor);
-  const start = useStoreActions((actions) => actions.start);
+  const running = useStoreState((state) => state.running);
+  const provisioned = useStoreState((state) => state.provisioned);
+  const osType = useStoreState((state) => state.osType);
+  const currentConnector = useStoreState((state) => state.currentConnector);
+  const theme = useStoreState((state) => state.userSettings.theme || DEFAULT_THEME);
+  const startApplication = useStoreActions((actions) => actions.startApplication);
 
-  const theme = descriptor.userSettings.theme || DEFAULT_THEME;
-  const provisioned = descriptor.provisioned;
-  const running = descriptor.running;
-  const osType = descriptor.osType;
-  const currentConnector = descriptor.currentConnector;
-  const program = currentConnector?.settings?.current?.program;
+  const program = currentConnector?.settings?.program;
 
   useEffect(() => {
     if (startRef.current) {
@@ -207,15 +189,15 @@ export function AppMainScreen() {
     } else {
       console.debug("Initial start has been triggered");
       startRef.current = true;
-      start();
+      startApplication();
     }
-  }, [start]);
+  }, [startApplication]);
 
   return (
     <div
       className="App"
-      data-adapter={currentConnector.adapter}
-      data-engine={currentConnector.engine}
+      data-runtime={currentConnector?.runtime}
+      data-engine={currentConnector?.engine}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
       data-os={osType}
@@ -225,7 +207,7 @@ export function AppMainScreen() {
     >
       <Helmet>
         <html data-theme={theme} lang="en" />
-        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-adapter={currentConnector.adapter} />
+        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-runtime={currentConnector?.runtime ?? "podman"} />
       </Helmet>
       <Router>
         <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
