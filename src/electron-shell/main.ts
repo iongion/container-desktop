@@ -34,11 +34,9 @@ const URLS_ALLOWED = [
 ];
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
 const logger = createLogger("shell.main");
+let tray: any = null;
 let applicationWindow: Electron.BrowserWindow;
 let notified = false;
-const ensureWindow = () => {
-  applicationWindow.show();
-};
 const isHideToTrayOnClose = async () => {
   return await userConfiguration.getKey("minimizeToSystemTray", false);
 };
@@ -104,8 +102,8 @@ ipcMain.on("openDevTools", () => {
 ipcMain.on("notify", (event, arg) => {
   if (arg && arg.message === "ready") {
     notified = true;
+    applicationWindow.show();
   }
-  ensureWindow();
 });
 ipcMain.handle("openFileSelector", async function (event, options) {
   logger.debug("IPC - openFileSelector - start", options);
@@ -124,10 +122,10 @@ ipcMain.handle("openTerminal", async function (event, options) {
   return success;
 });
 
-async function createWindow() {
+async function createApplicationWindow() {
   if (applicationWindow) {
-    logger.debug("Creating window - already created");
-    return applicationWindow;
+    logger.debug("Window already created - destroying it");
+    applicationWindow.destroy();
   }
   const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`);
   const appDevURL = import.meta.env.VITE_DEV_SERVER_URL;
@@ -210,10 +208,7 @@ async function createWindow() {
   applicationWindow.on("close", (event: any) => onMinimizeOrClose(event, "close"));
   applicationWindow.once("ready-to-show", () => {
     logger.debug("window is ready to show - waiting application ready-ness");
-    ensureWindow();
-    if (isDebug || isDevelopment()) {
-      activateTools();
-    }
+    applicationWindow.show();
     if ((windowConfigOptions as any).isMaximized) {
       applicationWindow.maximize();
     }
@@ -233,9 +228,13 @@ async function createWindow() {
     // if (url.startsWith(config.fileProtocol)) {
     //   return { action: "allow" };
     // }
-
     shell.openExternal(event.url, { activate: true });
     return { action: "deny" };
+  });
+  // Set-up context menu
+  contextMenu({
+    window: applicationWindow,
+    showInspectElement: true
   });
   logger.debug("Application URL is", { appURL, preloadURL, current: __dirname });
   try {
@@ -243,18 +242,20 @@ async function createWindow() {
   } catch (error: any) {
     console.error("Unable to load the application", error);
   }
-  applicationWindow.webContents.openDevTools({ mode: "detach" });
+  if (isDevelopment() || isDebug) {
+    applicationWindow.webContents.openDevTools({ mode: "detach" });
+  }
   return applicationWindow;
 }
 
 function createSystemTray() {
   if (tray) {
-    logger.debug("Creating system tray menu - already created");
+    logger.debug("Creating system tray menu - skipped - already present");
     return;
   }
   logger.debug("Creating system tray menu");
   tray = new Tray(trayIconPath);
-  const contextMenu = Menu.buildFromTemplate([
+  const trayMenu = Menu.buildFromTemplate([
     {
       label: "Show main window",
       click: async () => {
@@ -276,38 +277,14 @@ function createSystemTray() {
     }
   ]);
   tray.setToolTip("Podman Desktop Companion");
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(trayMenu);
 }
 
-// see https://mmazzarolo.com/blog/2021-08-12-building-an-electron-application-using-create-react-app/
-//let mainWindow: any;
-let tray: any = null;
-(async () => {
+async function main() {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
-  contextMenu({
-    showInspectElement: true // Always show to help debugging
-  });
   app.commandLine.appendSwitch("ignore-certificate-errors");
-  // app.on("activate", async () => {
-  //   if (!applicationWindow && BrowserWindow.getAllWindows().length === 0) {
-  //     applicationWindow = await createWindow();
-  //   }
-  // });
-  app.whenReady().then(async () => {
-    // setup window
-    await createWindow();
-  });
-  /*
-  app.on("window-all-closed", async () => {
-    if (await isHideToTrayOnClose()) {
-      createSystemTray();
-      if (isDevelopment()) {
-        logger.debug("When Hide to tray is set - the application is not quitted");
-      }
-    } else {
-      logger.debug("Quitting the application and killing all nested processes", notified);
-      app.quit();
-    }
-  });
-  */
-})();
+  await app.whenReady();
+  await createApplicationWindow();
+}
+
+main();
