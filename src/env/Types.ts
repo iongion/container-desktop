@@ -499,6 +499,9 @@ export interface ContainerPort {
   host_ip: string;
   range: number;
   protocol: string;
+  PrivatePort?: number;
+  PublicPort?: number;
+  Type?: string;
 }
 export interface ContainerPorts {
   [key: string]: ContainerPort;

@@ -161,8 +161,8 @@ async function createApplicationWindow() {
   let closed = false;
   const onMinimizeOrClose = async (event: any, source: any) => {
     if (closed) {
-      logger.debug("Already closed - skipping event", source);
-      return;
+      logger.debug("Already closed - skipping event and terminating", source);
+      return true;
     }
     event.preventDefault();
     logger.debug("Checking if must hide to tray", source);
@@ -173,14 +173,19 @@ async function createApplicationWindow() {
       event.returnValue = false;
       if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
         app.dock.hide();
+        if (isDevelopment()) {
+          closed = true;
+        }
       }
     } else if (source === "close") {
       closed = true;
     } else if (source === "closed") {
       closed = true;
     }
+    console.debug("Quitting application from", { source, closed });
     if (closed) {
       app.quit();
+      process.exit(0);
     }
   };
   // Application window
