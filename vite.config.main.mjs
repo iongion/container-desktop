@@ -13,9 +13,14 @@ export default ({ mode, command }) => {
   config.build.lib = {
     entry: "src/electron-shell/main.ts",
     formats: ["es"]
-    // fileName: "main"
   };
+  // config.build.manifest = true;
   config.build.rollupOptions.external = ["electron"];
-  console.debug("<<< MAIN >>>", config);
+  config.build.rollupOptions.preserveEntrySignatures = "exports-only";
+  config.build.rollupOptions.output.exports = "auto";
+  config.build.rollupOptions.output.format = "es";
+  if (ENVIRONMENT === "production") {
+    // config.plugins.push(createSingleFile(false));
+  }
   return config;
 };

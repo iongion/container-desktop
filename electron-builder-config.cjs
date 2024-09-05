@@ -16,7 +16,17 @@ const config = {
     releaseName: `${pkg.title} ${pkg.version}`,
     releaseDate: dayjs().format("MMM DD, YYYY")
   },
-  files: ["build", "LICENSE", "!node_modules/**/*"],
+  asar: true,
+  files: [
+    // Exclude all
+    // "!**/*",
+    // What to copy
+    "build",
+    "LICENSE",
+    "!**/node_modules/**/*"
+  ],
+  // electronLanguages: ["en"],
+  // includeSubNodeModule: false,
   extraMetadata: {
     version: pkg.version,
     main: `build/main-${pkg.version}.mjs`

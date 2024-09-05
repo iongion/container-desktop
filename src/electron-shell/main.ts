@@ -53,7 +53,7 @@ const isDevelopment = () => {
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
 };
 const iconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/appIcon-duotone.png") : path.join(__dirname, "appIcon-duotone.png");
-const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/trayIcon-duotone-28.png") : path.join(__dirname, "trayIcon-duotone-28.png");
+const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/trayIcon-duotone.png") : path.join(__dirname, "trayIcon-duotone.png");
 const activateTools = () => {
   if (isDevelopment() || isDebug) {
     try {
@@ -62,7 +62,7 @@ const activateTools = () => {
         applicationWindow.webContents.closeDevTools();
       } else {
         logger.debug("Opening dev tools");
-        applicationWindow.webContents.openDevTools();
+        applicationWindow.webContents.openDevTools({ mode: "detach" });
       }
     } catch (error: any) {
       logger.error("Unable to open dev tools", error.message, error.stack);
@@ -242,7 +242,12 @@ async function createWindow() {
     return { action: "deny" };
   });
   logger.debug("Application URL is", { appURL, preloadURL, windowOptions });
-  await applicationWindow.loadURL(appURL);
+  try {
+    await applicationWindow.loadURL(appURL);
+  } catch (error: any) {
+    console.error("Unable to load the application", error);
+  }
+  applicationWindow.webContents.openDevTools({ mode: "detach" });
   return applicationWindow;
 }
 

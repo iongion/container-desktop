@@ -1,14 +1,77 @@
 import fs from "node:fs";
 import path from "node:path";
 // vendors
+import ncc from "@vercel/ncc";
 import * as dotenv from "dotenv";
-import { merge } from "lodash-es";
+import merge from "lodash.merge";
+import MagicString from "magic-string";
 import { checker } from "vite-plugin-checker";
 import topLevelAwait from "vite-plugin-top-level-await";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 // pkg
 import pkg from "./package.json";
+
+export function createSingleFile(patch) {
+  let currentOutputConfig = {};
+  return [
+    {
+      name: "create-single-file",
+      apply: "build",
+      async writeBundle(outputConfig) {
+        currentOutputConfig = outputConfig;
+      },
+      async closeBundle() {
+        const outFile = path.join(currentOutputConfig.dir, currentOutputConfig.entryFileNames);
+        if (!outFile.endsWith(".mjs")) {
+          console.debug("Skipped from bundling", outFile);
+          return;
+        }
+        await new Promise((resolve, reject) => {
+          ncc(outFile, {
+            externals: ["electron"],
+            cache: false,
+            minify: false,
+            sourceMap: false,
+            quiet: false,
+            target: "es2020",
+            debugLog: true
+          })
+            .then(({ code, map, assets }) => {
+              // ssh2 issues
+              const singleFile = outFile;
+              const s = new MagicString(code);
+              s.prepend(`
+                import __path from 'path';
+                import { fileURLToPath as __fileURLToPath } from 'url';
+                import { createRequire as __createRequire } from 'module';
+                if (typeof __dirname === 'undefined') {
+                  const __getFilename = () => __fileURLToPath(import.meta.url);
+                  const __getDirname = () => __path.dirname(__getFilename());
+                  const __dirname = __getDirname();
+                  const __filename = __getFilename();
+                  const self = globalThis;
+                  const require = __createRequire(import.meta.url);
+                  self.__filename = __filename;
+                  self.__dirname = __dirname;
+                }
+               `);
+              fs.writeFileSync(singleFile, patch ? s.toString() : code, "utf8");
+              Object.keys(assets).forEach((asset) => {
+                const assetFilePath = path.join(currentOutputConfig.dir, asset);
+                fs.mkdirSync(path.dirname(assetFilePath), { recursive: true });
+                fs.writeFileSync(assetFilePath, assets[asset].source);
+              });
+              console.debug("Single file generated");
+              resolve();
+            })
+            .catch(reject);
+        });
+        console.debug("<<< BUNDLE CLOSED >>>", outFile);
+      }
+    }
+  ];
+}
 
 // module
 export const ENVIRONMENT = process.env.ENVIRONMENT || "development";
@@ -50,7 +113,7 @@ export const sourcemap = true;
  * @type {import('vite').UserConfig}
  * @see https://vitejs.dev/config/
  */
-export function getCommonViteConfig({ mode, define, resolve, outputName, plugins, rollupOptions }) {
+export function getCommonViteConfig({ mode, define, resolve, outputName, outputFormat, plugins, rollupOptions }) {
   const userDefine = {
     // Define environment variables
     "import.meta.env.NODE_ENV": `"${mode}"`,
@@ -64,9 +127,12 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, plugins
     // Bugs
     "process.env.NODE_DEBUG": JSON.stringify(false),
     // Defines
-    ...define
+    ...define,
+    // Fix
+    __dirname: "import.meta.dirname"
   };
   const minify = false; // mode === "production";
+  const outputExtension = outputFormat == "cjs" ? "cjs" : "mjs";
   const config = {
     clearScreen: false,
     plugins: [
@@ -80,6 +146,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, plugins
     ],
     define: userDefine,
     build: {
+      target: "es2020",
       outDir: path.join(__dirname, "build"),
       emptyOutDir: false,
       sourcemap: sourcemap,
@@ -91,11 +158,11 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, plugins
         output: {
           manualChunks: (filename) => outputName,
           preserveModules: false,
-          // format: "esm",
+          format: outputFormat == "cjs" ? "commonjs" : "es",
           inlineDynamicImports: false,
           assetFileNames: `assets/${outputName}-${pkg.version}.[ext]`,
-          entryFileNames: `${outputName}-${pkg.version}.mjs`,
-          chunkFileNames: `${outputName}-${pkg.version}.[hash].mjs`
+          entryFileNames: `${outputName}-${pkg.version}.${outputExtension}`,
+          chunkFileNames: `${outputName}-${pkg.version}.[hash].${outputExtension}`
         }
       })
     },

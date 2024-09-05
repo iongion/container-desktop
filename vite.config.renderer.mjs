@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { merge } from "lodash-es";
+import merge from "lodash.merge";
 import mimeTypes from "mime-types";
 import fs from "node:fs";
 import path from "node:path";
@@ -108,6 +108,5 @@ export default ({ mode, command }) => {
     }
   });
   config.build.rollupOptions.external = ["electron"];
-  console.debug("<<< RENDERER >>>", config);
   return config;
 };

@@ -13,9 +13,14 @@ export default ({ mode, command }) => {
   config.build.lib = {
     entry: "src/electron-shell/preload.ts",
     formats: ["es"]
-    // fileName: "preload"
   };
+  // config.build.manifest = true;
   config.build.rollupOptions.external = ["electron"];
-  console.debug("<<< PRELOAD >>>", config);
+  config.build.rollupOptions.preserveEntrySignatures = "exports-only";
+  config.build.rollupOptions.output.exports = "auto";
+  config.build.rollupOptions.output.format = "es";
+  if (ENVIRONMENT === "production") {
+    // config.plugins.push(createSingleFile(false));
+  }
   return config;
 };
