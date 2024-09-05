@@ -43,7 +43,7 @@ export abstract class AbstractRuntime {
   }
 
   async setup() {
-    this.logger = await createLogger(`${this.RUNTIME}.runtime`);
+    this.logger = createLogger(`${this.RUNTIME}.runtime`);
     this.logger.debug(this.RUNTIME, "Created adapter");
   }
 
@@ -147,7 +147,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   async setup() {
     this.runner = new Runner(this);
-    this.logger = await createLogger("engine.client");
+    this.logger = createLogger("engine.client");
     this.logger.debug(this.id, "Client engine created");
   }
 

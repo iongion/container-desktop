@@ -18,7 +18,7 @@ export class Runner {
   // API connectivity and startup
   async startApi(opts?: ApiStartOptions, starter?: RunnerStarterOptions) {
     this.started = true;
-    this.logger = await createLogger("container-client.api.Runner");
+    this.logger = createLogger("container-client.api.Runner");
     this.logger.debug(">> Starting API - guard configuration");
     if (!starter?.path) {
       this.logger.error("<< Starting API - Starter program not configured");

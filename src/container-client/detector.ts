@@ -1,7 +1,7 @@
 import { CommandExecutionResult, OperatingSystem, ProgramOptions } from "@/env/Types";
 import { createLogger } from "@/logger";
 
-const logger = await createLogger("container-client.Detector");
+const logger = createLogger("container-client.Detector");
 
 export const parseProgramVersion = (input: string | undefined) => {
   let parsed: any = undefined;

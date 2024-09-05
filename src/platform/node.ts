@@ -163,4 +163,4 @@ export const Path: IPath = {
   }
 };
 
-export const CURRENT_OS_TYPE = await Platform.getOsType();
+export const CURRENT_OS_TYPE = os.type();

@@ -107,7 +107,7 @@ export function createEJSContext() {
     ENVIRONMENT
   };
 }
-export const sourcemap = true;
+export const sourcemap = ENVIRONMENT === "development";
 
 /**
  * @type {import('vite').UserConfig}
@@ -132,7 +132,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     __dirname: "import.meta.dirname"
   };
   const minify = false; // mode === "production";
-  const outputExtension = outputFormat == "cjs" ? "cjs" : "mjs";
+  const outputExtension = outputFormat == "umd" ? "js" : "mjs";
   const config = {
     clearScreen: false,
     plugins: [
@@ -158,7 +158,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
         output: {
           manualChunks: (filename) => outputName,
           preserveModules: false,
-          format: outputFormat == "cjs" ? "commonjs" : "es",
+          format: outputFormat == "umd" ? "umd" : "es",
           inlineDynamicImports: false,
           assetFileNames: `assets/${outputName}-${pkg.version}.[ext]`,
           entryFileNames: `${outputName}-${pkg.version}.${outputExtension}`,

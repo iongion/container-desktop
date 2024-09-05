@@ -4,7 +4,6 @@ import { EventEmitter } from "eventemitter3";
 import { spawn, SpawnOptionsWithoutStdio } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
-import { Client } from "ssh2";
 import { v4 } from "uuid";
 
 import { getApiConfig } from "@/container-client/Api.clients";
@@ -14,7 +13,7 @@ import { getWindowsPipePath } from "@/platform";
 import { axiosConfigToCURL } from "@/utils";
 import { Platform } from "./node";
 
-const logger = await createLogger("shared");
+const logger = createLogger("shared");
 
 export interface WrapperOpts extends SpawnOptionsWithoutStdio {
   wrapper: Wrapper;
@@ -393,6 +392,7 @@ export const Command: ICommand = {
       }
     }
     return new Promise((resolve, reject) => {
+      function Client() {}
       const connection = new Client();
       connection.on("ready", () => {
         logger.debug("Connection ready", connection);

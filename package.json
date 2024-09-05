@@ -5,7 +5,7 @@
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman Desktop Companion",
   "main": "build/main-5.2.0-rc.4.mjs",
-  "asar": false,
+  "homepage": "./",
   "type": "module",
   "scripts": {
     "node": "node",
@@ -70,7 +70,6 @@
     "react-router-dom": "5.3.4",
     "semver": "^7.6.3",
     "ssh-config": "^5.0.0",
-    "ssh2": "^1.15.0",
     "usehooks-ts": "^3.1.0",
     "uuid": "10.0.0"
   },
@@ -93,7 +92,7 @@
     "cpu-features": "^0.0.10",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
-    "electron": "31.4.0",
+    "electron": "32.0.2",
     "electron-builder": "^25.0.5",
     "eslint": "8.57.0",
     "eslint-config-prettier": "^9.1.0",

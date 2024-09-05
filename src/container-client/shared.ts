@@ -2,7 +2,7 @@ import { ControllerScopeType, LIMAInstance, OperatingSystem, PodmanMachine, SSHH
 import { createLogger } from "@/logger";
 
 // locals
-const logger = await createLogger("container-client.shared");
+const logger = createLogger("container-client.shared");
 
 export async function getAvailableSSHConnections() {
   let items: SSHHost[] = [];

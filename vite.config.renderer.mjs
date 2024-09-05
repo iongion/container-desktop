@@ -107,6 +107,7 @@ export default ({ mode, command }) => {
       }
     }
   });
+  config.base = "";
   config.build.rollupOptions.external = ["electron"];
   return config;
 };

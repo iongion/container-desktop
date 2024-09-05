@@ -34,7 +34,7 @@ export async function update(values: Partial<GlobalUserSettings>) {
   let config = await read();
   if (values) {
     config = deepMerge<GlobalUserSettings>({}, config, values);
-    console.debug("Updated configuration", config);
+    // console.debug("Updated configuration", config);
     return await write(config);
   }
   return config;
@@ -59,9 +59,9 @@ export class UserConfiguration {
   }
   async setKey(name: string, value: any) {
     const settings = await this.getSettings();
-    console.debug("Setting key", { name, value });
+    // console.debug("Setting key", { name, value });
     const updated = deepMerge<GlobalUserSettings>({}, settings, { [name]: value }, { version: import.meta.env.PROJECT_VERSION || "latest" });
-    console.debug("Setting key", updated);
+    // console.debug("Setting key", updated);
     return await update(updated);
   }
   async setSettings(value: Partial<GlobalUserSettings>) {

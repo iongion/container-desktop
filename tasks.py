@@ -58,9 +58,9 @@ def build(ctx, env=None):
     with ctx.cd(path):
         shutil.rmtree("build", ignore_errors=True)
         run_env(ctx, "yarn build", env)
-        for file in glob.glob("./src/resources/icons/appIcon.*"):
+        for file in glob.glob("./src/resources/icons/appIcon*"):
             shutil.copy(file, "./build")
-        for file in glob.glob("./src/resources/icons/trayIcon.*"):
+        for file in glob.glob("./src/resources/icons/trayIcon*"):
             shutil.copy(file, "./build")
 
 

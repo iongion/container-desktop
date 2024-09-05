@@ -3,7 +3,7 @@ import { ILogger } from "@/env/Types";
 
 const loggers: ILogger[] = [];
 
-export async function createLogger(name): Promise<ILogger> {
+export function createLogger(name): ILogger {
   return console as ILogger;
 }
 

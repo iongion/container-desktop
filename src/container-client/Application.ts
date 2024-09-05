@@ -866,7 +866,7 @@ export class Application {
   }
 
   async setup() {
-    this.logger = await createLogger("bridge.application");
+    this.logger = createLogger("bridge.application");
     this.inited = await this.init();
     return { logger: this.logger };
   }

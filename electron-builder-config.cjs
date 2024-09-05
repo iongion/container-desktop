@@ -19,17 +19,16 @@ const config = {
   asar: true,
   files: [
     // Exclude all
-    // "!**/*",
+    "!**/*",
     // What to copy
     "build",
-    "LICENSE",
-    "!**/node_modules/**/*"
+    "LICENSE"
   ],
   // electronLanguages: ["en"],
   // includeSubNodeModule: false,
   extraMetadata: {
     version: pkg.version,
-    main: `build/main-${pkg.version}.mjs`
+    main: pkg.main
   },
   directories: {
     app: ".",
@@ -84,7 +83,7 @@ const config = {
     shortcutName: pkg.title
   },
   win: {
-    target: ["nsis", "appx"],
+    target: ["nsis"],
     icon: "icons/icon.png"
   },
   appx: {

@@ -1,4 +1,4 @@
-import { ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, sourceEnv } from "./vite.config.common.mjs";
+import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, sourceEnv } from "./vite.config.common.mjs";
 
 /**
  * @type {import('vite').UserConfig}
@@ -7,20 +7,22 @@ import { ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, sourceEnv } 
 export default ({ mode, command }) => {
   sourceEnv(ENVIRONMENT);
   const cache = getElectronVendorsCache();
-  const config = getCommonViteConfig({ mode: mode || process.env.MODE || "development", command, outputName: "main" });
+  const outputFormat = "es";
+  const config = getCommonViteConfig({ mode: mode || process.env.MODE || "development", command, outputName: "main", outputFormat });
   config.build.ssr = true;
   config.build.target = `node${cache.node}`;
   config.build.lib = {
+    name: "main",
     entry: "src/electron-shell/main.ts",
-    formats: ["es"]
+    formats: [outputFormat]
   };
   // config.build.manifest = true;
   config.build.rollupOptions.external = ["electron"];
   config.build.rollupOptions.preserveEntrySignatures = "exports-only";
   config.build.rollupOptions.output.exports = "auto";
-  config.build.rollupOptions.output.format = "es";
+  config.build.rollupOptions.output.format = outputFormat;
   if (ENVIRONMENT === "production") {
-    // config.plugins.push(createSingleFile(false));
+    config.plugins.push(createSingleFile(false));
   }
   return config;
 };

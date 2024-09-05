@@ -33,7 +33,7 @@ const URLS_ALLOWED = [
   "https://github.com/iongion/podman-desktop-companion/releases"
 ];
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
-const logger = await createLogger("shell.main");
+const logger = createLogger("shell.main");
 let applicationWindow: Electron.BrowserWindow;
 let notified = false;
 const ensureWindow = () => {
@@ -130,13 +130,13 @@ async function createWindow() {
     return applicationWindow;
   }
   const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`);
-  const appURL = isDevelopment()
-    ? import.meta.env.VITE_DEV_SERVER_URL
-    : url.format({
-        pathname: path.join(__dirname, "index.html"),
-        protocol: "file:",
-        slashes: true
-      });
+  const appDevURL = import.meta.env.VITE_DEV_SERVER_URL;
+  const appProdURL = url.format({
+    pathname: path.join(__dirname, "index.html"),
+    protocol: "file:",
+    slashes: true
+  });
+  const appURL = isDevelopment() ? appDevURL : appProdURL;
   const windowConfigOptions: Partial<Electron.BrowserWindowConstructorOptions> = await getWindowConfigOptions();
   const windowOptions: Electron.BrowserWindowConstructorOptions = {
     show: false, // Use the 'ready-to-show' event to show the instantiated BrowserWindow.
@@ -146,7 +146,7 @@ async function createWindow() {
     ...(windowConfigOptions ?? {}),
     webPreferences: {
       devTools: true,
-      nodeIntegration: false,
+      nodeIntegration: true,
       nodeIntegrationInWorker: false,
       contextIsolation: true,
       sandbox: false, // Sandbox disabled because the demo of preload script depend on the Node.js api
@@ -234,14 +234,10 @@ async function createWindow() {
     //   return { action: "allow" };
     // }
 
-    if (isDevelopment()) {
-      return { action: "allow" };
-    }
-
     shell.openExternal(event.url, { activate: true });
     return { action: "deny" };
   });
-  logger.debug("Application URL is", { appURL, preloadURL, windowOptions });
+  logger.debug("Application URL is", { appURL, preloadURL, current: __dirname });
   try {
     await applicationWindow.loadURL(appURL);
   } catch (error: any) {
