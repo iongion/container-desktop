@@ -1,7 +1,6 @@
 import { v4 } from "uuid";
 
-import { Connector, ContainerEngine, ContainerRuntime, ContainerRuntimeOption, EngineConnectorSettings, Presence } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { Connector, ContainerEngine, ContainerRuntime, ContainerRuntimeOption, EngineConnectorSettings, OperatingSystem, Presence } from "@/env/Types";
 import { deepMerge } from "@/utils";
 
 // Podman - common

@@ -1,10 +1,3 @@
-enum ControllerScopeType {
-  PodmanMachine = "PodmanMachine",
-  WSLDistribution = "WSLDistribution",
-  LIMAInstance = "LIMAInstance",
-  SSHConnection = "SSHConnection"
-}
-
 interface SSHHost {
   Name: string;
   Usable?: boolean;
@@ -25,12 +18,14 @@ interface ICommand {
 }
 
 interface IPlatform {
+  OPERATING_SYSTEM: OperatingSystem;
   getHomeDir(): Promise<string>;
   getEnvironmentVariable(name: string): Promise<string | undefined>;
   isFlatpak(): Promise<boolean>;
   getUserDataPath(): Promise<string>;
   getOsType(): Promise<OperatingSystem>;
   getSSHConfig(): Promise<SSHHost[]>;
+  launchTerminal(commandLauncher: string, params?: string[], opts?: { title: string }): Promise<CommandExecutionResult>;
 }
 
 interface IPath {

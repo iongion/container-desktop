@@ -1,5 +1,14 @@
-import { ApiConnection, ApiStartOptions, CommandExecutionResult, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import {
+  ApiConnection,
+  ApiStartOptions,
+  CommandExecutionResult,
+  Connection,
+  ContainerEngine,
+  ContainerRuntime,
+  ControllerScope,
+  EngineConnectorSettings,
+  OperatingSystem
+} from "@/env/Types";
 import { DOCKER_PROGRAM } from "../../connection";
 import { AbstractClientEngine } from "../../runtimes/abstract";
 
@@ -37,7 +46,7 @@ export class DockerClientEngineNative extends AbstractClientEngine {
   // Availability
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
-    if (this.osType !== "Linux") {
+    if (this.osType !== OperatingSystem.Linux) {
       result.success = false;
       result.details = `Engine is not available on ${this.osType}`;
     }

@@ -209,5 +209,6 @@
     "a -": "- n/a -"
   },
   "Size": "Size",
-  "Created By": "Created By"
+  "Created By": "Created By",
+  "Path to executable": "Path to executable"
 }

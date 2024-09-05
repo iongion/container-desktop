@@ -1,9 +1,8 @@
 import { isEmpty } from "lodash-es";
 
 import { AbstractClientEngine, ClientEngine } from "@/container-client/runtimes/abstract";
-import { getAvailablePodmanMachines } from "@/detector";
 import { CommandExecutionResult, Connection, ContainerEngine, CreateMachineOptions, SystemInfo } from "@/env/Types";
-import { launchTerminal } from "@/terminal";
+import { getAvailablePodmanMachines } from "../../shared";
 
 export interface PodmanClientEngineCommon extends ClientEngine {
   getPodLogs: (id?: any, tail?: any) => Promise<CommandExecutionResult>;
@@ -41,7 +40,7 @@ export abstract class PodmanAbstractClientEngine extends AbstractClientEngine im
       commandLauncher = settings.program?.path || settings.program?.name || "";
     }
     const commandArgs = ["machine", "ssh", name];
-    const output = await launchTerminal(commandLauncher, commandArgs, {
+    const output = await Platform.launchTerminal(commandLauncher, commandArgs, {
       title: title || `${this.RUNTIME} machine`
     });
     if (!output.success) {

@@ -1,5 +1,5 @@
-import { ApiConnection, Connection, ContainerEngine, ContainerRuntime } from "@/env/Types";
-import { getWindowsPipePath, OperatingSystem } from "@/platform";
+import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
+import { getWindowsPipePath } from "@/platform";
 import { DOCKER_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedWSL } from "../abstract/wsl";
 

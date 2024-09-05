@@ -1,4 +1,3 @@
-import { OperatingSystem } from "@/platform";
 import { AxiosRequestHeaders, AxiosResponse, AxiosResponseHeaders } from "axios";
 
 export interface ILogger {
@@ -6,6 +5,21 @@ export interface ILogger {
   info: (...args: any[]) => void;
   warn: (...args: any[]) => void;
   error: (...args: any[]) => void;
+}
+
+export enum ControllerScopeType {
+  PodmanMachine = "PodmanMachine",
+  WSLDistribution = "WSLDistribution",
+  LIMAInstance = "LIMAInstance",
+  SSHConnection = "SSHConnection"
+}
+
+export enum OperatingSystem {
+  Browser = "browser",
+  Linux = "Linux",
+  MacOS = "Darwin",
+  Windows = "Windows_NT",
+  Unknown = "unknown"
 }
 
 export enum Environments {
@@ -179,13 +193,6 @@ export interface PodmanMachineInspect {
   UserModeNetworking: boolean;
   Rootful: boolean;
   Rosetta: boolean;
-}
-
-export enum ControllerScopeType {
-  PodmanMachine = "PodmanMachine",
-  WSLDistribution = "WSLDistribution",
-  LIMAInstance = "LIMAInstance",
-  SSHConnection = "SSHConnection"
 }
 
 export interface PodmanMachine {
@@ -732,7 +739,7 @@ export interface FindProgramOptions {
 }
 
 export interface ProgramOptions {
-  osType?: OperatingSystem;
+  osType: OperatingSystem;
   wrapper?: Wrapper;
 }
 

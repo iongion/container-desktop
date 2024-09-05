@@ -5,8 +5,7 @@ import { isObject } from "lodash-es";
 
 // project
 import { Application } from "@/container-client/Application";
-import { Connector } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { Connector, OperatingSystem } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { registry } from "@/web-app/domain/registry";

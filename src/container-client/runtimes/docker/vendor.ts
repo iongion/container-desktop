@@ -1,5 +1,5 @@
-import { ApiConnection, ContainerEngine, ContainerRuntime } from "@/env/Types";
-import { getWindowsPipePath, OperatingSystem } from "@/platform";
+import { ApiConnection, ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
+import { getWindowsPipePath } from "@/platform";
 import { userConfiguration } from "../../config";
 import { DOCKER_PROGRAM } from "../../connection";
 import { DockerClientEngineNative } from "./native";
@@ -22,7 +22,7 @@ export class DockerClientEngineVirtualizedVendor extends DockerClientEngineNativ
   // Availability
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
-    if (this.osType === "Linux") {
+    if (this.osType === OperatingSystem.Linux) {
       result.success = false;
       result.details = `Engine is not available on ${this.osType}`;
     }
@@ -38,7 +38,7 @@ export class DockerClientEngineVirtualizedVendor extends DockerClientEngineNativ
       ? await Path.join("/tmp", DOCKER_API_SOCKET)
       : await Path.join(await userConfiguration.getStoragePath(), DOCKER_API_SOCKET);
     let uri = NATIVE_DOCKER_SOCKET_PATH;
-    if (this.osType === "Windows_NT") {
+    if (this.osType === OperatingSystem.Windows) {
       const connection = await Platform.getEnvironmentVariable("DOCKER_HOST");
       uri = connection || getWindowsPipePath(scope!);
     } else {

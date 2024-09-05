@@ -1,6 +1,6 @@
 import { AbstractClientEngineSSH } from "@/container-client/runtimes/abstract/ssh";
-import { ApiConnection, Connection, ContainerEngine, ContainerRuntime } from "@/env/Types";
-import { getWindowsPipePath, OperatingSystem } from "@/platform";
+import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
+import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM } from "../../connection";
 
 export class PodmanClientEngineSSH extends AbstractClientEngineSSH {

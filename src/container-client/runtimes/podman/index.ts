@@ -1,6 +1,5 @@
 import { PodmanClientEngineSSH } from "@/container-client/runtimes/podman/ssh";
-import { ContainerRuntime } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { ContainerRuntime, OperatingSystem } from "@/env/Types";
 import { AbstractClientEngine, AbstractRuntime } from "../../runtimes/abstract";
 import { PodmanClientEngineVirtualizedLIMA } from "./lima";
 import { PodmanClientEngineNative } from "./native";

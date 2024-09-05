@@ -1,6 +1,6 @@
-import { getAvailableSSHConnections } from "@/detector";
 import { ApiConnection, ApiStartOptions, AvailabilityCheck, CommandExecutionResult, ControllerScope, EngineConnectorSettings, RunnerStopperOptions } from "@/env/Types";
 import { SSH_PROGRAM } from "../../connection";
+import { getAvailableSSHConnections } from "../../shared";
 import { AbstractClientEngine } from "../abstract/base";
 
 export abstract class AbstractClientEngineSSH extends AbstractClientEngine {

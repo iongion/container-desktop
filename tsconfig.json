@@ -33,8 +33,6 @@
     "paths": {
       "@/container-client": ["container-client"],
       "@/container-client/*": ["container-client/*"],
-      "@/detector": ["detector"],
-      "@/detector/*": ["detector/*"],
       "@/electron-shell": ["electron-shell"],
       "@/electron-shell/*": ["electron-shell/*"],
       "@/env": ["env"],
@@ -47,8 +45,6 @@
       "@/resources/*": ["resources/*"],
       "@/rpc": ["rpc"],
       "@/rpc/*": ["rpc/*"],
-      "@/terminal": ["terminal"],
-      "@/terminal/*": ["terminal/*"],
       "@/utils": ["utils"],
       "@/utils/*": ["utils/*"],
       "@/web-app": ["web-app"],

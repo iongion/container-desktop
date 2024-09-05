@@ -1,16 +1,17 @@
 // node
 import path from "node:path";
-import * as url from "url";
+import * as url from "node:url";
 // vendors
 import * as Electron from "electron";
 import contextMenu from "electron-context-menu";
+import { debounce } from "lodash-es";
 import is_ip_private from "private-ip";
 // project
 import { userConfiguration } from "@/container-client/config";
+import { OperatingSystem } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
-import { launchTerminal } from "@/terminal";
 import { MessageBus } from "./shared";
 
 // patch global like in preload
@@ -44,9 +45,9 @@ const isHideToTrayOnClose = async () => {
 const getWindowConfigOptions = async () => {
   return await userConfiguration.getKey<Electron.BrowserWindowConstructorOptions>("window", {});
 };
-const setWindowConfigOptions = async (opts: Electron.BrowserWindowConstructorOptions) => {
+const setWindowConfigOptions = debounce(async (opts: Electron.BrowserWindowConstructorOptions) => {
   return await userConfiguration.setKey("window", opts);
-};
+}, 500);
 const isDebug = ["yes", "true", "1"].includes(`${process.env.PODMAN_DESKTOP_COMPANION_DEBUG || ""}`.toLowerCase());
 const isDevelopment = () => {
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
@@ -118,7 +119,7 @@ ipcMain.handle("openFileSelector", async function (event, options) {
 });
 ipcMain.handle("openTerminal", async function (event, options) {
   logger.debug("IPC - openTerminal - start", options);
-  const success = await launchTerminal(options);
+  const success = await Platform.launchTerminal(options);
   logger.debug("IPC - openTerminal - result", options, success);
   return success;
 });
@@ -150,7 +151,7 @@ async function createWindow() {
     },
     icon: iconPath
   };
-  if (CURRENT_OS_TYPE === "Linux" || CURRENT_OS_TYPE === "Windows_NT") {
+  if (CURRENT_OS_TYPE === OperatingSystem.Linux || CURRENT_OS_TYPE === OperatingSystem.Windows) {
     windowOptions.frame = false;
   } else {
     windowOptions.titleBarStyle = "hiddenInset";
@@ -168,7 +169,7 @@ async function createWindow() {
       applicationWindow.setSkipTaskbar(true);
       applicationWindow.hide();
       event.returnValue = false;
-      if (CURRENT_OS_TYPE === "Darwin") {
+      if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
         app.dock.hide();
       }
     } else if (source === "close") {
@@ -258,7 +259,7 @@ function createSystemTray() {
         applicationWindow.excludedFromShownWindowsMenu = true;
         applicationWindow.show();
         applicationWindow.setSkipTaskbar(false);
-        if (CURRENT_OS_TYPE === "Darwin") {
+        if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
           app.dock.show();
         }
       }

@@ -1,5 +1,4 @@
-import { ContainerEngine, ContainerRuntime } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
 import { PODMAN_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedLIMA } from "../../runtimes/abstract";
 

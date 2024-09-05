@@ -7,10 +7,11 @@ import {
   ContainerRuntime,
   ControllerScope,
   EngineConnectorSettings,
+  OperatingSystem,
   PodmanMachineInspect,
   RunnerStopperOptions
 } from "@/env/Types";
-import { getWindowsPipePath, OperatingSystem } from "@/platform";
+import { getWindowsPipePath } from "@/platform";
 import { userConfiguration } from "../../config";
 import { PODMAN_PROGRAM } from "../../connection";
 import { PodmanAbstractClientEngine } from "./base";
@@ -49,7 +50,7 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
       ? await Path.join("/tmp", PODMAN_API_SOCKET)
       : await Path.join(await userConfiguration.getStoragePath(), PODMAN_API_SOCKET);
     let uri = NATIVE_PODMAN_SOCKET_PATH;
-    if (this.osType === "Windows_NT") {
+    if (this.osType === OperatingSystem.Windows) {
       uri = getWindowsPipePath(scope!);
     } else {
       const homeDir = await Platform.getHomeDir();

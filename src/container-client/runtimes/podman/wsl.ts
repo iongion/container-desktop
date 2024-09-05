@@ -1,7 +1,7 @@
 import { isEmpty } from "lodash-es";
 
-import { ApiConnection, ApiStartOptions, ContainerEngine, ContainerRuntime, EngineConnectorSettings } from "@/env/Types";
-import { getWindowsPipePath, OperatingSystem } from "@/platform";
+import { ApiConnection, ApiStartOptions, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedWSL } from "../abstract/wsl";
 import { PodmanClientEngineCommon } from "./base";

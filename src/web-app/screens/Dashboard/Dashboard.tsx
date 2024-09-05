@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine } from "@/env/Types";
+import { ContainerEngine, OperatingSystem } from "@/env/Types";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
 import { usePoller } from "@/web-app/Hooks";
@@ -11,7 +11,6 @@ import { Notification } from "@/web-app/Notification";
 import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { Application } from "@/container-client/Application";
-import { OperatingSystem } from "@/platform";
 import "./Dashboard.css";
 
 export const ID = "dashboard";

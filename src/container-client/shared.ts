@@ -1,8 +1,8 @@
-import { ControllerScopeType, LIMAInstance, PodmanMachine, SSHHost, WSLDistribution } from "@/env/Types";
+import { ControllerScopeType, LIMAInstance, OperatingSystem, PodmanMachine, SSHHost, WSLDistribution } from "@/env/Types";
 import { createLogger } from "@/logger";
 
 // locals
-const logger = await createLogger("shared");
+const logger = await createLogger("container-client.shared");
 
 export async function getAvailableSSHConnections() {
   let items: SSHHost[] = [];
@@ -16,7 +16,7 @@ export async function getAvailableSSHConnections() {
 
 export async function getAvailableLIMAInstances(limactlPath?: string) {
   let items: LIMAInstance[] = [];
-  if (CURRENT_OS_TYPE !== "Darwin") {
+  if (CURRENT_OS_TYPE !== OperatingSystem.MacOS) {
     return items;
   }
   if (!limactlPath) {
@@ -85,7 +85,7 @@ export async function getAvailablePodmanMachines(podmanPath?: string, customForm
 export async function getAvailableWSLDistributions(wslPath?: string) {
   let items: WSLDistribution[] = [];
   // No WSL distributions on non-windows
-  if (CURRENT_OS_TYPE !== "Windows_NT") {
+  if (CURRENT_OS_TYPE !== OperatingSystem.Windows) {
     return [];
   }
   if (!wslPath) {

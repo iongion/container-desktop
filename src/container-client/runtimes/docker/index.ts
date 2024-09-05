@@ -1,6 +1,5 @@
 import { DockerClientEngineSSH } from "@/container-client/runtimes/docker/ssh";
-import { ContainerRuntime } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { ContainerRuntime, OperatingSystem } from "@/env/Types";
 import { AbstractClientEngine, AbstractRuntime } from "../abstract";
 import { DockerClientEngineVirtualizedLIMA } from "./lima";
 import { DockerClientEngineNative } from "./native";

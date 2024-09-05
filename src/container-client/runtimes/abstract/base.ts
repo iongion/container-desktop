@@ -1,7 +1,6 @@
 import { isEmpty } from "lodash-es";
 
 import { Runner } from "@/container-client/runner";
-import { findProgramPath, findProgramVersion } from "@/detector";
 import {
   ApiConnection,
   ApiStartOptions,
@@ -14,6 +13,7 @@ import {
   EngineConnectorAvailability,
   EngineConnectorSettings,
   ILogger,
+  OperatingSystem,
   Program,
   RunnerStopperOptions,
   SystemInfo,
@@ -21,9 +21,9 @@ import {
   SystemResetReport
 } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { OperatingSystem } from "@/platform";
 import { deepMerge } from "@/utils";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
+import { findProgramPath, findProgramVersion } from "../../detector";
 
 export abstract class AbstractRuntime {
   public static RUNTIME: ContainerRuntime;
@@ -201,7 +201,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
       return result;
     }
     // Check unix socket as file
-    if (this.osType === "Windows_NT") {
+    if (this.osType === OperatingSystem.Windows) {
       // TODO: Check named pipe
     } else {
       // if (!isFilePresent(settings.api.connection)) {

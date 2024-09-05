@@ -1,8 +1,8 @@
 import { isEmpty } from "lodash-es";
 
-import { getAvailableLIMAInstances } from "@/detector";
-import { ApiConnection, ApiStartOptions, AvailabilityCheck, ControllerScope, EngineConnectorSettings, RunnerStopperOptions } from "@/env/Types";
+import { ApiConnection, ApiStartOptions, AvailabilityCheck, ControllerScope, EngineConnectorSettings, OperatingSystem, RunnerStopperOptions } from "@/env/Types";
 import { LIMA_PROGRAM } from "../../connection";
+import { getAvailableLIMAInstances } from "../../shared";
 import { AbstractClientEngine } from "../abstract/base";
 
 export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClientEngine {
@@ -89,7 +89,7 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
 
   async isEngineAvailable(): Promise<AvailabilityCheck> {
     const result = { success: true, details: "Engine is available" };
-    if (this.osType !== "Darwin") {
+    if (this.osType !== OperatingSystem.MacOS) {
       result.success = false;
       result.details = `Engine is not available on ${this.osType}`;
     }

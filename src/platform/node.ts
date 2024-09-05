@@ -4,8 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import SSHConfigParser from "ssh-config";
 
-import { ControllerScopeType, SSHHost } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { CommandExecutionResult, ControllerScopeType, OperatingSystem, SSHHost } from "@/env/Types";
 
 export interface SpawnedProcess {
   pid: any;
@@ -17,6 +16,8 @@ export interface SpawnedProcess {
 }
 
 export const Platform: IPlatform = {
+  OPERATING_SYSTEM: os.type() as OperatingSystem,
+
   async getHomeDir() {
     return await (os.homedir() || process.env?.HOME || "");
   },
@@ -29,7 +30,8 @@ export const Platform: IPlatform = {
   },
 
   async isFlatpak() {
-    if (CURRENT_OS_TYPE !== OperatingSystem.Linux) {
+    const osType = os.type() as OperatingSystem;
+    if (osType !== OperatingSystem.Linux) {
       return false;
     }
     const FLATPAK_ID = await Platform.getEnvironmentVariable("FLATPAK_ID");
@@ -102,6 +104,20 @@ export const Platform: IPlatform = {
       console.debug("Config file not found", pathToSSHConfig);
     }
     return config;
+  },
+
+  async launchTerminal(commandLauncher: string, params?: string[], opts?: { title: string }) {
+    console.debug("Launching terminal", commandLauncher, params);
+    const args = [commandLauncher].concat(params || []).join(" ");
+    let status: CommandExecutionResult;
+    if (os.type() === OperatingSystem.MacOS) {
+      status = await Command.Execute("osascript", ["-e", `tell app "Terminal" to do script "${args}"`]);
+    } else if (os.type() === OperatingSystem.Windows) {
+      status = await Command.Execute("wt", ["-w", "nt", "--title", opts?.title || "PDC Shell", "-p", "Command Prompt", "-d", ".", "cmd", "/k", commandLauncher, ...(params || [])]);
+    } else {
+      status = await Command.Execute("xterm", ["-e", args]);
+    }
+    return status;
   }
 };
 

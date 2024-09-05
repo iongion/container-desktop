@@ -1,15 +1,6 @@
 import { GlobalUserSettings } from "@/env/Types";
 import { deepMerge } from "@/utils";
 
-function getPrefix() {
-  const version = import.meta.env.PROJECT_VERSION || "1.0.0";
-  const stage = import.meta.env.ENVIRONMENT || "production";
-  const prefix = `${version.replace(/\./g, "|")}.${stage}`;
-  return prefix;
-}
-
-const VERSION = getPrefix();
-
 async function getUserSettingsPath() {
   const dataPath = await Platform.getUserDataPath();
   const configPath = await Path.join(dataPath, "user-settings.json");
@@ -69,7 +60,7 @@ export class UserConfiguration {
   async setKey(name: string, value: any) {
     const settings = await this.getSettings();
     console.debug("Setting key", { name, value });
-    const updated = deepMerge<GlobalUserSettings>({}, settings, { [name]: value }, { version: VERSION });
+    const updated = deepMerge<GlobalUserSettings>({}, settings, { [name]: value }, { version: import.meta.env.PROJECT_VERSION || "latest" });
     console.debug("Setting key", updated);
     return await update(updated);
   }

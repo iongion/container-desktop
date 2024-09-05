@@ -22,14 +22,13 @@ import {
   ILogger,
   OpenFileSelectorOptions,
   OpenTerminalOptions,
+  OperatingSystem,
   Program,
   RegistriesMap,
   RegistryPullOptions,
   RegistrySearchOptions
 } from "@/env/Types";
 import { createLogger, getLevel, setLevel } from "@/logger";
-import { OperatingSystem } from "@/platform";
-import { launchTerminal } from "@/terminal";
 import { deepMerge } from "@/utils";
 
 const AUTOMATIC_REGISTRIES = [
@@ -351,7 +350,7 @@ export class Application {
       launcherPath = program.path || program.name;
     }
     const launcherArgs = ["exec", "-it", id, shell || "/bin/sh"];
-    const output = await launchTerminal(launcherPath, launcherArgs, {
+    const output = await Platform.launchTerminal(launcherPath, launcherArgs, {
       title: title || `${currentApi.RUNTIME} container`
     });
     if (!output.success) {

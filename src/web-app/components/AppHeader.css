@@ -16,6 +16,7 @@
   width: 200px;
   height: 100%;
 }
+[data-os="MacOS"] .AppHeader .bp5-navbar,
 [data-os="Darwin"] .AppHeader .bp5-navbar {
   background-position-x: center;
 }

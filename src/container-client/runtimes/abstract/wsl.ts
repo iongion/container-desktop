@@ -1,6 +1,6 @@
-import { getAvailableWSLDistributions } from "@/detector";
-import { ApiConnection, ApiStartOptions, AvailabilityCheck, ContainerEngine, ControllerScope, EngineConnectorSettings, RunnerStopperOptions } from "@/env/Types";
+import { ApiConnection, ApiStartOptions, AvailabilityCheck, ContainerEngine, ControllerScope, EngineConnectorSettings, OperatingSystem, RunnerStopperOptions } from "@/env/Types";
 import { WSL_PROGRAM } from "../../connection";
+import { getAvailableWSLDistributions } from "../../shared";
 import { AbstractClientEngine } from "../abstract/base";
 
 export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientEngine {
@@ -35,7 +35,7 @@ export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientE
 
   async isEngineAvailable() {
     const result: AvailabilityCheck = { success: true, details: "Engine is available" };
-    if (this.osType !== "Windows_NT") {
+    if (this.osType !== OperatingSystem.Windows) {
       result.success = false;
       result.details = `Engine is not available on ${this.osType}`;
     }

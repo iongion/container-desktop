@@ -1,5 +1,4 @@
-import { ApiConnection, ApiStartOptions, CommandExecutionResult, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { ApiConnection, ApiStartOptions, CommandExecutionResult, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { PODMAN_PROGRAM } from "../../connection";
 import { PodmanAbstractClientEngine } from "./base";
 
@@ -68,7 +67,7 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
   // Availability
   async isEngineAvailable() {
     const result = { success: true, details: "Engine is available" };
-    if (this.osType !== "Linux") {
+    if (this.osType !== OperatingSystem.Linux) {
       result.success = false;
       result.details = `Engine is not available on ${this.osType}`;
     }

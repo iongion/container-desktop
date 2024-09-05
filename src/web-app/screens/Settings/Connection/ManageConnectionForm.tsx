@@ -8,8 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import { AbstractClientEngine, ContainerRuntimeOptions, createConnectorBy } from "@/container-client";
 import { Application } from "@/container-client/Application";
-import { Connection, Connector, ContainerEngine, ContainerRuntime, ControllerScope, Program } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
+import { Connection, Connector, ContainerEngine, ContainerRuntime, ControllerScope, OperatingSystem, Program } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";

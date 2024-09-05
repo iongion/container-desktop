@@ -1,4 +1,4 @@
-import { CommandExecutionResult, ProgramOptions } from "@/env/Types";
+import { CommandExecutionResult, OperatingSystem, ProgramOptions } from "@/env/Types";
 import { createLogger } from "@/logger";
 
 const logger = await createLogger("container-client.Detector");
@@ -67,7 +67,7 @@ export const findProgramPath = async (
   let programPath: string | undefined = undefined;
   logger.debug("Finding program path for", programName);
   const osType = opts.osType || CURRENT_OS_TYPE;
-  const windowsLookup = osType === "Windows_NT";
+  const windowsLookup = osType === OperatingSystem.Windows;
   const lookupProgram = windowsLookup && !programName.endsWith(".exe") ? `${programName}.exe` : programName;
   const finder = executor ? executor : Command.Execute;
   if (windowsLookup) {

@@ -3,7 +3,7 @@ import { Button, ButtonGroup, Divider, HTMLSelect, HTMLSelectProps, Intent } fro
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { OperatingSystem } from "@/platform";
+import { OperatingSystem } from "@/env/Types";
 import "./OSTypeSelect.css";
 
 // OSTypeSelect

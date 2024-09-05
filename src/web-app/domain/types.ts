@@ -11,9 +11,9 @@ import {
   FindProgramOptions,
   GenerateKubeOptions,
   GlobalUserSettings,
-  GlobalUserSettingsOptions
+  GlobalUserSettingsOptions,
+  OperatingSystem
 } from "@/env/Types";
-import { OperatingSystem } from "@/platform";
 import { ContainersModel } from "@/web-app/screens/Container/Model";
 import { DashboardModel } from "@/web-app/screens/Dashboard/Model";
 import { ImagesModel } from "@/web-app/screens/Image/Model";
