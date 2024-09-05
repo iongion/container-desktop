@@ -27,25 +27,30 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const currentConnector = useStoreState((state) => state.currentConnector);
   const engine = currentConnector?.engine;
   const program = currentConnector?.settings.program;
-  const machine = currentConnector?.settings.controller?.scope || "";
+  const scope = currentConnector?.settings.controller?.scope || "";
 
   const { exampleCode, commandPrefix, commandTitle } = useMemo(() => {
-    const exampleCode = CONTAINER_DOCS_EXAMPLE_CODE.replace("{program}", program?.name || "podman");
+    const programName = program?.name || "podman";
+    const exampleCode = CONTAINER_DOCS_EXAMPLE_CODE.replace("{program}", programName);
     let commandPrefix;
     let commandTitle;
-    if (osType === OperatingSystem.Linux && engine === ContainerEngine.PODMAN_VIRTUALIZED_VENDOR && machine) {
-      commandPrefix = `podman machine ssh ${machine}`;
-      commandTitle = t("On Linux, to dissociated between commands targeting the native podman engine, a machine prefix must be used.");
+    if (osType === OperatingSystem.Windows) {
+      if (engine === ContainerEngine.PODMAN_VIRTUALIZED_WSL || engine === ContainerEngine.DOCKER_VIRTUALIZED_WSL) {
+        commandPrefix = `wsl.exe --distribution ${scope} --exec bash -i -l`;
+        commandTitle = t("On WSL, to dissociated between commands targeting the native podman engine, a wsl prefix must be used.");
+      }
     } else if (osType === OperatingSystem.MacOS) {
-      commandPrefix = `limactl shell podman`;
-      commandTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
+      if (engine === ContainerEngine.PODMAN_VIRTUALIZED_LIMA || engine === ContainerEngine.DOCKER_VIRTUALIZED_LIMA) {
+        commandPrefix = `limactl shell ${scope}`;
+        commandTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
+      }
     }
     return {
       exampleCode,
       commandPrefix,
       commandTitle
     };
-  }, [t, engine, osType, machine, program]);
+  }, [t, engine, osType, scope, program]);
 
   const onCopyToClipboardClick = useCallback(
     async (e) => {

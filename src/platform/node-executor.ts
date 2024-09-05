@@ -427,6 +427,8 @@ export const Command: ICommand = {
       case ContainerEngine.DOCKER_NATIVE:
       case ContainerEngine.PODMAN_VIRTUALIZED_VENDOR:
       case ContainerEngine.DOCKER_VIRTUALIZED_VENDOR:
+      case ContainerEngine.PODMAN_VIRTUALIZED_LIMA:
+      case ContainerEngine.DOCKER_VIRTUALIZED_LIMA:
         {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           logger.debug("Proxying request", { connection, config });
@@ -437,8 +439,6 @@ export const Command: ICommand = {
         break;
       case ContainerEngine.PODMAN_VIRTUALIZED_WSL:
       case ContainerEngine.DOCKER_VIRTUALIZED_WSL:
-      case ContainerEngine.PODMAN_VIRTUALIZED_LIMA:
-      case ContainerEngine.DOCKER_VIRTUALIZED_LIMA:
         {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           config.socketPath = connection.settings.api.connection.relay;

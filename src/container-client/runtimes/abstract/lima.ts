@@ -113,24 +113,16 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
   }
   // LIMA specific
   async startLIMAInstance(name: string): Promise<boolean> {
-    const { program } = await this.getSettings();
-    let programLauncher = program.path;
-    if (isEmpty(programLauncher)) {
-      programLauncher = program.name;
-      this.logger.warn("Program path is empty - using program name", program);
-    }
-    const check = await this.runHostCommand("start", [name]);
+    const { controller } = await this.getSettings();
+    const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
+    const check = await this.runHostCommand(programLauncher, ["start", name]);
     return check.success;
   }
 
   async stopLIMAInstance(name: string): Promise<boolean> {
-    const { program } = await this.getSettings();
-    let programLauncher = program.path;
-    if (isEmpty(programLauncher)) {
-      programLauncher = program.name;
-      this.logger.warn("Program path is empty - using program name", program);
-    }
-    const check = await this.runHostCommand("stop", [name]);
+    const { controller } = await this.getSettings();
+    const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
+    const check = await this.runHostCommand(programLauncher, ["stop", name]);
     return check.success;
   }
 }

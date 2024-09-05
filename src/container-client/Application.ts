@@ -344,13 +344,33 @@ export class Application {
     const currentApi = this.getCurrentEngineConnectionApi();
     const { program, controller } = await currentApi.getSettings();
     let launcherPath = "";
+    const containerArgs: string[] = [];
     if (currentApi.isScoped()) {
+      const scope = controller?.scope || "";
+      const isLIMA = [ContainerEngine.PODMAN_VIRTUALIZED_LIMA, ContainerEngine.DOCKER_VIRTUALIZED_LIMA].includes(currentApi.ENGINE);
+      const isWSL = [ContainerEngine.PODMAN_VIRTUALIZED_WSL, ContainerEngine.DOCKER_VIRTUALIZED_WSL].includes(currentApi.ENGINE);
+      const isVendor = [ContainerEngine.PODMAN_VIRTUALIZED_VENDOR].includes(currentApi.ENGINE);
+      if (isLIMA) {
+        containerArgs.push("shell");
+        containerArgs.push(scope);
+      }
+      if (isWSL) {
+        containerArgs.push("--distribution");
+        containerArgs.push(scope);
+        containerArgs.push("--exec");
+      }
+      if (isVendor) {
+        containerArgs.push("machine");
+        containerArgs.push("ssh");
+        containerArgs.push(scope);
+      }
       launcherPath = controller?.path || controller?.name || "";
+      containerArgs.push(program.path || program.name);
     } else {
       launcherPath = program.path || program.name;
     }
-    const launcherArgs = ["exec", "-it", id, shell || "/bin/sh"];
-    const output = await Platform.launchTerminal(launcherPath, launcherArgs, {
+    containerArgs.push(...["exec", "-it", id, shell || "/bin/sh"]);
+    const output = await Platform.launchTerminal(launcherPath, containerArgs, {
       title: title || `${currentApi.RUNTIME} container`
     });
     if (!output.success) {

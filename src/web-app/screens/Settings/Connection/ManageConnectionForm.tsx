@@ -482,6 +482,9 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             ContainerEngine.PODMAN_VIRTUALIZED_VENDOR
           ].includes(connector.engine);
         }
+        if (detectTarget === "controller") {
+          insideScope = false;
+        }
         // Run program detection
         const lookupProgram = connector.settings[detectTarget] as Program;
         lookupProgram.path = "";

@@ -33,7 +33,7 @@ export async function getAvailableLIMAInstances(limactlPath?: string) {
         return {
           Name,
           Type: ControllerScopeType.LIMAInstance,
-          Usable: Status === "running",
+          Usable: Status === "Running",
           // LIMA specific
           Status,
           SSH,
@@ -50,6 +50,7 @@ export async function getAvailableLIMAInstances(limactlPath?: string) {
   } catch (error: any) {
     logger.error("Unable to detect LIMA instances - execution error", error.message, error.stack);
   }
+  console.debug(items);
   return items;
 }
 

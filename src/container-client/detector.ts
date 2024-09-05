@@ -19,29 +19,6 @@ export const parseProgramVersion = (input: string | undefined) => {
   return parsed;
 };
 
-export const isPathToExecutable = async (filePath, wrapper) => {
-  let flag = false;
-  logger.debug(`Checking if ${filePath} is an executable`);
-  if (wrapper) {
-    try {
-      const result = await Command.Execute("stat", ["-c", "'%A'", filePath], { wrapper });
-      if (result.success) {
-        flag = (result.stdout || "").indexOf("x") !== -1;
-      }
-    } catch (error: any) {
-      logger.error(`Unable to verify if ${filePath} is an executable file using wrapper`, error.message);
-    }
-  } else {
-    try {
-      // TODO: Check executable bit
-      flag = await FS.isFilePresent(filePath);
-    } catch (error: any) {
-      logger.error(`Unable to verify if ${filePath} is an executable file`, error.message);
-    }
-  }
-  return flag;
-};
-
 export const findWindowsProgramByRegistryKey = async (programName: string, registryKey: string) => {
   let programPath: string = "";
   const script = `
@@ -111,13 +88,7 @@ export const findProgramPath = async (
       logger.debug("Detecting", lookupProgram, "using - whereis >", result);
       const output = (result.stdout || "").trim();
       if (result.success && output) {
-        const decodedPath = output.split(" ")?.[1] || "";
-        const check = await isPathToExecutable(decodedPath, opts?.wrapper);
-        if (check) {
-          programPath = decodedPath;
-        } else {
-          logger.warn(`Found path ${decodedPath} is not an executable - assuming not present`);
-        }
+        programPath = output.split(" ")?.[1] || "";
       } else {
         logger.warn(`Unable to detect ${lookupProgram} cli program path - using whereis`, result);
       }

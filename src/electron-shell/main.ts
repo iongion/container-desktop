@@ -53,7 +53,7 @@ const isDevelopment = () => {
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
 };
 const iconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/appIcon-duotone.png") : path.join(__dirname, "appIcon-duotone.png");
-const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/trayIcon-duotone.png") : path.join(__dirname, "trayIcon-duotone.png");
+const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/trayIcon-duotone-28.png") : path.join(__dirname, "trayIcon-duotone-28.png");
 const activateTools = () => {
   if (isDevelopment() || isDebug) {
     try {
@@ -125,6 +125,10 @@ ipcMain.handle("openTerminal", async function (event, options) {
 });
 
 async function createWindow() {
+  if (applicationWindow) {
+    logger.debug("Creating window - already created");
+    return applicationWindow;
+  }
   const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`);
   const appURL = isDevelopment()
     ? import.meta.env.VITE_DEV_SERVER_URL
@@ -253,9 +257,6 @@ function createSystemTray() {
     {
       label: "Show main window",
       click: async () => {
-        if (!applicationWindow && BrowserWindow.getAllWindows().length === 0) {
-          applicationWindow = await createWindow();
-        }
         applicationWindow.excludedFromShownWindowsMenu = true;
         applicationWindow.show();
         applicationWindow.setSkipTaskbar(false);
@@ -286,17 +287,14 @@ let tray: any = null;
     showInspectElement: true // Always show to help debugging
   });
   app.commandLine.appendSwitch("ignore-certificate-errors");
-  app.on("activate", async () => {
-    if (!applicationWindow && BrowserWindow.getAllWindows().length === 0) {
-      applicationWindow = await createWindow();
-    }
-  });
+  // app.on("activate", async () => {
+  //   if (!applicationWindow && BrowserWindow.getAllWindows().length === 0) {
+  //     applicationWindow = await createWindow();
+  //   }
+  // });
   app.whenReady().then(async () => {
     // setup window
-    applicationWindow = await createWindow();
-    if (applicationWindow) {
-      applicationWindow.focus();
-    }
+    await createWindow();
   });
   /*
   app.on("window-all-closed", async () => {
