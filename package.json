@@ -26,7 +26,8 @@
     "package:linux_arm": "cross-env DEBUG=electron-builder electron-builder --publish never --linux --arm64 --config electron-builder-config.cjs",
     "check-types": "tsc",
     "format": "prettier --log-level=log --write \"src/**/*.{jsx,js,tsx,ts,json,css}\"",
-    "watch": "node support/watch.mjs"
+    "watch": "node support/watch.mjs",
+    "postinstall": "cross-env ELECTRON_RUN_AS_NODE=1 yarn electron support/update-electron-vendors.mjs"
   },
   "license": "MIT",
   "private": true,
@@ -114,7 +115,7 @@
     "tslib": "^2.7.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.3",
-    "vite-plugin-checker": "^0.7.2",
+    "vite-plugin-checker": "^0.8.0",
     "vite-plugin-ejs": "^1.7.0",
     "vite-plugin-svgr": "^4.2.0",
     "vite-plugin-top-level-await": "^1.4.4",
