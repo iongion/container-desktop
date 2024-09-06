@@ -6,12 +6,13 @@ const pkg = require("./package.json");
 const artifactName = [pkg.name, "${arch}", pkg.version].join("-");
 
 const applicationId = "io.github.iongion.PodmanDesktopCompanion";
+const year = dayjs().format("YYYY");
 const config = {
   appId: applicationId,
   productName: process.platform === "linux" ? pkg.name : pkg.title,
   buildVersion: pkg.version,
   artifactName: artifactName + ".${ext}",
-  copyright: "../LICENSE",
+  copyright: `Copyright (c) ${year} Ionut Stoica`,
   releaseInfo: {
     releaseName: `${pkg.title} ${pkg.version}`,
     releaseDate: dayjs().format("MMM DD, YYYY")
@@ -24,7 +25,7 @@ const config = {
     "build",
     "LICENSE"
   ],
-  // electronLanguages: ["en"],
+  electronLanguages: ["en-US"],
   // includeSubNodeModule: false,
   extraMetadata: {
     version: pkg.version,
@@ -83,17 +84,19 @@ const config = {
     shortcutName: pkg.title
   },
   win: {
-    target: ["nsis"],
+    target: ["appx", "nsis"],
     icon: "icons/icon.png"
   },
   appx: {
     applicationId,
-    identityName: pkg.name
+    identityName: pkg.name,
+    publisher: "CN=PodmanDesktopCompanion.iongion.github.io",
+    publisherDisplayName: "iongion"
   },
   linux: {
     icon: "icons/appIcon.svg",
     target: ["deb", "pacman", "rpm", "flatpak", "AppImage"],
-    category: "Utility",
+    category: "Development;System;Utility",
     extraResources: ["support/templates"],
     desktop: {
       Name: pkg.title
