@@ -230,7 +230,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
     const client = this.getContainerApiClient();
     const driver = client.getDriver();
     try {
-      const response = await driver.request({ method: "GET", url: "/_ping" });
+      const response = await driver.request({ method: "GET", url: "/_ping", timeout: 1500 });
       result.success = response?.data === "OK";
       result.details = result.success ? "Api is reachable" : response?.data;
     } catch (error: any) {
