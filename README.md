@@ -40,4 +40,8 @@ Main goals
 
 ## Multiple engines supported, familiar ones too
 
-![Engine Settings Screen](docs/img/DockerSettings.png?raw=true)
+![Engine Settings Screen](docs/img/ConnectionManager.png?raw=true)
+
+## Comprehensive actions
+
+![Engine Settings Screen](docs/img/003-ContainerActions.png?raw=true)
