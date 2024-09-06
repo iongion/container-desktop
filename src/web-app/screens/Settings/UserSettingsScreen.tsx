@@ -193,7 +193,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       </td>
                       <td>{connection.settings.api.autoStart ? t("Yes") : t("No")}</td>
                       <td>{connection.settings.rootfull ? t("Yes") : t("No")}</td>
-                      <td>{defaultConnector === connection.id ? <strong>{t("Yes")}</strong> : t("No")}</td>
+                      <td data-flag="default">{defaultConnector === connection.id ? <strong>{t("Yes")}</strong> : t("No")}</td>
                       <td>
                         <ActionsMenu onEdit={onEditConnection} connection={connection} />
                       </td>
