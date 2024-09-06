@@ -48,6 +48,7 @@ const setWindowConfigOptions = debounce(async (opts: Electron.BrowserWindowConst
 }, 500);
 const isDebug = ["yes", "true", "1"].includes(`${process.env.PODMAN_DESKTOP_COMPANION_DEBUG || ""}`.toLowerCase());
 const isDevelopment = () => {
+  logger.debug("Checking if development", { isPackaged: app.isPackaged, env: import.meta.env.ENVIRONMENT });
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
 };
 const activateTools = () => {
@@ -259,7 +260,8 @@ function createSystemTray() {
     return;
   }
   logger.debug("Creating system tray menu");
-  const trayIconPath = path.join(PROJECT_HOME, "src/resources/icons", "trayIcon-duotone.png");
+  const trayIconFile = "trayIcon.png";
+  const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons", trayIconFile) : path.join(__dirname, trayIconFile);
   tray = new Tray(trayIconPath);
   const trayMenu = Menu.buildFromTemplate([
     {
