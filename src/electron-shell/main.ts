@@ -50,8 +50,6 @@ const isDebug = ["yes", "true", "1"].includes(`${process.env.PODMAN_DESKTOP_COMP
 const isDevelopment = () => {
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
 };
-const iconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/appIcon-duotone.png") : path.join(__dirname, "appIcon-duotone.png");
-const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons/trayIcon-duotone.png") : path.join(__dirname, "trayIcon-duotone.png");
 const activateTools = () => {
   if (isDevelopment() || isDebug) {
     try {
@@ -135,6 +133,8 @@ async function createApplicationWindow() {
     slashes: true
   });
   const appURL = isDevelopment() ? appDevURL : appProdURL;
+  const iconFile = CURRENT_OS_TYPE === OperatingSystem.MacOS ? "appIcon.png" : "appIcon-duotone.png";
+  const iconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons", iconFile) : path.join(__dirname, iconFile);
   const windowConfigOptions: Partial<Electron.BrowserWindowConstructorOptions> = await getWindowConfigOptions();
   const windowOptions: Electron.BrowserWindowConstructorOptions = {
     show: false, // Use the 'ready-to-show' event to show the instantiated BrowserWindow.
@@ -259,6 +259,7 @@ function createSystemTray() {
     return;
   }
   logger.debug("Creating system tray menu");
+  const trayIconPath = path.join(PROJECT_HOME, "src/resources/icons", "trayIcon-duotone.png");
   tray = new Tray(trayIconPath);
   const trayMenu = Menu.buildFromTemplate([
     {
