@@ -16,6 +16,6 @@ export class DockerClientEngineVirtualizedLIMA extends AbstractClientEngineVirtu
   }
 
   async getSystemInfo(connection?: Connection, customFormat?: string) {
-    return super.getSystemInfo(connection, "{{ json . }}");
+    return super.getSystemInfo(connection, customFormat || "json");
   }
 }

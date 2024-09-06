@@ -1,4 +1,5 @@
 import { AbstractClientEngineSSH } from "@/container-client/runtimes/abstract/ssh";
+import { coercePodmanMachines } from "@/container-client/shared";
 import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM } from "../../connection";
@@ -38,9 +39,20 @@ export class PodmanClientEngineSSH extends AbstractClientEngineSSH {
 
   // System information
   async getSystemInfo(connection?: Connection, customFormat?: string) {
-    return super.getSystemInfo(connection, "{{ json . }}");
+    return super.getSystemInfo(connection, customFormat || "json");
   }
+
   isScoped() {
     return true;
+  }
+
+  async getPodmanMachines(customFormat?: string) {
+    this.logger.debug(this.id, "getMachines with program");
+    const settings = await this.getSettings();
+    const commandLauncher = settings.program?.path || settings.program?.name || "";
+    const commandArgs = ["machine", "list", "--format", customFormat || "json"];
+    const result = await this.runScopeCommand(commandLauncher, commandArgs, settings?.controller?.scope || "");
+    const items = coercePodmanMachines(result);
+    return items;
   }
 }

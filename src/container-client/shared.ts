@@ -1,4 +1,4 @@
-import { ControllerScopeType, LIMAInstance, OperatingSystem, PodmanMachine, SSHHost, WSLDistribution } from "@/env/Types";
+import { CommandExecutionResult, ControllerScopeType, LIMAInstance, OperatingSystem, PodmanMachine, SSHHost, WSLDistribution } from "@/env/Types";
 import { createLogger } from "@/logger";
 
 // locals
@@ -54,6 +54,25 @@ export async function getAvailableLIMAInstances(limactlPath?: string) {
   return items;
 }
 
+export function coercePodmanMachines(result: CommandExecutionResult) {
+  let items: PodmanMachine[] = [];
+  if (!result.success) {
+    logger.error("Unable to get machines list", result);
+    return items;
+  }
+  try {
+    items = result.stdout ? JSON.parse(result.stdout) : items;
+    items = items.map((it: PodmanMachine) => {
+      it.Type = ControllerScopeType.PodmanMachine;
+      it.Usable = it.Running;
+      return it;
+    });
+  } catch (error: any) {
+    logger.error("Unable to decode machines list", error, result);
+  }
+  return items;
+}
+
 export async function getAvailablePodmanMachines(podmanPath?: string, customFormat?: string, opts?: any) {
   let items: PodmanMachine[] = [];
   if (!podmanPath) {
@@ -62,21 +81,8 @@ export async function getAvailablePodmanMachines(podmanPath?: string, customForm
   }
   try {
     const command = ["machine", "list", "--format", customFormat || "json"];
-    const result: any = await Command.Execute(podmanPath, command, opts);
-    if (!result.success) {
-      logger.error("Unable to get machines list", result);
-      return items;
-    }
-    try {
-      items = result.stdout ? JSON.parse(result.stdout) : items;
-      items = items.map((it: PodmanMachine) => {
-        it.Type = ControllerScopeType.PodmanMachine;
-        it.Usable = it.Running;
-        return it;
-      });
-    } catch (error: any) {
-      logger.error("Unable to decode machines list", error, result);
-    }
+    const result = await Command.Execute(podmanPath, command, opts);
+    items = coercePodmanMachines(result);
   } catch (error: any) {
     logger.error("Unable to decode machines list - execution error", error.message, error.stack);
   }

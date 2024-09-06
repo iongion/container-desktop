@@ -20,26 +20,23 @@ export class Runner {
     this.started = true;
     this.logger = createLogger("container-client.api.Runner");
     this.logger.debug(">> Starting API - guard configuration");
-    if (!starter?.path) {
+    if (!starter || !starter?.path) {
       this.logger.error("<< Starting API - Starter program not configured");
       return false;
     }
     const clientOpts = {
-      retry: { count: 10, wait: 5000 },
+      retry: { count: 10, wait: 1500 },
       checkStatus: async () => {
         this.logger.debug(">> Starting API - Checking API status - checking if running");
         const result = await this.client.isApiRunning();
         return result.success;
-      },
-      programPath: starter.path,
-      programArgs: starter.args,
-      ...(opts || {})
+      }
     };
     try {
       this.logger.debug(">> Starting API - System service start requested", clientOpts);
       let rejected = false;
       const started = await new Promise<boolean>((resolve, reject) => {
-        Command.StartService(clientOpts)
+        Command.ExecuteAsBackgroundService(starter.path!, starter.args || [], clientOpts)
           .then(async (client) => {
             client.on("ready", async ({ process, child }) => {
               try {

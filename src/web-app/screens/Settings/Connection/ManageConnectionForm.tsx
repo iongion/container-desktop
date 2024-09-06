@@ -469,9 +469,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             // Podman
             ContainerEngine.PODMAN_VIRTUALIZED_WSL,
             ContainerEngine.PODMAN_VIRTUALIZED_LIMA,
+            ContainerEngine.PODMAN_REMOTE,
             // Docker
             ContainerEngine.DOCKER_VIRTUALIZED_WSL,
-            ContainerEngine.DOCKER_VIRTUALIZED_LIMA
+            ContainerEngine.DOCKER_VIRTUALIZED_LIMA,
+            ContainerEngine.DOCKER_REMOTE
           ].includes(connector.engine)
         ) {
           insideScope = true;

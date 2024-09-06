@@ -218,10 +218,14 @@ export function getApiConfig(api: EngineConnectorApiSettings, scope?: string) {
   return config;
 }
 
-export function createApplicationApiDriver(connection: Connection): AxiosInstance {
+export function createApplicationApiDriver(connection: Connection, context?: any): AxiosInstance {
   const request = async <T = any, D = any>(request, config?: AxiosRequestConfig<any> | undefined) => {
     const req = config ? merge({}, request, config) : request;
-    return await Command.proxyRequest(req, connection);
+    // flatten headers
+    req.headers = Object.keys(req.headers || {}).reduce((acc, key) => {
+      acc[key] = req.headers[key];
+    }, {} as any);
+    return await Command.proxyRequest(req, connection, context);
   };
   const driver: AxiosInstance = {
     request,
@@ -832,12 +836,17 @@ export class ContainerClient {
   // Network
   async getNetworks() {
     return this.withResult<Network[]>(async () => {
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
-        const result = await this.driver.get<Network[]>("/networks", { baseURL: "http://localhost" });
-        return (result.data as any[]).map(coerceNetwork);
+      try {
+        if (this.connection.runtime === ContainerRuntime.DOCKER) {
+          const result = await this.driver.get<Network[]>("/networks", { baseURL: "http://localhost" });
+          return (result.data as any[]).map(coerceNetwork);
+        }
+        const result = await this.driver.get<Network[]>("/networks/json", { baseURL: "http://d/v4.0.0/libpod" });
+        return result.data || [];
+      } catch (error: any) {
+        console.error("Unable to fetch networks", error);
+        return [];
       }
-      const result = await this.driver.get<Network[]>("/networks/json", { baseURL: "http://d/v4.0.0/libpod" });
-      return result.data;
     });
   }
 

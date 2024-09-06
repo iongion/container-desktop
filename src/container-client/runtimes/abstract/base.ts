@@ -194,10 +194,12 @@ export abstract class AbstractClientEngine implements ClientEngine {
     const settings = await this.getSettings();
     if (!settings.api.baseURL) {
       result.details = "API base URL is not set";
+      this.logger.error(result.details);
       return result;
     }
     if (!settings.api.connection) {
       result.details = "API connection string is not set";
+      this.logger.error(result.details);
       return result;
     }
     // Check unix socket as file
@@ -219,7 +221,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
     // Guard configuration
     const available = await this.isApiAvailable();
     if (!available.success) {
-      this.logger.debug(this.id, "API is not available - unable to ping", available);
+      this.logger.error(this.id, "API is not available - unable to ping", available);
       return available;
     }
     // Test reachability
@@ -233,6 +235,9 @@ export abstract class AbstractClientEngine implements ClientEngine {
       const response = await driver.request({ method: "GET", url: "/_ping", timeout: 1500 });
       result.success = response?.data === "OK";
       result.details = result.success ? "Api is reachable" : response?.data;
+      if (!result.success) {
+        this.logger.error(this.id, "API ping service failed", response);
+      }
     } catch (error: any) {
       result.details = "API is not reachable - start manually or connect";
       this.logger.error(this.id, "API ping service failed", error.message, error.response ? { code: error.response.status, statusText: error.response.statusText } : "");

@@ -1,16 +1,19 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import adapter from "axios/lib/adapters/http";
 import { EventEmitter } from "eventemitter3";
+import http from "http";
+import fetch from "node-fetch";
 import { spawn, SpawnOptionsWithoutStdio } from "node:child_process";
-import fs from "node:fs";
 import net from "node:net";
+import os from "node:os";
 import { v4 } from "uuid";
 
 import { getApiConfig } from "@/container-client/Api.clients";
-import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngine, Wrapper } from "@/env/Types";
+import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/services";
+import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngine, OperatingSystem, Wrapper } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { getWindowsPipePath } from "@/platform";
-import { axiosConfigToCURL } from "@/utils";
+import { axiosConfigToCURL, deepMerge } from "@/utils";
 import { Platform } from "./node";
 
 const logger = createLogger("shared");
@@ -20,12 +23,26 @@ export interface WrapperOpts extends SpawnOptionsWithoutStdio {
 }
 
 // locals
+export async function getFreeTCPPort() {
+  return new Promise<number>((resolve, reject) => {
+    const srv = net.createServer();
+    srv.on("error", reject);
+    srv.listen(0, function () {
+      const address = srv.address() as any;
+      srv.close();
+      setTimeout(() => {
+        resolve(address.port || 31313);
+      }, 500);
+    });
+  });
+}
+
 export function createNodeJSApiDriver(config: AxiosRequestConfig) {
   const adapterConfig = {
     ...config,
     adapter
   };
-  // console.debug(">> Create NodeJS API driver", adapterConfig);
+  // logger.debug(">> Create NodeJS API driver", adapterConfig);
   const driver = axios.create(adapterConfig);
   // Configure http client logging
   // Add a request interceptor
@@ -126,6 +143,37 @@ export function proxyRequestToWSLDistribution(connection: Connection, config: Ap
   });
 }
 
+const tunnels: any = {};
+
+export async function proxyRequestToSSHConnection(
+  connection: Connection,
+  config: ApiDriverConfig,
+  request: Partial<AxiosRequestConfig>,
+  context?: any
+): Promise<AxiosResponse<any, any>> {
+  const remoteAddress = connection.settings.api.connection.relay ?? "";
+  if (!tunnels[remoteAddress]) {
+    const sshConnection: ISSHClient = await context.getSSHConnection();
+    const port = await getFreeTCPPort();
+    const localAddress = `localhost:${port}`;
+    if (!remoteAddress) {
+      throw new Error("Remote address must be set");
+    }
+    const em = await sshConnection.startTunnel({ localAddress, remoteAddress });
+    if (em) {
+      tunnels[remoteAddress] = localAddress;
+    }
+  }
+  if (tunnels[remoteAddress]) {
+    const localAddress = tunnels[remoteAddress];
+    logger.debug("Tunneling started - proxying request", request);
+    const configured = deepMerge({}, request, config);
+    const response = await Command.proxyTCPRequest(configured, localAddress);
+    return response;
+  }
+  throw new Error("Tunneling failed - unable to start tunnel");
+}
+
 // Commander
 export function applyWrapper(launcher: string, args: string[], opts: WrapperOpts) {
   let commandLauncher = launcher;
@@ -134,7 +182,7 @@ export function applyWrapper(launcher: string, args: string[], opts: WrapperOpts
     commandLauncher = opts.wrapper.launcher;
     commandArgs = [...opts.wrapper.args, launcher, ...args];
   }
-  // console.debug("Applied wrapper", { launcher, args }, ">>>", { launcher: commandLauncher, args: commandArgs });
+  // logger.debug("Applied wrapper", { launcher, args }, ">>>", { launcher: commandLauncher, args: commandArgs });
   return { commandLauncher, commandArgs };
 }
 
@@ -237,7 +285,11 @@ export async function exec_launcher(launcher, launcherArgs, opts?: any) {
   return await exec_launcher_async(launcher, launcherArgs, opts);
 }
 
-export async function exec_service(opts) {
+export async function exec_service(
+  programPath: string,
+  programArgs: string[],
+  opts: { checkStatus: () => Promise<boolean>; retry?: { count: number; wait: number }; cwd?: string; env?: any }
+) {
   let isManagedExit = false;
   let child;
   const process = {
@@ -247,7 +299,7 @@ export async function exec_service(opts) {
     stdout: "",
     stderr: ""
   };
-  const { checkStatus, retry, programPath, programArgs } = opts;
+  const { checkStatus, retry } = opts;
   const em = new EventEmitter();
   // Check
   const running = await checkStatus();
@@ -317,7 +369,7 @@ export async function exec_service(opts) {
               child: {
                 kill: (signal: string) => {
                   try {
-                    logger.debug("Killing child process");
+                    logger.debug("Killing child process", child?.pid);
                     child.kill(signal);
                   } catch (error: any) {
                     logger.error("Kill child process failed", error);
@@ -375,15 +427,15 @@ export const Command: ICommand = {
     return await exec_launcher_async(launcher, args, opts);
   },
 
-  async StartService(opts?: any) {
-    return await exec_service(opts);
+  async ExecuteAsBackgroundService(launcher: string, args: string[], opts?: any) {
+    return await exec_service(launcher, args, opts);
   },
 
-  async StartSSHConnection(opts: SSHHost) {
+  async StartSSHConnection(host: SSHHost, cli?: string) {
     const homeDir = await Platform.getHomeDir();
     let privateKeyPath = await Path.join(homeDir, ".ssh/id_rsa");
-    if (opts.IdentityFile) {
-      privateKeyPath = opts.IdentityFile;
+    if (host.IdentityFile) {
+      privateKeyPath = host.IdentityFile;
       if (privateKeyPath.startsWith("~")) {
         privateKeyPath = privateKeyPath.replace("~", homeDir);
       }
@@ -391,36 +443,101 @@ export const Command: ICommand = {
         privateKeyPath = privateKeyPath.replace("$HOME", homeDir);
       }
     }
-    return new Promise((resolve, reject) => {
-      function Client() {}
-      const connection = new Client();
+    return new Promise<ISSHClient>((resolve, reject) => {
+      // function Client() {}
+      const connection = new SSHClient({ osType: os.type() as OperatingSystem });
+      connection.cli = cli ?? (os.type() === OperatingSystem.Windows ? "ssh.exe" : "ssh");
       connection.on("ready", () => {
         logger.debug("Connection ready", connection);
+        // Wrap as object as it is passed from electron to renderer process - that one can't pass class instances
         resolve({
-          connected: true,
-          exec: (command, callback) => connection.exec(command, callback),
-          stop: () => connection.end()
-        });
+          isConnected: () => connection.isConnected(),
+          connect: async (params: SSHClientConnection) => await connection.connect(params),
+          execute: async (command: string[]) => await connection.execute(command),
+          startTunnel: async (params: any) => await connection.startTunnel(params),
+          on: (event, listener, context) => connection.on(event, listener, context),
+          close: () => connection.close()
+        } as ISSHClient);
       });
       connection.on("error", (error: any) => {
         logger.error("SSH connection error", error.message);
         reject(new Error("SSH connection error"));
       });
       const credentials = {
-        host: opts.HostName,
-        port: Number(opts.Port) || 22,
-        username: opts.User,
-        privateKey: fs.readFileSync(privateKeyPath)
+        host: host.HostName,
+        port: Number(host.Port) || 22,
+        username: host.User,
+        privateKeyPath: privateKeyPath
       };
-      logger.debug("Connecting to SSH server using", credentials);
+      logger.debug("Connecting to SSH server using", credentials, "from host", host);
       connection.connect(credentials);
-      return {
-        on: (event, listener, context) => connection.on(event, listener, context)
-      };
     });
   },
 
-  async proxyRequest(request: Partial<AxiosRequestConfig>, connection: Connection) {
+  async proxyTCPRequest(request: Partial<AxiosRequestConfig>, tcpAddress: string) {
+    const httpAgent = new http.Agent({
+      keepAlive: true,
+      keepAliveMsecs: 10,
+      timeout: 30000
+    });
+    httpAgent.maxSockets = 1;
+    const [tcpHost, tcpPort] = tcpAddress.split(":");
+    const options = {
+      url: request.url ?? "/",
+      method: request.method,
+      headers: (request.headers as any) || {},
+      agent: httpAgent
+    };
+    if (request.data) {
+      options.headers["Content-Type"] = "application/json";
+      (options as any).body = JSON.stringify(request.data);
+    }
+    logger.debug(">> Proxying TCP request", options);
+    try {
+      let fetchAddress = `http://${tcpAddress}${options.url.startsWith("/") ? options.url : `/${options.url}`}`;
+      if (request.baseURL) {
+        const url = new URL(request.baseURL);
+        url.host = tcpHost;
+        url.port = tcpPort;
+        fetchAddress = `${url}${options.url}`;
+      }
+      console.debug(">> Fetching TCP address", fetchAddress, options, request.headers);
+      const response = await fetch(fetchAddress, options);
+      const axiosResponse: any = {
+        success: response.status >= 200 && response.status < 300,
+        status: response.status,
+        statusText: response.statusText,
+        data: undefined,
+        headers: Object.keys(response.headers).reduce((acc, key) => {
+          acc[key] = response.headers.get(key);
+          return acc;
+        }, {} as any)
+      };
+      const isText = response.headers.get("Content-Type")?.includes("text/plain");
+      const isJSON = response.headers.get("Content-Type")?.includes("application/json");
+      if (isJSON) {
+        axiosResponse.data = await response.json();
+      } else if (isText) {
+        axiosResponse.data = await response.text();
+      }
+      logger.debug("<< Proxying TCP response", axiosResponse);
+      if (axiosResponse.success) {
+        return axiosResponse;
+      }
+      const error = new Error("Proxying TCP request failed");
+      (error as any).response = axiosResponse;
+      throw error;
+    } catch (error: any) {
+      return {
+        success: false,
+        status: 500,
+        statusText: error.message,
+        response: error.response
+      };
+    }
+  },
+
+  async proxyRequest(request: Partial<AxiosRequestConfig>, connection: Connection, context?: any) {
     let response: AxiosResponse<any, any> | undefined;
     switch (connection.engine) {
       case ContainerEngine.PODMAN_NATIVE:
@@ -446,7 +563,17 @@ export const Command: ICommand = {
           response = await proxyRequestToWSLDistribution(connection, config, request);
         }
         break;
+      case ContainerEngine.PODMAN_REMOTE:
+      case ContainerEngine.DOCKER_REMOTE:
+        {
+          const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
+          config.socketPath = connection.settings.api.connection.relay;
+          logger.debug("Proxying request", { connection, config });
+          response = await proxyRequestToSSHConnection(connection, config, request, context);
+        }
+        break;
       default:
+        logger.error("Unsupported engine", connection.engine);
         break;
     }
     return response;

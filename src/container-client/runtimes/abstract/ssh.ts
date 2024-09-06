@@ -1,12 +1,48 @@
-import { ApiConnection, ApiStartOptions, AvailabilityCheck, CommandExecutionResult, ControllerScope, EngineConnectorSettings, RunnerStopperOptions } from "@/env/Types";
+import { ApiConnection, ApiStartOptions, AvailabilityCheck, CommandExecutionResult, Connection, ControllerScope, EngineConnectorSettings, RunnerStopperOptions } from "@/env/Types";
+import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { SSH_PROGRAM } from "../../connection";
+import { ISSHClient } from "../../services";
 import { getAvailableSSHConnections } from "../../shared";
 import { AbstractClientEngine } from "../abstract/base";
 
 export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
   public CONTROLLER: string = SSH_PROGRAM;
+  protected _connection!: ISSHClient;
+
+  protected connectionsTracker: { [key: string]: any } = {};
 
   abstract getApiConnection(scope?: string): Promise<ApiConnection>;
+
+  getContainerApiClient() {
+    if (!this.containerApiClient) {
+      const connection: Connection = {
+        name: "Current",
+        label: "Current",
+        settings: this.settings,
+        runtime: this.RUNTIME,
+        engine: this.ENGINE,
+        id: this.id
+      };
+      this.containerApiClient = new ContainerClient(
+        connection,
+        createApplicationApiDriver(connection, {
+          getSSHConnection: async () => {
+            // console
+            const scopes = await this.getControllerScopes();
+            const scope = scopes.find((s) => s.Name === this.settings.controller?.scope);
+            const connected = await this.startSSHConnection(scope as SSHHost);
+            if (connected) {
+              console.debug("Returning connection", this, scope);
+              return this._connection;
+            }
+            console.error("SSH connection is not established", this, scope, connected);
+            throw new Error("SSH connection is not established");
+          }
+        })
+      );
+    }
+    return this.containerApiClient;
+  }
 
   // Runtime
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
@@ -49,22 +85,42 @@ export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
     const available = await this.isEngineAvailable();
     const controllerPath = settings.controller?.path || settings.controller?.name || "";
     const canListScopes = available.success && controllerPath;
-    const items = canListScopes ? await getAvailableSSHConnections() : [];
+    let items = canListScopes ? await getAvailableSSHConnections() : [];
+    items = items.map((it) => {
+      it.Usable = this.connectionsTracker[it.Name]?.connected ?? false;
+      it.Connected = it.Usable;
+      return it;
+    });
     return items;
   }
 
   // SSH specific
-  protected _connection: any;
   async startSSHConnection(host: SSHHost): Promise<boolean> {
-    this._connection = await Command.StartSSHConnection(host);
-    return this._connection && this._connection.connected;
+    if (this._connection && this._connection.isConnected()) {
+      return true;
+    }
+    const settings = await this.getSettings();
+    const sshExecutable = settings.controller?.path || settings.controller?.name || SSH_PROGRAM;
+    this.connectionsTracker[host.Name] = { connected: false };
+    this._connection = await Command.StartSSHConnection(host, sshExecutable);
+    if (this._connection && this._connection.isConnected()) {
+      this.connectionsTracker[host.Name] = { connected: true };
+    }
+    return this._connection && this._connection.isConnected();
   }
 
   async stopSSHConnection(host: SSHHost): Promise<boolean> {
-    console.error("Method not implemented.");
-    return false;
+    this.connectionsTracker[host.Name] = { connected: false };
+    if (this._connection) {
+      this._connection.close();
+    }
+    return true;
   }
   async runScopeCommand(program: string, args: string[], scope: string): Promise<CommandExecutionResult> {
-    throw new Error("Run scope command is not yet implemented");
+    if (!this._connection || !this._connection.isConnected()) {
+      throw new Error("SSH connection is not established");
+    }
+    const result = await this._connection.execute([program, ...args]);
+    return result;
   }
 }

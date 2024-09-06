@@ -38,7 +38,7 @@ export class DockerClientEngineSSH extends AbstractClientEngineSSH {
 
   // System information
   async getSystemInfo(connection?: Connection, customFormat?: string) {
-    return super.getSystemInfo(connection, customFormat || "{{ json . }}");
+    return super.getSystemInfo(connection, customFormat || "json");
   }
   isScoped() {
     return true;

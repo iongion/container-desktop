@@ -215,7 +215,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       description: "",
       notes: "Remote SSH connection is not yet available",
       availability: {
-        enabled: false,
+        enabled: true,
         api: false,
         engine: false,
         program: false,
@@ -355,7 +355,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       description: "",
       notes: "Remote SSH connection is not yet available",
       availability: {
-        enabled: false,
+        enabled: true,
         api: false,
         engine: false,
         program: false,

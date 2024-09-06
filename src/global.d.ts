@@ -12,9 +12,14 @@ interface SSHHost {
 
 interface ICommand {
   Execute: (launcher: string, args: string[], opts?: any) => Promise<CommandExecutionResult>;
-  StartService: (opts?: any) => Promise<EventEmitter>;
-  StartSSHConnection: (opts?: any) => Promise<EventEmitter>;
-  proxyRequest: (request, settings) => any;
+  ExecuteAsBackgroundService: (
+    launcher: string,
+    args: string[],
+    opts: { checkStatus: () => Promise<boolean>; retry?: { count: number; wait: number }; cwd?: string; env?: any }
+  ) => Promise<EventEmitter>;
+  StartSSHConnection: (opts?: any, cli?: string) => Promise<ISSHClient>;
+  proxyRequest: (request: any, settings: any, context?: any) => any;
+  proxyTCPRequest: (request: any, tcpAddress: string) => any;
 }
 
 interface IPlatform {
