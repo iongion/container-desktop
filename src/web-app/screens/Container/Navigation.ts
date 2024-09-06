@@ -6,7 +6,6 @@ export const getContainerUrl = (id: string, view: string) => {
 };
 
 export const getContainerServiceUrl = (container: Container) => {
-  console.debug(container);
   const port = (container.Ports || [])[0];
   let serviceUrl;
   if (port) {

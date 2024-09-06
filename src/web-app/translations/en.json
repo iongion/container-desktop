@@ -210,5 +210,15 @@
   },
   "Size": "Size",
   "Created By": "Created By",
-  "Path to executable": "Path to executable"
+  "Path to executable": "Path to executable",
+  "Command failed": "Command failed",
+  "Inspect": "Inspect",
+  "Stats": "Stats",
+  "Logs": "Logs",
+  "Kube": "Kube",
+  "Resume": "Resume",
+  "Pause": "Pause",
+  "Restart": "Restart",
+  "Open terminal console": "Open terminal console",
+  "Open in browser": "Open in browser"
 }

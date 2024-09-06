@@ -195,8 +195,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
     );
   }
 
-  console.debug({ containerServiceUrl });
-
   return (
     <ButtonGroup className="ItemActionsMenu" data-actions-menu="container">
       {expandAsOverlay}
