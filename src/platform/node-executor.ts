@@ -180,7 +180,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
   const spawnOpts = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
-    env: opts?.env || undefined,
+    env: opts?.env || process.env,
     detached: opts?.detached
   };
   const { commandLauncher, commandArgs } = applyWrapper(launcher, launcherArgs, opts);
