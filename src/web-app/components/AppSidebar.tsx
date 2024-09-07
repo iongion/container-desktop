@@ -10,24 +10,30 @@ import { AppSidebarFooter } from "./AppSidebarFooter";
 import "./AppSidebar.css";
 
 interface AppSidebarProps {
+  disabled?: boolean;
   screens: AppScreen<any>[];
   currentScreen: AppScreen<any>;
 }
 
-export const AppSidebar: React.FC<AppSidebarProps> = ({ screens, currentScreen }: AppSidebarProps) => {
+export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, currentScreen }: AppSidebarProps) => {
   const { t } = useTranslation();
   const currentConnector = useStoreState((state) => state.currentConnector);
   const expandSidebar = useStoreState((state) => state.userSettings.expandSidebar);
   const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
   return (
-    <div className="AppSidebar" data-expanded={expandSidebar ? "yes" : "no"}>
+    <div
+      className="AppSidebar"
+      data-expanded={expandSidebar ? "yes" : "no"}
+      data-disabled={disabled ? "yes" : "no"}
+      title={disabled ? t("To use these features a connection must be established") : ""}
+    >
       <div className="AppSidebarActions">
         <ButtonGroup vertical>
           {sidebarScreens.map((Screen) => {
             const isDisabled = Screen.isAvailable ? !Screen.isAvailable(currentConnector) : false;
             return (
               <AnchorButton
-                disabled={isDisabled}
+                disabled={disabled || isDisabled}
                 title={isDisabled ? t("This feature is not available for current engine") : undefined}
                 active={currentScreen?.ID === Screen.ID}
                 href={pathTo(Screen.Route.Path)}

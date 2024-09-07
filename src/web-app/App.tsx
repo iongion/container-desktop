@@ -125,14 +125,9 @@ export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
     );
   }
 
-  let sidebar;
-  if (ready) {
-    sidebar = <AppSidebar screens={Screens} currentScreen={currentScreen} />;
-  }
-
   return (
     <div className="AppContent">
-      {sidebar}
+      {phase === "starting" ? null : <AppSidebar disabled={!ready} screens={Screens} currentScreen={currentScreen} />}
       <div className="AppContentDocument">{content}</div>
     </div>
   );

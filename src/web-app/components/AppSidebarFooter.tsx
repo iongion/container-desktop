@@ -64,7 +64,7 @@ export function AppSidebarFooter() {
             </span>
             <br />
             <span className="AppSidebarProgramString" title={programTitle}>
-              <strong>CLI</strong> {programString}
+              <strong>CLI</strong> {programString || "current"}
             </span>
           </div>
         }
@@ -95,7 +95,7 @@ export function AppSidebarFooter() {
             <strong>GUI</strong> <span className="AppSidebarVersionString">{versionString}</span>
             <strong>CLI</strong>{" "}
             <span className="AppSidebarProgramString" title={programTitle}>
-              {programString}
+              {programString || "current"}
             </span>
           </NavbarHeading>
         </NavbarGroup>
