@@ -266,5 +266,13 @@
   "Get help with podman composer": "Get help with podman composer",
   "Clean-up the system": "Clean-up the system",
   "Factory reset": "Factory reset",
-  "Reset to factory settings": "Reset to factory settings"
+  "Reset to factory settings": "Reset to factory settings",
+  "No connections defined": "No connections defined",
+  "Unable to import connections - empty list": "Unable to import connections - empty list",
+  "Connections have been imported": "Connections have been imported",
+  "No default connection": "No default connection",
+  "Unable to import connections - invalid format": "Unable to import connections - invalid format",
+  "No connections defined - nothing to export": "No connections defined - nothing to export",
+  "Exports the current list of connections": "Exports the current list of connections",
+  "Imports and replaces the current list of connections": "Imports and replaces the current list of connections"
 }
