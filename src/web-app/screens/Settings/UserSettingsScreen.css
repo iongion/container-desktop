@@ -145,7 +145,12 @@
   color: #999;
 }
 .AppSettingsEngineManagerConnectionsController {
+  display: flex;
   padding: 5px;
+}
+.ConnectionsExportImport {
+  width: 214px !important;
+  margin-left: 5px;
 }
 .PlatformConnectionName,
 .PlatformConnectionURI {

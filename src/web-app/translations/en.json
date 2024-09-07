@@ -223,5 +223,8 @@
   "Open in browser": "Open in browser",
   "Automatic": "Automatic",
   "Manual": "Manual",
-  "Container startup": "Container startup"
+  "Container startup": "Container startup",
+  "Import": "Import",
+  "Export": "Export",
+  "Auto": "Auto"
 }

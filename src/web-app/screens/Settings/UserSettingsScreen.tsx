@@ -2,6 +2,7 @@ import { AnchorButton, Button, ButtonGroup, Callout, Checkbox, ControlGroup, Div
 import { IconNames } from "@blueprintjs/icons";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
+import { saveAs } from "file-saver";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -42,7 +43,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [withManageDrawer, setWithManagerDrawer] = useState(false);
   const connections = useStoreState((state) => state.settings.connections);
   const osType = useStoreState((state) => state.osType);
-  const getConnections = useStoreActions((actions) => actions.settings.getConnections);
+  const refreshConnections = useStoreActions((actions) => actions.settings.getConnections);
   const connectors = useMemo(() => {
     return getDefaultConnectors(osType);
   }, [osType]);
@@ -59,8 +60,43 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, []);
 
   const onReloadConnectionsClick = useCallback(async () => {
-    getConnections();
-  }, [getConnections]);
+    refreshConnections();
+  }, [refreshConnections]);
+
+  const onConnectionsExportClick = useCallback(async () => {
+    const data = JSON.stringify(connections, null, 2);
+    saveAs(new Blob([data], { type: "application/json" }), "podman-desktop-companion-connections.json");
+  }, [connections]);
+  const onConnectionsImportClick = useCallback(async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const data = e.target?.result;
+          if (typeof data === "string") {
+            try {
+              const connections = JSON.parse(data);
+              if (connections.length === 0) {
+                Notification.show({ message: t("Unable to import connections - empty list"), intent: Intent.DANGER });
+              } else {
+                await setGlobalUserSettings({ connections });
+                await refreshConnections();
+                Notification.show({ message: t("Connections have been imported"), intent: Intent.SUCCESS });
+              }
+            } catch (error: any) {
+              Notification.show({ message: t("Unable to import connections - invalid format"), intent: Intent.DANGER });
+            }
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  }, [t, setGlobalUserSettings, refreshConnections]);
 
   const onEditConnection = useCallback((connection: Connection) => {
     setEditedConnection(connection);
@@ -119,28 +155,30 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   let title = "";
   let errorMessage = "";
-  let icon = mdiEmoticonSad;
-  if (currentConnector?.settings?.program?.path) {
-    title = t("Unusable connection");
-    errorMessage = t("Check the logs from application data path if this is not intended behavior");
-    icon = mdiEmoticonWink;
+  let icon: any = undefined;
+
+  if (connections.length === 0) {
+    title = t("No connections defined");
+    errorMessage = t("To be able to continue, at least one connection needs to be defined.");
+    icon = mdiEmoticonSad;
   } else {
-    title = t("Automatic detection failed");
-    errorMessage = t("To be able to continue, all required programs need to be installed");
+    title = t("No default connection");
+    errorMessage = t("To be able to start automatically, a default connection needs to be set.");
+    icon = mdiEmoticonWink;
   }
 
   const contentWidget =
     provisioned && running ? null : (
-      <Callout className="AppSettingsCallout" title={title} icon={<ReactIcon.Icon path={icon} size={3} />}>
+      <Callout className="AppSettingsCallout" title={title} icon={icon ? <ReactIcon.Icon path={icon} size={3} /> : undefined}>
         <p>{errorMessage}</p>
       </Callout>
     );
 
   useEffect(() => {
     (async () => {
-      await getConnections();
+      await refreshConnections();
     })();
-  }, [getConnections]);
+  }, [refreshConnections]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -220,6 +258,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <Button text={t("Auto detect")} icon={IconNames.SEARCH} intent={Intent.NONE} />
                 </>
               ) : null}
+            </ButtonGroup>
+
+            <ButtonGroup minimal className="ConnectionsExportImport">
+              <Button
+                disabled={connections.length === 0}
+                text={t("Export")}
+                title={connections.length === 0 ? t("No connections defined - nothing to export") : t("Exports the current list of connections")}
+                icon={IconNames.EXPORT}
+                intent={Intent.NONE}
+                onClick={onConnectionsExportClick}
+              />
+              <Button
+                text={t("Import")}
+                title={t("Imports and replaces the current list of connections")}
+                icon={IconNames.IMPORT}
+                intent={Intent.NONE}
+                onClick={onConnectionsImportClick}
+              />
             </ButtonGroup>
           </div>
         </div>
