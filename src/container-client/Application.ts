@@ -791,6 +791,11 @@ export class Application {
           }
         }
         if (startApi) {
+          connectionNotifier.emit("startup.phase", {
+            date: dayjs().toISOString(),
+            event: "Starting connection api",
+            origin: opts?.origin
+          });
           try {
             await engine.startApi();
           } catch (error: any) {
