@@ -159,10 +159,9 @@
 }
 .PlatformConnectionName {
   font-size: 12px;
-  padding-top: 2px;
-  padding-bottom: 5px;
 }
 .PlatformConnectionURI {
+  padding-top: 5px;
   color: #999;
 }
 

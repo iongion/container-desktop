@@ -222,7 +222,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <td>{index + 1}.</td>
                       <td>
                         <p className="PlatformConnectionName">{connection.name}</p>
-                        <p className="PlatformConnectionURI">{connection.settings?.api?.connection?.uri}</p>
+                        {connection.settings?.api?.connection?.uri ? <p className="PlatformConnectionURI">{connection.settings?.api?.connection?.uri}</p> : null}
                       </td>
                       <td>{connection.runtime}</td>
                       <td>
