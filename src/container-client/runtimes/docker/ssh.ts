@@ -1,5 +1,5 @@
 import { AbstractClientEngineSSH } from "@/container-client/runtimes/abstract/ssh";
-import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { DOCKER_PROGRAM, SSH_PROGRAM } from "../../connection";
 
@@ -43,9 +43,5 @@ export class DockerClientEngineSSH extends AbstractClientEngineSSH {
   }
   isScoped() {
     return true;
-  }
-
-  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
-    throw new Error("Method not implemented.");
   }
 }

@@ -115,6 +115,22 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
     const items = canListScopes ? await getAvailableLIMAInstances(controllerPath) : [];
     return items;
   }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    const scopes = await this.getControllerScopes(customSettings);
+    if (scopes.length > 0) {
+      if (customSettings?.controller?.scope) {
+        const matchingScope = scopes.find((s) => s.Name === customSettings?.controller?.scope);
+        return matchingScope;
+      } else {
+        this.logger.error(this.id, "Controller scope is not set", customSettings);
+      }
+    } else {
+      this.logger.error(this.id, "No controller scopes available - no LIMA instances present", customSettings);
+    }
+    return undefined;
+  }
+
   // Executes command inside controller scope
   async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
     const { controller } = settings || (await this.getSettings());

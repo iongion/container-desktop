@@ -98,7 +98,7 @@
 }
 
 .AppSettingsEngineManagerConnections {
-  height: 300px;
+  height: calc(100vh - 320px);
   border: 1px solid #333;
   position: relative;
   background-color: #2a262c;

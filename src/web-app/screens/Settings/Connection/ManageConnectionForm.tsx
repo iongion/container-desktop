@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/no-autofocus */
-import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, ProgressBar, Switch, Tab, Tabs } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, ProgressBar, Switch, Tab, Tabs, UL } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { isEmpty } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -767,18 +767,54 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           </FormGroup>
         ) : null}
 
+        {/* Connection api start */}
+        <FormGroup
+          disabled={pending}
+          labelFor="settings.api.autoStart"
+          label={t("Container startup")}
+          subLabel={t("Useful when not relying on engines running as system services")}
+        >
+          <Controller
+            control={control}
+            name="settings.api.autoStart"
+            render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+              return (
+                <Switch
+                  label={t("Auto-start the runtime engine if not already running")}
+                  inline
+                  autoFocus
+                  disabled={pending}
+                  id={name}
+                  name={name}
+                  checked={value || false}
+                  onBlur={onBlur}
+                  onChange={onChange}
+                  inputRef={ref}
+                />
+              );
+            }}
+          />
+        </FormGroup>
+
         <Controller
           control={control}
           name="settings.mode"
           render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
             return (
-              <Tabs id="ConnectionSettingsMode" fill selectedTabId={value} onChange={onChange}>
+              <Tabs id="ConnectionSettingsMode" className="ConnectionSettingsMode" fill selectedTabId={value} onChange={onChange}>
                 <Tab
                   id="mode.automatic"
                   title={t("Automatic")}
                   panel={
                     <>
-                      <p>{t("Connection settings are automatically inferred from runtime engine configuration. Go to Manual mode to set-up advanced configuration details")}</p>
+                      <UL>
+                        <li>
+                          <p>{t("Connection settings are automatically detected")}</p>
+                        </li>
+                        <li>
+                          <p>{t("Go to Manual mode to set-up advanced connection details")}</p>
+                        </li>
+                      </UL>
                     </>
                   }
                   panelClassName="AutomaticSettingsPanel"
@@ -880,30 +916,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             );
           }}
         />
-
-        {/* Connection api start */}
-        <FormGroup disabled={pending} labelFor="settings.api.autoStart">
-          <Controller
-            control={control}
-            name="settings.api.autoStart"
-            render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-              return (
-                <Switch
-                  label={t("Auto-start API")}
-                  inline
-                  autoFocus
-                  disabled={pending}
-                  id={name}
-                  name={name}
-                  checked={value || false}
-                  onBlur={onBlur}
-                  onChange={onChange}
-                  inputRef={ref}
-                />
-              );
-            }}
-          />
-        </FormGroup>
 
         {withRootfulSupport ? (
           <FormGroup disabled={pending} labelFor="settings.rootfull">

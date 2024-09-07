@@ -94,6 +94,21 @@ export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
     return items;
   }
 
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    const scopes = await this.getControllerScopes(customSettings);
+    if (scopes.length > 0) {
+      if (customSettings?.controller?.scope) {
+        const matchingScope = scopes.find((s) => s.Name === customSettings?.controller?.scope);
+        return matchingScope;
+      } else {
+        this.logger.error(this.id, "Controller scope is not set", customSettings);
+      }
+    } else {
+      this.logger.error(this.id, "No controller scopes available - no SSH connections configured", customSettings);
+    }
+    return undefined;
+  }
+
   // SSH specific
   async startSSHConnection(host: SSHHost): Promise<boolean> {
     if (this._connection && this._connection.isConnected()) {

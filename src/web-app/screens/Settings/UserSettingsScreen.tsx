@@ -149,7 +149,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
       </ScreenHeader>
       <div className="AppScreenContent">
         {contentWidget}
-
         <div className="AppSettingsEngineManager">
           <div className="AppSettingsEngineManagerConnections">
             <HTMLTable compact striped interactive className="AppDataTable" data-table="engine.connections">

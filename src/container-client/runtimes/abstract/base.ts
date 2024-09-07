@@ -165,8 +165,10 @@ export abstract class AbstractClientEngine implements ClientEngine {
     try {
       // 1.0 - detect program
       if (this.isScoped()) {
+        const existingScope = settings.controller?.scope || "";
         const controllerProgram = await this.findHostProgram({ name: this.CONTROLLER, path: "" }, settings);
         settings.controller = controllerProgram;
+        settings.controller.scope = existingScope;
         const defaultScope = await this.getControllerDefaultScope(settings);
         this.logger.warn(this.id, "Default scope is", defaultScope);
         if (defaultScope) {
