@@ -67,6 +67,7 @@ export const createModel = async (registry: AppRegistry): Promise<DashboardModel
         exited: exitedContainers.length,
         created: createdContainers.length
       });
+      console.debug("Fetching containers stats", containers.length);
       return containers.length;
     })
   )

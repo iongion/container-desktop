@@ -41,7 +41,7 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
         fontSize: 11,
         disableStdin: true,
         scrollback: 16 * 1024,
-        logLevel: "trace",
+        logLevel: "error",
         allowProposedApi: true
       });
       terminal.loadAddon(fitAddon);

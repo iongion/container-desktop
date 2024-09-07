@@ -44,6 +44,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
     }
     const isPollingEnabled = Environment.features.polling?.enabled;
     if (isPollingEnabled) {
+      console.debug("Polling enabled - creating interval");
       pollerID.current = setInterval(async () => {
         try {
           if (isPending.current) {
@@ -60,6 +61,8 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
           console.debug("Poller cycle complete");
         }
       }, frequency);
+    } else {
+      console.debug("Polling disabled - fetching once");
     }
     return () => {
       clearInterval(pollerID.current);

@@ -221,11 +221,13 @@ export function getApiConfig(api: EngineConnectorApiSettings, scope?: string) {
 
 export function createApplicationApiDriver(connection: Connection, context?: any): AxiosInstance {
   const request = async <T = any, D = any>(request, config?: AxiosRequestConfig<any> | undefined) => {
-    const req = config ? merge({}, request, config) : request;
+    const req = (config ? merge({}, request, config) : request) || { headers: {} };
     // flatten headers
-    req.headers = Object.keys(req.headers || {}).reduce((acc, key) => {
+    const headersFlat = Object.keys(req.headers || {}).reduce((acc, key) => {
       acc[key] = req.headers[key];
+      return acc;
     }, {} as any);
+    req.headers = headersFlat as any;
     return await Command.proxyRequest(req, connection, context);
   };
   const driver: AxiosInstance = {

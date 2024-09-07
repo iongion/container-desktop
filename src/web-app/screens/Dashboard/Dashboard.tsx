@@ -1,6 +1,6 @@
 import { AnchorButton, Button, FormGroup, HTMLTable, Icon, InputGroup, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngine, OperatingSystem } from "@/env/Types";
@@ -10,7 +10,6 @@ import { usePoller } from "@/web-app/Hooks";
 import { Notification } from "@/web-app/Notification";
 import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-import { Application } from "@/container-client/Application";
 import "./Dashboard.css";
 
 export const ID = "dashboard";
@@ -20,8 +19,7 @@ export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const [osType, setOsType] = useState<string>("");
-  const userSettings = useStoreState((state) => state.userSettings);
+  const osType = useStoreState((state) => state.osType);
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
   const currentConnector = useStoreState((state) => state.currentConnector);
@@ -62,14 +60,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   // Change hydration
   usePoller({ poller: containersFetchStats });
-
-  useEffect(() => {
-    (async () => {
-      const instance = Application.getInstance();
-      const osType = await instance.getOsType();
-      setOsType(osType);
-    })();
-  }, [t]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
