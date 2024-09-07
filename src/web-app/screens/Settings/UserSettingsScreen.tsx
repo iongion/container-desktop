@@ -165,6 +165,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
     title = t("No default connection");
     errorMessage = t("To be able to start automatically, a default connection needs to be set.");
     icon = mdiEmoticonWink;
+    if (!currentConnector) {
+      title = t("No active connection");
+      errorMessage = t("To be able to continue, a connection needs to be established.");
+    }
   }
 
   const contentWidget =

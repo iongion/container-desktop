@@ -274,5 +274,6 @@
   "Unable to import connections - invalid format": "Unable to import connections - invalid format",
   "No connections defined - nothing to export": "No connections defined - nothing to export",
   "Exports the current list of connections": "Exports the current list of connections",
-  "Imports and replaces the current list of connections": "Imports and replaces the current list of connections"
+  "Imports and replaces the current list of connections": "Imports and replaces the current list of connections",
+  "No active connection": "No active connection"
 }

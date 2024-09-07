@@ -691,10 +691,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         </FormGroup>
 
         {/* Program path widget */}
-        {flags.programWidgetPosition === "before-controller" ? programPathWidget : null}
+        {flags.programWidgetPosition === "before-controller" && engine ? programPathWidget : null}
 
         {/* Program path widget */}
-        {flags.withCustomControllerPath ? (
+        {flags.withCustomControllerPath && engine ? (
           <FormGroup
             disabled={pending}
             label={t("Path to {{name}} executable", controller)}
@@ -739,7 +739,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         ) : null}
 
         {/* Controller scope widget*/}
-        {flags.withCustomControllerScope ? (
+        {flags.withCustomControllerScope && engine ? (
           <FormGroup disabled={pending} label={labels.controllerScope} labelFor="settings.controller.scope">
             <Controller
               control={control}
@@ -769,155 +769,153 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         ) : null}
 
         {/* Connection api start */}
-        <FormGroup
-          className="ContainerStartupFormGroup"
-          disabled={pending}
-          labelFor="settings.api.autoStart"
-          label={t("Container startup")}
-          subLabel={t("Useful when not relying on engines running as system services")}
-        >
+        {engine ? (
+          <FormGroup className="ContainerStartupFormGroup" disabled={pending} labelFor="settings.api.autoStart" label={t("Container startup")}>
+            <Controller
+              control={control}
+              name="settings.api.autoStart"
+              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                return (
+                  <Switch
+                    label={t("Auto-start the runtime engine if not already running")}
+                    inline
+                    autoFocus
+                    disabled={pending}
+                    id={name}
+                    name={name}
+                    checked={value || false}
+                    onBlur={onBlur}
+                    onChange={onChange}
+                    inputRef={ref}
+                  />
+                );
+              }}
+            />
+          </FormGroup>
+        ) : null}
+
+        {engine ? (
           <Controller
             control={control}
-            name="settings.api.autoStart"
+            name="settings.mode"
             render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
               return (
-                <Switch
-                  label={t("Auto-start the runtime engine if not already running")}
-                  inline
-                  autoFocus
-                  disabled={pending}
-                  id={name}
-                  name={name}
-                  checked={value || false}
-                  onBlur={onBlur}
-                  onChange={onChange}
-                  inputRef={ref}
-                />
-              );
-            }}
-          />
-        </FormGroup>
+                <Tabs id="ConnectionSettingsMode" className="ConnectionSettingsMode" fill selectedTabId={value} onChange={onChange}>
+                  <Tab
+                    id="mode.automatic"
+                    title={t("Automatic")}
+                    panel={
+                      <>
+                        <UL>
+                          <li>
+                            <p>{t("Connection settings are automatically detected")}</p>
+                          </li>
+                          <li>
+                            <p>{t("Go to Manual mode to set-up advanced connection details")}</p>
+                          </li>
+                        </UL>
+                      </>
+                    }
+                    panelClassName="AutomaticSettingsPanel"
+                  />
+                  <Tab
+                    id="mode.manual"
+                    title={t("Manual")}
+                    panel={
+                      <>
+                        {flags.programWidgetPosition === "after-scope" ? programPathWidget : null}
 
-        <Controller
-          control={control}
-          name="settings.mode"
-          render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-            return (
-              <Tabs id="ConnectionSettingsMode" className="ConnectionSettingsMode" fill selectedTabId={value} onChange={onChange}>
-                <Tab
-                  id="mode.automatic"
-                  title={t("Automatic")}
-                  panel={
-                    <>
-                      <UL>
-                        <li>
-                          <p>{t("Connection settings are automatically detected")}</p>
-                        </li>
-                        <li>
-                          <p>{t("Go to Manual mode to set-up advanced connection details")}</p>
-                        </li>
-                      </UL>
-                    </>
-                  }
-                  panelClassName="AutomaticSettingsPanel"
-                />
-                <Tab
-                  id="mode.manual"
-                  title={t("Manual")}
-                  panel={
-                    <>
-                      {flags.programWidgetPosition === "after-scope" ? programPathWidget : null}
-
-                      {/* Connection api */}
-                      <FormGroup disabled={pending} label={labels.apiConnectionUri} labelFor="settings.api.connection.uri" helperText={t("Used as API connection URI")}>
-                        <Controller
-                          control={control}
-                          name="settings.api.connection.uri"
-                          render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-                            const apiConnectionUriDetectButtonTitle = "";
-                            return (
-                              <div className="ApiConnectionUriInput">
-                                <InputGroup
-                                  fill
-                                  autoFocus
-                                  disabled={pending}
-                                  readOnly={flags.isCustomApiConnectionUriReadonly}
-                                  id={name}
-                                  name={name}
-                                  value={value || ""}
-                                  onBlur={onBlur}
-                                  onChange={onChange}
-                                  inputRef={ref}
-                                  intent={invalid ? Intent.DANGER : Intent.NONE}
-                                  placeholder={t("auto")}
-                                  rightElement={
-                                    flags.withCustomApiConnectionUri ? undefined : (
-                                      <ButtonGroup minimal>
-                                        <Button
-                                          disabled={pending}
-                                          small
-                                          title={t("Managed by {{name}} - click to override", program)}
-                                          icon={isCustomApiConnectionUriEditable ? IconNames.UNLOCK : IconNames.LOCK}
-                                          intent={Intent.NONE}
-                                          data-target="program"
-                                          onClick={onToggleCustomApiConnectionUriEditability}
-                                        />
-                                      </ButtonGroup>
-                                    )
-                                  }
-                                />
-                                <Divider />
-                                <ButtonGroup minimal>
-                                  <Button
-                                    disabled={pending || flags.isCustomApiConnectionUriDetectDisabled}
-                                    small
-                                    text={t("Detect")}
-                                    title={apiConnectionUriDetectButtonTitle}
-                                    intent={Intent.SUCCESS}
-                                    onClick={onApiConnectionUriDetectClick}
-                                  />
-                                </ButtonGroup>
-                              </div>
-                            );
-                          }}
-                        />
-                      </FormGroup>
-
-                      {/* Connection api relay */}
-                      {flags.withApiRelay ? (
-                        <FormGroup disabled={pending} label={t("API connection relay")} labelFor="settings.api.connection.relay">
+                        {/* Connection api */}
+                        <FormGroup disabled={pending} label={labels.apiConnectionUri} labelFor="settings.api.connection.uri" helperText={t("Used as API connection URI")}>
                           <Controller
                             control={control}
-                            name="settings.api.connection.relay"
+                            name="settings.api.connection.uri"
                             render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                              const apiConnectionUriDetectButtonTitle = "";
                               return (
-                                <InputGroup
-                                  fill
-                                  autoFocus
-                                  readOnly={flags.isCustomApiConnectionRelayReadonly}
-                                  disabled={pending || engine === ContainerEngine.DOCKER_VIRTUALIZED_VENDOR}
-                                  id={name}
-                                  name={name}
-                                  value={value || ""}
-                                  onBlur={onBlur}
-                                  onChange={onChange}
-                                  inputRef={ref}
-                                  placeholder={t("auto")}
-                                  intent={invalid ? Intent.DANGER : Intent.NONE}
-                                />
+                                <div className="ApiConnectionUriInput">
+                                  <InputGroup
+                                    fill
+                                    autoFocus
+                                    disabled={pending}
+                                    readOnly={flags.isCustomApiConnectionUriReadonly}
+                                    id={name}
+                                    name={name}
+                                    value={value || ""}
+                                    onBlur={onBlur}
+                                    onChange={onChange}
+                                    inputRef={ref}
+                                    intent={invalid ? Intent.DANGER : Intent.NONE}
+                                    placeholder={t("auto")}
+                                    rightElement={
+                                      flags.withCustomApiConnectionUri ? undefined : (
+                                        <ButtonGroup minimal>
+                                          <Button
+                                            disabled={pending}
+                                            small
+                                            title={t("Managed by {{name}} - click to override", program)}
+                                            icon={isCustomApiConnectionUriEditable ? IconNames.UNLOCK : IconNames.LOCK}
+                                            intent={Intent.NONE}
+                                            data-target="program"
+                                            onClick={onToggleCustomApiConnectionUriEditability}
+                                          />
+                                        </ButtonGroup>
+                                      )
+                                    }
+                                  />
+                                  <Divider />
+                                  <ButtonGroup minimal>
+                                    <Button
+                                      disabled={pending || flags.isCustomApiConnectionUriDetectDisabled}
+                                      small
+                                      text={t("Detect")}
+                                      title={apiConnectionUriDetectButtonTitle}
+                                      intent={Intent.SUCCESS}
+                                      onClick={onApiConnectionUriDetectClick}
+                                    />
+                                  </ButtonGroup>
+                                </div>
                               );
                             }}
                           />
                         </FormGroup>
-                      ) : null}
-                    </>
-                  }
-                  panelClassName="ManualSettingsPanel"
-                />
-              </Tabs>
-            );
-          }}
-        />
+
+                        {/* Connection api relay */}
+                        {flags.withApiRelay ? (
+                          <FormGroup disabled={pending} label={t("API connection relay")} labelFor="settings.api.connection.relay">
+                            <Controller
+                              control={control}
+                              name="settings.api.connection.relay"
+                              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                                return (
+                                  <InputGroup
+                                    fill
+                                    autoFocus
+                                    readOnly={flags.isCustomApiConnectionRelayReadonly}
+                                    disabled={pending || engine === ContainerEngine.DOCKER_VIRTUALIZED_VENDOR}
+                                    id={name}
+                                    name={name}
+                                    value={value || ""}
+                                    onBlur={onBlur}
+                                    onChange={onChange}
+                                    inputRef={ref}
+                                    placeholder={t("auto")}
+                                    intent={invalid ? Intent.DANGER : Intent.NONE}
+                                  />
+                                );
+                              }}
+                            />
+                          </FormGroup>
+                        ) : null}
+                      </>
+                    }
+                    panelClassName="ManualSettingsPanel"
+                  />
+                </Tabs>
+              );
+            }}
+          />
+        ) : null}
 
         {withRootfulSupport ? (
           <FormGroup disabled={pending} labelFor="settings.rootfull">
