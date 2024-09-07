@@ -170,6 +170,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   const scopeLabel = runtimeEngineLabelsMap[`${connection.runtime}:${connection.engine}`] || connection.engine;
                   const isCurrent = currentConnector?.connectionId === connection?.id;
                   const isConnected = isCurrent && currentConnector.availability.api;
+                  const isAutomatic = connection.settings.mode === "mode.automatic";
                   return (
                     <tr
                       key={connection.id}
@@ -188,11 +189,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       </td>
                       <td>{connection.runtime}</td>
                       <td>
-                        <p className="PlatformScopeName">{connection.settings?.controller?.scope || ""}</p>
+                        <p className="PlatformScopeName">{isAutomatic ? t("Auto") : connection.settings?.controller?.scope || ""}</p>
                         <p className="PlatformScopeLabel">{scopeLabel}</p>
                       </td>
                       <td>{connection.settings.api.autoStart ? t("Yes") : t("No")}</td>
-                      <td>{connection.settings.rootfull ? t("Yes") : t("No")}</td>
+                      <td>{isAutomatic ? t("Detect") : connection.settings.rootfull ? t("Yes") : t("No")}</td>
                       <td data-flag="default">{defaultConnector === connection.id ? <strong>{t("Yes")}</strong> : t("No")}</td>
                       <td>
                         <ActionsMenu onEdit={onEditConnection} connection={connection} />

@@ -1,4 +1,4 @@
-import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { DOCKER_PROGRAM, WSL_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedWSL } from "../abstract/wsl";
@@ -28,18 +28,16 @@ export class DockerClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
       };
     }
     // Get environment variable inside the scope
-    const engine = await this.getScopeEnvironmentVariable(scope, "DOCKER_HOST");
-    let relay = engine || "";
+    let relay = "";
     const uri = getWindowsPipePath(`${this.RUNTIME}-${scope}`);
     // Inspect machine system info for relay path
-    try {
-      const systemInfo = await this.getSystemInfo(connection, undefined, customSettings);
-      relay = systemInfo?.host?.remoteSocket?.path || relay;
-      if (relay) {
-        this.logger.debug(this.id, "Using relay from system info", systemInfo);
-      }
-    } catch (error: any) {
-      this.logger.error(this.id, "Unable to retrieve system info", error);
+    if (settings.mode === "mode.automatic") {
+      // TODO: Find a way to retrieve the relay path from docker itself
+      const engine = await this.getScopeEnvironmentVariable(scope, "DOCKER_HOST");
+      relay = engine || "";
+    } else {
+      const engine = await this.getScopeEnvironmentVariable(scope, "DOCKER_HOST");
+      relay = engine || "";
     }
     return {
       uri,
@@ -53,9 +51,5 @@ export class DockerClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
   }
   isScoped() {
     return true;
-  }
-
-  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
-    throw new Error("Method not implemented.");
   }
 }

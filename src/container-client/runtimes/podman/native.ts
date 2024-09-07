@@ -110,8 +110,8 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
     return false;
   }
 
-  async getControllerScopes(customFormat?: any) {
-    return await this.getPodmanMachines(customFormat);
+  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+    return await this.getPodmanMachines(undefined, customSettings);
   }
 
   async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {

@@ -116,8 +116,8 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     return inspect;
   }
 
-  async getControllerScopes(customFormat?: string) {
-    return await this.getPodmanMachines(customFormat);
+  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+    return await this.getPodmanMachines(undefined, customSettings);
   }
 
   async getSystemConnections(customSettings?: EngineConnectorSettings) {

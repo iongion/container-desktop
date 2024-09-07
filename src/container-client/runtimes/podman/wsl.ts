@@ -1,6 +1,6 @@
 import { isEmpty } from "lodash-es";
 
-import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM, WSL_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedWSL } from "../abstract/wsl";
@@ -30,9 +30,19 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
         relay: ""
       };
     }
+    let relay = "";
     // Get environment variable inside the scope
-    const userDataDir = await this.getConnectionDataDir();
-    const relay = `${userDataDir}/podman-desktop-companion-wsl-relay.sock`;
+    if (settings.mode === "mode.automatic") {
+      try {
+        const systemInfo = await this.getSystemInfo(connection, undefined, customSettings);
+        relay = systemInfo?.host?.remoteSocket?.path || relay;
+      } catch (error: any) {
+        this.logger.error(this.id, "Unable to retrieve system info", error);
+      }
+    } else {
+      const userDataDir = await this.getConnectionDataDir();
+      relay = `${userDataDir}/podman-desktop-companion-wsl-relay.sock`;
+    }
     const uri = getWindowsPipePath(scope.startsWith("podman-machine") ? scope : `${this.RUNTIME}-${scope}`);
     // Inspect machine system info for relay path
     return {
@@ -111,9 +121,5 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
       this.logger.error("Unable to generate kube", entityId, result);
     }
     return result;
-  }
-
-  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
-    throw new Error("Method not implemented.");
   }
 }

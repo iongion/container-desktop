@@ -107,8 +107,8 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
     return result;
   }
   // Services
-  async getControllerScopes() {
-    const settings = await this.getSettings();
+  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+    const settings = customSettings || (await this.getSettings());
     const available = await this.isEngineAvailable();
     const controllerPath = settings.controller?.path || settings.controller?.name || "";
     const canListScopes = available.success && !isEmpty(controllerPath);

@@ -53,8 +53,8 @@ export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientE
     return result;
   }
   // Services
-  async getControllerScopes() {
-    const settings = await this.getSettings();
+  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+    const settings = customSettings || (await this.getSettings());
     const available = await this.isEngineAvailable();
     const controllerPath = settings.controller?.path || settings.controller?.name;
     const canListScopes = available.success && controllerPath;
@@ -108,5 +108,16 @@ export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientE
     const commandLauncher = settings.controller?.path || settings.controller?.name || "";
     const check = await this.runHostCommand(commandLauncher, ["--terminate", name]);
     return check.success;
+  }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    let defaultScope: ControllerScope | undefined;
+    const scopes = await this.getControllerScopes(customSettings);
+    if (scopes.length) {
+      defaultScope = scopes[0];
+    } else {
+      this.logger.error(this.id, "Unable to get default scope - no connections or machines");
+    }
+    return defaultScope;
   }
 }
