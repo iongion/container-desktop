@@ -33,7 +33,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.KEY} rightContent={<ListActionsMenu onReload={podsFetch} />} />
       <div className="AppScreenContent">
-        {pods.length === 0 && !pending ? (
+        {pods.length === 0 ? (
           <NonIdealState icon={IconNames.GEOSEARCH} title={t("No results")} description={<p>{t("There are no pods")}</p>} />
         ) : (
           <HTMLTable interactive compact striped className="AppDataTable" data-table="pods">

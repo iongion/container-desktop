@@ -34,7 +34,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} rightContent={<ActionsMenu withoutStart onReload={fetchAll} />} />
       <div className="AppScreenContent">
-        {images.length === 0 && !pending ? (
+        {images.length === 0 ? (
           <NonIdealState icon={IconNames.GEOSEARCH} title={t("No results")} description={<p>{t("There are no images")}</p>} />
         ) : (
           <HTMLTable interactive striped compact className="AppDataTable" data-table="images">
