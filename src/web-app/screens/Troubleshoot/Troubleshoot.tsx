@@ -92,7 +92,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       text: t("Access online help"),
       title: t("Podman"),
       description: t("Get help with podman"),
-      href: "https://podman.io/getting-started",
+      href: "https://podman.io/get-started",
       icon: IconNames.HELP
     },
     {

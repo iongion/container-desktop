@@ -254,5 +254,17 @@
   "Security": "Security",
   "Image layers history": "Image layers history",
   "Total number of containers in this group": "Total number of containers in this group",
-  "Unable to generate kube - pod only has an infra container": "Unable to generate kube"
+  "Unable to generate kube - pod only has an infra container": "Unable to generate kube",
+  "Confirm": "Confirm",
+  "Cancel": "Cancel",
+  "Clean ": {
+    " Prune data": "Clean / Prune data"
+  },
+  "Access online help": "Access online help",
+  "Get help with podman": "Get help with podman",
+  "Podman composer": "Podman composer",
+  "Get help with podman composer": "Get help with podman composer",
+  "Clean-up the system": "Clean-up the system",
+  "Factory reset": "Factory reset",
+  "Reset to factory settings": "Reset to factory settings"
 }

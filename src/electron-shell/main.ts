@@ -30,7 +30,8 @@ const URLS_ALLOWED = [
   "https://stately.ai/inspect",
   "https://stately.ai/registry/inspect",
   "https://iongion.github.io/podman-desktop-companion/",
-  "https://github.com/iongion/podman-desktop-companion/releases"
+  "https://github.com/iongion/podman-desktop-companion/releases",
+  "https://github.com/containers/podman-compose"
 ];
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
 const logger = createLogger("shell.main");
