@@ -356,8 +356,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   );
   const onControllerScopesDetectClick = useCallback(async () => {
     const connector = getValues();
-    await fetchControllerScopes(connector);
-  }, [getValues, fetchControllerScopes]);
+    const updated = await fetchControllerScopes(connector);
+    if (!updated?.scopes?.length) {
+      Notification.show({ message: t("No {{controllerScope}} detected - setup required", labels), intent: Intent.WARNING });
+    }
+  }, [getValues, fetchControllerScopes, labels, t]);
   const onControllerScopeChange = useCallback(
     async (scope: ControllerScope) => {
       try {
