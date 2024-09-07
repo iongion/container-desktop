@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
+import { Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiConsole } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -20,6 +20,7 @@ interface ActionsMenuProps {
   withoutCreate?: boolean;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
+  onReload?: () => void;
 }
 
 interface PerformActionOptions {
@@ -29,7 +30,7 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate, onReload }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -154,6 +155,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
     <>
       <ButtonGroup>
         {startButton}
+        {onReload && (
+          <>
+            {startButton ? <Divider /> : null}
+            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+          </>
+        )}
         {removeWidget}
       </ButtonGroup>
       {withCreate && <CreateDrawer onClose={onCreateClose} />}

@@ -357,9 +357,10 @@ export abstract class AbstractClientEngine implements ClientEngine {
       result = await this.runHostCommand(programPath, args);
     }
     if (result.success) {
-      this.logger.debug(this.id, "System prune complete");
+      this.logger.debug(this.id, "System prune complete", result);
       try {
-        const report: SystemPruneReport = JSON.parse(result.stdout || "{}");
+        // TODO: Parse report
+        const report: SystemPruneReport = {} as any;
         return report;
       } catch (error: any) {
         this.logger.error(this.id, "Unable to decode system info", error, result);

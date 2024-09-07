@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Intent } from "@blueprintjs/core";
+import { Button, ButtonGroup, Divider, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +16,7 @@ import { CreateDrawer } from "./CreateDrawer";
 interface ActionsMenuProps {
   network?: Network;
   withoutCreate?: boolean;
+  onReload?: () => void;
 }
 
 interface PerformActionOptions {
@@ -25,7 +26,7 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate, onReload }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -90,6 +91,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
     <>
       <ButtonGroup>
         {startButton}
+        {onReload && (
+          <>
+            {startButton ? <Divider /> : null}
+            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+          </>
+        )}
         {removeWidget}
       </ButtonGroup>
       {withCreate && <CreateDrawer onClose={onCreateClose} />}

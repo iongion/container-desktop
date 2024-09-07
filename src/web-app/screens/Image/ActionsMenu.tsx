@@ -1,4 +1,4 @@
-import { AnchorButton, Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiPlayCircle } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -15,13 +15,14 @@ import { CreateDrawer } from "./CreateDrawer";
 import { getImageUrl } from "./Navigation";
 
 interface ActionsMenuProps {
-  image: ContainerImage;
+  image?: ContainerImage;
   withoutStart?: boolean;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
+  onReload?: () => void;
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, withoutStart, isActive }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, withoutStart, isActive, onReload }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -35,13 +36,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
       try {
         switch (action) {
           case "image.remove":
-            result = await imageRemove(image);
+            result = await imageRemove(image!);
             break;
           case "image.pull":
-            result = await imagePull(image);
+            result = await imagePull(image!);
             break;
           case "image.push":
-            result = await imagePush(image);
+            result = await imagePush(image!);
             break;
           default:
             break;
@@ -89,46 +90,63 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
   const startButton = withoutStart ? null : (
     <Button small minimal intent={Intent.SUCCESS} text={t("Start")} icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />} onClick={onCreateClick} />
   );
-  const expandAsButtons = expand ? (
-    <>
-      <AnchorButton minimal active={isActive ? isActive("image.layers") : false} icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
-      <AnchorButton minimal active={isActive ? isActive("image.inspect") : false} icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
-      <AnchorButton
-        minimal
-        active={isActive ? isActive("image.security") : false}
-        icon={IconNames.CONFIRM}
-        text={t("Security")}
-        intent={Intent.DANGER}
-        href={getImageUrl(image.Id, "security")}
-      />
-    </>
-  ) : undefined;
-  const expandAsMenuItems = expand ? undefined : (
-    <>
-      <MenuItem icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
-      <MenuItem icon={IconNames.CONFIRM} text={t("Security check")} href={getImageUrl(image.Id, "security")} />
-    </>
-  );
+  const expandAsButtons =
+    image && expand ? (
+      <>
+        <AnchorButton minimal active={isActive ? isActive("image.layers") : false} icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
+        <AnchorButton minimal active={isActive ? isActive("image.inspect") : false} icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
+        <AnchorButton
+          minimal
+          active={isActive ? isActive("image.security") : false}
+          icon={IconNames.CONFIRM}
+          text={t("Security")}
+          intent={Intent.DANGER}
+          href={getImageUrl(image!.Id, "security")}
+        />
+      </>
+    ) : undefined;
+  const expandAsMenuItems =
+    expand || !image ? undefined : (
+      <>
+        <MenuItem icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
+        <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
+        <MenuItem icon={IconNames.CONFIRM} text={t("Security check")} href={getImageUrl(image.Id, "security")} />
+      </>
+    );
   return (
     <>
       <ButtonGroup>
         {startButton}
+        {onReload && (
+          <>
+            {startButton ? <Divider /> : null}
+            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+          </>
+        )}
         {expandAsButtons}
-        <ConfirmMenu onConfirm={onRemove} tag={image.Id}>
-          {expandAsMenuItems}
-          <MenuItem data-image={image.Id} data-action="image.pull" disabled={disabledAction === "image.pull"} icon={IconNames.GIT_PULL} text={t("Pull")} onClick={onActionClick} />
-          <MenuItem
-            data-image={image.Id}
-            data-action="image.push"
-            disabled={disabledAction === "image.push"}
-            icon={IconNames.GIT_PUSH}
-            text={t("Push to Hub")}
-            onClick={onActionClick}
-          />
-        </ConfirmMenu>
+        {image ? (
+          <ConfirmMenu onConfirm={onRemove} tag={image.Id}>
+            {expandAsMenuItems}
+            <MenuItem
+              data-image={image.Id}
+              data-action="image.pull"
+              disabled={disabledAction === "image.pull"}
+              icon={IconNames.GIT_PULL}
+              text={t("Pull")}
+              onClick={onActionClick}
+            />
+            <MenuItem
+              data-image={image.Id}
+              data-action="image.push"
+              disabled={disabledAction === "image.push"}
+              icon={IconNames.GIT_PUSH}
+              text={t("Push to Hub")}
+              onClick={onActionClick}
+            />
+          </ConfirmMenu>
+        ) : null}
       </ButtonGroup>
-      {withCreate && <CreateDrawer image={image} onClose={onCreateClose} />}
+      {withCreate && image && <CreateDrawer image={image} onClose={onCreateClose} />}
     </>
   );
 };

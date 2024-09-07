@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
+import { Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,9 +15,10 @@ import { getVolumeUrl } from "./Navigation";
 export interface VolumeActionsMenuProps {
   volume?: Volume;
   withoutCreate?: boolean;
+  onReload?: () => void;
 }
 
-export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, withoutCreate }: VolumeActionsMenuProps) => {
+export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, withoutCreate, onReload }: VolumeActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -85,6 +86,12 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
     <>
       <ButtonGroup>
         {startButton}
+        {onReload && (
+          <>
+            {startButton ? <Divider /> : null}
+            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+          </>
+        )}
         {removeWidget}
       </ButtonGroup>
       {withCreate && <CreateDrawer onClose={onCreateVolumeClose} />}

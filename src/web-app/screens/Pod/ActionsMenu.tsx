@@ -1,4 +1,4 @@
-import { AnchorButton, Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,11 +15,13 @@ import { getPodUrl } from "./Navigation";
 // Actions menu
 interface ListActionsMenuProps {
   withoutCreate?: boolean;
+  onReload?: () => void;
 }
 interface ItemActionsMenuProps {
   pod: Pod;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
+  onReload?: () => void;
 }
 
 interface PerformActionOptions {
@@ -29,7 +31,7 @@ interface PerformActionOptions {
   };
 }
 
-export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, isActive }: ItemActionsMenuProps) => {
+export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, isActive, onReload }: ItemActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const podFetch = useStoreActions((actions) => actions.pod.podFetch);
@@ -162,7 +164,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
   );
 };
 
-export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate }: ListActionsMenuProps) => {
+export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate, onReload }: ListActionsMenuProps) => {
   const { t } = useTranslation();
   const [withCreate, setWithCreate] = useState(false);
   const onCreateClick = useCallback(() => {
@@ -174,7 +176,15 @@ export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate 
   const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
   return (
     <>
-      <ButtonGroup>{startButton}</ButtonGroup>
+      <ButtonGroup>
+        {startButton}
+        {onReload && (
+          <>
+            {startButton ? <Divider /> : null}
+            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+          </>
+        )}
+      </ButtonGroup>
       {withCreate && <CreateDrawer onClose={onCreateSecretClose} />}
     </>
   );

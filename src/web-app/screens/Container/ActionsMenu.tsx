@@ -1,4 +1,4 @@
-import { AnchorButton, Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -16,10 +16,11 @@ import "./ActionsMenu.css";
 
 // Actions menu
 interface ActionsMenuProps {
-  container: Container;
+  container?: Container;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
   withOverlay?: boolean;
+  onReload?: () => void;
 }
 
 interface PerformActionOptions {
@@ -29,7 +30,7 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isActive, withOverlay }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isActive, onReload, withOverlay }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const currentRuntime = useStoreState((state) => state.currentConnector?.runtime);
@@ -42,6 +43,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
   const containerConnect = useStoreActions((actions) => actions.container.containerConnect);
   const performActionCommand = useCallback(
     async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
+      if (!container) {
+        console.error("No container to perform action on");
+        return;
+      }
       setDisabledAction(action);
       try {
         // TODO: Improve notifications
@@ -120,48 +125,58 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
 
   const isKubeAvailable = currentRuntime === ContainerRuntime.PODMAN;
   const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available when using {{currentRuntime}} engine", { currentRuntime });
-  const expandAsButtons = expand ? (
-    <>
-      <AnchorButton minimal active={isActive ? isActive("container.logs") : false} icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
-      <AnchorButton
-        minimal
-        active={isActive ? isActive("container.inspect") : false}
-        icon={IconNames.EYE_OPEN}
-        text={t("Inspect")}
-        href={getContainerUrl(container.Id, "inspect")}
-      />
-      <AnchorButton minimal active={isActive ? isActive("container.stats") : false} icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
-      <AnchorButton
-        minimal
-        active={isActive ? isActive("container.kube") : false}
-        icon={IconNames.TEXT_HIGHLIGHT}
-        text={t("Kube")}
-        href={getContainerUrl(container.Id, "kube")}
-        disabled={!isKubeAvailable}
-        title={kubeDisabledTitle}
-      />
-    </>
-  ) : undefined;
-  const expandAsMenuItems = expand ? undefined : (
-    <>
-      <MenuItem icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getContainerUrl(container.Id, "inspect")} />
-      <MenuItem icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
-      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} disabled={!isKubeAvailable} title={kubeDisabledTitle} />
-    </>
-  );
+  const expandAsButtons =
+    expand && container ? (
+      <>
+        <AnchorButton minimal active={isActive ? isActive("container.logs") : false} icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
+        <AnchorButton
+          minimal
+          active={isActive ? isActive("container.inspect") : false}
+          icon={IconNames.EYE_OPEN}
+          text={t("Inspect")}
+          href={getContainerUrl(container.Id, "inspect")}
+        />
+        <AnchorButton minimal active={isActive ? isActive("container.stats") : false} icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
+        <AnchorButton
+          minimal
+          active={isActive ? isActive("container.kube") : false}
+          icon={IconNames.TEXT_HIGHLIGHT}
+          text={t("Kube")}
+          href={getContainerUrl(container.Id, "kube")}
+          disabled={!isKubeAvailable}
+          title={kubeDisabledTitle}
+        />
+      </>
+    ) : undefined;
+  const expandAsMenuItems =
+    expand || !container ? undefined : (
+      <>
+        <MenuItem icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
+        <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getContainerUrl(container.Id, "inspect")} />
+        <MenuItem icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
+        <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} disabled={!isKubeAvailable} title={kubeDisabledTitle} />
+      </>
+    );
 
-  const containerServiceUrl = getContainerServiceUrl(container);
-  const isRunning = container.Computed.DecodedState === ContainerStateList.RUNNING;
-  const isPaused = container.Computed.DecodedState === ContainerStateList.PAUSED;
-  const isStopped = container.Computed.DecodedState === ContainerStateList.STOPPED;
   // TODO: State machine - manage transitional states
-  const canPauseUnpause = isRunning || isPaused;
-  const canStop = isRunning && !isStopped;
-  const canRestart = !isPaused;
+  let isRunning = false;
+  let isPaused = false;
+  let isStopped = false;
+  let canPauseUnpause = false;
+  let canStop = false;
+  let canRestart = false;
 
+  let containerServiceUrl = "";
   let expandAsOverlay;
-  if (withOverlay) {
+  if (withOverlay && container) {
+    containerServiceUrl = getContainerServiceUrl(container);
+    isRunning = container.Computed.DecodedState === ContainerStateList.RUNNING;
+    isPaused = container.Computed.DecodedState === ContainerStateList.PAUSED;
+    isStopped = container.Computed.DecodedState === ContainerStateList.STOPPED;
+
+    canPauseUnpause = isRunning || isPaused;
+    canStop = isRunning && !isStopped;
+    canRestart = !isPaused;
     expandAsOverlay = (
       <div className="ItemActionsOverlayMenu">
         <ButtonGroup minimal className="ItemActionsOverlayMenuActions">
@@ -198,44 +213,52 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
   return (
     <ButtonGroup className="ItemActionsMenu" data-actions-menu="container">
       {expandAsOverlay}
+      {onReload && (
+        <>
+          {expandAsOverlay ? <Divider /> : null}
+          <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+        </>
+      )}
       {expandAsButtons}
-      <ConfirmMenu onConfirm={onRemove} tag={container.Id} disabled={disabledAction === "container.remove"}>
-        {expandAsMenuItems}
-        <MenuItem
-          data-container={container.Id}
-          disabled={!isRunning}
-          icon={<ReactIcon.Icon path={mdiOpenInApp} size={0.75} />}
-          href={containerServiceUrl}
-          target="_blank"
-          text={t("Open in browser")}
-          title={containerServiceUrl}
-        />
-        <MenuItem
-          data-container={container.Id}
-          data-action="container.connect"
-          disabled={!isRunning}
-          icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
-          text={t("Open terminal console")}
-          onClick={onOpenTerminalConsole}
-        />
-        <MenuItem
-          data-container={container.Id}
-          data-action={isPaused ? "container.unpause" : "container.pause"}
-          disabled={!canPauseUnpause}
-          icon={IconNames.PAUSE}
-          text={isPaused ? t("Resume") : t("Pause")}
-          onClick={onActionClick}
-        />
-        <MenuItem data-container={container.Id} data-action="container.stop" disabled={!canStop} icon={IconNames.STOP} text={t("Stop")} onClick={onActionClick} />
-        <MenuItem
-          data-container={container.Id}
-          data-action="container.restart"
-          disabled={!canRestart}
-          icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
-          text={isRunning || isPaused ? t("Restart") : t("Start")}
-          onClick={onActionClick}
-        />
-      </ConfirmMenu>
+      {container ? (
+        <ConfirmMenu onConfirm={onRemove} tag={container.Id} disabled={disabledAction === "container.remove"}>
+          {expandAsMenuItems}
+          <MenuItem
+            data-container={container.Id}
+            disabled={!isRunning}
+            icon={<ReactIcon.Icon path={mdiOpenInApp} size={0.75} />}
+            href={containerServiceUrl}
+            target="_blank"
+            text={t("Open in browser")}
+            title={containerServiceUrl}
+          />
+          <MenuItem
+            data-container={container.Id}
+            data-action="container.connect"
+            disabled={!isRunning}
+            icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
+            text={t("Open terminal console")}
+            onClick={onOpenTerminalConsole}
+          />
+          <MenuItem
+            data-container={container.Id}
+            data-action={isPaused ? "container.unpause" : "container.pause"}
+            disabled={!canPauseUnpause}
+            icon={IconNames.PAUSE}
+            text={isPaused ? t("Resume") : t("Pause")}
+            onClick={onActionClick}
+          />
+          <MenuItem data-container={container.Id} data-action="container.stop" disabled={!canStop} icon={IconNames.STOP} text={t("Stop")} onClick={onActionClick} />
+          <MenuItem
+            data-container={container.Id}
+            data-action="container.restart"
+            disabled={!canRestart}
+            icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
+            text={isRunning || isPaused ? t("Restart") : t("Start")}
+            onClick={onActionClick}
+          />
+        </ConfirmMenu>
+      ) : null}
     </ButtonGroup>
   );
 };
