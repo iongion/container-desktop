@@ -867,6 +867,8 @@ export class Application {
         }
         const { engine, availability } = await this.createConnectorClientEngine(connector, opts);
         if (engine) {
+          const engineSettings = await engine.getSettings();
+          connector.settings = deepMerge(connector.settings, engineSettings);
           connector.availability = availability;
           this._currentClientEngine = engine;
         } else {

@@ -29,17 +29,15 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
     const settings = customSettings || (await this.getSettings());
     // Get environment variable inside the scope
     const engine = await Platform.getEnvironmentVariable("PODMAN_HOST");
-    const alias = await Platform.getEnvironmentVariable("DOCKER_HOST");
+    const alias = await Platform.getEnvironmentVariable("DOCKER_HOST"); // Podman disguised as docker
     // Inspect machine system info for relay path
     let uri = engine || alias || "";
     try {
-      const systemInfo = await this.getSystemInfo(connection, undefined, customSettings);
+      const systemInfo = await this.getSystemInfo(connection, undefined, settings);
       if (systemInfo?.host?.remoteSocket?.exists) {
-        uri = systemInfo?.host?.remoteSocket?.path || uri;
+        this.logger.error("Podman API is not running");
       }
-      if (uri) {
-        this.logger.debug(this.id, "Using uri from system info", systemInfo);
-      }
+      uri = systemInfo?.host?.remoteSocket?.path || uri;
     } catch (error: any) {
       this.logger.error(this.id, "Unable to retrieve system info", error);
     }
