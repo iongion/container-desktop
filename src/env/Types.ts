@@ -332,6 +332,7 @@ export interface Connector extends Connection {
 export interface ConnectOptions {
   startApi: boolean;
   connection: Connection;
+  skipAvailabilityCheck: boolean;
 }
 
 export interface DisconnectOptions {

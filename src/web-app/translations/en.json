@@ -222,5 +222,6 @@
   "Open terminal console": "Open terminal console",
   "Open in browser": "Open in browser",
   "Automatic": "Automatic",
-  "Manual": "Manual"
+  "Manual": "Manual",
+  "Container startup": "Container startup"
 }

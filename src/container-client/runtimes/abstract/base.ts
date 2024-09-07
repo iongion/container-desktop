@@ -69,7 +69,7 @@ export interface ClientEngine {
   getAutomaticSettings(): Promise<EngineConnectorSettings>;
   // Controller behavior
   isScoped(): boolean;
-  getControllerScopes(customSettings?: EngineConnectorSettings): Promise<ControllerScope[]>;
+  getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean): Promise<ControllerScope[]>;
   startScope(scope: ControllerScope): Promise<boolean>;
   stopScope(scope: ControllerScope): Promise<boolean>;
   startScopeByName(name: string): Promise<boolean>;
@@ -118,7 +118,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
   // Controller behavior
   abstract isScoped(): boolean;
-  abstract getControllerScopes(customSettings?: EngineConnectorSettings): Promise<ControllerScope[]>;
+  abstract getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean): Promise<ControllerScope[]>;
   abstract getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined>;
   abstract startScope(scope: ControllerScope): Promise<boolean>;
   abstract stopScope(scope: ControllerScope): Promise<boolean>;

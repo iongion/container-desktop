@@ -65,7 +65,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
     onEdit?.(connection);
   }, [onEdit, connection]);
   const onConnectClick = useCallback(async () => {
-    await startApplication({ startApi: connection.settings.api.autoStart ?? false, connection });
+    await startApplication({ startApi: connection.settings.api.autoStart ?? false, connection, skipAvailabilityCheck: false });
   }, [startApplication, connection]);
   const onDisconnectClick = useCallback(async () => {
     await stopApplication({ stopApi: true, connection });

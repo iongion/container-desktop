@@ -157,7 +157,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               console.debug("No default connector found", userSettings?.connector?.default);
             }
           }
-          const currentConnector = await instance.start(connection ? { startApi, connection } : undefined);
+          const currentConnector = await instance.start(connection ? { startApi, connection, skipAvailabilityCheck: false } : undefined);
           const connectors = instance.getConnectors();
           const running = currentConnector?.availability?.api || false;
           const osType = instance.getOsType();

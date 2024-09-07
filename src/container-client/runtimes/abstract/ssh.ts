@@ -80,7 +80,7 @@ export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
   }
 
   // Services
-  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+  async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     const settings = customSettings || (await this.getSettings());
     const available = await this.isEngineAvailable();
     const controllerPath = settings.controller?.path || settings.controller?.name || "";

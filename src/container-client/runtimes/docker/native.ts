@@ -74,7 +74,7 @@ export class DockerClientEngineNative extends AbstractClientEngine {
     this.logger.warn("Scope is not supported in native mode");
     return false;
   }
-  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+  async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     const settings = customSettings || (await this.getSettings());
     return await Promise.resolve([] as ControllerScope[]);
   }

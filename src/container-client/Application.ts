@@ -310,15 +310,15 @@ export class Application {
   }
 
   // Scope actions
-  async getControllerScopes(connection: Connection) {
-    const currentApi = await this.getConnectionApi(connection);
+  async getControllerScopes(connection: Connection, skipAvailabilityCheck: boolean) {
+    const currentApi = await this.getConnectionApi(connection, skipAvailabilityCheck);
     this.logger.debug("Listing controller scopes of current engine", connection);
-    return await currentApi.getControllerScopes();
+    return await currentApi.getControllerScopes(undefined, skipAvailabilityCheck);
   }
 
-  async startScope(scope: ControllerScope, connection: Connection) {
+  async startScope(scope: ControllerScope, connection: Connection, skipAvailabilityCheck: boolean) {
     let flag = false;
-    const currentApi = await this.getConnectionApi(connection);
+    const currentApi = await this.getConnectionApi(connection, skipAvailabilityCheck);
     if (currentApi.isScoped()) {
       this.logger.debug(">> Starting scope", scope, "with connection", connection);
       flag = await currentApi.startScope(scope);
@@ -327,9 +327,9 @@ export class Application {
     return flag;
   }
 
-  async stopScope(scope: ControllerScope, connection: Connection) {
+  async stopScope(scope: ControllerScope, connection: Connection, skipAvailabilityCheck: boolean) {
     let flag = false;
-    const currentApi = await this.getConnectionApi(connection);
+    const currentApi = await this.getConnectionApi(connection, skipAvailabilityCheck);
     if (currentApi.isScoped()) {
       this.logger.debug("Stopping scope", scope, "with connection", connection, currentApi);
       flag = await currentApi.stopScope(scope);
@@ -380,7 +380,7 @@ export class Application {
   }
 
   async findProgram(connection: Connection, program: Program, insideScope?: boolean) {
-    const api = await this.getConnectionApi(connection);
+    const api = await this.getConnectionApi(connection, false);
     let outputProgram: Program = {
       ...program,
       path: ""
@@ -396,7 +396,7 @@ export class Application {
   }
 
   async findProgramVersion(connection: Connection, program: Program, insideScope?: boolean) {
-    const api = await this.getConnectionApi(connection);
+    const api = await this.getConnectionApi(connection, false);
     let version = "";
     this.logger.debug(connection.id, ">> Find program version", insideScope ? "inside" : "outside", "scope", { connector: deepMerge({}, connection), program });
     if (insideScope) {
@@ -457,7 +457,7 @@ export class Application {
   }
 
   async getConnectionDataDir(connection: Connection) {
-    const engine = await this.getConnectionApi(connection);
+    const engine = await this.getConnectionApi(connection, false);
     return await engine.getConnectionDataDir();
   }
 
@@ -465,7 +465,7 @@ export class Application {
   async getIsApiRunning(connection?: Connection) {
     let currentApi = this._currentClientEngine;
     if (connection) {
-      currentApi = await this.getConnectionApi(connection);
+      currentApi = await this.getConnectionApi(connection, false);
     }
     return currentApi ? await currentApi.isApiRunning() : false;
   }
@@ -473,7 +473,7 @@ export class Application {
   async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
     let currentApi = this._currentClientEngine;
     if (connection) {
-      currentApi = await this.getConnectionApi(connection);
+      currentApi = await this.getConnectionApi(connection, false);
     }
     return await currentApi.getSystemInfo(connection, customFormat, customSettings);
   }
@@ -723,7 +723,7 @@ export class Application {
   }
 
   // Main
-  async getConnectionApi<T extends AbstractClientEngine = AbstractClientEngine>(connection: Connection) {
+  async getConnectionApi<T extends AbstractClientEngine = AbstractClientEngine>(connection: Connection, skipAvailabilityCheck: boolean) {
     if (this.connectionApis[connection.id]) {
       this.logger.debug("Using connection api - found", connection.id);
       this.connectionApis[connection.id].setSettings(connection.settings);
@@ -731,7 +731,7 @@ export class Application {
       this.logger.debug("Using connection api - creating", connection.id);
       const connector = deepMerge<Connector>({}, createConnectorBy(this.osType, connection.runtime, connection.engine), connection);
       try {
-        const { engine, availability } = await this.createConnectorClientEngine(connector);
+        const { engine, availability } = await this.createConnectorClientEngine(connector, { connection: connector, startApi: false, skipAvailabilityCheck });
         connector.availability = availability;
         if (engine) {
           this.connectionApis[connection.id] = engine;
@@ -770,9 +770,13 @@ export class Application {
         this.logger.debug(connector.id, "Using custom engine - settings", { user: opts?.connection?.settings, defaults: connector.settings });
         await engine.setSettings(settings);
         if (settings.mode === "mode.automatic") {
-          const automaticSettings = await engine.getAutomaticSettings();
-          this.logger.warn("Using automatic settings", automaticSettings);
-          await engine.setSettings(automaticSettings);
+          if (opts?.skipAvailabilityCheck) {
+            this.logger.warn(connector.id, "Skipping automatic settings - availability check disabled");
+          } else {
+            const automaticSettings = await engine.getAutomaticSettings();
+            this.logger.warn("Using automatic settings", automaticSettings);
+            await engine.setSettings(automaticSettings);
+          }
         }
         if (startApi) {
           try {
@@ -786,7 +790,11 @@ export class Application {
         // Read availability
         this.logger.debug(connector.id, ">> Reading engine availability");
         try {
-          availability = await engine.getAvailability(connector.settings);
+          if (opts?.skipAvailabilityCheck) {
+            this.logger.warn(connector.id, "Skipping availability check");
+          } else {
+            availability = await engine.getAvailability(connector.settings);
+          }
         } catch (error: any) {
           this.logger.error(connector.id, "<< Reading engine availability failed", error);
         }

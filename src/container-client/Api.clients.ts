@@ -686,7 +686,7 @@ export class ContainerClient {
   async getControllerScopes(connection: Connection) {
     return this.withResult<ControllerScope[]>(async () => {
       const instance = Application.getInstance();
-      return await instance.getControllerScopes(connection);
+      return await instance.getControllerScopes(connection, false);
     });
   }
 

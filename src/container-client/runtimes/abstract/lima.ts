@@ -107,7 +107,7 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
     return result;
   }
   // Services
-  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+  async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     const settings = customSettings || (await this.getSettings());
     const available = await this.isEngineAvailable();
     const controllerPath = settings.controller?.path || settings.controller?.name || "";
@@ -117,7 +117,7 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
   }
 
   async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
-    const scopes = await this.getControllerScopes(customSettings);
+    const scopes = await this.getControllerScopes(customSettings, true);
     if (scopes.length > 0) {
       if (customSettings?.controller?.scope) {
         const matchingScope = scopes.find((s) => s.Name === customSettings?.controller?.scope);

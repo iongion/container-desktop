@@ -116,7 +116,7 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     return inspect;
   }
 
-  async getControllerScopes(customSettings?: EngineConnectorSettings) {
+  async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     return await this.getPodmanMachines(undefined, customSettings);
   }
 

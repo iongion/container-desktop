@@ -39,8 +39,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   const connectors = useStoreState((state) => state.connectors);
   const createConnection = useStoreActions((actions) => actions.settings.createConnection);
   const updateConnection = useStoreActions((actions) => actions.settings.updateConnection);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const { control, handleSubmit, reset, setValue, getValues } = useForm<Connector>({ defaultValues: connection || currentConnector });
+  const { control, handleSubmit, reset, setValue, getValues } = useForm<Connector>({ defaultValues: connection });
   const [osType, setHostOSType] = useState(detectedOsType);
   const runtime = useWatch({ control, name: "runtime" });
   const engine = useWatch({ control, name: "engine" });
@@ -173,7 +172,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(true);
         console.debug(">> Detecting controller scopes", connector);
         const instance = Application.getInstance();
-        const result = await instance.getControllerScopes(connector);
+        const result = await instance.getControllerScopes(connector, true);
         updated = deepMerge<Connector>({}, connector);
         updated.scopes = result;
         // Pick first scope
@@ -205,7 +204,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
     async (scope: ControllerScope) => {
       const connector = getValues();
       const instance = Application.getInstance();
-      const flag = await instance.startScope(scope, connector);
+      const flag = await instance.startScope(scope, connector, false);
       if (flag && connector.scopes) {
         try {
           await fetchControllerScopes(connector);
@@ -221,7 +220,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
     async (scope: ControllerScope) => {
       const connector = getValues();
       const instance = Application.getInstance();
-      const flag = await instance.stopScope(scope, connector);
+      const flag = await instance.stopScope(scope, connector, false);
       if (flag && connector.scopes) {
         await fetchControllerScopes(connector);
       }
@@ -390,7 +389,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       console.debug(">> Detecting API connection URI", connection);
       setPending(true);
       const instance = Application.getInstance();
-      const connectionApi = await instance.getConnectionApi<AbstractClientEngine>(connection);
+      const connectionApi = await instance.getConnectionApi<AbstractClientEngine>(connection, false);
       const apiConnection = await connectionApi.getApiConnection();
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);
@@ -590,7 +589,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   // At load
   useEffect(() => {
     if (connection) {
-      console.debug(">> Connection re-loaded", connection);
       resetFormData(connection);
       fetchControllerScopes(connection);
     }
