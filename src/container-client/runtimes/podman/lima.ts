@@ -1,4 +1,4 @@
-import { ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
 import { LIMA_PROGRAM, PODMAN_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedLIMA } from "../../runtimes/abstract";
 
@@ -14,9 +14,5 @@ export class PodmanClientEngineVirtualizedLIMA extends AbstractClientEngineVirtu
     instance.id = id;
     await instance.setup();
     return instance;
-  }
-
-  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
-    throw new Error("Method not implemented.");
   }
 }

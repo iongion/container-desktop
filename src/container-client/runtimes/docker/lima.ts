@@ -1,4 +1,4 @@
-import { Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { Connection, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { DOCKER_PROGRAM, LIMA_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedLIMA } from "../../runtimes/abstract";
 
@@ -18,9 +18,5 @@ export class DockerClientEngineVirtualizedLIMA extends AbstractClientEngineVirtu
 
   async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
     return super.getSystemInfo(connection, customFormat || "json", customSettings);
-  }
-
-  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
-    throw new Error("Method not implemented.");
   }
 }
