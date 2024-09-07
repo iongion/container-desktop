@@ -25,11 +25,11 @@ export class DockerClientEngineNative extends AbstractClientEngine {
     return instance;
   }
 
-  async getApiConnection(): Promise<ApiConnection> {
-    const connection = await Platform.getEnvironmentVariable("DOCKER_HOST");
+  async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    const uri = await Platform.getEnvironmentVariable("DOCKER_HOST");
     return {
-      uri: connection || "",
-      relay: undefined
+      uri: uri || "",
+      relay: ""
     };
   }
 
@@ -55,7 +55,7 @@ export class DockerClientEngineNative extends AbstractClientEngine {
   isScoped() {
     return false;
   }
-  async runScopeCommand(program: string, args: string[], scope: string): Promise<CommandExecutionResult> {
+  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
     throw new Error("Scope is not supported in native mode");
   }
   async startScope(scope: ControllerScope): Promise<boolean> {
@@ -78,7 +78,11 @@ export class DockerClientEngineNative extends AbstractClientEngine {
     return await Promise.resolve([] as ControllerScope[]);
   }
   // System information
-  async getSystemInfo(connection?: Connection, customFormat?: string) {
-    return super.getSystemInfo(connection, "json");
+  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
+    return super.getSystemInfo(connection, customFormat || "json", customSettings);
+  }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    throw new Error("Method not implemented.");
   }
 }

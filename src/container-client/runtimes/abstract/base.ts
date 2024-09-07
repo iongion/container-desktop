@@ -64,7 +64,9 @@ export abstract class AbstractRuntime {
 export interface ClientEngine {
   startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions);
   isEngineAvailable();
-  getApiConnection(scope?: string): Promise<ApiConnection>;
+  getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
+  getSettings(): Promise<EngineConnectorSettings>;
+  getAutomaticSettings(): Promise<EngineConnectorSettings>;
   // Controller behavior
   isScoped(): boolean;
   getControllerScopes(): Promise<ControllerScope[]>;
@@ -74,7 +76,7 @@ export interface ClientEngine {
   stopScopeByName(name: string): Promise<boolean>;
 
   isApiRunning(): Promise<AvailabilityCheck>;
-  getSystemInfo(connection?: Connection, customFormat?: string): Promise<SystemInfo>;
+  getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings): Promise<SystemInfo>;
 }
 
 export abstract class AbstractClientEngine implements ClientEngine {
@@ -104,7 +106,8 @@ export abstract class AbstractClientEngine implements ClientEngine {
       path: this.PROGRAM,
       version: ""
     },
-    rootfull: false
+    rootfull: false,
+    mode: "mode.automatic"
   };
 
   public logger!: ILogger;
@@ -112,10 +115,11 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   abstract startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions);
   abstract isEngineAvailable();
-  abstract getApiConnection(scope?: string): Promise<ApiConnection>;
+  abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
   // Controller behavior
   abstract isScoped(): boolean;
   abstract getControllerScopes(): Promise<ControllerScope[]>;
+  abstract getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined>;
   abstract startScope(scope: ControllerScope): Promise<boolean>;
   abstract stopScope(scope: ControllerScope): Promise<boolean>;
   abstract startScopeByName(name: string): Promise<boolean>;
@@ -148,11 +152,47 @@ export abstract class AbstractClientEngine implements ClientEngine {
   async setup() {
     this.runner = new Runner(this);
     this.logger = createLogger("engine.client");
-    this.logger.debug(this.id, "Client engine created");
+    this.logger.debug(this.id, "Client engine created", this.settings);
   }
 
   async setSettings(settings: EngineConnectorSettings) {
     this.settings = settings;
+  }
+
+  async getAutomaticSettings(): Promise<EngineConnectorSettings> {
+    this.logger.warn(this.id, "Settings are in automatic mode - fetching");
+    const settings = await this.getSettings();
+    try {
+      // 1.0 - detect program
+      if (this.isScoped()) {
+        const controllerProgram = await this.findHostProgram({ name: this.CONTROLLER, path: "" }, settings);
+        settings.controller = controllerProgram;
+        const defaultScope = await this.getControllerDefaultScope(settings);
+        this.logger.warn(this.id, "Default scope is", defaultScope);
+        if (defaultScope) {
+          settings.controller.scope = defaultScope.Name;
+          if (defaultScope.Usable) {
+            const scopeProgram = await this.findScopeProgram({ name: this.PROGRAM, path: "" }, settings);
+            settings.program = scopeProgram;
+          } else {
+            this.logger.warn(this.id, "Default scope is not usable - program will not be detected");
+          }
+          // API connection
+        } else {
+          this.logger.error(this.id, "No default scope found - program will not be detected");
+        }
+      } else {
+        const hostProgram = await this.findHostProgram({ name: this.PROGRAM, path: "" }, settings);
+        settings.program = hostProgram;
+      }
+      // 2.0 - detect API connection
+      const api = await this.getApiConnection(undefined, settings);
+      settings.api.connection.uri = api.uri;
+      settings.api.connection.relay = api.relay;
+    } catch (error: any) {
+      this.logger.error(this.id, "Unable to get automatic settings", error);
+    }
+    return settings;
   }
 
   async getSettings(): Promise<EngineConnectorSettings> {
@@ -168,7 +208,11 @@ export abstract class AbstractClientEngine implements ClientEngine {
       return false;
     }
     this.logger.debug("Stopping API - begin");
-    return await this.runner.stopApi(customSettings, opts);
+    const stopped = await this.runner.stopApi(customSettings, opts);
+    if (stopped) {
+      this.apiStarted = false;
+    }
+    return stopped;
   }
 
   async isProgramAvailable(settings: EngineConnectorSettings): Promise<AvailabilityCheck> {
@@ -248,7 +292,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   // Executes command inside controller scope
 
-  async runHostCommand(program: string, args?: string[]) {
+  async runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings) {
     const commandLauncher = this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
     const commandLine = [commandLauncher].concat(args || []).join(" ");
     this.logger.debug(this.id, ">> Running host command", commandLine);
@@ -259,15 +303,15 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   // System commands
 
-  async getSystemInfo(connection?: Connection, customFormat?: string) {
+  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
     let info: SystemInfo = {} as SystemInfo;
     let result: CommandExecutionResult;
-    const settings = await this.getSettings();
+    const settings = customSettings || (await this.getSettings());
     const programPath = settings.program.path || settings.program.name || "";
     if (this.isScoped()) {
-      result = await this.runScopeCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings.controller?.scope || "");
+      result = await this.runScopeCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings.controller?.scope || "", settings);
     } else {
-      result = await this.runHostCommand(programPath, ["system", "info", "--format", customFormat || "json"]);
+      result = await this.runHostCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings);
     }
     if (!result.success) {
       this.logger.error(this.id, "Unable to get system info", result);
@@ -353,7 +397,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   // Controller behavior
-  abstract runScopeCommand(program: string, args: string[], scope: string): Promise<CommandExecutionResult>;
+  abstract runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult>;
 
   async isControllerAvailable(settings: EngineConnectorSettings) {
     let success = false;
@@ -461,21 +505,21 @@ export abstract class AbstractClientEngine implements ClientEngine {
     return value;
   }
 
-  async findHostProgram(program: Program): Promise<Program> {
+  async findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
     const output = deepMerge({}, program);
     output.path = await findProgramPath(program.name, { osType: this.osType });
     output.version = await findProgramVersion(output.path, { osType: this.osType });
     return output;
   }
 
-  async findHostProgramVersion(program: Program): Promise<string> {
+  async findHostProgramVersion(program: Program, settings?: EngineConnectorSettings): Promise<string> {
     return await findProgramVersion(program.path, { osType: this.osType });
   }
 
-  async findScopeProgram(program: Program): Promise<Program> {
+  async findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
     const executor = async (path: string, args: string[]) => {
-      const settings = await this.getSettings();
-      return await this.runScopeCommand(path, args, settings.controller?.scope || "");
+      const userSettings = settings || (await this.getSettings());
+      return await this.runScopeCommand(path, args, userSettings.controller?.scope || "");
     };
     const output = deepMerge({}, program);
     output.path = await findProgramPath(program.name, { osType: OperatingSystem.Linux }, executor);
@@ -483,10 +527,10 @@ export abstract class AbstractClientEngine implements ClientEngine {
     return output;
   }
 
-  async findScopeProgramVersion(program: Program): Promise<string> {
+  async findScopeProgramVersion(program: Program, settings?: EngineConnectorSettings): Promise<string> {
     const executor = async (path: string, args: string[]) => {
-      const settings = await this.getSettings();
-      return await this.runScopeCommand(path, args, settings.controller?.scope || "");
+      const userSettings = settings || (await this.getSettings());
+      return await this.runScopeCommand(path, args, userSettings.controller?.scope || "");
     };
     return await findProgramVersion(program.path, { osType: OperatingSystem.Linux }, executor);
   }

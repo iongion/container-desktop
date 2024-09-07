@@ -11,7 +11,7 @@ export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
 
   protected connectionsTracker: { [key: string]: any } = {};
 
-  abstract getApiConnection(scope?: string): Promise<ApiConnection>;
+  abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
 
   getContainerApiClient() {
     if (!this.containerApiClient) {
@@ -116,7 +116,8 @@ export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
     }
     return true;
   }
-  async runScopeCommand(program: string, args: string[], scope: string): Promise<CommandExecutionResult> {
+
+  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
     if (!this._connection || !this._connection.isConnected()) {
       throw new Error("SSH connection is not established");
     }

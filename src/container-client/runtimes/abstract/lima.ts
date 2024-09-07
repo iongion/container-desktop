@@ -1,6 +1,16 @@
 import { isEmpty } from "lodash-es";
 
-import { ApiConnection, ApiStartOptions, AvailabilityCheck, ControllerScope, EngineConnectorSettings, OperatingSystem, RunnerStopperOptions } from "@/env/Types";
+import {
+  ApiConnection,
+  ApiStartOptions,
+  AvailabilityCheck,
+  CommandExecutionResult,
+  Connection,
+  ControllerScope,
+  EngineConnectorSettings,
+  OperatingSystem,
+  RunnerStopperOptions
+} from "@/env/Types";
 import { LIMA_PROGRAM } from "../../connection";
 import { getAvailableLIMAInstances } from "../../shared";
 import { AbstractClientEngine } from "../abstract/base";
@@ -8,20 +18,21 @@ import { AbstractClientEngine } from "../abstract/base";
 export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClientEngine {
   public CONTROLLER: string = LIMA_PROGRAM;
   // Helpers
-  async getApiConnection(): Promise<ApiConnection> {
-    const settings = await this.getSettings();
+  async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    const settings = customSettings || (await this.getSettings());
     const scope = settings.controller?.scope;
     if (!scope) {
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: "",
-        relay: undefined
+        relay: ""
       };
     }
     const homeDir = await Platform.getHomeDir();
     const uri = await Path.join(homeDir, ".lima", scope, "sock", `${scope}.sock`);
     return {
-      uri
+      uri,
+      relay: ""
     };
   }
   // Runtime
@@ -105,11 +116,11 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
     return items;
   }
   // Executes command inside controller scope
-  async runScopeCommand(program: string, args: string[], scope: string) {
-    const { controller } = await this.getSettings();
+  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+    const { controller } = settings || (await this.getSettings());
     const hostLauncher = controller?.path || controller?.name || "";
     const hostArgs = ["shell", scope, program, ...args];
-    return await this.runHostCommand(hostLauncher, hostArgs);
+    return await this.runHostCommand(hostLauncher, hostArgs, settings);
   }
   // LIMA specific
   async startLIMAInstance(name: string): Promise<boolean> {

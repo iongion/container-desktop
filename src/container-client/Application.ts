@@ -284,9 +284,9 @@ export class Application {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
     return await currentApi.inspectPodmanMachine(name);
   }
-  async getPodmanMachines() {
+  async getPodmanMachines(customFormat?: string, customSettings?: EngineConnectorSettings) {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
-    return await currentApi.getPodmanMachines();
+    return await currentApi.getPodmanMachines(customFormat, customSettings);
   }
   async createPodmanMachine(opts: CreateMachineOptions) {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
@@ -470,12 +470,12 @@ export class Application {
     return currentApi ? await currentApi.isApiRunning() : false;
   }
 
-  async getSystemInfo(connection?: Connection, customFormat?: string) {
+  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
     let currentApi = this._currentClientEngine;
     if (connection) {
       currentApi = await this.getConnectionApi(connection);
     }
-    return await currentApi.getSystemInfo(connection, customFormat);
+    return await currentApi.getSystemInfo(connection, customFormat, customSettings);
   }
 
   async pruneSystem(opts?: any) {
@@ -766,15 +766,22 @@ export class Application {
         throw new Error("Connector engine not found");
       }
       if (engine) {
-        const settings = opts?.connection.settings || connector.settings;
-        this.logger.debug(connector.id, "Using custom current engine settings", settings);
+        const settings = opts?.connection?.settings || connector.settings;
+        this.logger.debug(connector.id, "Using custom engine - settings", { user: opts?.connection?.settings, defaults: connector.settings });
         await engine.setSettings(settings);
+        if (settings.mode === "mode.automatic") {
+          const automaticSettings = await engine.getAutomaticSettings();
+          this.logger.warn("Using automatic settings", automaticSettings);
+          await engine.setSettings(automaticSettings);
+        }
         if (startApi) {
           try {
             await engine.startApi();
           } catch (error: any) {
             this.logger.error(connector.id, "Unable to start the engine API", error);
           }
+        } else {
+          this.logger.debug(connector.id, "Skipping engine API start - not marked for start");
         }
         // Read availability
         this.logger.debug(connector.id, ">> Reading engine availability");
@@ -820,13 +827,12 @@ export class Application {
   async stop(opts?: DisconnectOptions): Promise<boolean> {
     const engine = this._currentClientEngine as AbstractClientEngine;
     if (engine) {
-      this.logger.debug(">> Bridge stop started", opts, engine.id);
-      await engine.stopApi();
       if (engine.isScoped()) {
-        const settings = await engine.getSettings();
-        if (settings.controller?.scope) {
-          await engine.stopScopeByName(settings.controller?.scope);
-        }
+        this.logger.debug(">> Bridge stop started - stop scope", opts, engine.id);
+        await engine.stopApi();
+      } else {
+        this.logger.debug(">> Bridge stop started - stop native", opts, engine.id);
+        await engine.stopApi();
       }
       this.logger.debug(">> Bridge stop completed", opts, engine.id);
     } else {

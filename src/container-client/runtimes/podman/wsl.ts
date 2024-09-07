@@ -1,8 +1,8 @@
 import { isEmpty } from "lodash-es";
 
-import { ApiConnection, ApiStartOptions, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
-import { PODMAN_PROGRAM } from "../../connection";
+import { PODMAN_PROGRAM, WSL_PROGRAM } from "../../connection";
 import { AbstractClientEngineVirtualizedWSL } from "../abstract/wsl";
 import { PodmanClientEngineCommon } from "./base";
 
@@ -10,6 +10,7 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
   static ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_WSL;
   ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_WSL;
   PROGRAM = PODMAN_PROGRAM;
+  CONTROLLER = WSL_PROGRAM;
   RUNTIME = ContainerRuntime.PODMAN;
 
   static async create(id: string, osType: OperatingSystem) {
@@ -19,14 +20,14 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
     return instance;
   }
 
-  async getApiConnection(): Promise<ApiConnection> {
-    const settings = await this.getSettings();
+  async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    const settings = customSettings || (await this.getSettings());
     const scope = settings.controller?.scope || "";
     if (!scope) {
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: "",
-        relay: undefined
+        relay: ""
       };
     }
     // Get environment variable inside the scope
@@ -110,5 +111,9 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
       this.logger.error("Unable to generate kube", entityId, result);
     }
     return result;
+  }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    throw new Error("Method not implemented.");
   }
 }

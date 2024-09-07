@@ -3,6 +3,8 @@ import { isEmpty } from "lodash-es";
 import {
   ApiConnection,
   ApiStartOptions,
+  CommandExecutionResult,
+  Connection,
   ContainerEngine,
   ContainerRuntime,
   ControllerScope,
@@ -22,6 +24,7 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
   static ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_VENDOR;
   ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_VENDOR;
   PROGRAM = PODMAN_PROGRAM;
+  CONTROLLER = PODMAN_PROGRAM;
   RUNTIME = ContainerRuntime.PODMAN;
 
   constructor(osType: OperatingSystem) {
@@ -35,15 +38,15 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     return instance;
   }
 
-  async getApiConnection(): Promise<ApiConnection> {
-    let relay: string | undefined;
-    const settings = await this.getSettings();
+  async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    let relay: string = "";
+    const settings = customSettings || (await this.getSettings());
     const scope = settings.controller?.scope;
     if (isEmpty(scope)) {
       this.logger.error(this.id, "Unable to get api connection - no machine");
       return {
         uri: "",
-        relay: undefined
+        relay: ""
       };
     }
     const NATIVE_PODMAN_SOCKET_PATH = (await Platform.isFlatpak())
@@ -62,17 +65,15 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
         }
       }
     }
-    // Inspect machine system info for relay path
-    try {
-      const systemInfo = await this.getSystemInfo();
-      relay = systemInfo?.host?.remoteSocket?.path || relay;
-    } catch (error: any) {
-      this.logger.error(this.id, "Unable to inspect machine", error);
-    }
     // Inspect machine for connection details - named pipe or unix socket
     try {
-      const inspectResult = await this.getPodmanMachineInspect();
-      uri = inspectResult?.ConnectionInfo?.PodmanSocket?.Path || inspectResult?.ConnectionInfo?.PodmanPipe?.Path || uri;
+      const inspectResult = await this.getPodmanMachineInspect(customSettings);
+      if (inspectResult?.ConnectionInfo?.PodmanPipe?.Path) {
+        uri = inspectResult?.ConnectionInfo?.PodmanPipe?.Path || uri;
+        relay = inspectResult?.ConnectionInfo?.PodmanSocket?.Path || "";
+      } else {
+        uri = inspectResult?.ConnectionInfo?.PodmanSocket?.Path || uri;
+      }
     } catch (error: any) {
       this.logger.error(this.id, "Unable to inspect machine", error);
     }
@@ -82,22 +83,22 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     };
   }
 
-  async getPodmanMachineInspect() {
-    const settings = await this.getSettings();
+  async getPodmanMachineInspect(customSettings?: EngineConnectorSettings) {
+    const settings = customSettings || (await this.getSettings());
     let inspect: PodmanMachineInspect | undefined;
     const controllerPath = settings.controller?.path || settings.controller?.name;
     if (!controllerPath) {
       this.logger.error(this.id, "Unable to inspect - no program");
       return inspect;
     }
-    const machineName = this.settings.controller?.scope;
+    const machineName = settings.controller?.scope;
     if (!machineName) {
       this.logger.error(this.id, "Unable to inspect - no machine");
       return inspect;
     }
     try {
       const command = ["machine", "inspect", machineName];
-      const result: any = await this.runHostCommand(controllerPath, command);
+      const result: any = await this.runHostCommand(controllerPath, command, settings);
       if (!result.success) {
         this.logger.error(this.id, "Unable to inspect", result);
         return inspect;
@@ -117,6 +118,43 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
 
   async getControllerScopes(customFormat?: string) {
     return await this.getPodmanMachines(customFormat);
+  }
+
+  async getSystemConnections(customSettings?: EngineConnectorSettings) {
+    const settings = customSettings || (await this.getSettings());
+    const controllerPath = settings.controller?.path || settings.controller?.name;
+    const commandArgs = ["system", "connection", "list", "--format", "json"];
+    const command = await this.runHostCommand(controllerPath || this.CONTROLLER, commandArgs);
+    if (command.success) {
+      try {
+        return JSON.parse(command.stdout || "[]");
+      } catch (error: any) {
+        this.logger.error(this.id, "Unable to parse connections", error, command);
+      }
+    } else {
+      this.logger.error(this.id, "Unable to get connections", command);
+    }
+    return [];
+  }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    let defaultScope: ControllerScope | undefined;
+    const connections = await this.getSystemConnections(customSettings);
+    if (connections.length) {
+      let defaultConnection = connections.find((it: any) => it.Default && it.IsMachine);
+      if (!defaultConnection) {
+        defaultConnection = connections[0];
+      }
+      const machines = await this.getPodmanMachines(undefined, customSettings);
+      if (machines.length) {
+        defaultScope = machines.find((it) => it.Name?.trim().toLowerCase() === defaultConnection.Name?.trim().toLowerCase());
+      } else {
+        this.logger.error(this.id, "Unable to get default scope - no machines");
+      }
+    } else {
+      this.logger.error(this.id, "Unable to get default scope - no connections or machines");
+    }
+    return defaultScope;
   }
 
   // Runtime
@@ -147,7 +185,7 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
       return false;
     }
     this.logger.debug(this.id, "Stopping API - begin");
-    const settings = await this.getSettings();
+    const settings = customSettings || (await this.getSettings());
     let args: string[] = opts?.args || [];
     if (!opts?.args) {
       if (!settings.controller?.scope) {
@@ -183,8 +221,8 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
   isScoped() {
     return true;
   }
-  async runScopeCommand(program: string, args: string[], scope: string) {
-    const { controller } = await this.getSettings();
+  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+    const { controller } = settings || (await this.getSettings());
     let command: string[] = [];
     if (!scope) {
       throw new Error("Unable to build scoped command - scope is not set");
@@ -198,6 +236,6 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     }
     const hostLauncher = controller?.path || controller?.name || "";
     const hostArgs = [...command];
-    return await this.runHostCommand(hostLauncher, hostArgs);
+    return await this.runHostCommand(hostLauncher, hostArgs, settings);
   }
 }

@@ -2,7 +2,7 @@ import { Connector } from "@/env/Types";
 import { AbstractClientEngine } from "../runtimes/abstract";
 
 export async function getPodmanApiRelay(engine: AbstractClientEngine, connector: Connector) {
-  let relay: string | undefined;
+  let relay: string = "";
   if (connector.availability.engine && connector.availability.controller) {
     const scope = connector.settings.controller?.scope;
     if (!scope) {

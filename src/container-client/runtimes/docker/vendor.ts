@@ -1,5 +1,6 @@
-import { ApiConnection, ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
+import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
+import { isEmpty } from "lodash-es";
 import { userConfiguration } from "../../config";
 import { DOCKER_PROGRAM } from "../../connection";
 import { DockerClientEngineNative } from "./native";
@@ -10,6 +11,7 @@ export class DockerClientEngineVirtualizedVendor extends DockerClientEngineNativ
   static ENGINE = ContainerEngine.DOCKER_VIRTUALIZED_VENDOR;
   ENGINE = ContainerEngine.DOCKER_VIRTUALIZED_VENDOR;
   PROGRAM = DOCKER_PROGRAM;
+  CONTROLLER = DOCKER_PROGRAM;
   RUNTIME = ContainerRuntime.DOCKER;
 
   static async create(id: string, osType: OperatingSystem) {
@@ -29,26 +31,31 @@ export class DockerClientEngineVirtualizedVendor extends DockerClientEngineNativ
     return result;
   }
 
-  async getApiConnection(): Promise<ApiConnection> {
-    let relay: string | undefined;
-    const settings = await this.getSettings();
-    // const scope = "dockerDesktopLinuxEngine";
-    const scope = "docker_engine";
+  async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    let relay: string = "";
     const NATIVE_DOCKER_SOCKET_PATH = (await Platform.isFlatpak())
       ? await Path.join("/tmp", DOCKER_API_SOCKET)
       : await Path.join(await userConfiguration.getStoragePath(), DOCKER_API_SOCKET);
     let uri = NATIVE_DOCKER_SOCKET_PATH;
     if (this.osType === OperatingSystem.Windows) {
-      const connection = await Platform.getEnvironmentVariable("DOCKER_HOST");
-      uri = connection || getWindowsPipePath(scope!);
+      const host = await Platform.getEnvironmentVariable("DOCKER_HOST");
+      if (isEmpty(host)) {
+        let scope = "dockerDesktopLinuxEngine";
+        const defaultPipeExists = await FS.isFilePresent(getWindowsPipePath(scope));
+        if (!defaultPipeExists) {
+          scope = "docker_engine";
+        }
+        uri = getWindowsPipePath(scope!) || "";
+      } else {
+        uri = host || "";
+      }
     } else {
       const homeDir = await Platform.getHomeDir();
       uri = await Path.join(homeDir, ".local/share/containers/docker/machine/podman.sock");
     }
     // Inspect machine system info for relay path
     try {
-      const systemInfo = await this.getSystemInfo();
-      console.debug(">> system info", systemInfo);
+      const systemInfo = await this.getSystemInfo(connection, undefined, customSettings);
       relay = systemInfo?.host?.remoteSocket?.path || relay;
     } catch (error: any) {
       this.logger.error(this.id, "Unable to inspect machine", error);
@@ -57,5 +64,9 @@ export class DockerClientEngineVirtualizedVendor extends DockerClientEngineNativ
       uri,
       relay
     };
+  }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    throw new Error("Method not implemented.");
   }
 }

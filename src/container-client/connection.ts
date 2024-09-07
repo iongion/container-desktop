@@ -47,7 +47,7 @@ export function createConnectorSettings({
       baseURL: "",
       connection: {
         uri: "",
-        relay: undefined
+        relay: ""
       }
     },
     program: {
@@ -55,7 +55,8 @@ export function createConnectorSettings({
       path: "",
       version: ""
     },
-    rootfull: false
+    rootfull: false,
+    mode: "mode.automatic"
   };
   if (programName.startsWith(PODMAN_PROGRAM)) {
     settings.api.baseURL = "http://d";

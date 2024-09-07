@@ -15,6 +15,7 @@ import {
   ContainerStats,
   ControllerScope,
   EngineConnectorApiSettings,
+  EngineConnectorSettings,
   GenerateKubeOptions,
   Network,
   Pod,
@@ -656,10 +657,10 @@ export class ContainerClient {
     });
   }
   // System
-  async getSystemInfo() {
+  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
     return this.withResult<SystemInfo>(async () => {
       const instance = Application.getInstance();
-      return await instance.getSystemInfo();
+      return await instance.getSystemInfo(connection, customFormat, customSettings);
     });
   }
   async pruneSystem() {

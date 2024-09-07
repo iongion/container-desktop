@@ -1,13 +1,14 @@
 import { AbstractClientEngineSSH } from "@/container-client/runtimes/abstract/ssh";
 import { coercePodmanMachines } from "@/container-client/shared";
-import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
+import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
-import { PODMAN_PROGRAM } from "../../connection";
+import { PODMAN_PROGRAM, SSH_PROGRAM } from "../../connection";
 
 export class PodmanClientEngineSSH extends AbstractClientEngineSSH {
   static ENGINE = ContainerEngine.PODMAN_REMOTE;
   ENGINE = ContainerEngine.PODMAN_REMOTE;
   PROGRAM = PODMAN_PROGRAM;
+  CONTROLLER = SSH_PROGRAM;
   RUNTIME = ContainerRuntime.PODMAN;
 
   static async create(id: string, osType: OperatingSystem) {
@@ -17,42 +18,46 @@ export class PodmanClientEngineSSH extends AbstractClientEngineSSH {
     return instance;
   }
 
-  async getApiConnection(): Promise<ApiConnection> {
-    const settings = await this.getSettings();
+  async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    const settings = customSettings || (await this.getSettings());
     const scope = settings.controller?.scope;
     if (!scope) {
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: "",
-        relay: undefined
+        relay: ""
       };
     }
-    let connection = "";
+    let uri = "";
     if (this.osType === OperatingSystem.Windows) {
-      connection = getWindowsPipePath(scope);
+      uri = getWindowsPipePath(scope);
     }
     return {
-      uri: connection,
-      relay: undefined
+      uri: uri,
+      relay: ""
     };
   }
 
   // System information
-  async getSystemInfo(connection?: Connection, customFormat?: string) {
-    return super.getSystemInfo(connection, customFormat || "json");
+  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
+    return super.getSystemInfo(connection, customFormat || "json", customSettings);
   }
 
   isScoped() {
     return true;
   }
 
-  async getPodmanMachines(customFormat?: string) {
+  async getPodmanMachines(customFormat?: string, customSettings?: EngineConnectorSettings) {
     this.logger.debug(this.id, "getMachines with program");
-    const settings = await this.getSettings();
+    const settings = customSettings || (await this.getSettings());
     const commandLauncher = settings.program?.path || settings.program?.name || "";
     const commandArgs = ["machine", "list", "--format", customFormat || "json"];
     const result = await this.runScopeCommand(commandLauncher, commandArgs, settings?.controller?.scope || "");
     const items = coercePodmanMachines(result);
     return items;
+  }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    throw new Error("Method not implemented.");
   }
 }

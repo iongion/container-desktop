@@ -108,7 +108,7 @@ export interface DetectFlags {
 
 export interface ApiConnection {
   uri: string;
-  relay?: string;
+  relay: string;
 }
 
 export interface EngineConnectorApiSettings {
@@ -122,6 +122,7 @@ export interface EngineConnectorSettings {
   program: Program;
   controller?: Controller;
   rootfull: boolean;
+  mode: "mode.automatic" | "mode.manual";
 }
 
 export interface EngineUserSettingsOptions {

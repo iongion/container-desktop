@@ -1,4 +1,14 @@
-import { ApiConnection, ApiStartOptions, CommandExecutionResult, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import {
+  ApiConnection,
+  ApiStartOptions,
+  CommandExecutionResult,
+  Connection,
+  ContainerEngine,
+  ContainerRuntime,
+  ControllerScope,
+  EngineConnectorSettings,
+  OperatingSystem
+} from "@/env/Types";
 import { PODMAN_PROGRAM } from "../../connection";
 import { PodmanAbstractClientEngine } from "./base";
 
@@ -15,15 +25,15 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
     return instance;
   }
 
-  async getApiConnection(): Promise<ApiConnection> {
-    const settings = await this.getSettings();
+  async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    const settings = customSettings || (await this.getSettings());
     // Get environment variable inside the scope
     const engine = await Platform.getEnvironmentVariable("PODMAN_HOST");
     const alias = await Platform.getEnvironmentVariable("DOCKER_HOST");
     // Inspect machine system info for relay path
     let uri = engine || alias || "";
     try {
-      const systemInfo = await this.getSystemInfo();
+      const systemInfo = await this.getSystemInfo(connection, undefined, customSettings);
       if (systemInfo?.host?.remoteSocket?.exists) {
         uri = systemInfo?.host?.remoteSocket?.path || uri;
       }
@@ -35,7 +45,7 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
     }
     return {
       uri,
-      relay: undefined
+      relay: ""
     };
   }
 
@@ -78,7 +88,7 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
     return false;
   }
 
-  async runScopeCommand(program: string, args: string[], scope: string): Promise<CommandExecutionResult> {
+  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
     throw new Error("Scope is not supported in native mode");
   }
 
@@ -102,5 +112,9 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
 
   async getControllerScopes(customFormat?: any) {
     return await this.getPodmanMachines(customFormat);
+  }
+
+  async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    throw new Error("Method not implemented.");
   }
 }

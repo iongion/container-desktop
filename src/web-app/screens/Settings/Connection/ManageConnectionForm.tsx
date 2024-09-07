@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/no-autofocus */
-import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, ProgressBar, Switch } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, ProgressBar, Switch, Tab, Tabs } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { isEmpty } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -155,6 +155,17 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   }, [t, engine, controllerScope, isNativeApplication, isCustomProgramPathEditable, isCustomApiConnectionUriEditable, controllerScopeName, controllerScopeLabel]);
 
   // Helpers
+  const resetFormData = useCallback(
+    (userValues: Connection) => {
+      const values = getValues();
+      reset({
+        ...userValues,
+        name: values.name
+      });
+    },
+    [reset, getValues]
+  );
+
   const fetchControllerScopes = useCallback(
     async (connector: Connection, skipReset?: boolean) => {
       let updated = connector as Connector;
@@ -184,11 +195,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       }
       if (!skipReset) {
         console.debug("<< Detected controller scopes", updated);
-        reset(updated);
+        resetFormData(updated);
       }
       return updated;
     },
-    [t, reset]
+    [t, resetFormData]
   );
   const startControllerScope = useCallback(
     async (scope: ControllerScope) => {
@@ -226,6 +237,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       if (mode === "create") {
         await createConnection(data);
       } else {
+        console.debug(">> Updating connection", data);
         await updateConnection({ id: data.id, connection: data });
       }
       onClose();
@@ -263,14 +275,14 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setContainerEngineOptions(connectors.filter((it) => it.runtime === runtime));
         console.debug("Detecting container runtime", runtime);
         const updated = createConnectorBy(osType, runtime);
-        reset(updated);
+        resetFormData(updated);
       } catch (error: any) {
         console.error("Error during container runtime detection", error);
       } finally {
         setPending(false);
       }
     },
-    [connectors, reset, osType]
+    [connectors, resetFormData, osType]
   );
   const onContainerEngineDetectClick = useCallback(
     async (engine: ContainerEngine) => {
@@ -293,7 +305,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         console.debug("Detecting container engine", engine);
         const connector = createConnectorBy(osType, runtime, engine);
         const updated = await fetchControllerScopes(connector, true);
-        reset(updated);
+        resetFormData(updated);
       } catch (error: any) {
         console.error("Unable to create connection", error);
         Notification.show({ message: t("Error during connector creation"), intent: Intent.DANGER });
@@ -301,7 +313,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(false);
       }
     },
-    [t, reset, osType, runtime, fetchControllerScopes]
+    [t, resetFormData, osType, runtime, fetchControllerScopes]
   );
   const onControllerScopeStartClick = useCallback(
     async (scope: ControllerScope) => {
@@ -362,7 +374,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           // updated.settings.controller.version = ""; // clear version on scope change
         }
         console.debug("<< Controller scope updated", JSON.parse(JSON.stringify(updated)));
-        reset(updated);
+        resetFormData(updated);
       } catch (error: any) {
         console.error("Error during controller scope change", error);
         Notification.show({ message: t("Error during controller scope change"), intent: Intent.DANGER });
@@ -370,7 +382,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(false);
       }
     },
-    [t, getValues, reset]
+    [t, getValues, resetFormData]
   );
   const onApiConnectionUriDetectClick = useCallback(async () => {
     const connection = getValues();
@@ -445,7 +457,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         if (!insideScope) {
           inspected = await fetchControllerScopes(inspected, true);
         }
-        reset(inspected);
+        resetFormData(inspected);
       } catch (error: any) {
         console.error("Error during executable selection", error);
         Notification.show({ message: t("Error during executable selection"), intent: Intent.DANGER });
@@ -453,7 +465,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(false);
       }
     },
-    [t, getValues, reset, fetchControllerScopes]
+    [t, getValues, resetFormData, fetchControllerScopes]
   );
   const onExecutableDetectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -498,7 +510,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         if (!insideScope) {
           inspected = await fetchControllerScopes(inspected, true);
         }
-        reset(inspected);
+        resetFormData(inspected);
       } catch (error: any) {
         console.error("Error during executable detection", error);
         Notification.show({ message: t("Error during executable selection"), intent: Intent.DANGER });
@@ -506,7 +518,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(false);
       }
     },
-    [t, getValues, reset, fetchControllerScopes]
+    [t, getValues, resetFormData, fetchControllerScopes]
   );
 
   // Widgets
@@ -578,10 +590,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   // At load
   useEffect(() => {
     if (connection) {
-      reset(connection);
+      console.debug(">> Connection re-loaded", connection);
+      resetFormData(connection);
       fetchControllerScopes(connection);
     }
-  }, [reset, connection, fetchControllerScopes]);
+  }, [resetFormData, connection, fetchControllerScopes]);
 
   return (
     <form className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
@@ -754,91 +767,119 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           </FormGroup>
         ) : null}
 
-        {/* Program path widget - program in scope */}
-        {flags.programWidgetPosition === "after-scope" ? programPathWidget : null}
+        <Controller
+          control={control}
+          name="settings.mode"
+          render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+            return (
+              <Tabs id="ConnectionSettingsMode" fill selectedTabId={value} onChange={onChange}>
+                <Tab
+                  id="mode.automatic"
+                  title={t("Automatic")}
+                  panel={
+                    <>
+                      <p>{t("Connection settings are automatically inferred from runtime engine configuration. Go to Manual mode to set-up advanced configuration details")}</p>
+                    </>
+                  }
+                  panelClassName="AutomaticSettingsPanel"
+                />
+                <Tab
+                  id="mode.manual"
+                  title={t("Manual")}
+                  panel={
+                    <>
+                      {flags.programWidgetPosition === "after-scope" ? programPathWidget : null}
 
-        {/* Connection api */}
-        <FormGroup disabled={pending} label={labels.apiConnectionUri} labelFor="settings.api.connection.uri" helperText={t("Used as API connection URI")}>
-          <Controller
-            control={control}
-            name="settings.api.connection.uri"
-            render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-              const apiConnectionUriDetectButtonTitle = "";
-              return (
-                <div className="ApiConnectionUriInput">
-                  <InputGroup
-                    fill
-                    autoFocus
-                    disabled={pending}
-                    readOnly={flags.isCustomApiConnectionUriReadonly}
-                    id={name}
-                    name={name}
-                    value={value || ""}
-                    onBlur={onBlur}
-                    onChange={onChange}
-                    inputRef={ref}
-                    intent={invalid ? Intent.DANGER : Intent.NONE}
-                    placeholder={t("auto")}
-                    rightElement={
-                      flags.withCustomApiConnectionUri ? undefined : (
-                        <ButtonGroup minimal>
-                          <Button
-                            disabled={pending}
-                            small
-                            title={t("Managed by {{name}} - click to override", program)}
-                            icon={isCustomApiConnectionUriEditable ? IconNames.UNLOCK : IconNames.LOCK}
-                            intent={Intent.NONE}
-                            data-target="program"
-                            onClick={onToggleCustomApiConnectionUriEditability}
+                      {/* Connection api */}
+                      <FormGroup disabled={pending} label={labels.apiConnectionUri} labelFor="settings.api.connection.uri" helperText={t("Used as API connection URI")}>
+                        <Controller
+                          control={control}
+                          name="settings.api.connection.uri"
+                          render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                            const apiConnectionUriDetectButtonTitle = "";
+                            return (
+                              <div className="ApiConnectionUriInput">
+                                <InputGroup
+                                  fill
+                                  autoFocus
+                                  disabled={pending}
+                                  readOnly={flags.isCustomApiConnectionUriReadonly}
+                                  id={name}
+                                  name={name}
+                                  value={value || ""}
+                                  onBlur={onBlur}
+                                  onChange={onChange}
+                                  inputRef={ref}
+                                  intent={invalid ? Intent.DANGER : Intent.NONE}
+                                  placeholder={t("auto")}
+                                  rightElement={
+                                    flags.withCustomApiConnectionUri ? undefined : (
+                                      <ButtonGroup minimal>
+                                        <Button
+                                          disabled={pending}
+                                          small
+                                          title={t("Managed by {{name}} - click to override", program)}
+                                          icon={isCustomApiConnectionUriEditable ? IconNames.UNLOCK : IconNames.LOCK}
+                                          intent={Intent.NONE}
+                                          data-target="program"
+                                          onClick={onToggleCustomApiConnectionUriEditability}
+                                        />
+                                      </ButtonGroup>
+                                    )
+                                  }
+                                />
+                                <Divider />
+                                <ButtonGroup minimal>
+                                  <Button
+                                    disabled={pending || flags.isCustomApiConnectionUriDetectDisabled}
+                                    small
+                                    text={t("Detect")}
+                                    title={apiConnectionUriDetectButtonTitle}
+                                    intent={Intent.SUCCESS}
+                                    onClick={onApiConnectionUriDetectClick}
+                                  />
+                                </ButtonGroup>
+                              </div>
+                            );
+                          }}
+                        />
+                      </FormGroup>
+
+                      {/* Connection api relay */}
+                      {flags.withApiRelay ? (
+                        <FormGroup disabled={pending} label={t("API connection relay")} labelFor="settings.api.connection.relay">
+                          <Controller
+                            control={control}
+                            name="settings.api.connection.relay"
+                            render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                              return (
+                                <InputGroup
+                                  fill
+                                  autoFocus
+                                  readOnly={flags.isCustomApiConnectionRelayReadonly}
+                                  disabled={pending || engine === ContainerEngine.DOCKER_VIRTUALIZED_VENDOR}
+                                  id={name}
+                                  name={name}
+                                  value={value || ""}
+                                  onBlur={onBlur}
+                                  onChange={onChange}
+                                  inputRef={ref}
+                                  placeholder={t("auto")}
+                                  intent={invalid ? Intent.DANGER : Intent.NONE}
+                                />
+                              );
+                            }}
                           />
-                        </ButtonGroup>
-                      )
-                    }
-                  />
-                  <Divider />
-                  <ButtonGroup minimal>
-                    <Button
-                      disabled={pending || flags.isCustomApiConnectionUriDetectDisabled}
-                      small
-                      text={t("Detect")}
-                      title={apiConnectionUriDetectButtonTitle}
-                      intent={Intent.SUCCESS}
-                      onClick={onApiConnectionUriDetectClick}
-                    />
-                  </ButtonGroup>
-                </div>
-              );
-            }}
-          />
-        </FormGroup>
-
-        {/* Connection api relay */}
-        {flags.withApiRelay ? (
-          <FormGroup disabled={pending} label={t("API connection relay")} labelFor="settings.api.connection.relay">
-            <Controller
-              control={control}
-              name="settings.api.connection.relay"
-              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-                return (
-                  <InputGroup
-                    fill
-                    autoFocus
-                    readOnly={flags.isCustomApiConnectionRelayReadonly}
-                    disabled={pending || engine === ContainerEngine.DOCKER_VIRTUALIZED_VENDOR}
-                    id={name}
-                    name={name}
-                    value={value || ""}
-                    onBlur={onBlur}
-                    onChange={onChange}
-                    inputRef={ref}
-                    placeholder={t("auto")}
-                    intent={invalid ? Intent.DANGER : Intent.NONE}
-                  />
-                );
-              }}
-            />
-          </FormGroup>
-        ) : null}
+                        </FormGroup>
+                      ) : null}
+                    </>
+                  }
+                  panelClassName="ManualSettingsPanel"
+                />
+              </Tabs>
+            );
+          }}
+        />
 
         {/* Connection api start */}
         <FormGroup disabled={pending} labelFor="settings.api.autoStart">

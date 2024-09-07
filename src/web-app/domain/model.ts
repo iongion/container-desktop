@@ -150,7 +150,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
             const connections = await instance.getConnections();
             const defaultConnector = connections.find((it) => it.id === userSettings?.connector?.default);
             if (defaultConnector) {
-              console.debug("Using default connector", defaultConnector);
+              console.debug("Using default connector", defaultConnector, "in mode", defaultConnector?.settings?.mode);
               connection = defaultConnector;
               startApi = options?.startApi || defaultConnector?.settings?.api?.autoStart || false;
             } else {

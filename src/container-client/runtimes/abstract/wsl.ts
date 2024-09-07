@@ -1,4 +1,15 @@
-import { ApiConnection, ApiStartOptions, AvailabilityCheck, ContainerEngine, ControllerScope, EngineConnectorSettings, OperatingSystem, RunnerStopperOptions } from "@/env/Types";
+import {
+  ApiConnection,
+  ApiStartOptions,
+  AvailabilityCheck,
+  CommandExecutionResult,
+  Connection,
+  ContainerEngine,
+  ControllerScope,
+  EngineConnectorSettings,
+  OperatingSystem,
+  RunnerStopperOptions
+} from "@/env/Types";
 import { WSL_PROGRAM } from "../../connection";
 import { getAvailableWSLDistributions } from "../../shared";
 import { AbstractClientEngine } from "../abstract/base";
@@ -6,7 +17,7 @@ import { AbstractClientEngine } from "../abstract/base";
 export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientEngine {
   public CONTROLLER: string = WSL_PROGRAM;
 
-  abstract getApiConnection(scope?: string): Promise<ApiConnection>;
+  abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
 
   // Runtime
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
@@ -52,8 +63,8 @@ export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientE
   }
 
   // Executes command inside controller scope
-  async runScopeCommand(program: string, args: string[], scope: string) {
-    const { controller } = await this.getSettings();
+  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+    const { controller } = settings || (await this.getSettings());
     let shell = "bash";
     let shellArgs = ["-l", "-c"];
     if (this.ENGINE === ContainerEngine.DOCKER_VIRTUALIZED_WSL) {
@@ -84,7 +95,7 @@ export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientE
     }
     const hostLauncher = controller?.path || controller?.name || "";
     const hostArgs = [...command];
-    return await this.runHostCommand(hostLauncher, hostArgs);
+    return await this.runHostCommand(hostLauncher, hostArgs, settings);
   }
   // WSL specific
   async startWSLDistribution(name: string): Promise<boolean> {
