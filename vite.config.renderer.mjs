@@ -22,10 +22,24 @@ export function docsServer() {
             res.write(pkg.version);
             res.end();
           } else if (req.originalUrl?.includes("/docs")) {
-            const resource = path.join(__dirname, `${req.originalUrl}`);
-            res.setHeader("Content-Type", mimeTypes.lookup(resource) || "application/octet-stream");
-            res.writeHead(200);
-            res.write(fs.readFileSync(resource));
+            let resource = path.join(__dirname, `${req.originalUrl}`);
+            if (fs.lstatSync(resource).isDirectory()) {
+              resource = path.join(resource, "index.html");
+              res.setHeader("Content-Type", mimeTypes.lookup(resource) || "application/octet-stream");
+              res.setHeader("Location", "/docs/index.html");
+              res.writeHead(301);
+            } else {
+              if (fs.existsSync(resource)) {
+                res.setHeader("Content-Type", mimeTypes.lookup(resource) || "application/octet-stream");
+                res.writeHead(200);
+                res.write(fs.readFileSync(resource));
+              } else {
+                console.error(`Resource not found: ${resource}`);
+                res.setHeader("Content-Type", "text/plain");
+                res.writeHead(404);
+                res.write("Resource not found");
+              }
+            }
             res.end();
           }
           next();
