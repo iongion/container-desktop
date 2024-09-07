@@ -27,7 +27,7 @@
 .AppLoadingSplashPhases {
   margin-top: 4px;
   width: 400px;
-  height: 120px;
+  height: 90px;
   border: 1px solid #333;
   display: flex;
   flex-direction: column;
@@ -41,6 +41,7 @@
   vertical-align: middle;
   margin-bottom: 3px;
   white-space: nowrap;
+  font-size: 12px;
 }
 .AppLoadingSplashPhase:last-child {
   margin-bottom: 0;
