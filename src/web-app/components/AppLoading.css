@@ -25,7 +25,7 @@
   align-items: center;
 }
 .AppLoadingSplashPhases {
-  padding: 0;
+  margin-top: 4px;
   width: 400px;
   height: 120px;
   border: 1px solid #333;
