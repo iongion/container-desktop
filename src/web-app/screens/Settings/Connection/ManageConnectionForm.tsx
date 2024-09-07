@@ -769,6 +769,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
 
         {/* Connection api start */}
         <FormGroup
+          className="ContainerStartupFormGroup"
           disabled={pending}
           labelFor="settings.api.autoStart"
           label={t("Container startup")}

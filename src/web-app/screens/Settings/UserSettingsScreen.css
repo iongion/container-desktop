@@ -98,11 +98,14 @@
 }
 
 .AppSettingsEngineManagerConnections {
-  height: calc(100vh - 320px);
+  height: calc(100vh - 380px);
   border: 1px solid #333;
   position: relative;
   background-color: #2a262c;
   overflow: auto;
+}
+[data-running="no"] .AppSettingsEngineManagerConnections {
+  height: calc(100vh - 520px);
 }
 .AppSettingsEngineManagerConnections [data-table="engine.connections"] thead {
   position: sticky;
