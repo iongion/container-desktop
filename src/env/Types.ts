@@ -333,6 +333,7 @@ export interface ConnectOptions {
   startApi: boolean;
   connection: Connection;
   skipAvailabilityCheck: boolean;
+  origin?: string;
 }
 
 export interface DisconnectOptions {

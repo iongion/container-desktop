@@ -1,8 +1,10 @@
 import * as async from "async";
+import dayjs from "dayjs";
 import { v4 } from "uuid";
 
 import { AbstractClientEngine, createConnectorBy, Docker, getDefaultConnectors, Podman, RUNTIMES } from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
+import { connectionNotifier } from "@/container-client/notifier";
 import { AbstractRuntime, ClientEngine } from "@/container-client/runtimes/abstract/base";
 import { PodmanAbstractClientEngine, PodmanClientEngineCommon } from "@/container-client/runtimes/podman/base";
 import {
@@ -761,6 +763,11 @@ export class Application {
         throw new Error("Connector runtime not found");
       }
       engine = await Runtime.createEngineByName(connector.engine, connector.id);
+      connectionNotifier.emit("startup.phase", {
+        date: dayjs().toISOString(),
+        event: "Runtime engine created",
+        origin: opts?.origin
+      });
       if (!engine) {
         this.logger.error(connector.id, "Connector engine not found", connector.engine);
         throw new Error("Connector engine not found");
@@ -773,6 +780,11 @@ export class Application {
           if (opts?.skipAvailabilityCheck) {
             this.logger.warn(connector.id, "Skipping automatic settings - availability check disabled");
           } else {
+            connectionNotifier.emit("startup.phase", {
+              date: dayjs().toISOString(),
+              event: "Performing automatic connection detection",
+              origin: opts?.origin
+            });
             const automaticSettings = await engine.getAutomaticSettings();
             this.logger.warn("Using automatic settings", automaticSettings);
             await engine.setSettings(automaticSettings);
@@ -793,7 +805,17 @@ export class Application {
           if (opts?.skipAvailabilityCheck) {
             this.logger.warn(connector.id, "Skipping availability check");
           } else {
+            connectionNotifier.emit("startup.phase", {
+              date: dayjs().toISOString(),
+              event: "Performing availability checks",
+              origin: opts?.origin
+            });
             availability = await engine.getAvailability(connector.settings);
+            connectionNotifier.emit("startup.phase", {
+              date: dayjs().toISOString(),
+              event: "Availability checks completed",
+              origin: opts?.origin
+            });
           }
         } catch (error: any) {
           this.logger.error(connector.id, "<< Reading engine availability failed", error);
@@ -855,6 +877,11 @@ export class Application {
     try {
       this.logger.debug("Bridge startup - creating current");
       if (opts?.connection) {
+        connectionNotifier.emit("startup.phase", {
+          date: dayjs().toISOString(),
+          event: "Creating connectors",
+          phase: "start"
+        });
         connector = createConnectorBy(this.osType, opts.connection.runtime, opts.connection.engine);
         connector.connectionId = opts.connection.id;
         connector.name = opts.connection.name;
@@ -865,12 +892,22 @@ export class Application {
           this.logger.error("Bridge startup - no connector found", opts);
           throw new Error("No connector found");
         }
-        const { engine, availability } = await this.createConnectorClientEngine(connector, opts);
+        connectionNotifier.emit("startup.phase", {
+          date: dayjs().toISOString(),
+          event: "Creating connector engine starting",
+          phase: "start"
+        });
+        const { engine, availability } = await this.createConnectorClientEngine(connector, { ...opts, origin: "start" });
         if (engine) {
           const engineSettings = await engine.getSettings();
           connector.settings = deepMerge(connector.settings, engineSettings);
           connector.availability = availability;
           this._currentClientEngine = engine;
+          connectionNotifier.emit("startup.phase", {
+            date: dayjs().toISOString(),
+            event: "Creating connector engine completed",
+            phase: "start"
+          });
         } else {
           throw new Error("Unable to create current engine connection");
         }

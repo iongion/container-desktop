@@ -6,6 +6,7 @@ import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from "./ScreenHeader";
 
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import "./SystemInfoScreen.css";
 
 // Screen
@@ -19,6 +20,7 @@ export const Title = "System info";
 export const Screen: AppScreen<ScreenProps> = () => {
   const provisioned = useStoreState((state) => state.provisioned);
   const running = useStoreState((state) => state.running);
+  const pending = useStoreState((state) => state.pending);
   const systemInfo = useStoreState((state) => state.settings.systemInfo);
   const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(systemInfo, null, 2)} /> : null;
 
@@ -29,6 +31,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
       await getSystemInfo();
     })();
   }, [getSystemInfo]);
+
+  if (pending) {
+    return <ScreenLoader screen={ID} pending={pending} />;
+  }
 
   return (
     <div className="AppScreen" data-screen={ID}>

@@ -1,8 +1,8 @@
 // vendors
 import { Action, EasyPeasyConfig, Store, Thunk, createTypedHooks } from "easy-peasy";
 // project
-import { ContainerClient, OnlineApi } from "@/container-client/Api.clients";
-import {
+import type { ContainerClient, OnlineApi } from "@/container-client/Api.clients";
+import type {
   ConnectOptions,
   Connector,
   DisconnectOptions,
@@ -14,17 +14,17 @@ import {
   GlobalUserSettingsOptions,
   OperatingSystem
 } from "@/env/Types";
-import { ContainersModel } from "@/web-app/screens/Container/Model";
-import { DashboardModel } from "@/web-app/screens/Dashboard/Model";
-import { ImagesModel } from "@/web-app/screens/Image/Model";
-import { MachinesModel } from "@/web-app/screens/Machine/Model";
-import { NetworksModel } from "@/web-app/screens/Network/Model";
-import { PodsModel } from "@/web-app/screens/Pod/Model";
-import { RegistriesModel } from "@/web-app/screens/Registry/Model";
-import { SecretsModel } from "@/web-app/screens/Secret/Model";
-import { SettingsModel } from "@/web-app/screens/Settings/Model";
-import { TroubleshootModel } from "@/web-app/screens/Troubleshoot/Model";
-import { VolumesModel } from "@/web-app/screens/Volume/Model";
+import type { ContainersModel } from "@/web-app/screens/Container/Model";
+import type { DashboardModel } from "@/web-app/screens/Dashboard/Model";
+import type { ImagesModel } from "@/web-app/screens/Image/Model";
+import type { MachinesModel } from "@/web-app/screens/Machine/Model";
+import type { NetworksModel } from "@/web-app/screens/Network/Model";
+import type { PodsModel } from "@/web-app/screens/Pod/Model";
+import type { RegistriesModel } from "@/web-app/screens/Registry/Model";
+import type { SecretsModel } from "@/web-app/screens/Secret/Model";
+import type { SettingsModel } from "@/web-app/screens/Settings/Model";
+import type { TroubleshootModel } from "@/web-app/screens/Troubleshoot/Model";
+import type { VolumesModel } from "@/web-app/screens/Volume/Model";
 
 export enum AppBootstrapPhase {
   INITIAL = "initial",
@@ -47,6 +47,7 @@ export interface AppModelState {
   phase: AppBootstrapPhase;
   pending: boolean;
   native: boolean;
+  bootstrapPhases: any[];
   // Descriptor
   osType: OperatingSystem;
   version: string;
@@ -66,6 +67,8 @@ export interface AppModel extends AppModelState {
   // actions
   setPhase: Action<AppModel, AppBootstrapPhase>;
   setPending: Action<AppModel, boolean>;
+  insertBootstrapPhase: Action<AppModel, any>;
+  resetBootstrapPhases: Action<AppModel, any>;
   syncGlobalUserSettings: Action<AppModel, GlobalUserSettings>;
   syncEngineUserSettings: Action<AppModel, EngineUserSettingsOptions>;
 
@@ -99,10 +102,10 @@ export type AppStorePendingOperation = (store: AppStore) => Promise<any>;
 export type AppStorePendingCallback = (operation: AppStorePendingOperation) => Promise<any>;
 
 export interface AppRegistry {
-  onlineApi: OnlineApi;
+  withPending: AppStorePendingCallback;
   getStore: () => AppStore;
   getApi: () => ContainerClient;
-  withPending: AppStorePendingCallback;
+  getOnlineApi: () => OnlineApi;
 }
 
 export interface DomainModel extends AppModel {

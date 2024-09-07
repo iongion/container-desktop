@@ -44,7 +44,3 @@ export function axiosConfigToCURL(config) {
   }
   return command.join(" ");
 }
-
-export default {
-  axiosConfigToCURL
-};

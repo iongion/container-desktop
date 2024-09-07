@@ -19,3 +19,39 @@
   justify-content: center;
   align-items: center;
 }
+.AppLoadingSplashContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.AppLoadingSplashPhases {
+  padding: 0;
+  width: 400px;
+  height: 120px;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px;
+}
+.AppLoadingSplashPhase {
+  display: flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+.AppLoadingSplashPhase:last-child {
+  margin-bottom: 0;
+}
+.AppLoadingSplashPhase span {
+  display: block;
+  padding: 4px;
+}
+.AppLoadingSplashPhase p {
+  margin: 0;
+  padding: 0;
+  padding-left: 4px;
+  white-space: nowrap;
+}

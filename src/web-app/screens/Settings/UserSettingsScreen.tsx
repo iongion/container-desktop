@@ -137,7 +137,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onVersionCheck = useCallback(async () => {
     setIsChecking(true);
     try {
-      const check = await registry.onlineApi.checkLatestVersion();
+      const check = await registry.getOnlineApi().checkLatestVersion();
       console.debug("Checking for new version", check);
       if (check.hasUpdate) {
         Notification.show({
