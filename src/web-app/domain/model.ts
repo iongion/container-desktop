@@ -127,9 +127,12 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
     }),
     startApplication: thunk(async (actions, options, store) => {
       let nextPhase = AppBootstrapPhase.STARTING;
+      const state = store.getState();
+      let connection = options?.connection || state.currentConnector;
+      let startApi = options?.startApi || connection?.settings?.api?.autoStart || false;
       const app = document.querySelector("body");
       if (app) {
-        app.setAttribute("data-runtime", options?.connection?.runtime || "podman");
+        app.setAttribute("data-runtime", connection?.runtime || "podman");
       }
       return registry.withPending(async () => {
         const instance = Application.getInstance();
@@ -143,7 +146,18 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           const environment = import.meta.env.ENVIRONMENT;
           const version = import.meta.env.PROJECT_VERSION;
           const userSettings = await instance.getGlobalUserSettings();
-          const currentConnector = await instance.start(options);
+          if (!connection) {
+            const connections = await instance.getConnections();
+            const defaultConnector = connections.find((it) => it.id === userSettings?.connector?.default);
+            if (defaultConnector) {
+              console.debug("Using default connector", defaultConnector);
+              connection = defaultConnector;
+              startApi = options?.startApi || defaultConnector?.settings?.api?.autoStart || false;
+            } else {
+              console.debug("No default connector found", userSettings?.connector?.default);
+            }
+          }
+          const currentConnector = await instance.start(connection ? { startApi, connection } : undefined);
           const connectors = instance.getConnectors();
           const running = currentConnector?.availability?.api || false;
           const osType = instance.getOsType();

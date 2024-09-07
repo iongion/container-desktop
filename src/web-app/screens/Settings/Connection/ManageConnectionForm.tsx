@@ -863,6 +863,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             }}
           />
         </FormGroup>
+
         {withRootfulSupport ? (
           <FormGroup disabled={pending} labelFor="settings.rootfull">
             <Controller

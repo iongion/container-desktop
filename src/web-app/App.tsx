@@ -180,7 +180,6 @@ export function AppMainScreen() {
   const currentConnector = useStoreState((state) => state.currentConnector);
   const theme = useStoreState((state) => state.userSettings.theme || DEFAULT_THEME);
   const startApplication = useStoreActions((actions) => actions.startApplication);
-
   const program = currentConnector?.settings?.program;
 
   useEffect(() => {
