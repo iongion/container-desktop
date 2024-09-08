@@ -206,8 +206,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
   const canRestart = !isPaused && !pending;
   const canRemove = !isRunning && !pending;
 
-  console.debug({ isPaused });
-
   let containerServiceUrl = "";
   let expandAsOverlay;
   let withInlinePlayerActionsWidget: React.ReactNode | undefined;
