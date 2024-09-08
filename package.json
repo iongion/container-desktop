@@ -1,10 +1,10 @@
 {
   "name": "podman-desktop-companion",
   "title": "Podman Desktop Companion",
-  "version": "5.2.0-rc.4",
+  "version": "5.2.2-rc.1",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman Desktop Companion",
-  "main": "build/main-5.2.0-rc.4.mjs",
+  "main": "build/main-5.2.2-rc.1.mjs",
   "homepage": "./",
   "type": "module",
   "scripts": {
