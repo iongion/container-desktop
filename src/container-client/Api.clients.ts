@@ -678,7 +678,7 @@ export class ContainerClient {
       const instance = Application.getInstance();
       return await instance.connectToContainer({
         id: item.Id,
-        title: item.Name || item.Names?.[0],
+        title: item.Name || "",
         shell: undefined
       });
     });

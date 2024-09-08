@@ -52,6 +52,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
         // TODO: Improve notifications
         let success = false;
         const notifyFailure = true;
+        const name = container.Name || container.Names?.[0] || "";
+        const title = name.startsWith("/") ? name.substring(1) : name;
         switch (action) {
           case "container.logs":
             await containerFetch(container);
@@ -78,7 +80,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
             success = await containerRemove(container);
             break;
           case "container.connect":
-            success = await containerConnect(container);
+            success = await containerConnect({ ...container, Name: t("Terminal console for {{title}} container", { title }) });
             break;
           default:
             break;

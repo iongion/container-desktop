@@ -110,12 +110,13 @@ export const Platform: IPlatform = {
     console.debug("Launching terminal", commandLauncher, params);
     const args = [commandLauncher].concat(params || []).join(" ");
     let status: CommandExecutionResult;
+    const title = opts?.title || import.meta.env.PROJECT_NAME || "";
     if (os.type() === OperatingSystem.MacOS) {
       status = await Command.Execute("osascript", ["-e", `tell app "Terminal" to do script "${args}"`]);
     } else if (os.type() === OperatingSystem.Windows) {
-      status = await Command.Execute("wt", ["-w", "nt", "--title", opts?.title || "PDC Shell", "-p", "Command Prompt", "-d", ".", "cmd", "/k", commandLauncher, ...(params || [])]);
+      status = await Command.Execute("wt", ["-w", "nt", "--title", title, "-p", "Command Prompt", "-d", ".", "cmd", "/k", commandLauncher, ...(params || [])]);
     } else {
-      status = await Command.Execute("xterm", ["-e", args]);
+      status = await Command.Execute("gnome-terminal", ["--title", title, "-e", args]);
     }
     return status;
   }
