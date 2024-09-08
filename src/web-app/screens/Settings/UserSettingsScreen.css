@@ -165,6 +165,11 @@
   color: #999;
 }
 
+[data-connection-is-system="yes"] .PlatformConnectionName {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
 [data-theme="bp5-dark"] [data-runtime="docker"] .AppSettingsEngineManagerConnections {
   background-color: var(--docker-dark-bg-color);
 }

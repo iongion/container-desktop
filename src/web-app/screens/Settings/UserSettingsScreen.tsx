@@ -226,6 +226,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       data-connection-is-default={defaultConnector === connection.id ? "yes" : "no"}
                       data-connection-is-current={isCurrent ? "yes" : "no"}
                       data-connection-is-connected={isConnected ? "yes" : "no"}
+                      data-connection-is-system={connection.readonly ? "yes" : "no"}
                     >
                       <td>{index + 1}.</td>
                       <td>
