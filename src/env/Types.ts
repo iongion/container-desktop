@@ -312,10 +312,12 @@ export interface EngineConnectorAvailability {
 
 export interface Connection {
   name: string;
+  label: string;
+  description?: string;
   runtime: ContainerRuntime;
   engine: ContainerEngine;
-  label: string;
   disabled?: boolean;
+  readonly?: boolean;
   //
   id: string;
   settings: EngineConnectorSettings;

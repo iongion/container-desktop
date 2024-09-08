@@ -3,6 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { saveAs } from "file-saver";
+import { isEmpty } from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -64,9 +65,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, [refreshConnections]);
 
   const onConnectionsExportClick = useCallback(async () => {
+    const connections = await Application.getInstance().getConnections();
     const data = JSON.stringify(connections, null, 2);
     saveAs(new Blob([data], { type: "application/json" }), "podman-desktop-companion-connections.json");
-  }, [connections]);
+  }, []);
   const onConnectionsImportClick = useCallback(async () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -212,6 +214,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   const isCurrent = currentConnector?.connectionId === connection?.id;
                   const isConnected = isCurrent && currentConnector.availability.api;
                   const isAutomatic = connection.settings.mode === "mode.automatic";
+                  const descriptions = [connection.settings?.api?.connection?.uri || "", connection.description || ""];
+                  const description = descriptions.filter((it) => !isEmpty(it)).join(". ");
                   return (
                     <tr
                       key={connection.id}
@@ -226,7 +230,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <td>{index + 1}.</td>
                       <td>
                         <p className="PlatformConnectionName">{connection.name}</p>
-                        {connection.settings?.api?.connection?.uri ? <p className="PlatformConnectionURI">{connection.settings?.api?.connection?.uri}</p> : null}
+                        {description ? <p className="PlatformConnectionDescription">{description}</p> : null}
                       </td>
                       <td>{connection.runtime}</td>
                       <td>

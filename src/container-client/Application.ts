@@ -15,6 +15,7 @@ import {
   Connector,
   ContainerConnectOptions,
   ContainerEngine,
+  ContainerRuntime,
   ControllerScope,
   CreateMachineOptions,
   DisconnectOptions,
@@ -455,6 +456,35 @@ export class Application {
 
   async getConnections() {
     const connections: Connection[] = await this.userConfiguration.getKey("connections");
+    return connections || [];
+  }
+
+  async getSystemConnections() {
+    const connections: Connection[] = [];
+    // Add system podman as default
+    const firstPodman: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.PODMAN) as Connection;
+    if (firstPodman) {
+      firstPodman.id = "system-default.podman";
+      firstPodman.description = "Uses the available system podman installation";
+      firstPodman.label = "System Podman";
+      firstPodman.name = "System Podman";
+      firstPodman.readonly = true;
+      firstPodman.settings.api.autoStart = true;
+      firstPodman.settings.mode = "mode.automatic";
+      connections.push(firstPodman);
+    }
+    // Add system docker as default
+    const firstDocker: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.DOCKER) as Connection;
+    if (firstDocker) {
+      firstDocker.id = "system-default.docker";
+      firstDocker.description = "Uses the available system docker installation";
+      firstDocker.label = "System Docker";
+      firstDocker.name = "System Docker";
+      firstDocker.readonly = true;
+      firstDocker.settings.api.autoStart = true;
+      firstDocker.settings.mode = "mode.automatic";
+      connections.push(firstDocker);
+    }
     return connections || [];
   }
 

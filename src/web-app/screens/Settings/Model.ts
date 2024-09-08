@@ -72,7 +72,9 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
     getConnections: thunk(async (actions) =>
       registry.withPending(async () => {
         const instance = Application.getInstance();
-        const items = await instance.getConnections();
+        const systemItems = await instance.getSystemConnections();
+        const userItems = await instance.getConnections();
+        const items = [...systemItems, ...userItems];
         actions.setConnections(items);
         return items;
       })

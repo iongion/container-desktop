@@ -26,6 +26,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const currentConnector = useStoreState((state) => state.currentConnector);
+  const [isStarting, setIsStarting] = useState(false);
   const startApplication = useStoreActions((actions) => actions.startApplication);
   const stopApplication = useStoreActions((actions) => actions.stopApplication);
   const removeConnection = useStoreActions((actions) => actions.settings.removeConnection);
@@ -65,7 +66,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
     onEdit?.(connection);
   }, [onEdit, connection]);
   const onConnectClick = useCallback(async () => {
-    await startApplication({ startApi: connection.settings.api.autoStart ?? false, connection, skipAvailabilityCheck: false });
+    setIsStarting(true);
+    try {
+      await startApplication({ startApi: connection.settings.api.autoStart ?? false, connection, skipAvailabilityCheck: false });
+    } catch (error: any) {
+      console.error("Unable to start application", error);
+    } finally {
+      setIsStarting(false);
+    }
   }, [startApplication, connection]);
   const onDisconnectClick = useCallback(async () => {
     await stopApplication({ stopApi: true, connection });
@@ -90,7 +98,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   const isConnected = isCurrent && currentConnector.availability.api;
 
   const removeWidget = connection ? (
-    <ConfirmMenu onConfirm={onRemove} tag={connection.id} disabled={disabledAction === "connection.remove"}>
+    <ConfirmMenu onConfirm={onRemove} tag={connection.id} disabled={connection.readonly || isStarting || disabledAction === "connection.remove"}>
       <MenuItem icon={IconNames.TARGET} text={t("Make default")} intent={Intent.NONE} onClick={onMakeDefault} />
       <MenuDivider />
     </ConfirmMenu>
@@ -101,6 +109,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
         <Button
           className="ConnectionToggle"
           small
+          disabled={isStarting}
           icon={isConnected ? IconNames.POWER : IconNames.OFFLINE}
           intent={isConnected ? Intent.SUCCESS : Intent.NONE}
           text={isConnected ? t("Disconnect") : t("Connect")}
@@ -110,7 +119,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
       </ButtonGroup>
       &nbsp;
       <ButtonGroup minimal>
-        <Button small icon={IconNames.EDIT} title={t("Edit")} onClick={onEditClick} />
+        <Button
+          disabled={connection.readonly || isStarting}
+          small
+          icon={IconNames.EDIT}
+          title={connection.readonly ? t("This is a system default connection and cannot be changed") : t("Edit")}
+          onClick={onEditClick}
+        />
       </ButtonGroup>
       <ButtonGroup>{removeWidget}</ButtonGroup>
     </>

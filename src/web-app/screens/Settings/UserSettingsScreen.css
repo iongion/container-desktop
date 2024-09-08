@@ -153,14 +153,14 @@
   margin-left: 5px;
 }
 .PlatformConnectionName,
-.PlatformConnectionURI {
+.PlatformConnectionDescription {
   margin: 0;
   padding: 0;
 }
 .PlatformConnectionName {
   font-size: 12px;
 }
-.PlatformConnectionURI {
+.PlatformConnectionDescription {
   padding-top: 5px;
   color: #999;
 }
@@ -193,6 +193,6 @@
 [data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformScopeLabel {
   color: #333;
 }
-[data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformConnectionURI {
+[data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformConnectionDescription {
   color: #777;
 }

@@ -70,6 +70,11 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       state.bootstrapPhases = [];
     }),
     syncGlobalUserSettings: action((state, values) => {
+      if (values?.connector?.default) {
+        values.connector = {
+          default: "system-default.podman"
+        };
+      }
       state.userSettings = values;
     }),
     syncEngineUserSettings: action((state, values) => {
@@ -187,7 +192,9 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               event: "Listing connections",
               origin: "start"
             });
-            const connections = await instance.getConnections();
+            const userConnections = await instance.getConnections();
+            const systemConnections = await instance.getSystemConnections();
+            const connections = [...systemConnections, ...userConnections];
             const defaultConnector = connections.find((it) => it.id === userSettings?.connector?.default);
             if (defaultConnector) {
               console.debug("Using default connector", defaultConnector, "in mode", defaultConnector?.settings?.mode);
