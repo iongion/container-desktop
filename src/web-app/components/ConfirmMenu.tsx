@@ -9,13 +9,14 @@ export interface ConfirmMenuItemProps {
   icon?: IconName;
   tag?: any;
   text?: string;
+  title?: string;
   intent?: Intent;
   disabled?: boolean;
   autoConfirm?: boolean;
   onConfirm?: (tag: any, e: any) => void;
   onCancel?: (tag: any, e: any) => void;
 }
-export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, text, disabled, intent, onConfirm, onCancel }: ConfirmMenuItemProps) => {
+export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, text, title, disabled, intent, onConfirm, onCancel }: ConfirmMenuItemProps) => {
   const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
   const onTrigger = useCallback(
@@ -58,16 +59,17 @@ export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, tex
       }
     />
   ) : (
-    <MenuItem disabled={disabled} icon={icon || IconNames.TRASH} text={text || t("Remove")} intent={intent || Intent.DANGER} onClick={onTrigger} />
+    <MenuItem disabled={disabled} icon={icon || IconNames.TRASH} title={title} text={text || t("Remove")} intent={intent || Intent.DANGER} onClick={onTrigger} />
   );
 };
 export interface ConfirmMenuProps {
   disabled?: boolean;
   children?: any;
+  title?: string;
   tag?: any;
   onConfirm: ConfirmMenuRemoveHandler;
 }
-export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({ disabled, tag, children, onConfirm }: ConfirmMenuProps) => {
+export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({ disabled, tag, title, children, onConfirm }: ConfirmMenuProps) => {
   const popoverRef = useRef<any>(null);
   const onActionConfirm = useCallback(
     (e) => {
@@ -90,7 +92,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({ disabled, tag, childre
   const menuContent = (
     <Menu>
       {children}
-      <ConfirmMenuItem tag={tag} disabled={disabled} onConfirm={onActionConfirm} onCancel={onActionCancel} />
+      <ConfirmMenuItem tag={tag} title={title} disabled={disabled} onConfirm={onActionConfirm} onCancel={onActionCancel} />
     </Menu>
   );
   return (

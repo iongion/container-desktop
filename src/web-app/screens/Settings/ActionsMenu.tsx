@@ -98,7 +98,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   const isConnected = isCurrent && currentConnector.availability.api;
 
   const removeWidget = connection ? (
-    <ConfirmMenu onConfirm={onRemove} tag={connection.id} disabled={connection.readonly || isStarting || disabledAction === "connection.remove"}>
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={connection.id}
+      title={isCurrent ? t("Current connection cannot be removed") : null}
+      disabled={connection.readonly || isStarting || isCurrent || disabledAction === "connection.remove"}
+    >
       <MenuItem icon={IconNames.TARGET} text={t("Make default")} intent={Intent.NONE} onClick={onMakeDefault} />
       <MenuDivider />
     </ConfirmMenu>

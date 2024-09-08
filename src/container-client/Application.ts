@@ -462,7 +462,7 @@ export class Application {
   async getSystemConnections() {
     const connections: Connection[] = [];
     // Add system podman as default
-    const firstPodman: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.PODMAN) as Connection;
+    const firstPodman: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.PODMAN && it.availability.enabled) as Connection;
     if (firstPodman) {
       firstPodman.id = "system-default.podman";
       firstPodman.description = "Uses the available system podman installation";
@@ -474,7 +474,7 @@ export class Application {
       connections.push(firstPodman);
     }
     // Add system docker as default
-    const firstDocker: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.DOCKER) as Connection;
+    const firstDocker: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.DOCKER && it.availability.enabled) as Connection;
     if (firstDocker) {
       firstDocker.id = "system-default.docker";
       firstDocker.description = "Uses the available system docker installation";

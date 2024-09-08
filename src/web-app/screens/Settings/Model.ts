@@ -46,7 +46,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
       registry.withPending(async () => {
         const instance = Application.getInstance();
         const info = await instance.createConnection(connection);
-        const items = await instance.getConnections();
+        const items = await actions.getConnections();
         actions.setConnections(items);
         return info;
       })
@@ -55,7 +55,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
       registry.withPending(async () => {
         const instance = Application.getInstance();
         const info = await instance.updateConnection(id, connection);
-        const items = await instance.getConnections();
+        const items = await actions.getConnections();
         actions.setConnections(items);
         return info;
       })
@@ -64,7 +64,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
       registry.withPending(async () => {
         const instance = Application.getInstance();
         const info = await instance.removeConnection(id);
-        const items = await instance.getConnections();
+        const items = await actions.getConnections();
         actions.setConnections(items);
         return info;
       })
