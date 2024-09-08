@@ -31,7 +31,7 @@ export function createSingleFile(patch) {
           ncc(outFile, {
             externals: ["electron"],
             cache: false,
-            minify: false,
+            minify: true,
             sourceMap: false,
             quiet: false,
             target: "es2020",

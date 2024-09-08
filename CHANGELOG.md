@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.2-rc.1 - 2024-09-08
+
+## Added
+
+- Application startup visual log
+- Flexible connection management method and UI
+- Support for custom WSL distributions
+- Support for custom LIMA instances
+- Support for remote SSH connection using `.ssh/config` like VS Code extension
+- Ability to export / import connections
+- Ability to automatically detect installed packages
+- Enabled latest version check
+- Latest version publishing to static website
+- Footer mentioning current connection and engine version
+- `No results` non-ideal state for all list screens
+- Manual reload/refresh button for all list screens
+
+## Changed
+
+- Connection management
+- Container inline player actions for stop/start/pause/restart
+- Single file javascript bundling using ncc to eliminate need to distribute `node_modules` in asar package
+- Tray icon with duo-tone
+
+## Fixed
+
+- Automatic detections
+- System clean/prune
+- Factory reset
+- Errors properly displaying
+- Various visual issues
+
+## Removed
+
+- Logging to file-system
+- All electron languages besides `en-US` to reduce payload size
+
 ## 5.2.0-rc.4 - 2024-08-22
 
 ## Added

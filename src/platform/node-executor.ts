@@ -228,7 +228,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
   const spawnOpts = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
-    env: opts?.env || process.env,
+    env: deepMerge({}, process.env, opts?.env || {}),
     detached: opts?.detached
   };
   const { commandLauncher, commandArgs } = applyWrapper(launcher, launcherArgs, opts);
@@ -237,7 +237,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
     return wrapSpawnAsync(commandLauncher, commandArgs, spawnOpts)
       .then((child) => {
         //
-        const process: CommandExecutionResult = {
+        const result: CommandExecutionResult = {
           pid: undefined,
           code: undefined,
           success: false,
@@ -250,14 +250,14 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
           if (resolved) {
             logger.error(command, "spawning already resolved", { from, data });
           } else {
-            process.pid = child.pid as any;
-            process.code = child.exitCode as any;
-            process.stderr = process.stderr || "";
-            process.success = child.exitCode === 0;
-            process.command = command;
+            result.pid = child.pid as any;
+            result.code = child.exitCode as any;
+            result.stderr = result.stderr || "";
+            result.success = child.exitCode === 0;
+            result.command = command;
             resolved = true;
-            logger.debug("[SC.A][<]", { pid: process.pid, code: process.code, success: process.success, command });
-            resolve(process);
+            logger.debug("[SC.A][<]", { pid: result.pid, code: result.code, success: result.success, command });
+            resolve(result);
           }
         };
         child.stdout.setEncoding("utf8");
@@ -266,15 +266,15 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
         // child.on("close", (code) => processResolve("close", code));
         child.on("error", (error) => {
           logger.error(command, "spawning error", error.message);
-          (process as any).error = error;
+          (result as any).error = error;
           processResolve("error", error);
         });
         child.stdout.on("data", (data) => {
-          process.stdout += `${data}`;
+          result.stdout += `${data}`;
         });
         child.stderr.on("data", (data) => {
           logger.warn(command, data);
-          process.stderr += `${data}`;
+          result.stderr += `${data}`;
         });
       })
       .catch(reject);
@@ -292,7 +292,7 @@ export async function exec_service(
 ) {
   let isManagedExit = false;
   let child;
-  const process = {
+  const proc = {
     pid: null,
     code: null,
     success: false,
@@ -305,9 +305,9 @@ export async function exec_service(
   const running = await checkStatus();
   if (running) {
     logger.debug("Already running - reusing");
-    process.success = true;
+    proc.success = true;
     setImmediate(() => {
-      em.emit("ready", { process, child });
+      em.emit("ready", { process: proc, child });
     });
   } else {
     // Handle
@@ -363,9 +363,9 @@ export async function exec_service(
           if (running) {
             clearInterval(IID);
             isManagedExit = true;
-            process.success = true;
+            proc.success = true;
             em.emit("ready", {
-              process,
+              proc,
               child: {
                 kill: (signal: string) => {
                   try {
@@ -393,11 +393,11 @@ export async function exec_service(
       const launcherOpts = {
         encoding: "utf-8",
         cwd: opts?.cwd,
-        env: opts?.env
+        env: deepMerge({}, process.env, opts?.env || {})
       };
       child = await wrapSpawnAsync(programPath, programArgs, launcherOpts);
-      process.pid = child.pid;
-      process.code = child.exitCode;
+      proc.pid = child.pid;
+      proc.code = child.exitCode;
       child.on("exit", (code) => onProcessExit(child, code));
       child.on("close", (code) => onProcessClose(child, code));
       child.on("error", (error) => onProcessError(child, error));
@@ -406,11 +406,11 @@ export async function exec_service(
       child.stderr.setEncoding("utf8");
       child.stderr.on("data", (data) => onProcessData(child, "stderr", data.toString()));
       if (typeof child.pid === "undefined") {
-        process.success = false;
-        logger.error("Child process spawn failure", process);
+        proc.success = false;
+        logger.error("Child process spawn failure", proc);
       } else {
-        process.success = !child.killed;
-        logger.debug("Child process spawn success", process);
+        proc.success = !child.killed;
+        logger.debug("Child process spawn success", proc);
         waitForProcess(child);
       }
     };
