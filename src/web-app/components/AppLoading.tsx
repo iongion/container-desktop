@@ -11,11 +11,11 @@ export interface AppLoadingProps {}
 
 export const AppLoading: React.FC<AppLoadingProps> = () => {
   const pending = useStoreState((state) => state.pending);
-  const bootstrapPhases = useStoreState((state) => state.bootstrapPhases);
+  const systemNotifications = useStoreState((state) => state.systemNotifications);
   const phasesRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     phasesRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [bootstrapPhases]);
+  }, [systemNotifications]);
   return (
     <div className="AppLoading" data-pending={pending ? "yes" : "no"}>
       <div className="AppLoadingSplashContainer">
@@ -24,13 +24,13 @@ export const AppLoading: React.FC<AppLoadingProps> = () => {
           {pending ? (
             <>
               <ProgressBar intent={Intent.PRIMARY} />
-              {bootstrapPhases.length ? (
+              {systemNotifications.length ? (
                 <div className="AppLoadingSplashPhases">
-                  {bootstrapPhases.map((it) => {
+                  {systemNotifications.map((it) => {
                     return (
-                      <div className="AppLoadingSplashPhase" key={it.event}>
+                      <div className="AppLoadingSplashPhase" key={it.guid}>
                         <span>{dayjs(it.date).format("HH:mm:ss.SSS")}</span>
-                        <p>{i18n.t(it.event)}</p>
+                        <p>{it.data?.trace ? i18n.t(it.data?.trace) : "..."}</p>
                       </div>
                     );
                   })}

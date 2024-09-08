@@ -7,10 +7,10 @@ export const createRegistry = () => {
   const registry: AppRegistry = {
     withPending: ((operation: AppStorePendingOperation) => {}) as any,
     getStore: (() => {}) as any,
-    getApi: () => {
+    getContainerClient: async () => {
       const instance = Application.getInstance();
       const connectionApi = instance.getCurrentEngineConnectionApi();
-      return connectionApi.getContainerApiClient();
+      return await connectionApi.getContainerApiClient();
     },
     getOnlineApi: () => onlineApi
   };

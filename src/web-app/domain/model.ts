@@ -1,11 +1,10 @@
 import { Intent } from "@blueprintjs/core";
-import dayjs from "dayjs";
 import { action, thunk } from "easy-peasy";
 import produce from "immer";
 import { isObject } from "lodash-es";
 // project
 import { Application } from "@/container-client/Application";
-import { connectionNotifier } from "@/container-client/notifier";
+import { systemNotifier } from "@/container-client/notifier";
 import { Connector, OperatingSystem } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { t } from "@/web-app/App.i18n";
@@ -33,8 +32,15 @@ function delayCheckUpdate() {
 export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
   const osType = (window as any).CURRENT_OS_TYPE || OperatingSystem.Unknown;
   const instance = Application.getInstance();
-  connectionNotifier.on("startup.phase", (event) => {
-    if (event.origin === "start") {
+  systemNotifier.on("startup.phase", (event) => {
+    const state = registry.getStore().getState();
+    if (state.phase === AppBootstrapPhase.STARTING) {
+      registry.getStore().getActions().insertBootstrapPhase(event);
+    }
+  });
+  systemNotifier.on("engine.availability", (event) => {
+    const state = registry.getStore().getState();
+    if (state.phase === AppBootstrapPhase.STARTING) {
       registry.getStore().getActions().insertBootstrapPhase(event);
     }
   });
@@ -42,7 +48,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
     phase: AppBootstrapPhase.INITIAL,
     pending: false,
     native: true,
-    bootstrapPhases: [],
+    systemNotifications: [],
     // descriptor
     environment: import.meta.env.ENVIRONMENT,
     version: import.meta.env.PROJECT_VERSION,
@@ -64,10 +70,10 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       state.pending = flag;
     }),
     insertBootstrapPhase: action((state, phase) => {
-      state.bootstrapPhases.push(phase);
+      state.systemNotifications.push(phase);
     }),
     resetBootstrapPhases: action((state) => {
-      state.bootstrapPhases = [];
+      state.systemNotifications = [];
     }),
     syncGlobalUserSettings: action((state, values) => {
       if (values?.connector?.default) {
@@ -112,10 +118,8 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       //
       let nextPhase = AppBootstrapPhase.STOPPING;
       return registry.withPending(async () => {
-        connectionNotifier.emit("startup.phase", {
-          date: dayjs().toISOString(),
-          event: "Startup entering setup",
-          origin: "startup"
+        systemNotifier.transmit("startup.phase", {
+          trace: "Startup entering setup"
         });
         await instance.setup();
         await instance.notify("ready");
@@ -161,16 +165,12 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       }
       return registry.withPending(async () => {
         const instance = Application.getInstance();
-        connectionNotifier.emit("startup.phase", {
-          date: dayjs().toISOString(),
-          event: "Starting setup",
-          origin: "start"
+        systemNotifier.transmit("startup.phase", {
+          trace: "Starting setup"
         });
         await instance.setup();
-        connectionNotifier.emit("startup.phase", {
-          date: dayjs().toISOString(),
-          event: "Setup ready",
-          origin: "start"
+        systemNotifier.transmit("startup.phase", {
+          trace: "Setup ready"
         });
         await instance.notify("ready");
         try {
@@ -178,19 +178,15 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           await actions.reset();
           await instance.stop();
           // offload
-          connectionNotifier.emit("startup.phase", {
-            date: dayjs().toISOString(),
-            event: "Reading settings",
-            origin: "start"
+          systemNotifier.transmit("startup.phase", {
+            trace: "Reading settings"
           });
           const environment = import.meta.env.ENVIRONMENT;
           const version = import.meta.env.PROJECT_VERSION;
           const userSettings = await instance.getGlobalUserSettings();
           if (!connection) {
-            connectionNotifier.emit("startup.phase", {
-              date: dayjs().toISOString(),
-              event: "Listing connections",
-              origin: "start"
+            systemNotifier.transmit("startup.phase", {
+              trace: "Listing connections"
             });
             const userConnections = await instance.getConnections();
             const systemConnections = await instance.getSystemConnections();
@@ -204,10 +200,8 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               console.debug("No default connector found", userSettings?.connector?.default);
             }
           }
-          connectionNotifier.emit("startup.phase", {
-            date: dayjs().toISOString(),
-            event: "Establishing connection",
-            origin: "start"
+          systemNotifier.transmit("startup.phase", {
+            trace: "Establishing connection"
           });
           const currentConnector = await instance.start(connection ? { startApi, connection, skipAvailabilityCheck: false } : undefined);
           const connectors = instance.getConnectors();
@@ -235,7 +229,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               connectors,
               currentConnector,
               userSettings,
-              bootstrapPhases: []
+              systemNotifications: []
             });
             // check for new version if enabled
             if (nextPhase === AppBootstrapPhase.READY || nextPhase === AppBootstrapPhase.FAILED) {
@@ -273,10 +267,8 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
             phase: nextPhase
           });
         } finally {
-          connectionNotifier.emit("startup.phase", {
-            date: dayjs().toISOString(),
-            event: "Startup finished",
-            origin: "start"
+          systemNotifier.transmit("startup.phase", {
+            trace: "Startup finished"
           });
         }
         return nextPhase === AppBootstrapPhase.READY;
@@ -357,7 +349,8 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
     generateKube: thunk(async (actions, options, { getState }) => {
       return registry.withPending(async () => {
         try {
-          const program = await registry.getApi().generateKube(options);
+          const client = await registry.getContainerClient();
+          const program = await client.generateKube(options);
           return program;
         } catch (error: any) {
           console.error("Error during connection string test", error);

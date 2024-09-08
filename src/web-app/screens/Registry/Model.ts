@@ -83,21 +83,24 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
   // Thunks
   registriesFetch: thunk(async (actions) => {
     return registry.withPending(async () => {
-      const registriesMap = await registry.getApi().getRegistriesMap();
+      const client = await registry.getContainerClient();
+      const registriesMap = await client.getRegistriesMap();
       actions.setRegistriesMap(registriesMap);
       return registriesMap;
     });
   }),
   registryFetch: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const it = await registry.getApi().getRegistry(name);
+      const client = await registry.getContainerClient();
+      const it = await client.getRegistry(name);
       actions.registryUpdate(it);
       return registry;
     })
   ),
   registryRemove: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const removed = await registry.getApi().removeRegistry(name);
+      const client = await registry.getContainerClient();
+      const removed = await client.removeRegistry(name);
       if (removed) {
         actions.registryDelete(name);
       }
@@ -106,7 +109,8 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
   ),
   registryCreate: thunk(async (actions, it, { getState }) =>
     registry.withPending(async () => {
-      const item = await registry.getApi().createRegistry(it);
+      const client = await registry.getContainerClient();
+      const item = await client.createRegistry(it);
       item.weight = Math.max(...getState().registriesMap.custom.map((it) => it.weight)) + 1;
       if (item) {
         actions.registryAdd(item);
@@ -119,7 +123,8 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
       actions.setTerm(options.term || "");
       actions.setOfficial(!!options.filters.isOfficial);
       actions.setAutomated(!!options.filters.isAutomated);
-      const items = await registry.getApi().searchRegistry(options);
+      const client = await registry.getContainerClient();
+      const items = await client.searchRegistry(options);
       actions.setSearchResults(items);
       return items;
     })

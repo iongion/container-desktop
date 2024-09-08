@@ -1,3 +1,4 @@
+import { systemNotifier } from "@/container-client/notifier";
 import { ApiConnection, ApiStartOptions, AvailabilityCheck, CommandExecutionResult, Connection, ControllerScope, EngineConnectorSettings, RunnerStopperOptions } from "@/env/Types";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { SSH_PROGRAM } from "../../connection";
@@ -13,7 +14,7 @@ export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
 
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
 
-  getContainerApiClient() {
+  async getContainerApiClient() {
     if (!this.containerApiClient) {
       const connection: Connection = {
         name: "Current",
@@ -27,13 +28,23 @@ export abstract class AbstractClientEngineSSH extends AbstractClientEngine {
         connection,
         createApplicationApiDriver(connection, {
           getSSHConnection: async () => {
+            systemNotifier.transmit("engine.availability", {
+              trace: "Starting SSH connection"
+            });
             // console
             const scopes = await this.getControllerScopes();
             const scope = scopes.find((s) => s.Name === this.settings.controller?.scope);
             const connected = await this.startSSHConnection(scope as SSHHost);
             if (connected) {
               console.debug("Returning connection", this, scope);
+              systemNotifier.transmit("engine.availability", {
+                trace: "SSH connection has been established"
+              });
               return this._connection;
+            } else {
+              systemNotifier.transmit("engine.availability", {
+                trace: "SSH connection has failed"
+              });
             }
             console.error("SSH connection is not established", this, scope, connected);
             throw new Error("SSH connection is not established");

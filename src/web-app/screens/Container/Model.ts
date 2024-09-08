@@ -137,29 +137,31 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     // Thunks
     containersFetch: thunk(async (actions) => {
       return registry.withPending(async () => {
-        const containers = await registry.getApi().getContainers();
+        const client = await registry.getContainerClient();
+        const containers = await client.getContainers();
         actions.setContainers(containers);
         return containers;
       });
     }),
     containerFetch: thunk(async (actions, options) =>
       registry.withPending(async () => {
+        const client = await registry.getContainerClient();
         let logs: any = [];
         try {
-          logs = options.withLogs ? await registry.getApi().getContainerLogs(options.Id) : [];
+          logs = options.withLogs ? await client.getContainerLogs(options.Id) : [];
         } catch (error: any) {
           console.error("Unable to retrieve logs", error);
         }
         let stats: ContainerStats | null = null;
         try {
-          stats = options.withStats ? await registry.getApi().getContainerStats(options.Id) : null;
+          stats = options.withStats ? await client.getContainerStats(options.Id) : null;
         } catch (error: any) {
           console.error("Unable to retrieve stats", error);
         }
-        const container = await registry.getApi().getContainer(options.Id);
+        const container = await client.getContainer(options.Id);
         const hydrated: Container = { ...container, Logs: logs, Stats: stats };
         if (options.withKube) {
-          const generation = await registry.getApi().generateKube({ entityId: options.Id });
+          const generation = await client.generateKube({ entityId: options.Id });
           hydrated.Kube = generation.success ? generation.stdout : "";
         }
         actions.containerUpdate(hydrated);
@@ -168,11 +170,12 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     ),
     containerPause: thunk(async (actions, container) =>
       registry.withPending(async () => {
+        const client = await registry.getContainerClient();
         let removed = false;
         if (container.Id) {
-          removed = await registry.getApi().pauseContainer(container.Id);
+          removed = await client.pauseContainer(container.Id);
           if (removed) {
-            const freshContainer = await registry.getApi().getContainer(container.Id);
+            const freshContainer = await client.getContainer(container.Id);
             actions.containerUpdate(freshContainer);
           }
         }
@@ -181,11 +184,12 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     ),
     containerUnpause: thunk(async (actions, container) =>
       registry.withPending(async () => {
+        const client = await registry.getContainerClient();
         let removed = false;
         if (container.Id) {
-          removed = await registry.getApi().unpauseContainer(container.Id);
+          removed = await client.unpauseContainer(container.Id);
           if (removed) {
-            const freshContainer = await registry.getApi().getContainer(container.Id);
+            const freshContainer = await client.getContainer(container.Id);
             actions.containerUpdate(freshContainer);
           }
         }
@@ -194,11 +198,12 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     ),
     containerStop: thunk(async (actions, container) =>
       registry.withPending(async () => {
+        const client = await registry.getContainerClient();
         let stopped = false;
         if (container.Id) {
-          stopped = await registry.getApi().stopContainer(container.Id);
+          stopped = await client.stopContainer(container.Id);
           if (stopped) {
-            const freshContainer = await registry.getApi().getContainer(container.Id);
+            const freshContainer = await client.getContainer(container.Id);
             actions.containerUpdate(freshContainer);
           }
         }
@@ -207,11 +212,12 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     ),
     containerRestart: thunk(async (actions, container) =>
       registry.withPending(async () => {
+        const client = await registry.getContainerClient();
         let restarted = false;
         if (container.Id) {
-          restarted = await registry.getApi().restartContainer(container.Id);
+          restarted = await client.restartContainer(container.Id);
           if (restarted) {
-            const freshContainer = await registry.getApi().getContainer(container.Id);
+            const freshContainer = await client.getContainer(container.Id);
             actions.containerUpdate(freshContainer);
           }
         }
@@ -220,9 +226,10 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     ),
     containerRemove: thunk(async (actions, container) =>
       registry.withPending(async () => {
+        const client = await registry.getContainerClient();
         let removed = false;
         if (container.Id) {
-          removed = await registry.getApi().removeContainer(container.Id);
+          removed = await client.removeContainer(container.Id);
         }
         if (removed) {
           actions.containerDelete(container);
@@ -232,7 +239,8 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     ),
     containerCreate: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const create = await registry.getApi().createContainer(options);
+        const client = await registry.getContainerClient();
+        const create = await client.createContainer(options);
         return create;
       })
     ),
@@ -240,7 +248,8 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
       registry.withPending(async () => {
         let connected = false;
         if (options.Id) {
-          connected = await registry.getApi().connectToContainer(options);
+          const client = await registry.getContainerClient();
+          connected = await client.connectToContainer(options);
         } else {
           console.warn("Unable to connect to container without name", options);
         }

@@ -12,7 +12,8 @@ import type {
   GenerateKubeOptions,
   GlobalUserSettings,
   GlobalUserSettingsOptions,
-  OperatingSystem
+  OperatingSystem,
+  SystemNotification
 } from "@/env/Types";
 import type { ContainersModel } from "@/web-app/screens/Container/Model";
 import type { DashboardModel } from "@/web-app/screens/Dashboard/Model";
@@ -37,7 +38,6 @@ export enum AppBootstrapPhase {
   READY = "ready",
   FAILED = "failed"
 }
-
 export enum AppTheme {
   DARK = "bp5-dark",
   LIGHT = "bp5-light"
@@ -47,7 +47,7 @@ export interface AppModelState {
   phase: AppBootstrapPhase;
   pending: boolean;
   native: boolean;
-  bootstrapPhases: any[];
+  systemNotifications: SystemNotification[];
   // Descriptor
   osType: OperatingSystem;
   version: string;
@@ -58,7 +58,6 @@ export interface AppModelState {
   currentConnector?: Connector;
   userSettings: GlobalUserSettings;
 }
-
 export interface ResetableModel<T extends object> {
   reset: Action<T>;
 }
@@ -67,7 +66,7 @@ export interface AppModel extends AppModelState {
   // actions
   setPhase: Action<AppModel, AppBootstrapPhase>;
   setPending: Action<AppModel, boolean>;
-  insertBootstrapPhase: Action<AppModel, any>;
+  insertBootstrapPhase: Action<AppModel, SystemNotification>;
   resetBootstrapPhases: Action<AppModel, any>;
   syncGlobalUserSettings: Action<AppModel, GlobalUserSettings>;
   syncEngineUserSettings: Action<AppModel, EngineUserSettingsOptions>;
@@ -104,7 +103,7 @@ export type AppStorePendingCallback = (operation: AppStorePendingOperation) => P
 export interface AppRegistry {
   withPending: AppStorePendingCallback;
   getStore: () => AppStore;
-  getApi: () => ContainerClient;
+  getContainerClient: () => Promise<ContainerClient>;
   getOnlineApi: () => OnlineApi;
 }
 

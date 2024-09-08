@@ -1,10 +1,9 @@
 import * as async from "async";
-import dayjs from "dayjs";
 import { v4 } from "uuid";
 
 import { AbstractClientEngine, createConnectorBy, Docker, getDefaultConnectors, Podman, RUNTIMES } from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
-import { connectionNotifier } from "@/container-client/notifier";
+import { systemNotifier } from "@/container-client/notifier";
 import { AbstractRuntime, ClientEngine } from "@/container-client/runtimes/abstract/base";
 import { PodmanAbstractClientEngine, PodmanClientEngineCommon } from "@/container-client/runtimes/podman/base";
 import {
@@ -676,7 +675,8 @@ export class Application {
     if (isPodman) {
       // Search using API
       if (registry?.id === "system") {
-        const driver = await engine.getContainerApiClient().getDriver();
+        const client = await engine.getContainerApiClient();
+        const driver = await client.getDriver();
         const searchParams = new URLSearchParams();
         searchParams.set("term", term || "");
         // searchParams.set("listTags", "true");
@@ -793,10 +793,8 @@ export class Application {
         throw new Error("Connector runtime not found");
       }
       engine = await Runtime.createEngineByName(connector.engine, connector.id);
-      connectionNotifier.emit("startup.phase", {
-        date: dayjs().toISOString(),
-        event: "Runtime engine created",
-        origin: opts?.origin
+      systemNotifier.transmit("startup.phase", {
+        trace: "Runtime engine created"
       });
       if (!engine) {
         this.logger.error(connector.id, "Connector engine not found", connector.engine);
@@ -810,10 +808,8 @@ export class Application {
           if (opts?.skipAvailabilityCheck) {
             this.logger.warn(connector.id, "Skipping automatic settings - availability check disabled");
           } else {
-            connectionNotifier.emit("startup.phase", {
-              date: dayjs().toISOString(),
-              event: "Performing automatic connection detection",
-              origin: opts?.origin
+            systemNotifier.transmit("startup.phase", {
+              trace: "Performing automatic connection detection"
             });
             const automaticSettings = await engine.getAutomaticSettings();
             this.logger.warn("Using automatic settings", automaticSettings);
@@ -821,10 +817,8 @@ export class Application {
           }
         }
         if (startApi) {
-          connectionNotifier.emit("startup.phase", {
-            date: dayjs().toISOString(),
-            event: "Starting connection api",
-            origin: opts?.origin
+          systemNotifier.transmit("startup.phase", {
+            trace: "Starting connection api"
           });
           try {
             await engine.startApi();
@@ -840,16 +834,12 @@ export class Application {
           if (opts?.skipAvailabilityCheck) {
             this.logger.warn(connector.id, "Skipping availability check");
           } else {
-            connectionNotifier.emit("startup.phase", {
-              date: dayjs().toISOString(),
-              event: "Performing availability checks",
-              origin: opts?.origin
+            systemNotifier.transmit("startup.phase", {
+              trace: "Performing availability checks"
             });
             availability = await engine.getAvailability(connector.settings);
-            connectionNotifier.emit("startup.phase", {
-              date: dayjs().toISOString(),
-              event: "Availability checks completed",
-              origin: opts?.origin
+            systemNotifier.transmit("startup.phase", {
+              trace: "Availability checks completed"
             });
           }
         } catch (error: any) {
@@ -912,10 +902,8 @@ export class Application {
     try {
       this.logger.debug("Bridge startup - creating current");
       if (opts?.connection) {
-        connectionNotifier.emit("startup.phase", {
-          date: dayjs().toISOString(),
-          event: "Creating connectors",
-          phase: "start"
+        systemNotifier.transmit("startup.phase", {
+          trace: "Creating connectors"
         });
         connector = createConnectorBy(this.osType, opts.connection.runtime, opts.connection.engine);
         connector.connectionId = opts.connection.id;
@@ -927,10 +915,8 @@ export class Application {
           this.logger.error("Bridge startup - no connector found", opts);
           throw new Error("No connector found");
         }
-        connectionNotifier.emit("startup.phase", {
-          date: dayjs().toISOString(),
-          event: "Creating connector engine starting",
-          phase: "start"
+        systemNotifier.transmit("startup.phase", {
+          trace: "Creating connector engine starting"
         });
         const { engine, availability } = await this.createConnectorClientEngine(connector, { ...opts, origin: "start" });
         if (engine) {
@@ -938,10 +924,8 @@ export class Application {
           connector.settings = deepMerge(connector.settings, engineSettings);
           connector.availability = availability;
           this._currentClientEngine = engine;
-          connectionNotifier.emit("startup.phase", {
-            date: dayjs().toISOString(),
-            event: "Creating connector engine completed",
-            phase: "start"
+          systemNotifier.transmit("startup.phase", {
+            trace: "Creating connector engine completed"
           });
         } else {
           throw new Error("Unable to create current engine connection");

@@ -37,7 +37,8 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
     }),
     getSystemInfo: thunk(async (actions) =>
       registry.withPending(async () => {
-        const info = await registry.getApi().getSystemInfo();
+        const client = await registry.getContainerClient();
+        const info = await client.getSystemInfo();
         actions.setSystemInfo(info);
         return info;
       })

@@ -17,12 +17,14 @@ export const createModel = async (registry: AppRegistry): Promise<TroubleshootMo
     reset: action((state) => {}),
     troubleShootPrune: thunk(async (actions) =>
       registry.withPending(async () => {
-        await registry.getApi().pruneSystem();
+        const client = await registry.getContainerClient();
+        await client.pruneSystem();
       })
     ),
     troubleShootReset: thunk(async (actions) =>
       registry.withPending(async (store) => {
-        await registry.getApi().resetSystem();
+        const client = await registry.getContainerClient();
+        await client.resetSystem();
       })
     )
   };

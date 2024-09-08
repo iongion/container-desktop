@@ -65,20 +65,23 @@ export const createModel = async (registry: AppRegistry): Promise<VolumesModel> 
   // thunks
   volumesFetch: thunk(async (actions) =>
     registry.withPending(async () => {
-      const volumes = await registry.getApi().getVolumes();
+      const client = await registry.getContainerClient();
+      const volumes = await client.getVolumes();
       actions.setVolumes(volumes);
       return volumes;
     })
   ),
   volumeFetch: thunk(async (actions, opts) =>
     registry.withPending(async () => {
-      const volume = await registry.getApi().getVolume(opts.Id);
+      const client = await registry.getContainerClient();
+      const volume = await client.getVolume(opts.Id);
       return volume;
     })
   ),
   volumeCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const created = await registry.getApi().createVolume(options);
+      const client = await registry.getContainerClient();
+      const created = await client.createVolume(options);
       return created;
     })
   ),
@@ -86,7 +89,8 @@ export const createModel = async (registry: AppRegistry): Promise<VolumesModel> 
     registry.withPending(async () => {
       let removed = false;
       if (volume.Name) {
-        removed = await registry.getApi().removeVolume(volume.Name);
+        const client = await registry.getContainerClient();
+        removed = await client.removeVolume(volume.Name);
       }
       return removed;
     })

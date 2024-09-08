@@ -74,7 +74,8 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
   // Thunks
   networksFetch: thunk(async (actions) => {
     return registry.withPending(async () => {
-      const networks = (await registry.getApi().getNetworks()).sort((a, b) => {
+      const client = await registry.getContainerClient();
+      const networks = (await client.getNetworks()).sort((a, b) => {
         return sortAlphaNum(a.name, b.name);
       });
       actions.setNetworks(networks);
@@ -83,14 +84,16 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
   }),
   networkFetch: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const network = await registry.getApi().getNetwork(name);
+      const client = await registry.getContainerClient();
+      const network = await client.getNetwork(name);
       actions.networkUpdate(network);
       return network;
     })
   ),
   networkRemove: thunk(async (actions, name) =>
     registry.withPending(async () => {
-      const removed = await registry.getApi().removeNetwork(name);
+      const client = await registry.getContainerClient();
+      const removed = await client.removeNetwork(name);
       if (removed) {
         actions.networkDelete(name);
       }
@@ -99,7 +102,8 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
   ),
   networkCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const item = await registry.getApi().createNetwork(options);
+      const client = await registry.getContainerClient();
+      const item = await client.createNetwork(options);
       if (item) {
         actions.networkAdd(item);
       }

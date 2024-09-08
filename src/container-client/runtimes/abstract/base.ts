@@ -1,5 +1,6 @@
 import { isEmpty } from "lodash-es";
 
+import { systemNotifier } from "@/container-client/notifier";
 import { Runner } from "@/container-client/runner";
 import {
   ApiConnection,
@@ -114,7 +115,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
   protected containerApiClient?: ContainerClient;
 
   abstract startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions);
-  abstract isEngineAvailable();
+  abstract isEngineAvailable(): Promise<AvailabilityCheck>;
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
   // Controller behavior
   abstract isScoped(): boolean;
@@ -130,7 +131,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
     this.apiStarted = false;
   }
 
-  getContainerApiClient() {
+  async getContainerApiClient() {
     if (!this.containerApiClient) {
       const connection: Connection = {
         name: "Current",
@@ -263,6 +264,9 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async isApiRunning() {
+    systemNotifier.transmit("engine.availability", {
+      trace: `Checking if API is running`
+    });
     this.logger.debug(this.id, ">> Checking if API is running");
     // Guard configuration
     const available = await this.isApiAvailable();
@@ -275,8 +279,11 @@ export abstract class AbstractClientEngine implements ClientEngine {
       success: false,
       details: undefined
     };
-    const client = this.getContainerApiClient();
+    const client = await this.getContainerApiClient();
     const driver = client.getDriver();
+    systemNotifier.transmit("engine.availability", {
+      trace: `Issuing api ping request`
+    });
     try {
       const response = await driver.request({ method: "GET", url: "/_ping", timeout: 5000 });
       result.success = response?.data === "OK";
@@ -422,9 +429,12 @@ export abstract class AbstractClientEngine implements ClientEngine {
   async getAvailability(userSettings?: EngineConnectorSettings) {
     this.logger.debug(this.id, ">> Checking availability");
     const settings = userSettings || (await this.getSettings());
-    const enabled = await this.isEngineAvailable();
+    systemNotifier.transmit("engine.availability", {
+      trace: `Detecting engine availability`
+    });
+    const check = await this.isEngineAvailable();
     const availability: EngineConnectorAvailability = {
-      enabled,
+      enabled: check.success,
       engine: false,
       controller: false,
       controllerScope: false,
@@ -438,12 +448,14 @@ export abstract class AbstractClientEngine implements ClientEngine {
         api: "Not checked"
       }
     };
-    const engine = await this.isEngineAvailable();
-    availability.report.engine = engine.details;
-    if (engine.success) {
+    availability.report.engine = check.details || "";
+    if (check.success) {
       availability.engine = true;
     }
     if (availability.engine) {
+      systemNotifier.transmit("engine.availability", {
+        trace: `Detecting host program availability`
+      });
       const controllerAvailability = await this.isControllerAvailable(settings);
       availability.report.controller = controllerAvailability.details;
       if (controllerAvailability.success) {
@@ -462,6 +474,9 @@ export abstract class AbstractClientEngine implements ClientEngine {
       availability.report.controllerScope = "Not checked - controller not available";
     }
     if (availability.controllerScope) {
+      systemNotifier.transmit("engine.availability", {
+        trace: `Detecting guest program availability`
+      });
       const program = await this.isProgramAvailable(settings);
       availability.report.program = program.details || "";
       if (program.success) {
@@ -479,6 +494,9 @@ export abstract class AbstractClientEngine implements ClientEngine {
       availability.api = false;
       availability.report.api = "API is not running";
     }
+    systemNotifier.transmit("engine.availability", {
+      trace: `Availability check complete`
+    });
     this.logger.debug(this.id, "<< Checking availability", availability);
     return availability;
   }
@@ -509,6 +527,9 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
+    systemNotifier.transmit("engine.availability", {
+      trace: `Finding host program ${program.name}`
+    });
     const output = deepMerge({}, program);
     output.path = await findProgramPath(program.name, { osType: this.osType });
     output.version = await findProgramVersion(output.path, { osType: this.osType });
@@ -520,6 +541,9 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
+    systemNotifier.transmit("engine.availability", {
+      trace: `Finding guest program ${program.name}`
+    });
     const executor = async (path: string, args: string[]) => {
       const userSettings = settings || (await this.getSettings());
       return await this.runScopeCommand(path, args, userSettings.controller?.scope || "");
@@ -539,6 +563,9 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async getConnectionDataDir() {
+    systemNotifier.transmit("engine.availability", {
+      trace: `Finding connection system data dir`
+    });
     let dataDir: string | undefined;
     this.logger.debug(this.id, "Get this data dir", this);
     if (this.settings.controller) {

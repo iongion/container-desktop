@@ -34,6 +34,13 @@ export enum WindowAction {
   Close = "window.close"
 }
 
+export interface SystemNotification {
+  guid: string;
+  type: string;
+  date: Date;
+  data?: any;
+}
+
 export interface ApiDriverConfig {
   baseURL: string;
   headers: Partial<Record<string, string>> | AxiosResponseHeaders | AxiosRequestHeaders;

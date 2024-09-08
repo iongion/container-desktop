@@ -56,7 +56,8 @@ export const createModel = async (registry: AppRegistry): Promise<DashboardModel
   containersFetchStats: thunk(async (actions) =>
     registry.withPending(async () => {
       // TODO: Optimize this - avoid loading all containers data, avoid multi-traversal
-      const containers = await registry.getApi().getContainers();
+      const client = await registry.getContainerClient();
+      const containers = await client.getContainers();
       const pausedContainers = containers.filter((c) => c.Computed.DecodedState === ContainerStateList.PAUSED);
       const runningContainers = containers.filter((c) => c.Computed.DecodedState === ContainerStateList.RUNNING);
       const exitedContainers = containers.filter((c) => c.Computed.DecodedState === ContainerStateList.EXITED);

@@ -71,14 +71,16 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
     // thunks
     fetchAll: thunk(async (actions) =>
       registry.withPending(async () => {
-        const images = await registry.getApi().getImages();
+        const client = await registry.getContainerClient();
+        const images = await client.getImages();
         actions.setImages(images);
         return images;
       })
     ),
     imageFetch: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const image = await registry.getApi().getImage(options.Id, options);
+        const client = await registry.getContainerClient();
+        const image = await client.getImage(options.Id, options);
         if (image) {
           actions.update(image);
         }
@@ -87,7 +89,8 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
     ),
     fetchHistory: thunk(async (actions, options) =>
       registry.withPending(async () => {
-        const history = await registry.getApi().getImageHistory(options.Id);
+        const client = await registry.getContainerClient();
+        const history = await client.getImageHistory(options.Id);
         actions.update({ Id: options.Id, History: history });
         return history;
       })
@@ -96,7 +99,8 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let pulled = false;
         if (image.Names) {
-          pulled = await registry.getApi().pullImage(image.Names[0]);
+          const client = await registry.getContainerClient();
+          pulled = await client.pullImage(image.Names[0]);
         }
         if (pulled) {
           actions.update(image);
@@ -108,7 +112,8 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let pushed = false;
         if (image.Id) {
-          pushed = await registry.getApi().pushImage(image.Id);
+          const client = await registry.getContainerClient();
+          pushed = await client.pushImage(image.Id);
         }
         return pushed;
       })
@@ -117,7 +122,8 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let removed = false;
         if (image.Id) {
-          removed = await registry.getApi().removeImage(image.Id);
+          const client = await registry.getContainerClient();
+          removed = await client.removeImage(image.Id);
         }
         if (removed) {
           actions.delete(image);
@@ -129,7 +135,8 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
       registry.withPending(async () => {
         let removed = false;
         if (image.Id) {
-          removed = await registry.getApi().removeImage(image.Id);
+          const client = await registry.getContainerClient();
+          removed = await client.removeImage(image.Id);
         }
         if (removed) {
           actions.delete(image);

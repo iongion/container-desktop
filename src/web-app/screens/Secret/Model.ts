@@ -50,20 +50,23 @@ export const createModel = async (registry: AppRegistry): Promise<SecretsModel> 
   // thunks
   secretsFetch: thunk(async (actions) =>
     registry.withPending(async () => {
-      const secrets = await registry.getApi().getSecrets();
+      const client = await registry.getContainerClient();
+      const secrets = await client.getSecrets();
       actions.setSecrets(secrets);
       return secrets;
     })
   ),
   secretFetch: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const secret = await registry.getApi().getSecret(options.Id);
+      const client = await registry.getContainerClient();
+      const secret = await client.getSecret(options.Id);
       return secret;
     })
   ),
   secretCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
-      const created = await registry.getApi().createSecret(options);
+      const client = await registry.getContainerClient();
+      const created = await client.createSecret(options);
       return created;
     })
   ),
@@ -71,7 +74,8 @@ export const createModel = async (registry: AppRegistry): Promise<SecretsModel> 
     registry.withPending(async () => {
       let removed = false;
       if (options.ID) {
-        removed = await registry.getApi().removeSecret(options.ID);
+        const client = await registry.getContainerClient();
+        removed = await client.removeSecret(options.ID);
         if (removed) {
           actions.secretDelete(options);
         }
