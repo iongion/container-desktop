@@ -55,6 +55,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     }, {});
   }, [connectors]);
 
+  console.debug("Connections", defaultConnector);
+
   const onAddConnectionClick = useCallback(() => {
     setEditedConnection(undefined);
     setWithManagerDrawer(true);

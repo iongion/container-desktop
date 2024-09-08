@@ -88,6 +88,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
     [performActionCommand]
   );
   const onMakeDefault = useCallback(() => {
+    console.debug("Make default connection", connection.id);
     setGlobalUserSettings({
       connector: {
         default: connection.id

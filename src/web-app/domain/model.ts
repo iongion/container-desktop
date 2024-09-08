@@ -29,6 +29,8 @@ function delayCheckUpdate() {
   }, 1500);
 }
 
+export const DEFAULT_SYSTEM_CONNECTION_ID = "system-default.podman";
+
 export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
   const osType = (window as any).CURRENT_OS_TYPE || OperatingSystem.Unknown;
   const instance = Application.getInstance();
@@ -76,11 +78,6 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       state.systemNotifications = [];
     }),
     syncGlobalUserSettings: action((state, values) => {
-      if (values?.connector?.default) {
-        values.connector = {
-          default: "system-default.podman"
-        };
-      }
       state.userSettings = values;
     }),
     syncEngineUserSettings: action((state, values) => {
@@ -184,6 +181,9 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           const environment = import.meta.env.ENVIRONMENT;
           const version = import.meta.env.PROJECT_VERSION;
           const userSettings = await instance.getGlobalUserSettings();
+          if (!userSettings?.connector?.default) {
+            userSettings.connector = { default: DEFAULT_SYSTEM_CONNECTION_ID };
+          }
           if (!connection) {
             systemNotifier.transmit("startup.phase", {
               trace: "Listing connections"
