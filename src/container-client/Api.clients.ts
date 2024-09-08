@@ -433,7 +433,6 @@ export class ContainerClient {
   }
   async unpauseContainer(id: string) {
     return this.withResult<boolean>(async () => {
-      const s = await this.driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`);
       const result = await this.driver.post<boolean>(`/containers/${encodeURIComponent(id)}/unpause`);
       return isOk(result);
     });

@@ -206,6 +206,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
   const canRestart = !isPaused && !pending;
   const canRemove = !isRunning && !pending;
 
+  console.debug({ isPaused });
+
   let containerServiceUrl = "";
   let expandAsOverlay;
   let withInlinePlayerActionsWidget: React.ReactNode | undefined;
@@ -261,7 +263,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
               data-container={container.Id}
               data-action={isPaused ? "container.unpause" : "container.pause"}
               disabled={!canPauseUnpause}
-              icon={IconNames.PAUSE}
+              icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
               title={isPaused ? t("Resume") : t("Pause")}
               onClick={onActionClick}
               loading={(disabledAction === "container.pause" || disabledAction === "container.unpause") && pending}
@@ -338,7 +340,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
                 data-container={container.Id}
                 data-action={isPaused ? "container.unpause" : "container.pause"}
                 disabled={!canPauseUnpause}
-                icon={IconNames.PAUSE}
+                icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
                 text={isPaused ? t("Resume") : t("Pause")}
                 onClick={onActionClick}
               />

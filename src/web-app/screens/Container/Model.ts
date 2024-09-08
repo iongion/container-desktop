@@ -185,15 +185,15 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     containerUnpause: thunk(async (actions, container) =>
       registry.withPending(async () => {
         const client = await registry.getContainerClient();
-        let removed = false;
+        let updated = false;
         if (container.Id) {
-          removed = await client.unpauseContainer(container.Id);
-          if (removed) {
+          updated = await client.unpauseContainer(container.Id);
+          if (updated) {
             const freshContainer = await client.getContainer(container.Id);
             actions.containerUpdate(freshContainer);
           }
         }
-        return removed;
+        return updated;
       })
     ),
     containerStop: thunk(async (actions, container) =>
