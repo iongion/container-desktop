@@ -550,7 +550,15 @@ export const Command: ICommand = {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           logger.debug("Proxying request", { connection, config });
           const driver = await createNodeJSApiDriver(config);
-          response = await driver.request(request);
+          try {
+            response = await driver.request(request);
+          } catch (error: any) {
+            if (error.response) {
+              response = error.response;
+            } else {
+              throw error;
+            }
+          }
           logger.debug("Proxy response", response);
         }
         break;
@@ -560,7 +568,15 @@ export const Command: ICommand = {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           config.socketPath = connection.settings.api.connection.relay;
           logger.debug("Proxying request", { connection, config });
-          response = await proxyRequestToWSLDistribution(connection, config, request);
+          try {
+            response = await proxyRequestToWSLDistribution(connection, config, request);
+          } catch (error: any) {
+            if (error.response) {
+              response = error.response;
+            } else {
+              throw error;
+            }
+          }
         }
         break;
       case ContainerEngine.PODMAN_REMOTE:
@@ -569,7 +585,15 @@ export const Command: ICommand = {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           config.socketPath = connection.settings.api.connection.relay;
           logger.debug("Proxying request", { connection, config });
-          response = await proxyRequestToSSHConnection(connection, config, request, context);
+          try {
+            response = await proxyRequestToSSHConnection(connection, config, request, context);
+          } catch (error: any) {
+            if (error.response) {
+              response = error.response;
+            } else {
+              throw error;
+            }
+          }
         }
         break;
       default:

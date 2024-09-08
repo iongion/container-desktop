@@ -433,6 +433,7 @@ export class ContainerClient {
   }
   async unpauseContainer(id: string) {
     return this.withResult<boolean>(async () => {
+      const s = await this.driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`);
       const result = await this.driver.post<boolean>(`/containers/${encodeURIComponent(id)}/unpause`);
       return isOk(result);
     });
@@ -445,6 +446,12 @@ export class ContainerClient {
   }
   async restartContainer(id: string) {
     return this.withResult<boolean>(async () => {
+      try {
+        await this.driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`);
+      } catch (error: any) {
+        console.error("Failed to stop container", error);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       const result = await this.driver.post<boolean>(`/containers/${encodeURIComponent(id)}/restart`);
       return isOk(result);
     });

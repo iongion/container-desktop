@@ -1,0 +1,22 @@
+.NotificationAdvancedDetails {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+.NotificationAdvancedDetails h1 {
+  font-size: 14px;
+  margin: 0;
+  padding: 0;
+  margin-bottom: 5px;
+}
+.NotificationAdvancedDetails ul {
+  margin: 0;
+  padding: 0;
+  padding-left: 18px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background-color: rgba(255, 255, 255, 0.15);
+  max-height: 80px;
+  overflow: auto;
+  white-space: wrap;
+}

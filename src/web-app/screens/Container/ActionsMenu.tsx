@@ -2,7 +2,7 @@ import { AnchorButton, Button, ButtonGroup, Divider, Intent, MenuItem } from "@b
 import { IconNames } from "@blueprintjs/icons";
 import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Container, ContainerRuntime, ContainerStateList } from "@/env/Types";
@@ -20,6 +20,7 @@ interface ActionsMenuProps {
   expand?: boolean;
   isActive?: (screen: string) => boolean;
   withOverlay?: boolean;
+  withInlinePlayerActions?: boolean;
   onReload?: () => void;
 }
 
@@ -30,9 +31,11 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isActive, onReload, withOverlay }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContainer, expand, isActive, withInlinePlayerActions, onReload, withOverlay }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
+  const [pending, setPending] = useState(false);
+  const [container, setContainer] = useState<Container | undefined>(userContainer);
   const currentRuntime = useStoreState((state) => state.currentConnector?.runtime);
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
   const containerPause = useStoreActions((actions) => actions.container.containerPause);
@@ -48,36 +51,48 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
         return;
       }
       setDisabledAction(action);
+      setPending(true);
       try {
         // TODO: Improve notifications
         let success = false;
         const notifyFailure = true;
         const name = container.Name || container.Names?.[0] || "";
         const title = name.startsWith("/") ? name.substring(1) : name;
+        let nextContainer = container;
+        let successMessage = "";
         switch (action) {
           case "container.logs":
-            await containerFetch(container);
+            nextContainer = await containerFetch(container);
             break;
           case "container.inspect":
-            await containerFetch(container);
+            nextContainer = await containerFetch(container);
             break;
           case "container.stats":
-            await containerFetch(container);
+            nextContainer = await containerFetch(container);
             break;
           case "container.stop":
             success = await containerStop(container);
+            nextContainer = await containerFetch(container);
+            successMessage = t("The container has been stopped");
             break;
           case "container.pause":
             success = await containerPause(container);
+            nextContainer = await containerFetch(container);
+            successMessage = t("The container has been paused");
             break;
           case "container.unpause":
             success = await containerUnpause(container);
+            nextContainer = await containerFetch(container);
+            successMessage = t("The container has been unpaused");
             break;
           case "container.restart":
             success = await containerRestart(container);
+            nextContainer = await containerFetch(container);
+            successMessage = t("The container has been restared");
             break;
           case "container.remove":
             success = await containerRemove(container);
+            successMessage = t("The container has been removed");
             break;
           case "container.connect":
             success = await containerConnect({ ...container, Name: t("Terminal console for {{title}} container", { title }) });
@@ -85,21 +100,43 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
           default:
             break;
         }
+        setContainer(nextContainer);
         if (notifyFailure && !success) {
           Notification.show({ message: t("Command failed"), intent: Intent.DANGER });
+        }
+        if (success && successMessage) {
+          Notification.show({ message: successMessage, intent: Intent.SUCCESS });
         }
         if (action === "container.remove") {
           goToScreen("/screens/containers");
         }
       } catch (error: any) {
         console.error("Command execution failed", error);
+        const message = t("Command did not complete properly");
+        const details: string[] = [`${error.message}`];
+        if (error.name === "AxiosError") {
+          if (error.response?.data?.message) {
+            details.push(error.response.data.message);
+          }
+        }
         Notification.show({
-          message: t("Command did not execute properly - {{message}} {{data}}", {
-            message: error.message,
-            data: error.data
-          }),
+          message:
+            details.length > 0 ? (
+              <div className="NotificationAdvancedDetails">
+                <h1>{message}</h1>
+                <ul>
+                  {details.map((detail, index) => (
+                    <li key={index}>{detail}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              message
+            ),
           intent: Intent.DANGER
         });
+      } finally {
+        setPending(false);
       }
       setDisabledAction(undefined);
     },
@@ -161,56 +198,104 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
     );
 
   // TODO: State machine - manage transitional states
-  let isRunning = false;
-  let isPaused = false;
-  let isStopped = false;
-  let canPauseUnpause = false;
-  let canStop = false;
-  let canRestart = false;
+  const isRunning = container?.Computed?.DecodedState === ContainerStateList.RUNNING;
+  const isPaused = container?.Computed?.DecodedState === ContainerStateList.PAUSED;
+  const isStopped = container?.Computed.DecodedState === ContainerStateList.STOPPED;
+  const canPauseUnpause = (isRunning || isPaused) && !pending;
+  const canStop = isRunning && !isStopped && !pending;
+  const canRestart = !isPaused && !pending;
+  const canRemove = !isRunning && !pending;
 
   let containerServiceUrl = "";
   let expandAsOverlay;
-  if (withOverlay && container) {
-    containerServiceUrl = getContainerServiceUrl(container);
-    isRunning = container.Computed.DecodedState === ContainerStateList.RUNNING;
-    isPaused = container.Computed.DecodedState === ContainerStateList.PAUSED;
-    isStopped = container.Computed.DecodedState === ContainerStateList.STOPPED;
-
-    canPauseUnpause = isRunning || isPaused;
-    canStop = isRunning && !isStopped;
-    canRestart = !isPaused;
-    expandAsOverlay = (
-      <div className="ItemActionsOverlayMenu">
-        <ButtonGroup minimal className="ItemActionsOverlayMenuActions">
-          <Button
-            data-container={container.Id}
-            data-action="container.connect"
-            disabled={!isRunning}
-            icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
-            title={t("Open terminal console")}
-            onClick={onOpenTerminalConsole}
-          />
-          <Button
-            data-container={container.Id}
-            data-action={isPaused ? "container.unpause" : "container.pause"}
-            disabled={!canPauseUnpause}
-            icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
-            title={isPaused ? t("Resume") : t("Pause")}
-            onClick={onActionClick}
-          />
-          <Button data-container={container.Id} data-action="container.stop" disabled={!canStop} icon={IconNames.STOP} title={t("Stop")} onClick={onActionClick} />
-          <Button
-            data-container={container.Id}
-            data-action="container.restart"
-            disabled={!canRestart}
-            icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
-            title={isRunning || isPaused ? t("Restart") : t("Start")}
-            onClick={onActionClick}
-          />
-        </ButtonGroup>
-      </div>
-    );
+  let withInlinePlayerActionsWidget: React.ReactNode | undefined;
+  if (container) {
+    if (withOverlay) {
+      containerServiceUrl = getContainerServiceUrl(container);
+      expandAsOverlay = (
+        <div className="ItemActionsOverlayMenu">
+          <ButtonGroup minimal className="ItemActionsOverlayMenuActions">
+            <Button
+              data-container={container.Id}
+              data-action="container.connect"
+              disabled={!isRunning}
+              icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
+              title={t("Open terminal console")}
+              onClick={onOpenTerminalConsole}
+            />
+            <Button
+              data-container={container.Id}
+              data-action={isPaused ? "container.unpause" : "container.pause"}
+              disabled={!canPauseUnpause}
+              icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
+              title={isPaused ? t("Resume") : t("Pause")}
+              onClick={onActionClick}
+              loading={(disabledAction === "container.pause" || disabledAction === "container.unpause") && pending}
+            />
+            <Button
+              data-container={container.Id}
+              data-action="container.stop"
+              disabled={!canStop}
+              icon={IconNames.STOP}
+              title={t("Stop")}
+              onClick={onActionClick}
+              loading={disabledAction === "container.stop" && pending}
+            />
+            <Button
+              data-container={container.Id}
+              data-action="container.restart"
+              disabled={!canRestart}
+              icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
+              title={isRunning || isPaused ? t("Restart") : t("Start")}
+              onClick={onActionClick}
+              loading={disabledAction === "container.restart" && pending}
+            />
+          </ButtonGroup>
+        </div>
+      );
+    } else if (withInlinePlayerActions) {
+      withInlinePlayerActionsWidget = (
+        <div className="InlinePlayerActions">
+          <ButtonGroup minimal>
+            <Divider />
+            <Button
+              data-container={container.Id}
+              data-action={isPaused ? "container.unpause" : "container.pause"}
+              disabled={!canPauseUnpause}
+              icon={IconNames.PAUSE}
+              title={isPaused ? t("Resume") : t("Pause")}
+              onClick={onActionClick}
+              loading={(disabledAction === "container.pause" || disabledAction === "container.unpause") && pending}
+            />
+            <Button
+              data-container={container.Id}
+              data-action="container.stop"
+              disabled={!canStop}
+              icon={IconNames.STOP}
+              title={t("Stop")}
+              onClick={onActionClick}
+              loading={disabledAction === "container.stop" && pending}
+            />
+            <Button
+              data-container={container.Id}
+              data-action="container.restart"
+              disabled={!canRestart}
+              icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
+              title={isRunning || isPaused ? t("Restart") : t("Start")}
+              onClick={onActionClick}
+              loading={disabledAction === "container.restart" && pending}
+            />
+            <Divider />
+          </ButtonGroup>
+        </div>
+      );
+    }
   }
+
+  // On change from props
+  useEffect(() => {
+    setContainer(userContainer);
+  }, [userContainer]);
 
   return (
     <ButtonGroup className="ItemActionsMenu" data-actions-menu="container">
@@ -222,8 +307,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
         </>
       )}
       {expandAsButtons}
+      {withInlinePlayerActions ? withInlinePlayerActionsWidget : null}
       {container ? (
-        <ConfirmMenu onConfirm={onRemove} tag={container.Id} disabled={disabledAction === "container.remove"}>
+        <ConfirmMenu
+          onConfirm={onRemove}
+          tag={container.Id}
+          title={t("The container cannot be removed while it is running")}
+          disabled={!canRemove || disabledAction === "container.remove"}
+        >
           {expandAsMenuItems}
           <MenuItem
             data-container={container.Id}
@@ -242,23 +333,27 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container, expand, isA
             text={t("Open terminal console")}
             onClick={onOpenTerminalConsole}
           />
-          <MenuItem
-            data-container={container.Id}
-            data-action={isPaused ? "container.unpause" : "container.pause"}
-            disabled={!canPauseUnpause}
-            icon={IconNames.PAUSE}
-            text={isPaused ? t("Resume") : t("Pause")}
-            onClick={onActionClick}
-          />
-          <MenuItem data-container={container.Id} data-action="container.stop" disabled={!canStop} icon={IconNames.STOP} text={t("Stop")} onClick={onActionClick} />
-          <MenuItem
-            data-container={container.Id}
-            data-action="container.restart"
-            disabled={!canRestart}
-            icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
-            text={isRunning || isPaused ? t("Restart") : t("Start")}
-            onClick={onActionClick}
-          />
+          {withInlinePlayerActionsWidget ? null : (
+            <>
+              <MenuItem
+                data-container={container.Id}
+                data-action={isPaused ? "container.unpause" : "container.pause"}
+                disabled={!canPauseUnpause}
+                icon={IconNames.PAUSE}
+                text={isPaused ? t("Resume") : t("Pause")}
+                onClick={onActionClick}
+              />
+              <MenuItem data-container={container.Id} data-action="container.stop" disabled={!canStop} icon={IconNames.STOP} text={t("Stop")} onClick={onActionClick} />
+              <MenuItem
+                data-container={container.Id}
+                data-action="container.restart"
+                disabled={!canRestart}
+                icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
+                text={isRunning || isPaused ? t("Restart") : t("Start")}
+                onClick={onActionClick}
+              />
+            </>
+          )}
         </ConfirmMenu>
       ) : null}
     </ButtonGroup>

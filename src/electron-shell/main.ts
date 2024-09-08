@@ -184,7 +184,7 @@ async function createApplicationWindow() {
     } else if (source === "closed") {
       closed = true;
     }
-    console.debug("Quitting application from", { source, closed });
+    console.debug(source, "application from", { closed });
     if (closed) {
       app.quit();
       process.exit(0);
@@ -266,7 +266,7 @@ function createSystemTray() {
   tray = new Tray(trayIconPath);
   const trayMenu = Menu.buildFromTemplate([
     {
-      label: "Show main window",
+      label: `${import.meta.env.PROJECT_TITLE} - v${import.meta.env.PROJECT_VERSION}`,
       click: async () => {
         applicationWindow.excludedFromShownWindowsMenu = true;
         applicationWindow.show();

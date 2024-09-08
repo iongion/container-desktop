@@ -11,6 +11,7 @@ import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
 import AppErrorBoundary from "@/web-app/components/AppErrorBoundary";
+import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
 import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
@@ -94,14 +95,22 @@ export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
           {Screens.map((Screen) => {
             return (
               <Route path={Screen.Route.Path} key={Screen.ID} exact>
-                <Screen navigator={navigator} />
+                <div className="AppScreenViewport">
+                  <Screen navigator={navigator} />
+                  <AppFooter />
+                </div>
               </Route>
             );
           })}
         </Switch>
       );
     } else if (phase === AppBootstrapPhase.FAILED) {
-      content = <UserSettingsScreen navigator={navigator} />;
+      content = (
+        <div className="AppScreenViewport">
+          <UserSettingsScreen navigator={navigator} />
+          <AppFooter />
+        </div>
+      );
     } else {
       content = <AppLoading />;
     }

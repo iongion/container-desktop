@@ -118,7 +118,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.PODMAN_VIRTUALIZED_VENDOR,
       id: createConnectorId("default", ContainerEngine.PODMAN_VIRTUALIZED_VENDOR),
       label: "Podman machine virtualization",
-      description: "From vendor",
+      description: "Using podman machine virtualization",
       availability: {
         enabled: true,
         api: false,
@@ -267,8 +267,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       runtime: ContainerRuntime.DOCKER,
       engine: ContainerEngine.DOCKER_VIRTUALIZED_VENDOR,
       id: createConnectorId("default", ContainerEngine.DOCKER_VIRTUALIZED_VENDOR),
-      label: "Docker desktop virtualization",
-      description: "From vendor",
+      label: "Docker virtualization",
+      description: "Using docker virtualization",
       availability: {
         enabled: true,
         api: false,

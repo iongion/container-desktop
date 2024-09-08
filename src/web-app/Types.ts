@@ -16,6 +16,7 @@ export interface Domain {
 
 export interface AppScreenProps {
   navigator: Navigator;
+  footer?: React.ReactNode;
 }
 export interface AppScreenMetadata {
   ExcludeFromSidebar: boolean;

@@ -42,27 +42,38 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         return pollerCallback.current();
       }
     }
-    const isPollingEnabled = Environment.features.polling?.enabled;
+    let isPollingEnabled = Environment.features.polling?.enabled;
+    const poller = async () => {
+      try {
+        if (isPending.current) {
+          console.debug("Polling cycle skipped");
+        } else {
+          console.debug("Polling cycle started");
+          await poll();
+        }
+      } catch (error: any) {
+        console.error("Polling cycle error, stopping - error must be handled", error);
+        clearInterval(pollerID.current);
+      } finally {
+        isPending.current = false;
+        console.debug("Poller cycle complete");
+      }
+    };
     if (isPollingEnabled) {
       console.debug("Polling enabled - creating interval");
-      pollerID.current = setInterval(async () => {
-        try {
-          if (isPending.current) {
-            console.debug("Polling cycle skipped");
-          } else {
-            console.debug("Polling cycle started");
-            await poll();
-          }
-        } catch (error: any) {
-          console.error("Polling cycle error, stopping - error must be handled", error);
-          clearInterval(pollerID.current);
-        } finally {
-          isPending.current = false;
-          console.debug("Poller cycle complete");
-        }
-      }, frequency);
+      clearInterval(pollerID.current);
+      pollerID.current = setInterval(poller, frequency);
     } else {
       console.debug("Polling disabled - fetching once");
+      clearInterval(pollerID.current);
+      pollerID.current = setInterval(() => {
+        isPollingEnabled = Environment.features.polling?.enabled;
+        // console.debug("Polling flag monitoring", isPollingEnabled);
+        if (isPollingEnabled) {
+          clearInterval(pollerID.current);
+          pollerID.current = setInterval(poller, frequency);
+        }
+      }, 5000);
     }
     return () => {
       clearInterval(pollerID.current);

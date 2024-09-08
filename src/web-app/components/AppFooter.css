@@ -1,0 +1,56 @@
+.AppFooter {
+  height: 32px;
+  display: flex;
+  overflow: hidden;
+  padding-left: 15px;
+  padding-right: 5px;
+}
+.AppFooterNavbar {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  box-shadow: none !important;
+  height: 32px;
+  align-items: center;
+}
+.AppFooter .bp5-navbar-group {
+  height: 32px;
+}
+.AppFooter .bp5-navbar-heading {
+  font-size: 12px;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+.AppFooterCurrentConnectorStatus {
+  display: block;
+  width: 15px;
+  height: 15px;
+  margin-right: 5px;
+  border-radius: 15px;
+}
+.AppFooterCurrentConnectorStatus[data-connected="yes"] {
+  background-color: #0f0;
+}
+.AppFooterCurrentConnectorStatus[data-connected="no"] {
+  background-color: #f00;
+}
+
+[data-theme="bp5-dark"] [data-runtime="podman"] .AppFooter,
+[data-theme="bp5-dark"] [data-runtime="podman"] .AppFooterNavbar {
+  background-color: #4f175b;
+}
+[data-theme="bp5-light"] [data-runtime="podman"] .AppFooter,
+[data-theme="bp5-light"] [data-runtime="podman"] .AppFooterNavbar {
+  background-color: #cfcfcf;
+}
+
+[data-theme="bp5-dark"] [data-runtime="docker"] .AppFooter,
+[data-theme="bp5-dark"] [data-runtime="docker"] .AppFooterNavbar {
+  background-color: #02091f;
+}
+[data-theme="bp5-light"] [data-runtime="docker"] .AppFooter,
+[data-theme="bp5-light"] [data-runtime="docker"] .AppFooterNavbar {
+  background-color: #7397a8;
+}

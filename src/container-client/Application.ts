@@ -465,7 +465,6 @@ export class Application {
     if (firstPodman) {
       firstPodman.id = "system-default.podman";
       firstPodman.description = "Uses the available system podman installation";
-      firstPodman.label = "System Podman";
       firstPodman.name = "System Podman";
       firstPodman.readonly = true;
       firstPodman.settings.api.autoStart = true;
@@ -477,7 +476,6 @@ export class Application {
     if (firstDocker) {
       firstDocker.id = "system-default.docker";
       firstDocker.description = "Uses the available system docker installation";
-      firstDocker.label = "System Docker";
       firstDocker.name = "System Docker";
       firstDocker.readonly = true;
       firstDocker.settings.api.autoStart = true;

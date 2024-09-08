@@ -29,7 +29,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ container, currentSc
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.BOX}
       titleText={nameText.startsWith("/") ? nameText.slice(1) : nameText}
-      rightContent={<ActionsMenu container={container} expand isActive={(input) => input === currentScreen} />}
+      rightContent={<ActionsMenu container={container} expand withInlinePlayerActions isActive={(input) => input === currentScreen} />}
     />
   );
 };
