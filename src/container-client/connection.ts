@@ -95,7 +95,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       runtime: ContainerRuntime.PODMAN,
       engine: ContainerEngine.PODMAN_NATIVE,
       id: createConnectorId("default", ContainerEngine.PODMAN_NATIVE),
-      label: "Native executable",
+      label: "Native",
       description: "",
       notes: "Podman native is only available on Linux",
       availability: {
