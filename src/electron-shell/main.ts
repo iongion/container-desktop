@@ -27,8 +27,6 @@ const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);
 const URLS_ALLOWED = [
-  "https://stately.ai/inspect",
-  "https://stately.ai/registry/inspect",
   "https://iongion.github.io/podman-desktop-companion/",
   "https://github.com/iongion/podman-desktop-companion/releases",
   "https://github.com/containers/podman-compose"
