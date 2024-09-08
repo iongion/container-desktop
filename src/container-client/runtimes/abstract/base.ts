@@ -282,7 +282,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
     const client = await this.getContainerApiClient();
     const driver = client.getDriver();
     systemNotifier.transmit("engine.availability", {
-      trace: `Issuing api ping request`
+      trace: `Performing api health check`
     });
     try {
       const response = await driver.request({ method: "GET", url: "/_ping", timeout: 5000 });
