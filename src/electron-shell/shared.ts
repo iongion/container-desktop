@@ -1,4 +1,7 @@
 import * as Electron from "electron";
+import fixPath from "fix-path";
+
+fixPath();
 
 export const MessageBus: IMessageBus = {
   send: (channel: string, ...data: any[]) => Electron.ipcRenderer.send(channel, ...data),
