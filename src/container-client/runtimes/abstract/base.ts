@@ -528,7 +528,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   async findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
     systemNotifier.transmit("engine.availability", {
-      trace: `Finding host program ${program.name}`
+      trace: `Detecting host ${program.name} program path and version`
     });
     const output = deepMerge({}, program);
     output.path = await findProgramPath(program.name, { osType: this.osType });
@@ -542,7 +542,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   async findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
     systemNotifier.transmit("engine.availability", {
-      trace: `Finding guest program ${program.name}`
+      trace: `Detecting guest ${program.name} program path and version`
     });
     const executor = async (path: string, args: string[]) => {
       const userSettings = settings || (await this.getSettings());
@@ -564,7 +564,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   async getConnectionDataDir() {
     systemNotifier.transmit("engine.availability", {
-      trace: `Finding connection system data dir`
+      trace: `Detecting connection system data dir`
     });
     let dataDir: string | undefined;
     this.logger.debug(this.id, "Get this data dir", this);

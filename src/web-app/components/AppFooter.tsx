@@ -10,7 +10,6 @@ export const AppFooter = () => {
   const running = useStoreState((state) => state.running);
   const currentConnector = useStoreState((state) => state.currentConnector);
   const expandSidebar = useStoreState((state) => state.userSettings.expandSidebar);
-  console.debug(currentConnector);
   return (
     <div className="AppFooter">
       <Navbar className="AppFooterNavbar">
