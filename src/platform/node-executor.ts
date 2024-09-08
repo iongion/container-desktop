@@ -550,15 +550,7 @@ export const Command: ICommand = {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           logger.debug("Proxying request", { connection, config });
           const driver = await createNodeJSApiDriver(config);
-          try {
-            response = await driver.request(request);
-          } catch (error: any) {
-            if (error.response) {
-              response = error.response;
-            } else {
-              throw error;
-            }
-          }
+          response = await driver.request(request);
           logger.debug("Proxy response", response);
         }
         break;
@@ -568,15 +560,7 @@ export const Command: ICommand = {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           config.socketPath = connection.settings.api.connection.relay;
           logger.debug("Proxying request", { connection, config });
-          try {
-            response = await proxyRequestToWSLDistribution(connection, config, request);
-          } catch (error: any) {
-            if (error.response) {
-              response = error.response;
-            } else {
-              throw error;
-            }
-          }
+          response = await proxyRequestToWSLDistribution(connection, config, request);
         }
         break;
       case ContainerEngine.PODMAN_REMOTE:
@@ -585,15 +569,7 @@ export const Command: ICommand = {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
           config.socketPath = connection.settings.api.connection.relay;
           logger.debug("Proxying request", { connection, config });
-          try {
-            response = await proxyRequestToSSHConnection(connection, config, request, context);
-          } catch (error: any) {
-            if (error.response) {
-              response = error.response;
-            } else {
-              throw error;
-            }
-          }
+          response = await proxyRequestToSSHConnection(connection, config, request, context);
         }
         break;
       default:

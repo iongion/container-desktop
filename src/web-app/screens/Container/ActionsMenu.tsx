@@ -257,7 +257,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
       withInlinePlayerActionsWidget = (
         <div className="InlinePlayerActions">
           <ButtonGroup minimal>
-            <Divider />
             <Button
               data-container={container.Id}
               data-action={isPaused ? "container.unpause" : "container.pause"}
@@ -306,13 +305,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
           <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
         </>
       )}
-      {expandAsButtons}
       {withInlinePlayerActions ? withInlinePlayerActionsWidget : null}
+      {expandAsButtons}
       {container ? (
         <ConfirmMenu
           onConfirm={onRemove}
           tag={container.Id}
-          title={t("The container cannot be removed while it is running")}
+          title={t("The container cannot be removed while running")}
           disabled={!canRemove || disabledAction === "container.remove"}
         >
           {expandAsMenuItems}
