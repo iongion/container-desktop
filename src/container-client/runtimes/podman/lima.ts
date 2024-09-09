@@ -1,16 +1,16 @@
-import { ContainerEngine, ContainerRuntime, OperatingSystem } from "@/env/Types";
+import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
 import { LIMA_PROGRAM, PODMAN_PROGRAM } from "../../connection";
-import { AbstractClientEngineVirtualizedLIMA } from "../../runtimes/abstract";
+import { AbstractContainerEngineHostClientVirtualizedLIMA } from "../../runtimes/abstract";
 
-export class PodmanClientEngineVirtualizedLIMA extends AbstractClientEngineVirtualizedLIMA {
-  static ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_LIMA;
-  ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_LIMA;
+export class PodmanContainerEngineHostClientVirtualizedLIMA extends AbstractContainerEngineHostClientVirtualizedLIMA {
+  static HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA;
+  HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA;
   PROGRAM = PODMAN_PROGRAM;
   CONTROLLER = LIMA_PROGRAM;
-  RUNTIME = ContainerRuntime.PODMAN;
+  ENGINE = ContainerEngine.PODMAN;
 
   static async create(id: string, osType: OperatingSystem) {
-    const instance = new PodmanClientEngineVirtualizedLIMA(osType);
+    const instance = new PodmanContainerEngineHostClientVirtualizedLIMA(osType);
     instance.id = id;
     await instance.setup();
     return instance;

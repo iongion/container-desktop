@@ -1,25 +1,25 @@
-import { PodmanClientEngineSSH } from "@/container-client/runtimes/podman/ssh";
-import { ContainerRuntime, OperatingSystem } from "@/env/Types";
-import { AbstractClientEngine, AbstractRuntime } from "../../runtimes/abstract";
-import { PodmanClientEngineVirtualizedLIMA } from "./lima";
-import { PodmanClientEngineNative } from "./native";
-import { PodmanClientEngineVirtualizedVendor } from "./vendor";
-import { PodmanClientEngineVirtualizedWSL } from "./wsl";
+import { PodmanContainerEngineHostClientSSH } from "@/container-client/runtimes/podman/ssh";
+import { ContainerEngine, OperatingSystem } from "@/env/Types";
+import { AbstractContainerEngineHostClient, AbstractEngine } from "../../runtimes/abstract";
+import { PodmanContainerEngineHostClientVirtualizedLIMA } from "./lima";
+import { PodmanContainerEngineHostClientNative } from "./native";
+import { PodmanContainerEngineHostClientVirtualizedVendor } from "./vendor";
+import { PodmanContainerEngineHostClientVirtualizedWSL } from "./wsl";
 
-export class Runtime extends AbstractRuntime {
-  static RUNTIME = ContainerRuntime.PODMAN;
-  public RUNTIME: ContainerRuntime = ContainerRuntime.PODMAN;
+export class Engine extends AbstractEngine {
+  static ENGINE = ContainerEngine.PODMAN;
+  public ENGINE = ContainerEngine.PODMAN;
 
-  ENGINES: (typeof AbstractClientEngine)[] = [
-    PodmanClientEngineNative,
-    PodmanClientEngineVirtualizedVendor,
-    PodmanClientEngineVirtualizedWSL,
-    PodmanClientEngineVirtualizedLIMA,
-    PodmanClientEngineSSH
+  ENGINE_HOST_CLIENTS: (typeof AbstractContainerEngineHostClient)[] = [
+    PodmanContainerEngineHostClientNative,
+    PodmanContainerEngineHostClientVirtualizedVendor,
+    PodmanContainerEngineHostClientVirtualizedWSL,
+    PodmanContainerEngineHostClientVirtualizedLIMA,
+    PodmanContainerEngineHostClientSSH
   ];
 
   static async create(osType: OperatingSystem) {
-    const instance = new Runtime(osType);
+    const instance = new Engine(osType);
     await instance.setup();
     return instance;
   }
@@ -27,11 +27,11 @@ export class Runtime extends AbstractRuntime {
 
 export const Podman = {
   // runtimes
-  Runtime,
+  Engine,
   // engines
-  PodmanClientEngineNative,
-  PodmanClientEngineVirtualizedVendor,
-  PodmanClientEngineVirtualizedWSL,
-  PodmanClientEngineVirtualizedLIMA,
-  PodmanClientEngineSSH
+  PodmanContainerEngineHostClientNative,
+  PodmanContainerEngineHostClientVirtualizedVendor,
+  PodmanContainerEngineHostClientVirtualizedWSL,
+  PodmanContainerEngineHostClientVirtualizedLIMA,
+  PodmanContainerEngineHostClientSSH
 };

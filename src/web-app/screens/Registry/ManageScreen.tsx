@@ -31,7 +31,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const registries = useMemo(() => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])], [registriesMap]);
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
   const firstEnabledRegistry = useMemo(
-    () => registries.find((it) => it.enabled && currentConnector?.runtime && it.runtime.includes(currentConnector?.runtime)),
+    () => registries.find((it) => it.enabled && currentConnector?.engine && it.engine.includes(currentConnector?.engine)),
     [currentConnector, registries]
   );
   const [currentRegistry, setCurrentRegistry] = useState<string | undefined>(firstEnabledRegistry?.name);
@@ -43,12 +43,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
     async (filters: RegistrySearchFilters, event: MouseEvent<HTMLElement, MouseEvent>) => {
       setState("state.looking-up");
       const registry = registries.find((it) => it.name === selectedRegistry);
-      if (registry) {
-        await registrySearch({ term: searchTerm, registry, filters });
-      } else {
-        console.warn("No registry", selectedRegistry);
+      try {
+        if (registry) {
+          await registrySearch({ term: searchTerm, registry, filters });
+        } else {
+          console.warn("No registry", selectedRegistry);
+        }
+      } catch (error: any) {
+        console.error("Error looking up", error);
+      } finally {
+        setState("state.looked-up");
       }
-      setState("state.looked-up");
     },
     [registries, searchTerm, registrySearch, selectedRegistry]
   );
@@ -155,9 +160,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
               {(registries || []).map((registry) => {
                 let title;
                 if (registry.id === "system") {
-                  title = registry.enabled ? t("Podman registry.conf file must be adjusted - it allows parallel search") : t("Not available for current engine");
+                  title = registry.enabled ? t("Podman registry.conf file must be adjusted - it allows parallel search") : t("Not available for current host");
                 }
-                const isUsable = currentConnector?.runtime ? registry.runtime.includes(currentConnector?.runtime) : false;
+                const isUsable = currentConnector?.engine ? registry.engine.includes(currentConnector?.engine) : false;
                 return (
                   <tr key={registry.id} data-registry={registry.id}>
                     <td title={title}>

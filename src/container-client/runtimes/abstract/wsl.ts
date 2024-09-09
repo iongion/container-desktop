@@ -4,7 +4,7 @@ import {
   AvailabilityCheck,
   CommandExecutionResult,
   Connection,
-  ContainerEngine,
+  ContainerEngineHost,
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem,
@@ -12,20 +12,21 @@ import {
 } from "@/env/Types";
 import { WSL_PROGRAM } from "../../connection";
 import { getAvailableWSLDistributions } from "../../shared";
-import { AbstractClientEngine } from "../abstract/base";
+import { AbstractContainerEngineHostClient } from "../abstract/base";
 
-export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientEngine {
+export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends AbstractContainerEngineHostClient {
   public CONTROLLER: string = WSL_PROGRAM;
 
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
 
-  // Runtime
+  // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     this.logger.debug(this.id, "Start api skipped - not required");
     return true;
   }
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
-    this.logger.debug(this.id, "Stop api skipped - not required");
+    const settings = customSettings || (await this.getSettings());
+    await Command.StopConnectionServices(this.id, settings);
     return true;
   }
   async startScope(scope: ControllerScope): Promise<boolean> {
@@ -67,12 +68,12 @@ export abstract class AbstractClientEngineVirtualizedWSL extends AbstractClientE
     const { controller } = settings || (await this.getSettings());
     let shell = "bash";
     let shellArgs = ["-l", "-c"];
-    if (this.ENGINE === ContainerEngine.DOCKER_VIRTUALIZED_WSL) {
+    if (this.HOST === ContainerEngineHost.DOCKER_VIRTUALIZED_WSL) {
       // TODO: Improve docker-desktop distribution detection
       if (scope === "docker-desktop") {
         shell = "sh";
       }
-    } else if (this.ENGINE === ContainerEngine.PODMAN_VIRTUALIZED_WSL) {
+    } else if (this.HOST === ContainerEngineHost.PODMAN_VIRTUALIZED_WSL) {
       if (scope.startsWith("podman-machine")) {
         shell = "bash";
         // TODO: Improve podman-machine distribution detection

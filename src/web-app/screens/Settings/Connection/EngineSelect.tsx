@@ -6,36 +6,32 @@ import classNames from "classnames";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Connector, ContainerEngine } from "@/env/Types";
+import { ContainerEngine, ContainerEngineOption } from "@/env/Types";
 
-import { RestrictedTo } from "@/web-app/components/RestrictedTo";
 import "./EngineSelect.css";
 
 // EngineSelect
 
-const renderConnector: ItemRenderer<Connector> = (item, { handleClick, handleFocus, modifiers, query }) => {
+const renderMenuItem: ItemRenderer<ContainerEngineOption> = (item, { handleClick, handleFocus, modifiers, query }) => {
   if (!modifiers.matchesPredicate) {
     return null;
   }
-  const isDisabled = modifiers.disabled || item.disabled || !item.availability.enabled;
   return (
     <MenuItem
       className="EngineSelectMenuItem"
       active={modifiers.active}
-      disabled={isDisabled}
+      disabled={modifiers.disabled}
       key={item.engine}
-      labelElement={(<RestrictedTo engine={item.engine} />) as any}
       onClick={handleClick}
       onFocus={handleFocus}
       roleStructure="listoption"
       text={item.label}
-      title={isDisabled ? item.notes : ""}
     />
   );
 };
 
 export interface EngineSelectProps {
-  items: Connector[];
+  items: ContainerEngineOption[];
   inputProps: Partial<Omit<InputGroupProps, "value" | "onChange">>;
   engine?: ContainerEngine;
   disabled?: boolean;
@@ -64,14 +60,14 @@ export const EngineSelect: React.FC<EngineSelectProps> = ({ items, inputProps, d
   );
   return (
     <div className="ConnectionEntitySelect EngineSelect">
-      <Select<Connector>
+      <Select<ContainerEngineOption>
         filterable={false}
         fill
         resetOnSelect
         scrollToActiveItem
         inputProps={inputProps}
         items={items}
-        itemRenderer={renderConnector}
+        itemRenderer={renderMenuItem}
         onItemSelect={onItemSelect}
         popoverProps={{ matchTargetWidth: true, minimal: true }}
         activeItem={activeItem}
@@ -81,7 +77,6 @@ export const EngineSelect: React.FC<EngineSelectProps> = ({ items, inputProps, d
           disabled={disabled}
           fill
           rightIcon={IconNames.CARET_DOWN}
-          title={activeItem?.description}
           text={activeItem?.label ?? t("-- Select --")}
           textClassName={classNames({
             [Classes.TEXT_MUTED]: activeItem === undefined

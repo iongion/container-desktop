@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-import { Connector, ContainerEngine, PodmanMachine } from "@/env/Types";
+import { Connector, ContainerEngineHost, PodmanMachine } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -90,7 +90,7 @@ Screen.Metadata = {
   LeftIcon: IconNames.HEAT_GRID
 };
 Screen.isAvailable = (currentConnector?: Connector) => {
-  const isDocker = (currentConnector?.engine || "").startsWith("docker");
-  const isPodmanWSL = currentConnector?.engine === ContainerEngine.PODMAN_VIRTUALIZED_WSL;
+  const isDocker = (currentConnector?.host || "").startsWith("docker");
+  const isPodmanWSL = currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   return !(isDocker || isPodmanWSL);
 };

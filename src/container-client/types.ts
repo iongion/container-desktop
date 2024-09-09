@@ -1,4 +1,4 @@
-export interface ClientEngineCommand {
+export interface ContainerEngineHostClientCommand {
   launcher?: string;
   command: string[];
   scope?: string;

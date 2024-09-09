@@ -5,7 +5,7 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Container, ContainerRuntime, ContainerStateList } from "@/env/Types";
+import { Container, ContainerEngine, ContainerStateList } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -36,7 +36,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
   const [container, setContainer] = useState<Container | undefined>(userContainer);
-  const currentRuntime = useStoreState((state) => state.currentConnector?.runtime);
+  const currentEngine = useStoreState((state) => state.currentConnector?.engine);
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
   const containerPause = useStoreActions((actions) => actions.container.containerPause);
   const containerUnpause = useStoreActions((actions) => actions.container.containerUnpause);
@@ -162,8 +162,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
     performActionCommand("container.connect", { confirm: { success: false } });
   }, [performActionCommand]);
 
-  const isKubeAvailable = currentRuntime === ContainerRuntime.PODMAN;
-  const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available when using {{currentRuntime}} engine", { currentRuntime });
+  const isKubeAvailable = currentEngine === ContainerEngine.PODMAN;
+  const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available when using {{currentEngine}} host", { currentEngine });
   const expandAsButtons =
     expand && container ? (
       <>

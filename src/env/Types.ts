@@ -1,5 +1,15 @@
 import { AxiosRequestHeaders, AxiosResponse, AxiosResponseHeaders } from "axios";
 
+export interface SpawnedProcess {
+  pid: any;
+  code: any;
+  success: boolean;
+  stdout?: string;
+  stderr?: string;
+  command?: any;
+  kill: (signal: NodeJS.Signals | number) => void;
+}
+
 export interface ILogger {
   debug: (...args: any[]) => void;
   info: (...args: any[]) => void;
@@ -90,7 +100,7 @@ export interface GlobalUserSettings {
 
 export interface GlobalUserSettingsOptions extends GlobalUserSettings {
   program: Partial<Program>;
-  engine: Partial<ContainerEngine>;
+  host: Partial<ContainerEngineHost>;
 }
 
 export interface Program {
@@ -116,6 +126,7 @@ export interface DetectFlags {
 export interface ApiConnection {
   uri: string;
   relay: string;
+  relayMethod?: "auto" | "socat" | "netcat" | "curl";
 }
 
 export interface EngineConnectorApiSettings {
@@ -133,14 +144,14 @@ export interface EngineConnectorSettings {
 }
 
 export interface EngineUserSettingsOptions {
-  id: string; // engine client instance id
+  id: string; // host client instance id
   settings: Partial<EngineConnectorSettings>;
 }
 
 export interface EngineApiOptions {
-  runtime: ContainerRuntime;
   engine: ContainerEngine;
-  id: string; // engine client instance id
+  host: ContainerEngineHost;
+  id: string; // host client instance id
   //
   scope: string; // ControllerScope Name
   baseURL: string;
@@ -148,9 +159,9 @@ export interface EngineApiOptions {
 }
 
 export interface EngineProgramOptions {
-  runtime: ContainerRuntime;
   engine: ContainerEngine;
-  id: string; // engine client instance id
+  host: ContainerEngineHost;
+  id: string; // host client instance id
   //
   program: Partial<Program>;
   controller?: Partial<Controller>;
@@ -263,12 +274,12 @@ export interface ProgramTestResult extends TestResult {
   scopes?: ControllerScope[];
 }
 
-export enum ContainerRuntime {
+export enum ContainerEngine {
   PODMAN = "podman",
   DOCKER = "docker"
 }
 
-export enum ContainerEngine {
+export enum ContainerEngineHost {
   // Podman
   PODMAN_NATIVE = "podman.native",
   PODMAN_VIRTUALIZED_WSL = "podman.virtualized.wsl",
@@ -289,8 +300,8 @@ export enum Presence {
   UNKNOWN = "unknown"
 }
 
-export interface ContainerRuntimeOption {
-  runtime: ContainerRuntime;
+export interface ContainerEngineOption {
+  engine: ContainerEngine;
   label: string;
   present: Presence;
   disabled?: boolean;
@@ -303,13 +314,13 @@ export interface AvailabilityCheck {
 
 export interface EngineConnectorAvailability {
   enabled: boolean;
-  engine: boolean;
+  host: boolean;
   api: boolean;
   program: boolean;
   controller?: boolean;
   controllerScope?: boolean;
   report: {
-    engine: string;
+    host: string;
     api: string;
     program: string;
     controller?: string;
@@ -321,8 +332,8 @@ export interface Connection {
   name: string;
   label: string;
   description?: string;
-  runtime: ContainerRuntime;
   engine: ContainerEngine;
+  host: ContainerEngineHost;
   disabled?: boolean;
   readonly?: boolean;
   //
@@ -399,6 +410,22 @@ export interface SystemInfo {
   registries: SystemInfoRegistries;
   store: any;
   version: SystemVersion;
+}
+
+export interface ContextInspect {
+  Name: string;
+  Metadata: any;
+  Endpoints: {
+    docker: {
+      Host: string;
+      SkipTLSVerify: boolean;
+    };
+  };
+  TLSMaterial: any;
+  Storage: {
+    MetadataPath: string;
+    TLSPath: string;
+  };
 }
 
 export interface ContainerStats {
@@ -785,8 +812,8 @@ export interface ProxyRequest {
   request: any;
   baseURL: string;
   socketPath?: string;
+  host: ContainerEngineHost;
   engine: ContainerEngine;
-  runtime: ContainerRuntime;
   scope?: string;
 }
 
@@ -828,6 +855,7 @@ export interface Registry {
   enabled: boolean;
   isRemovable: boolean;
   isSystem: boolean;
+  engine: ContainerEngine[];
 }
 
 export interface RegistriesMap {

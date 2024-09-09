@@ -4,22 +4,22 @@ import {
   CommandExecutionResult,
   Connection,
   ContainerEngine,
-  ContainerRuntime,
+  ContainerEngineHost,
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem
 } from "@/env/Types";
 import { PODMAN_PROGRAM } from "../../connection";
-import { PodmanAbstractClientEngine } from "./base";
+import { PodmanAbstractContainerEngineHostClient } from "./base";
 
-export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
-  static ENGINE = ContainerEngine.PODMAN_NATIVE;
-  ENGINE = ContainerEngine.PODMAN_NATIVE;
+export class PodmanContainerEngineHostClientNative extends PodmanAbstractContainerEngineHostClient {
+  static HOST = ContainerEngineHost.PODMAN_NATIVE;
+  HOST = ContainerEngineHost.PODMAN_NATIVE;
   PROGRAM = PODMAN_PROGRAM;
-  RUNTIME = ContainerRuntime.PODMAN;
+  ENGINE = ContainerEngine.PODMAN;
 
   static async create(id: string, osType: OperatingSystem) {
-    const instance = new PodmanClientEngineNative(osType);
+    const instance = new PodmanContainerEngineHostClientNative(osType);
     instance.id = id;
     await instance.setup();
     return instance;
@@ -28,10 +28,10 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
     const settings = customSettings || (await this.getSettings());
     // Get environment variable inside the scope
-    const engine = await Platform.getEnvironmentVariable("PODMAN_HOST");
+    const host = await Platform.getEnvironmentVariable("PODMAN_HOST");
     const alias = await Platform.getEnvironmentVariable("DOCKER_HOST"); // Podman disguised as docker
     // Inspect machine system info for relay path
-    let uri = engine || alias || "";
+    let uri = host || alias || "";
     try {
       const systemInfo = await this.getSystemInfo(connection, undefined, settings);
       if (systemInfo?.host?.remoteSocket?.exists) {
@@ -47,7 +47,7 @@ export class PodmanClientEngineNative extends PodmanAbstractClientEngine {
     };
   }
 
-  // Runtime
+  // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
     if (running.success) {

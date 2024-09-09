@@ -106,5 +106,5 @@ Screen.Metadata = {
   LeftIcon: IconNames.CUBE_ADD
 };
 Screen.isAvailable = (currentConnector?: Connector) => {
-  return !(currentConnector?.engine || "").startsWith("docker");
+  return !(currentConnector?.host || "").startsWith("docker");
 };

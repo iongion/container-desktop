@@ -9,7 +9,7 @@ import { App } from "./App";
 import { I18nContextProvider } from "./App.i18n";
 import { store } from "./App.store";
 
-import { ContainerRuntime } from "@/env/Types";
+import { ContainerEngine } from "@/env/Types";
 import "./themes/docker.css";
 import "./themes/podman.css";
 import "./themes/shared.css";
@@ -20,12 +20,12 @@ export async function renderApplication() {
   const container = document.getElementById("root");
   const root = createRoot(container!);
   console.debug("Settings up the native bridge");
-  console.debug("Starting web-app", { runtime: ContainerRuntime.PODMAN });
+  console.debug("Starting web-app", { engine: ContainerEngine.PODMAN });
   root.render(
     // <StrictMode>
     <I18nContextProvider>
       <Helmet>
-        <body className="bp5-dark" data-runtime={ContainerRuntime.PODMAN} />
+        <body className="bp5-dark" data-engine={ContainerEngine.PODMAN} />
       </Helmet>
       <App store={store} />
     </I18nContextProvider>

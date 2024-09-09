@@ -199,8 +199,8 @@ export function AppMainScreen() {
   return (
     <div
       className="App"
-      data-runtime={currentConnector?.runtime}
       data-engine={currentConnector?.engine}
+      data-host={currentConnector?.host}
       data-environment={CURRENT_ENVIRONMENT}
       data-native={native ? "yes" : "no"}
       data-os={osType}
@@ -209,8 +209,19 @@ export function AppMainScreen() {
       data-provisioned={provisioned ? "yes" : "no"}
     >
       <Helmet>
-        <html data-theme={theme} lang="en" />
-        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-runtime={currentConnector?.runtime ?? "podman"} />
+        <html
+          data-theme={theme}
+          data-os={osType}
+          data-engine={currentConnector?.engine}
+          data-host={currentConnector?.host}
+          data-environment={CURRENT_ENVIRONMENT}
+          data-native={native ? "yes" : "no"}
+          data-phase={phase}
+          data-running={running ? "yes" : "no"}
+          data-provisioned={provisioned ? "yes" : "no"}
+          lang="en"
+        />
+        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-engine={currentConnector?.engine ?? "podman"} />
       </Helmet>
       <Router>
         <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />

@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine } from "@/env/Types";
+import { ContainerEngineHost } from "@/env/Types";
 import { AppTheme, useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { PROJECT_VERSION } from "@/web-app/Environment";
 
@@ -35,14 +35,14 @@ export function AppSidebarFooter() {
     version: ""
   };
   let programTitle = "";
-  if (currentConnector?.engine === ContainerEngine.PODMAN_VIRTUALIZED_VENDOR) {
+  if (currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
     programInfo.version = controller?.version || "";
     programTitle = t("Machine program version: {{version}}", program);
   } else {
     programInfo.version = program?.version || "";
   }
   const versionString = `v${PROJECT_VERSION}`;
-  const programString = `${programInfo.name} ${programInfo.version}`;
+  const programString = programInfo.version ? `${programInfo.name} ${programInfo.version}` : "";
   let rightContent = pending ? (
     <div className="AppSidebarFooterPendingIndicator">
       <Spinner intent={Intent.PRIMARY} size={SpinnerSize.SMALL} />
@@ -62,10 +62,14 @@ export function AppSidebarFooter() {
             <span className="AppSidebarVersionString">
               <strong>GUI</strong> {versionString}
             </span>
-            <br />
-            <span className="AppSidebarProgramString" title={programTitle}>
-              <strong>CLI</strong> {programString || "current"}
-            </span>
+            {programString ? (
+              <>
+                <br />
+                <span className="AppSidebarProgramString" title={programTitle}>
+                  <strong>CLI</strong> {programString || "current"}
+                </span>
+              </>
+            ) : null}
           </div>
         }
       >
@@ -93,10 +97,14 @@ export function AppSidebarFooter() {
         <NavbarGroup align={Alignment.LEFT} className="AppSidebarFooterVersions">
           <NavbarHeading>
             <strong>GUI</strong> <span className="AppSidebarVersionString">{versionString}</span>
-            <strong>CLI</strong>{" "}
-            <span className="AppSidebarProgramString" title={programTitle}>
-              {programString || "current"}
-            </span>
+            {programString ? (
+              <>
+                <strong>CLI</strong>{" "}
+                <span className="AppSidebarProgramString" title={programTitle}>
+                  {programString || "current"}
+                </span>
+              </>
+            ) : null}
           </NavbarHeading>
         </NavbarGroup>
         <NavbarGroup align={Alignment.RIGHT} className="AppSidebarFooterRightColumn">

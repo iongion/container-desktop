@@ -1,22 +1,22 @@
 import { isEmpty } from "lodash-es";
 
-import { AbstractClientEngine, ClientEngine } from "@/container-client/runtimes/abstract";
-import { CommandExecutionResult, Connection, ContainerEngine, CreateMachineOptions, EngineConnectorSettings, SystemInfo } from "@/env/Types";
+import { AbstractContainerEngineHostClient, ContainerEngineHostClient } from "@/container-client/runtimes/abstract";
+import { CommandExecutionResult, Connection, ContainerEngineHost, CreateMachineOptions, EngineConnectorSettings, SystemInfo } from "@/env/Types";
 import { getAvailablePodmanMachines } from "../../shared";
 
-export interface PodmanClientEngineCommon extends ClientEngine {
+export interface PodmanContainerEngineHostClientCommon extends ContainerEngineHostClient {
   getPodLogs: (id?: any, tail?: any) => Promise<CommandExecutionResult>;
   generateKube: (id?: any, tail?: any) => Promise<CommandExecutionResult>;
 }
 
-export abstract class PodmanAbstractClientEngine extends AbstractClientEngine implements PodmanClientEngineCommon {
+export abstract class PodmanAbstractContainerEngineHostClient extends AbstractContainerEngineHostClient implements PodmanContainerEngineHostClientCommon {
   async getPodmanMachines(customFormat?: string, customSettings?: EngineConnectorSettings) {
     this.logger.debug(this.id, "getMachines with program");
     const settings = customSettings || (await this.getSettings());
     const engineAvailabilityTest = await this.isEngineAvailable();
     const canListScopes = engineAvailabilityTest.success;
     if (!canListScopes) {
-      this.logger.warn(this.id, "Cannot list scopes - engine or controller is not available", {
+      this.logger.warn(this.id, "Cannot list scopes - host or controller is not available", {
         settings
       });
     }
@@ -41,7 +41,7 @@ export abstract class PodmanAbstractClientEngine extends AbstractClientEngine im
     }
     const commandArgs = ["machine", "ssh", name];
     const output = await Platform.launchTerminal(commandLauncher, commandArgs, {
-      title: title || `${this.RUNTIME} machine`
+      title: title || `${this.ENGINE} machine`
     });
     if (!output.success) {
       this.logger.error("Unable to connect to machine", name, title, output);
@@ -193,7 +193,7 @@ export abstract class PodmanAbstractClientEngine extends AbstractClientEngine im
     const settings = customSettings || (await this.getSettings());
     const programPath = settings.program.path || settings.program.name || "";
     if (this.isScoped()) {
-      if (this.ENGINE === ContainerEngine.PODMAN_VIRTUALIZED_VENDOR) {
+      if (this.HOST === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
         const controllerPath = settings.controller?.path || settings.controller?.name || "";
         result = await this.runHostCommand(controllerPath, ["system", "info", "--format", customFormat || "json"], customSettings);
       } else {

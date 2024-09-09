@@ -50,7 +50,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, [osType]);
   const runtimeEngineLabelsMap = useMemo(() => {
     return connectors.reduce((acc, it) => {
-      acc[`${it.runtime}:${it.engine}`] = it.label;
+      acc[`${it.engine}:${it.host}`] = it.label;
       return acc;
     }, {});
   }, [connectors]);
@@ -66,7 +66,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const onConnectionsExportClick = useCallback(async () => {
     const connections = await Application.getInstance().getConnections();
-    const data = JSON.stringify(connections, null, 2);
+    const data = JSON.stringify(
+      {
+        version: import.meta.env.PROJECT_VERSION,
+        connections
+      },
+      null,
+      2
+    );
     saveAs(new Blob([data], { type: "application/json" }), "podman-desktop-companion-connections.json");
   }, []);
   const onConnectionsImportClick = useCallback(async () => {
@@ -81,7 +88,21 @@ export const Screen: AppScreen<ScreenProps> = () => {
           const data = e.target?.result;
           if (typeof data === "string") {
             try {
-              const connections = JSON.parse(data);
+              const imported = JSON.parse(data);
+              let connections: Connection[] = [];
+              if (Array.isArray(imported)) {
+                // old version
+                connections = imported.map((it) => {
+                  const host = it.engine;
+                  const engine = it.runtime;
+                  it.engine = engine;
+                  it.host = host;
+                  delete it.runtime;
+                  return it;
+                });
+              } else {
+                connections = imported.connections || [];
+              }
               if (connections.length === 0) {
                 Notification.show({ message: t("Unable to import connections - empty list"), intent: Intent.DANGER });
               } else {
@@ -195,12 +216,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
         {contentWidget}
         <div className="AppSettingsEngineManager">
           <div className="AppSettingsEngineManagerConnections">
-            <HTMLTable compact striped interactive className="AppDataTable" data-table="engine.connections">
+            <HTMLTable compact striped interactive className="AppDataTable" data-table="host.connections">
               <thead>
                 <tr>
                   <th>#</th>
                   <th>{t("Connection")}</th>
-                  <th>{t("Runtime")}</th>
+                  <th>{t("Engine")}</th>
                   <th>{t("Platform")}</th>
                   <th>{t("Autostart")}</th>
                   <th>{t("Rootful")}</th>
@@ -210,7 +231,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </thead>
               <tbody>
                 {connections.map((connection, index) => {
-                  const scopeLabel = runtimeEngineLabelsMap[`${connection.runtime}:${connection.engine}`] || connection.engine;
+                  const scopeLabel = runtimeEngineLabelsMap[`${connection.engine}:${connection.host}`] || connection.host;
                   const isCurrent = currentConnector?.connectionId === connection?.id;
                   const isConnected = isCurrent && currentConnector.availability.api;
                   const isAutomatic = connection.settings.mode === "mode.automatic";
@@ -220,8 +241,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <tr
                       key={connection.id}
                       data-connection-id={connection.id}
-                      data-connection-runtime={connection.runtime}
                       data-connection-engine={connection.engine}
+                      data-connection-host={connection.host}
                       data-connection-is-rootfull={connection.settings?.rootfull ? "yes" : "no"}
                       data-connection-is-default={defaultConnector === connection.id ? "yes" : "no"}
                       data-connection-is-current={isCurrent ? "yes" : "no"}
@@ -233,7 +254,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         <p className="PlatformConnectionName">{connection.name}</p>
                         {description ? <p className="PlatformConnectionDescription">{description}</p> : null}
                       </td>
-                      <td>{connection.runtime}</td>
+                      <td>{connection.engine}</td>
                       <td>
                         <p className="PlatformScopeName">{isAutomatic ? t("Auto") : connection.settings?.controller?.scope || ""}</p>
                         <p className="PlatformScopeLabel">{scopeLabel}</p>
@@ -255,7 +276,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             <ButtonGroup>
               <Button
                 text={t("Create connection")}
-                title={t("Define a new container engine connection")}
+                title={t("Define a new container host connection")}
                 icon={IconNames.PLUS}
                 intent={Intent.PRIMARY}
                 onClick={onAddConnectionClick}

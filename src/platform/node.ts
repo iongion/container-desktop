@@ -6,15 +6,6 @@ import SSHConfigParser from "ssh-config";
 
 import { CommandExecutionResult, ControllerScopeType, OperatingSystem, SSHHost } from "@/env/Types";
 
-export interface SpawnedProcess {
-  pid: any;
-  code: any;
-  success: boolean;
-  stdout?: string;
-  stderr?: string;
-  command?: any;
-}
-
 export const Platform: IPlatform = {
   OPERATING_SYSTEM: os.type() as OperatingSystem,
 

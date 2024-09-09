@@ -4,22 +4,22 @@ import {
   CommandExecutionResult,
   Connection,
   ContainerEngine,
-  ContainerRuntime,
+  ContainerEngineHost,
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem
 } from "@/env/Types";
 import { DOCKER_PROGRAM } from "../../connection";
-import { AbstractClientEngine } from "../../runtimes/abstract";
+import { AbstractContainerEngineHostClient } from "../../runtimes/abstract";
 
-export class DockerClientEngineNative extends AbstractClientEngine {
-  static ENGINE = ContainerEngine.DOCKER_NATIVE;
-  ENGINE = ContainerEngine.DOCKER_NATIVE;
+export class DockerContainerEngineHostClientNative extends AbstractContainerEngineHostClient {
+  static HOST = ContainerEngineHost.DOCKER_NATIVE;
+  HOST = ContainerEngineHost.DOCKER_NATIVE;
   PROGRAM = DOCKER_PROGRAM;
-  RUNTIME = ContainerRuntime.DOCKER;
+  ENGINE = ContainerEngine.DOCKER;
 
   static async create(id: string, osType: OperatingSystem) {
-    const instance = new DockerClientEngineNative(osType);
+    const instance = new DockerContainerEngineHostClientNative(osType);
     instance.id = id;
     await instance.setup();
     return instance;
@@ -33,14 +33,14 @@ export class DockerClientEngineNative extends AbstractClientEngine {
     };
   }
 
-  // Runtime
+  // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
     if (running.success) {
       this.logger.debug("API is running");
       return true;
     }
-    this.logger.error(this.id, "Start api failed - must start engine manually");
+    this.logger.error(this.id, "Start api failed - must start host manually");
     return false;
   }
   // Availability
