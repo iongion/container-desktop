@@ -29,8 +29,8 @@ export const AppFooter = () => {
           <>
             <NavbarDivider />
             <NavbarHeading>
-              <div className="AppFooterCurrentProgram" title={t("Container engine runtime")}>
-                {t("{{runtime}} {{version}}", { runtime: currentConnector.runtime, version: currentConnector.settings?.program?.version || "" })}
+              <div className="AppFooterCurrentProgram" title={t("Container host engine")}>
+                {t("{{engine}} {{version}}", { engine: currentConnector.engine, version: currentConnector.settings?.program?.version || "" })}
               </div>
             </NavbarHeading>
           </>

@@ -13,9 +13,9 @@ import {
 } from "@/env/Types";
 import { LIMA_PROGRAM } from "../../connection";
 import { getAvailableLIMAInstances } from "../../shared";
-import { AbstractClientEngine } from "../abstract/base";
+import { AbstractContainerEngineHostClient } from "../abstract/base";
 
-export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClientEngine {
+export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends AbstractContainerEngineHostClient {
   public CONTROLLER: string = LIMA_PROGRAM;
   // Helpers
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
@@ -35,7 +35,7 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
       relay: ""
     };
   }
-  // Runtime
+  // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
     if (running.success) {
@@ -58,12 +58,13 @@ export abstract class AbstractClientEngineVirtualizedLIMA extends AbstractClient
     return started;
   }
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
+    const settings = customSettings || (await this.getSettings());
+    await Command.StopConnectionServices(this.id, settings);
     if (!this.apiStarted) {
       this.logger.debug("Stopping API - skip(not started here)");
       return false;
     }
     this.logger.debug("Stopping API - begin");
-    const settings = customSettings || (await this.getSettings());
     let args: string[] = opts?.args || [];
     if (!opts?.args) {
       if (!settings.controller?.scope) {

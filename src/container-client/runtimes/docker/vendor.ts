@@ -1,21 +1,21 @@
-import { ApiConnection, Connection, ContainerEngine, ContainerRuntime, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ApiConnection, Connection, ContainerEngine, ContainerEngineHost, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { isEmpty } from "lodash-es";
 import { userConfiguration } from "../../config";
 import { DOCKER_PROGRAM } from "../../connection";
-import { DockerClientEngineNative } from "./native";
+import { DockerContainerEngineHostClientNative } from "./native";
 
 const DOCKER_API_SOCKET = `podman-desktop-companion-${DOCKER_PROGRAM}-rest-api.sock`;
 
-export class DockerClientEngineVirtualizedVendor extends DockerClientEngineNative {
-  static ENGINE = ContainerEngine.DOCKER_VIRTUALIZED_VENDOR;
-  ENGINE = ContainerEngine.DOCKER_VIRTUALIZED_VENDOR;
+export class DockerContainerEngineHostClientVirtualizedVendor extends DockerContainerEngineHostClientNative {
+  static HOST = ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;
+  HOST = ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;
   PROGRAM = DOCKER_PROGRAM;
   CONTROLLER = DOCKER_PROGRAM;
-  RUNTIME = ContainerRuntime.DOCKER;
+  ENGINE = ContainerEngine.DOCKER;
 
   static async create(id: string, osType: OperatingSystem) {
-    const instance = new DockerClientEngineVirtualizedVendor(osType);
+    const instance = new DockerContainerEngineHostClientVirtualizedVendor(osType);
     instance.id = id;
     await instance.setup();
     return instance;

@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine, OperatingSystem } from "@/env/Types";
+import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
 import { usePoller } from "@/web-app/Hooks";
@@ -23,7 +23,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
   const containerStats = useStoreState((state) => state.dashboard.containerStats);
   const currentConnector = useStoreState((state) => state.currentConnector);
-  const engine = currentConnector?.engine;
+  const host = currentConnector?.host;
   const program = currentConnector?.settings.program;
   const scope = currentConnector?.settings.controller?.scope || "";
 
@@ -33,14 +33,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
     let commandPrefix;
     let commandTitle;
     if (osType === OperatingSystem.Windows) {
-      if (engine === ContainerEngine.PODMAN_VIRTUALIZED_WSL || engine === ContainerEngine.DOCKER_VIRTUALIZED_WSL) {
+      if (host === ContainerEngineHost.PODMAN_VIRTUALIZED_WSL || host === ContainerEngineHost.DOCKER_VIRTUALIZED_WSL) {
         commandPrefix = `wsl.exe --distribution ${scope} --exec bash -i -l`;
-        commandTitle = t("On WSL, to dissociated between commands targeting the native podman engine, a wsl prefix must be used.");
+        commandTitle = t("On WSL, to dissociated between commands targeting the native podman host, a wsl prefix must be used.");
       }
     } else if (osType === OperatingSystem.MacOS) {
-      if (engine === ContainerEngine.PODMAN_VIRTUALIZED_LIMA || engine === ContainerEngine.DOCKER_VIRTUALIZED_LIMA) {
+      if (host === ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA || host === ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA) {
         commandPrefix = `limactl shell ${scope}`;
-        commandTitle = t("On MacOS, to dissociated between commands targeting the native podman engine, a limactl prefix must be used.");
+        commandTitle = t("On MacOS, to dissociated between commands targeting the native podman host, a limactl prefix must be used.");
       }
     }
     return {
@@ -48,7 +48,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       commandPrefix,
       commandTitle
     };
-  }, [t, engine, osType, scope, program]);
+  }, [t, host, osType, scope, program]);
 
   const onCopyToClipboardClick = useCallback(
     async (e) => {

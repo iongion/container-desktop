@@ -1,16 +1,16 @@
-import { Connection, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { DOCKER_PROGRAM, LIMA_PROGRAM } from "../../connection";
-import { AbstractClientEngineVirtualizedLIMA } from "../../runtimes/abstract";
+import { AbstractContainerEngineHostClientVirtualizedLIMA } from "../../runtimes/abstract";
 
-export class DockerClientEngineVirtualizedLIMA extends AbstractClientEngineVirtualizedLIMA {
-  static ENGINE = ContainerEngine.DOCKER_VIRTUALIZED_LIMA;
-  ENGINE = ContainerEngine.DOCKER_VIRTUALIZED_LIMA;
+export class DockerContainerEngineHostClientVirtualizedLIMA extends AbstractContainerEngineHostClientVirtualizedLIMA {
+  static HOST = ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA;
+  HOST = ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA;
   PROGRAM = DOCKER_PROGRAM;
   CONTROLLER = LIMA_PROGRAM;
-  RUNTIME = ContainerRuntime.DOCKER;
+  ENGINE = ContainerEngine.DOCKER;
 
   static async create(id: string, osType: OperatingSystem) {
-    const instance = new DockerClientEngineVirtualizedLIMA(osType);
+    const instance = new DockerContainerEngineHostClientVirtualizedLIMA(osType);
     instance.id = id;
     await instance.setup();
     return instance;

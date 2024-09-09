@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { Connection } from "@/env/Types";
 import { ManageConnectionForm } from "./ManageConnectionForm";
 
+import "./ManageConnectionDrawer.css";
+
 export interface ManageConnectionDrawerProps {
   mode: "create" | "edit";
   connection?: Connection;
@@ -17,8 +19,8 @@ export const ManageConnectionDrawer: React.FC<ManageConnectionDrawerProps> = (pr
   const { t } = useTranslation();
   return (
     <Drawer
-      className="AppDrawer"
-      title={props.mode === "create" ? t("Create container engine connection") : t("Manage container engine connection")}
+      className="AppDrawer ManageConnectionDrawer"
+      title={props.mode === "create" ? t("Create container host connection") : t("Manage container host connection")}
       icon={IconNames.PLUS}
       usePortal
       size={DrawerSize.SMALL}

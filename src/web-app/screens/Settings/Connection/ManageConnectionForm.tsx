@@ -1,22 +1,23 @@
 /* eslint-disable jsx-a11y/no-autofocus */
-import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, ProgressBar, Switch, Tab, Tabs, UL } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, Spinner, SpinnerSize, Switch, Tab, Tabs, UL } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { isEmpty } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import { AbstractClientEngine, ContainerRuntimeOptions, createConnectorBy } from "@/container-client";
+import { AbstractContainerEngineHostClient, ContainerEngineOptions, createConnectorBy } from "@/container-client";
 import { Application } from "@/container-client/Application";
-import { Connection, Connector, ContainerEngine, ContainerRuntime, ControllerScope, OperatingSystem, Program } from "@/env/Types";
+import { Connection, Connector, ContainerEngine, ContainerEngineHost, ControllerScope, OperatingSystem, Program } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
+import { EngineHostSelect } from "./EngineHostSelect";
 import { EngineSelect } from "./EngineSelect";
 import { OSTypeSelect } from "./OSTypeSelect";
-import { RuntimeSelect } from "./RuntimeSelect";
 import { ScopeSelect } from "./ScopeSelect";
 
+import classNames from "classnames";
 import "./ManageConnectionForm.css";
 
 type DetectTarget = "program" | "controller";
@@ -34,6 +35,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   const [pending, setPending] = useState(false);
   const [isCustomProgramPathEditable, setCustomProgramPathEditable] = useState(false);
   const [isCustomApiConnectionUriEditable, setCustomApiConnectionUriEditable] = useState(false);
+  const [isCustomApiConnectionRelayEditable, setCustomApiConnectionRelayEditable] = useState(false);
   const isNativeApplication = useStoreState((state) => state.native);
   const detectedOsType = useStoreState((state) => state.osType);
   const connectors = useStoreState((state) => state.connectors);
@@ -41,8 +43,8 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   const updateConnection = useStoreActions((actions) => actions.settings.updateConnection);
   const { control, handleSubmit, reset, setValue, getValues } = useForm<Connector>({ defaultValues: connection });
   const [osType, setHostOSType] = useState(detectedOsType);
-  const runtime = useWatch({ control, name: "runtime" });
   const engine = useWatch({ control, name: "engine" });
+  const host = useWatch({ control, name: "host" });
   const scopes = useWatch({ control, name: "scopes" });
   const program = useWatch({ control, name: "settings.program" });
   const controller = useWatch({ control, name: "settings.controller" });
@@ -51,7 +53,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
     if (!controllerScopeName) return undefined;
     return (scopes || []).find((it) => it.Name === controllerScopeName);
   }, [scopes, controllerScopeName]);
-  const [containerEngineOptions, setContainerEngineOptions] = useState(connectors.filter((it) => it.runtime === runtime));
+  const [containerEngineHostOptions, setContainerEngineHostOptions] = useState(connectors.filter((it) => it.engine === engine));
 
   const labels = useMemo(() => {
     const controllerPath = t("Path to {{name}} executable", controller);
@@ -61,23 +63,23 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
     if (osType === OperatingSystem.Windows) {
       apiConnectionUri = t("Windows named pipe");
     }
-    switch (engine) {
-      case ContainerEngine.PODMAN_VIRTUALIZED_VENDOR:
+    switch (host) {
+      case ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR:
         programPath = t("Path to {{name}} executable inside the podman machine", program);
         controllerScope = t("Podman machine");
         break;
-      case ContainerEngine.PODMAN_VIRTUALIZED_WSL:
-      case ContainerEngine.DOCKER_VIRTUALIZED_WSL:
+      case ContainerEngineHost.PODMAN_VIRTUALIZED_WSL:
+      case ContainerEngineHost.DOCKER_VIRTUALIZED_WSL:
         programPath = t("Path to {{name}} executable inside the distribution", program);
         controllerScope = t("WSL distribution");
         break;
-      case ContainerEngine.PODMAN_VIRTUALIZED_LIMA:
-      case ContainerEngine.DOCKER_VIRTUALIZED_LIMA:
+      case ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA:
+      case ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA:
         programPath = t("Path to {{name}} executable inside the instance", program);
         controllerScope = t("LIMA instance");
         break;
-      case ContainerEngine.PODMAN_REMOTE:
-      case ContainerEngine.DOCKER_REMOTE:
+      case ContainerEngineHost.PODMAN_REMOTE:
+      case ContainerEngineHost.DOCKER_REMOTE:
         programPath = t("Path to {{name}} executable inside the ssh connection", program);
         controllerScope = t("SSH Host");
         break;
@@ -90,34 +92,36 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       controllerScope,
       programPath
     };
-  }, [t, osType, engine, controller, program]);
+  }, [t, osType, host, controller, program]);
   const controllerScopeLabel = labels.controllerScope;
   const flags = useMemo(() => {
     // Options
     const withOSTypeSelect = false;
     const withController = [
-      ContainerEngine.PODMAN_VIRTUALIZED_VENDOR,
-      ContainerEngine.PODMAN_VIRTUALIZED_WSL,
-      ContainerEngine.PODMAN_VIRTUALIZED_LIMA,
-      ContainerEngine.PODMAN_REMOTE,
-      // ContainerEngine.DOCKER_VIRTUALIZED_VENDOR, // No scopes exist for Docker - such as Podman machines
-      ContainerEngine.DOCKER_VIRTUALIZED_WSL,
-      ContainerEngine.DOCKER_VIRTUALIZED_LIMA,
-      ContainerEngine.DOCKER_REMOTE
-    ].includes(engine);
-    const withCustomControllerPath = withController && ![ContainerEngine.PODMAN_VIRTUALIZED_WSL, ContainerEngine.DOCKER_VIRTUALIZED_WSL].includes(engine);
+      ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
+      ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+      ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+      ContainerEngineHost.PODMAN_REMOTE,
+      // ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR, // No scopes exist for Docker - such as Podman machines
+      ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
+      ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
+      ContainerEngineHost.DOCKER_REMOTE
+    ].includes(host);
+    const withCustomControllerPath = withController && ![ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(host);
     const withCustomControllerScope = withController;
-    const withCustomProgramPath = engine !== ContainerEngine.PODMAN_VIRTUALIZED_VENDOR;
-    const withCustomApiConnectionUri = engine !== ContainerEngine.PODMAN_VIRTUALIZED_VENDOR;
+    const withCustomProgramPath = host !== ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
+    const withCustomApiConnectionUri = host !== ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
+    const withCustomApiConnectionRelay = host !== ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
     const withScopeSelected = !isEmpty(controllerScopeName);
-    const withApiRelay = ![ContainerEngine.DOCKER_NATIVE, ContainerEngine.PODMAN_NATIVE].includes(engine);
+    const withApiRelay = ![ContainerEngineHost.DOCKER_NATIVE, ContainerEngineHost.PODMAN_NATIVE].includes(host);
     const programWidgetPosition = withController ? "after-scope" : "before-controller";
     // Flags
     const isProgramBrowseEnabled = isNativeApplication && !withController;
     const isCustomApiConnectionUriReadonly = isCustomApiConnectionUriEditable ? false : !withCustomApiConnectionUri;
-    const isCustomApiConnectionRelayReadonly = isCustomApiConnectionUriEditable ? false : !withCustomApiConnectionUri;
+    const isCustomApiConnectionRelayReadonly = isCustomApiConnectionRelayEditable ? false : !withCustomApiConnectionRelay;
     const isCustomProgramPathReadonly = isCustomProgramPathEditable ? false : !withCustomProgramPath;
     let isCustomApiConnectionUriDetectDisabled = false;
+    let isCustomApiConnectionRelayDetectDisabled = false;
     let executableDetectButtonTitle = "";
     let isProgramPathDetectDisabled = false;
     if (withCustomControllerScope) {
@@ -125,10 +129,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       if (withScopeSelected) {
         isProgramPathDetectDisabled = !controllerScope?.Usable;
         isCustomApiConnectionUriDetectDisabled = !controllerScope?.Usable;
+        isCustomApiConnectionRelayDetectDisabled = !controllerScope?.Usable;
       } else {
         executableDetectButtonTitle = t("{{label}} must first be selected", { label: controllerScopeLabel });
         isProgramPathDetectDisabled = true;
         isCustomApiConnectionUriDetectDisabled = true;
+        isCustomApiConnectionRelayDetectDisabled = true;
       }
     }
     if (!isCustomProgramPathEditable) {
@@ -141,17 +147,29 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       withCustomControllerScope,
       withCustomProgramPath,
       withCustomApiConnectionUri,
+      withCustomApiConnectionRelay,
       withApiRelay,
       programWidgetPosition,
       isProgramBrowseEnabled,
       isCustomApiConnectionUriDetectDisabled,
+      isCustomApiConnectionRelayDetectDisabled,
       isCustomApiConnectionUriReadonly,
       isCustomApiConnectionRelayReadonly,
       isCustomProgramPathReadonly,
       isProgramPathDetectDisabled,
       executableDetectButtonTitle
     };
-  }, [t, engine, controllerScope, isNativeApplication, isCustomProgramPathEditable, isCustomApiConnectionUriEditable, controllerScopeName, controllerScopeLabel]);
+  }, [
+    t,
+    host,
+    controllerScope,
+    isNativeApplication,
+    isCustomProgramPathEditable,
+    isCustomApiConnectionUriEditable,
+    isCustomApiConnectionRelayEditable,
+    controllerScopeName,
+    controllerScopeLabel
+  ]);
 
   // Helpers
   const resetFormData = useCallback(
@@ -252,57 +270,57 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   const onHostOSTypeChange = useCallback((e: OperatingSystem) => {
     setHostOSType(e);
   }, []);
-  const onContainerRuntimeDetectClick = useCallback(
-    async (runtime: ContainerRuntime) => {
+  const onContainerEngineDetectClick = useCallback(
+    async (engine: ContainerEngine) => {
       try {
         setPending(true);
-        setContainerEngineOptions(connectors.filter((it) => it.runtime === runtime));
-        console.debug("Detecting container runtime", runtime);
+        setContainerEngineHostOptions(connectors.filter((it) => it.engine === engine));
+        console.debug("Detecting container engine", engine);
       } catch (error: any) {
-        console.error("Error during container runtime detection", error);
-        Notification.show({ message: t("Error during runtime detection"), intent: Intent.DANGER });
+        console.error("Error during container engine detection", error);
+        Notification.show({ message: t("Error during engine detection"), intent: Intent.DANGER });
       } finally {
         setPending(false);
       }
     },
     [t, connectors]
   );
-  const onContainerRuntimeChange = useCallback(
-    async (runtime: ContainerRuntime) => {
+  const onContainerEngineChange = useCallback(
+    async (engine: ContainerEngine) => {
       try {
         setPending(true);
-        setContainerEngineOptions(connectors.filter((it) => it.runtime === runtime));
-        console.debug("Detecting container runtime", runtime);
-        const updated = createConnectorBy(osType, runtime);
+        setContainerEngineHostOptions(connectors.filter((it) => it.engine === engine));
+        console.debug("Detecting container engine", engine);
+        const updated = createConnectorBy(osType, engine);
         resetFormData(updated);
       } catch (error: any) {
-        console.error("Error during container runtime detection", error);
+        console.error("Error during container engine detection", error);
       } finally {
         setPending(false);
       }
     },
     [connectors, resetFormData, osType]
   );
-  const onContainerEngineDetectClick = useCallback(
-    async (engine: ContainerEngine) => {
+  const onContainerEngineHostDetectClick = useCallback(
+    async (host: ContainerEngineHost) => {
       try {
         setPending(true);
-        console.debug("Detecting container engine", engine);
+        console.debug("Detecting container host", host);
       } catch (error: any) {
-        console.error("Unable to detect engine", error);
-        Notification.show({ message: t("Error during engine detection"), intent: Intent.DANGER });
+        console.error("Unable to detect host", error);
+        Notification.show({ message: t("Error during engine host detection"), intent: Intent.DANGER });
       } finally {
         setPending(false);
       }
     },
     [t]
   );
-  const onContainerEngineChange = useCallback(
-    async (engine: ContainerEngine) => {
+  const onContainerEngineHostChange = useCallback(
+    async (host: ContainerEngineHost) => {
       try {
         setPending(true);
-        console.debug("Detecting container engine", engine);
-        const connector = createConnectorBy(osType, runtime, engine);
+        console.debug("Detecting container host", host);
+        const connector = createConnectorBy(osType, engine, host);
         const updated = await fetchControllerScopes(connector, true);
         resetFormData(updated);
       } catch (error: any) {
@@ -312,7 +330,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(false);
       }
     },
-    [t, resetFormData, osType, runtime, fetchControllerScopes]
+    [t, resetFormData, osType, engine, fetchControllerScopes]
   );
   const onControllerScopeStartClick = useCallback(
     async (scope: ControllerScope) => {
@@ -372,8 +390,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         updated.settings.program.version = ""; // clear version on scope change
         if (updated.settings.controller) {
           updated.settings.controller.scope = scope.Name;
-          // updated.settings.controller.path = ""; // clear path on scope change
-          // updated.settings.controller.version = ""; // clear version on scope change
         }
         console.debug("<< Controller scope updated", JSON.parse(JSON.stringify(updated)));
         resetFormData(updated);
@@ -392,7 +408,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       console.debug(">> Detecting API connection URI", connection);
       setPending(true);
       const instance = Application.getInstance();
-      const connectionApi = await instance.getConnectionApi<AbstractClientEngine>(connection, false);
+      const connectionApi = await instance.getConnectionApi<AbstractContainerEngineHostClient>(connection, false);
       const apiConnection = await connectionApi.getApiConnection();
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);
@@ -404,11 +420,32 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       setPending(false);
     }
   }, [t, getValues, setValue]);
+  const onApiConnectionRelayDetectClick = useCallback(async () => {
+    const connection = getValues();
+    try {
+      console.debug(">> Detecting API connection relay", connection);
+      setPending(true);
+      const instance = Application.getInstance();
+      const connectionApi = await instance.getConnectionApi<AbstractContainerEngineHostClient>(connection, false);
+      const apiConnection = await connectionApi.getApiConnection();
+      setValue("settings.api.connection.uri", apiConnection.uri);
+      setValue("settings.api.connection.relay", apiConnection.relay);
+      console.debug("<< Detecting API connection relay", connection);
+    } catch (error: any) {
+      console.error("<< Detecting API connection relay", error);
+      Notification.show({ message: t("Error during API connection relay detection"), intent: Intent.DANGER });
+    } finally {
+      setPending(false);
+    }
+  }, [t, getValues, setValue]);
   const onToggleCustomProgramPathEditability = useCallback(() => {
     setCustomProgramPathEditable((prev) => !prev);
   }, []);
   const onToggleCustomApiConnectionUriEditability = useCallback(() => {
     setCustomApiConnectionUriEditable((prev) => !prev);
+  }, []);
+  const onToggleCustomApiConnectionRelayEditability = useCallback(() => {
+    setCustomApiConnectionRelayEditable((prev) => !prev);
   }, []);
   const onExecutableSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -441,12 +478,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         if (
           [
             // Podman
-            ContainerEngine.PODMAN_VIRTUALIZED_WSL,
-            ContainerEngine.PODMAN_VIRTUALIZED_LIMA,
+            ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+            ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
             // Docker
-            ContainerEngine.DOCKER_VIRTUALIZED_WSL,
-            ContainerEngine.DOCKER_VIRTUALIZED_LIMA
-          ].includes(connector.engine)
+            ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
+            ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA
+          ].includes(connector.host)
         ) {
           insideScope = true;
         }
@@ -481,22 +518,22 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         if (
           [
             // Podman
-            ContainerEngine.PODMAN_VIRTUALIZED_WSL,
-            ContainerEngine.PODMAN_VIRTUALIZED_LIMA,
-            ContainerEngine.PODMAN_REMOTE,
+            ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+            ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+            ContainerEngineHost.PODMAN_REMOTE,
             // Docker
-            ContainerEngine.DOCKER_VIRTUALIZED_WSL,
-            ContainerEngine.DOCKER_VIRTUALIZED_LIMA,
-            ContainerEngine.DOCKER_REMOTE
-          ].includes(connector.engine)
+            ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
+            ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
+            ContainerEngineHost.DOCKER_REMOTE
+          ].includes(connector.host)
         ) {
           insideScope = true;
         }
         if (detectTarget === "program" && !insideScope) {
           insideScope = [
             // Podman - supports Podman machines
-            ContainerEngine.PODMAN_VIRTUALIZED_VENDOR
-          ].includes(connector.engine);
+            ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR
+          ].includes(connector.host);
         }
         if (detectTarget === "controller") {
           insideScope = false;
@@ -598,7 +635,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   }, [resetFormData, connection, fetchControllerScopes]);
 
   return (
-    <form className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
+    <form className={classNames(Classes.DIALOG_BODY, "ManageConnectionForm")} onSubmit={onSubmit}>
       <ButtonGroup fill>
         <Button
           disabled={pending}
@@ -609,7 +646,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           type="submit"
         />
       </ButtonGroup>
-      <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
+      {pending && (
+        <div className="AppDrawerPendingIndicator">
+          <Spinner intent={Intent.SUCCESS} size={SpinnerSize.SMALL} />
+          <span>{t("Please wait ...")}</span>
+        </div>
+      )}
       <div className="AppDataForm" data-form="connection.create">
         <FormGroup disabled={pending} label={t("Connection name")} labelFor="name" helperText={t("Human friendly name to help identify this connection")}>
           <Controller
@@ -642,30 +684,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           </FormGroup>
         ) : null}
 
-        <FormGroup disabled={pending} label={t("Container runtime")} labelFor="runtime">
-          <Controller
-            control={control}
-            name="runtime"
-            render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-              return (
-                <RuntimeSelect
-                  pending={pending}
-                  disabled={pending}
-                  withoutDetect
-                  items={ContainerRuntimeOptions}
-                  runtime={value}
-                  inputProps={{ disabled: pending, id: name, name, onBlur, inputRef: ref }}
-                  onChange={async (item) => {
-                    await onChange(item);
-                    await onContainerRuntimeChange(item);
-                  }}
-                  onDetect={onContainerRuntimeDetectClick}
-                />
-              );
-            }}
-          />
-        </FormGroup>
-
         <FormGroup disabled={pending} label={t("Container engine")} labelFor="engine">
           <Controller
             control={control}
@@ -676,7 +694,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                   pending={pending}
                   disabled={pending}
                   withoutDetect
-                  items={containerEngineOptions}
+                  items={ContainerEngineOptions}
                   engine={value}
                   inputProps={{ disabled: pending, id: name, name, onBlur, inputRef: ref }}
                   onChange={async (item) => {
@@ -690,11 +708,35 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           />
         </FormGroup>
 
-        {/* Program path widget */}
-        {flags.programWidgetPosition === "before-controller" && engine ? programPathWidget : null}
+        <FormGroup disabled={pending} label={t("Container host")} labelFor="host">
+          <Controller
+            control={control}
+            name="host"
+            render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+              return (
+                <EngineHostSelect
+                  pending={pending}
+                  disabled={pending}
+                  withoutDetect
+                  items={containerEngineHostOptions}
+                  host={value}
+                  inputProps={{ disabled: pending, id: name, name, onBlur, inputRef: ref }}
+                  onChange={async (item) => {
+                    await onChange(item);
+                    await onContainerEngineHostChange(item);
+                  }}
+                  onDetect={onContainerEngineHostDetectClick}
+                />
+              );
+            }}
+          />
+        </FormGroup>
 
         {/* Program path widget */}
-        {flags.withCustomControllerPath && engine ? (
+        {flags.programWidgetPosition === "before-controller" && host ? programPathWidget : null}
+
+        {/* Program path widget */}
+        {flags.withCustomControllerPath && host ? (
           <FormGroup
             disabled={pending}
             label={t("Path to {{name}} executable", controller)}
@@ -739,7 +781,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         ) : null}
 
         {/* Controller scope widget*/}
-        {flags.withCustomControllerScope && engine ? (
+        {flags.withCustomControllerScope && host ? (
           <FormGroup disabled={pending} label={labels.controllerScope} labelFor="settings.controller.scope">
             <Controller
               control={control}
@@ -769,7 +811,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         ) : null}
 
         {/* Connection api start */}
-        {engine ? (
+        {host ? (
           <FormGroup className="ContainerStartupFormGroup" disabled={pending} labelFor="settings.api.autoStart" label={t("Container startup")}>
             <Controller
               control={control}
@@ -777,7 +819,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
               render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                 return (
                   <Switch
-                    label={t("Auto-start the runtime engine if not already running")}
+                    label={t("Auto-start the engine host if not already running")}
                     inline
                     autoFocus
                     disabled={pending}
@@ -794,7 +836,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           </FormGroup>
         ) : null}
 
-        {engine ? (
+        {host ? (
           <Controller
             control={control}
             name="settings.mode"
@@ -804,6 +846,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                   <Tab
                     id="mode.automatic"
                     title={t("Automatic")}
+                    disabled={pending}
                     panel={
                       <>
                         <UL>
@@ -821,6 +864,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                   <Tab
                     id="mode.manual"
                     title={t("Manual")}
+                    disabled={pending}
                     panel={
                       <>
                         {flags.programWidgetPosition === "after-scope" ? programPathWidget : null}
@@ -831,7 +875,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                             control={control}
                             name="settings.api.connection.uri"
                             render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-                              const apiConnectionUriDetectButtonTitle = "";
                               return (
                                 <div className="ApiConnectionUriInput">
                                   <InputGroup
@@ -869,7 +912,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                                       disabled={pending || flags.isCustomApiConnectionUriDetectDisabled}
                                       small
                                       text={t("Detect")}
-                                      title={apiConnectionUriDetectButtonTitle}
                                       intent={Intent.SUCCESS}
                                       onClick={onApiConnectionUriDetectClick}
                                     />
@@ -888,20 +930,47 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                               name="settings.api.connection.relay"
                               render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
                                 return (
-                                  <InputGroup
-                                    fill
-                                    autoFocus
-                                    readOnly={flags.isCustomApiConnectionRelayReadonly}
-                                    disabled={pending || engine === ContainerEngine.DOCKER_VIRTUALIZED_VENDOR}
-                                    id={name}
-                                    name={name}
-                                    value={value || ""}
-                                    onBlur={onBlur}
-                                    onChange={onChange}
-                                    inputRef={ref}
-                                    placeholder={t("auto")}
-                                    intent={invalid ? Intent.DANGER : Intent.NONE}
-                                  />
+                                  <div className="ApiConnectionUriInput">
+                                    <InputGroup
+                                      fill
+                                      autoFocus
+                                      readOnly={flags.isCustomApiConnectionRelayReadonly}
+                                      disabled={pending || host === ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR}
+                                      id={name}
+                                      name={name}
+                                      value={value || ""}
+                                      onBlur={onBlur}
+                                      onChange={onChange}
+                                      inputRef={ref}
+                                      intent={invalid ? Intent.DANGER : Intent.NONE}
+                                      placeholder={t("auto")}
+                                      rightElement={
+                                        flags.withCustomApiConnectionRelay ? undefined : (
+                                          <ButtonGroup minimal>
+                                            <Button
+                                              disabled={pending}
+                                              small
+                                              title={t("Managed by {{name}} - click to override", program)}
+                                              icon={isCustomApiConnectionRelayEditable ? IconNames.UNLOCK : IconNames.LOCK}
+                                              intent={Intent.NONE}
+                                              data-target="program"
+                                              onClick={onToggleCustomApiConnectionRelayEditability}
+                                            />
+                                          </ButtonGroup>
+                                        )
+                                      }
+                                    />
+                                    <Divider />
+                                    <ButtonGroup minimal>
+                                      <Button
+                                        disabled={pending || flags.isCustomApiConnectionRelayDetectDisabled}
+                                        small
+                                        text={t("Detect")}
+                                        intent={Intent.SUCCESS}
+                                        onClick={onApiConnectionRelayDetectClick}
+                                      />
+                                    </ButtonGroup>
+                                  </div>
                                 );
                               }}
                             />

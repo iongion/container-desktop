@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerRuntime, Registry } from "@/env/Types";
+import { ContainerEngine, Registry } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -85,13 +85,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
     },
     [performActionCommand]
   );
-  const canCreateRegistry = currentConnector?.runtime === ContainerRuntime.PODMAN;
+  const canCreateRegistry = currentConnector?.engine === ContainerEngine.PODMAN;
   const createButton = withoutCreate ? null : (
     <Button
       small
       intent={Intent.SUCCESS}
       disabled={!canCreateRegistry}
-      title={canCreateRegistry ? t("Click to configure a new registry") : t("This feature is not available with current connection engine")}
+      title={canCreateRegistry ? t("Click to configure a new registry") : t("This feature is not available with current connection host")}
       text={t("Configure")}
       icon={IconNames.PLUS}
       onClick={onCreateClick}

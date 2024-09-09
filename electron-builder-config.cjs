@@ -85,13 +85,12 @@ const config = {
   },
   win: {
     target: ["appx", "nsis"],
-    icon: "icons/icon.png"
+    icon: "icons/icon.ico"
   },
   appx: {
-    applicationId,
-    identityName: pkg.name,
-    publisher: "CN=PodmanDesktopCompanion.iongion.github.io",
-    publisherDisplayName: "iongion"
+    identityName: "IonutStoica.PodmanDesktopCompanion",
+    publisher: "CN=52408AA8-2ECC-4E48-9A2C-6C1F69841C79",
+    publisherDisplayName: "Ionut Stoica"
   },
   linux: {
     icon: "icons/appIcon.svg",

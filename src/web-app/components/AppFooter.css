@@ -37,20 +37,20 @@
   background-color: #f00;
 }
 
-[data-theme="bp5-dark"] [data-runtime="podman"] .AppFooter,
-[data-theme="bp5-dark"] [data-runtime="podman"] .AppFooterNavbar {
+[data-theme="bp5-dark"] [data-engine="podman"] .AppFooter,
+[data-theme="bp5-dark"] [data-engine="podman"] .AppFooterNavbar {
   background-color: #4f175b;
 }
-[data-theme="bp5-light"] [data-runtime="podman"] .AppFooter,
-[data-theme="bp5-light"] [data-runtime="podman"] .AppFooterNavbar {
+[data-theme="bp5-light"] [data-engine="podman"] .AppFooter,
+[data-theme="bp5-light"] [data-engine="podman"] .AppFooterNavbar {
   background-color: #cfcfcf;
 }
 
-[data-theme="bp5-dark"] [data-runtime="docker"] .AppFooter,
-[data-theme="bp5-dark"] [data-runtime="docker"] .AppFooterNavbar {
+[data-theme="bp5-dark"] [data-engine="docker"] .AppFooter,
+[data-theme="bp5-dark"] [data-engine="docker"] .AppFooterNavbar {
   background-color: #02091f;
 }
-[data-theme="bp5-light"] [data-runtime="docker"] .AppFooter,
-[data-theme="bp5-light"] [data-runtime="docker"] .AppFooterNavbar {
+[data-theme="bp5-light"] [data-engine="docker"] .AppFooter,
+[data-theme="bp5-light"] [data-engine="docker"] .AppFooterNavbar {
   background-color: #7397a8;
 }

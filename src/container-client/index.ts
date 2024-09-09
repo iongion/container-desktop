@@ -7,14 +7,14 @@ import { Connection, OperatingSystem } from "@/env/Types";
 import { Docker } from "./runtimes/docker";
 import { Podman } from "./runtimes/podman";
 
-export const RUNTIMES = [Podman.Runtime, Docker.Runtime];
-export async function createClientEngine(connection: Connection, osType: OperatingSystem) {
-  const Runtime = RUNTIMES.find((Runtime) => Runtime.RUNTIME === connection.runtime);
-  if (!Runtime) {
-    throw new Error(`No runtime found for ${connection.runtime}`);
+export const RUNTIMES = [Podman.Engine, Docker.Engine];
+export async function createContainerEngineHostClient(connection: Connection, osType: OperatingSystem) {
+  const Engine = RUNTIMES.find((Engine) => Engine.ENGINE === connection.engine);
+  if (!Engine) {
+    throw new Error(`No engine found for ${connection.engine}`);
   }
-  const runtime = await Runtime.create(osType);
-  const clientEngine = await runtime.createEngineByName(connection.engine, connection.id);
+  const engine = await Engine.create(osType);
+  const clientEngine = await engine.createEngineHostClientByName(connection.host, connection.id);
   clientEngine.setSettings(connection.settings);
   return clientEngine;
 }

@@ -9,7 +9,7 @@ import {
   CommandExecutionResult,
   Connection,
   ContainerEngine,
-  ContainerRuntime,
+  ContainerEngineHost,
   ControllerScope,
   EngineConnectorAvailability,
   EngineConnectorSettings,
@@ -26,16 +26,16 @@ import { deepMerge } from "@/utils";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { findProgramPath, findProgramVersion } from "../../detector";
 
-export abstract class AbstractRuntime {
-  public static RUNTIME: ContainerRuntime;
-  public RUNTIME!: ContainerRuntime;
-  public ENGINES: (typeof AbstractClientEngine)[] = [];
+export abstract class AbstractEngine {
+  public static ENGINE: ContainerEngine;
+  public ENGINE!: ContainerEngine;
+  public ENGINE_HOST_CLIENTS: (typeof AbstractContainerEngineHostClient)[] = [];
 
   public osType: OperatingSystem;
 
   public logger!: ILogger;
 
-  static create(a, b?: any): Promise<AbstractRuntime> {
+  static create(a, b?: any): Promise<AbstractEngine> {
     throw new Error("Must implement");
   }
 
@@ -44,25 +44,25 @@ export abstract class AbstractRuntime {
   }
 
   async setup() {
-    this.logger = createLogger(`${this.RUNTIME}.runtime`);
-    this.logger.debug(this.RUNTIME, "Created adapter");
+    this.logger = createLogger(`${this.ENGINE}.host`);
+    this.logger.debug(this.ENGINE, "Created adapter");
   }
 
-  async createEngine(Engine: typeof AbstractClientEngine, id: string): Promise<AbstractClientEngine> {
-    return await Engine.create(id, this.osType);
+  async createEngineHostClient(host: typeof AbstractContainerEngineHostClient, id: string): Promise<AbstractContainerEngineHostClient> {
+    return await host.create(id, this.osType);
   }
 
-  async createEngineByName(engine: ContainerEngine, id: string) {
-    const Engine = this.ENGINES.find((it) => it.ENGINE === engine);
-    if (!Engine) {
-      this.logger.error("Unable to find specified engine", engine, "within known engines", this.ENGINES);
-      throw new Error("Unable to find specified engine");
+  async createEngineHostClientByName(host: ContainerEngineHost, id: string) {
+    const EngineHostClient = this.ENGINE_HOST_CLIENTS.find((it) => it.HOST === host);
+    if (!EngineHostClient) {
+      this.logger.error("Unable to find specified host", host, "within known engines", this.ENGINE_HOST_CLIENTS);
+      throw new Error("Unable to find specified host");
     }
-    return await this.createEngine(Engine, id);
+    return await this.createEngineHostClient(EngineHostClient, id);
   }
 }
 
-export interface ClientEngine {
+export interface ContainerEngineHostClient {
   startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions);
   isEngineAvailable();
   getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
@@ -80,14 +80,14 @@ export interface ClientEngine {
   getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings): Promise<SystemInfo>;
 }
 
-export abstract class AbstractClientEngine implements ClientEngine {
-  public static ENGINE: ContainerEngine;
+export abstract class AbstractContainerEngineHostClient implements ContainerEngineHostClient {
+  public static HOST: ContainerEngineHost;
 
   public LABEL: string = "Abstract";
   public PROGRAM!: string;
   public CONTROLLER!: string;
-  public RUNTIME!: ContainerRuntime;
   public ENGINE!: ContainerEngine;
+  public HOST!: ContainerEngineHost;
   public id!: string;
 
   protected osType: OperatingSystem;
@@ -137,8 +137,8 @@ export abstract class AbstractClientEngine implements ClientEngine {
         name: "Current",
         label: "Current",
         settings: this.settings,
-        runtime: this.RUNTIME,
         engine: this.ENGINE,
+        host: this.HOST,
         id: this.id
       };
       this.containerApiClient = new ContainerClient(connection, createApplicationApiDriver(connection));
@@ -146,14 +146,14 @@ export abstract class AbstractClientEngine implements ClientEngine {
     return this.containerApiClient;
   }
 
-  static create(id: string, osType: OperatingSystem): Promise<AbstractClientEngine> {
+  static create(id: string, osType: OperatingSystem): Promise<AbstractContainerEngineHostClient> {
     throw new Error("Must implement");
   }
 
   async setup() {
     this.runner = new Runner(this);
-    this.logger = createLogger("engine.client");
-    this.logger.debug(this.id, "Client engine created", this.settings);
+    this.logger = createLogger("host.client");
+    this.logger.debug(this.id, "Client host created", this.settings);
   }
 
   async setSettings(settings: EngineConnectorSettings) {
@@ -203,6 +203,8 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
+    const settings = customSettings || (await this.getSettings());
+    await Command.StopConnectionServices(this.id, settings);
     if (!this.runner) {
       return true;
     }
@@ -211,7 +213,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
       return false;
     }
     this.logger.debug("Stopping API - begin");
-    const stopped = await this.runner.stopApi(customSettings, opts);
+    const stopped = await this.runner.stopApi(settings, opts);
     if (stopped) {
       this.apiStarted = false;
     }
@@ -264,7 +266,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async isApiRunning() {
-    systemNotifier.transmit("engine.availability", {
+    systemNotifier.transmit("host.availability", {
       trace: `Checking if API is running`
     });
     this.logger.debug(this.id, ">> Checking if API is running");
@@ -281,7 +283,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
     };
     const client = await this.getContainerApiClient();
     const driver = client.getDriver();
-    systemNotifier.transmit("engine.availability", {
+    systemNotifier.transmit("host.availability", {
       trace: `Performing api health check`
     });
     try {
@@ -380,7 +382,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
 
   async resetSystem() {
     if (this.PROGRAM === "docker") {
-      this.logger.debug(this.id, "No such concept for current engine - skipping");
+      this.logger.debug(this.id, "No such concept for current host - skipping");
       return true;
     }
     const settings = await this.getSettings();
@@ -429,31 +431,31 @@ export abstract class AbstractClientEngine implements ClientEngine {
   async getAvailability(userSettings?: EngineConnectorSettings) {
     this.logger.debug(this.id, ">> Checking availability");
     const settings = userSettings || (await this.getSettings());
-    systemNotifier.transmit("engine.availability", {
-      trace: `Detecting engine availability`
+    systemNotifier.transmit("host.availability", {
+      trace: `Detecting host availability`
     });
     const check = await this.isEngineAvailable();
     const availability: EngineConnectorAvailability = {
       enabled: check.success,
-      engine: false,
+      host: false,
       controller: false,
       controllerScope: false,
       program: false,
       api: false,
       report: {
-        engine: "Not checked",
+        host: "Not checked",
         controller: "Not checked",
         controllerScope: "Not checked",
         program: "Not checked",
         api: "Not checked"
       }
     };
-    availability.report.engine = check.details || "";
+    availability.report.host = check.details || "";
     if (check.success) {
-      availability.engine = true;
+      availability.host = true;
     }
-    if (availability.engine) {
-      systemNotifier.transmit("engine.availability", {
+    if (availability.host) {
+      systemNotifier.transmit("host.availability", {
         trace: `Detecting host program availability`
       });
       const controllerAvailability = await this.isControllerAvailable(settings);
@@ -462,7 +464,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
         availability.controller = true;
       }
     } else {
-      availability.report.controller = "Not checked - engine not available";
+      availability.report.controller = "Not checked - host not available";
     }
     if (availability.controller) {
       const controllerScope = await this.isControllerAvailable(settings);
@@ -474,7 +476,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
       availability.report.controllerScope = "Not checked - controller not available";
     }
     if (availability.controllerScope) {
-      systemNotifier.transmit("engine.availability", {
+      systemNotifier.transmit("host.availability", {
         trace: `Detecting guest program availability`
       });
       const program = await this.isProgramAvailable(settings);
@@ -494,7 +496,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
       availability.api = false;
       availability.report.api = "API is not running";
     }
-    systemNotifier.transmit("engine.availability", {
+    systemNotifier.transmit("host.availability", {
       trace: `Availability check complete`
     });
     this.logger.debug(this.id, "<< Checking availability", availability);
@@ -527,7 +529,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
-    systemNotifier.transmit("engine.availability", {
+    systemNotifier.transmit("host.availability", {
       trace: `Detecting host ${program.name} program path and version`
     });
     const output = deepMerge({}, program);
@@ -541,7 +543,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
-    systemNotifier.transmit("engine.availability", {
+    systemNotifier.transmit("host.availability", {
       trace: `Detecting guest ${program.name} program path and version`
     });
     const executor = async (path: string, args: string[]) => {
@@ -563,7 +565,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
   }
 
   async getConnectionDataDir() {
-    systemNotifier.transmit("engine.availability", {
+    systemNotifier.transmit("host.availability", {
       trace: `Detecting connection system data dir`
     });
     let dataDir: string | undefined;
@@ -582,7 +584,7 @@ export abstract class AbstractClientEngine implements ClientEngine {
             }
           }
         } else {
-          if (this.ENGINE === ContainerEngine.PODMAN_VIRTUALIZED_VENDOR) {
+          if (this.HOST === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
             dataDir = await Platform.getUserDataPath();
           } else {
             this.logger.error(this.id, "Controller scope is not defined", this.settings.controller);

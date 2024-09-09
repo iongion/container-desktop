@@ -27,3 +27,25 @@
   margin: 0;
   padding: 0;
 }
+.ManageConnectionForm {
+  position: relative;
+}
+.ManageConnectionForm .AppDrawerPendingIndicator {
+  position: fixed;
+  width: 180px;
+  height: 30px;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  padding-left: 7px;
+  justify-content: flex-start;
+  align-items: center;
+  vertical-align: middle;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  z-index: 100;
+  border-radius: 15px;
+}
+.ManageConnectionForm .AppDrawerPendingIndicator span {
+  padding-left: 10px;
+}

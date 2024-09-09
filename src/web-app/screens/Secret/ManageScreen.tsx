@@ -97,5 +97,5 @@ Screen.Metadata = {
   LeftIcon: IconNames.KEY
 };
 Screen.isAvailable = (currentConnector?: Connector) => {
-  return !(currentConnector?.engine || "").startsWith("docker");
+  return !(currentConnector?.host || "").startsWith("docker");
 };

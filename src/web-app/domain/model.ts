@@ -40,12 +40,13 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       registry.getStore().getActions().insertBootstrapPhase(event);
     }
   });
-  systemNotifier.on("engine.availability", (event) => {
+  systemNotifier.on("host.availability", (event) => {
     const state = registry.getStore().getState();
     if (state.phase === AppBootstrapPhase.STARTING) {
       registry.getStore().getActions().insertBootstrapPhase(event);
     }
   });
+  let checkForUpdatePerformed = false;
   const model: AppModel = {
     phase: AppBootstrapPhase.INITIAL,
     pending: false,
@@ -158,7 +159,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       let startApi = options?.startApi || connection?.settings?.api?.autoStart || false;
       const app = document.querySelector("body");
       if (app) {
-        app.setAttribute("data-runtime", connection?.runtime || "podman");
+        app.setAttribute("data-engine", connection?.engine || "podman");
       }
       return registry.withPending(async () => {
         const instance = Application.getInstance();
@@ -235,7 +236,10 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
             if (nextPhase === AppBootstrapPhase.READY || nextPhase === AppBootstrapPhase.FAILED) {
               const state = store.getState();
               if (state?.userSettings?.checkLatestVersion) {
-                delayCheckUpdate();
+                if (!checkForUpdatePerformed) {
+                  checkForUpdatePerformed = true;
+                  delayCheckUpdate();
+                }
               }
             }
             if (currentConnector.availability.api) {
@@ -329,7 +333,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           return updated;
         } catch (error: any) {
           // TODO: Notify the user
-          console.error("Error during engine user preferences update", error);
+          console.error("Error during host user preferences update", error);
         }
       });
     }),
