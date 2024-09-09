@@ -27,21 +27,23 @@ import {
   OperatingSystem,
   Program,
   RegistriesMap,
+  Registry,
   RegistryPullOptions,
   RegistrySearchOptions
 } from "@/env/Types";
 import { createLogger, getLevel, setLevel } from "@/logger";
 import { deepMerge } from "@/utils";
 
-const AUTOMATIC_REGISTRIES = [
+const AUTOMATIC_REGISTRIES: Registry[] = [
   {
     id: "system",
-    name: "Podman configuration",
+    name: "Configuration",
     created: new Date().toISOString(),
     weight: -1,
     isRemovable: false,
     isSystem: true,
-    enabled: true
+    enabled: true,
+    runtime: [Podman.Runtime.RUNTIME, Docker.Runtime.RUNTIME]
   }
 ];
 const PROPOSED_REGISTRIES = [
@@ -52,7 +54,8 @@ const PROPOSED_REGISTRIES = [
     weight: 0,
     isRemovable: true,
     isSystem: false,
-    enabled: true
+    enabled: true,
+    runtime: [Podman.Runtime.RUNTIME]
   },
   {
     id: "docker.io",
@@ -61,7 +64,8 @@ const PROPOSED_REGISTRIES = [
     weight: 1000,
     isRemovable: true,
     isSystem: false,
-    enabled: true
+    enabled: true,
+    runtime: [Podman.Runtime.RUNTIME, Docker.Runtime.RUNTIME]
   }
 ];
 
@@ -704,27 +708,26 @@ export class Application {
       programArgs.push(...filtersList);
       programArgs.push(...[`${registry.name}/${term}`, "--format", "json"]);
     } else if (isDocker) {
+      programArgs.push("--format", "json");
       if (filters?.isOfficial) {
-        filtersList.push("--filter", "is-official=[OK]");
-      }
-      if (filters?.isAutomated) {
-        filtersList.push("--filter", "is-automated=[OK]");
+        filtersList.push("--filter", "is-official=true");
       }
       programArgs.push(...filtersList);
-      programArgs.push(...[`${registry.name}/${term}`, "--format", "{{json .}}"]);
+      programArgs.push(...[term]);
     }
     const currentApi = this.getCurrentEngineConnectionApi();
     let result;
     if (currentApi.isScoped()) {
       const { controller } = await currentApi.getSettings();
-      result = await currentApi.runScopeCommand(program.path, programArgs, controller?.scope || "");
+      result = await currentApi.runScopeCommand(program.path || program.name, programArgs, controller?.scope || "");
     } else {
-      result = await currentApi.runHostCommand(program.path, programArgs);
+      result = await currentApi.runHostCommand(program.path || program.name, programArgs);
     }
     if (!result.success) {
       this.logger.error("Unable to search", { term, registry }, result);
     } else {
       try {
+        // Docker outputs multiple JSON lines - not an array of objects
         const output = isDocker ? `[${(result.stdout || "").trim().split(/\r?\n/).join(",")}]` : result.stdout;
         if (output) {
           items = JSON.parse(output);
@@ -745,9 +748,9 @@ export class Application {
     const { program, controller } = await engine.getSettings();
     let result: CommandExecutionResult;
     if (engine.isScoped()) {
-      result = await engine.runScopeCommand(program.path, ["image", "pull", image], controller?.scope || "");
+      result = await engine.runScopeCommand(program.path || program.name, ["image", "pull", image], controller?.scope || "");
     } else {
-      result = await engine.runHostCommand(program.path, ["image", "pull", image]);
+      result = await engine.runHostCommand(program.path || program.name, ["image", "pull", image]);
     }
     return result;
   }

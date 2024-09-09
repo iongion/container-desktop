@@ -2,11 +2,12 @@ import { Switch } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 
-import { Registry, RegistrySearchFilters } from "@/env/Types";
+import { ContainerRuntime, Registry, RegistrySearchFilters } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useStoreState } from "@/web-app/domain/types";
 import { pathTo } from "@/web-app/Navigator";
 
+import { useTranslation } from "react-i18next";
 import "./ScreenHeader.css";
 
 // Screen header
@@ -31,6 +32,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   listRouteIcon,
   rightContent
 }: ScreenHeaderProps) => {
+  const { t } = useTranslation();
+  const currentConnector = useStoreState((state) => state.currentConnector);
   const isOfficial = useStoreState((actions) => actions.registry.official);
   const isAutomated = useStoreState((actions) => actions.registry.automated);
   const [filters, setFilters] = useState<RegistrySearchFilters>({ isOfficial, isAutomated });
@@ -63,6 +66,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     },
     [filters]
   );
+
   return (
     <AppScreenHeader
       searchTerm={searchTerm}
@@ -76,7 +80,14 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     >
       <div className="SearchFilters">
         <Switch label="Official" inline checked={filters.isOfficial} onChange={onFilterChange} data-filter="isOfficial" />
-        <Switch label="Automated" inline checked={filters.isAutomated} onChange={onFilterChange} data-filter="isAutomated" />
+        <Switch
+          label="Automated"
+          inline
+          checked={currentConnector?.runtime === ContainerRuntime.DOCKER ? false : filters.isAutomated}
+          onChange={onFilterChange}
+          data-filter="isAutomated"
+          disabled={currentConnector?.runtime === ContainerRuntime.DOCKER}
+        />
       </div>
     </AppScreenHeader>
   );

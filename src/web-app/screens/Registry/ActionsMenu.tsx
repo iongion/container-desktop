@@ -3,9 +3,9 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Registry } from "@/env/Types";
+import { ContainerRuntime, Registry } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 
@@ -29,6 +29,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
+  const currentConnector = useStoreState((state) => state.currentConnector);
   const registryFetch = useStoreActions((actions) => actions.registry.registryFetch);
   const registryRemove = useStoreActions((actions) => actions.registry.registryRemove);
   const performActionCommand = useCallback(
@@ -84,14 +85,25 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
     },
     [performActionCommand]
   );
-  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Configure")} icon={IconNames.PLUS} onClick={onCreateClick} />;
+  const canCreateRegistry = currentConnector?.runtime === ContainerRuntime.PODMAN;
+  const createButton = withoutCreate ? null : (
+    <Button
+      small
+      intent={Intent.SUCCESS}
+      disabled={!canCreateRegistry}
+      title={canCreateRegistry ? t("Click to configure a new registry") : t("This feature is not available with current connection engine")}
+      text={t("Configure")}
+      icon={IconNames.PLUS}
+      onClick={onCreateClick}
+    />
+  );
   const removeWidget = registry ? (
     <ConfirmMenu onConfirm={onRemove} tag={registry.name} disabled={disabledAction === "registry.remove" || !registry.isRemovable}></ConfirmMenu>
   ) : undefined;
   return (
     <>
       <ButtonGroup>
-        {startButton}
+        {createButton}
         {removeWidget}
       </ButtonGroup>
       {withCreate && <CreateDrawer onClose={onCreateClose} />}

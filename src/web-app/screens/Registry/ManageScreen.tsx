@@ -23,13 +23,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const term = useStoreState((actions) => actions.registry.term);
   const { searchTerm, onSearchChange } = useAppScreenSearch(term);
   const { t } = useTranslation();
-  const registriesFetch = useStoreActions((actions) => actions.registry.registriesFetch);
   const registriesMap = useStoreState((state) => state.registry.registriesMap);
   const searchResults = useStoreState((state) => state.registry.searchResults);
+  const currentConnector = useStoreState((state) => state.currentConnector);
+  const registriesFetch = useStoreActions((actions) => actions.registry.registriesFetch);
   const registrySearch = useStoreActions((actions) => actions.registry.registrySearch);
   const registries = useMemo(() => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])], [registriesMap]);
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
-  const firstEnabledRegistry = useMemo(() => registries.find((it) => it.enabled), [registries]);
+  const firstEnabledRegistry = useMemo(
+    () => registries.find((it) => it.enabled && currentConnector?.runtime && it.runtime.includes(currentConnector?.runtime)),
+    [currentConnector, registries]
+  );
   const [currentRegistry, setCurrentRegistry] = useState<string | undefined>(firstEnabledRegistry?.name);
   const [searchResult, setSearchResult] = useState<RegistrySearchResult>();
 
@@ -153,6 +157,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 if (registry.id === "system") {
                   title = registry.enabled ? t("Podman registry.conf file must be adjusted - it allows parallel search") : t("Not available for current engine");
                 }
+                const isUsable = currentConnector?.runtime ? registry.runtime.includes(currentConnector?.runtime) : false;
                 return (
                   <tr key={registry.id} data-registry={registry.id}>
                     <td title={title}>
@@ -163,7 +168,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         onChange={onCurrentRegistryChange}
                         radioGroup="currentRegistryGroup"
                         checked={registry.name === selectedRegistry}
-                        disabled={!registry.enabled}
+                        disabled={!registry.enabled || !isUsable}
                       />
                     </td>
                     <td>

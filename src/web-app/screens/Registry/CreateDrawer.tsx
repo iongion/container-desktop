@@ -7,6 +7,7 @@ import { useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
+import { ContainerRuntime } from "@/env/Types";
 import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
 import { RegistryPropertiesForm } from "./RegistryPropertiesForm";
@@ -61,7 +62,8 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
         weight: 0,
         enabled: true,
         isRemovable: true,
-        isSystem: false
+        isSystem: false,
+        runtime: [ContainerRuntime.PODMAN]
       });
       onClose();
       Notification.show({ message: t("Registry has been created"), intent: Intent.SUCCESS });
