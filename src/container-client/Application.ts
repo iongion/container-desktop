@@ -1,11 +1,11 @@
 import * as async from "async";
 import { v4 } from "uuid";
 
-import { AbstractClientEngine, createConnectorBy, Docker, getDefaultConnectors, Podman, RUNTIMES } from "@/container-client";
+import { AbstractContainerEngineHostClient, createConnectorBy, Docker, getDefaultConnectors, Podman, RUNTIMES } from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
 import { systemNotifier } from "@/container-client/notifier";
-import { AbstractRuntime, ClientEngine } from "@/container-client/runtimes/abstract/base";
-import { PodmanAbstractClientEngine, PodmanClientEngineCommon } from "@/container-client/runtimes/podman/base";
+import { AbstractEngine, ContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
+import { PodmanAbstractContainerEngineHostClient, PodmanContainerEngineHostClientCommon } from "@/container-client/runtimes/podman/base";
 import {
   ApplicationEnvironment,
   CommandExecutionResult,
@@ -14,7 +14,7 @@ import {
   Connector,
   ContainerConnectOptions,
   ContainerEngine,
-  ContainerRuntime,
+  ContainerEngineHost,
   ControllerScope,
   CreateMachineOptions,
   DisconnectOptions,
@@ -43,7 +43,7 @@ const AUTOMATIC_REGISTRIES: Registry[] = [
     isRemovable: false,
     isSystem: true,
     enabled: true,
-    runtime: [Podman.Runtime.RUNTIME, Docker.Runtime.RUNTIME]
+    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE]
   }
 ];
 const PROPOSED_REGISTRIES = [
@@ -55,7 +55,7 @@ const PROPOSED_REGISTRIES = [
     isRemovable: true,
     isSystem: false,
     enabled: true,
-    runtime: [Podman.Runtime.RUNTIME]
+    engine: [Podman.Engine.ENGINE]
   },
   {
     id: "docker.io",
@@ -65,7 +65,7 @@ const PROPOSED_REGISTRIES = [
     isRemovable: true,
     isSystem: false,
     enabled: true,
-    runtime: [Podman.Runtime.RUNTIME, Docker.Runtime.RUNTIME]
+    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE]
   }
 ];
 
@@ -118,12 +118,12 @@ export class Application {
   protected osType: OperatingSystem;
   protected version: string;
   protected environment: string;
-  protected connectionApis: { [key: string]: AbstractClientEngine } = {};
+  protected connectionApis: { [key: string]: AbstractContainerEngineHostClient } = {};
   protected inited: boolean = false;
-  protected runtimes: AbstractRuntime[] = [];
+  protected runtimes: AbstractEngine[] = [];
   protected connectors: Connector[] = [];
 
-  protected _currentClientEngine!: ClientEngine;
+  protected _currentContainerEngineHostClient!: ContainerEngineHostClient;
 
   constructor(opts: ApplicationEnvironment) {
     this.osType = opts.osType;
@@ -254,7 +254,8 @@ export class Application {
   }
 
   async getGlobalUserSettings() {
-    return {
+    // const version = await this.userConfiguration.getKey<string>("version", "");
+    const settings = {
       theme: await this.userConfiguration.getKey("theme", "bp5-dark"),
       expandSidebar: await this.userConfiguration.getKey("expandSidebar", true),
       startApi: await this.userConfiguration.getKey("startApi", false),
@@ -264,8 +265,10 @@ export class Application {
       logging: {
         level: await getLevel()
       },
-      connector: await this.userConfiguration.getKey("connector")
+      connector: await this.userConfiguration.getKey("connector"),
+      connections: await this.getConnectionsFromConfiguration()
     } as GlobalUserSettings;
+    return settings;
   }
 
   async setConnectorSettings(id: string, settings: Partial<EngineConnectorSettings>) {
@@ -279,46 +282,46 @@ export class Application {
 
   // Podman specific
   async getPodLogs(id?: any, tail?: any) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanClientEngineCommon>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
     return await currentApi.getPodLogs(id, tail);
   }
   async generateKube(entityId?: any) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanClientEngineCommon>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
     return await currentApi.generateKube(entityId);
   }
   async inspectPodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
     return await currentApi.inspectPodmanMachine(name);
   }
   async getPodmanMachines(customFormat?: string, customSettings?: EngineConnectorSettings) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
     return await currentApi.getPodmanMachines(customFormat, customSettings);
   }
   async createPodmanMachine(opts: CreateMachineOptions) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
     return await currentApi.createPodmanMachine(opts);
   }
   async removePodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
     return await currentApi.removePodmanMachine(name);
   }
   async stopPodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
     return await currentApi.stopPodmanMachine(name);
   }
   async restartPodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
     return await currentApi.restartPodmanMachine(name);
   }
   async connectToPodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractClientEngine>();
+    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
     return await currentApi.connectToPodmanMachine(name);
   }
 
   // Scope actions
   async getControllerScopes(connection: Connection, skipAvailabilityCheck: boolean) {
     const currentApi = await this.getConnectionApi(connection, skipAvailabilityCheck);
-    this.logger.debug("Listing controller scopes of current engine", connection);
+    this.logger.debug("Listing controller scopes of current host", connection);
     return await currentApi.getControllerScopes(undefined, skipAvailabilityCheck);
   }
 
@@ -353,9 +356,9 @@ export class Application {
     const containerArgs: string[] = [];
     if (currentApi.isScoped()) {
       const scope = controller?.scope || "";
-      const isLIMA = [ContainerEngine.PODMAN_VIRTUALIZED_LIMA, ContainerEngine.DOCKER_VIRTUALIZED_LIMA].includes(currentApi.ENGINE);
-      const isWSL = [ContainerEngine.PODMAN_VIRTUALIZED_WSL, ContainerEngine.DOCKER_VIRTUALIZED_WSL].includes(currentApi.ENGINE);
-      const isVendor = [ContainerEngine.PODMAN_VIRTUALIZED_VENDOR].includes(currentApi.ENGINE);
+      const isLIMA = [ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA, ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA].includes(currentApi.HOST);
+      const isWSL = [ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(currentApi.HOST);
+      const isVendor = [ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR].includes(currentApi.HOST);
       if (isLIMA) {
         containerArgs.push("shell");
         containerArgs.push(scope);
@@ -377,7 +380,7 @@ export class Application {
     }
     containerArgs.push(...["exec", "-it", id, shell || "/bin/sh"]);
     const output = await Platform.launchTerminal(launcherPath, containerArgs, {
-      title: title || `${currentApi.RUNTIME} container`
+      title: title || `${currentApi.ENGINE} container`
     });
     if (!output.success) {
       this.logger.error("Unable to connect to container", id, output);
@@ -415,10 +418,32 @@ export class Application {
   }
 
   // Connection
+  async getConnectionsFromConfiguration() {
+    let connections = await this.userConfiguration.getKey<Connection[]>("connections", []);
+    if (connections.length) {
+      // Backwards compatibility checks
+      const it = connections[0] as any;
+      if (it.runtime) {
+        connections = connections.map((it: any) => {
+          // Migrate to new format
+          const host = it.engine;
+          const engine = it.runtime;
+          it.engine = engine;
+          it.host = host;
+          delete it.runtime;
+          return it;
+        });
+        // Save the new format
+        await this.userConfiguration.setKey("connections", connections);
+        this.logger.warn("Migrated connections to new format", connections);
+      }
+    }
+    return connections;
+  }
 
   async createConnection(connection: Connection) {
     this.logger.debug("Create connection", connection);
-    let connections: Connection[] = await this.userConfiguration.getKey("connections");
+    let connections: Connection[] = await this.getConnectionsFromConfiguration();
     if (!connections) {
       connections = [];
     }
@@ -426,8 +451,8 @@ export class Application {
       id: connection.id,
       name: connection.name,
       label: connection.label,
+      host: connection.host,
       engine: connection.engine,
-      runtime: connection.runtime,
       settings: connection.settings
     });
     await this.userConfiguration.setKey("connections", connections);
@@ -435,7 +460,7 @@ export class Application {
   }
 
   async updateConnection(id: string, connection: Partial<Connection>) {
-    const connections: Connection[] = await this.userConfiguration.getKey("connections");
+    const connections: Connection[] = await this.getConnectionsFromConfiguration();
     const updated = connections.findIndex((it) => it.id === id);
     if (updated !== -1) {
       connections[updated] = deepMerge({}, connections[updated], connection);
@@ -447,7 +472,7 @@ export class Application {
   async removeConnection(id: string) {
     try {
       this.logger.debug("Removing connection", id);
-      let connections: Connection[] = await this.userConfiguration.getKey("connections");
+      let connections: Connection[] = await this.getConnectionsFromConfiguration();
       connections = connections.filter((it) => it.id !== id);
       await this.userConfiguration.setKey("connections", connections);
     } catch (error: any) {
@@ -458,14 +483,14 @@ export class Application {
   }
 
   async getConnections() {
-    const connections: Connection[] = await this.userConfiguration.getKey("connections");
+    const connections: Connection[] = await this.getConnectionsFromConfiguration();
     return connections || [];
   }
 
   async getSystemConnections() {
     const connections: Connection[] = [];
     // Add system podman as default
-    const firstPodman: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.PODMAN && it.availability.enabled) as Connection;
+    const firstPodman: Connection = getDefaultConnectors(this.osType).find((it) => it.engine === ContainerEngine.PODMAN && it.availability.enabled) as Connection;
     if (firstPodman) {
       firstPodman.id = "system-default.podman";
       firstPodman.description = "Uses the available system podman installation";
@@ -476,7 +501,7 @@ export class Application {
       connections.push(firstPodman);
     }
     // Add system docker as default
-    const firstDocker: Connection = getDefaultConnectors(this.osType).find((it) => it.runtime === ContainerRuntime.DOCKER && it.availability.enabled) as Connection;
+    const firstDocker: Connection = getDefaultConnectors(this.osType).find((it) => it.engine === ContainerEngine.DOCKER && it.availability.enabled) as Connection;
     if (firstDocker) {
       firstDocker.id = "system-default.docker";
       firstDocker.description = "Uses the available system docker installation";
@@ -490,13 +515,13 @@ export class Application {
   }
 
   async getConnectionDataDir(connection: Connection) {
-    const engine = await this.getConnectionApi(connection, false);
-    return await engine.getConnectionDataDir();
+    const host = await this.getConnectionApi(connection, false);
+    return await host.getConnectionDataDir();
   }
 
   // System
   async getIsApiRunning(connection?: Connection) {
-    let currentApi = this._currentClientEngine;
+    let currentApi = this._currentContainerEngineHostClient;
     if (connection) {
       currentApi = await this.getConnectionApi(connection, false);
     }
@@ -504,7 +529,7 @@ export class Application {
   }
 
   async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
-    let currentApi = this._currentClientEngine;
+    let currentApi = this._currentContainerEngineHostClient;
     if (connection) {
       currentApi = await this.getConnectionApi(connection, false);
     }
@@ -545,7 +570,7 @@ export class Application {
       const scanner = options?.scanner || "trivy";
       const settings = await currentApi.getSettings();
       const scope = settings.controller?.scope || "";
-      const useScope = currentApi.isScoped() && ![ContainerEngine.PODMAN_VIRTUALIZED_VENDOR, ContainerEngine.DOCKER_VIRTUALIZED_VENDOR].includes(currentApi.ENGINE);
+      const useScope = currentApi.isScoped() && ![ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR].includes(currentApi.HOST);
       if (useScope) {
         program = await currentApi.findScopeProgram({ name: options.scanner, path: "" });
       } else {
@@ -642,8 +667,8 @@ export class Application {
 
   // registry
   async getRegistriesMap() {
-    const engine = this._currentClientEngine as AbstractClientEngine;
-    const isPodman = engine.RUNTIME === Podman.Runtime.RUNTIME;
+    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
+    const isPodman = host.ENGINE === Podman.Engine.ENGINE;
     const customRegistriesPath = await Path.join(await this.userConfiguration.getStoragePath(), "registries.json");
     const registriesMap = {
       default: AUTOMATIC_REGISTRIES.map((it) => (it.id === "system" && !isPodman ? { ...it, enabled: false } : it)),
@@ -668,16 +693,16 @@ export class Application {
     const { filters, term, registry } = opts || {};
     this.logger.debug("searchRegistry", { filters, term, registry });
     let items = [];
-    const engine = this._currentClientEngine as AbstractClientEngine;
-    const { program } = await engine.getSettings();
+    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
+    const { program } = await host.getSettings();
     const filtersList: any[] = [];
     const programArgs = ["search"];
-    const isPodman = engine.RUNTIME === Podman.Runtime.RUNTIME;
-    const isDocker = engine.RUNTIME === Docker.Runtime.RUNTIME;
+    const isPodman = host.ENGINE === Podman.Engine.ENGINE;
+    const isDocker = host.ENGINE === Docker.Engine.ENGINE;
     if (isPodman) {
       // Search using API
       if (registry?.id === "system") {
-        const client = await engine.getContainerApiClient();
+        const client = await host.getContainerApiClient();
         const driver = await client.getDriver();
         const searchParams = new URLSearchParams();
         searchParams.set("term", term || "");
@@ -744,30 +769,30 @@ export class Application {
   async pullFromRegistry(opts: RegistryPullOptions) {
     const { image, onProgress } = opts;
     this.logger.debug("pull from registry", image);
-    const engine = this._currentClientEngine as AbstractClientEngine;
-    const { program, controller } = await engine.getSettings();
+    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
+    const { program, controller } = await host.getSettings();
     let result: CommandExecutionResult;
-    if (engine.isScoped()) {
-      result = await engine.runScopeCommand(program.path || program.name, ["image", "pull", image], controller?.scope || "");
+    if (host.isScoped()) {
+      result = await host.runScopeCommand(program.path || program.name, ["image", "pull", image], controller?.scope || "");
     } else {
-      result = await engine.runHostCommand(program.path || program.name, ["image", "pull", image]);
+      result = await host.runHostCommand(program.path || program.name, ["image", "pull", image]);
     }
     return result;
   }
 
   // Main
-  async getConnectionApi<T extends AbstractClientEngine = AbstractClientEngine>(connection: Connection, skipAvailabilityCheck: boolean) {
+  async getConnectionApi<T extends AbstractContainerEngineHostClient = AbstractContainerEngineHostClient>(connection: Connection, skipAvailabilityCheck: boolean) {
     if (this.connectionApis[connection.id]) {
       this.logger.debug("Using connection api - found", connection.id);
       this.connectionApis[connection.id].setSettings(connection.settings);
     } else {
       this.logger.debug("Using connection api - creating", connection.id);
-      const connector = deepMerge<Connector>({}, createConnectorBy(this.osType, connection.runtime, connection.engine), connection);
+      const connector = deepMerge<Connector>({}, createConnectorBy(this.osType, connection.engine, connection.host), connection);
       try {
-        const { engine, availability } = await this.createConnectorClientEngine(connector, { connection: connector, startApi: false, skipAvailabilityCheck });
+        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, { connection: connector, startApi: false, skipAvailabilityCheck });
         connector.availability = availability;
-        if (engine) {
-          this.connectionApis[connection.id] = engine;
+        if (host) {
+          this.connectionApis[connection.id] = host;
         } else {
           this.logger.error("Unable to create connection api", connector.id);
         }
@@ -778,33 +803,36 @@ export class Application {
     return this.connectionApis[connection.id] as T;
   }
 
-  getCurrentEngineConnectionApi<T extends ClientEngine = AbstractClientEngine>() {
-    return this._currentClientEngine as T;
+  getCurrentEngineConnectionApi<T extends ContainerEngineHostClient = AbstractContainerEngineHostClient>() {
+    return this._currentContainerEngineHostClient as T;
   }
 
-  async createConnectorClientEngine(connector: Connector, opts?: ConnectOptions): Promise<{ engine: AbstractClientEngine | undefined; availability: EngineConnectorAvailability }> {
-    this.logger.debug(connector.id, ">> Creating connector engine api", opts);
+  async createConnectorContainerEngineHostClient(
+    connector: Connector,
+    opts?: ConnectOptions
+  ): Promise<{ host: AbstractContainerEngineHostClient | undefined; availability: EngineConnectorAvailability }> {
+    this.logger.debug(connector.id, ">> Creating connector host api", opts);
     const startApi = opts?.startApi ?? false;
-    let engine: AbstractClientEngine | undefined = undefined;
+    let host: AbstractContainerEngineHostClient | undefined = undefined;
     let availability = connector.availability;
     try {
-      const Runtime = this.runtimes.find((it) => it.RUNTIME === connector.runtime);
-      if (!Runtime) {
-        this.logger.error(connector.id, "Connector runtime not found", connector.runtime);
-        throw new Error("Connector runtime not found");
-      }
-      engine = await Runtime.createEngineByName(connector.engine, connector.id);
-      systemNotifier.transmit("startup.phase", {
-        trace: "Runtime engine created"
-      });
-      if (!engine) {
+      const Engine = this.runtimes.find((it) => it.ENGINE === connector.engine);
+      if (!Engine) {
         this.logger.error(connector.id, "Connector engine not found", connector.engine);
         throw new Error("Connector engine not found");
       }
-      if (engine) {
+      host = await Engine.createEngineHostClientByName(connector.host, connector.id);
+      systemNotifier.transmit("startup.phase", {
+        trace: "Engine host created"
+      });
+      if (!host) {
+        this.logger.error(connector.id, "Connector host not found", connector.host);
+        throw new Error("Connector host not found");
+      }
+      if (host) {
         const settings = opts?.connection?.settings || connector.settings;
-        this.logger.debug(connector.id, "Using custom engine - settings", { user: opts?.connection?.settings, defaults: connector.settings });
-        await engine.setSettings(settings);
+        this.logger.debug(connector.id, "Using custom host - settings", { user: opts?.connection?.settings, defaults: connector.settings });
+        await host.setSettings(settings);
         if (settings.mode === "mode.automatic") {
           if (opts?.skipAvailabilityCheck) {
             this.logger.warn(connector.id, "Skipping automatic settings - availability check disabled");
@@ -812,9 +840,13 @@ export class Application {
             systemNotifier.transmit("startup.phase", {
               trace: "Performing automatic connection detection"
             });
-            const automaticSettings = await engine.getAutomaticSettings();
+            if (host.isScoped()) {
+              await host.stopScopeByName(settings.controller?.scope || "");
+              await host.startScopeByName(settings.controller?.scope || "");
+            }
+            const automaticSettings = await host.getAutomaticSettings();
             this.logger.warn("Using automatic settings", automaticSettings);
-            await engine.setSettings(automaticSettings);
+            await host.setSettings(automaticSettings);
           }
         }
         if (startApi) {
@@ -822,15 +854,15 @@ export class Application {
             trace: "Starting connection api"
           });
           try {
-            await engine.startApi();
+            await host.startApi();
           } catch (error: any) {
-            this.logger.error(connector.id, "Unable to start the engine API", error);
+            this.logger.error(connector.id, "Unable to start the host API", error);
           }
         } else {
-          this.logger.debug(connector.id, "Skipping engine API start - not marked for start");
+          this.logger.debug(connector.id, "Skipping host API start - not marked for start");
         }
         // Read availability
-        this.logger.debug(connector.id, ">> Reading engine availability");
+        this.logger.debug(connector.id, ">> Reading host availability");
         try {
           if (opts?.skipAvailabilityCheck) {
             this.logger.warn(connector.id, "Skipping availability check");
@@ -838,25 +870,25 @@ export class Application {
             systemNotifier.transmit("startup.phase", {
               trace: "Performing availability checks"
             });
-            availability = await engine.getAvailability(connector.settings);
+            availability = await host.getAvailability(connector.settings);
             systemNotifier.transmit("startup.phase", {
               trace: "Availability checks completed"
             });
           }
         } catch (error: any) {
-          this.logger.error(connector.id, "<< Reading engine availability failed", error);
+          this.logger.error(connector.id, "<< Reading host availability failed", error);
         }
-        this.logger.debug(connector.id, "<< Reading engine availability", availability);
+        this.logger.debug(connector.id, "<< Reading host availability", availability);
       }
     } catch (error: any) {
-      this.logger.error(connector.id, "Connector engine api creation error", error);
+      this.logger.error(connector.id, "Connector host api creation error", error);
     }
-    this.logger.debug(connector.id, "<< Creating connector engine api", { engine, availability });
-    return { engine, availability };
+    this.logger.debug(connector.id, "<< Creating connector host api", { host, availability });
+    return { host, availability };
   }
 
   async init() {
-    // All logic is done only once at application startup - can be updated during engine changes by the start logic
+    // All logic is done only once at application startup - can be updated during host changes by the start logic
     if (this.inited) {
       this.logger.debug("Init skipping - already initialized");
       return this.inited;
@@ -865,9 +897,9 @@ export class Application {
     try {
       this.runtimes = await async.parallel(
         RUNTIMES.map(
-          (Runtime) => (cb: any) =>
-            Runtime.create(this.osType)
-              .then((runtime) => cb(null, runtime))
+          (Engine) => (cb: any) =>
+            Engine.create(this.osType)
+              .then((engine) => cb(null, engine))
               .catch(cb)
         )
       );
@@ -881,16 +913,19 @@ export class Application {
   }
 
   async stop(opts?: DisconnectOptions): Promise<boolean> {
-    const engine = this._currentClientEngine as AbstractClientEngine;
-    if (engine) {
-      if (engine.isScoped()) {
-        this.logger.debug(">> Bridge stop started - stop scope", opts, engine.id);
-        await engine.stopApi();
+    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
+    if (host) {
+      if (host.isScoped()) {
+        this.logger.debug(">> Bridge stop started - stop scope", opts, host.id);
+        await host.stopApi();
+        const settings = opts?.connection?.settings || (await host.getSettings());
+        const scope = settings?.controller?.scope || "";
+        await host.stopScopeByName(scope);
       } else {
-        this.logger.debug(">> Bridge stop started - stop native", opts, engine.id);
-        await engine.stopApi();
+        this.logger.debug(">> Bridge stop started - stop native", opts, host.id);
+        await host.stopApi();
       }
-      this.logger.debug(">> Bridge stop completed", opts, engine.id);
+      this.logger.debug(">> Bridge stop completed", opts, host.id);
     } else {
       this.logger.debug("<< Bridge stop skipped - not started", opts);
     }
@@ -906,7 +941,7 @@ export class Application {
         systemNotifier.transmit("startup.phase", {
           trace: "Creating connectors"
         });
-        connector = createConnectorBy(this.osType, opts.connection.runtime, opts.connection.engine);
+        connector = createConnectorBy(this.osType, opts.connection.engine, opts.connection.host);
         connector.connectionId = opts.connection.id;
         connector.name = opts.connection.name;
         connector.label = opts.connection.label;
@@ -917,19 +952,19 @@ export class Application {
           throw new Error("No connector found");
         }
         systemNotifier.transmit("startup.phase", {
-          trace: "Creating connector engine starting"
+          trace: "Creating connector host starting"
         });
-        const { engine, availability } = await this.createConnectorClientEngine(connector, { ...opts, origin: "start" });
-        if (engine) {
-          const engineSettings = await engine.getSettings();
+        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, { ...opts, origin: "start" });
+        if (host) {
+          const engineSettings = await host.getSettings();
           connector.settings = deepMerge(connector.settings, engineSettings);
           connector.availability = availability;
-          this._currentClientEngine = engine;
+          this._currentContainerEngineHostClient = host;
           systemNotifier.transmit("startup.phase", {
-            trace: "Creating connector engine completed"
+            trace: "Creating connector host completed"
           });
         } else {
-          throw new Error("Unable to create current engine connection");
+          throw new Error("Unable to create current host connection");
         }
       }
     } catch (error: any) {

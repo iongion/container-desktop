@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.2-rc.4 - 2024-09-11
+
+## Fixed
+
+- Properly close connections
+- Auto-mode supported for all connection types
+- Bug with podman not being able to create the basedir of the listening socket on WSL
+- Mode change disabled while pending operation
+- Registry search behavior for docker
+- NSIS installer icon
+- Visual bugs
+
+## Added
+
+- Detect button for relay endpoint
+
+## Changed
+
+- Display version only when connected
+- Export connections with version specifier
+- Connection pending indicator moved to bottom of the form
+- Refactor all needed to respect containers domain
+- Upgraded deps
+
+## Removed
+
+- Unused dependencies
+
 ## 5.2.2-rc.3 - 2024-09-08
 
 ## Fixed

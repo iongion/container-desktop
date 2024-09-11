@@ -1,36 +1,36 @@
-import { DockerClientEngineSSH } from "@/container-client/runtimes/docker/ssh";
-import { ContainerRuntime, OperatingSystem } from "@/env/Types";
-import { AbstractClientEngine, AbstractRuntime } from "../abstract";
-import { DockerClientEngineVirtualizedLIMA } from "./lima";
-import { DockerClientEngineNative } from "./native";
-import { DockerClientEngineVirtualizedVendor } from "./vendor";
-import { DockerClientEngineVirtualizedWSL } from "./wsl";
+import { DockerContainerEngineHostClientSSH } from "@/container-client/runtimes/docker/ssh";
+import { ContainerEngine, OperatingSystem } from "@/env/Types";
+import { AbstractContainerEngineHostClient, AbstractEngine } from "../abstract";
+import { DockerContainerEngineHostClientVirtualizedLIMA } from "./lima";
+import { DockerContainerEngineHostClientNative } from "./native";
+import { DockerContainerEngineHostClientVirtualizedVendor } from "./vendor";
+import { DockerContainerEngineHostClientVirtualizedWSL } from "./wsl";
 
-export class Runtime extends AbstractRuntime {
-  static RUNTIME = ContainerRuntime.DOCKER;
-  public RUNTIME: ContainerRuntime = ContainerRuntime.DOCKER;
+export class Engine extends AbstractEngine {
+  static ENGINE = ContainerEngine.DOCKER;
+  public ENGINE: ContainerEngine = ContainerEngine.DOCKER;
 
-  ENGINES: (typeof AbstractClientEngine)[] = [
-    DockerClientEngineNative,
-    DockerClientEngineVirtualizedVendor,
-    DockerClientEngineVirtualizedWSL,
-    DockerClientEngineVirtualizedLIMA,
-    DockerClientEngineSSH
+  ENGINE_HOST_CLIENTS: (typeof AbstractContainerEngineHostClient)[] = [
+    DockerContainerEngineHostClientNative,
+    DockerContainerEngineHostClientVirtualizedVendor,
+    DockerContainerEngineHostClientVirtualizedWSL,
+    DockerContainerEngineHostClientVirtualizedLIMA,
+    DockerContainerEngineHostClientSSH
   ];
 
   static async create(osType: OperatingSystem) {
-    const instance = new Runtime(osType);
+    const instance = new Engine(osType);
     await instance.setup();
     return instance;
   }
 }
 
 export const Docker = {
-  Runtime,
+  Engine,
   // engines
-  DockerClientEngineNative,
-  DockerClientEngineVirtualizedVendor,
-  DockerClientEngineVirtualizedWSL,
-  DockerClientEngineVirtualizedLIMA,
-  DockerClientEngineSSH
+  DockerContainerEngineHostClientNative,
+  DockerContainerEngineHostClientVirtualizedVendor,
+  DockerContainerEngineHostClientVirtualizedWSL,
+  DockerContainerEngineHostClientVirtualizedLIMA,
+  DockerContainerEngineHostClientSSH
 };

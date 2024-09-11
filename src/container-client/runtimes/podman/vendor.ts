@@ -6,7 +6,7 @@ import {
   CommandExecutionResult,
   Connection,
   ContainerEngine,
-  ContainerRuntime,
+  ContainerEngineHost,
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem,
@@ -16,23 +16,23 @@ import {
 import { getWindowsPipePath } from "@/platform";
 import { userConfiguration } from "../../config";
 import { PODMAN_PROGRAM } from "../../connection";
-import { PodmanAbstractClientEngine } from "./base";
+import { PodmanAbstractContainerEngineHostClient } from "./base";
 
 const PODMAN_API_SOCKET = `podman-desktop-companion-${PODMAN_PROGRAM}-rest-api.sock`;
 
-export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEngine {
-  static ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_VENDOR;
-  ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_VENDOR;
+export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbstractContainerEngineHostClient {
+  static HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
+  HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
   PROGRAM = PODMAN_PROGRAM;
   CONTROLLER = PODMAN_PROGRAM;
-  RUNTIME = ContainerRuntime.PODMAN;
+  ENGINE = ContainerEngine.PODMAN;
 
   constructor(osType: OperatingSystem) {
     super(osType);
   }
 
   static async create(id: string, osType: OperatingSystem) {
-    const instance = new PodmanClientEngineVirtualizedVendor(osType);
+    const instance = new PodmanContainerEngineHostClientVirtualizedVendor(osType);
     instance.id = id;
     await instance.setup();
     return instance;
@@ -70,19 +70,25 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
       const inspectResult = await this.getPodmanMachineInspect(customSettings);
       if (inspectResult?.ConnectionInfo?.PodmanPipe?.Path) {
         uri = inspectResult?.ConnectionInfo?.PodmanPipe?.Path || uri;
-        relay = inspectResult?.ConnectionInfo?.PodmanSocket?.Path || "";
       } else {
         uri = inspectResult?.ConnectionInfo?.PodmanSocket?.Path || uri;
       }
     } catch (error: any) {
-      this.logger.error(this.id, "Unable to inspect machine", error);
+      this.logger.warn(this.id, "Unable to inspect machine", error);
+    }
+    if (this.isScoped()) {
+      try {
+        const info = await this.getSystemInfo(connection, undefined, settings);
+        relay = info?.host?.remoteSocket?.path || "";
+      } catch (error: any) {
+        this.logger.warn(this.id, "Unable to get system info", error);
+      }
     }
     return {
       uri,
       relay
     };
   }
-
   async getPodmanMachineInspect(customSettings?: EngineConnectorSettings) {
     const settings = customSettings || (await this.getSettings());
     let inspect: PodmanMachineInspect | undefined;
@@ -115,11 +121,9 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     }
     return inspect;
   }
-
   async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     return await this.getPodmanMachines(undefined, customSettings);
   }
-
   async getSystemConnections(customSettings?: EngineConnectorSettings) {
     const settings = customSettings || (await this.getSettings());
     const controllerPath = settings.controller?.path || settings.controller?.name;
@@ -136,7 +140,6 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     }
     return [];
   }
-
   async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
     let defaultScope: ControllerScope | undefined;
     const connections = await this.getSystemConnections(customSettings);
@@ -157,7 +160,7 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     return defaultScope;
   }
 
-  // Runtime
+  // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
     if (running.success) {
@@ -180,12 +183,13 @@ export class PodmanClientEngineVirtualizedVendor extends PodmanAbstractClientEng
     return started;
   }
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
+    const settings = customSettings || (await this.getSettings());
+    await Command.StopConnectionServices(this.id, settings);
     if (!this.apiStarted) {
       this.logger.debug(this.id, "Stopping API - skip(not started here)");
       return false;
     }
     this.logger.debug(this.id, "Stopping API - begin");
-    const settings = customSettings || (await this.getSettings());
     let args: string[] = opts?.args || [];
     if (!opts?.args) {
       if (!settings.controller?.scope) {

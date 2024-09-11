@@ -6,11 +6,11 @@ import {
   CommandExecutionResult,
   Connection,
   Container,
+  ContainerEngine,
   ContainerImage,
   ContainerImageHistory,
   ContainerImageMount,
   ContainerImagePortMapping,
-  ContainerRuntime,
   ContainerStateList,
   ContainerStats,
   ControllerScope,
@@ -392,11 +392,14 @@ export class ContainerClient {
   async getContainer(id: string, opts?: FetchContainerOptions) {
     return this.withResult<Container>(async () => {
       const result = await this.driver.get<Container>(`/containers/${encodeURIComponent(id)}/json`);
-      const container = coerceContainer(result.data);
-      if (opts?.withLogs) {
-        container.Logs = await this.getContainerLogs(id);
+      if (isOk(result)) {
+        const container = coerceContainer(result.data);
+        if (opts?.withLogs) {
+          container.Logs = await this.getContainerLogs(id);
+        }
+        return container;
       }
-      return container;
+      throw new Error("Unable to fetch container");
     });
   }
   async getContainerLogs(id: string) {
@@ -513,15 +516,15 @@ export class ContainerClient {
   // Volumes
   async getVolumes() {
     return this.withResult<Volume[]>(async () => {
-      const engine = this.connection?.engine || "";
+      const host = this.connection?.host || "";
       let baseURL = "http://d/v4.0.0/libpod";
       let serviceUrl = "/volumes/json";
       let processData = (input: any) => input as Volume[];
-      if (engine.startsWith("docker")) {
+      if (host.startsWith("docker")) {
         baseURL = "http://localhost";
         serviceUrl = "/volumes";
         processData = (input: any) => {
-          const output = input.Volumes;
+          const output = input.Volumes || [];
           return output as Volume[];
         };
       }
@@ -532,9 +535,9 @@ export class ContainerClient {
   async getVolume(nameOrId: string, opts?: FetchVolumeOptions) {
     return this.withResult<Volume>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      const engine = this.connection?.engine || "";
+      const host = this.connection?.host || "";
       let serviceUrl = `/volumes/${encodeURIComponent(nameOrId)}/json`;
-      if (engine.startsWith("docker")) {
+      if (host.startsWith("docker")) {
         baseURL = "http://localhost";
         serviceUrl = `/volumes/${encodeURIComponent(nameOrId)}`;
       }
@@ -545,8 +548,8 @@ export class ContainerClient {
   async inspectVolume(nameOrId: string) {
     return this.withResult<Volume>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      const engine = this.connection?.engine || "";
-      if (engine.startsWith("docker")) {
+      const host = this.connection?.host || "";
+      if (host.startsWith("docker")) {
         baseURL = "http://localhost";
       }
       const result = await this.driver.get<Volume>(`/volumes/${encodeURIComponent(nameOrId)}/json`, { baseURL });
@@ -556,8 +559,8 @@ export class ContainerClient {
   async createVolume(opts: CreateVolumeOptions) {
     return this.withResult<Volume>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      const engine = this.connection?.engine || "";
-      if (engine.startsWith("docker")) {
+      const host = this.connection?.host || "";
+      if (host.startsWith("docker")) {
         baseURL = "http://localhost";
       }
       const creator = opts;
@@ -568,8 +571,8 @@ export class ContainerClient {
   async removeVolume(nameOrId: string) {
     return this.withResult<boolean>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      const engine = this.connection?.engine || "";
-      if (engine.startsWith("docker")) {
+      const host = this.connection?.host || "";
+      if (host.startsWith("docker")) {
         baseURL = "http://localhost";
       }
       const result = await this.driver.delete<boolean>(`/volumes/${encodeURIComponent(nameOrId)}`, {
@@ -584,8 +587,8 @@ export class ContainerClient {
   async pruneVolumes(filters: any) {
     return this.withResult<boolean>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      const engine = this.connection?.engine || "";
-      if (engine.startsWith("docker")) {
+      const host = this.connection?.host || "";
+      if (host.startsWith("docker")) {
         baseURL = "http://localhost";
       }
       const result = await this.driver.post("/volumes/prune", filters, { baseURL });
@@ -596,7 +599,7 @@ export class ContainerClient {
   async getSecrets() {
     return this.withResult<Secret[]>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         baseURL = "http://localhost";
       }
       const result = await this.driver.get<Secret[]>("/secrets/json", {
@@ -608,7 +611,7 @@ export class ContainerClient {
   async getSecret(nameOrId: string, opts?: FetchSecretOptions) {
     return this.withResult<Secret>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         baseURL = "http://localhost";
       }
       const result = await this.driver.get<Secret>(`/secrets/${encodeURIComponent(nameOrId)}/json`, {
@@ -620,7 +623,7 @@ export class ContainerClient {
   async inspectSecret(nameOrId: string) {
     return this.withResult<Secret>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         baseURL = "http://localhost";
       }
       const result = await this.driver.get<Secret>(`/secrets/${encodeURIComponent(nameOrId)}/json`, {
@@ -632,7 +635,7 @@ export class ContainerClient {
   async createSecret(opts: CreateSecretOptions) {
     return this.withResult<Secret>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         baseURL = "http://localhost";
       }
       const creator = {
@@ -652,7 +655,7 @@ export class ContainerClient {
   async removeSecret(id: string) {
     return this.withResult<boolean>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         baseURL = "http://localhost";
       }
       const result = await this.driver.delete<boolean>(`/secrets/${encodeURIComponent(id)}`, {
@@ -846,7 +849,7 @@ export class ContainerClient {
   async getNetworks() {
     return this.withResult<Network[]>(async () => {
       try {
-        if (this.connection.runtime === ContainerRuntime.DOCKER) {
+        if (this.connection.engine === ContainerEngine.DOCKER) {
           const result = await this.driver.get<Network[]>("/networks", { baseURL: "http://localhost" });
           return (result.data as any[]).map(coerceNetwork);
         }
@@ -861,7 +864,7 @@ export class ContainerClient {
 
   async getNetwork(name: string) {
     return this.withResult<Network>(async () => {
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         const result = await this.driver.get<Network[]>(`/networks/${encodeURIComponent(name)}`, {
           baseURL: "http://localhost"
         });
@@ -877,7 +880,7 @@ export class ContainerClient {
   async createNetwork(opts: CreateNetworkOptions) {
     return this.withResult<Network>(async () => {
       const creator = opts;
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         const creatorDocker = {
           Name: creator.name,
           Driver: creator.driver,
@@ -904,7 +907,7 @@ export class ContainerClient {
 
   async removeNetwork(name: string) {
     return this.withResult<boolean>(async () => {
-      if (this.connection.runtime === ContainerRuntime.DOCKER) {
+      if (this.connection.engine === ContainerEngine.DOCKER) {
         const result = await this.driver.delete<Network[]>(`/networks/${encodeURIComponent(name)}`, {
           baseURL: "http://localhost"
         });

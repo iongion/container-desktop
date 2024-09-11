@@ -17,8 +17,8 @@ ICNS_SIZES =[16, 32, 48, 128, 256, 512]
 
 
 def generate_icon(size=16):
-    export_path = os.path.join(PROJECT_HOME, "src-tauri/icons", f"{size}x{size}.png")
-    export_2x_path = os.path.join(PROJECT_HOME, "src-tauri/icons", f"{int(size/2)}x{int(size/2)}@2x.png") if size > 16 else None
+    export_path = os.path.join(PROJECT_HOME, "release/icons", f"{size}x{size}.png")
+    export_2x_path = os.path.join(PROJECT_HOME, "release/icons", f"{int(size/2)}x{int(size/2)}@2x.png") if size > 16 else None
     args = [
         "resvg",
         "--width", str(size),
@@ -33,16 +33,16 @@ def generate_icon(size=16):
         SOURCE_PATH,
         export_2x_path
     ]
-    print(f"Executing: {" ".join(args)}")
+    print(f"Executing: {' '.join(args)}")
     subprocess.run(args)
     if export_2x_path is not None:
-        print(f"Executing: {" ".join(args_2x)}")
+        print(f"Executing: {' '.join(args_2x)}")
         subprocess.run(args_2x)
 
 
 
 def generate_square(size, output_name=None):
-    export_path = os.path.join(PROJECT_HOME, "src-tauri/icons", f"Square{size}x{size}Logo.png" if output_name is None else output_name)
+    export_path = os.path.join(PROJECT_HOME, "release/icons", f"Square{size}x{size}Logo.png" if output_name is None else output_name)
     args = [
         "resvg",
         "--width", str(size),
@@ -50,24 +50,24 @@ def generate_square(size, output_name=None):
         SOURCE_PATH,
         export_path
     ]
-    print(f"Executing: {" ".join(args)}")
+    print(f"Executing: {' '.join(args)}")
     subprocess.run(args)
 
 def generate_plain():
-    export_path = os.path.join(PROJECT_HOME, "src-tauri/icons/icon.svg")
+    export_path = os.path.join(PROJECT_HOME, "release/icons/icon.svg")
     args = [
         "svgo",
         SOURCE_PATH,
         "-o",
         export_path
     ]
-    print(f"Optimizing: {" ".join(args)}")
+    print(f"Optimizing: {' '.join(args)}")
     subprocess.run(args)
 
 
 
 def generate_tray(size=64, monochrome=False):
-    export_path = os.path.join(PROJECT_HOME, "src-tauri/icons/trayIcon.png")
+    export_path = os.path.join(PROJECT_HOME, "release/icons/trayIcon.png")
     args = [
         "resvg",
         "--width", str(size),
@@ -76,37 +76,37 @@ def generate_tray(size=64, monochrome=False):
         export_path,
     ]
     if os.path.exists(export_path):
-        print(f"Executing: {" ".join(args)} - skip")
+        print(f"Executing: {' '.join(args)} - skip")
     else:
-        print(f"Executing: {" ".join(args)}")
+        print(f"Executing: {' '.join(args)}")
         subprocess.run(args)
 
 
 def generate_icns():
-    export_path = os.path.join(PROJECT_HOME, "src-tauri/icons/icon.icns")
+    export_path = os.path.join(PROJECT_HOME, "release/icons/icon.icns")
     args = [
         "png2icns",
         export_path,
     ]
     for size in ICNS_SIZES:
-        import_path = os.path.join(PROJECT_HOME, "src-tauri/icons", f"{size}x{size}.png")
+        import_path = os.path.join(PROJECT_HOME, "release/icons", f"{size}x{size}.png")
         args.append(import_path)
-    print(f"Executing: {" ".join(args)}")
+    print(f"Executing: {' '.join(args)}")
     subprocess.run(args)
 
 def generate_ico():
-    export_path = os.path.join(PROJECT_HOME, "src-tauri/icons/icon.ico")
+    export_path = os.path.join(PROJECT_HOME, "release/icons/icon.ico")
     args = ["convert"]
     for size in ICO_SIZES:
-        import_path = os.path.join(PROJECT_HOME, "src-tauri/icons", f"{size}x{size}.png")
+        import_path = os.path.join(PROJECT_HOME, "release/icons", f"{size}x{size}.png")
         args.append(import_path)
     args += ["-colors", "512", export_path]
-    print(f"Executing: {" ".join(args)}")
+    print(f"Executing: {' '.join(args)}")
     subprocess.run(args)
 
 
 def main():
-    os.makedirs(os.path.join(PROJECT_HOME, "src-tauri/icons"), exist_ok=True)
+    os.makedirs(os.path.join(PROJECT_HOME, "release/icons"), exist_ok=True)
     os.makedirs(os.path.join(PROJECT_HOME, "src/resources/icons"), exist_ok=True)
     for size in SIZES:
         generate_icon(size)
@@ -118,27 +118,27 @@ def main():
     generate_tray(monochrome=True)
     generate_icns()
     generate_ico()
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/96x96.png"), os.path.join(PROJECT_HOME, "src-tauri/icons/icon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/96x96.png"), os.path.join(PROJECT_HOME, "release/icons/icon.png"))
     # Generate resources
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.icns"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.icns"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.svg"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.svg"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.ico"), os.path.join(PROJECT_HOME, "src/resources/icons/favicon.ico"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/96x96.png"), os.path.join(PROJECT_HOME, "src/resources/icons/favicon.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/512x512.png"), os.path.join(PROJECT_HOME, "src/resources/icons/icon.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/96x96.png"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/trayIcon.png"), os.path.join(PROJECT_HOME, "src/resources/icons/trayIcon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/icon.icns"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.icns"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/icon.svg"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.svg"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/icon.ico"), os.path.join(PROJECT_HOME, "src/resources/icons/favicon.ico"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/96x96.png"), os.path.join(PROJECT_HOME, "src/resources/icons/favicon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/512x512.png"), os.path.join(PROJECT_HOME, "src/resources/icons/icon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/96x96.png"), os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/trayIcon.png"), os.path.join(PROJECT_HOME, "src/resources/icons/trayIcon.png"))
     # Public and docs icons
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.ico"), os.path.join(PROJECT_HOME, "public/favicon.ico"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/96x96.png"), os.path.join(PROJECT_HOME, "public/favicon.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.svg"), os.path.join(PROJECT_HOME, "docs/img/logo.svg"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.ico"), os.path.join(PROJECT_HOME, "docs/favicon.ico"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/16x16.png"), os.path.join(PROJECT_HOME, "docs/favicon-16x16.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/32x32.png"), os.path.join(PROJECT_HOME, "docs/favicon-32x32.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/150x150.png"), os.path.join(PROJECT_HOME, "docs/mstile-150x150.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/180x180.png"), os.path.join(PROJECT_HOME, "docs/apple-touch-icon.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/192x192.png"), os.path.join(PROJECT_HOME, "docs/android-chrome-192x192.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/512x512.png"), os.path.join(PROJECT_HOME, "docs/android-chrome-512x512.png"))
-    shutil.copyfile(os.path.join(PROJECT_HOME, "src-tauri/icons/icon.svg"), os.path.join(PROJECT_HOME, "docs/safari-pinned-tab.svg"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/icon.ico"), os.path.join(PROJECT_HOME, "public/favicon.ico"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/96x96.png"), os.path.join(PROJECT_HOME, "public/favicon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/icon.svg"), os.path.join(PROJECT_HOME, "docs/img/logo.svg"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/icon.ico"), os.path.join(PROJECT_HOME, "docs/favicon.ico"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/16x16.png"), os.path.join(PROJECT_HOME, "docs/favicon-16x16.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/32x32.png"), os.path.join(PROJECT_HOME, "docs/favicon-32x32.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/150x150.png"), os.path.join(PROJECT_HOME, "docs/mstile-150x150.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/180x180.png"), os.path.join(PROJECT_HOME, "docs/apple-touch-icon.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/192x192.png"), os.path.join(PROJECT_HOME, "docs/android-chrome-192x192.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/512x512.png"), os.path.join(PROJECT_HOME, "docs/android-chrome-512x512.png"))
+    shutil.copyfile(os.path.join(PROJECT_HOME, "release/icons/icon.svg"), os.path.join(PROJECT_HOME, "docs/safari-pinned-tab.svg"))
 
 if __name__ == "__main__":
     main()

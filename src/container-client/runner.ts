@@ -1,15 +1,16 @@
-import { AbstractClientEngine } from "@/container-client/runtimes/abstract/base";
+import { systemNotifier } from "@/container-client/notifier";
+import { AbstractContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
 import { ApiStartOptions, EngineConnectorSettings, ILogger, RunnerStarterOptions, RunnerStopperOptions } from "@/env/Types";
 import { createLogger } from "@/logger";
 
 export class Runner {
-  protected client: AbstractClientEngine;
+  protected client: AbstractContainerEngineHostClient;
   protected nativeApiStarterProcess: any;
   protected nativeApiStarterProcessChild: any;
   protected logger!: ILogger;
   protected started: boolean = false;
 
-  constructor(client: AbstractClientEngine) {
+  constructor(client: AbstractContainerEngineHostClient) {
     this.client = client;
     this.nativeApiStarterProcess = undefined;
     this.nativeApiStarterProcessChild = undefined;
@@ -18,6 +19,9 @@ export class Runner {
   // API connectivity and startup
   async startApi(opts?: ApiStartOptions, starter?: RunnerStarterOptions) {
     this.started = true;
+    systemNotifier.transmit("startup.phase", {
+      trace: `Staring the api`
+    });
     this.logger = createLogger("container-client.api.Runner");
     this.logger.debug(">> Starting API - guard configuration");
     if (!starter || !starter?.path) {

@@ -54,7 +54,6 @@
   "Container engine settings reset has failed": "Container engine settings reset has failed",
   "Container engine settings update has failed": "Container engine settings update has failed",
   "Container logs": "Container logs",
-  "Container runtime": "Container runtime",
   "Container startup": "Container startup",
   "Controller path must be set": "Controller path must be set",
   "Controller scopes": "Controller scope",
@@ -91,7 +90,6 @@
   "Error during engine detection": "Error during engine detection",
   "Error during executable detection": "Unable to detect executable",
   "Error during executable selection": "Unable to detect executable",
-  "Error during runtime detection": "Error during runtime detection",
   "Exited": "Exited",
   "Expand": "Expand",
   "Explore more in the docs": "Explore more in the docs",
@@ -275,5 +273,6 @@
   "containersRunning_one": "There is {{count}} running container",
   "containersRunning_other": "There are {{count}} running containers",
   "dark": "dark",
-  "light": "light"
+  "light": "light",
+  "Container host": "Container host"
 }

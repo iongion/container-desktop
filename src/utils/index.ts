@@ -7,7 +7,7 @@ export function deepMerge<T = any>(x: Partial<T>, ...y: Partial<T & any>[]) {
   }) as T;
 }
 
-export function axiosConfigToCURL(config) {
+export function axiosConfigToCURL(config, opts?: { as_array?: boolean; silent?: boolean; with_headers?: boolean; raw?: boolean; without_buffer?: boolean }) {
   if (!config || !config.baseURL || !config.socketPath) {
     console.error("Request config is not valid", config);
     throw new Error("Unable to construct curl from config");
@@ -18,7 +18,23 @@ export function axiosConfigToCURL(config) {
     Object.entries(config.params).forEach(([key, value]) => searchParams.set(key, `${value}`));
     requestUrl = `${requestUrl}?${searchParams}`;
   }
-  const command = ["curl", "-v", "-X", config.method?.toUpperCase(), "--unix-socket", `"${config.socketPath.replace("unix://", "").replace("npipe://", "")}"`, `"${requestUrl}"`];
+  const socketPath = `"${config.socketPath.replace("unix://", "").replace("npipe://", "")}"`;
+  const command = ["curl"];
+  if (opts?.silent) {
+    command.push("-s");
+  }
+  command.push(opts?.with_headers ? "-i" : "-v");
+  if (opts?.raw) {
+    command.push("--raw");
+  }
+  if (opts?.without_buffer) {
+    command.push("--no-buffer");
+  }
+  command.push("-X", config.method?.toUpperCase() || "GET");
+  command.push("--unix-socket");
+  command.push(socketPath);
+  command.push(`"${requestUrl}"`);
+  // Headers
   const exclude = ["common", "delete", "get", "head", "patch", "post", "put"];
   const extractHeaders = (bag) => {
     const headers = {};
@@ -37,10 +53,12 @@ export function axiosConfigToCURL(config) {
   Object.entries(headers).forEach(([key, value]) => {
     command.push(`-H "${key}: ${value}"`);
   });
-  if (config.method !== "get" && config.method !== "head") {
-    if (typeof config.data !== "undefined") {
-      command.push("-d", `'${JSON.stringify(config.data)}'`);
+  if (typeof config.data !== "undefined") {
+    let data = config.data;
+    if (headers["Content-Type"] === "application/json") {
+      data = JSON.stringify(data);
     }
+    command.push("-d", `'${data}'`);
   }
-  return command.join(" ");
+  return opts?.as_array ? command : command.join(" ");
 }

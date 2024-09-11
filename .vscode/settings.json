@@ -89,6 +89,7 @@
     "Minimizable",
     "Mountpoint",
     "mstile",
+    "Netcat",
     "netns",
     "nodemon",
     "npipe",

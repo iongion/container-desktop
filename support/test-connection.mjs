@@ -7,29 +7,6 @@ export function createApiDriver(config) {
     ...config,
     adapter
   });
-  // Configure http client logging
-  // Add a request interceptor
-  driver.interceptors.request.use(
-    function (config) {
-      console.debug("[container-client] HTTP request", config);
-      return config;
-    },
-    function (error) {
-      console.error("[container-client] HTTP request error", error.message, error.stack);
-      return Promise.reject(error);
-    }
-  );
-  // Add a response interceptor
-  driver.interceptors.response.use(
-    function (response) {
-      console.debug("[container-client] HTTP response", { status: response.status, statusText: response.statusText });
-      return response;
-    },
-    function (error) {
-      console.error("[container-client] HTTP response error", error.message, error.response ? { code: error.response.status, statusText: error.response.statusText } : "");
-      return Promise.reject(error);
-    }
-  );
   return driver;
 }
 

@@ -1,12 +1,12 @@
 import { Action, Thunk, action, thunk } from "easy-peasy";
 
 import { Application } from "@/container-client/Application";
-import { Connection, ContainerEngine, SystemInfo } from "@/env/Types";
+import { Connection, ContainerEngineHost, SystemInfo } from "@/env/Types";
 import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface SettingsModelState {
   connections: Connection[];
-  engine?: ContainerEngine;
+  host?: ContainerEngineHost;
   systemInfo?: SystemInfo;
 }
 
@@ -26,7 +26,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
   return {
     connections: [],
     reset: action((state) => {
-      state.engine = undefined;
+      state.host = undefined;
       state.systemInfo = undefined;
     }),
     setSystemInfo: action((state, systemInfo) => {

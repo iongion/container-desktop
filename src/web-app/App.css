@@ -81,10 +81,10 @@
 .AppToaster .bp5-toast {
   top: 40px;
 }
-.bp5-drawer.bp5-position-left.AppDrawer .bp5-drawer-header h4.bp5-heading {
+[data-os="Darwin"] .bp5-drawer.bp5-position-left.AppDrawer .bp5-drawer-header h4.bp5-heading {
   text-align: right;
 }
-.bp5-drawer.bp5-position-left.AppDrawer .bp5-drawer-header > .bp5-icon {
+[data-os="Darwin"] .bp5-drawer.bp5-position-left.AppDrawer .bp5-drawer-header > .bp5-icon {
   display: none;
 }
 .AppDrawer {

@@ -1,20 +1,20 @@
 import { isEmpty } from "lodash-es";
 
-import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerRuntime, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, RunnerStopperOptions } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM, WSL_PROGRAM } from "../../connection";
-import { AbstractClientEngineVirtualizedWSL } from "../abstract/wsl";
-import { PodmanClientEngineCommon } from "./base";
+import { AbstractContainerEngineHostClientVirtualizedWSL } from "../abstract/wsl";
+import { PodmanContainerEngineHostClientCommon } from "./base";
 
-export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtualizedWSL implements PodmanClientEngineCommon {
-  static ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_WSL;
-  ENGINE = ContainerEngine.PODMAN_VIRTUALIZED_WSL;
+export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractContainerEngineHostClientVirtualizedWSL implements PodmanContainerEngineHostClientCommon {
+  static HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
+  HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   PROGRAM = PODMAN_PROGRAM;
   CONTROLLER = WSL_PROGRAM;
-  RUNTIME = ContainerRuntime.PODMAN;
+  ENGINE = ContainerEngine.PODMAN;
 
   static async create(id: string, osType: OperatingSystem) {
-    const instance = new PodmanClientEngineVirtualizedWSL(osType);
+    const instance = new PodmanContainerEngineHostClientVirtualizedWSL(osType);
     instance.id = id;
     await instance.setup();
     return instance;
@@ -30,27 +30,23 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
         relay: ""
       };
     }
+    const uri = getWindowsPipePath(scope.startsWith("podman-machine") ? scope : `${this.ENGINE}-${scope}-${settings.mode}`);
     let relay = "";
     // Get environment variable inside the scope
-    if (settings.mode === "mode.automatic") {
-      try {
-        const systemInfo = await this.getSystemInfo(connection, undefined, customSettings);
-        relay = systemInfo?.host?.remoteSocket?.path || relay;
-      } catch (error: any) {
-        this.logger.error(this.id, "Unable to retrieve system info", error);
-      }
-    } else {
-      const userDataDir = await this.getConnectionDataDir();
-      relay = `${userDataDir}/podman-desktop-companion-wsl-relay.sock`;
+    try {
+      const info = await this.getSystemInfo(connection, undefined, settings);
+      relay = info?.host?.remoteSocket?.path || "";
+    } catch (error: any) {
+      this.logger.warn(this.id, "Unable to get system info", error);
     }
-    const uri = getWindowsPipePath(scope.startsWith("podman-machine") ? scope : `${this.RUNTIME}-${scope}`);
     // Inspect machine system info for relay path
     return {
       uri,
       relay
     };
   }
-  // Runtime
+
+  // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
     if (running.success) {
@@ -68,6 +64,18 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
       launcherPath = controller?.path || controller?.name || "";
       const programPath = program.path || program.name;
       launcherArgs = [programPath, ...args];
+      try {
+        // Bug on WSL - podman is unable to create the base directory for the unix socket
+        if (settings.api.connection.relay) {
+          const baseDir = await Path.dirname(settings.api.connection.relay);
+          this.logger.warn("Ensuring relay base directory", settings.api.connection.relay);
+          await this.runScopeCommand("mkdir", ["-p", baseDir], controller?.scope || "");
+        } else {
+          this.logger.warn("No relay path - base dir not ensured");
+        }
+      } catch (error: any) {
+        this.logger.warn(this.id, "Unable to create base directory", settings.api.connection.relay, error);
+      }
     } else {
       launcherPath = program.path || program.name;
     }
@@ -78,6 +86,13 @@ export class PodmanClientEngineVirtualizedWSL extends AbstractClientEngineVirtua
     this.apiStarted = started;
     this.logger.debug(this.id, "<< Starting API completed", started);
     return started;
+  }
+
+  async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
+    this.logger.debug(this.id, "Stop api");
+    const settings = customSettings || (await this.getSettings());
+    await Command.StopConnectionServices(this.id, settings);
+    return true;
   }
 
   isScoped() {

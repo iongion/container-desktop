@@ -6,68 +6,72 @@ import classNames from "classnames";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerRuntime, ContainerRuntimeOption } from "@/env/Types";
+import { Connector, ContainerEngineHost } from "@/env/Types";
 
-import "./RuntimeSelect.css";
+import { RestrictedTo } from "@/web-app/components/RestrictedTo";
+import "./EngineHostSelect.css";
 
-// RuntimeSelect
+// EngineHostSelect
 
-const renderContainerRuntimeOption: ItemRenderer<ContainerRuntimeOption> = (item, { handleClick, handleFocus, modifiers, query }) => {
+const renderMenuItem: ItemRenderer<Connector> = (item, { handleClick, handleFocus, modifiers, query }) => {
   if (!modifiers.matchesPredicate) {
     return null;
   }
+  const isDisabled = modifiers.disabled || item.disabled || !item.availability.enabled;
   return (
     <MenuItem
-      className="RuntimeSelectMenuItem"
+      className="EngineHostSelectMenuItem"
       active={modifiers.active}
-      disabled={modifiers.disabled}
-      key={item.runtime}
+      disabled={isDisabled}
+      key={item.host}
+      labelElement={(<RestrictedTo host={item.host} />) as any}
       onClick={handleClick}
       onFocus={handleFocus}
       roleStructure="listoption"
       text={item.label}
+      title={isDisabled ? item.notes : ""}
     />
   );
 };
 
-export interface RuntimeSelectProps {
-  items: ContainerRuntimeOption[];
+export interface EngineSelectProps {
+  items: Connector[];
   inputProps: Partial<Omit<InputGroupProps, "value" | "onChange">>;
-  runtime?: ContainerRuntime;
+  host?: ContainerEngineHost;
   disabled?: boolean;
   pending?: boolean;
   withoutDetect?: boolean;
-  onChange?: (item: ContainerRuntime, event?: React.SyntheticEvent<HTMLElement>) => void;
-  onDetect?: (item: ContainerRuntime, event?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
+  onChange?: (item: ContainerEngineHost, event?: React.SyntheticEvent<HTMLElement>) => void;
+  onDetect?: (item: ContainerEngineHost, event?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
-export const RuntimeSelect: React.FC<RuntimeSelectProps> = ({ items, inputProps, disabled, pending, withoutDetect, runtime, onChange, onDetect }: RuntimeSelectProps) => {
+export const EngineHostSelect: React.FC<EngineSelectProps> = ({ items, inputProps, disabled, pending, withoutDetect, host, onChange, onDetect }: EngineSelectProps) => {
   const { t } = useTranslation();
-  const activeItem = runtime ? items.find((it) => it.runtime === runtime) : undefined;
+  const activeItem = host ? items.find((it) => it.host === host) : undefined;
   const onItemSelect = useCallback(
     (e: any) => {
-      onChange?.(e.runtime);
+      onChange?.(e.host);
     },
     [onChange]
   );
   const onItemDetect = useCallback(
     (e: any) => {
       if (activeItem) {
-        onDetect?.(activeItem.runtime, e);
+        onDetect?.(activeItem.host, e);
       }
     },
     [onDetect, activeItem]
   );
   return (
-    <div className="ConnectionEntitySelect RuntimeSelect">
-      <Select<ContainerRuntimeOption>
+    <div className="ConnectionEntitySelect EngineHostSelect">
+      <Select<Connector>
         filterable={false}
         fill
         resetOnSelect
         scrollToActiveItem
         inputProps={inputProps}
         items={items}
-        itemRenderer={renderContainerRuntimeOption}
+        itemRenderer={renderMenuItem}
         onItemSelect={onItemSelect}
         popoverProps={{ matchTargetWidth: true, minimal: true }}
         activeItem={activeItem}
@@ -77,6 +81,7 @@ export const RuntimeSelect: React.FC<RuntimeSelectProps> = ({ items, inputProps,
           disabled={disabled}
           fill
           rightIcon={IconNames.CARET_DOWN}
+          title={activeItem?.description}
           text={activeItem?.label ?? t("-- Select --")}
           textClassName={classNames({
             [Classes.TEXT_MUTED]: activeItem === undefined

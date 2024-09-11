@@ -2,7 +2,7 @@ import { Switch } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 
-import { ContainerRuntime, Registry, RegistrySearchFilters } from "@/env/Types";
+import { ContainerEngine, Registry, RegistrySearchFilters } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useStoreState } from "@/web-app/domain/types";
 import { pathTo } from "@/web-app/Navigator";
@@ -83,10 +83,10 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         <Switch
           label="Automated"
           inline
-          checked={currentConnector?.runtime === ContainerRuntime.DOCKER ? false : filters.isAutomated}
+          checked={currentConnector?.engine === ContainerEngine.DOCKER ? false : filters.isAutomated}
           onChange={onFilterChange}
           data-filter="isAutomated"
-          disabled={currentConnector?.runtime === ContainerRuntime.DOCKER}
+          disabled={currentConnector?.engine === ContainerEngine.DOCKER}
         />
       </div>
     </AppScreenHeader>
