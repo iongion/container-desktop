@@ -17,6 +17,7 @@ import { AbstractContainerEngineHostClient } from "../abstract/base";
 
 export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends AbstractContainerEngineHostClient {
   public CONTROLLER: string = LIMA_PROGRAM;
+  public startedScopesMap: Map<string, boolean> = new Map<string, boolean>();
   // Helpers
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
     const settings = customSettings || (await this.getSettings());
@@ -141,16 +142,33 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
   }
   // LIMA specific
   async startLIMAInstance(name: string): Promise<boolean> {
-    const { controller } = await this.getSettings();
-    const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
-    const check = await this.runHostCommand(programLauncher, ["start", name]);
-    return check.success;
+    const scopes = await this.getControllerScopes();
+    const matchingScope = scopes.find((scope) => scope.Name === name);
+    if (matchingScope) {
+      if (matchingScope.Usable) {
+        this.logger.warn(this.id, `LIMA instance ${name} is already running`);
+        return true;
+      } else {
+        const { controller } = await this.getSettings();
+        const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
+        const check = await this.runHostCommand(programLauncher, ["start", name]);
+        return check.success;
+      }
+    } else {
+      this.logger.error(this.id, `LIMA instance ${name} not found`);
+    }
+    return false;
   }
 
   async stopLIMAInstance(name: string): Promise<boolean> {
-    const { controller } = await this.getSettings();
-    const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
-    const check = await this.runHostCommand(programLauncher, ["stop", name]);
-    return check.success;
+    if (this.startedScopesMap.has(name)) {
+      const { controller } = await this.getSettings();
+      const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
+      const check = await this.runHostCommand(programLauncher, ["stop", name]);
+      return check.success;
+    } else {
+      this.logger.warn(this.id, `LIMA instance ${name} is not started here - stop skipped`);
+    }
+    return true;
   }
 }

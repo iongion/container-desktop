@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.2-rc.5 - 2024-09-11
+
+## Fixed
+
+- Terminate WSL distributions only if started by pdc
+- Stop LIMA instances only if started by pdc
+
+## Added
+
+- Icons for Windows Store
+
+## Changed
+
+- Privacy policy to be readable
+
 ## 5.2.2-rc.4 - 2024-09-11
 
 ## Fixed

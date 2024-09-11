@@ -11,5 +11,5 @@
   "manifest_version": 2,
   "name": "Podman desktop companion",
   "permissions": ["webNavigation"],
-  "version": "5.2.2-rc.4"
+  "version": "5.2.2-rc.5"
 }
