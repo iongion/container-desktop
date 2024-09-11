@@ -16,6 +16,7 @@ import { AbstractContainerEngineHostClient } from "../abstract/base";
 
 export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends AbstractContainerEngineHostClient {
   public CONTROLLER: string = WSL_PROGRAM;
+  public startedScopesMap: Map<string, boolean> = new Map<string, boolean>();
 
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
 
@@ -100,15 +101,37 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
   }
   // WSL specific
   async startWSLDistribution(name: string): Promise<boolean> {
-    const check = await this.runScopeCommand("echo", ["started"], name);
-    return check.success && `${check.stdout}`.trim().endsWith("started");
+    const scopes = await this.getControllerScopes();
+    const matchingScope = scopes.find((scope) => scope.Name === name);
+    if (matchingScope) {
+      console.error("matchingScope", matchingScope);
+      if (matchingScope.Usable) {
+        this.logger.warn(this.id, `WSL distribution ${name} is already running`);
+        return true;
+      } else {
+        const check = await this.runScopeCommand("echo", ["started"], name);
+        if (check.success) {
+          this.startedScopesMap.set(name, true);
+        }
+        return check.success && `${check.stdout}`.trim().endsWith("started");
+      }
+    } else {
+      this.logger.error(this.id, `WSL distribution ${name} not found`);
+    }
+    return false;
   }
 
   async stopWSLDistribution(name: string): Promise<boolean> {
-    const settings = await this.getSettings();
-    const commandLauncher = settings.controller?.path || settings.controller?.name || "";
-    const check = await this.runHostCommand(commandLauncher, ["--terminate", name]);
-    return check.success;
+    if (this.startedScopesMap.has(name)) {
+      const settings = await this.getSettings();
+      const commandLauncher = settings.controller?.path || settings.controller?.name || "";
+      this.logger.warn(this.id, `WSL distribution ${name} is being stopped`, this.startedScopesMap);
+      const check = await this.runHostCommand(commandLauncher, ["--terminate", name]);
+      return check.success;
+    } else {
+      this.logger.warn(this.id, `WSL distribution ${name} is not started here - stop skipped`);
+    }
+    return true;
   }
 
   async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
