@@ -1,4 +1,8 @@
-import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, sourceEnv } from "./vite.config.common.mjs";
+import path from "node:path";
+import { normalizePath } from "vite";
+import { viteStaticCopy } from "vite-plugin-static-copy";
+
+import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, PROJECT_HOME, sourceEnv } from "./vite.config.common.mjs";
 
 /**
  * @type {import('vite').UserConfig}
@@ -9,6 +13,7 @@ export default ({ mode, command }) => {
   const cache = getElectronVendorsCache();
   const outputFormat = "es";
   const config = getCommonViteConfig({ mode: mode || process.env.MODE || "development", command, outputName: "main", outputFormat });
+  config.build.emptyOutDir = false;
   config.build.ssr = true;
   config.build.target = `node${cache.node}`;
   config.build.lib = {
@@ -23,6 +28,16 @@ export default ({ mode, command }) => {
   config.build.rollupOptions.output.format = outputFormat;
   if (ENVIRONMENT === "production") {
     config.plugins.push(createSingleFile(false));
+    config.plugins.push(
+      viteStaticCopy({
+        targets: [
+          {
+            src: normalizePath(path.resolve(PROJECT_HOME, "support/resources/appx")),
+            dest: normalizePath(path.resolve(PROJECT_HOME, "build"))
+          }
+        ]
+      })
+    );
   }
   return config;
 };

@@ -85,13 +85,15 @@ const config = {
   },
   win: {
     target: ["appx", "nsis"],
+    //certificateFile: "PodmanDesktopCompanion.pfx",
+    // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico"
   },
   appx: {
     identityName: "IonutStoica.PodmanDesktopCompanion",
     publisher: "CN=52408AA8-2ECC-4E48-9A2C-6C1F69841C79",
     publisherDisplayName: "Ionut Stoica",
-    // applicationId: "PodmanDesktopCompanion"
+    applicationId: "IonutStoica.PodmanDesktopCompanion",
     displayName: "Podman Desktop Companion"
   },
   linux: {

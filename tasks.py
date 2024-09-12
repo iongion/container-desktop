@@ -3,6 +3,7 @@ import shutil
 import hashlib
 import platform
 import os
+import subprocess
 from pathlib import Path
 
 from invoke import task, Collection
@@ -14,7 +15,7 @@ NODE_ENV = os.environ.get("NODE_ENV", "development")
 ENVIRONMENT = os.environ.get("ENVIRONMENT", NODE_ENV)
 APP_PROJECT_VERSION = PROJECT_VERSION
 TARGET = os.environ.get("TARGET", "linux")
-PORT = int(os.environ.get("PROT", str(3000)))
+PORT = int(os.environ.get("PORT", str(3000)))
 PTY = os.name != "nt"
 
 def get_env():
@@ -31,6 +32,7 @@ def get_env():
         # Global
         "ENVIRONMENT": ENVIRONMENT,
         "APP_PROJECT_VERSION": APP_PROJECT_VERSION,
+        "SIGNTOOL_PATH": "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22000.0\\x64\\signtool.exe" if os.name == "nt" else ""
     }
 
 
@@ -50,6 +52,33 @@ def run_env(ctx, cmd, env=None):
     else:
         ctx.run(cmd, env=cmd_env, pty=PTY)
 
+
+@task
+def gen_sign(ctx):
+    # See https://ebourg.github.io for jsign-6.0.jar
+    # See https://gist.github.com/steve981cr/52ca0ae39403dba73a7dbdbe5d231bbf
+    # See https://gist.github.com/steve981cr/4d592c5cc0f4600d2dc11b1b55aa62a7
+    # See https://www.briggsoft.com/signgui.htm
+    # Create self-signed certificate
+    # New-SelfSignedCertificate -Type CodeSigning -Subject "CN=52408AA8-2ECC-4E48-9A2C-6C1F69841C79" -KeyUsage DigitalSignature -FriendlyName "Podman Desktop Companion" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+    # Export without password
+    # $cert = @(Get-ChildItem -Path 'Cert:\CurrentUser\My\61A96AA84FAA9EE846F176E0C40B32D364A0DEE6')[0]; $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx); [System.IO.File]::WriteAllBytes('PodmanDesktopCompanion.pfx', $certBytes)
+    path = Path(PROJECT_HOME)
+    cert_path = os.path.join(path, "PodmanDesktopCompanion.pfx")
+    cert_gen = "$cert = @(Get-ChildItem -Path 'Cert:\\CurrentUser\\My\\61A96AA84FAA9EE846F176E0C40B32D364A0DEE6')[0]; $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx); [System.IO.File]::WriteAllBytes('PodmanDesktopCompanion.pfx', $certBytes)"
+    if not os.path.exists(cert_path):
+        print(f"Certificate not found at {cert_path} - generate with: {cert_gen}")
+        return False
+    jar_path = os.path.join(path, "temp/jsign-6.0.jar")
+    ts_url = "as,http://timestamp.sectigo.com/rfc3161,http://timestamp.globalsign.com/scripts/timstamp.dll,http://timestamp.comodoca.com/authenticode,http://sha256timestamp.ws.symantec.com/sha256/timestamp"
+    app_path = os.path.join(path, "release", f"podman-desktop-companion-x64-{PROJECT_VERSION}.exe")
+    with ctx.cd(path):
+        run_env(ctx, f'java -jar "{jar_path}" --keystore PodmanDesktopCompanion.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{app_path}"')
+    # "C:\Program Files (x86)\Windows
+    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\podman-desktop-companion\PodmanDesktopCompanion.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\podman-desktop-companion\release\podman-desktop-companion-x64-5.2.2-rc.6.appx"
+    # appx_path = os.path.join(path, "release", f"podman-desktop-companion-x64-{PROJECT_VERSION}.appx")
+    # with ctx.cd(path):
+    #     run_env(ctx, f'java -jar "{jar_path}" --keystore PodmanDesktopCompanion.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{appx_path}"')
 
 
 @task
@@ -135,4 +164,4 @@ def start(ctx, docs=False):
         run_env(ctx, "yarn dev")
 
 
-namespace = Collection(clean, prepare, build, bundle, release, start, checksums)
+namespace = Collection(clean, prepare, build, bundle, release, start, checksums, gen_sign)

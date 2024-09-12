@@ -60,35 +60,35 @@
   "tap": "homebrew/cask",
   "tap_git_head": "2e01e559350aa6f88679fcc94a5e74b90c432cc6",
   "token": "podman-desktop-companion",
-  "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-arm64-5.2.2-rc.5.dmg",
+  "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-arm64-5.2.2-rc.6.dmg",
   "url_specs": {
     "verified": "github.com/iongion/podman-desktop-companion/"
   },
   "variations": {
     "big_sur": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.5.dmg"
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.6.dmg"
     },
     "catalina": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.5.dmg"
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.6.dmg"
     },
     "monterey": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.5.dmg"
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.6.dmg"
     },
     "sequoia": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.5.dmg"
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.6.dmg"
     },
     "sonoma": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.5.dmg"
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.6.dmg"
     },
     "ventura": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.5.dmg"
+      "url": "https://github.com/iongion/podman-desktop-companion/releases/podman-desktop-companion-x64-5.2.2-rc.6.dmg"
     }
   },
-  "version": "5.2.2-rc.5"
+  "version": "5.2.2-rc.6"
 }

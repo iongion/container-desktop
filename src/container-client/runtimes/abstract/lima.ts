@@ -133,6 +133,10 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
     return undefined;
   }
 
+  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
+    return super.getSystemInfo(connection, customFormat || "json", customSettings);
+  }
+
   // Executes command inside controller scope
   async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
     const { controller } = settings || (await this.getSettings());

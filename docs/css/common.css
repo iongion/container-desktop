@@ -2,6 +2,8 @@ html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .navbar {
@@ -66,7 +68,8 @@ h1 {
 }
 
 .callout a.pd {
-  font-size: 44px;
+  font-size: 14px;
+  font-weight: bold;
   padding-top: 4px;
   padding-bottom: 4px;
   display: inline-block;
@@ -533,4 +536,31 @@ ul.footerMenu {
 }
 .installationSection a:last-child {
   margin-right: 0;
+}
+.privacy-policy {
+  margin: 0 auto;
+  color: #fff;
+  font-family: "Montserrat", sans-serif;
+  width: 70%;
+  text-align: left;
+  font-weight: normal !important;
+}
+.privacy-policy li:nth-child(1),
+.privacy-policy li:nth-child(2) {
+  font-weight: bold;
+}
+.privacy-policy a {
+  font-weight: normal;
+  text-decoration: underline;
+  color: #dbed27 !important;
+}
+.privacy-policy a:hover {
+  color: #aec5ff !important;
+}
+.inner-buttons a.button {
+  color: #aec5ff !important;
+}
+.intro-nav a:hover {
+  color: #fff !important;
+  text-decoration: underline;
 }

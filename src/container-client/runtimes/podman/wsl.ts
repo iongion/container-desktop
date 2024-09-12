@@ -1,6 +1,6 @@
 import { isEmpty } from "lodash-es";
 
-import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, RunnerStopperOptions } from "@/env/Types";
+import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM, WSL_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClientVirtualizedWSL } from "../abstract/wsl";
@@ -86,13 +86,6 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
     this.apiStarted = started;
     this.logger.debug(this.id, "<< Starting API completed", started);
     return started;
-  }
-
-  async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
-    this.logger.debug(this.id, "Stop api");
-    const settings = customSettings || (await this.getSettings());
-    await Command.StopConnectionServices(this.id, settings);
-    return true;
   }
 
   isScoped() {

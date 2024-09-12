@@ -1,10 +1,10 @@
 {
   "name": "podman-desktop-companion",
   "title": "Podman Desktop Companion",
-  "version": "5.2.2-rc.5",
+  "version": "5.2.2-rc.6",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
   "description": "Podman Desktop Companion",
-  "main": "build/main-5.2.2-rc.5.mjs",
+  "main": "build/main-5.2.2-rc.6.mjs",
   "homepage": "./",
   "type": "module",
   "scripts": {
@@ -92,7 +92,7 @@
     "autoprefixer": "^10.4.20",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
-    "electron": "32.0.2",
+    "electron": "32.1.0",
     "electron-builder": "^25.0.5",
     "eslint": "8.57.0",
     "eslint-config-prettier": "^9.1.0",
@@ -102,7 +102,7 @@
     "eslint-plugin-import": "^2.30.0",
     "eslint-plugin-jsx-a11y": "^6.10.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "eslint-plugin-react": "^7.35.2",
+    "eslint-plugin-react": "^7.36.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.11",
     "mime-types": "^2.1.35",
@@ -116,6 +116,7 @@
     "vite": "^5.4.4",
     "vite-plugin-checker": "^0.8.0",
     "vite-plugin-ejs": "^1.7.0",
+    "vite-plugin-static-copy": "^1.0.6",
     "vite-plugin-svgr": "^4.2.0",
     "vite-plugin-top-level-await": "^1.4.4",
     "vite-tsconfig-paths": "^5.0.1"
