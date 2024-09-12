@@ -60,6 +60,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
     running: false,
     connectors: [],
     currentConnector: undefined,
+    nextConnection: undefined,
     userSettings: {} as any,
     // Actions
     setPhase: action((state, phase) => {
@@ -71,6 +72,9 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
     }),
     setPending: action((state, flag) => {
       state.pending = flag;
+    }),
+    setNextConnection: action((state, conn) => {
+      state.nextConnection = conn;
     }),
     insertBootstrapPhase: action((state, phase) => {
       state.systemNotifications.push(phase);
@@ -143,6 +147,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
             running,
             connectors,
             currentConnector: undefined,
+            nextConnection: undefined,
             userSettings
           });
         } catch (error: any) {
@@ -157,10 +162,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       const state = store.getState();
       let connection = options?.connection || state.currentConnector;
       let startApi = options?.startApi || connection?.settings?.api?.autoStart || false;
-      const app = document.querySelector("body");
-      if (app) {
-        app.setAttribute("data-engine", connection?.engine || "podman");
-      }
+      await actions.setNextConnection(connection);
       return registry.withPending(async () => {
         const instance = Application.getInstance();
         systemNotifier.transmit("startup.phase", {
@@ -244,6 +246,10 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
             }
             if (currentConnector.availability.api) {
               console.debug("Api started - connection is available");
+              Notification.show({
+                message: t("You are now connected to {{name}}", currentConnector),
+                intent: Intent.SUCCESS
+              });
             } else {
               Notification.show({
                 message: t("Unable to start the application - current connection API is not available"),

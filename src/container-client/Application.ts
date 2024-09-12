@@ -915,17 +915,8 @@ export class Application {
   async stop(opts?: DisconnectOptions): Promise<boolean> {
     const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
     if (host) {
-      if (host.isScoped()) {
-        this.logger.debug(">> Bridge stop started - stop scope", opts, host.id);
-        await host.stopApi();
-        const settings = opts?.connection?.settings || (await host.getSettings());
-        const scope = settings?.controller?.scope || "";
-        await host.stopScopeByName(scope);
-      } else {
-        this.logger.debug(">> Bridge stop started - stop native", opts, host.id);
-        await host.stopApi();
-      }
-      this.logger.debug(">> Bridge stop completed", opts, host.id);
+      const stopped = await host.stopApi();
+      this.logger.debug(">> Bridge stop completed", opts, host.id, { stopped });
     } else {
       this.logger.debug("<< Bridge stop skipped - not started", opts);
     }

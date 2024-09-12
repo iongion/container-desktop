@@ -210,8 +210,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
   let expandAsOverlay;
   let withInlinePlayerActionsWidget: React.ReactNode | undefined;
   if (container) {
+    containerServiceUrl = getContainerServiceUrl(container);
     if (withOverlay) {
-      containerServiceUrl = getContainerServiceUrl(container);
       expandAsOverlay = (
         <div className="ItemActionsOverlayMenu">
           <ButtonGroup minimal className="ItemActionsOverlayMenuActions">

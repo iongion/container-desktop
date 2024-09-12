@@ -470,11 +470,12 @@ export class ContainerClient {
     });
   }
   async createContainer(opts: CreateContainerOptions) {
+    const mounts = (opts.Mounts || []).filter((mount) => mount.source && mount.destination);
     return this.withResult<{ created: boolean; started: boolean }>(async () => {
-      const creator = {
+      let creator: any = {
         image: opts.ImageId,
         name: opts.Name,
-        mounts: opts.Mounts?.filter((mount) => mount.source && mount.destination).map((mount) => {
+        mounts: mounts.map((mount) => {
           return {
             Source: mount.source,
             Destination: mount.destination,
@@ -490,13 +491,37 @@ export class ContainerClient {
           };
         })
       };
+      let baseURL = "http://d/v4.0.0/libpod";
+      const host = this.connection?.host || "";
+      if (host.startsWith("docker")) {
+        baseURL = "http://localhost";
+        creator = {
+          Image: opts.ImageId,
+          Name: opts.Name,
+          HostConfig: {
+            Mounts: mounts.map((mount) => {
+              return {
+                Type: mount.type,
+                Source: mount.source,
+                Target: mount.destination,
+                ReadOnly: false
+              };
+            })
+          },
+          PortBindings: opts.PortMappings?.reduce((acc, mapping) => {
+            const key = `${mapping.container_port}/${mapping.protocol}`;
+            acc[key] = [{ HostPort: `${mapping.host_port}` }];
+            return acc;
+          }, {} as any)
+        };
+      }
       let url = "/containers/create";
       if (opts.Name) {
         const searchParams = new URLSearchParams();
         searchParams.set("name", opts.Name);
         url = `${url}?${searchParams.toString()}`;
       }
-      const createResult = await this.driver.post<{ Id: string }>(url, creator);
+      const createResult = await this.driver.post<{ Id: string }>(url, creator, { baseURL });
       const create = { created: false, started: false };
       if (isOk(createResult)) {
         create.created = true;

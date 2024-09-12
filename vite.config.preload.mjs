@@ -9,6 +9,7 @@ export default ({ mode, command }) => {
   const cache = getElectronVendorsCache();
   const outputFormat = "es";
   const config = getCommonViteConfig({ mode: mode || process.env.MODE || "development", command, outputName: "preload", outputFormat: outputFormat });
+  config.build.emptyOutDir = false;
   config.build.ssr = true;
   config.build.target = `node${cache.node}`;
   config.build.lib = {

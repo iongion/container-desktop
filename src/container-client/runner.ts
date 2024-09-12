@@ -29,7 +29,7 @@ export class Runner {
       return false;
     }
     const clientOpts = {
-      retry: { count: 10, wait: 5000 },
+      retry: { count: 10, wait: 10000 },
       checkStatus: async () => {
         this.logger.debug(">> Starting API - Checking API status - checking if running");
         const result = await this.client.isApiRunning();

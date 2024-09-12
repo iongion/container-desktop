@@ -140,6 +140,6 @@ export async function getAvailableWSLDistributions(wslPath?: string) {
   } catch (error: any) {
     logger.error("Unable to decode WSL distributions - execution error", error.message, error.stack);
   }
-  logger.debug("WSL distributions are", items);
+  // logger.debug("WSL distributions are", items);
   return items;
 }

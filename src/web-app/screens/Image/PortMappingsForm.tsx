@@ -11,11 +11,13 @@ import { ContainerImagePortMapping } from "@/env/Types";
 // locals
 import "./PortMappingsForm.css";
 
+const DEFAULT_HOST_IP = "0.0.0.0";
+
 export const createPortMapping = (): ContainerImagePortMapping => {
   return {
     guid: v4(),
     container_port: 80,
-    host_ip: "127.0.0.1",
+    host_ip: DEFAULT_HOST_IP,
     host_port: 8080,
     protocol: "tcp"
   };
@@ -29,7 +31,7 @@ export const toPortMappings = (exposed: { [key: string]: number }) => {
     return {
       guid: v4(),
       container_port: Number(container_port),
-      host_ip: "127.0.0.1",
+      host_ip: DEFAULT_HOST_IP,
       host_port: host_port,
       protocol: protocol as any
     };

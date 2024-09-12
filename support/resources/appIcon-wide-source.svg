@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="310"
+   height="150"
+   viewBox="0 0 310 150"
+   version="1.1"
+   id="svg1"
+   inkscape:export-filename="Wide310x150Logo.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   sodipodi:docname="appIcon-wide-source.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="0.51276154"
+     inkscape:cx="-158.94328"
+     inkscape:cy="206.72377"
+     inkscape:window-width="1920"
+     inkscape:window-height="1010"
+     inkscape:window-x="-6"
+     inkscape:window-y="-6"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g44478"
+       transform="matrix(2.3430743,0,0,2.3430743,85.443578,1.5848885)">
+      <g
+         id="g10819"
+         transform="matrix(0.73323943,0,0,0.73323943,-895.07265,177.00919)">
+        <g
+           id="text10671"
+           style="font-style:normal;font-weight:normal;font-size:37.592px;line-height:22.5552px;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#892ca0;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           aria-label="podman">
+          <path
+             id="path80700"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Montserrat;-inkscape-font-specification:Montserrat;fill:#892ca0;fill-opacity:1;stroke-width:0.264583px"
+             d="m 1249.8778,-209.9329 c -3.1202,0 -5.526,1.27812 -6.9921,3.60883 v -3.45846 h -4.3231 v 27.29175 h 4.3231 v -10.75129 c 1.4661,2.3307 3.8719,3.60882 7.0673,3.60882 5.7139,0 9.4731,-4.09752 9.4731,-10.07464 0,-6.0899 -3.8719,-10.22501 -9.5483,-10.22501 z m -0.9022,16.61564 c -3.5713,0 -6.0899,-2.66903 -6.0899,-6.541 0,-3.75919 2.5186,-6.46581 6.0899,-6.46581 3.5712,0 6.0899,2.74421 6.0899,6.46581 0,3.83438 -2.5187,6.541 -6.0899,6.541 z" />
+          <path
+             id="path80704"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:37.592px;line-height:22.5552px;font-family:Montserrat;-inkscape-font-specification:Montserrat;letter-spacing:0px;word-spacing:0px;fill:#999999;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+             d="m 1278.3436,-217.67684 v 11.35277 c -1.466,-2.33071 -3.8719,-3.64642 -7.1048,-3.64642 -5.6388,0 -9.5108,4.09752 -9.5108,10.11223 0,6.0899 3.8344,10.2626 9.5859,10.2626 3.1954,0 5.6012,-1.27812 7.0297,-3.60882 v 3.42086 h 4.3231 v -27.89322 z m -6.1275,24.47236 c -3.6464,0 -6.1274,-2.70662 -6.165,-6.50341 0.038,-3.83438 2.5562,-6.57859 6.165,-6.57859 3.6089,0 6.1275,2.70662 6.1275,6.57859 0,3.79679 -2.5186,6.50341 -6.1275,6.50341 z" />
+        </g>
+      </g>
+      <g
+         id="g10987"
+         transform="translate(-1170.6108,231.26666)">
+        <g
+           id="g10985"
+           transform="translate(238.41304,-199.74894)">
+          <path
+             style="opacity:1;fill:none;fill-opacity:1;stroke:#892ca0;stroke-width:1.05833;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+             d="m 961.97165,23.28467 -19.29817,-9.23285 -4.82036,-20.8616002 13.2871,-16.7806158 21.38926,-0.06408 13.38485,16.7011458 -4.69887,20.8897002 z"
+             id="path10931" />
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

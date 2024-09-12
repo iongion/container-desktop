@@ -584,7 +584,7 @@ export const Command: ICommand = {
       case ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA:
         {
           const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
-          logger.debug("Proxying request to host", { connection, config });
+          logger.debug("Proxying request to host", { connection, config, request });
           const driver = await createNodeJSApiDriver(config);
           response = await driver.request(request);
           logger.debug("Proxy response", response);
