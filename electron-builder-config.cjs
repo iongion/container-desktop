@@ -85,13 +85,14 @@ const config = {
   },
   win: {
     target: ["appx", "nsis"],
+    //certificateFile: "PodmanDesktopCompanion.pfx",
     icon: "icons/icon.ico"
   },
   appx: {
     identityName: "IonutStoica.PodmanDesktopCompanion",
     publisher: "CN=52408AA8-2ECC-4E48-9A2C-6C1F69841C79",
     publisherDisplayName: "Ionut Stoica",
-    // applicationId: "PodmanDesktopCompanion"
+    applicationId: "IonutStoica.PodmanDesktopCompanion",
     displayName: "Podman Desktop Companion"
   },
   linux: {

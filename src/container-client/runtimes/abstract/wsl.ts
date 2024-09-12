@@ -27,7 +27,15 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
   }
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
     const settings = customSettings || (await this.getSettings());
-    await Command.StopConnectionServices(this.id, settings);
+    // Stop services
+    try {
+      await Command.StopConnectionServices(this.id, settings);
+    } catch (e: any) {
+      this.logger.error(this.id, "Stop api - failed to stop connection services", e);
+    }
+    // Stop scope - WSL -distribution
+    const scope = settings?.controller?.scope || "";
+    this.logger.debug(this.id, "Stop scope", scope, "skipped - other users may be using the distribution");
     return true;
   }
   async startScope(scope: ControllerScope): Promise<boolean> {
@@ -104,7 +112,6 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
     const scopes = await this.getControllerScopes();
     const matchingScope = scopes.find((scope) => scope.Name === name);
     if (matchingScope) {
-      console.error("matchingScope", matchingScope);
       if (matchingScope.Usable) {
         this.logger.warn(this.id, `WSL distribution ${name} is already running`);
         return true;

@@ -6,6 +6,7 @@ dist
 release
 squashfs-root
 .DS_Store
+PodmanDesktopCompanion.pfx
 
 # Logs
 logs

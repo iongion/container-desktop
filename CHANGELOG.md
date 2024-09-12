@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.2-rc.6 - 2024-09-11
+
+## Fixed
+
+- Theme switch on connect
+- Startup/Shutdown of managed hosts
+- Env sourcing
+- Starting containers with volumes and exposed ports
+- Open in browser when applicable
+- Icons generator
+
+## Added
+
+- Proper privacy policy page
+- Graphics generator
+- Self-sign test task
+
+## Changed
+
+- Upgraded deps
+- Home page podman desktop note and redirect to avoid users getting wrong message
+- Home page license and privacy notes
+
+## Removed
+
+- System tray screenshots as they were inaccurate
+
 ## 5.2.2-rc.5 - 2024-09-11
 
 ## Fixed

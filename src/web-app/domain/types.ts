@@ -1,8 +1,9 @@
 // vendors
-import { Action, EasyPeasyConfig, Store, Thunk, createTypedHooks } from "easy-peasy";
+import { Action, createTypedHooks, EasyPeasyConfig, Store, Thunk } from "easy-peasy";
 // project
 import type { ContainerClient, OnlineApi } from "@/container-client/Api.clients";
 import type {
+  Connection,
   ConnectOptions,
   Connector,
   DisconnectOptions,
@@ -56,6 +57,7 @@ export interface AppModelState {
   running?: boolean;
   connectors: Connector[];
   currentConnector?: Connector;
+  nextConnection?: Connection;
   userSettings: GlobalUserSettings;
 }
 export interface ResetableModel<T extends object> {
@@ -74,6 +76,8 @@ export interface AppModel extends AppModelState {
   domainUpdate: Action<AppModel, Partial<AppModelState>>;
   connectorUpdate: Action<AppModel, Connector>;
   connectorUpdateSettingsById: Action<AppModel, { id: string; settings: EngineConnectorSettings }>;
+
+  setNextConnection: Action<AppModel, Connection | undefined>;
 
   // thunks
   reset: Thunk<DomainModel>;

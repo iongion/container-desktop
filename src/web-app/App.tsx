@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { Route, HashRouter as Router, Switch, useLocation } from "react-router-dom";
 
-import { Program } from "@/env/Types";
+import { ContainerEngine, Program } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
@@ -182,9 +182,13 @@ export function AppMainScreen() {
   const provisioned = useStoreState((state) => state.provisioned);
   const osType = useStoreState((state) => state.osType);
   const currentConnector = useStoreState((state) => state.currentConnector);
+  const nextConnection = useStoreState((state) => state.nextConnection);
   const theme = useStoreState((state) => state.userSettings.theme || DEFAULT_THEME);
   const startApplication = useStoreActions((actions) => actions.startApplication);
   const program = currentConnector?.settings?.program;
+
+  const engine = nextConnection?.engine || currentConnector?.engine || ContainerEngine.PODMAN;
+  const host = nextConnection?.host || currentConnector?.host || undefined;
 
   useEffect(() => {
     if (startRef.current) {
@@ -197,23 +201,13 @@ export function AppMainScreen() {
   }, [startApplication]);
 
   return (
-    <div
-      className="App"
-      data-engine={currentConnector?.engine}
-      data-host={currentConnector?.host}
-      data-environment={CURRENT_ENVIRONMENT}
-      data-native={native ? "yes" : "no"}
-      data-os={osType}
-      data-phase={phase}
-      data-running={running ? "yes" : "no"}
-      data-provisioned={provisioned ? "yes" : "no"}
-    >
+    <div className="App">
       <Helmet>
         <html
           data-theme={theme}
           data-os={osType}
-          data-engine={currentConnector?.engine}
-          data-host={currentConnector?.host}
+          data-engine={engine}
+          data-host={host}
           data-environment={CURRENT_ENVIRONMENT}
           data-native={native ? "yes" : "no"}
           data-phase={phase}
@@ -221,7 +215,7 @@ export function AppMainScreen() {
           data-provisioned={provisioned ? "yes" : "no"}
           lang="en"
         />
-        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-engine={currentConnector?.engine ?? "podman"} />
+        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-engine={engine} />
       </Helmet>
       <Router>
         <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />

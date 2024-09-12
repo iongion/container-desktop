@@ -1,4 +1,4 @@
-import { Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
 import { DOCKER_PROGRAM, LIMA_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClientVirtualizedLIMA } from "../../runtimes/abstract";
 
@@ -14,9 +14,5 @@ export class DockerContainerEngineHostClientVirtualizedLIMA extends AbstractCont
     instance.id = id;
     await instance.setup();
     return instance;
-  }
-
-  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
-    return super.getSystemInfo(connection, customFormat || "json", customSettings);
   }
 }

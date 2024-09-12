@@ -184,7 +184,12 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
   }
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
     const settings = customSettings || (await this.getSettings());
-    await Command.StopConnectionServices(this.id, settings);
+    // Stop services
+    try {
+      await Command.StopConnectionServices(this.id, settings);
+    } catch (e: any) {
+      this.logger.error(this.id, "Stop api - failed to stop connection services", e);
+    }
     if (!this.apiStarted) {
       this.logger.debug(this.id, "Stopping API - skip(not started here)");
       return false;

@@ -64,7 +64,19 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
   }
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
     const settings = customSettings || (await this.getSettings());
-    await Command.StopConnectionServices(this.id, settings);
+    // Stop services
+    try {
+      await Command.StopConnectionServices(this.id, settings);
+    } catch (e: any) {
+      this.logger.error(this.id, "Stop api - failed to stop connection services", e);
+    }
+    // Stop scope - LIMA -instance
+    try {
+      const scope = settings?.controller?.scope || "";
+      await this.stopScopeByName(scope);
+    } catch (e: any) {
+      this.logger.error(this.id, "Stop api - failed to stop connection scope", e);
+    }
     return true;
   }
 

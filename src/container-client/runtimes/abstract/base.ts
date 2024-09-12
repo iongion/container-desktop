@@ -287,7 +287,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       trace: `Performing api health check`
     });
     try {
-      const response = await driver.request({ method: "GET", url: "/_ping", timeout: 5000 });
+      const response = await driver.request({ method: "GET", url: "/_ping", timeout: 10000 });
       result.success = response?.data === "OK";
       result.details = result.success ? "Api is reachable" : response?.data;
       if (!result.success) {
