@@ -55,4 +55,4 @@ jobs:
       - name: Publish ${{github.event.inputs.stage}} ${{github.event.inputs.target}} artifacts
         uses: actions/upload-artifact@v2
         with:
-          path: release/podman-desktop-companion*
+          path: release/container-desktop*

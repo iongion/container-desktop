@@ -4,9 +4,9 @@
 abi <abi/4.0>,
 include <tunables/global>
 
-profile podman-desktop-companion /opt/podman-desktop-companion/podman-desktop-companion flags=(unconfined) {
+profile container-desktop /opt/container-desktop/container-desktop flags=(unconfined) {
   userns,
 
   # Site-specific additions and overrides. See local/README for details.
-  include if exists <local/podman-desktop-companion>
+  include if exists <local/container-desktop>
 }

@@ -9,13 +9,18 @@
 .AppSidebarFooter .bp5-navbar {
   margin: 0;
   padding: 0;
-  background-image: url("../images/podman-logo.svg");
   background-repeat: no-repeat;
   background-position: center left;
   background-position-x: 4px;
   background-position-y: 4px;
   background-size: 26px;
   height: 32px;
+}
+[data-engine="podman"] .AppSidebarFooter .bp5-navbar {
+  background-image: url("../images/podman-engine.svg");
+}
+[data-engine="docker"] .AppSidebarFooter .bp5-navbar {
+  background-image: url("../images/docker-engine.svg");
 }
 .AppSidebarFooter .bp5-navbar-group {
   height: 32px;

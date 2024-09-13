@@ -1,20 +1,35 @@
+const path = require("path");
 // vendors
 const dayjs = require("dayjs");
+const dotenv = require("dotenv");
 // pkg
 const pkg = require("./package.json");
 // module
 const artifactName = [pkg.name, "${arch}", pkg.version].join("-");
+const ENVIRONMENT = process.env.ENVIRONMENT || "development";
+const PROJECT_HOME = path.resolve(__dirname);
 
-const applicationId = "io.github.iongion.PodmanDesktopCompanion";
+// template
+dotenv.config({ path: path.join(PROJECT_HOME, ".env") });
+dotenv.config({ path: path.join(PROJECT_HOME, ".env.local"), override: true });
+// target env
+dotenv.config({ path: path.join(PROJECT_HOME, `.env.${ENVIRONMENT}`), override: true });
+dotenv.config({ path: path.join(PROJECT_HOME, `.env.${ENVIRONMENT}.local`), override: true });
+
+// injected
 const year = dayjs().format("YYYY");
+const identityName = "IonutStoica.ContainerDesktop";
+const applicationId = identityName;
+const displayName = pkg.title;
+const releaseName = `${displayName} ${pkg.version}`;
 const config = {
   appId: applicationId,
-  productName: process.platform === "linux" ? pkg.name : pkg.title,
+  productName: process.platform === "linux" ? pkg.name : displayName,
   buildVersion: pkg.version,
   artifactName: artifactName + ".${ext}",
-  copyright: `Copyright (c) ${year} Ionut Stoica`,
+  copyright: `Copyright (c) ${year} ${pkg.author}`,
   releaseInfo: {
-    releaseName: `${pkg.title} ${pkg.version}`,
+    releaseName,
     releaseDate: dayjs().format("MMM DD, YYYY")
   },
   asar: true,
@@ -36,6 +51,7 @@ const config = {
     output: "release",
     buildResources: "src/resources"
   },
+  publish: null,
   flatpak: {
     base: "org.electronjs.Electron2.BaseApp",
     baseVersion: "23.08",
@@ -81,20 +97,20 @@ const config = {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
-    shortcutName: pkg.title
+    shortcutName: displayName
   },
   win: {
     target: ["appx", "nsis"],
-    //certificateFile: "PodmanDesktopCompanion.pfx",
+    //certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico"
   },
   appx: {
-    identityName: "IonutStoica.PodmanDesktopCompanion",
-    publisher: "CN=52408AA8-2ECC-4E48-9A2C-6C1F69841C79",
-    publisherDisplayName: "Ionut Stoica",
-    applicationId: "IonutStoica.PodmanDesktopCompanion",
-    displayName: "Podman Desktop Companion"
+    identityName,
+    publisher: process.env.PUBLISHER || pkg.author,
+    publisherDisplayName: process.env.PUBLISHER_DISPLAY_NAME || pkg.author,
+    applicationId,
+    displayName
   },
   linux: {
     icon: "icons/appIcon.svg",
@@ -102,7 +118,7 @@ const config = {
     category: "Development;System;Utility",
     extraResources: ["support/templates"],
     desktop: {
-      Name: pkg.title
+      Name: displayName
     },
     executableArgs: ["--no-sandbox"]
   },

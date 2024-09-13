@@ -252,8 +252,8 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               });
             } else {
               Notification.show({
-                message: t("Unable to start the application - current connection API is not available"),
-                intent: Intent.DANGER
+                message: t("Connection skipped - please check the settings or install the requirements"),
+                intent: Intent.WARNING
               });
             }
           } else {

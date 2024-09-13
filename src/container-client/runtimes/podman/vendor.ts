@@ -18,7 +18,7 @@ import { userConfiguration } from "../../config";
 import { PODMAN_PROGRAM } from "../../connection";
 import { PodmanAbstractContainerEngineHostClient } from "./base";
 
-const PODMAN_API_SOCKET = `podman-desktop-companion-${PODMAN_PROGRAM}-rest-api.sock`;
+const PODMAN_API_SOCKET = `container-desktop-${PODMAN_PROGRAM}-rest-api.sock`;
 
 export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbstractContainerEngineHostClient {
   static HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;

@@ -4430,10 +4430,10 @@ eslint-plugin-react@^7.27.1:
     string.prototype.matchall "^4.0.11"
     string.prototype.repeat "^1.0.0"
 
-eslint-plugin-react@^7.36.0:
-  version "7.36.0"
-  resolved "https://registry.yarnpkg.com/eslint-plugin-react/-/eslint-plugin-react-7.36.0.tgz#307fcdc0a10e08f10a77cb1f2ba2b61f5b397987"
-  integrity sha512-c+RvVxBH0JE2kHt/8p043nPPhIohSnyQOZApIzGJqM2tXnjEzcZzyKIAg72gymLtuwuKfgGxW2H2aqTJqRgTfQ==
+eslint-plugin-react@^7.36.1:
+  version "7.36.1"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-react/-/eslint-plugin-react-7.36.1.tgz#f1dabbb11f3d4ebe8b0cf4e54aff4aee81144ee5"
+  integrity sha512-/qwbqNXZoq+VP30s1d4Nc1C5GTxjJQjk4Jzs4Wq2qzxFM7dSmuG2UkIjg2USMLh3A/aVcUNrK7v0J5U1XEGGwA==
   dependencies:
     array-includes "^3.1.8"
     array.prototype.findlast "^1.2.5"
@@ -8160,10 +8160,10 @@ vite-tsconfig-paths@^5.0.1:
     globrex "^0.1.2"
     tsconfck "^3.0.3"
 
-vite@^5.4.4:
-  version "5.4.4"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-5.4.4.tgz#3da90314b617047366459443320ea78f39111008"
-  integrity sha512-RHFCkULitycHVTtelJ6jQLd+KSAAzOgEYorV32R2q++M6COBjKJR6BxqClwp5sf0XaBDjVMuJ9wnNfyAJwjMkA==
+vite@^5.4.5:
+  version "5.4.5"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-5.4.5.tgz#e4ab27709de46ff29bd8db52b0c51606acba893b"
+  integrity sha512-pXqR0qtb2bTwLkev4SE3r4abCNioP3GkjvIDLlzziPpXtHgiJIjuKl+1GN6ESOT3wMjG3JTeARopj2SwYaHTOA==
   dependencies:
     esbuild "^0.21.3"
     postcss "^8.4.43"

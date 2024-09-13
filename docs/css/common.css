@@ -59,6 +59,12 @@ h1 {
   color: #b682ff;
   text-decoration: underline;
 }
+.intro h1 .super {
+  font-size: 40px;
+}
+.intro h1 .alias {
+  font-size: 20px;
+}
 
 .callout {
   margin-top: 40px;

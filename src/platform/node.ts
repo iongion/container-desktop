@@ -40,7 +40,7 @@ export const Platform: IPlatform = {
 
   async getUserDataPath() {
     const home = await Platform.getHomeDir();
-    const appName = import.meta.env.PROJECT_NAME || "podman-desktop-companion";
+    const appName = import.meta.env.PROJECT_NAME || "container-desktop";
     switch (process.platform) {
       case "win32":
         return await Path.join(home, "AppData/Roaming", appName);

@@ -18,7 +18,7 @@ function Get-HashForArchitecture {
         [string]
         $Version
     )
-    $url = "https://github.com/iongion/podman-desktop-companion/releases/download/$Version/podman-desktop-companion-$Architecture-$Version.exe.sha256"
+    $url = "https://github.com/iongion/container-desktop/releases/download/$Version/container-desktop-$Architecture-$Version.exe.sha256"
     Write-Host "Obtaining hash for $Architecture from $url"
     $hash = (new-object Net.WebClient).DownloadString($url)
     return $hash.Trim()
@@ -60,7 +60,7 @@ Import-Module Appx -UseWindowsPowerShell
 # Add-AppxPackage $vcLibsBundleFile
 
 # Download Winget-Create msixbundle, install, and execute update.
-$appxBundleFile = "$PWD\release\podman-desktop-companion-x64-$Version.appx"
+$appxBundleFile = "$PWD\release\container-desktop-x64-$Version.appx"
 # Add-AppxPackage $appxBundleFile
 Add-AppxPackage -Path "$PWD\release\__appx-x64\AppxManifest.xml" -Register
 
