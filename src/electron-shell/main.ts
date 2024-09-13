@@ -26,11 +26,7 @@ const { BrowserWindow, Menu, Tray, app, dialog, ipcMain, shell } = Electron;
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);
-const URLS_ALLOWED = [
-  "https://iongion.github.io/podman-desktop-companion/",
-  "https://github.com/iongion/podman-desktop-companion/releases",
-  "https://github.com/containers/podman-compose"
-];
+const URLS_ALLOWED = ["https://iongion.github.io/container-desktop/", "https://github.com/iongion/container-desktop/releases", "https://github.com/containers/podman-compose"];
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
 const logger = createLogger("shell.main");
 let tray: any = null;
@@ -283,7 +279,7 @@ function createSystemTray() {
       }
     }
   ]);
-  tray.setToolTip("Podman Desktop Companion");
+  tray.setToolTip("Container Desktop");
   tray.setContextMenu(trayMenu);
 }
 

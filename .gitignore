@@ -20,7 +20,7 @@ lerna-debug.log*
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Rust
-support/podman-desktop-companion-relay/target
+support/container-desktop-relay/target
 
 # Runtime data
 pids
@@ -114,7 +114,7 @@ dist
 
 # dotenv environment variables file
 .env.test
-.env.*.local
+.env.*local
 
 # Extras
 .electron-vendors.cache.json

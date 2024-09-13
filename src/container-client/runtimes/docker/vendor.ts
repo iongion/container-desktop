@@ -5,7 +5,7 @@ import { userConfiguration } from "../../config";
 import { DOCKER_PROGRAM } from "../../connection";
 import { DockerContainerEngineHostClientNative } from "./native";
 
-const DOCKER_API_SOCKET = `podman-desktop-companion-${DOCKER_PROGRAM}-rest-api.sock`;
+const DOCKER_API_SOCKET = `container-desktop-${DOCKER_PROGRAM}-rest-api.sock`;
 
 export class DockerContainerEngineHostClientVirtualizedVendor extends DockerContainerEngineHostClientNative {
   static HOST = ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;

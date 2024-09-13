@@ -1,8 +1,8 @@
-# Podman Desktop Companion
+# Container Desktop
 
-![GitHub Release](https://img.shields.io/github/v/release/iongion/podman-desktop-companion)
-![GitHub repo size](https://img.shields.io/github/repo-size/iongion/podman-desktop-companion)
-![Github All Releases](https://img.shields.io/github/downloads/iongion/podman-desktop-companion/total.svg)
+![GitHub Release](https://img.shields.io/github/v/release/iongion/container-desktop)
+![GitHub repo size](https://img.shields.io/github/repo-size/iongion/container-desktop)
+![Github All Releases](https://img.shields.io/github/downloads/iongion/container-desktop/total.svg)
 
 ## **IMPORTANT**
 
@@ -36,7 +36,7 @@ Main goals
 
 ## Podman is the driving engine
 
-![Podman Desktop Companion Dashboard](docs/img/001-Dashboard.png?raw=true)
+![Container Desktop Dashboard](docs/img/001-Dashboard.png?raw=true)
 
 ## Multiple engines supported, familiar ones too
 

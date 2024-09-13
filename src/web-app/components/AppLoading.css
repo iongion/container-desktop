@@ -5,11 +5,15 @@
   justify-content: center;
   flex-direction: column;
 }
-
 .AppLoadingSplashLogo {
-  background: url("../images/podman-logo.svg") no-repeat;
   width: 256px;
   height: 256px;
+}
+[data-engine="podman"] .AppLoadingSplashLogo {
+  background: url("../images/podman-engine.svg") no-repeat;
+}
+[data-engine="docker"] .AppLoadingSplashLogo {
+  background: url("../images/docker-engine.svg") no-repeat;
 }
 .AppLoadingSplashContent {
   display: flex;

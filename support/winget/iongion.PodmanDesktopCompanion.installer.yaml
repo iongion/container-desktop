@@ -11,13 +11,13 @@ InstallModes:
   - silentWithProgress
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/iongion/podman-desktop-companion/releases/download/<VERSION>/podman-desktop-companion-x64-<VERSION>.exe
+    InstallerUrl: https://github.com/iongion/container-desktop/releases/download/<VERSION>/container-desktop-x64-<VERSION>.exe
     InstallerSha256: <HASH-AMD64>
     Scope: machine
     InstallerSwitches:
       Custom: /INSTALLER=winget /ALLUSERS
   - Architecture: x64
-    InstallerUrl: https://github.com/iongion/podman-desktop-companion/releases/download/<VERSION>/podman-desktop-companion-x64-<VERSION>.exe
+    InstallerUrl: https://github.com/iongion/container-desktop/releases/download/<VERSION>/container-desktop-x64-<VERSION>.exe
     InstallerSha256: <HASH-AMD64>
     Scope: user
     InstallerSwitches:

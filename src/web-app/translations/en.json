@@ -43,6 +43,7 @@
   "Connected": "Connected",
   "Connection": "Connection",
   "Connection name": "Connection name",
+  "Connection skipped - please check the settings or install the requirements": "Connection skipped - please check the settings or install the requirements",
   "Connection string": "Connection string",
   "Connection string must be set": "Connection string must be set",
   "Connections have been imported": "Connections have been imported",
@@ -53,6 +54,7 @@
   "Container engine settings have been updated": "Container engine settings have been updated",
   "Container engine settings reset has failed": "Container engine settings reset has failed",
   "Container engine settings update has failed": "Container engine settings update has failed",
+  "Container host": "Container host",
   "Container logs": "Container logs",
   "Container startup": "Container startup",
   "Controller path must be set": "Controller path must be set",
@@ -248,7 +250,6 @@
   "Unable to generate kube - pod only has an infra container": "Unable to generate kube",
   "Unable to import connections - empty list": "Unable to import connections - empty list",
   "Unable to import connections - invalid format": "Unable to import connections - invalid format",
-  "Unable to start the application - current connection API is not available": "Unable to start the application - current connection API is not available",
   "Unusable connection": "Unusable connection",
   "Update": "Update",
   "Updated": "Updated",
@@ -273,6 +274,5 @@
   "containersRunning_one": "There is {{count}} running container",
   "containersRunning_other": "There are {{count}} running containers",
   "dark": "dark",
-  "light": "light",
-  "Container host": "Container host"
+  "light": "light"
 }

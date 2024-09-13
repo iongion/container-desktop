@@ -1,9 +1,9 @@
 {
-  "name": "podman-desktop-companion",
-  "title": "Podman Desktop Companion",
+  "name": "container-desktop",
+  "title": "Container Desktop",
   "version": "5.2.2-rc.6",
   "author": "Ionut Stoica <stoica.ionut@gmail.com>",
-  "description": "Podman Desktop Companion",
+  "description": "Container Desktop",
   "main": "build/main-5.2.2-rc.6.mjs",
   "homepage": "./",
   "type": "module",
@@ -102,7 +102,7 @@
     "eslint-plugin-import": "^2.30.0",
     "eslint-plugin-jsx-a11y": "^6.10.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "eslint-plugin-react": "^7.36.0",
+    "eslint-plugin-react": "^7.36.1",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.11",
     "mime-types": "^2.1.35",
@@ -113,7 +113,7 @@
     "svgo": "^3.3.2",
     "tslib": "^2.7.0",
     "typescript": "^5.6.2",
-    "vite": "^5.4.4",
+    "vite": "^5.4.5",
     "vite-plugin-checker": "^0.8.0",
     "vite-plugin-ejs": "^1.7.0",
     "vite-plugin-static-copy": "^1.0.6",
@@ -124,5 +124,5 @@
   "optionalDependencies": {
     "dmg-license": "^1.0.11"
   },
-  "repository": "https://github.com/iongion/podman-desktop-companion.git"
+  "repository": "https://github.com/iongion/container-desktop.git"
 }

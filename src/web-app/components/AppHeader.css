@@ -5,7 +5,7 @@
 }
 .AppHeader .bp5-navbar {
   display: flex;
-  background: url("../images/podman-desktop-companion.svg") no-repeat 0 center;
+  background: url("../images/container-desktop.svg") no-repeat 0 center;
   background-size: contain;
   background-position-x: 7px;
 }

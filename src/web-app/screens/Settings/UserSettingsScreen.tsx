@@ -74,7 +74,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       null,
       2
     );
-    saveAs(new Blob([data], { type: "application/json" }), "podman-desktop-companion-connections.json");
+    saveAs(new Blob([data], { type: "application/json" }), "container-desktop-connections.json");
   }, []);
   const onConnectionsImportClick = useCallback(async () => {
     const input = document.createElement("input");
@@ -330,13 +330,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <FormGroup label={t("Check for new versions")} className="AppSettingsFormVersionCheck" labelFor="checkLatestVersion">
             <ButtonGroup fill className="AppSettingsFormVersionCheckActions">
               <Button loading={isChecking} disabled={isChecking} intent={Intent.PRIMARY} small text={t("Check now")} icon={IconNames.UPDATED} onClick={onVersionCheck} />
-              <AnchorButton
-                icon={IconNames.DOWNLOAD}
-                text={t("Versions")}
-                href="https://github.com/iongion/podman-desktop-companion/releases"
-                target="_blank"
-                rel="noopener noreferrer"
-              />
+              <AnchorButton icon={IconNames.DOWNLOAD} text={t("Versions")} href="https://github.com/iongion/container-desktop/releases" target="_blank" rel="noopener noreferrer" />
             </ButtonGroup>
           </FormGroup>
         </div>
