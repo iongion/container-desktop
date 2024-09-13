@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.2-rc.7 - 2024-09-13
+
+## Changed
+
+- Re-branded from `podman-desktop-companion` to `container-desktop` to avoid confusion of users and publishers with the younger `podman-desktop`
+
 ## 5.2.2-rc.6 - 2024-09-11
 
 ## Fixed
