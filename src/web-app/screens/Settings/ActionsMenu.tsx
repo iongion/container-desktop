@@ -70,7 +70,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
     try {
       await startApplication({ startApi: connection.settings.api.autoStart ?? false, connection, skipAvailabilityCheck: false });
     } catch (error: any) {
-      console.error("Unable to start application", error);
+      console.error("Unable to start the application", error);
     } finally {
       setIsStarting(false);
     }
