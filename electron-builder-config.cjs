@@ -23,7 +23,7 @@ const applicationId = identityName;
 const displayName = pkg.title;
 const releaseName = `${displayName} ${pkg.version}`;
 const config = {
-  appId: applicationId,
+  appId: "container-desktop.iongion.github.io",
   productName: process.platform === "linux" ? pkg.name : displayName,
   buildVersion: pkg.version,
   artifactName: artifactName + ".${ext}",
@@ -54,11 +54,11 @@ const config = {
   publish: null,
   flatpak: {
     base: "org.electronjs.Electron2.BaseApp",
-    baseVersion: "23.08",
+    baseVersion: "24.08",
     branch: "main",
-    category: "Utils",
+    category: "Development",
     runtime: "org.freedesktop.Platform",
-    runtimeVersion: "23.08",
+    runtimeVersion: "24.08",
     sdk: "org.freedesktop.Sdk",
     finishArgs: [
       "--share=network",
@@ -74,7 +74,14 @@ const config = {
       "--filesystem=host-etc",
       "--filesystem=home",
       "--filesystem=/tmp",
+      "--filesystem=xdg-run/bash",
+      "--filesystem=xdg-run/nc",
+      "--filesystem=xdg-run/socat",
+      "--filesystem=xdg-run/which",
+      "--filesystem=xdg-run/where",
+      "--filesystem=xdg-run/ssh",
       "--filesystem=xdg-run/podman",
+      "--filesystem=xdg-run/docker",
       "--talk-name=org.freedesktop.Notifications"
     ]
   },
