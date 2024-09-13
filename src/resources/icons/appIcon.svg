@@ -30,29 +30,21 @@
      id="g44478"
      transform="matrix(5.263114,0,0,5.263114,-20.773948,-29.441503)">
     <g
-       id="g10819"
-       transform="matrix(0.73323943,0,0,0.73323943,-895.07265,177.00919)">
-      <g
-         id="text10671"
-         style="font-style:normal;font-weight:normal;font-size:37.592px;line-height:22.5552px;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#892ca0;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         aria-label="podman" />
-    </g>
-    <g
        id="g2">
       <g
          id="g3">
-        <text
-           xml:space="preserve"
-           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;line-height:179.314px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;vector-effect:non-scaling-stroke;fill:#911ba2;fill-opacity:1;stroke:none;stroke-width:2.7023;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:30;stroke-opacity:1;-inkscape-stroke:hairline;paint-order:markers fill stroke"
-           x="28.47813"
-           y="39.603077"
-           id="text1"><tspan
-             id="tspan1"
-             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#911ba2;fill-opacity:1;stroke:none;stroke-width:2.7023"
-             x="28.47813"
-             y="39.603077">c<tspan
-   style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#999999;fill-opacity:1;stroke-width:2.7023"
-   id="tspan2">d</tspan></tspan></text>
+        <g
+           id="text1"
+           style="font-weight:bold;font-size:25.7266px;line-height:179.314px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#911ba2;stroke-width:2.7023;stroke-linecap:round;stroke-miterlimit:30;paint-order:markers fill stroke"
+           aria-label="cd">
+          <path
+             d="m 27.114619,23.112326 v 2.598387 h -7.383534 q -0.463079,0 -0.771798,0.128633 -0.30872,0.128633 -0.488806,0.437352 -0.154359,0.308719 -0.231539,0.848978 -0.07718,0.540258 -0.07718,1.363509 v 5.994298 q 0,1.980949 0.848978,2.392574 0.411625,0.205813 2.701293,0.205813 0.411625,0 1.05479,0 0.668892,-0.02573 1.672229,-0.02573 h 2.675567 v 2.546934 h -8.721318 q -1.13197,0 -1.955221,-0.282993 -0.797525,-0.282992 -1.312057,-0.900431 -0.514532,-0.643165 -0.771798,-1.672229 -0.231539,-1.029064 -0.231539,-2.546933 v -5.711306 q 0,-1.492142 0.231539,-2.521206 0.257266,-1.029064 0.771798,-1.646503 0.514532,-0.643165 1.312057,-0.926157 0.823251,-0.282993 1.955221,-0.282993 z"
+             id="path1" />
+          <path
+             style="fill:#999999"
+             d="m 42.987934,17.864099 v 21.738978 h -9.004311 q -1.13197,0 -1.955221,-0.308719 -0.797525,-0.334446 -1.312057,-1.029064 -0.514532,-0.694619 -0.771798,-1.775136 -0.231539,-1.106244 -0.231539,-2.64984 v -4.965234 q 0,-1.543596 0.231539,-2.624113 0.257266,-1.106244 0.771798,-1.800862 0.514532,-0.694618 1.312057,-1.003337 0.823251,-0.334446 1.955221,-0.334446 h 5.016687 v -5.248227 z m -9.364483,14.561256 q 0,1.543596 0.128633,2.469754 0.128633,0.900431 0.437352,1.389236 0.334446,0.488806 0.900431,0.643165 0.565985,0.128633 1.44069,0.128633 h 2.469753 v -11.34543 h -3.756083 q -0.437352,0 -0.746072,0.128633 -0.308719,0.102906 -0.514532,0.437352 -0.180086,0.308719 -0.282992,0.848978 -0.07718,0.540258 -0.07718,1.389236 z"
+             id="path2" />
+        </g>
         <g
            id="g10987"
            transform="translate(-1170.6108,231.26666)">
