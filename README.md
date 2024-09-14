@@ -13,7 +13,7 @@ Podman Desktop Companion
 
 ## Author notes
 
-- Podman **Desktop Companion** is considered **complete**, it is a place to play with tech.
+- Podman **Desktop Companion** is considered **complete**, it started by offering a familiar experience, but it strives to offer its own identity.
 - _It will not be shut-down or archived unless required, it was **the first cross-platform container UI** before any other existing solution._
 - _There is **great pride in this**(mom is proud), no other benefits were obtained, no donations on patreon or ko-fi since inception._
 - _It was my first experience with the open source world as a creator and the one that made me **never do it again**, at least not on my own._
@@ -30,13 +30,13 @@ Main goals
 
 ## Requirements
 
-- Linux - Install [podman](https://podman.io/docs/installation) - note that distributions usually have older versions of podman, see [Aalvistack](https://software.opensuse.org/download/package?package=podman&project=home%3Aalvistack) for the most recent repositories.
+- **Linux** - Install [podman](https://podman.io/docs/installation) - note that distributions usually have older versions of podman, see [Aalvistack](https://software.opensuse.org/download/package?package=podman&project=home%3Aalvistack) for the most recent repositories.
 Additional packages besides podman may be required, such as `aardvark-dns` and `passt` for networking (<https://passt.top/passt/about/>).
 If one wants to add support for docker container engine, the easiest is to install rootless docker as documented here <https://linuxhandbook.com/rootless-docker/>
-- Windows - Install [podman](https://podman.io/docs/installation) or provision your favorite WSL distribution with latest podman by following the link above. On your custom WSL distribution, netcat is needed to relay unix sockets back to Windows native context. Example `sudo apt install netcat` for Ubuntu.
-- MacOS - Install [podman](https://podman.io/docs/installation) or [lima](https://lima-vm.io/)
+- **Windows** - Install [podman](https://podman.io/docs/installation) or provision your favorite WSL distribution with latest podman by following the instructions above for **Linux**. On your custom WSL distribution, `netcat` or `socat` are needed to relay unix sockets back to Windows native context. Example `sudo apt install netcat` for Ubuntu.
+- **MacOS** - Install [podman](https://podman.io/docs/installation) or [lima](https://lima-vm.io/)
 
-> NOTE - To access and monitor remote ssh installations, properly set-up the connections in your `$HOME/.ssh/config` or `$env:USERPROFILE/.ssh/config` just like you do for Visual Studio Code remote extensions <https://code.visualstudio.com/docs/remote/ssh>
+> NOTE - To access and monitor remote ssh installations, properly set-up the connections in your `$HOME/.ssh/config` or `$env:USERPROFILE/.ssh/config` just like you do for Visual Studio Code remote extensions <https://code.visualstudio.com/docs/remote/ssh> - SSH connections are tunneled through a **tcp** listener, listening to `localhost` only.
 
 ## Usage
 
