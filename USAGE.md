@@ -10,7 +10,7 @@
 
 ### Windows
 
-- Download the application from Microsoft Store, it is digitally signed, courtesy of Microsoft. You can also install it using `winget install "Container Desktop"`.
+- Download the application from Microsoft Store, it is digitally signed, courtesy of Microsoft. You can also install it using `winget install "Container Desktop"`
 
 ### Linux
 
