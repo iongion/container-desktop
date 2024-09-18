@@ -6,7 +6,7 @@
 
 ### MacOS
 
-- Allow unsigned application to execute - `xattr -d com.apple.quarantine /Applications/Podman\ Desktop\ Companion.app`
+- Allow unsigned application to execute - `xattr -d com.apple.quarantine /Applications/Container\ Desktop.app`
 
 ### Windows
 
