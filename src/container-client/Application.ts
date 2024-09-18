@@ -289,9 +289,9 @@ export class Application {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
     return await currentApi.generateKube(entityId);
   }
-  async inspectPodmanMachine(name: string) {
+  async getPodmanMachineInspect(name: string) {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
-    return await currentApi.inspectPodmanMachine(name);
+    return await currentApi.getPodmanMachineInspect(name);
   }
   async getPodmanMachines(customFormat?: string, customSettings?: EngineConnectorSettings) {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();

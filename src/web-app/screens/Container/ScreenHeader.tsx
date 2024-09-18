@@ -12,9 +12,10 @@ interface ScreenHeaderProps {
   currentScreen: string;
   listRoutePath?: string;
   listRouteIcon?: IconName;
+  onReload?: () => void;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ container, currentScreen, listRoutePath, listRouteIcon }: ScreenHeaderProps) => {
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ container, currentScreen, listRoutePath, listRouteIcon, onReload }: ScreenHeaderProps) => {
   const { t } = useTranslation();
   let currentListRoutePath = listRoutePath;
   if (container && !currentListRoutePath) {
@@ -29,7 +30,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ container, currentSc
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.BOX}
       titleText={nameText.startsWith("/") ? nameText.slice(1) : nameText}
-      rightContent={<ActionsMenu container={container} expand withInlinePlayerActions isActive={(input) => input === currentScreen} />}
+      rightContent={<ActionsMenu container={container} expand withInlinePlayerActions onReload={onReload} isActive={(input) => input === currentScreen} />}
     />
   );
 };

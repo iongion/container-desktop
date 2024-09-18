@@ -26,7 +26,13 @@ const { BrowserWindow, Menu, Tray, app, dialog, ipcMain, shell } = Electron;
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);
-const URLS_ALLOWED = ["https://iongion.github.io/container-desktop/", "https://github.com/iongion/container-desktop/releases", "https://github.com/containers/podman-compose"];
+const URLS_ALLOWED = [
+  // Allowed
+  "https://iongion.github.io/container-desktop/",
+  "https://github.com/iongion/container-desktop/releases",
+  "https://github.com/containers/podman-compose",
+  "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct"
+];
 const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
 const logger = createLogger("shell.main");
 let tray: any = null;
@@ -155,33 +161,38 @@ async function createApplicationWindow() {
     windowOptions.titleBarStyle = "hiddenInset";
   }
   let closed = false;
-  const onMinimizeOrClose = async (event: any, source: any) => {
-    if (closed) {
-      logger.debug("Already closed - skipping event and terminating", source);
-      return true;
-    }
-    event.preventDefault();
-    logger.debug("Checking if must hide to tray", source);
+  const hideToTray = async (event?: any) => {
     if (await isHideToTrayOnClose()) {
       createSystemTray();
       applicationWindow.setSkipTaskbar(true);
       applicationWindow.hide();
-      event.returnValue = false;
+      if (event) {
+        event.returnValue = false;
+      }
       if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
         app.dock.hide();
-        if (isDevelopment()) {
-          closed = true;
-        }
       }
-    } else if (source === "close") {
-      closed = true;
-    } else if (source === "closed") {
-      closed = true;
+      return true;
     }
-    console.debug(source, "application from", { closed });
+    return false;
+  };
+  const onWindowMinimize = async (event: any) => {
+    const inTray = await hideToTray(event);
+    if (applicationWindow?.webContents) {
+      applicationWindow.webContents.send("window:minimize", { inTray });
+    }
+  };
+  const onWindowClose = async (event: any) => {
     if (closed) {
-      app.quit();
-      process.exit(0);
+      logger.debug("Already closed - skipping event and terminating");
+      event.returnValue = true;
+      return;
+    }
+    closed = true;
+    event.preventDefault();
+    const inTray = await hideToTray(event);
+    if (applicationWindow?.webContents) {
+      applicationWindow.webContents.send("window:close", { inTray });
     }
   };
   // Application window
@@ -200,15 +211,17 @@ async function createApplicationWindow() {
     config.y = y;
     await setWindowConfigOptions(config);
   });
-  applicationWindow.on("minimize", (event: any) => onMinimizeOrClose(event, "minimize"));
+  applicationWindow.on("minimize", onWindowMinimize);
   applicationWindow.on("maximize", async (event: any) => {
     const isMaximized = applicationWindow.isMaximized();
     const config = await getWindowConfigOptions();
     (config as any).isMaximized = isMaximized;
+    if (applicationWindow?.webContents) {
+      applicationWindow.webContents.send("window:maximize", { isMaximized });
+    }
   });
-  applicationWindow.on("close", (event: any) => onMinimizeOrClose(event, "close"));
+  applicationWindow.on("close", onWindowClose);
   applicationWindow.once("ready-to-show", () => {
-    logger.debug("window is ready to show - waiting application ready-ness");
     applicationWindow.show();
     if ((windowConfigOptions as any).isMaximized) {
       applicationWindow.maximize();
@@ -249,15 +262,21 @@ async function createApplicationWindow() {
   return applicationWindow;
 }
 
+function getTrayIcon(isDark = Electron.nativeTheme.shouldUseDarkColors): string {
+  const theme = isDark ? "dark" : "light";
+  const trayIconFile = CURRENT_OS_TYPE === OperatingSystem.MacOS ? `trayIcon-${theme}-mac.png` : `trayIcon-${theme}.png`;
+  const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons", trayIconFile) : path.join(__dirname, trayIconFile);
+  logger.debug("Using tray icon from", { trayIconPath });
+  return path.resolve(trayIconPath);
+}
+
 function createSystemTray() {
   if (tray) {
     logger.debug("Creating system tray menu - skipped - already present");
     return;
   }
   logger.debug("Creating system tray menu");
-  const trayIconFile = "trayIcon.png";
-  const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons", trayIconFile) : path.join(__dirname, trayIconFile);
-  tray = new Tray(trayIconPath);
+  tray = new Tray(getTrayIcon());
   const trayMenu = Menu.buildFromTemplate([
     {
       label: `${import.meta.env.PROJECT_TITLE} - v${import.meta.env.PROJECT_VERSION}`,
@@ -286,6 +305,12 @@ function createSystemTray() {
 async function main() {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   app.commandLine.appendSwitch("ignore-certificate-errors");
+  Electron.nativeTheme.on("updated", () => {
+    tray.setImage(getTrayIcon());
+    if (applicationWindow?.webContents) {
+      applicationWindow.webContents.send("theme:change", Electron.nativeTheme.shouldUseDarkColors ? "dark" : "light");
+    }
+  });
   await app.whenReady();
   await createApplicationWindow();
 }

@@ -1,0 +1,4 @@
+.AppDataTable[data-table="processes"] tr th,
+.AppDataTable[data-table="processes"] tr td {
+  text-align: center;
+}

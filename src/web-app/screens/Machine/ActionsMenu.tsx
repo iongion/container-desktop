@@ -5,7 +5,7 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { PodmanMachine } from "@/env/Types";
+import { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -16,7 +16,7 @@ import { CreateDrawer } from "./CreateDrawer";
 // Machine actions menu
 
 interface ActionsMenuProps {
-  machine?: PodmanMachine;
+  machine?: PodmanMachineInspect | PodmanMachine;
   withoutCreate?: boolean;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
@@ -35,6 +35,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
   const isNative = useStoreState((state) => state.native);
+  const isRunning = ((machine as any)?.State || "").toLowerCase() === "running" || (machine as any)?.Running;
   const machineInspect = useStoreActions((actions) => actions.machine.machineInspect);
   const machineRemove = useStoreActions((actions) => actions.machine.machineRemove);
   const machineStop = useStoreActions((actions) => actions.machine.machineStop);
@@ -126,8 +127,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
           icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
           text={t("Open terminal console")}
           onClick={onOpenTerminalConsole}
-          disabled={!machine.Running}
-          title={machine.Running ? t("Machine is running") : t("Machine is not running")}
+          disabled={!isRunning}
+          title={isRunning ? t("Machine is running") : t("Machine is not running")}
         />
       ) : null}
       <MenuItem
@@ -137,8 +138,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
         icon={IconNames.STOP}
         intent={Intent.NONE}
         text={t("Stop")}
-        disabled={disabledAction === "machine.stop" || !machine.Running}
-        title={machine.Running ? t("Machine is running") : t("Machine is not running")}
+        disabled={disabledAction === "machine.stop" || !isRunning}
+        title={isRunning ? t("Machine is running") : t("Machine is not running")}
       />
       <MenuItem
         data-machine={machine.Name}
@@ -147,7 +148,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
         icon={IconNames.RESET}
         intent={Intent.NONE}
         disabled={disabledAction === "machine.restart"}
-        text={machine.Running ? t("Restart") : t("Start")}
+        text={isRunning ? t("Restart") : t("Start")}
       />
     </ConfirmMenu>
   ) : undefined;

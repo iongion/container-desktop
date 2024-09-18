@@ -1,6 +1,6 @@
 import { Spinner } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { Container } from "@/env/Types";
@@ -22,22 +22,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { id } = useParams<{ id: string }>();
   const screenRef = useRef<HTMLDivElement>(null);
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const container = await containerFetch({
-          Id: decodeURIComponent(id as any),
-          withKube: true
-        });
-        setContainer(container);
-      } catch (error: any) {
-        console.error("Unable to generate at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
+  const onScreenReload = useCallback(async () => {
+    try {
+      setPending(true);
+      const container = await containerFetch({
+        Id: decodeURIComponent(id as any),
+        withKube: true
+      });
+      setContainer(container);
+    } catch (error: any) {
+      console.error("Unable to generate at this moment", error);
+    } finally {
+      setPending(false);
+    }
   }, [containerFetch, id]);
+
+  useEffect(() => {
+    onScreenReload();
+  }, [onScreenReload]);
 
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -48,7 +50,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <Spinner />
   ) : (
     <>
-      <ScreenHeader container={container} currentScreen={ID} />
+      <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
         <CodeEditor value={`${container?.Kube}`} mode="yaml" />
       </div>

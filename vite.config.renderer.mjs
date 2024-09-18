@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import merge from "lodash.merge";
 import mimeTypes from "mime-types";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import svgrPlugin from "vite-plugin-svgr";
@@ -16,7 +17,7 @@ export function docsServer() {
     configureServer(server) {
       return () => {
         server.middlewares.use(async (req, res, next) => {
-          if (req.originalUrl?.startsWith("/VERSION")) {
+          if (req.originalUrl?.startsWith("/VERSION") || req.originalUrl?.startsWith(`/VERSION-${os.type()}`)) {
             res.setHeader("Content-Type", "text/plain");
             res.writeHead(200);
             res.write(pkg.version);

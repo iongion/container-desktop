@@ -5,11 +5,11 @@
    viewBox="0 0 270.93334 270.93334"
    height="1024"
    width="1024"
-   sodipodi:docname="appIcon-monochrome.svg"
+   sodipodi:docname="appIcon-monochrome-dark.svg"
    inkscape:export-xdpi="2.25"
    inkscape:export-ydpi="2.25"
    inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
-   inkscape:export-filename="trayIcon-light-mac.png"
+   inkscape:export-filename="trayIcon-mac.png"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -67,29 +67,29 @@
       <g
          id="g10987"
          transform="translate(-1170.6108,231.26666)"
-         style="fill:#494949;fill-opacity:1">
+         style="stroke:#000000;stroke-opacity:1;fill:#ffffff;fill-opacity:1">
         <g
            id="g10985"
            transform="translate(238.41304,-199.74894)"
-           style="fill:#494949;fill-opacity:1">
+           style="stroke:#000000;stroke-opacity:1;fill:#ffffff;fill-opacity:1">
           <path
-             style="opacity:1;fill:#494949;fill-opacity:1;stroke:#ffffff;stroke-width:1.05833;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+             style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1.05833;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
              d="m 961.97165,23.28467 -19.29817,-9.23285 -4.82036,-20.8616002 13.2871,-16.7806158 21.38926,-0.06408 13.38485,16.7011458 -4.69887,20.8897002 z"
              id="path10931" />
         </g>
       </g>
       <text
          xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;line-height:179.314px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;vector-effect:non-scaling-stroke;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:2.7023;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:30;stroke-opacity:1;-inkscape-stroke:hairline;paint-order:markers fill stroke"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;line-height:179.314px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;vector-effect:non-scaling-stroke;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.7023;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:30;stroke-opacity:1;-inkscape-stroke:hairline;paint-order:markers fill stroke"
          x="28.47813"
          y="39.603077"
          id="text1"><tspan
            sodipodi:role="line"
            id="tspan1"
-           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:2.7023"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.7023"
            x="28.47813"
            y="39.603077">c<tspan
-   style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1;stroke-width:2.7023"
+   style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:25.7266px;font-family:Unispace;-inkscape-font-specification:'Unispace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke-width:2.7023"
    id="tspan2">d</tspan></tspan></text>
     </g>
   </g>

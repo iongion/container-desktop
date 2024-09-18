@@ -11,6 +11,7 @@ import {
 } from "@/env/Types";
 import { DOCKER_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClient } from "../../runtimes/abstract";
+import { getContextInspect } from "./shared";
 
 export class DockerContainerEngineHostClientNative extends AbstractContainerEngineHostClient {
   static HOST = ContainerEngineHost.DOCKER_NATIVE;
@@ -26,9 +27,18 @@ export class DockerContainerEngineHostClientNative extends AbstractContainerEngi
   }
 
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
-    const uri = await Platform.getEnvironmentVariable("DOCKER_HOST");
+    const settings = customSettings || (await this.getSettings());
+    // Get environment variable
+    let uri = (await Platform.getEnvironmentVariable("DOCKER_HOST")) || "";
+    // Inspect context info for env var override
+    try {
+      const info = await getContextInspect(this, undefined, settings);
+      uri = info?.Endpoints?.docker?.Host || "";
+    } catch (error: any) {
+      this.logger.warn(this.id, "Unable to get context inspect", error);
+    }
     return {
-      uri: uri || "",
+      uri,
       relay: ""
     };
   }
@@ -77,10 +87,6 @@ export class DockerContainerEngineHostClientNative extends AbstractContainerEngi
   async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     const settings = customSettings || (await this.getSettings());
     return await Promise.resolve([] as ControllerScope[]);
-  }
-  // System information
-  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
-    return super.getSystemInfo(connection, customFormat || "json", customSettings);
   }
 
   async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {

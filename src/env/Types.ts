@@ -223,6 +223,10 @@ export interface PodmanMachine {
   Running: boolean;
   LastUp: string;
   VMType: string;
+  CPUs?: string;
+  Default?: boolean;
+  DiskSize?: number;
+  Memory?: number;
   Created: string;
 }
 
@@ -594,6 +598,7 @@ export interface Container {
   Labels: { [key: string]: string } | null;
   Config: ContainerInspect;
   Stats: ContainerStats | null;
+  Processes?: any[] | null;
   Logs?: string | Uint8Array;
   Mounts: any[];
   Names: string[];

@@ -7,7 +7,7 @@ import { isEmpty } from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Connection, GlobalUserSettingsOptions } from "@/env/Types";
+import { Connection, GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
 import { LOGGING_LEVELS, PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -160,7 +160,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onVersionCheck = useCallback(async () => {
     setIsChecking(true);
     try {
-      const check = await registry.getOnlineApi().checkLatestVersion();
+      const check = await registry.getOnlineApi().checkLatestVersion(osType);
       console.debug("Checking for new version", check);
       if (check.hasUpdate) {
         Notification.show({
@@ -174,7 +174,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       Notification.show({ message: t("Unable to check latest version"), intent: Intent.DANGER });
     }
     setIsChecking(false);
-  }, [t]);
+  }, [t, osType]);
 
   let title = "";
   let errorMessage = "";
@@ -320,19 +320,42 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 onChange={onMinimizeToSystemTray}
               />
             </ControlGroup>
-            <Checkbox
-              id="checkLatestVersion"
-              label={t("Automatically check for new version at startup")}
-              checked={!!userSettings.checkLatestVersion}
-              onChange={onCheckLatestVersion}
-            />
+            <ControlGroup>
+              <Checkbox
+                id="checkLatestVersion"
+                label={t("Automatically check for new version at startup")}
+                checked={!!userSettings.checkLatestVersion}
+                onChange={onCheckLatestVersion}
+              />
+            </ControlGroup>
           </FormGroup>
-          <FormGroup label={t("Check for new versions")} className="AppSettingsFormVersionCheck" labelFor="checkLatestVersion">
-            <ButtonGroup fill className="AppSettingsFormVersionCheckActions">
-              <Button loading={isChecking} disabled={isChecking} intent={Intent.PRIMARY} small text={t("Check now")} icon={IconNames.UPDATED} onClick={onVersionCheck} />
-              <AnchorButton icon={IconNames.DOWNLOAD} text={t("Versions")} href="https://github.com/iongion/container-desktop/releases" target="_blank" rel="noopener noreferrer" />
-            </ButtonGroup>
-          </FormGroup>
+          {import.meta.env.TARGET === OperatingSystem.Windows ? (
+            <FormGroup label={t("Check for new versions")} data-target={import.meta.env.TARGET} className="AppSettingsFormVersionCheck" labelFor="checkLatestVersion">
+              <ButtonGroup className="AppSettingsFormVersionCheckActions">
+                <Button fill loading={isChecking} disabled={isChecking} intent={Intent.PRIMARY} small text={t("Check now")} icon={IconNames.UPDATED} onClick={onVersionCheck} />
+                <AnchorButton
+                  id="checkLatestVersion"
+                  className="AppSettingsFormVersionCheckStore"
+                  title={t("Check latest version")}
+                  href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct"
+                  target="_blank"
+                />
+              </ButtonGroup>
+            </FormGroup>
+          ) : (
+            <FormGroup label={t("Check for new versions")} data-target={import.meta.env.TARGET} className="AppSettingsFormVersionCheck" labelFor="checkLatestVersion">
+              <ButtonGroup fill className="AppSettingsFormVersionCheckActions">
+                <Button loading={isChecking} disabled={isChecking} intent={Intent.PRIMARY} small text={t("Check now")} icon={IconNames.UPDATED} onClick={onVersionCheck} />
+                <AnchorButton
+                  icon={IconNames.DOWNLOAD}
+                  text={t("Versions")}
+                  href="https://github.com/iongion/container-desktop/releases"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              </ButtonGroup>
+            </FormGroup>
+          )}
         </div>
         <div className="AppSettingsForm" data-form="logging">
           <FormGroup label={t("Configuration and logging")} labelFor="userSettingsPath">

@@ -6,13 +6,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import { Program, WindowAction } from "@/env/Types";
+import { OperatingSystem, Program, WindowAction } from "@/env/Types";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
 import { AppScreen } from "../Types";
 
 import "./AppHeader.css";
 interface AppHeaderProps {
+  osType: OperatingSystem;
   screens: AppScreen<any>[];
   currentScreen?: AppScreen<any>;
   program?: Program;
@@ -39,7 +40,7 @@ const WINDOW_ACTIONS_MAP = {
   }
 };
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ currentScreen, program, running, provisioned }: AppHeaderProps) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ osType, currentScreen, program, running, provisioned }: AppHeaderProps) => {
   const { t } = useTranslation();
   const [withControls, setWithControls] = useState(true);
   const onWindowControlClick = useCallback((e) => {
@@ -88,7 +89,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ currentScreen, program, ru
       <>
         <AnchorButton href={pathTo("/screens/settings/user-settings")} icon={IconNames.COG} />
         <AnchorButton href={pathTo("/screens/troubleshoot")} icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />} />
-        <Divider />
+        {osType === OperatingSystem.MacOS ? null : <Divider />}
       </>
     ) : null;
   const screenTitle = provisioned ? currentScreen?.Title : t("Your attention is needed");

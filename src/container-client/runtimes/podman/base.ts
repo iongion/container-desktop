@@ -1,7 +1,7 @@
 import { isEmpty } from "lodash-es";
 
 import { AbstractContainerEngineHostClient, ContainerEngineHostClient } from "@/container-client/runtimes/abstract";
-import { CommandExecutionResult, Connection, ContainerEngineHost, CreateMachineOptions, EngineConnectorSettings, SystemInfo } from "@/env/Types";
+import { CommandExecutionResult, Connection, ContainerEngineHost, CreateMachineOptions, EngineConnectorSettings, PodmanMachineInspect, SystemInfo } from "@/env/Types";
 import { getAvailablePodmanMachines } from "../../shared";
 
 export interface PodmanContainerEngineHostClientCommon extends ContainerEngineHostClient {
@@ -10,6 +10,39 @@ export interface PodmanContainerEngineHostClientCommon extends ContainerEngineHo
 }
 
 export abstract class PodmanAbstractContainerEngineHostClient extends AbstractContainerEngineHostClient implements PodmanContainerEngineHostClientCommon {
+  async getPodmanMachineInspect(name?: string, customSettings?: EngineConnectorSettings) {
+    const settings = customSettings || (await this.getSettings());
+    let inspect: PodmanMachineInspect | undefined;
+    const controllerPath = settings.controller?.path || settings.controller?.name;
+    if (!controllerPath) {
+      this.logger.error(this.id, "Unable to inspect - no program");
+      return inspect;
+    }
+    const machineName = name || settings.controller?.scope;
+    if (!machineName) {
+      this.logger.error(this.id, "Unable to inspect - no machine");
+      return inspect;
+    }
+    try {
+      const command = ["machine", "inspect", machineName];
+      const result: any = await this.runHostCommand(controllerPath, command, settings);
+      if (!result.success) {
+        this.logger.error(this.id, "Unable to inspect", result);
+        return inspect;
+      }
+      try {
+        const items: PodmanMachineInspect[] = JSON.parse(result.stdout || "[]");
+        const targetMachine = items.find((it) => it.Name === machineName);
+        return targetMachine;
+      } catch (error: any) {
+        this.logger.error(this.id, "Unable to inspect", error, result);
+      }
+    } catch (error: any) {
+      this.logger.error(this.id, "Unable to inspect - execution error", error.message, error.stack);
+    }
+    return inspect;
+  }
+
   async getPodmanMachines(customFormat?: string, customSettings?: EngineConnectorSettings) {
     this.logger.debug(this.id, "getMachines with program");
     const settings = customSettings || (await this.getSettings());
@@ -137,11 +170,6 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
       this.logger.error("Unable to create machine", opts, output);
     }
     return output.success;
-  }
-
-  async inspectPodmanMachine(name: string) {
-    const machines = await this.getPodmanMachines();
-    return machines.find((it) => it.Name === name);
   }
 
   // explicit shared

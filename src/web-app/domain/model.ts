@@ -12,10 +12,10 @@ import { registry } from "@/web-app/domain/registry";
 import { Notification } from "@/web-app/Notification";
 import { AppBootstrapPhase, AppModel, AppModelState, AppRegistry } from "./types";
 
-function delayCheckUpdate() {
+function delayCheckUpdate(osType: OperatingSystem) {
   setTimeout(async () => {
     try {
-      const check = await registry.getOnlineApi().checkLatestVersion();
+      const check = await registry.getOnlineApi().checkLatestVersion(osType);
       console.debug("Checking for new version", check);
       if (check.hasUpdate) {
         Notification.show({
@@ -240,7 +240,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               if (state?.userSettings?.checkLatestVersion) {
                 if (!checkForUpdatePerformed) {
                   checkForUpdatePerformed = true;
-                  delayCheckUpdate();
+                  delayCheckUpdate(osType);
                 }
               }
             }

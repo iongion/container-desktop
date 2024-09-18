@@ -1,11 +1,9 @@
 import { ApiConnection, Connection, ContainerEngine, ContainerEngineHost, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { isEmpty } from "lodash-es";
-import { userConfiguration } from "../../config";
 import { DOCKER_PROGRAM } from "../../connection";
 import { DockerContainerEngineHostClientNative } from "./native";
-
-const DOCKER_API_SOCKET = `container-desktop-${DOCKER_PROGRAM}-rest-api.sock`;
+import { getContextInspect } from "./shared";
 
 export class DockerContainerEngineHostClientVirtualizedVendor extends DockerContainerEngineHostClientNative {
   static HOST = ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;
@@ -32,11 +30,9 @@ export class DockerContainerEngineHostClientVirtualizedVendor extends DockerCont
   }
 
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    const settings = customSettings || (await this.getSettings());
     let relay: string = "";
-    const NATIVE_DOCKER_SOCKET_PATH = (await Platform.isFlatpak())
-      ? await Path.join("/tmp", DOCKER_API_SOCKET)
-      : await Path.join(await userConfiguration.getStoragePath(), DOCKER_API_SOCKET);
-    let uri = NATIVE_DOCKER_SOCKET_PATH;
+    let uri = "";
     if (this.osType === OperatingSystem.Windows) {
       const host = await Platform.getEnvironmentVariable("DOCKER_HOST");
       if (isEmpty(host)) {
@@ -50,8 +46,15 @@ export class DockerContainerEngineHostClientVirtualizedVendor extends DockerCont
         uri = host || "";
       }
     } else {
-      const homeDir = await Platform.getHomeDir();
-      uri = await Path.join(homeDir, ".local/share/containers/docker/machine/podman.sock");
+      // Get environment variable
+      uri = (await Platform.getEnvironmentVariable("DOCKER_HOST")) || "";
+      // Inspect context info for env var override
+      try {
+        const info = await getContextInspect(this, undefined, settings);
+        uri = (info?.Endpoints?.docker?.Host || uri).replace("unix://", "");
+      } catch (error: any) {
+        this.logger.warn(this.id, "Unable to get context inspect", error);
+      }
     }
     // Inspect machine system info for relay path
     try {
@@ -68,5 +71,29 @@ export class DockerContainerEngineHostClientVirtualizedVendor extends DockerCont
 
   async getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
     throw new Error("Method not implemented.");
+  }
+
+  async getAutomaticSettings(): Promise<EngineConnectorSettings> {
+    this.logger.warn(this.id, "Settings are in automatic mode - fetching");
+    const settings = await this.getSettings();
+    try {
+      // 1.0 - detect program
+      if (this.isScoped()) {
+        const existingScope = settings.controller?.scope || "";
+        const controllerProgram = await this.findHostProgram({ name: this.CONTROLLER, path: "" }, settings);
+        settings.controller = controllerProgram;
+        settings.controller.scope = existingScope;
+      } else {
+        const hostProgram = await this.findHostProgram({ name: this.PROGRAM, path: "" }, settings);
+        settings.program = hostProgram;
+      }
+      // 2.0 - detect API connection
+      const api = await this.getApiConnection(undefined, settings);
+      settings.api.connection.uri = api.uri;
+      settings.api.connection.relay = api.relay;
+    } catch (error: any) {
+      this.logger.error(this.id, "Unable to get automatic settings", error);
+    }
+    return settings;
   }
 }
