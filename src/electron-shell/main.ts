@@ -28,12 +28,20 @@ const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);
 const URLS_ALLOWED = [
   // Allowed
-  "https://iongion.github.io/container-desktop/",
-  "https://github.com/iongion/container-desktop/releases",
-  "https://github.com/containers/podman-compose",
-  "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct"
+  "https://container-desktop.com/", // Project website
+  "https://iongion.github.io/container-desktop/", // Project github pages website
+  "https://github.com/iongion/container-desktop/releases", // Project github releases
+  "https://github.com/containers/podman-compose", // Podman Compose 3rd party
+  "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct" // Project Microsoft Store link
 ];
-const DOMAINS_ALLOW_LIST = ["localhost", "podman.io", "docs.podman.io", "avd.aquasec.com", "aquasecurity.github.io"];
+const DOMAINS_ALLOW_LIST = [
+  // Allowed
+  "localhost",
+  "podman.io", // Podman website
+  "docs.podman.io", // Podman documentation
+  "avd.aquasec.com", // Aqua Security (trivy)
+  "aquasecurity.github.io" // Aqua Security (trivy)
+];
 const logger = createLogger("shell.main");
 let tray: any = null;
 let applicationWindow: Electron.BrowserWindow;
@@ -47,7 +55,7 @@ const getWindowConfigOptions = async () => {
 const setWindowConfigOptions = debounce(async (opts: Electron.BrowserWindowConstructorOptions) => {
   return await userConfiguration.setKey("window", opts);
 }, 500);
-const isDebug = ["yes", "true", "1"].includes(`${process.env.PODMAN_DESKTOP_COMPANION_DEBUG || ""}`.toLowerCase());
+const isDebug = ["yes", "true", "1"].includes(`${process.env.CONTAINER_DESKTOP_DEBUG || ""}`.toLowerCase());
 const isDevelopment = () => {
   logger.debug("Checking if development", { isPackaged: app.isPackaged, env: import.meta.env.ENVIRONMENT });
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
@@ -122,11 +130,22 @@ ipcMain.handle("openTerminal", async function (event, options) {
   return success;
 });
 
+function sendToRenderer(event: string, data?: any) {
+  try {
+    if (applicationWindow?.webContents) {
+      applicationWindow.webContents.send(event, data);
+    }
+  } catch (error: any) {
+    logger.error("Unable to send message to renderer", error);
+  }
+}
+
 async function createApplicationWindow() {
   if (applicationWindow) {
     logger.debug("Window already created - destroying it");
     applicationWindow.destroy();
   }
+  logger.debug("Creating application window");
   const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`);
   const appDevURL = import.meta.env.VITE_DEV_SERVER_URL;
   const appProdURL = url.format({
@@ -163,6 +182,7 @@ async function createApplicationWindow() {
   let closed = false;
   const hideToTray = async (event?: any) => {
     if (await isHideToTrayOnClose()) {
+      logger.debug("Must hide to tray");
       createSystemTray();
       applicationWindow.setSkipTaskbar(true);
       applicationWindow.hide();
@@ -178,9 +198,7 @@ async function createApplicationWindow() {
   };
   const onWindowMinimize = async (event: any) => {
     const inTray = await hideToTray(event);
-    if (applicationWindow?.webContents) {
-      applicationWindow.webContents.send("window:minimize", { inTray });
-    }
+    sendToRenderer("window:minimize", { inTray });
   };
   const onWindowClose = async (event: any) => {
     if (closed) {
@@ -191,9 +209,7 @@ async function createApplicationWindow() {
     closed = true;
     event.preventDefault();
     const inTray = await hideToTray(event);
-    if (applicationWindow?.webContents) {
-      applicationWindow.webContents.send("window:close", { inTray });
-    }
+    sendToRenderer("window:close", { inTray });
   };
   // Application window
   applicationWindow = new BrowserWindow(windowOptions);
@@ -216,12 +232,11 @@ async function createApplicationWindow() {
     const isMaximized = applicationWindow.isMaximized();
     const config = await getWindowConfigOptions();
     (config as any).isMaximized = isMaximized;
-    if (applicationWindow?.webContents) {
-      applicationWindow.webContents.send("window:maximize", { isMaximized });
-    }
+    sendToRenderer("window:maximize", { isMaximized });
   });
   applicationWindow.on("close", onWindowClose);
   applicationWindow.once("ready-to-show", () => {
+    logger.debug("Application is ready to show");
     applicationWindow.show();
     if ((windowConfigOptions as any).isMaximized) {
       applicationWindow.maximize();
@@ -257,6 +272,7 @@ async function createApplicationWindow() {
     console.error("Unable to load the application", error);
   }
   if (isDevelopment() || isDebug) {
+    logger.debug("Showing dev tools");
     applicationWindow.webContents.openDevTools({ mode: "detach" });
   }
   return applicationWindow;
@@ -275,7 +291,8 @@ function createSystemTray() {
     logger.debug("Creating system tray menu - skipped - already present");
     return;
   }
-  logger.debug("Creating system tray menu");
+  const trayIconPath = getTrayIcon();
+  logger.debug("Creating system tray menu", trayIconPath);
   tray = new Tray(getTrayIcon());
   const trayMenu = Menu.buildFromTemplate([
     {
@@ -307,9 +324,7 @@ async function main() {
   app.commandLine.appendSwitch("ignore-certificate-errors");
   Electron.nativeTheme.on("updated", () => {
     tray.setImage(getTrayIcon());
-    if (applicationWindow?.webContents) {
-      applicationWindow.webContents.send("theme:change", Electron.nativeTheme.shouldUseDarkColors ? "dark" : "light");
-    }
+    sendToRenderer("theme:change", Electron.nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   await app.whenReady();
   await createApplicationWindow();

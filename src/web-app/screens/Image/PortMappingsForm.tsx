@@ -57,6 +57,7 @@ export interface PortMappingFormProps {
 export const PortMappingForm: React.FC<PortMappingFormProps> = ({ action, disabled, portMapping, portMappingIndex }: PortMappingFormProps) => {
   const { t } = useTranslation();
   const { control } = useFormContext<{
+    amount: number;
     mappings: ContainerImagePortMapping[];
   }>();
 

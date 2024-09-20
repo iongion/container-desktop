@@ -1,4 +1,4 @@
-PackageIdentifier: iongion.PodmanDesktopCompanion
+PackageIdentifier: iongion.ContainerDesktop
 PackageVersion: <VERSION>
 DefaultLocale: en-US
 ManifestType: version

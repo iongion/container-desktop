@@ -5,7 +5,7 @@
       "uninstall": [
         {
           "delete": "/Applications/Container Desktop.app",
-          "quit": "io.github.iongion.PodmanDesktopCompanion"
+          "quit": "io.github.iongion.ContainerDesktop"
         }
       ]
     },
@@ -18,8 +18,8 @@
           "trash": [
             "~/.local/share/container-desktop",
             "~/Library/Application Support/Container Desktop",
-            "~/Library/Preferences/io.github.iongion.PodmanDesktopCompanion.plist",
-            "~/Library/Saved Application State/io.github.iongion.PodmanDesktopCompanion.savedState"
+            "~/Library/Preferences/io.github.iongion.ContainerDesktop.plist",
+            "~/Library/Saved Application State/io.github.iongion.ContainerDesktop.savedState"
           ]
         }
       ]
@@ -45,7 +45,7 @@
   "disabled": false,
   "full_token": "container-desktop",
   "generated_date": "2024-08-17",
-  "homepage": "https://iongion.github.io/container-desktop/",
+  "homepage": "https://container-desktop.com/",
   "installed": null,
   "installed_time": null,
   "languages": [],

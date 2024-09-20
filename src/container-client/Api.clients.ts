@@ -61,6 +61,7 @@ export interface FetchVolumeOptions {
   Id: string;
 }
 export interface CreateContainerOptions {
+  Amount: number;
   ImageId: string;
   Name?: string;
   // flags

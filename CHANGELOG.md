@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.2-rc.8 - 2024-09-20
+
+## Changed
+
+- Completed rebranding - added container-desktop.com support
+- Added separate UI and latest version checking API endpoint for supporting Microsoft Store for Windows as updates need approval
+- Only build appx target by default in releases
+- Podman machine info respects the cli
+- Moved container stats to container actions menu to favor Processes
+- Container pages auto-refresh on container start / stop / pause / restart
+- Container playback actions differentiation
+- Upgraded deps
+
+## Added
+
+- Issue #159: Ability to create and start multiple containers from the same image
+- Processes top list page for a container
+- Reload button for all container screens
+
+## Fixed
+
+- Docker engine discovery - now it is supposed to support any docker engine in existence using auto-detection (podman impersonating as docker is recognized on purpose as docker just like any other client that uses podman docker compatibility layer)
+- Tray icon for mac is now theme aware and has proper size
+
 ## 5.2.2-rc.7 - 2024-09-13
 
 ## Changed

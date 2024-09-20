@@ -9,7 +9,7 @@ cask "container-desktop" do
       verified: "github.com/iongion/container-desktop/"
   name "Container Desktop"
   desc "General purpose container operations"
-  homepage "https://iongion.github.io/container-desktop/"
+  homepage "https://container-desktop.com/"
 
   livecheck do
     url :url
@@ -21,14 +21,14 @@ cask "container-desktop" do
 
   app "Container Desktop.app"
 
-  uninstall quit:   "io.github.iongion.PodmanDesktopCompanion",
+  uninstall quit:   "io.github.iongion.ContainerDesktop",
             delete: "/Applications/Container Desktop.app",
-            trash:  "~/Library/LaunchAgents/io.podman_desktop.PodmanDesktopCompanion.plist"
+            trash:  "~/Library/LaunchAgents/io.podman_desktop.ContainerDesktop.plist"
 
   zap trash: [
     "~/.local/share/container-desktop",
     "~/Library/Application Support/Container Desktop",
-    "~/Library/Preferences/io.github.iongion.PodmanDesktopCompanion.plist",
-    "~/Library/Saved Application State/io.github.iongion.PodmanDesktopCompanion.savedState",
+    "~/Library/Preferences/io.github.iongion.ContainerDesktop.plist",
+    "~/Library/Saved Application State/io.github.iongion.ContainerDesktop.savedState",
   ]
 end

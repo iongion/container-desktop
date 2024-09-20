@@ -7,7 +7,7 @@ import { isEmpty } from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Connection, GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
+import { Connection, Connector, GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
 import { LOGGING_LEVELS, PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -69,7 +69,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const data = JSON.stringify(
       {
         version: import.meta.env.PROJECT_VERSION,
-        connections
+        connections: connections.map((it) => {
+          delete (it as Connector).scopes;
+          return it;
+        })
       },
       null,
       2
