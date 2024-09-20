@@ -10,13 +10,13 @@ import {
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem,
-  PodmanMachineInspect,
   RunnerStopperOptions
 } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { userConfiguration } from "../../config";
 import { PODMAN_PROGRAM } from "../../connection";
 import { PodmanAbstractContainerEngineHostClient } from "./base";
+import { getPodmanMachineInspect } from "./shared";
 
 const PODMAN_API_SOCKET = `container-desktop-${PODMAN_PROGRAM}-rest-api.sock`;
 
@@ -67,7 +67,7 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
     }
     // Inspect machine for connection details - named pipe or unix socket
     try {
-      const inspectResult = await this.getPodmanMachineInspect(customSettings);
+      const inspectResult = await getPodmanMachineInspect(this, customSettings);
       if (inspectResult?.ConnectionInfo?.PodmanPipe?.Path) {
         uri = inspectResult?.ConnectionInfo?.PodmanPipe?.Path || uri;
       } else {
@@ -88,38 +88,6 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
       uri,
       relay
     };
-  }
-  async getPodmanMachineInspect(customSettings?: EngineConnectorSettings) {
-    const settings = customSettings || (await this.getSettings());
-    let inspect: PodmanMachineInspect | undefined;
-    const controllerPath = settings.controller?.path || settings.controller?.name;
-    if (!controllerPath) {
-      this.logger.error(this.id, "Unable to inspect - no program");
-      return inspect;
-    }
-    const machineName = settings.controller?.scope;
-    if (!machineName) {
-      this.logger.error(this.id, "Unable to inspect - no machine");
-      return inspect;
-    }
-    try {
-      const command = ["machine", "inspect", machineName];
-      const result: any = await this.runHostCommand(controllerPath, command, settings);
-      if (!result.success) {
-        this.logger.error(this.id, "Unable to inspect", result);
-        return inspect;
-      }
-      try {
-        const items: PodmanMachineInspect[] = JSON.parse(result.stdout || "[]");
-        const targetMachine = items.find((it) => it.Name === machineName);
-        return targetMachine;
-      } catch (error: any) {
-        this.logger.error(this.id, "Unable to inspect", error, result);
-      }
-    } catch (error: any) {
-      this.logger.error(this.id, "Unable to inspect - execution error", error.message, error.stack);
-    }
-    return inspect;
   }
   async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     return await this.getPodmanMachines(undefined, customSettings);

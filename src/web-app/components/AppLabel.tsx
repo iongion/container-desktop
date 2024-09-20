@@ -19,7 +19,7 @@ export const AppLabel: React.FC<AppLabelProps> = ({ iconPath, iconName, text }: 
   }
   return (
     <div className="AppLabel">
-      <div className="AppLabelIcon">{content}</div>
+      {content ? <div className="AppLabelIcon">{content}</div> : null}
       {text && <div className="AppLabelText">{text}</div>}
     </div>
   );

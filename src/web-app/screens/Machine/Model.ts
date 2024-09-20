@@ -100,7 +100,7 @@ export const createModel = async (registry: AppRegistry): Promise<MachinesModel>
     machineInspect: thunk(async (actions, options) =>
       registry.withPending(async () => {
         const instance = Application.getInstance();
-        const machine = await instance.inspectPodmanMachine(options.Name);
+        const machine = await instance.getPodmanMachineInspect(options.Name);
         return machine;
       })
     ),

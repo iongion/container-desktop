@@ -62,10 +62,10 @@ def gen_sign(ctx):
     # Create self-signed certificate
     # New-SelfSignedCertificate -Type CodeSigning -Subject "CN=52408AA8-2ECC-4E48-9A2C-6C1F69841C79" -KeyUsage DigitalSignature -FriendlyName "Container Desktop" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
     # Export without password
-    # $cert = @(Get-ChildItem -Path 'Cert:\CurrentUser\My\61A96AA84FAA9EE846F176E0C40B32D364A0DEE6')[0]; $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx); [System.IO.File]::WriteAllBytes('PodmanDesktopCompanion.pfx', $certBytes)
+    # $cert = @(Get-ChildItem -Path 'Cert:\CurrentUser\My\61A96AA84FAA9EE846F176E0C40B32D364A0DEE6')[0]; $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx); [System.IO.File]::WriteAllBytes('ContainerDesktop.pfx', $certBytes)
     path = Path(PROJECT_HOME)
-    cert_path = os.path.join(path, "PodmanDesktopCompanion.pfx")
-    cert_gen = "$cert = @(Get-ChildItem -Path 'Cert:\\CurrentUser\\My\\61A96AA84FAA9EE846F176E0C40B32D364A0DEE6')[0]; $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx); [System.IO.File]::WriteAllBytes('PodmanDesktopCompanion.pfx', $certBytes)"
+    cert_path = os.path.join(path, "ContainerDesktop.pfx")
+    cert_gen = "$cert = @(Get-ChildItem -Path 'Cert:\\CurrentUser\\My\\61A96AA84FAA9EE846F176E0C40B32D364A0DEE6')[0]; $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx); [System.IO.File]::WriteAllBytes('ContainerDesktop.pfx', $certBytes)"
     if not os.path.exists(cert_path):
         print(f"Certificate not found at {cert_path} - generate with: {cert_gen}")
         return False
@@ -73,12 +73,12 @@ def gen_sign(ctx):
     ts_url = "as,http://timestamp.sectigo.com/rfc3161,http://timestamp.globalsign.com/scripts/timstamp.dll,http://timestamp.comodoca.com/authenticode,http://sha256timestamp.ws.symantec.com/sha256/timestamp"
     app_path = os.path.join(path, "release", f"container-desktop-x64-{PROJECT_VERSION}.exe")
     with ctx.cd(path):
-        run_env(ctx, f'java -jar "{jar_path}" --keystore PodmanDesktopCompanion.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{app_path}"')
+        run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{app_path}"')
     # "C:\Program Files (x86)\Windows
-    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\PodmanDesktopCompanion.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.2-rc.7.appx"
+    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\ContainerDesktop.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.2-rc.7.appx"
     # appx_path = os.path.join(path, "release", f"container-desktop-x64-{PROJECT_VERSION}.appx")
     # with ctx.cd(path):
-    #     run_env(ctx, f'java -jar "{jar_path}" --keystore PodmanDesktopCompanion.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{appx_path}"')
+    #     run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{appx_path}"')
 
 
 @task

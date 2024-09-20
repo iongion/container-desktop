@@ -1,7 +1,7 @@
 import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
@@ -22,33 +22,37 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const cpu_usage = container?.Stats?.cpu_stats?.cpu || 0;
+  const mem_usage = container?.Stats?.memory_stats?.usage || 0;
+  const disk_io = 0;
+  const net_io = 0;
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const container = await containerFetch({
-          Id: decodeURIComponent(id as any),
-          withStats: true
-        });
-        setContainer(container);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
+  const onScreenReload = useCallback(async () => {
+    try {
+      setPending(true);
+      const container = await containerFetch({
+        Id: decodeURIComponent(id as any),
+        withStats: true
+      });
+      setContainer(container);
+    } catch (error: any) {
+      console.error("Unable to fetch at this moment", error);
+    } finally {
+      setPending(false);
+    }
   }, [containerFetch, id]);
+
+  useEffect(() => {
+    onScreenReload();
+  }, [onScreenReload]);
+
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
-  const cpu_usage = container.Stats?.cpu_stats?.cpu || 0;
-  const mem_usage = container.Stats?.memory_stats?.usage || 0;
-  const disk_io = 0;
-  const net_io = 0;
+
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader container={container} currentScreen={ID} />
+      <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
         <HTMLTable className="AppContainerStatsView">
           <tbody>

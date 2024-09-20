@@ -13,3 +13,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.AmountOfContainers .bp5-input-group {
+  width: 80px;
+}

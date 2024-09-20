@@ -1,6 +1,7 @@
 import { AnchorButton, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
+import prettyBytes from "pretty-bytes";
 import { useTranslation } from "react-i18next";
 
 import { Connector, ContainerEngineHost, PodmanMachine } from "@/env/Types";
@@ -42,10 +43,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <AppLabel iconName={IconNames.HEAT_GRID} text={t("Name")} />
                 </th>
                 <th data-column="VMType">{t("VM Type")}</th>
-                <th data-column="Active">{t("Active")}</th>
+                <th data-column="CPUs">{t("CPUs")}</th>
+                <th data-column="Memory">{t("Memory")}</th>
+                <th data-column="DiskSize">{t("Disk Size")}</th>
+                <th data-column="Default">{t("Default")}</th>
                 <th data-column="Running">{t("Running")}</th>
                 <th data-column="LastUp">
-                  <AppLabel iconName={IconNames.CALENDAR} text={t("titleBarStyle")} />
+                  <AppLabel iconName={IconNames.CALENDAR} text={t("Last Up")} />
                 </th>
                 <th data-column="Created">
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
@@ -63,7 +67,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       </AnchorButton>
                     </td>
                     <td>{machine.VMType}</td>
-                    <td>{machine.Active ? t("Yes") : t("No")}</td>
+                    <td>{machine.CPUs || "-"}</td>
+                    <td>{machine.Memory && !Number.isNaN(Number(machine.Memory)) ? prettyBytes(Number(machine.Memory)) : "-"}</td>
+                    <td>{machine.DiskSize && !Number.isNaN(Number(machine.DiskSize)) ? prettyBytes(Number(machine.DiskSize)) : "-"}</td>
+                    <td>{machine.Default ? t("Yes") : t("No")}</td>
                     <td>{machine.Running ? t("Yes") : t("No")}</td>
                     <td>{dayjs(machine.LastUp).format("DD MMM YYYY HH:mm")}</td>
                     <td>{dayjs(machine.Created).format("DD MMM YYYY HH:mm")}</td>

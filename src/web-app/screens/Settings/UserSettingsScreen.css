@@ -28,6 +28,15 @@
   display: flex;
   flex: 1;
 }
+.AppSettingsFormVersionCheckStore {
+  background-color: transparent !important;
+  background: url("../../images/microsoft-store.svg") no-repeat 0 center;
+  background-size: contain;
+  border: none;
+  border: none !important;
+  box-shadow: none !important;
+  width: 84px;
+}
 .AppSettingsFormVersionCheckActions {
   display: flex;
   flex: 1;

@@ -107,8 +107,8 @@ const config = {
     shortcutName: displayName
   },
   win: {
-    target: ["appx", "nsis"],
-    //certificateFile: "ContainerDesktop.pfx",
+    target: ["appx"],
+    // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico"
   },

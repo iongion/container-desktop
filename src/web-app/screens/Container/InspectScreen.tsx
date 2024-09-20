@@ -34,21 +34,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { id } = useParams<{ id: string }>();
   const screenRef = useRef<HTMLDivElement>(null);
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const container = await containerFetch({
-          Id: decodeURIComponent(id as any)
-        });
-        setContainer(container);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
+  const onScreenReload = useCallback(async () => {
+    try {
+      setPending(true);
+      const container = await containerFetch({
+        Id: decodeURIComponent(id as any)
+      });
+      setContainer(container);
+    } catch (error: any) {
+      console.error("Unable to fetch at this moment", error);
+    } finally {
+      setPending(false);
+    }
   }, [containerFetch, id]);
+
+  useEffect(() => {
+    onScreenReload();
+  }, [onScreenReload]);
 
   const onCopyToClipboardClick = useCallback(
     async (e) => {
@@ -97,7 +99,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   ];
   return (
     <div className="AppScreen" data-screen={ID} ref={screenRef}>
-      <ScreenHeader container={container} currentScreen={ID} />
+      <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
         <HTMLTable compact striped className="AppDataTable" data-table="container.inspect">
           <tbody>

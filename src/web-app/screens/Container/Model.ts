@@ -1,9 +1,11 @@
 import { IconNames } from "@blueprintjs/icons";
+import * as async from "async";
 import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
 import { v4 } from "uuid";
 
 import { CreateContainerOptions, FetchContainerOptions } from "@/container-client/Api.clients";
 import { Container, ContainerStateList, ContainerStats } from "@/env/Types";
+import { deepMerge } from "@/utils";
 import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { ContainerGroup } from "@/web-app/Types";
@@ -146,20 +148,29 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     containerFetch: thunk(async (actions, options) =>
       registry.withPending(async () => {
         const client = await registry.getContainerClient();
+        // logs
         let logs: any = [];
         try {
           logs = options.withLogs ? await client.getContainerLogs(options.Id) : [];
         } catch (error: any) {
           console.error("Unable to retrieve logs", error);
         }
+        // stats
         let stats: ContainerStats | null = null;
         try {
           stats = options.withStats ? await client.getContainerStats(options.Id) : null;
         } catch (error: any) {
           console.error("Unable to retrieve stats", error);
         }
+        // processes
+        let processes: any = [];
+        try {
+          processes = options.withProcesses ? await client.getContainerProcesses(options.Id) : null;
+        } catch (error: any) {
+          console.error("Unable to retrieve processes", error);
+        }
         const container = await client.getContainer(options.Id);
-        const hydrated: Container = { ...container, Logs: logs, Stats: stats };
+        const hydrated: Container = { ...container, Logs: logs, Stats: stats, Processes: processes };
         if (options.withKube) {
           const generation = await client.generateKube({ entityId: options.Id });
           hydrated.Kube = generation.success ? generation.stdout : "";
@@ -240,8 +251,38 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     containerCreate: thunk(async (actions, options) =>
       registry.withPending(async () => {
         const client = await registry.getContainerClient();
-        const create = await client.createContainer(options);
-        return create;
+        if (options.Amount > 1) {
+          const creators = Array.from({ length: options.Amount }).map((_, index) => {
+            const instanceOptions = deepMerge({}, options);
+            if (instanceOptions.Name) {
+              instanceOptions.Name = instanceOptions.Name.replace(/\${index}/gi, `${index}`);
+            }
+            if (instanceOptions.PortMappings.length > 0) {
+              // Assign unique host ports based on index
+              instanceOptions.PortMappings = instanceOptions.PortMappings.map((mapping) => {
+                const hostPort = mapping.host_port || 0;
+                return { ...mapping, host_port: hostPort + index };
+              });
+            }
+            return instanceOptions;
+          });
+          const creatorCallbacks = creators.map((creatorOptions) => (cb: any) => {
+            return client
+              .createContainer(creatorOptions)
+              .then((created) => {
+                cb(null, created);
+              })
+              .catch(cb);
+          });
+          const results = await async.parallel(creatorCallbacks);
+          return {
+            created: results.filter((it: any) => it.created).length === results.length,
+            started: results.filter((it: any) => it.started).length === results.length
+          };
+        } else {
+          const create = await client.createContainer(options);
+          return create;
+        }
       })
     ),
     containerConnect: thunk(async (actions, options) =>

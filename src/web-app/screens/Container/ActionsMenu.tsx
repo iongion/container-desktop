@@ -106,6 +106,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
         }
         if (success && successMessage) {
           Notification.show({ message: successMessage, intent: Intent.SUCCESS });
+          await onReload?.();
         }
         if (action === "container.remove") {
           goToScreen("/screens/containers");
@@ -175,7 +176,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
           text={t("Inspect")}
           href={getContainerUrl(container.Id, "inspect")}
         />
-        <AnchorButton minimal active={isActive ? isActive("container.stats") : false} icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
+        <AnchorButton
+          minimal
+          active={isActive ? isActive("container.processes") : false}
+          icon={IconNames.PANEL_TABLE}
+          text={t("Processes")}
+          href={getContainerUrl(container.Id, "processes")}
+        />
         <AnchorButton
           minimal
           active={isActive ? isActive("container.kube") : false}
@@ -192,7 +199,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
       <>
         <MenuItem icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
         <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getContainerUrl(container.Id, "inspect")} />
-        <MenuItem icon={IconNames.CHART} text={t("Stats")} href={getContainerUrl(container.Id, "stats")} />
+        <MenuItem icon={IconNames.PANEL_TABLE} text={t("Processes")} href={getContainerUrl(container.Id, "processes")} />
         <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} disabled={!isKubeAvailable} title={kubeDisabledTitle} />
       </>
     );
@@ -284,7 +291,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
               onClick={onActionClick}
               loading={disabledAction === "container.restart" && pending}
             />
-            <Divider />
           </ButtonGroup>
         </div>
       );
@@ -299,13 +305,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
   return (
     <ButtonGroup className="ItemActionsMenu" data-actions-menu="container">
       {expandAsOverlay}
-      {onReload && (
+      {withInlinePlayerActions ? (
         <>
-          {expandAsOverlay ? <Divider /> : null}
-          <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+          {withInlinePlayerActionsWidget}
+          <Divider />
         </>
-      )}
-      {withInlinePlayerActions ? withInlinePlayerActionsWidget : null}
+      ) : null}
       {expandAsButtons}
       {container ? (
         <ConfirmMenu
@@ -315,6 +320,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
           disabled={!canRemove || disabledAction === "container.remove"}
         >
           {expandAsMenuItems}
+          <MenuItem
+            data-container={container.Id}
+            data-action="container.stats"
+            disabled={!isRunning}
+            icon={IconNames.CHART}
+            text={t("Stats")}
+            href={getContainerUrl(container.Id, "stats")}
+          />
           <MenuItem
             data-container={container.Id}
             disabled={!isRunning}
@@ -355,6 +368,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
           )}
         </ConfirmMenu>
       ) : null}
+      {onReload && (
+        <>
+          {expandAsOverlay || withInlinePlayerActionsWidget ? <Divider /> : null}
+          <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+        </>
+      )}
     </ButtonGroup>
   );
 };

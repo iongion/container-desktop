@@ -18,6 +18,7 @@ import {
   EngineConnectorSettings,
   GenerateKubeOptions,
   Network,
+  OperatingSystem,
   Pod,
   PodProcessReport,
   Registry,
@@ -53,12 +54,14 @@ export interface FetchContainerOptions {
   withLogs?: boolean;
   withStats?: boolean;
   withKube?: boolean;
+  withProcesses?: boolean;
 }
 
 export interface FetchVolumeOptions {
   Id: string;
 }
 export interface CreateContainerOptions {
+  Amount: number;
   ImageId: string;
   Name?: string;
   // flags
@@ -425,6 +428,32 @@ export class ContainerClient {
           stream: false
         }
       });
+      return result.data;
+    });
+  }
+  async getContainerProcesses(id: string) {
+    return this.withResult<any>(async () => {
+      const result = await this.driver.get<any>(`/containers/${encodeURIComponent(id)}/top`, {
+        params: {
+          ps_args: "-aux"
+        }
+      });
+      // Compatibility issue - See https://github.com/containers/podman/pull/23986/files#diff-2b1db9a60dcb3f8a41cba2b527ce9d1c8d7db6b8025bea3a6cfc0ba48dd123d9R95
+      let mustPatch = false;
+      const titles = result.data?.Titles || [];
+      const processes = result.data?.Processes || [];
+      if (titles.length > 0 && processes.length > 0) {
+        mustPatch = (processes?.[0] || []).length !== titles.length;
+      }
+      if (mustPatch) {
+        const patchedProcesses = processes.map((it: any) => {
+          return it[0].split(/\s+|\t/gi);
+        });
+        // Assume command is last element - reconstruct
+        result.data.Processes = patchedProcesses.map((it: any) => {
+          return it.slice(0, titles.length - 1).concat(it.slice(titles.length - 1).join(" "));
+        });
+      }
       return result.data;
     });
   }
@@ -993,8 +1022,9 @@ export class OnlineApi {
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
-  async checkLatestVersion() {
-    const re = await fetch(this.baseUrl, { headers: { "content-type": "text/plain" } });
+  async checkLatestVersion(osType: OperatingSystem) {
+    const versionSpecifier = osType === OperatingSystem.Windows ? `VERSION-${osType}` : "VERSION";
+    const re = await fetch(`${this.baseUrl}/${versionSpecifier}`, { headers: { "content-type": "text/plain" } });
     const text = await re.text();
     const current = import.meta.env.PROJECT_VERSION;
     const latest = `${text || ""}`.split("\n")[0] ?? undefined;

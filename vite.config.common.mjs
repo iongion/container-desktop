@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 // vendors
 import ncc from "@vercel/ncc";
@@ -117,6 +118,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
   const userDefine = {
     // Define environment variables
     "import.meta.env.NODE_ENV": `"${mode}"`,
+    "import.meta.env.TARGET": `"${os.type()}"`,
     "import.meta.env.ENVIRONMENT": JSON.stringify(ENVIRONMENT),
     "import.meta.env.PUBLIC_URL": JSON.stringify("."),
     "import.meta.env.PROJECT_VERSION": JSON.stringify(pkg.version),

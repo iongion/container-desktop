@@ -267,7 +267,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
       id: createConnectorId("default", ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR),
-      label: "Docker virtualization",
+      label: osType === OperatingSystem.MacOS ? "Docker virtualization or COLIMA" : "Docker virtualization",
       description: "Using docker virtualization",
       availability: {
         enabled: true,

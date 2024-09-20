@@ -31,7 +31,6 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
     if (!viewRef.current) {
       viewRef.current = wrapRef.current.querySelector<HTMLDivElement>(".TerminalViewContent") ?? undefined;
     }
-    console.debug("Mounting term", viewRef);
     if (!term.current) {
       const fitAddon = new FitAddon();
       const webglAddon = new FitAddon();
@@ -57,7 +56,6 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
       terminal.focus();
       term.current = terminal;
       fit.current = fitAddon;
-      console.debug("Registered terminal", term);
     }
     if (value) {
       term.current?.write(value);

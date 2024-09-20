@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Classes, Drawer, DrawerSize, FormGroup, HTMLTable, InputGroup, Intent, ProgressBar } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Divider, Drawer, DrawerSize, FormGroup, HTMLTable, InputGroup, Intent, NumericInput, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
@@ -16,6 +16,7 @@ import { PortMappingsForm, toPortMappings } from "./PortMappingsForm";
 import "./CreateDrawer.css";
 
 export interface CreateFormData {
+  amount: number;
   imageContainerName: string;
   mounts: MountFormContainerImageMount[];
   mappings: ContainerImagePortMapping[];
@@ -47,6 +48,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
   // Form setup
   const methods = useForm<CreateFormData>({
     defaultValues: {
+      amount: 1,
       mounts,
       mappings
     }
@@ -55,6 +57,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
   const onSubmit = handleSubmit(async (data) => {
     try {
       const creator = {
+        Amount: data.amount,
         ImageId: image.Id,
         Name: data.imageContainerName,
         Start: true,
@@ -64,17 +67,19 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
       setState((prev) => ({ ...prev, pending: true }));
       const create = await containerCreate(creator);
       if (create.created) {
-        if (!create.started) {
-          Notification.show({ message: t("Container has been created but could not start"), intent: Intent.WARNING });
+        if (create.started) {
+          Notification.show({ message: t("Container(s) created and started"), intent: Intent.SUCCESS });
+        } else {
+          Notification.show({ message: t("Container(s) created but could not start"), intent: Intent.WARNING });
         }
         setState((prev) => ({ ...prev, pending: false }));
         onClose();
       } else {
-        Notification.show({ message: t("Unable to create container from image"), intent: Intent.DANGER });
+        Notification.show({ message: t("Unable to start container(s) from image"), intent: Intent.DANGER });
       }
     } catch (error: any) {
-      console.error("Unable to create container from image", error);
-      Notification.show({ message: t("Unable to create container from image"), intent: Intent.DANGER });
+      console.error("Unable to start container(s) from image", error);
+      Notification.show({ message: t("Unable to start container(s) from image"), intent: Intent.DANGER });
       setState((prev) => ({ ...prev, pending: false }));
     }
   });
@@ -103,8 +108,8 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
   return (
     <Drawer
       className="AppDrawer AppCreateImageDrawer"
-      icon={IconNames.PLUS}
-      title={t("Create and start a new container")}
+      icon={IconNames.LAYOUT_BALLOON}
+      title={t("Start from image")}
       usePortal
       size={DrawerSize.SMALL}
       onClose={onClose}
@@ -131,12 +136,41 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
           </HTMLTable>
           <ButtonGroup fill>
             <Button type="submit" disabled={pending} intent={Intent.PRIMARY} icon={IconNames.CUBE_ADD} title={t("Click to launch creation")} text={t("Create and start")} />
+            <Divider />
+
+            <Controller
+              control={control}
+              name="amount"
+              defaultValue={1}
+              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                return (
+                  <NumericInput
+                    required
+                    disabled={pending}
+                    name={name}
+                    inputRef={ref}
+                    value={value}
+                    onValueChange={onChange}
+                    onBlur={onBlur}
+                    className="AmountOfContainers"
+                    title={t("Amount of containers to be launched. If launching more than one, port mappings will be adjusted by incrementing the host port.")}
+                    allowNumericCharactersOnly
+                    min={1}
+                    max={65535}
+                    stepSize={1}
+                    minorStepSize={1}
+                    data-invalid={invalid}
+                    intent={invalid ? Intent.DANGER : Intent.NONE}
+                  />
+                );
+              }}
+            />
           </ButtonGroup>
           <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
           <div className="AppDataForm">
             <FormGroup
               disabled={pending}
-              helperText={t("If not set, it will be automatically generated")}
+              helperText={t("If not set, it will be automatically generated. Use ${index} to insert a counter.")}
               label={t("Container name")}
               labelFor="imageContainerName"
               labelInfo="(optional)"

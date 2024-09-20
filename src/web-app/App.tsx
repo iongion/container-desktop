@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { Route, HashRouter as Router, Switch, useLocation } from "react-router-dom";
 
-import { ContainerEngine, Program } from "@/env/Types";
+import { ContainerEngine, OperatingSystem, Program } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
@@ -23,6 +23,7 @@ import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Contain
 import { Screen as ContainerInspectScreen } from "@/web-app/screens/Container/InspectScreen";
 import { Screen as ContainerLogsScreen } from "@/web-app/screens/Container/LogsScreen";
 import { Screen as ContainersScreen } from "@/web-app/screens/Container/ManageScreen";
+import { Screen as ContainerProcessesScreen } from "@/web-app/screens/Container/ProcessesScreen";
 import { Screen as ContainerStatsScreen } from "@/web-app/screens/Container/StatsScreen";
 import { Screen as ContainerTerminalScreen } from "@/web-app/screens/Container/TerminalScreen";
 import { Screen as DashboardScreen } from "@/web-app/screens/Dashboard";
@@ -54,6 +55,7 @@ const Screens = [
   ContainerLogsScreen,
   ContainerInspectScreen,
   ContainerStatsScreen,
+  ContainerProcessesScreen,
   ContainerGenerateKubeScreen,
   ContainerTerminalScreen,
   ImagesScreen,
@@ -143,12 +145,13 @@ export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
 };
 
 interface AppMainScreenContentProps {
+  osType: OperatingSystem;
   phase: AppBootstrapPhase;
   program?: Program;
   running?: boolean;
   provisioned?: boolean;
 }
-export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ program, phase, provisioned, running }) => {
+export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ osType, program, phase, provisioned, running }) => {
   const startApplication = useStoreActions((actions) => actions.startApplication);
   const { t } = useTranslation();
   const location = useLocation();
@@ -161,7 +164,7 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ prog
 
   return (
     <>
-      <AppHeader program={program} provisioned={provisioned} running={running} screens={Screens} currentScreen={currentScreen} />
+      <AppHeader osType={osType} program={program} provisioned={provisioned} running={running} screens={Screens} currentScreen={currentScreen} />
       <AppErrorBoundary
         onReconnect={onReconnect}
         reconnect={t("Try to recover")}
@@ -218,7 +221,7 @@ export function AppMainScreen() {
         <body className={theme === "dark" ? `bp5-${theme}` : theme} data-engine={engine} />
       </Helmet>
       <Router>
-        <AppMainScreenContent phase={phase} provisioned={provisioned} running={running} program={program} />
+        <AppMainScreenContent osType={osType} phase={phase} provisioned={provisioned} running={running} program={program} />
       </Router>
     </div>
   );
