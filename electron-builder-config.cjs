@@ -1,11 +1,18 @@
-const path = require("path");
+const path = require("node:path");
+const os = require("node:os");
 // vendors
 const dayjs = require("dayjs");
 const dotenv = require("dotenv");
+const semver = require("semver");
 // pkg
 const pkg = require("./package.json");
 // module
-const artifactName = [pkg.name, "${arch}", pkg.version].join("-");
+const version = pkg.version;
+const semverVersion = semver.parse(version);
+// MAJOR.MIN.REV.BUILD for Windows Store compatibility
+const buildNumber = Number(process.env.BUILD_NUMBER || semverVersion.build[0] || semverVersion.prerelease[0][0] || 0);
+const buildVersion = `${semverVersion.major}.${semverVersion.minor}.${semverVersion.patch}.${buildNumber}`;
+const artifactName = [pkg.name, "${arch}", version].join("-");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 
@@ -21,11 +28,12 @@ const year = dayjs().format("YYYY");
 const identityName = "IonutStoica.ContainerDesktop";
 const applicationId = identityName;
 const displayName = pkg.title;
-const releaseName = `${displayName} ${pkg.version}`;
+const releaseName = `${displayName} ${version}`;
 const config = {
   appId: "container-desktop.iongion.github.io",
   productName: process.platform === "linux" ? pkg.name : displayName,
-  buildVersion: pkg.version,
+  buildNumber,
+  buildVersion,
   artifactName: artifactName + ".${ext}",
   copyright: `Copyright (c) ${year} ${pkg.author}`,
   releaseInfo: {
@@ -43,7 +51,9 @@ const config = {
   electronLanguages: ["en-US"],
   // includeSubNodeModule: false,
   extraMetadata: {
-    version: pkg.version,
+    version: buildVersion,
+    buildVersion,
+    buildNumber,
     main: pkg.main
   },
   directories: {
@@ -117,6 +127,7 @@ const config = {
     publisher: process.env.PUBLISHER || pkg.author,
     publisherDisplayName: process.env.PUBLISHER_DISPLAY_NAME || pkg.author,
     applicationId,
+    setBuildNumber: false, // Always false otherwise rejected by Windows Store
     displayName
   },
   linux: {

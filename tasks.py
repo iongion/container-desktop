@@ -75,7 +75,7 @@ def gen_sign(ctx):
     with ctx.cd(path):
         run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{app_path}"')
     # "C:\Program Files (x86)\Windows
-    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\ContainerDesktop.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.2-rc.7.appx"
+    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\ContainerDesktop.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.3.appx"
     # appx_path = os.path.join(path, "release", f"container-desktop-x64-{PROJECT_VERSION}.appx")
     # with ctx.cd(path):
     #     run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{appx_path}"')
