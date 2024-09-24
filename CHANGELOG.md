@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.4 - 2024-09-24
+
+## Fixed
+
+- WSL - Support for multiple distributions even with automatic connections
+- Flatpak - Unable to set icon and connect properly
+- Linux - Proper icons and logos in all cases for all packages
+
+## Changed
+
+- Improved flatpak build process to be able to publish to flathub
+- Updated deps
+
+## Changed
+
 ## 5.2.3 - 2024-09-20
 
 ## Changed

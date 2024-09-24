@@ -23,6 +23,11 @@ async function read() {
 async function write(config?: GlobalUserSettings) {
   const configPath = await getUserSettingsPath();
   try {
+    const baseDir = await Path.dirname(configPath);
+    const baseDirExits = await FS.isFilePresent(baseDir);
+    if (!baseDirExits) {
+      await FS.mkdir(baseDir, { recursive: true });
+    }
     await FS.writeTextFile(configPath, JSON.stringify(config, null, 2));
   } catch (error: any) {
     console.error("Unable to write config", { error, config });
@@ -41,9 +46,6 @@ export async function update(values: Partial<GlobalUserSettings>) {
 }
 
 export class UserConfiguration {
-  constructor() {
-    console.debug("User configuration has been instantiated");
-  }
   async getStoragePath() {
     const dataPath = await Platform.getUserDataPath();
     return dataPath;

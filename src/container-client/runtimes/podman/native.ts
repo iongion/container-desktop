@@ -56,16 +56,32 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
     }
     const settings = customSettings || (await this.getSettings());
     const programPath = settings.program.path || settings.program.name || "";
-    if (settings.api.connection.uri) {
-      const baseDir = await Path.dirname(settings.api.connection.uri);
+    const socketPath = `${settings.api.connection.uri || ""}`.replace("unix://", "");
+    if (socketPath) {
+      const baseDir = await Path.dirname(socketPath);
+      // CHANGE: I don't know why podman does not create the base-dir of the listening socket
+      if (await Platform.isFlatpak()) {
+        if (baseDir.startsWith("/run/user")) {
+          const hostBaseDir = await Path.join("/var", baseDir);
+          this.logger.debug(this.id, "(flatpak) Ensuring socket base dir exists in host", hostBaseDir);
+          await FS.mkdir(hostBaseDir, { recursive: true });
+        } else {
+          const hostBaseDir = await Path.join("/var/run/host", baseDir);
+          this.logger.debug(this.id, "(flatpak) Ensuring socket base dir exists in host", hostBaseDir);
+          await FS.mkdir(hostBaseDir, { recursive: true });
+        }
+      }
+      this.logger.debug(this.id, "Ensuring socket base dir exists", baseDir);
       const baseExists = await FS.isFilePresent(baseDir);
       if (!baseExists) {
+        this.logger.debug(this.id, "Creating socket base dir", baseDir);
         await FS.mkdir(baseDir, { recursive: true });
       }
     }
+    this.logger.debug(this.id, "Starting API", { programPath, socketPath });
     const started = await this.runner.startApi(opts, {
       path: programPath,
-      args: ["system", "service", "--time=0", `unix://${settings.api.connection.uri}`, "--log-level=debug"]
+      args: ["system", "service", "--time=0", `unix://${socketPath}`, "--log-level=debug"]
     });
     this.apiStarted = started;
     this.logger.debug("Start API complete", started);

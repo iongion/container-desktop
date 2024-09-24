@@ -54,12 +54,13 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
       return true;
     }
     this.logger.warn(this.id, ">> Starting API - starting system service");
-    const settings = customSettings || (await this.getSettings());
+    const settings = customSettings || (await this.getSettings()) || {};
     this.logger.debug(this.id, ">> Starting API", settings, opts);
     const args = ["system", "service", "--time=0", `unix://${settings.api.connection.relay}`, "--log-level=debug"];
     const { program, controller } = settings;
     let launcherPath = "";
     let launcherArgs = [...args];
+    const scope = settings?.controller?.scope || "";
     if (this.isScoped()) {
       launcherPath = controller?.path || controller?.name || "";
       const programPath = program.path || program.name;
@@ -68,8 +69,13 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
         // Bug on WSL - podman is unable to create the base directory for the unix socket
         if (settings.api.connection.relay) {
           const baseDir = await Path.dirname(settings.api.connection.relay);
-          this.logger.warn("Ensuring relay base directory", settings.api.connection.relay);
-          await this.runScopeCommand("mkdir", ["-p", baseDir], controller?.scope || "");
+          this.logger.error("Ensuring relay base directory", settings.api.connection.relay);
+          const created = await this.runScopeCommand("mkdir", ["-p", baseDir], scope || "");
+          if (created.success) {
+            this.logger.debug(this.id, "Base directory created", baseDir);
+          } else {
+            this.logger.warn("Base directory not created", baseDir, { result: created });
+          }
         } else {
           this.logger.warn("No relay path - base dir not ensured");
         }
@@ -79,9 +85,10 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
     } else {
       launcherPath = program.path || program.name;
     }
+    this.logger.debug(this.id, ">> Starting API", settings, opts, { launcherPath, launcherArgs });
     const started: any = await this.runner.startApi(opts, {
       path: launcherPath,
-      args: launcherArgs
+      args: ["--distribution", scope, "--exec", "bash", "-l", "-c", "$@", "--"].concat(launcherArgs)
     });
     this.apiStarted = started;
     this.logger.debug(this.id, "<< Starting API completed", started);

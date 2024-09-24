@@ -7,6 +7,7 @@ import {
   Connection,
   Container,
   ContainerEngine,
+  ContainerEngineHost,
   ContainerImage,
   ContainerImageHistory,
   ContainerImageMount,
@@ -205,17 +206,39 @@ export function isOk(res: AxiosResponse) {
   return res.status >= 200 && res.status < 300;
 }
 
-export function getApiConfig(api: EngineConnectorApiSettings, scope?: string) {
-  console.debug("Constructing api configuration", { api, scope });
+export async function getApiConfig(api: EngineConnectorApiSettings, scope: string | undefined, host: ContainerEngineHost) {
+  console.debug("Constructing api configuration", { api, scope, host });
   const baseURL = api.baseURL || "";
-  const socketPath = `${api.connection?.uri || ""}`.replace("npipe://", "").replace("unix://", "");
+  let socketPath = `${api.connection?.uri || ""}`.replace("npipe://", "").replace("unix://", "");
+  if (await Platform.isFlatpak()) {
+    if (
+      [
+        // Tests for flatpak
+        ContainerEngineHost.PODMAN_NATIVE,
+        ContainerEngineHost.DOCKER_NATIVE,
+        ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
+        ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
+        ContainerEngineHost.PODMAN_REMOTE,
+        ContainerEngineHost.DOCKER_REMOTE
+      ].includes(host)
+    ) {
+      //
+      if (socketPath.startsWith("/run/user")) {
+        socketPath = await Path.join("/var", socketPath);
+      } else {
+        socketPath = await Path.join("/var/run/host", socketPath);
+      }
+      console.debug("(flatpak) environment detected - mapped socket path to", socketPath);
+    }
+  }
   const config: ApiDriverConfig = {
     timeout: 60000,
     socketPath,
     baseURL,
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "User-Agent": `Container Desktop ${import.meta.env.PROJECT_VERSION}`
     }
   };
   // logger.debug("API configuration", config);
