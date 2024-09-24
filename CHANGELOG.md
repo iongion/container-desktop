@@ -14,9 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - WSL - Support for multiple distributions even with automatic connections
 - Flatpak - Unable to set icon and connect properly
 - Linux - Proper icons and logos in all cases for all packages
+- Window Close issues
 
 ## Changed
 
+- Reduced timeouts to fail faster
 - Improved flatpak build process to be able to publish to flathub
 - Updated deps
 
