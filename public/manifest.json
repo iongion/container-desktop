@@ -1,6 +1,6 @@
 {
   "default_locale": "en",
-  "description": "Podman desktop companion",
+  "description": "Container Desktop",
   "icons": [
     {
       "sizes": "any",
@@ -9,7 +9,7 @@
     }
   ],
   "manifest_version": 2,
-  "name": "Podman desktop companion",
+  "name": "Container Desktop",
   "permissions": ["webNavigation"],
-  "version": "5.2.3"
+  "version": "5.2.4"
 }
