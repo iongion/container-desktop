@@ -49,10 +49,7 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
         relay: ""
       };
     }
-    const NATIVE_PODMAN_SOCKET_PATH = (await Platform.isFlatpak())
-      ? await Path.join("/tmp", PODMAN_API_SOCKET)
-      : await Path.join(await userConfiguration.getStoragePath(), PODMAN_API_SOCKET);
-    let uri = NATIVE_PODMAN_SOCKET_PATH;
+    let uri = await Path.join(await userConfiguration.getStoragePath(), PODMAN_API_SOCKET);
     if (this.osType === OperatingSystem.Windows) {
       uri = getWindowsPipePath(scope!);
     } else {

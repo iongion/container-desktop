@@ -170,19 +170,28 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
         const controllerProgram = await this.findHostProgram({ name: this.CONTROLLER, path: "" }, settings);
         settings.controller = controllerProgram;
         settings.controller.scope = existingScope;
-        const defaultScope = await this.getControllerDefaultScope(settings);
-        this.logger.warn(this.id, "Default scope is", defaultScope);
-        if (defaultScope) {
-          settings.controller.scope = defaultScope.Name;
-          if (defaultScope.Usable) {
+        if (isEmpty(existingScope)) {
+          const defaultScope = await this.getControllerDefaultScope(settings);
+          this.logger.warn(this.id, "Default scope is", defaultScope);
+          if (defaultScope) {
+            settings.controller.scope = defaultScope.Name;
+            if (defaultScope.Usable) {
+              const scopeProgram = await this.findScopeProgram({ name: this.PROGRAM, path: "" }, settings);
+              settings.program = scopeProgram;
+            } else {
+              this.logger.warn(this.id, "Default scope is not usable - program will not be detected");
+            }
+            // API connection
+          } else {
+            this.logger.error(this.id, "No default scope found - program will not be detected");
+          }
+        } else {
+          try {
             const scopeProgram = await this.findScopeProgram({ name: this.PROGRAM, path: "" }, settings);
             settings.program = scopeProgram;
-          } else {
-            this.logger.warn(this.id, "Default scope is not usable - program will not be detected");
+          } catch (error: any) {
+            this.logger.error(this.id, "Unable to get scope program", error);
           }
-          // API connection
-        } else {
-          this.logger.error(this.id, "No default scope found - program will not be detected");
         }
       } else {
         const hostProgram = await this.findHostProgram({ name: this.PROGRAM, path: "" }, settings);
@@ -287,7 +296,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       trace: `Performing api health check`
     });
     try {
-      const response = await driver.request({ method: "GET", url: "/_ping", timeout: 10000 });
+      const response = await driver.request({ method: "GET", url: "/_ping", timeout: 5000 });
       result.success = response?.data === "OK";
       result.details = result.success ? "Api is reachable" : response?.data;
       if (!result.success) {

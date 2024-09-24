@@ -174,6 +174,7 @@ async function createApplicationWindow() {
     },
     icon: iconPath
   };
+  logger.debug("Setting application icon", iconPath);
   if (CURRENT_OS_TYPE === OperatingSystem.Linux || CURRENT_OS_TYPE === OperatingSystem.Windows) {
     windowOptions.frame = false;
   } else {
@@ -206,10 +207,13 @@ async function createApplicationWindow() {
       event.returnValue = true;
       return;
     }
-    closed = true;
     event.preventDefault();
     const inTray = await hideToTray(event);
     sendToRenderer("window:close", { inTray });
+    if (!inTray) {
+      closed = true;
+      app.quit();
+    }
   };
   // Application window
   applicationWindow = new BrowserWindow(windowOptions);
@@ -317,13 +321,21 @@ function createSystemTray() {
   ]);
   tray.setToolTip("Container Desktop");
   tray.setContextMenu(trayMenu);
+  return tray;
 }
 
 async function main() {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   app.commandLine.appendSwitch("ignore-certificate-errors");
   Electron.nativeTheme.on("updated", () => {
-    tray.setImage(getTrayIcon());
+    try {
+      const tray = createSystemTray();
+      const trayIconPath = getTrayIcon();
+      logger.debug("Set tray icon from", trayIconPath);
+      tray.setImage(trayIconPath);
+    } catch (e: any) {
+      logger.error("Unable to set sys-tray icon");
+    }
     sendToRenderer("theme:change", Electron.nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   await app.whenReady();

@@ -123,19 +123,21 @@ export const FS: IFileSystem = {
   },
 
   async isFilePresent(filePath: string) {
-    let vfsFilePath: string = filePath;
-    if (await Platform.isFlatpak()) {
-      vfsFilePath = await Path.join("/var/run/host", filePath);
-    }
-    // console.debug("Checking file presence", { filePath, vfsFilePath });
-    return await fs.existsSync(vfsFilePath);
+    return await fs.existsSync(filePath);
   },
 
   async mkdir(location: string, options?: any) {
-    return await fs.mkdirSync(location, options);
+    console.debug("Creating directory", { location });
+    const lastCreated = await fs.mkdirSync(location, options);
+    const created = !!lastCreated;
+    const exists = await fs.existsSync(location);
+    if (!created || !exists) {
+      console.error("Directory creation failed", location);
+    }
+    return location;
   },
 
-  async rename(oldPath: string | URL, newPath: string | URL, options?: any) {
+  async rename(oldPath: string, newPath: string, options?: any) {
     return await fs.renameSync(oldPath, newPath);
   }
 };

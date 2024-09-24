@@ -23,13 +23,13 @@ export class Runner {
       trace: `Staring the api`
     });
     this.logger = createLogger("container-client.api.Runner");
-    this.logger.debug(">> Starting API - guard configuration");
+    this.logger.debug(">> Starting API - guard configuration", { starter });
     if (!starter || !starter?.path) {
       this.logger.error("<< Starting API - Starter program not configured");
       return false;
     }
     const clientOpts = {
-      retry: { count: 10, wait: 10000 },
+      retry: { count: 10, wait: 5000 },
       checkStatus: async () => {
         this.logger.debug(">> Starting API - Checking API status - checking if running");
         const result = await this.client.isApiRunning();

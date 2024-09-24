@@ -40,7 +40,6 @@ export class PodmanContainerEngineHostClientSSH extends AbstractContainerEngineH
     } catch (error: any) {
       this.logger.warn(this.id, "Unable to get system info", error);
     }
-    // Inspect machine system info for relay path
     return {
       uri,
       relay

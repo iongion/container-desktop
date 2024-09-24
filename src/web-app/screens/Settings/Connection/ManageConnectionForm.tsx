@@ -325,6 +325,13 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         console.debug("Detecting container host", host);
         const connector = createConnectorBy(osType, engine, host);
         const updated = await fetchControllerScopes(connector, true);
+        if (engine === ContainerEngine.PODMAN) {
+          // These should default to auto-start
+          const autoStartHosts = [ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA];
+          if (autoStartHosts.includes(host)) {
+            updated.settings.api.autoStart = true;
+          }
+        }
         resetFormData(updated);
       } catch (error: any) {
         console.error("Unable to create connection", error);

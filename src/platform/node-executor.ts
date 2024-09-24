@@ -583,7 +583,7 @@ export const Command: ICommand = {
       case ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA:
       case ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA:
         {
-          const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
+          const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
           logger.debug("Proxying request to host", { connection, config, request });
           const driver = await createNodeJSApiDriver(config);
           response = await driver.request(request);
@@ -593,7 +593,7 @@ export const Command: ICommand = {
       case ContainerEngineHost.PODMAN_VIRTUALIZED_WSL:
       case ContainerEngineHost.DOCKER_VIRTUALIZED_WSL:
         {
-          const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
+          const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
           config.socketPath = connection.settings.api.connection.relay;
           logger.debug("Proxying request to WSL distribution", { connection, config });
           response = await proxyRequestToWSLDistribution(connection, config, request);
@@ -602,7 +602,7 @@ export const Command: ICommand = {
       case ContainerEngineHost.PODMAN_REMOTE:
       case ContainerEngineHost.DOCKER_REMOTE:
         {
-          const config = getApiConfig(connection.settings.api, connection.settings.controller?.scope);
+          const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
           config.socketPath = connection.settings.api.connection.relay;
           logger.debug("Proxying request to SSH connection", { connection, config });
           response = await proxyRequestToSSHConnection(connection, config, request, context);
