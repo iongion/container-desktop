@@ -45,6 +45,15 @@ export async function exec_buffered(hostLauncher: string, commandLine: string[],
     child.on("exit", function (code) {
       if (!resolved) {
         resolved = true;
+        logger.debug("Child process exited", code);
+        try {
+          if (child.stdin) {
+            logger.debug("Ending child process stdin");
+            (child.stdin as any).end();
+          }
+        } catch (error) {
+          logger.error("child process stdin end error", error);
+        }
         resolve({
           //
           stdout: Buffer.concat(stdoutChunks),
@@ -83,12 +92,12 @@ export class RelayServer {
           try {
             let command = `printf ${JSON.stringify(data)} | socat -t 10 UNIX-CONNECT:${socketPath} -`;
             if (relayMethod === "netcat") {
-              command = `printf ${JSON.stringify(data)} | nc -U ${socketPath}`;
+              command = `printf ${JSON.stringify(data)} | nc -v -q 0 -w 1 -U ${socketPath} && exit 0`;
             }
             const hostLauncher = "wsl.exe";
             const hostArgs: string[] = ["--distribution", scope, "--exec", "bash", "-l", "-c", command];
             const result = await exec_buffered(hostLauncher, hostArgs, (chunk) => {
-              logger.debug("Relaying chunk to listening address", { chunk, socketPath });
+              logger.debug("Relaying chunk to listening address", { chunkSize: chunk?.length, socketPath });
               stream.write(chunk);
             });
             logger.debug("Relaying complete response", result.exitCode, "to", this._address);

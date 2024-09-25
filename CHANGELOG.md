@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.5 - 2024-09-24
+
+## Fixed
+
+- WSL - Fix never ending pollers due to netcat no timeout exit
+
+## Changed
+
+- Reduced the polling frequency to 2 seconds
+
 ## 5.2.4 - 2024-09-24
 
 ## Fixed

@@ -16,7 +16,7 @@ export const PROGRAM_PODMAN = {
   homepage: "https://podman.io"
 };
 export const PROGRAM_DEFAULT = "podman";
-export const POLL_RATE_DEFAULT = 1000;
+export const POLL_RATE_DEFAULT = 2000;
 export const API_BASE_URL_DEFAULT = "http://d/v3.0.0/libpod";
 export const ENV_DEFAULT: Pick<Environment, "settings" | "features"> = {
   settings: {
