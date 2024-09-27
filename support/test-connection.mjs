@@ -11,7 +11,7 @@ export function createApiDriver(config) {
 }
 
 const driver = createApiDriver({
-  // socketPath: "\\\\.\\pipe\\wsl-relay",
+  // socketPath: "\\\\.\\pipe\\wcontainer-desktop-wsl-relay",
   baseURL: "http://localhost:8080"
 });
 let response = await driver.get("/_ping");

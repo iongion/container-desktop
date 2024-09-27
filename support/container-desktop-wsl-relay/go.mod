@@ -1,4 +1,4 @@
-module wsl-relay
+module container-desktop-wsl-relay
 
 go 1.23.0
 

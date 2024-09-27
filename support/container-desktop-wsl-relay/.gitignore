@@ -6,4 +6,4 @@
 /build
 *.test
 *.out
-/wsl-relay
+/container-desktop-wsl-relay

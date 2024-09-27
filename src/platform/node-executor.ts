@@ -109,11 +109,11 @@ export class RelayServer {
     let port = 8080;
     let wslRelayPath = "";
     try {
-      const relayPath = await Path.join(process.env.APP_PATH || "", "bin/wsl-relay");
+      const relayPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay");
       const wslRelayPathCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", relayPath]);
       const wslUidCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "id", "-u"]);
       const wslUid = wslUidCommand.stdout.trim();
-      const pidDir = `/var/run/user/${wslUid}`;
+      const pidDir = `/tmp/container-desktop-${wslUid}`;
       wslRelayPath = wslRelayPathCommand.stdout.trim();
       port = await getFreeTCPPort();
       this._pidFile = `${pidDir}/container-desktop-wsl-relay-${this._connection.id}.pid`;

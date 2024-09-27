@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container-desktop-wsl-relay/internal/relay"
 	"context"
 	"flag"
 	"log"
@@ -9,7 +10,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-	"wsl-relay/internal/relay"
 )
 
 const (

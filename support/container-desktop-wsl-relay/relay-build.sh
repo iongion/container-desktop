@@ -14,12 +14,12 @@ dir=$(
 SCRIPTPATH=$dir/$(basename -- "$SCRIPTPATH") || exit
 PROJECT_HOME="$(dirname "$(dirname "$(dirname "$SCRIPTPATH")")")"
 
-echo "Building wsl-relay"
+echo "Building container-desktop-wsl-relay"
 export GOOS=linux
 export GOARCH=amd64
 go build --ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -buildmode pie -tags "osusergo netgo static_build"
 
-echo "Compress wsl-relay"
-upx -9 wsl-relay
+echo "Compress container-desktop-wsl-relay"
+upx -9 container-desktop-wsl-relay
 mkdir -p "$PROJECT_HOME/bin"
-mv wsl-relay "$PROJECT_HOME/bin"
+mv container-desktop-wsl-relay "$PROJECT_HOME/bin"
