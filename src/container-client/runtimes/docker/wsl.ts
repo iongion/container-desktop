@@ -28,7 +28,7 @@ export class DockerContainerEngineHostClientVirtualizedWSL extends AbstractConta
         relay: ""
       };
     }
-    const uri = getWindowsPipePath(scope.startsWith("podman-machine") ? scope : `${this.ENGINE}-${scope}-${settings.mode}`);
+    const uri = scope.startsWith("podman-machine") ? getWindowsPipePath(scope) : "";
     // Get environment variable inside the scope
     let relay = (await this.getScopeEnvironmentVariable(scope, "DOCKER_HOST")) || "";
     // Inspect context info for relay path

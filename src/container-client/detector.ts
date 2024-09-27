@@ -118,7 +118,23 @@ export const findProgramVersion = async (
     return version;
   }
   if (programPath.endsWith("wsl.exe")) {
-    logger.warn("wsl.exe does not report a version - defaulting", version);
+    try {
+      const script = `
+        $console = ([console]::OutputEncoding)
+        [console]::OutputEncoding = New-Object System.Text.UnicodeEncoding
+        $version = (Get-AppxPackage | ? Name -eq "MicrosoftCorporationII.WindowsSubsystemforLinux") | ConvertTo-Json -Compress
+        [console]::OutputEncoding = $console
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::Write("$version")
+      `;
+      const result = await Command.Execute("powershell", ["-Command", script], { encoding: "utf8" });
+      if (result.success) {
+        const output = JSON.parse(result.stdout || JSON.stringify({ Version: "2" }));
+        version = output.Version;
+      }
+    } catch (error: any) {
+      logger.error("Unable to detect wsl.exe version", error.message, "defaulting", version);
+    }
     return version;
   }
   let isSSH = false;

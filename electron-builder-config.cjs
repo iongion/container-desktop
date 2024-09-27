@@ -56,6 +56,7 @@ const config = {
     buildNumber,
     main: pkg.main
   },
+  extraFiles: os.type() === "Windows_NT" ? ["bin/*"] : [],
   directories: {
     app: ".",
     output: "release",
@@ -121,7 +122,7 @@ const config = {
     shortcutName: displayName
   },
   win: {
-    target: ["appx"],
+    target: ["appx", "nsis"],
     // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico"

@@ -9,7 +9,7 @@ export const DOCKER_PROGRAM = "docker";
 
 // WSL - common
 export const WSL_PROGRAM = "wsl";
-export const WSL_VERSION = "2"; // The cli does not report a version
+export const WSL_VERSION = "2";
 
 // LIMA - common
 export const LIMA_PROGRAM = "limactl";
@@ -383,7 +383,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
   return connectors;
 }
 
-export function createConnectorBy(osType: OperatingSystem, engine: ContainerEngine = DEFAULT_CONTAINER_RUNTIME, host?: ContainerEngineHost) {
+export function createConnectorBy(osType: OperatingSystem, engine: ContainerEngine = DEFAULT_CONTAINER_RUNTIME, host?: ContainerEngineHost, id?: string) {
   const canUseNativeEngine = osType === OperatingSystem.Linux;
   let currentEngineHost: ContainerEngineHost = host!;
   if (currentEngineHost) {
@@ -398,7 +398,7 @@ export function createConnectorBy(osType: OperatingSystem, engine: ContainerEngi
   const connectors = getDefaultConnectors(osType);
   const connector = connectors.find((it) => it.engine === engine && it.host === currentEngineHost)!;
   const copyOf = deepMerge<Connector>({}, { ...connector });
-  copyOf.id = `host.${v4()}.${connector.host}`;
+  copyOf.id = id || `host.${v4()}.${connector.host}`;
   console.debug("Create connector by", { osType, engine, host: currentEngineHost, canUseNativeEngine });
   return copyOf;
 }

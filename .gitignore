@@ -1,10 +1,11 @@
 **/__pycache__/**
 .venv
-temp
+bin
 build
 dist
 release
 squashfs-root
+temp
 .DS_Store
 PodmanDesktopCompanion.pfx
 ContainerDesktop.pfx

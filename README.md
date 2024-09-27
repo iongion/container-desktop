@@ -33,7 +33,7 @@ Main goals
 - **Linux** - Install [podman](https://podman.io/docs/installation) - note that distributions usually have older versions of podman, see [Aalvistack](https://software.opensuse.org/download/package?package=podman&project=home%3Aalvistack) for the most recent repositories.
 Additional packages besides podman may be required, such as `aardvark-dns` and `passt` for networking (<https://passt.top/passt/about/>).
 If one wants to add support for docker container engine, the easiest is to install rootless docker as documented here <https://linuxhandbook.com/rootless-docker/>
-- **Windows** - Install [podman](https://podman.io/docs/installation) or provision your favorite WSL distribution with latest podman by following the instructions above for **Linux**. On your custom WSL distribution, `netcat` or `socat` are needed to relay unix sockets back to Windows native context. Example `sudo apt install netcat` for Ubuntu.
+- **Windows** - Install [podman](https://podman.io/docs/installation) or provision your favorite WSL distribution with latest podman by following the instructions above for **Linux**. On your custom WSL distribution, a custom TCP relay is provided to relay unix sockets back to Windows native context.
 - **MacOS** - Install [podman](https://podman.io/docs/installation) or [lima](https://lima-vm.io/)
 
 > NOTE - To access and monitor remote ssh installations, properly set-up the connections in your `$HOME/.ssh/config` or `$env:USERPROFILE/.ssh/config` just like you do for Visual Studio Code remote extensions <https://code.visualstudio.com/docs/remote/ssh> - SSH connections are tunneled through a **tcp** listener, listening to `localhost` only.

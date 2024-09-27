@@ -12,15 +12,20 @@ import { OperatingSystem } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
+import { execFileSync } from "node:child_process";
 import { MessageBus } from "./shared";
+
+const APP_PATH = Electron.app.isPackaged ? path.dirname(Electron.app.getPath("exe")) : Electron.app.getAppPath();
 
 // patch global like in preload
 (global as any).Command = Command;
 (global as any).Platform = Platform;
 (global as any).Path = Path;
 (global as any).FS = FS;
+(global as any).APP_PATH = APP_PATH;
 (global as any).CURRENT_OS_TYPE = CURRENT_OS_TYPE;
 (global as any).MessageBus = MessageBus;
+process.env.APP_PATH = APP_PATH;
 // locals
 const { BrowserWindow, Menu, Tray, app, dialog, ipcMain, shell } = Electron;
 const __filename = url.fileURLToPath(import.meta.url);
@@ -43,6 +48,7 @@ const DOMAINS_ALLOW_LIST = [
   "aquasecurity.github.io" // Aqua Security (trivy)
 ];
 const logger = createLogger("shell.main");
+const quitRegistry: any[] = [];
 let tray: any = null;
 let applicationWindow: Electron.BrowserWindow;
 let notified = false;
@@ -112,6 +118,9 @@ ipcMain.on("notify", (event, arg) => {
     notified = true;
     applicationWindow.show();
   }
+});
+ipcMain.handle("register.quit", async function (event, options) {
+  quitRegistry.push(options);
 });
 ipcMain.handle("openFileSelector", async function (event, options) {
   logger.debug("IPC - openFileSelector - start", options);
@@ -269,7 +278,7 @@ async function createApplicationWindow() {
     window: applicationWindow,
     showInspectElement: true
   });
-  logger.debug("Application URL is", { appURL, preloadURL, current: __dirname });
+  logger.debug("Application is", { appURL, preloadURL, current: __dirname, path: APP_PATH });
   try {
     await applicationWindow.loadURL(appURL);
   } catch (error: any) {
@@ -325,6 +334,21 @@ function createSystemTray() {
 }
 
 async function main() {
+  app.on("before-quit", () => {
+    if (quitRegistry) {
+      logger.debug("Calling registered quit", quitRegistry);
+      quitRegistry.forEach((q) => {
+        try {
+          const output = execFileSync(q.command[0], q.command.slice(1));
+          logger.debug("Quitting", q.command, output.toString());
+        } catch (error: any) {
+          logger.error("Error on before-quit", error);
+        }
+      });
+    } else {
+      logger.debug("No quit registered");
+    }
+  });
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   app.commandLine.appendSwitch("ignore-certificate-errors");
   Electron.nativeTheme.on("updated", () => {

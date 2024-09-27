@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/no-autofocus */
-import { Button, ButtonGroup, Classes, Divider, FormGroup, HTMLSelect, InputGroup, Intent, Spinner, SpinnerSize, Switch, Tab, Tabs, UL } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, Spinner, SpinnerSize, Switch, Tab, Tabs, UL } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { isEmpty } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -934,12 +934,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
 
                         {/* Connection api relay */}
                         {flags.withApiRelay ? (
-                          <FormGroup
-                            disabled={pending}
-                            label={t("API connection relay")}
-                            labelFor="settings.api.connection.relay"
-                            helperText={flags.isWSL ? t("The WSL distribution requires netcat or socat to be installed(default is netcat)") : null}
-                          >
+                          <FormGroup disabled={pending} label={t("API connection relay")} labelFor="settings.api.connection.relay">
                             <Controller
                               control={control}
                               name="settings.api.connection.relay"
@@ -960,30 +955,8 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                                       intent={invalid ? Intent.DANGER : Intent.NONE}
                                       placeholder={t("auto")}
                                       rightElement={
-                                        <ButtonGroup minimal>
-                                          {flags.isWSL ? (
-                                            <Controller
-                                              control={control}
-                                              name="settings.api.connection.relayMethod"
-                                              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-                                                return (
-                                                  <HTMLSelect
-                                                    disabled={pending}
-                                                    minimal
-                                                    title={t("Relay method")}
-                                                    value={value || "netcat"}
-                                                    onChange={onChange}
-                                                    onBlur={onBlur}
-                                                    ref={ref}
-                                                  >
-                                                    <option value="netcat">Netcat</option>
-                                                    <option value="socat">Socat</option>
-                                                  </HTMLSelect>
-                                                );
-                                              }}
-                                            />
-                                          ) : null}
-                                          {flags.withCustomApiConnectionRelay ? undefined : (
+                                        flags.withCustomApiConnectionRelay ? undefined : (
+                                          <ButtonGroup minimal>
                                             <Button
                                               disabled={pending}
                                               small
@@ -993,8 +966,8 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                                               data-target="program"
                                               onClick={onToggleCustomApiConnectionRelayEditability}
                                             />
-                                          )}
-                                        </ButtonGroup>
+                                          </ButtonGroup>
+                                        )
                                       }
                                     />
                                     <Divider />

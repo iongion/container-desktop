@@ -30,7 +30,7 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
         relay: ""
       };
     }
-    const uri = getWindowsPipePath(scope.startsWith("podman-machine") ? scope : `${this.ENGINE}-${scope}-${settings.mode}`);
+    const uri = scope.startsWith("podman-machine") ? getWindowsPipePath(scope) : "";
     let relay = "";
     // Get environment variable inside the scope
     try {

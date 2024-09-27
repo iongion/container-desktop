@@ -1,7 +1,7 @@
 cask "container-desktop" do
   arch arm: "arm64", intel: "x64"
 
-  version "5.2.5"
+  version "5.2.6"
   sha256 arm:   "766e95f921ec223ade4ba06e82558a77cd890962f2a4e25d41a047d88c1b10bf",
          intel: "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf"
 

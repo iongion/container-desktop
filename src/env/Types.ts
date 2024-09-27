@@ -7,7 +7,7 @@ export interface SpawnedProcess {
   stdout?: string;
   stderr?: string;
   command?: any;
-  kill: (signal: NodeJS.Signals | number) => void;
+  kill: (signal?: NodeJS.Signals | number) => void;
 }
 
 export interface ILogger {
@@ -126,7 +126,6 @@ export interface DetectFlags {
 export interface ApiConnection {
   uri: string;
   relay: string;
-  relayMethod?: "auto" | "socat" | "netcat" | "curl";
 }
 
 export interface EngineConnectorApiSettings {

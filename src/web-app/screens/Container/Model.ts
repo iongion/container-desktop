@@ -148,6 +148,8 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
     containerFetch: thunk(async (actions, options) =>
       registry.withPending(async () => {
         const client = await registry.getContainerClient();
+        // container itself
+        const container = await client.getContainer(options.Id);
         // logs
         let logs: any = [];
         try {
@@ -165,11 +167,14 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
         // processes
         let processes: any = [];
         try {
-          processes = options.withProcesses ? await client.getContainerProcesses(options.Id) : null;
+          if (container.State === "running" || (container as any).State.Status === "running") {
+            processes = options.withProcesses ? await client.getContainerProcesses(options.Id) : null;
+          } else {
+            processes = [];
+          }
         } catch (error: any) {
           console.error("Unable to retrieve processes", error);
         }
-        const container = await client.getContainer(options.Id);
         const hydrated: Container = { ...container, Logs: logs, Stats: stats, Processes: processes };
         if (options.withKube) {
           const generation = await client.generateKube({ entityId: options.Id });

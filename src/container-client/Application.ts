@@ -932,7 +932,7 @@ export class Application {
         systemNotifier.transmit("startup.phase", {
           trace: "Creating connectors"
         });
-        connector = createConnectorBy(this.osType, opts.connection.engine, opts.connection.host);
+        connector = createConnectorBy(this.osType, opts.connection.engine, opts.connection.host, opts.connection.id);
         connector.connectionId = opts.connection.id;
         connector.name = opts.connection.name;
         connector.label = opts.connection.label;

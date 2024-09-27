@@ -3,6 +3,7 @@ import shutil
 import hashlib
 import platform
 import os
+import subprocess
 from pathlib import Path
 
 from invoke import task, Collection
@@ -75,7 +76,7 @@ def gen_sign(ctx):
     with ctx.cd(path):
         run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{app_path}"')
     # "C:\Program Files (x86)\Windows
-    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\ContainerDesktop.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.5.appx"
+    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\ContainerDesktop.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.6.appx"
     # appx_path = os.path.join(path, "release", f"container-desktop-x64-{PROJECT_VERSION}.appx")
     # with ctx.cd(path):
     #     run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-421f6152-2313-4a73-85bf-29bae289dbd8 --tsaurl "{ts_url}" "{appx_path}"')
@@ -92,6 +93,20 @@ def build(ctx, env=None):
         for file in glob.glob("./src/resources/icons/trayIcon*"):
             shutil.copy(file, "./build")
 
+@task
+def build_relay(ctx, env=None):
+    path = Path(PROJECT_HOME)
+    with ctx.cd(path):
+        os.makedirs(os.path.join(PROJECT_HOME, "bin"), exist_ok=True)
+        relay_path = os.path.join(PROJECT_HOME, "bin", "wsl-relay")
+        if os.path.exists(relay_path):
+            os.unlink(relay_path)
+        project_home = os.path.abspath(os.path.join(PROJECT_HOME, "support/wsl-relay"))
+        project_home_wsl = subprocess.check_output(["wsl.exe", "--exec", "bash", "-l", "-c", "$@", "--", "wslpath", project_home]).decode("utf-8").strip()
+        project_relay_bundle = subprocess.check_output(["wsl.exe", "--exec", "bash", "-l", "-c", f'cd "{project_home_wsl}" && ./relay-build.sh']).decode("utf-8").strip()
+        print(project_relay_bundle)
+        if os.path.exists(relay_path):
+            print(f"Relay binary created in {relay_path}")
 
 @task
 def bundle(ctx, env=None):
@@ -106,6 +121,7 @@ def bundle(ctx, env=None):
             run_env(ctx, "yarn package:linux_x86", env)
             run_env(ctx, "yarn package:linux_arm", env)
         else:
+            build_relay(ctx, env)
             run_env(ctx, "yarn package:win_x86", env)
 
 @task
@@ -165,4 +181,4 @@ def start(ctx, docs=False):
         run_env(ctx, "yarn dev")
 
 
-namespace = Collection(clean, prepare, build, bundle, release, start, checksums, gen_sign)
+namespace = Collection(clean, prepare, build, build_relay, bundle, release, start, checksums, gen_sign)

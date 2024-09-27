@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.6 - 2024-09-24
+
+## Changed
+
+- WSL - Create and use a custom TCP relay
+- WSL - Performance - Reduced CPU usage to insignificant values during polling
+- WSL - Provisioning - Removed the need for `socat` or `netcat` as the relay binary is now bundled for Windows
+
+## Fixed
+
+- Avoid reading container processes if container is not running
+
+## Added
+
+- WSL - Killing of spawned processes from WSL distribution before application graceful quit(nodejs cannot kill them as they are not native)
+- WSL - Relay binary helper building during release
+
 ## 5.2.5 - 2024-09-24
 
 ## Fixed

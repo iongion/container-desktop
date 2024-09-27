@@ -11,8 +11,10 @@ export function createApiDriver(config) {
 }
 
 const driver = createApiDriver({
-  socketPath: "\\\\.\\pipe\\docker_engine",
-  baseURL: "http://d"
+  // socketPath: "\\\\.\\pipe\\wsl-relay",
+  baseURL: "http://localhost:8080"
 });
-const response = await driver.get("/v4.0.0/libpod/pods/json");
+let response = await driver.get("/_ping");
+console.log(response.data);
+response = await driver.get("/containers/json");
 console.log(response.data);

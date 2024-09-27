@@ -1,15 +1,17 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import adapter from "axios/lib/adapters/http";
+import Electron from "electron";
 import { EventEmitter } from "eventemitter3";
 // import fetch from "node-fetch";
-import { ChildProcess, ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio } from "node:child_process";
+import { ChildProcess, ChildProcessWithoutNullStreams, execFileSync, spawn, SpawnOptionsWithoutStdio } from "node:child_process";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
+import systeminformation from "systeminformation";
 
 import { getApiConfig } from "@/container-client/Api.clients";
 import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/services";
-import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, Wrapper } from "@/env/Types";
+import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, SpawnedProcess, Wrapper } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { deepMerge } from "@/utils";
 import { Platform } from "./node";
@@ -17,6 +19,15 @@ import { Platform } from "./node";
 const logger = createLogger("shared");
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 const RELAY_SERVERS_CACHE: { [key: string]: RelayServer } = {};
+
+async function isPortInUse(port: number) {
+  const networkConnections = await systeminformation.networkConnections();
+  return (
+    networkConnections.find((networkConnection) => {
+      return networkConnection.localPort === String(port);
+    }) !== undefined
+  );
+}
 
 // Servers
 export async function exec_buffered(hostLauncher: string, commandLine: string[], onChunk?: (buffer: Buffer) => void) {
@@ -75,44 +86,16 @@ export async function exec_buffered(hostLauncher: string, commandLine: string[],
 
 export class RelayServer {
   protected _connection: Connection;
-  protected _server: net.Server;
+  // protected _server: net.Server;
   protected _address: string = "";
+  protected _pidFile: string = "";
   protected isListening: boolean = false;
+
+  protected nativeApiStarterProcess: CommandExecutionResult | null = null;
+  protected nativeApiStarterProcessChild: SpawnedProcess | null = null;
 
   constructor(conn: Connection) {
     this._connection = conn;
-    this._server = net.createServer((stream) => {
-      stream.on("data", async (c) => {
-        const data = c.toString();
-        if (data) {
-          const scope = conn.settings.controller?.scope || "";
-          const socketPath = `${conn.settings.api.connection.relay}`.replace("unix://", "");
-          const relayMethod = conn.settings.api.connection.relayMethod || "netcat";
-          logger.debug("Relaying request to native unix socket", socketPath, data);
-          try {
-            let command = `printf ${JSON.stringify(data)} | socat -t 10 UNIX-CONNECT:${socketPath} -`;
-            if (relayMethod === "netcat") {
-              command = `printf ${JSON.stringify(data)} | nc -v -q 0 -w 1 -U ${socketPath} && exit 0`;
-            }
-            const hostLauncher = "wsl.exe";
-            const hostArgs: string[] = ["--distribution", scope, "--exec", "bash", "-l", "-c", command];
-            const result = await exec_buffered(hostLauncher, hostArgs, (chunk) => {
-              logger.debug("Relaying chunk to listening address", { chunkSize: chunk?.length, socketPath });
-              stream.write(chunk);
-            });
-            logger.debug("Relaying complete response", result.exitCode, "to", this._address);
-            // stream.write(result.stdout);
-          } catch (error: any) {
-            logger.error("Relay communication error", error);
-          } finally {
-            // stream.end();
-          }
-        }
-      });
-      stream.on("error", (error) => {
-        logger.error("Stream error detected", error);
-      });
-    });
   }
   getAddress() {
     return this._address;
@@ -121,20 +104,141 @@ export class RelayServer {
     if (this.isListening) {
       return this;
     }
-    const address = this._connection.settings.api.connection.uri || "";
-    return new Promise((resolve, reject) => {
-      logger.debug(this._connection.id, "Relay server starting", address);
-      this._address = address;
-      this._server.listen(address, () => {
-        logger.debug(this._connection.id, "Relay server started", address);
-        this.isListening = true;
-        resolve(this);
+    let rejected = false;
+    const scope = this._connection.settings.controller?.scope || "";
+    let port = 8080;
+    let wslRelayPath = "";
+    try {
+      const relayPath = await Path.join(process.env.APP_PATH || "", "bin/wsl-relay");
+      const wslRelayPathCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", relayPath]);
+      const wslUidCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "id", "-u"]);
+      const wslUid = wslUidCommand.stdout.trim();
+      const pidDir = `/var/run/user/${wslUid}`;
+      wslRelayPath = wslRelayPathCommand.stdout.trim();
+      port = await getFreeTCPPort();
+      this._pidFile = `${pidDir}/container-desktop-wsl-relay-${this._connection.id}.pid`;
+      this._address = `localhost:${port}`;
+      await exec_launcher("wsl.exe", ["--distribution", scope, "--exec", "mkdir", "-p", pidDir]);
+      logger.debug(">> WSL Relay path", {
+        relayPath,
+        wslRelayPathCommand,
+        wslRelayPath,
+        resourcesPath: process.env.APP_PATH,
+        localAddress: this._address,
+        pidPath: this._pidFile,
+        userId: wslUid
       });
+      logger.debug("Ensure no process is running using pid file", this._pidFile);
+      this.killProcessByPidFile(this._pidFile);
+    } catch (error: any) {
+      logger.error("Unable to start relay server", error);
+      this.isListening = false;
+      return this;
+    }
+    const started = await new Promise<boolean>((resolve, reject) => {
+      Command.ExecuteAsBackgroundService(
+        this._connection.settings.controller?.path || "wsl.exe",
+        [
+          // in case of wsl
+          "--distribution",
+          scope || "",
+          "--exec",
+          wslRelayPath,
+          "--socket",
+          this._connection.settings.api.connection.relay.replace("unix://", ""),
+          "--address",
+          this._address,
+          "--pid-file",
+          this._pidFile
+        ],
+        {
+          checkStatus: async () => {
+            return await isPortInUse(port);
+          }
+        }
+      )
+        .then(async (client) => {
+          client.on("ready", async ({ process, child }) => {
+            try {
+              this.nativeApiStarterProcess = process;
+              this.nativeApiStarterProcessChild = child;
+              logger.debug(">> Starting API - System service start ready", { process, child });
+              const controller = this._connection.settings.controller?.path || this._connection.settings.controller?.name || "wsl.exe";
+              const pidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", this._pidFile]);
+              const pid = pidCommand.toString().trim();
+              await Electron.ipcRenderer.invoke("register.quit", {
+                pid,
+                pidFile: this._pidFile,
+                address: this._address,
+                command: [controller, "--distribution", scope, "--exec", "kill", "-9", pid]
+              });
+              resolve(true);
+            } catch (error: any) {
+              if (rejected) {
+                logger.warn(">> Starting API - System service start - already rejected");
+              } else {
+                // rejected = true;
+                reject(error);
+              }
+            }
+          });
+          client.on("error", (info) => {
+            logger.error(">> Starting API - System service start - process error", info);
+            if (rejected) {
+              logger.warn(">> Starting API - System service start - already rejected");
+            } else {
+              rejected = true;
+              reject(new Error("Unable to start service"));
+            }
+          });
+        })
+        .catch(reject);
     });
+    if (started) {
+      this.isListening = true;
+    } else {
+      this.isListening = false;
+      throw new Error("Unable to start relay server");
+    }
+    return this;
+  }
+  killProcessByPidFile(pidFile: string) {
+    // IMPORTANT: Must be a synchronous operation
+    if (!pidFile) {
+      return false;
+    }
+    try {
+      const controller = this._connection.settings.controller?.path || this._connection.settings.controller?.name || "wsl.exe";
+      const scope = this._connection.settings.controller?.scope || "";
+      const pidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", pidFile]);
+      const pid = pidCommand.toString().trim();
+      const output = execFileSync(controller, ["--distribution", scope, "--exec", "kill", "-9", pid]);
+      logger.debug("Killed process using pid file", pidFile, output.toString());
+      const removePidFile = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "rm", "-f", pidFile]);
+      logger.debug("Removed pid file", pidFile, removePidFile.toString());
+      return true;
+    } catch (error: any) {
+      logger.error("Killing process using pid file failed", pidFile, error);
+    }
+    return false;
   }
   async stop() {
     this.isListening = false;
-    this._server.close();
+    logger.debug("Stopping relay", { process: this.nativeApiStarterProcess, child: this.nativeApiStarterProcessChild });
+    if (this.nativeApiStarterProcessChild) {
+      logger.debug("Stopping relay - Terminating child process", this.nativeApiStarterProcessChild.pid);
+      try {
+        this.nativeApiStarterProcessChild.kill();
+      } catch (error: any) {
+        logger.error("Stopping relay - Kill child process failed", error);
+      }
+      this.nativeApiStarterProcessChild = null;
+    } else {
+      logger.debug("No native starter process child found - nothing to stop");
+    }
+    logger.debug("Killing process using pid file", this._pidFile);
+    this.killProcessByPidFile(this._pidFile);
+    logger.debug("Stopped relay", { process: this.nativeApiStarterProcess, child: this.nativeApiStarterProcessChild });
   }
 }
 
@@ -189,9 +293,13 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
       // Make actual request to the temporary socket server created above
       try {
         await server.start();
-        const actual = deepMerge({}, config, request, { socketPath: server.getAddress() });
-        const driver = await createNodeJSApiDriver(actual);
-        const response = await driver.request(actual);
+        const localAddress = `http://${server.getAddress()}`;
+        request.headers = deepMerge({}, config.headers || {}, request.headers || {});
+        request.timeout = request.timeout || config.timeout || 5000;
+        request.baseURL = localAddress;
+        delete request.socketPath;
+        const driver = await createNodeJSApiDriver(request);
+        const response = await driver.request(request);
         resolve(response);
       } catch (error: any) {
         reject(error);
@@ -396,14 +504,15 @@ export async function exec_service(programPath: string, programArgs: string[], o
     };
     const waitForProcess = (child: ChildProcess) => {
       let pending = false;
-      let retries = retry?.count || 15;
-      const wait = retry?.wait || 1000;
+      const maxRetries = retry?.count || 15;
+      let retries = maxRetries;
+      const wait = retry?.wait || 2000;
       const IID = setInterval(async () => {
         if (pending) {
           logger.debug("Waiting for result of last retry - skipping new retry");
           return;
         }
-        logger.debug("Remaining", retries, "of", retry?.count);
+        logger.debug("Remaining", retries, "of", maxRetries);
         if (retries === 0) {
           clearInterval(IID);
           logger.error("Max retries reached");
@@ -429,19 +538,35 @@ export async function exec_service(programPath: string, programArgs: string[], o
               process: proc,
               child: {
                 pid,
-                kill: (signal: NodeJS.Signals | number) => {
+                kill: async (signal?: NodeJS.Signals | number) => {
+                  const sendSignal = signal || "SIGTERM";
+                  logger.debug("(OS) Killing child process started", pid, { signal: sendSignal });
                   try {
-                    logger.debug("Killing child process", pid);
-                    child.kill(signal);
+                    logger.debug("(OS) Destroying child process streams");
+                    if (child.stdout) {
+                      child.stdout.destroy();
+                    }
+                    if (child.stdin) {
+                      child.stdin.destroy();
+                    }
+                    if (child.stderr) {
+                      child.stderr.destroy();
+                    }
                   } catch (error: any) {
-                    logger.error("Kill child process failed", error);
+                    logger.error("(OS) Destroying child process streams failed", error);
                   }
                   try {
-                    logger.debug("Dereferencing child process");
+                    child.kill(sendSignal);
+                  } catch (error: any) {
+                    logger.error("(OS) Kill child process failed", error);
+                  }
+                  try {
+                    logger.debug("(OS) Dereferencing child process");
                     child.unref();
                   } catch (error: any) {
-                    logger.error("Dereferencing child process failed", error);
+                    logger.error("(OS) Dereferencing child process failed", error);
                   }
+                  logger.debug("(OS) Killing child process completed", pid, { child });
                 }
               }
             });
