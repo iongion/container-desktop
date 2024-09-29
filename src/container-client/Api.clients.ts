@@ -207,7 +207,7 @@ export function isOk(res: AxiosResponse) {
 }
 
 export async function getApiConfig(api: EngineConnectorApiSettings, scope: string | undefined, host: ContainerEngineHost) {
-  console.debug("Constructing api configuration", { api, scope, host });
+  // console.debug("Constructing api configuration", { api, scope, host });
   const baseURL = api.baseURL || "";
   let socketPath = `${api.connection?.uri || ""}`.replace("npipe://", "").replace("unix://", "");
   if (await Platform.isFlatpak()) {
@@ -323,6 +323,7 @@ export class ContainerClient {
   }
 
   public getDriver() {
+    console.debug("Returning driver", this.driver);
     return this.driver;
   }
 

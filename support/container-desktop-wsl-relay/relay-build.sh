@@ -22,4 +22,18 @@ go build --ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -bu
 echo "Compress container-desktop-wsl-relay"
 upx -9 container-desktop-wsl-relay
 mkdir -p "$PROJECT_HOME/bin"
-mv container-desktop-wsl-relay "$PROJECT_HOME/bin"
+cp container-desktop-wsl-relay "$PROJECT_HOME/bin"
+
+echo "Building container-desktop-wsl-relay.exe"
+# sudo apt-get install gcc-mingw-w64 -y
+export GOOS=windows
+export GOARCH=amd64
+export CGO_ENABLED=1
+export CXX=x86_64-w64-mingw32-g++
+export CC=x86_64-w64-mingw32-gcc
+go build --ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -buildmode pie -tags "osusergo netgo static_build"
+
+echo "Compress container-desktop-wsl-relay.exe"
+upx -9 container-desktop-wsl-relay.exe
+mkdir -p "$PROJECT_HOME/bin"
+cp container-desktop-wsl-relay.exe "$PROJECT_HOME/bin"

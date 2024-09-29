@@ -171,6 +171,7 @@ def clean(c, docs=False):
     path = Path(PROJECT_HOME)
     with c.cd(os.path.dirname(path)):
         shutil.rmtree("node_modules", ignore_errors=True)
+        shutil.rmtree("bin", ignore_errors=True)
         shutil.rmtree("build", ignore_errors=True)
         shutil.rmtree("release", ignore_errors=True)
 

@@ -7,3 +7,7 @@ replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
 	golang.org/x/text => golang.org/x/text v0.3.3
 )
+
+require github.com/Microsoft/go-winio v0.6.2
+
+require golang.org/x/sys v0.10.0 // indirect

@@ -7,3 +7,4 @@
 *.test
 *.out
 /container-desktop-wsl-relay
+/container-desktop-wsl-relay.exe

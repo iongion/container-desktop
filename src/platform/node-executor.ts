@@ -18,7 +18,7 @@ import { Platform } from "./node";
 
 const logger = createLogger("shared");
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
-const RELAY_SERVERS_CACHE: { [key: string]: RelayServer } = {};
+const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
 
 async function isPortInUse(port: number) {
   const networkConnections = await systeminformation.networkConnections();
@@ -84,11 +84,14 @@ export async function exec_buffered(hostLauncher: string, commandLine: string[],
   });
 }
 
-export class RelayServer {
+export class WSLRelayServer {
   protected _connection: Connection;
   // protected _server: net.Server;
-  protected _address: string = "";
+  protected _namedPipe: string = "";
   protected _pidFile: string = "";
+  protected _pid: any;
+  protected _relayPidFile: string = "";
+  protected _relayPid: any;
   protected isListening: boolean = false;
 
   protected nativeApiStarterProcess: CommandExecutionResult | null = null;
@@ -98,38 +101,43 @@ export class RelayServer {
     this._connection = conn;
   }
   getAddress() {
-    return this._address;
+    return this._namedPipe;
   }
-  async start(): Promise<RelayServer> {
+  async start(): Promise<WSLRelayServer> {
     if (this.isListening) {
       return this;
     }
     let rejected = false;
     const scope = this._connection.settings.controller?.scope || "";
-    let port = 8080;
-    let wslRelayPath = "";
+    let wslLinuxRelayProgramPath = "";
+    let wslWindowsRelayProgramPath = "";
     try {
-      const relayPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay");
-      const wslRelayPathCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", relayPath]);
+      const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay");
+      const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
+      const wslWindowsNamedPipeRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay.exe");
+      const wslWindowsNamedPipeRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslWindowsNamedPipeRelayProgramPath]);
       const wslUidCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "id", "-u"]);
       const wslUid = wslUidCommand.stdout.trim();
       const pidDir = `/tmp/container-desktop-${wslUid}`;
-      wslRelayPath = wslRelayPathCommand.stdout.trim();
-      port = await getFreeTCPPort();
+      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
+      wslWindowsRelayProgramPath = wslWindowsNamedPipeRelayProgramCommand.stdout.trim();
       this._pidFile = `${pidDir}/container-desktop-wsl-relay-${this._connection.id}.pid`;
-      this._address = `localhost:${port}`;
+      this._relayPidFile = `${pidDir}/container-desktop-wsl-relay-${this._connection.id}-relay.pid`;
+      this._namedPipe = `\\\\.\\pipe\\container-desktop-wsl-relay-${this._connection.id}`;
       await exec_launcher("wsl.exe", ["--distribution", scope, "--exec", "mkdir", "-p", pidDir]);
       logger.debug(">> WSL Relay path", {
-        relayPath,
-        wslRelayPathCommand,
-        wslRelayPath,
+        wslLinuxRelayProgramPath,
+        wslWindowsRelayProgramPath,
         resourcesPath: process.env.APP_PATH,
-        localAddress: this._address,
+        namedPipe: this._namedPipe,
         pidPath: this._pidFile,
+        relayPidPath: this._relayPidFile,
         userId: wslUid
       });
-      logger.debug("Ensure no process is running using pid file", this._pidFile);
+      logger.debug("(main) Ensure no process is running using pid file", this._pidFile);
       this.killProcessByPidFile(this._pidFile);
+      logger.debug("(relay) Ensure no process is running using pid file", this._relayPidFile);
+      this.killProcessByPidFile(this._relayPidFile);
     } catch (error: any) {
       logger.error("Unable to start relay server", error);
       this.isListening = false;
@@ -139,21 +147,37 @@ export class RelayServer {
       Command.ExecuteAsBackgroundService(
         this._connection.settings.controller?.path || "wsl.exe",
         [
-          // in case of wsl
           "--distribution",
           scope || "",
           "--exec",
-          wslRelayPath,
+          wslLinuxRelayProgramPath,
+          "--distribution",
+          scope || "",
           "--socket",
           this._connection.settings.api.connection.relay.replace("unix://", ""),
-          "--address",
-          this._address,
+          "--pipe",
+          this._namedPipe,
+          "--relay-program-path",
+          wslWindowsRelayProgramPath,
           "--pid-file",
           this._pidFile
         ],
         {
           checkStatus: async () => {
-            return await isPortInUse(port);
+            try {
+              const statusConfig = {
+                socketPath: this._namedPipe,
+                baseURL: "http://d",
+                adapter
+              };
+              logger.debug("Checking status of relay server", statusConfig);
+              const driver = axios.create(statusConfig);
+              const response = await driver.get("/_ping");
+              return response.status === 200;
+            } catch (error) {
+              logger.error("Unable to check status of relay server", error);
+              return false;
+            }
           }
         }
       )
@@ -166,12 +190,31 @@ export class RelayServer {
               const controller = this._connection.settings.controller?.path || this._connection.settings.controller?.name || "wsl.exe";
               const pidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", this._pidFile]);
               const pid = pidCommand.toString().trim();
+              const relayPidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", this._relayPidFile]);
+              const relayPid = relayPidCommand.toString().trim();
+              this._pid = pid;
+              this._relayPid = relayPid;
+              // wsl wrapper
+              await Electron.ipcRenderer.invoke("register.quit", {
+                pid: child.pid,
+                pidFile: "",
+                command: ["taskkill.exe", "/F", "/T", "/PID", child.pid.toString()]
+              });
+              // main
               await Electron.ipcRenderer.invoke("register.quit", {
                 pid,
                 pidFile: this._pidFile,
-                address: this._address,
-                command: [controller, "--distribution", scope, "--exec", "kill", "-9", pid]
+                address: this._namedPipe,
+                command: [controller, "--distribution", scope, "--exec", "kill", "-SIGTERM", pid]
               });
+              // relay
+              await Electron.ipcRenderer.invoke("register.quit", {
+                pid,
+                pidFile: this._relayPidFile,
+                address: this._namedPipe,
+                command: [controller, "--distribution", scope, "--exec", "kill", "-SIGTERM", relayPid]
+              });
+              logger.debug(">> Starting API - Registered quit for relays", { pid, file: this._pidFile, relayPid, relayPidFile: this._relayPidFile });
               resolve(true);
             } catch (error: any) {
               if (rejected) {
@@ -212,7 +255,7 @@ export class RelayServer {
       const scope = this._connection.settings.controller?.scope || "";
       const pidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", pidFile]);
       const pid = pidCommand.toString().trim();
-      const output = execFileSync(controller, ["--distribution", scope, "--exec", "kill", "-9", pid]);
+      const output = execFileSync(controller, ["--distribution", scope, "--exec", "kill", "-SIGTERM", pid]);
       logger.debug("Killed process using pid file", pidFile, output.toString());
       const removePidFile = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "rm", "-f", pidFile]);
       logger.debug("Removed pid file", pidFile, removePidFile.toString());
@@ -225,6 +268,13 @@ export class RelayServer {
   async stop() {
     this.isListening = false;
     logger.debug("Stopping relay", { process: this.nativeApiStarterProcess, child: this.nativeApiStarterProcessChild });
+    if (this._pidFile) {
+      logger.debug("(linux) Killing process using pid file", { pid: this._pid, pidFile: this._pidFile });
+      this.killProcessByPidFile(this._pidFile);
+      // Kill the relay process if it is still running
+      logger.debug("(relay) Killing process using pid file", { pid: this._pid, pidFile: this._pidFile });
+      this.killProcessByPidFile(this._pidFile.replace(".pid", "-relay.pid"));
+    }
     if (this.nativeApiStarterProcessChild) {
       logger.debug("Stopping relay - Terminating child process", this.nativeApiStarterProcessChild.pid);
       try {
@@ -236,15 +286,13 @@ export class RelayServer {
     } else {
       logger.debug("No native starter process child found - nothing to stop");
     }
-    logger.debug("Killing process using pid file", this._pidFile);
-    this.killProcessByPidFile(this._pidFile);
     logger.debug("Stopped relay", { process: this.nativeApiStarterProcess, child: this.nativeApiStarterProcessChild });
   }
 }
 
-export function withConnectionRelayServer(connection: Connection, callback: (server: RelayServer) => void) {
+export function withWSLRelayServer(connection: Connection, callback: (server: WSLRelayServer) => void) {
   if (!RELAY_SERVERS_CACHE[connection.id]) {
-    RELAY_SERVERS_CACHE[connection.id] = new RelayServer(connection);
+    RELAY_SERVERS_CACHE[connection.id] = new WSLRelayServer(connection);
   }
   callback(RELAY_SERVERS_CACHE[connection.id]);
 }
@@ -289,15 +337,14 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
 export async function proxyRequestToWSLDistribution(connection: Connection, config: ApiDriverConfig, request: Partial<AxiosRequestConfig>) {
   return await new Promise<AxiosResponse<any, any> | undefined>((resolve, reject) => {
     //
-    withConnectionRelayServer(connection, async (server) => {
+    withWSLRelayServer(connection, async (server) => {
       // Make actual request to the temporary socket server created above
       try {
         await server.start();
-        const localAddress = `http://${server.getAddress()}`;
         request.headers = deepMerge({}, config.headers || {}, request.headers || {});
         request.timeout = request.timeout || config.timeout || 5000;
-        request.baseURL = localAddress;
-        delete request.socketPath;
+        request.baseURL = "http://d";
+        request.socketPath = server.getAddress();
         const driver = await createNodeJSApiDriver(request);
         const response = await driver.request(request);
         resolve(response);
