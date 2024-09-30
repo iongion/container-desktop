@@ -1,13 +1,11 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import adapter from "axios/lib/adapters/http";
-import Electron from "electron";
 import { EventEmitter } from "eventemitter3";
 // import fetch from "node-fetch";
-import { ChildProcess, ChildProcessWithoutNullStreams, execFileSync, spawn, SpawnOptionsWithoutStdio } from "node:child_process";
+import { ChildProcess, ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio } from "node:child_process";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
-import systeminformation from "systeminformation";
 
 import { getApiConfig } from "@/container-client/Api.clients";
 import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/services";
@@ -19,15 +17,6 @@ import { Platform } from "./node";
 const logger = createLogger("shared");
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
-
-async function isPortInUse(port: number) {
-  const networkConnections = await systeminformation.networkConnections();
-  return (
-    networkConnections.find((networkConnection) => {
-      return networkConnection.localPort === String(port);
-    }) !== undefined
-  );
-}
 
 // Servers
 export async function exec_buffered(hostLauncher: string, commandLine: string[], onChunk?: (buffer: Buffer) => void) {
@@ -88,9 +77,7 @@ export class WSLRelayServer {
   protected _connection: Connection;
   // protected _server: net.Server;
   protected _namedPipe: string = "";
-  protected _pidFile: string = "";
   protected _pid: any;
-  protected _relayPidFile: string = "";
   protected _relayPid: any;
   protected isListening: boolean = false;
 
@@ -121,8 +108,6 @@ export class WSLRelayServer {
       const pidDir = `/tmp/container-desktop-${wslUid}`;
       wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
       wslWindowsRelayProgramPath = wslWindowsNamedPipeRelayProgramCommand.stdout.trim();
-      this._pidFile = `${pidDir}/container-desktop-wsl-relay-${this._connection.id}.pid`;
-      this._relayPidFile = `${pidDir}/container-desktop-wsl-relay-${this._connection.id}-relay.pid`;
       this._namedPipe = `\\\\.\\pipe\\container-desktop-wsl-relay-${this._connection.id}`;
       await exec_launcher("wsl.exe", ["--distribution", scope, "--exec", "mkdir", "-p", pidDir]);
       logger.debug(">> WSL Relay path", {
@@ -130,14 +115,8 @@ export class WSLRelayServer {
         wslWindowsRelayProgramPath,
         resourcesPath: process.env.APP_PATH,
         namedPipe: this._namedPipe,
-        pidPath: this._pidFile,
-        relayPidPath: this._relayPidFile,
         userId: wslUid
       });
-      logger.debug("(main) Ensure no process is running using pid file", this._pidFile);
-      this.killProcessByPidFile(this._pidFile);
-      logger.debug("(relay) Ensure no process is running using pid file", this._relayPidFile);
-      this.killProcessByPidFile(this._relayPidFile);
     } catch (error: any) {
       logger.error("Unable to start relay server", error);
       this.isListening = false;
@@ -158,9 +137,7 @@ export class WSLRelayServer {
           "--pipe",
           this._namedPipe,
           "--relay-program-path",
-          wslWindowsRelayProgramPath,
-          "--pid-file",
-          this._pidFile
+          wslWindowsRelayProgramPath
         ],
         {
           checkStatus: async () => {
@@ -187,34 +164,6 @@ export class WSLRelayServer {
               this.nativeApiStarterProcess = process;
               this.nativeApiStarterProcessChild = child;
               logger.debug(">> Starting API - System service start ready", { process, child });
-              const controller = this._connection.settings.controller?.path || this._connection.settings.controller?.name || "wsl.exe";
-              const pidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", this._pidFile]);
-              const pid = pidCommand.toString().trim();
-              const relayPidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", this._relayPidFile]);
-              const relayPid = relayPidCommand.toString().trim();
-              this._pid = pid;
-              this._relayPid = relayPid;
-              // wsl wrapper
-              await Electron.ipcRenderer.invoke("register.quit", {
-                pid: child.pid,
-                pidFile: "",
-                command: ["taskkill.exe", "/F", "/T", "/PID", child.pid.toString()]
-              });
-              // main
-              await Electron.ipcRenderer.invoke("register.quit", {
-                pid,
-                pidFile: this._pidFile,
-                address: this._namedPipe,
-                command: [controller, "--distribution", scope, "--exec", "kill", "-SIGTERM", pid]
-              });
-              // relay
-              await Electron.ipcRenderer.invoke("register.quit", {
-                pid,
-                pidFile: this._relayPidFile,
-                address: this._namedPipe,
-                command: [controller, "--distribution", scope, "--exec", "kill", "-SIGTERM", relayPid]
-              });
-              logger.debug(">> Starting API - Registered quit for relays", { pid, file: this._pidFile, relayPid, relayPidFile: this._relayPidFile });
               resolve(true);
             } catch (error: any) {
               if (rejected) {
@@ -245,36 +194,9 @@ export class WSLRelayServer {
     }
     return this;
   }
-  killProcessByPidFile(pidFile: string) {
-    // IMPORTANT: Must be a synchronous operation
-    if (!pidFile) {
-      return false;
-    }
-    try {
-      const controller = this._connection.settings.controller?.path || this._connection.settings.controller?.name || "wsl.exe";
-      const scope = this._connection.settings.controller?.scope || "";
-      const pidCommand = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "cat", pidFile]);
-      const pid = pidCommand.toString().trim();
-      const output = execFileSync(controller, ["--distribution", scope, "--exec", "kill", "-SIGTERM", pid]);
-      logger.debug("Killed process using pid file", pidFile, output.toString());
-      const removePidFile = execFileSync("wsl.exe", ["--distribution", scope, "--exec", "rm", "-f", pidFile]);
-      logger.debug("Removed pid file", pidFile, removePidFile.toString());
-      return true;
-    } catch (error: any) {
-      logger.error("Killing process using pid file failed", pidFile, error);
-    }
-    return false;
-  }
   async stop() {
     this.isListening = false;
     logger.debug("Stopping relay", { process: this.nativeApiStarterProcess, child: this.nativeApiStarterProcessChild });
-    if (this._pidFile) {
-      logger.debug("(linux) Killing process using pid file", { pid: this._pid, pidFile: this._pidFile });
-      this.killProcessByPidFile(this._pidFile);
-      // Kill the relay process if it is still running
-      logger.debug("(relay) Killing process using pid file", { pid: this._pid, pidFile: this._pidFile });
-      this.killProcessByPidFile(this._pidFile.replace(".pid", "-relay.pid"));
-    }
     if (this.nativeApiStarterProcessChild) {
       logger.debug("Stopping relay - Terminating child process", this.nativeApiStarterProcessChild.pid);
       try {
@@ -437,7 +359,7 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
     logger.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
     throw new Error("Launcher path has invalid type");
   }
-  logger.debug("[SC.A][>][spawn]", { command: spawnLauncher, args: spawnArgs, opts: spawnLauncherOpts });
+  logger.debug("[SC.A][>][spawn]", { command: spawnLauncher, args: spawnArgs, opts: spawnLauncherOpts, commandLine: command });
   const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
   // store for tracing and debugging
   (child as any).command = command;
