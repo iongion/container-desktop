@@ -96,24 +96,28 @@ export class WSLRelayServer {
     }
     let rejected = false;
     const scope = this._connection.settings.controller?.scope || "";
+    const pipeName = `container-desktop-wsl-relay-${this._connection.id}`;
+    let wslWindowsNamedPipeRelayProgramPath = "";
     let wslLinuxRelayProgramPath = "";
     let wslWindowsRelayProgramPath = "";
     try {
+      wslWindowsNamedPipeRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay.exe");
+      const wslWindowsNamedPipeRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslWindowsNamedPipeRelayProgramPath]);
       const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay");
       const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
-      const wslWindowsNamedPipeRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay.exe");
-      const wslWindowsNamedPipeRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslWindowsNamedPipeRelayProgramPath]);
       const wslUidCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "id", "-u"]);
       const wslUid = wslUidCommand.stdout.trim();
       const pidDir = `/tmp/container-desktop-${wslUid}`;
-      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
+      //
       wslWindowsRelayProgramPath = wslWindowsNamedPipeRelayProgramCommand.stdout.trim();
-      this._namedPipe = `\\\\.\\pipe\\container-desktop-wsl-relay-${this._connection.id}`;
+      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
+      this._namedPipe = `\\\\.\\pipe\\${pipeName}`;
       await exec_launcher("wsl.exe", ["--distribution", scope, "--exec", "mkdir", "-p", pidDir]);
       logger.debug(">> WSL Relay path", {
-        wslLinuxRelayProgramPath,
-        wslWindowsRelayProgramPath,
         resourcesPath: process.env.APP_PATH,
+        wslWindowsNamedPipeRelayProgramPath,
+        wslWindowsRelayProgramPath,
+        wslLinuxRelayProgramPath,
         namedPipe: this._namedPipe,
         userId: wslUid
       });
@@ -122,36 +126,39 @@ export class WSLRelayServer {
       this.isListening = false;
       return this;
     }
+    const unixSocket = this._connection.settings.api.connection.relay.replace("unix://", "");
     const started = await new Promise<boolean>((resolve, reject) => {
       Command.ExecuteAsBackgroundService(
-        this._connection.settings.controller?.path || "wsl.exe",
+        wslWindowsNamedPipeRelayProgramPath,
         [
-          "--distribution",
-          scope || "",
-          "--exec",
-          wslLinuxRelayProgramPath,
-          "--distribution",
-          scope || "",
-          "--socket",
-          this._connection.settings.api.connection.relay.replace("unix://", ""),
-          "--pipe",
-          this._namedPipe,
-          "--relay-program-path",
-          wslWindowsRelayProgramPath
+          // source
+          `NPIPE-LISTEN:${pipeName}`,
+          // destination
+          `WSL:"${wslLinuxRelayProgramPath} STDIO UNIX-CONNECT:${unixSocket}",distribution="${scope}"`
         ],
         {
-          checkStatus: async () => {
+          checkStatus: async ({ pid, started }: any) => {
+            logger.debug("Checking RELAY status", { pid, started });
+            if (pid === null) {
+              logger.error("Unable to check status of relay server - no PID");
+              return false;
+            }
+            if (started) {
+              logger.debug("Checking status of relay server - already started", { pid });
+              return true;
+            }
             try {
               const statusConfig = {
                 socketPath: this._namedPipe,
                 baseURL: "http://d",
-                adapter
+                adapter,
+                timeout: 1000
               };
               logger.debug("Checking status of relay server", statusConfig);
               const driver = axios.create(statusConfig);
               const response = await driver.get("/_ping");
               return response.status === 200;
-            } catch (error) {
+            } catch (error: any) {
               logger.error("Unable to check status of relay server", error);
               return false;
             }
@@ -224,7 +231,7 @@ export interface WrapperOpts extends SpawnOptionsWithoutStdio {
 }
 
 export interface ServiceOpts {
-  checkStatus: () => Promise<boolean>;
+  checkStatus: (process: any) => Promise<boolean>;
   retry?: { count: number; wait: number };
   cwd?: string;
   env?: any;
@@ -441,7 +448,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
   const { checkStatus, retry } = opts;
   const em = new EventEmitter();
   // Check
-  const running = await checkStatus();
+  const running = await checkStatus({ pid: null, started: false });
   if (running) {
     logger.debug("Already running - reusing");
     proc.success = true;
@@ -491,7 +498,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
           pending = true;
           let running = false;
           try {
-            running = await checkStatus();
+            running = await checkStatus({ pid: child.pid, started: true });
           } catch (error: any) {
             logger.error("Checked status - failed", error.message);
           } finally {
@@ -698,7 +705,7 @@ export const Command: ICommand = {
         {
           const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
           config.socketPath = connection.settings.api.connection.relay;
-          logger.debug("Proxying request to WSL distribution", { connection, config });
+          logger.debug("Proxying request to WSL distribution", { connection, config, request });
           response = await proxyRequestToWSLDistribution(connection, config, request);
         }
         break;
