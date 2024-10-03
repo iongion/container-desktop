@@ -268,7 +268,7 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
         await server.start();
         request.headers = deepMerge({}, config.headers || {}, request.headers || {});
         request.timeout = request.timeout || config.timeout || 5000;
-        request.baseURL = "http://d";
+        request.baseURL = request.baseURL || "http://d";
         request.socketPath = server.getAddress();
         const driver = await createNodeJSApiDriver(request);
         const response = await driver.request(request);
