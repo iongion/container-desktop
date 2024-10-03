@@ -110,7 +110,7 @@ export class WSLRelayServer {
       const pidDir = `/tmp/container-desktop-${wslUid}`;
       //
       wslWindowsRelayProgramPath = wslWindowsNamedPipeRelayProgramCommand.stdout.trim();
-      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
+      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim().replace(" ", "\\ ");
       this._namedPipe = `\\\\.\\pipe\\${pipeName}`;
       await exec_launcher("wsl.exe", ["--distribution", scope, "--exec", "mkdir", "-p", pidDir]);
       logger.debug(">> WSL Relay path", {
