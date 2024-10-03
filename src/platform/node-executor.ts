@@ -134,7 +134,7 @@ export class WSLRelayServer {
           // source
           `NPIPE-LISTEN:${pipeName}`,
           // destination
-          `WSL:"${wslLinuxRelayProgramPath} STDIO UNIX-CONNECT:${unixSocket}",distribution="${scope}"`
+          `WSL:"${wslLinuxRelayProgramPath} STDIO UNIX-CONNECT:${unixSocket}",distribution=${scope}`
         ],
         {
           checkStatus: async ({ pid, started }: any) => {
