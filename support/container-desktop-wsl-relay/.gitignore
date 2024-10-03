@@ -1,9 +1,0 @@
-# Binaries for programs and plugins
-*.exe
-*.dll
-*.so
-*.dylib
-/build
-*.test
-*.out
-/container-desktop-wsl-relay

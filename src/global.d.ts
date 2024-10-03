@@ -15,7 +15,7 @@ interface ICommand {
   ExecuteAsBackgroundService: (
     launcher: string,
     args: string[],
-    opts: { checkStatus: () => Promise<boolean>; retry?: { count: number; wait: number }; cwd?: string; env?: any }
+    opts: { checkStatus: (process: any) => Promise<boolean>; retry?: { count: number; wait: number }; cwd?: string; env?: any }
   ) => Promise<EventEmitter>;
   StartSSHConnection: (opts?: any, cli?: string) => Promise<ISSHClient>;
   StopConnectionServices: (connection_id: string, settings: EngineConnectorSettings) => Promise<void>;

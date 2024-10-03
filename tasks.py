@@ -3,7 +3,7 @@ import shutil
 import hashlib
 import platform
 import os
-import subprocess
+import urllib.request
 from pathlib import Path
 
 from invoke import task, Collection
@@ -18,6 +18,13 @@ TARGET = os.environ.get("TARGET", "linux")
 PORT = int(os.environ.get("PORT", str(3000)))
 PTY = os.name != "nt"
 SIGNTOOL_PATH = os.environ.get("SIGNTOOL_PATH", "")
+RELAY_VERSION = "1.0.8"
+
+def url_download(url, path):
+    url = url
+    output_file = path
+    with urllib.request.urlopen(url) as response, open(output_file, 'wb') as out_file:
+        shutil.copyfileobj(response, out_file)
 
 def get_env():
     return {
@@ -96,19 +103,13 @@ def build(ctx, env=None):
             shutil.copy(file, "./build")
 
 @task
-def build_relay(ctx, env=None):
+def fetch_relay(ctx, env=None):
     path = Path(PROJECT_HOME)
     with ctx.cd(path):
         os.makedirs(os.path.join(PROJECT_HOME, "bin"), exist_ok=True)
-        relay_path = os.path.join(PROJECT_HOME, "bin", "container-desktop-wsl-relay")
-        if os.path.exists(relay_path):
-            os.unlink(relay_path)
-        project_home = os.path.abspath(os.path.join(PROJECT_HOME, "support/container-desktop-wsl-relay"))
-        project_home_wsl = subprocess.check_output(["wsl.exe", "--exec", "bash", "-l", "-c", "$@", "--", "wslpath", project_home]).decode("utf-8").strip()
-        project_relay_bundle = subprocess.check_output(["wsl.exe", "--exec", "bash", "-l", "-c", f'cd "{project_home_wsl}" && ./relay-build.sh']).decode("utf-8").strip()
-        print(project_relay_bundle)
-        if os.path.exists(relay_path):
-            print(f"Relay binary created in {relay_path}")
+        url_download(f"https://github.com/iongion/container-desktop-wsl-relay/releases/download/{RELAY_VERSION}/container-desktop-wsl-relay", os.path.join(PROJECT_HOME, "bin/container-desktop-wsl-relay"))
+        url_download(f"https://github.com/iongion/container-desktop-wsl-relay/releases/download/{RELAY_VERSION}/container-desktop-wsl-relay.exe", os.path.join(PROJECT_HOME, "bin/container-desktop-wsl-relay.exe"))
+
 
 @task
 def bundle(ctx, env=None):
@@ -123,7 +124,7 @@ def bundle(ctx, env=None):
             run_env(ctx, "yarn package:linux_x86", env)
             run_env(ctx, "yarn package:linux_arm", env)
         else:
-            build_relay(ctx, env)
+            fetch_relay(ctx, env)
             run_env(ctx, "yarn package:win_x86", env)
 
 @task
@@ -171,6 +172,7 @@ def clean(c, docs=False):
     path = Path(PROJECT_HOME)
     with c.cd(os.path.dirname(path)):
         shutil.rmtree("node_modules", ignore_errors=True)
+        shutil.rmtree("bin", ignore_errors=True)
         shutil.rmtree("build", ignore_errors=True)
         shutil.rmtree("release", ignore_errors=True)
 
@@ -183,4 +185,4 @@ def start(ctx, docs=False):
         run_env(ctx, "yarn dev")
 
 
-namespace = Collection(clean, prepare, build, build_relay, bundle, release, start, checksums, gen_sign)
+namespace = Collection(clean, prepare, build, fetch_relay, bundle, release, start, checksums, gen_sign)
