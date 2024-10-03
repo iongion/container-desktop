@@ -99,24 +99,20 @@ export class WSLRelayServer {
     const pipeName = `container-desktop-wsl-relay-${this._connection.id}`;
     let wslWindowsNamedPipeRelayProgramPath = "";
     let wslLinuxRelayProgramPath = "";
-    let wslWindowsRelayProgramPath = "";
     try {
       wslWindowsNamedPipeRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay.exe");
-      const wslWindowsNamedPipeRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslWindowsNamedPipeRelayProgramPath]);
       const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay");
       const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
       const wslUidCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "id", "-u"]);
       const wslUid = wslUidCommand.stdout.trim();
       const pidDir = `/tmp/container-desktop-${wslUid}`;
       //
-      wslWindowsRelayProgramPath = wslWindowsNamedPipeRelayProgramCommand.stdout.trim();
       wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim().replace(" ", "\\ ");
       this._namedPipe = `\\\\.\\pipe\\${pipeName}`;
       await exec_launcher("wsl.exe", ["--distribution", scope, "--exec", "mkdir", "-p", pidDir]);
       logger.debug(">> WSL Relay path", {
         resourcesPath: process.env.APP_PATH,
         wslWindowsNamedPipeRelayProgramPath,
-        wslWindowsRelayProgramPath,
         wslLinuxRelayProgramPath,
         namedPipe: this._namedPipe,
         userId: wslUid
