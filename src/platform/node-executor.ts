@@ -11,6 +11,7 @@ import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/s
 import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, Wrapper } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { deepMerge } from "@/utils";
+import { v4 } from "uuid";
 import { Platform } from "./node";
 
 const logger = createLogger("shared");
@@ -72,11 +73,7 @@ export async function exec_buffered(hostLauncher: string, commandLine: string[],
   });
 }
 
-interface WriteableClientSocket extends net.Socket {
-  writeable: boolean;
-}
-
-export class WSLRelayServer {
+export class QueuedWSLRelayServer {
   protected isProcessing: boolean = false;
   protected server?: net.Server;
   protected isStarted: boolean = false;
@@ -268,6 +265,160 @@ export class WSLRelayServer {
   }
 }
 
+export class WSLRelayServer {
+  protected isProcessing: boolean = false;
+  protected server?: net.Server;
+  protected isStarted: boolean = false;
+  protected socatProcess: ChildProcessWithoutNullStreams | undefined;
+  protected stopSocatRespawn = false;
+
+  constructor() {
+    this.isProcessing = false;
+    this.isStarted = false;
+  }
+
+  start = async ({ pipeFullPath, distribution, unixSocketPath, relayProgram, unixConnectOptions }, onStart, onError): Promise<boolean> => {
+    if (this.isStarted) {
+      logger.debug("Named pipe server already started");
+      return true;
+    }
+    this.stopSocatRespawn = false;
+    let wslLinuxRelayProgramPath = "";
+    try {
+      const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", relayProgram);
+      const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
+      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim().replace(" ", "\\ ");
+    } catch (error: any) {
+      logger.error("Error getting WSL relay program path", error.message);
+      onError?.(error);
+      return false;
+    }
+    return new Promise((resolve) => {
+      distribution = distribution || "Ubuntu-24.04"; // Default to Ubuntu 24.04
+      relayProgram = relayProgram || "socat"; // Default to socat
+      unixConnectOptions = unixConnectOptions || "retry,forever"; // Default options for socat
+      logger.debug(`Creating named pipe server listening on ${pipeFullPath}, relaying to Unix socket ${unixSocketPath} in WSL distribution ${distribution}`);
+      const args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `UNIX-CONNECT:${unixSocketPath},${unixConnectOptions}`, "STDIO"];
+      const spawnSocatProcess = () => {
+        if (this.stopSocatRespawn) {
+          logger.debug("Respawn for socat process is disabled - quitting");
+          return;
+        }
+        const socatProcess = spawn("wsl.exe", args);
+        logger.error(`Started socat process with PID ${socatProcess.pid}`, { killed: socatProcess.killed, exitCode: socatProcess.exitCode });
+        socatProcess.on("close", (code) => {
+          logger.debug(`Socat process exited with code ${code}`);
+          logger.error("Restarting socat process");
+          spawnSocatProcess();
+        });
+        this.socatProcess = socatProcess;
+      };
+      const isSocatProcessUsable = () => {
+        return this.socatProcess && !this.socatProcess.killed && this.socatProcess.exitCode === null;
+      };
+      spawnSocatProcess();
+      // Handle client connections
+      const server = net.createServer((clientSocket) => {
+        let writeable = true;
+        const guid = v4();
+        const onSocatData = (chunk) => {
+          if (!writeable) {
+            logger.debug(guid, "Client is not writeable, discarding socat output data", chunk.toString());
+            return;
+          }
+          logger.debug(guid, `Received data from Unix socket, sending to client: ${chunk.length} bytes`);
+          clientSocket.write(chunk, (err) => {
+            if (err) {
+              logger.error(guid, `Error writing to client: ${err.message}`);
+              writeable = false;
+              clientSocket.end();
+            }
+          });
+        };
+        logger.debug(guid, "Client connected to named pipe.");
+        // Handle the end of the client connection
+        clientSocket.on("end", () => {
+          writeable = false;
+          logger.debug(guid, "Client disconnected");
+          this.socatProcess!.stdout.off("data", onSocatData);
+        });
+        clientSocket.on("close", () => {
+          writeable = false;
+          logger.debug(guid, "Client closed");
+          this.socatProcess!.stdout.off("data", onSocatData);
+        });
+        // Relay data from the client to the socat process (Unix socket)
+        clientSocket.on("data", (chunk) => {
+          logger.debug(guid, `Received data from client, sending to Unix socket: ${chunk.length} bytes`);
+          if (isSocatProcessUsable()) {
+            this.socatProcess!.stdin.write(chunk, (err) => {
+              if (err) {
+                logger.error(guid, `Error writing to socat: ${err.message}`);
+                writeable = false;
+                clientSocket.end();
+              }
+            });
+          } else {
+            logger.error(guid, "Socat process is not running, closing client connection.");
+            writeable = false;
+            clientSocket.end();
+          }
+        });
+        // Relay data from the socat process (Unix socket) to the client
+        if (isSocatProcessUsable()) {
+          this.socatProcess!.stdout.on("data", onSocatData);
+        } else {
+          logger.error(guid, "Socat process is not running, closing client connection.");
+          writeable = false;
+          clientSocket.end();
+        }
+      });
+      // Handle errors
+      server.on("error", (err) => {
+        logger.error(`Server error: ${err.message}`);
+        this.isStarted = false;
+        onError?.(server, err);
+      });
+      // Start the named pipe server
+      server.listen(pipeFullPath, async () => {
+        logger.debug(`Named pipe server is listening on ${pipeFullPath}`);
+        this.isStarted = true;
+        onStart?.(server);
+        resolve(true);
+      });
+      this.server = server;
+    });
+  };
+
+  async stop() {
+    this.stopSocatRespawn = true;
+    this.isStarted = false;
+    if (this.socatProcess) {
+      try {
+        logger.error("Stopping socat process");
+        this.socatProcess.on("close", () => {
+          logger.debug("Socat process stopped.");
+        });
+        this.socatProcess.kill("SIGTERM");
+      } catch (error: any) {
+        logger.error("Error killing socat process", error);
+      }
+    }
+    // Stop the server
+    return new Promise((resolve) => {
+      try {
+        this.server?.close(() => {
+          logger.debug("Named pipe server stopped.");
+          resolve(true);
+        });
+      } catch {
+        logger.error("Error stopping named pipe server");
+        resolve(true);
+      }
+    });
+  }
+}
+
 export function withWSLRelayServer(connection: Connection, callback: (server: WSLRelayServer) => void) {
   if (!RELAY_SERVERS_CACHE[connection.id]) {
     RELAY_SERVERS_CACHE[connection.id] = new WSLRelayServer();
@@ -302,12 +453,9 @@ export async function getFreeTCPPort() {
 }
 
 export function createNodeJSApiDriver(config: AxiosRequestConfig) {
-  const httpAgent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10, timeout: 500 });
   const adapterConfig = {
     ...config,
-    adapter,
-    httpAgent: httpAgent,
-    httpsAgent: httpAgent
+    adapter
   };
   // logger.debug(">> Create NodeJS API driver", adapterConfig);
   const driver = axios.create(adapterConfig);
@@ -346,9 +494,7 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
         );
         if (started) {
           try {
-            request.headers = deepMerge({}, config.headers || {}, request.headers || {}, {
-              "Keep-Alive": "false"
-            });
+            request.headers = deepMerge({}, config.headers || {}, request.headers || {});
             request.timeout = request.timeout || config.timeout || 5000;
             request.baseURL = request.baseURL || "http://d";
             request.socketPath = pipeFullPath;
