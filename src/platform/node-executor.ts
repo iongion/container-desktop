@@ -72,12 +72,17 @@ export async function exec_buffered(hostLauncher: string, commandLine: string[],
   });
 }
 
+interface WriteableClientSocket extends net.Socket {
+  writeable: boolean;
+}
+
 export class WSLRelayServer {
   protected isProcessing: boolean = false;
   protected server?: net.Server;
   protected isStarted: boolean = false;
   protected socatProcess: ChildProcessWithoutNullStreams | undefined;
   protected stopSocatRespawn = false;
+  protected iid: any;
 
   constructor() {
     this.isProcessing = false;
@@ -118,25 +123,74 @@ export class WSLRelayServer {
           logger.error("Restarting socat process");
           spawnSocatProcess();
         });
+        socatProcess.stderr.on("data", (data) => {
+          logger.error(`Socat stderr: ${data.toString()}`);
+        });
         this.socatProcess = socatProcess;
       };
       const isSocatProcessUsable = () => {
         return this.socatProcess && !this.socatProcess.killed && this.socatProcess.exitCode === null;
       };
       spawnSocatProcess();
-      // Handle client connections
-      const server = net.createServer((clientSocket) => {
-        logger.debug("Client connected to named pipe.");
+      // Queue for client connections
+      let isProcessing = false;
+      const queue: net.Socket[] = [];
+      const processNextInQueue = () => {
+        // Next client
+        if (queue.length === 0) {
+          logger.debug("No clients in queue");
+          clearInterval(this.iid);
+          return;
+        }
+        if (isProcessing) {
+          logger.debug("Already processing a client connection - skipping for now");
+          return;
+        }
+        // Process client
+        isProcessing = true;
+        const clientSocket = queue.shift();
+        if (!clientSocket) {
+          isProcessing = false;
+          logger.debug("No more clients in queue");
+          clearInterval(this.iid);
+          return;
+        }
+        let writeable = true;
+        const onSocatData = (chunk: Buffer) => {
+          if (!writeable) {
+            logger.debug("Client is not writeable, discarding socat output data");
+            return;
+          }
+          logger.debug(`Received data from Unix socket, sending to client: ${chunk.length} bytes`);
+          clientSocket.write(chunk, (err) => {
+            if (err) {
+              logger.error(`Error writing to client: ${err.message}`);
+              isProcessing = false;
+              clientSocket.end();
+            }
+          });
+        };
+        clientSocket.on("close", () => {
+          writeable = false;
+          isProcessing = false;
+          logger.debug("Client closed");
+          this.socatProcess!.stdout.off("data", onSocatData);
+        });
+        clientSocket.on("drain", () => {
+          logger.debug("Client drain");
+        });
         // Handle the end of the client connection
         clientSocket.on("end", () => {
-          logger.debug("Client disconnected.");
+          writeable = false;
+          isProcessing = false;
+          logger.debug("Client ended");
         });
-        // Relay data from the client to the socat process (Unix socket)
         clientSocket.on("data", (chunk) => {
           logger.debug(`Received data from client, sending to Unix socket: ${chunk.length} bytes`);
           if (isSocatProcessUsable()) {
             this.socatProcess!.stdin.write(chunk, (err) => {
               if (err) {
+                isProcessing = false;
                 logger.error(`Error writing to socat: ${err.message}`);
                 clientSocket.end();
               }
@@ -146,21 +200,26 @@ export class WSLRelayServer {
             clientSocket.end();
           }
         });
-        // Relay data from the socat process (Unix socket) to the client
         if (isSocatProcessUsable()) {
-          this.socatProcess!.stdout.on("data", (chunk) => {
-            logger.debug(`Received data from Unix socket, sending to client: ${chunk.length} bytes`);
-            clientSocket.write(chunk, (err) => {
-              if (err) {
-                logger.error(`Error writing to client: ${err.message}`);
-                clientSocket.end();
-              }
-            });
-          });
+          this.socatProcess!.stdout.on("data", onSocatData);
         } else {
           logger.error("Socat process is not running, closing client connection.");
+          isProcessing = false;
           clientSocket.end();
         }
+      };
+      const addToQueue = (socket: net.Socket) => {
+        queue.push(socket);
+        // processNextInQueue();
+      };
+      // Handle client connections
+      const server = net.createServer((clientSocket) => {
+        logger.debug("Client connected to named pipe.");
+        addToQueue(clientSocket);
+        clearInterval(this.iid);
+        this.iid = setInterval(() => {
+          processNextInQueue();
+        }, 200);
       });
       // Handle errors
       server.on("error", (err) => {
@@ -180,6 +239,7 @@ export class WSLRelayServer {
   };
 
   async stop() {
+    clearInterval(this.iid);
     this.stopSocatRespawn = true;
     this.isStarted = false;
     if (this.socatProcess) {
@@ -242,9 +302,12 @@ export async function getFreeTCPPort() {
 }
 
 export function createNodeJSApiDriver(config: AxiosRequestConfig) {
+  const httpAgent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10, timeout: 500 });
   const adapterConfig = {
     ...config,
-    adapter
+    adapter,
+    httpAgent: httpAgent,
+    httpsAgent: httpAgent
   };
   // logger.debug(">> Create NodeJS API driver", adapterConfig);
   const driver = axios.create(adapterConfig);
@@ -283,7 +346,9 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
         );
         if (started) {
           try {
-            request.headers = deepMerge({}, config.headers || {}, request.headers || {});
+            request.headers = deepMerge({}, config.headers || {}, request.headers || {}, {
+              "Keep-Alive": "false"
+            });
             request.timeout = request.timeout || config.timeout || 5000;
             request.baseURL = request.baseURL || "http://d";
             request.socketPath = pipeFullPath;
