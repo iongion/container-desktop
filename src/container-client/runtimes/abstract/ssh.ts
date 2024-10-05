@@ -1,7 +1,17 @@
 import { isEmpty } from "lodash-es";
 
 import { systemNotifier } from "@/container-client/notifier";
-import { ApiConnection, ApiStartOptions, AvailabilityCheck, CommandExecutionResult, Connection, ControllerScope, EngineConnectorSettings, RunnerStopperOptions } from "@/env/Types";
+import {
+  ApiConnection,
+  ApiStartOptions,
+  AvailabilityCheck,
+  CommandExecutionResult,
+  Connection,
+  ControllerScope,
+  EngineConnectorSettings,
+  RunnerStopperOptions,
+  StartupStatus
+} from "@/env/Types";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { SSH_PROGRAM } from "../../connection";
 import { ISSHClient } from "../../services";
@@ -15,6 +25,10 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
   protected connectionsTracker: { [key: string]: ISSHClient } = {};
 
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
+
+  shouldKeepStartedScopeRunning() {
+    return false;
+  }
 
   async getContainerApiClient() {
     if (!this.containerApiClient) {
@@ -80,7 +94,7 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
     return true;
   }
 
-  async startScope(scope: ControllerScope): Promise<boolean> {
+  async startScope(scope: ControllerScope): Promise<StartupStatus> {
     const check = await this.startSSHConnection(scope as SSHHost);
     return check;
   }
@@ -88,7 +102,7 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
     const check = await this.stopSSHConnection(scope as SSHHost);
     return check;
   }
-  async startScopeByName(name: string): Promise<boolean> {
+  async startScopeByName(name: string): Promise<StartupStatus> {
     const scopes = await this.getControllerScopes();
     const scope = scopes.find((s) => s.Name === name);
     return await this.startSSHConnection(scope as SSHHost);
@@ -136,18 +150,19 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
   }
 
   // SSH specific
-  async startSSHConnection(host: SSHHost): Promise<boolean> {
+  async startSSHConnection(host: SSHHost): Promise<StartupStatus> {
     if (this._connection && this._connection.isConnected()) {
-      return true;
+      return StartupStatus.RUNNING;
     }
     const settings = await this.getSettings();
     const sshExecutable = settings.controller?.path || settings.controller?.name || SSH_PROGRAM;
     this._connection = await Command.StartSSHConnection(host, sshExecutable);
     if (this._connection) {
       this.connectionsTracker[host.Name] = this._connection;
-      return this._connection && this._connection.isConnected();
+      const running = this._connection && this._connection.isConnected();
+      return running ? StartupStatus.RUNNING : StartupStatus.ERROR;
     }
-    return false;
+    return StartupStatus.ERROR;
   }
 
   async stopSSHConnection(host: SSHHost): Promise<boolean> {

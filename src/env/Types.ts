@@ -8,6 +8,14 @@ export interface SpawnedProcess {
   stderr?: string;
   command?: any;
   kill: (signal?: NodeJS.Signals | number) => void;
+  unref: () => void;
+}
+
+export enum StartupStatus {
+  STARTED = "started",
+  STOPPED = "stopped",
+  RUNNING = "running", // Already running
+  ERROR = "error"
 }
 
 export interface ILogger {
@@ -953,8 +961,10 @@ export interface ApplicationEnvironment {
   messageBus: IMessageBus;
 }
 
-export interface ApiStartOptions {}
-export interface RunnerStarterOptions {
+export interface ApiStartOptions {
+  logLevel?: string;
+}
+export interface RunnerStarterOptions extends ApiStartOptions {
   path?: string;
   args?: string[];
 }

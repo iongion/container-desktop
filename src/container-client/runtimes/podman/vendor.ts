@@ -10,7 +10,8 @@ import {
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem,
-  RunnerStopperOptions
+  RunnerStopperOptions,
+  StartupStatus
 } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { userConfiguration } from "../../config";
@@ -36,6 +37,10 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
     instance.id = id;
     await instance.setup();
     return instance;
+  }
+
+  shouldKeepStartedScopeRunning() {
+    return true; // Keep scope running as podman machines take a lot of time to stop/start
   }
 
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
@@ -125,11 +130,11 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
     return defaultScope;
   }
 
-  // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
     if (running.success) {
       this.logger.debug(this.id, "API is already running");
+      this.apiStarted = true;
       return true;
     }
     const settings = customSettings || (await this.getSettings());
@@ -151,40 +156,52 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
     const settings = customSettings || (await this.getSettings());
     // Stop services
     try {
+      this.logger.debug(this.id, "Stop api - stopping connection services", settings);
       await Command.StopConnectionServices(this.id, settings);
     } catch (e: any) {
       this.logger.error(this.id, "Stop api - failed to stop connection services", e);
     }
-    if (!this.apiStarted) {
-      this.logger.debug(this.id, "Stopping API - skip(not started here)");
-      return false;
-    }
-    this.logger.debug(this.id, "Stopping API - begin");
-    let args: string[] = opts?.args || [];
-    if (!opts?.args) {
-      if (!settings.controller?.scope) {
-        this.logger.error(this.id, "Stopping API - scope is not set (no custom stop args)");
-        return false;
-      } else {
-        args = ["machine", "stop", settings.controller?.scope];
+    this.logger.debug(this.id, "Stopping API - begin", settings);
+    if (this.shouldKeepStartedScopeRunning()) {
+      this.logger.debug(this.id, "Stopping API - skip (keep scope running)");
+    } else {
+      this.logger.warn(this.id, "Stopping API - perform");
+      let args: string[] = opts?.args || [];
+      if (!opts?.args) {
+        if (!settings.controller?.scope) {
+          this.logger.error(this.id, "Stopping API - scope is not set (no custom stop args)");
+          return false;
+        } else {
+          args = ["machine", "stop", settings.controller?.scope];
+        }
       }
+      this.logger.warn(this.id, "Stopping API - request stop from runner");
+      const controllerPath = settings.controller?.path || settings.controller?.name;
+      return await this.runner.stopApi(customSettings, {
+        path: controllerPath,
+        args
+      });
     }
-    const controllerPath = settings.controller?.path || settings.controller?.name;
-    return await this.runner.stopApi(customSettings, {
-      path: controllerPath,
-      args
-    });
+    return false;
   }
-  async startScope(scope: ControllerScope): Promise<boolean> {
-    return await this.startPodmanMachine(scope.Name);
+  async startScope(scope: ControllerScope): Promise<StartupStatus> {
+    this.logger.debug(this.id, "Starting scope", scope);
+    const status = await this.startPodmanMachine(scope.Name);
+    this.runner.setApiStarted(status === StartupStatus.RUNNING || status === StartupStatus.STARTED);
+    return status;
   }
   async stopScope(scope: ControllerScope): Promise<boolean> {
+    this.logger.debug(this.id, "Stopping scope", scope);
     return await this.stopPodmanMachine(scope.Name);
   }
-  async startScopeByName(name: string): Promise<boolean> {
-    return await this.startPodmanMachine(name);
+  async startScopeByName(name: string): Promise<StartupStatus> {
+    this.logger.debug(this.id, "Starting scope by name", name);
+    const status = await this.startPodmanMachine(name);
+    this.runner.setApiStarted(status === StartupStatus.RUNNING || status === StartupStatus.STARTED);
+    return status;
   }
   async stopScopeByName(name: string): Promise<boolean> {
+    this.logger.debug(this.id, "Stopping scope by name", name);
     return await this.stopPodmanMachine(name);
   }
   // Availability

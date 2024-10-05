@@ -34,6 +34,8 @@ export const DEFAULT_SYSTEM_CONNECTION_ID = "system-default.podman";
 export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
   const osType = (window as any).CURRENT_OS_TYPE || OperatingSystem.Unknown;
   const instance = Application.getInstance();
+  const settings = await instance.getGlobalUserSettings();
+  instance.setLogLevel(settings?.logging.level || "debug");
   systemNotifier.on("startup.phase", (event) => {
     const state = registry.getStore().getState();
     if (state.phase === AppBootstrapPhase.STARTING) {
@@ -168,6 +170,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
         systemNotifier.transmit("startup.phase", {
           trace: "Starting setup"
         });
+        instance.setLogLevel(state.userSettings?.logging?.level || "debug");
         await instance.setup();
         systemNotifier.transmit("startup.phase", {
           trace: "Setup ready"
@@ -308,6 +311,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       return registry.withPending(async () => {
         try {
           const instance = Application.getInstance();
+          instance.setLogLevel(options.logging?.level || "debug");
           const userSettings = await instance.setGlobalUserSettings(options);
           await actions.syncGlobalUserSettings(userSettings);
         } catch (error: any) {

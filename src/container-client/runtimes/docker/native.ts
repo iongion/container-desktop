@@ -7,7 +7,8 @@ import {
   ContainerEngineHost,
   ControllerScope,
   EngineConnectorSettings,
-  OperatingSystem
+  OperatingSystem,
+  StartupStatus
 } from "@/env/Types";
 import { DOCKER_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClient } from "../../runtimes/abstract";
@@ -43,6 +44,10 @@ export class DockerContainerEngineHostClientNative extends AbstractContainerEngi
     };
   }
 
+  shouldKeepStartedScopeRunning() {
+    return true;
+  }
+
   // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
@@ -68,17 +73,17 @@ export class DockerContainerEngineHostClientNative extends AbstractContainerEngi
   async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
     throw new Error("Scope is not supported in native mode");
   }
-  async startScope(scope: ControllerScope): Promise<boolean> {
+  async startScope(scope: ControllerScope): Promise<StartupStatus> {
     this.logger.warn("Scope is not supported in native mode");
-    return false;
+    return StartupStatus.ERROR;
   }
   async stopScope(scope: ControllerScope): Promise<boolean> {
     this.logger.warn("Scope is not supported in native mode");
     return false;
   }
-  async startScopeByName(name: string): Promise<boolean> {
+  async startScopeByName(name: string): Promise<StartupStatus> {
     this.logger.warn("Scope is not supported in native mode");
-    return false;
+    return StartupStatus.ERROR;
   }
   async stopScopeByName(name: string): Promise<boolean> {
     this.logger.warn("Scope is not supported in native mode");

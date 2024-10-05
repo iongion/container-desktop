@@ -4,11 +4,11 @@ import {
   AvailabilityCheck,
   CommandExecutionResult,
   Connection,
-  ContainerEngineHost,
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem,
-  RunnerStopperOptions
+  RunnerStopperOptions,
+  StartupStatus
 } from "@/env/Types";
 import { WSL_PROGRAM } from "../../connection";
 import { getAvailableWSLDistributions } from "../../shared";
@@ -20,6 +20,10 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
 
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
 
+  shouldKeepStartedScopeRunning() {
+    return false;
+  }
+
   // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     this.logger.debug(this.id, "Start api skipped - not required");
@@ -27,6 +31,14 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
   }
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
     const settings = customSettings || (await this.getSettings());
+    // Stop runner
+    if (this.runner) {
+      try {
+        await this.runner.stopApi();
+      } catch (e: any) {
+        this.logger.error(this.id, "Stop api - failed to stop runner", e);
+      }
+    }
     // Stop services
     try {
       await Command.StopConnectionServices(this.id, settings);
@@ -38,7 +50,7 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
     this.logger.debug(this.id, "Stop scope", scope, "skipped - other users may be using the distribution");
     return true;
   }
-  async startScope(scope: ControllerScope): Promise<boolean> {
+  async startScope(scope: ControllerScope): Promise<StartupStatus> {
     const check = await this.startWSLDistribution(scope.Name);
     return check;
   }
@@ -46,7 +58,7 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
     const check = await this.stopWSLDistribution(scope.Name);
     return check;
   }
-  async startScopeByName(name: string): Promise<boolean> {
+  async startScopeByName(name: string): Promise<StartupStatus> {
     return await this.startWSLDistribution(name);
   }
   async stopScopeByName(name: string): Promise<boolean> {
@@ -75,21 +87,7 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
   // Executes command inside controller scope
   async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
     const { controller } = settings || (await this.getSettings());
-    let shell = "bash";
-    let shellArgs = ["-l", "-c"];
-    if (this.HOST === ContainerEngineHost.DOCKER_VIRTUALIZED_WSL) {
-      // TODO: Improve docker-desktop distribution detection
-      if (scope === "docker-desktop") {
-        shell = "sh";
-      }
-    } else if (this.HOST === ContainerEngineHost.PODMAN_VIRTUALIZED_WSL) {
-      if (scope.startsWith("podman-machine")) {
-        shell = "bash";
-        // TODO: Improve podman-machine distribution detection
-        shellArgs = ["-c"];
-      }
-    }
-    const command: string[] = ["--distribution", scope, "--exec", shell, ...shellArgs, "$@"];
+    const command: string[] = ["--distribution", scope, "--exec"];
     const restArgs: string[] = [];
     if (program) {
       restArgs.push(program);
@@ -98,34 +96,33 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
       restArgs.push(...args);
     }
     if (restArgs.length) {
-      command.push("--");
       command.push(...restArgs);
-    } else {
-      command.push("--");
     }
     const hostLauncher = controller?.path || controller?.name || "";
     const hostArgs = [...command];
     return await this.runHostCommand(hostLauncher, hostArgs, settings);
   }
   // WSL specific
-  async startWSLDistribution(name: string): Promise<boolean> {
+  async startWSLDistribution(name: string): Promise<StartupStatus> {
     const scopes = await this.getControllerScopes();
     const matchingScope = scopes.find((scope) => scope.Name === name);
     if (matchingScope) {
       if (matchingScope.Usable) {
         this.logger.warn(this.id, `WSL distribution ${name} is already running`);
-        return true;
+        return StartupStatus.RUNNING;
       } else {
+        // Attempt to start
         const check = await this.runScopeCommand("echo", ["started"], name);
         if (check.success) {
           this.startedScopesMap.set(name, true);
         }
-        return check.success && `${check.stdout}`.trim().endsWith("started");
+        const running = check.success && `${check.stdout}`.trim().endsWith("started");
+        return running ? StartupStatus.STARTED : StartupStatus.ERROR;
       }
     } else {
       this.logger.error(this.id, `WSL distribution ${name} not found`);
     }
-    return false;
+    return StartupStatus.ERROR;
   }
 
   async stopWSLDistribution(name: string): Promise<boolean> {

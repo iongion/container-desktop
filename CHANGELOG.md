@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.7 - 2024-10-05
+
+## Changed
+
+- WSL - Drop custom relay in favor of custom `socat` build, relay using a node server listening on named pipe
+- WSL - Use named pipes listener instead of random tcp localhost allocated port listener(more secure, avoid firewall prompts)
+- Improve logging
+- Improve spawned processes killing
+
 ## 5.2.6 - 2024-09-24
 
 ## Changed

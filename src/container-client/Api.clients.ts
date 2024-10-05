@@ -314,12 +314,18 @@ export function createApplicationApiDriver(connection: Connection, context?: any
 }
 
 export class ContainerClient {
+  protected logLevel: string = "debug";
   protected readonly driver: AxiosInstance;
   protected readonly connection: Connection;
 
   constructor(connection: Connection, driver: AxiosInstance) {
     this.connection = connection;
     this.driver = driver;
+  }
+
+  setLogLevel(level: string) {
+    console.debug("Setting container client log level", level);
+    this.logLevel = level;
   }
 
   public getDriver() {

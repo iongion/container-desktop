@@ -17,6 +17,7 @@ import {
   OperatingSystem,
   Program,
   RunnerStopperOptions,
+  StartupStatus,
   SystemInfo,
   SystemPruneReport,
   SystemResetReport
@@ -27,6 +28,8 @@ import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { findProgramPath, findProgramVersion } from "../../detector";
 
 export abstract class AbstractEngine {
+  protected logLevel: string = "debug";
+
   public static ENGINE: ContainerEngine;
   public ENGINE!: ContainerEngine;
   public ENGINE_HOST_CLIENTS: (typeof AbstractContainerEngineHostClient)[] = [];
@@ -41,6 +44,11 @@ export abstract class AbstractEngine {
 
   constructor(osType: OperatingSystem) {
     this.osType = osType || CURRENT_OS_TYPE;
+  }
+
+  setLogLevel(level: string): void {
+    console.debug("Setting engine log level", level);
+    this.logLevel = level;
   }
 
   async setup() {
@@ -71,13 +79,15 @@ export interface ContainerEngineHostClient {
   // Controller behavior
   isScoped(): boolean;
   getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean): Promise<ControllerScope[]>;
-  startScope(scope: ControllerScope): Promise<boolean>;
+  startScope(scope: ControllerScope): Promise<StartupStatus>;
   stopScope(scope: ControllerScope): Promise<boolean>;
-  startScopeByName(name: string): Promise<boolean>;
+  startScopeByName(name: string): Promise<StartupStatus>;
   stopScopeByName(name: string): Promise<boolean>;
 
   isApiRunning(): Promise<AvailabilityCheck>;
   getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings): Promise<SystemInfo>;
+
+  setLogLevel(level: string): void;
 }
 
 export abstract class AbstractContainerEngineHostClient implements ContainerEngineHostClient {
@@ -92,6 +102,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
 
   protected osType: OperatingSystem;
   protected apiStarted: boolean;
+  protected logLevel: string = "debug";
 
   protected runner!: Runner;
   protected settings: EngineConnectorSettings = {
@@ -121,14 +132,24 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   abstract isScoped(): boolean;
   abstract getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean): Promise<ControllerScope[]>;
   abstract getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined>;
-  abstract startScope(scope: ControllerScope): Promise<boolean>;
+  abstract startScope(scope: ControllerScope): Promise<StartupStatus>;
   abstract stopScope(scope: ControllerScope): Promise<boolean>;
-  abstract startScopeByName(name: string): Promise<boolean>;
+  abstract startScopeByName(name: string): Promise<StartupStatus>;
   abstract stopScopeByName(name: string): Promise<boolean>;
+
+  abstract shouldKeepStartedScopeRunning(): boolean;
 
   constructor(osType: OperatingSystem) {
     this.osType = osType || CURRENT_OS_TYPE;
     this.apiStarted = false;
+  }
+
+  setLogLevel(level: string): void {
+    console.debug("Setting container engine host client log level", level);
+    this.logLevel = level;
+    if (this.containerApiClient) {
+      this.containerApiClient.setLogLevel(level);
+    }
   }
 
   async getContainerApiClient() {
@@ -142,6 +163,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
         id: this.id
       };
       this.containerApiClient = new ContainerClient(connection, createApplicationApiDriver(connection));
+      this.containerApiClient.setLogLevel(this.logLevel);
     }
     return this.containerApiClient;
   }

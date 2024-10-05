@@ -49,18 +49,20 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
   // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
+    const logLevel = opts?.logLevel || "debug";
+    this.logger.debug(this.id, ">> Starting API", { logLevel });
     if (running.success) {
       this.logger.debug(this.id, "<< Starting API skipped - API is already running");
       return true;
     }
-    this.logger.warn(this.id, ">> Starting API - starting system service");
     const settings = customSettings || (await this.getSettings()) || {};
-    this.logger.debug(this.id, ">> Starting API", settings, opts);
-    const args = ["system", "service", "--time=0", `unix://${settings.api.connection.relay}`, "--log-level=debug"];
+    const socketPath = `${settings.api.connection.relay}`.replace("unix://", "");
+    const args = ["system", "service", "--time=0", `unix://${socketPath}`, `--log-level=${logLevel}`];
     const { program, controller } = settings;
     let launcherPath = "";
     let launcherArgs = [...args];
     const scope = settings?.controller?.scope || "";
+    this.logger.debug(this.id, "Starting API ", { socketPath, logLevel });
     if (this.isScoped()) {
       launcherPath = controller?.path || controller?.name || "";
       const programPath = program.path || program.name;
@@ -88,7 +90,8 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
     this.logger.debug(this.id, ">> Starting API", settings, opts, { launcherPath, launcherArgs });
     const started: any = await this.runner.startApi(opts, {
       path: launcherPath,
-      args: ["--distribution", scope, "--exec", "bash", "-l", "-c", "$@", "--"].concat(launcherArgs)
+      args: ["--distribution", scope, "--exec"].concat(launcherArgs),
+      logLevel: opts?.logLevel
     });
     this.apiStarted = started;
     this.logger.debug(this.id, "<< Starting API completed", started);
