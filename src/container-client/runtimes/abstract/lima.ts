@@ -9,7 +9,8 @@ import {
   ControllerScope,
   EngineConnectorSettings,
   OperatingSystem,
-  RunnerStopperOptions
+  RunnerStopperOptions,
+  StartupStatus
 } from "@/env/Types";
 import { LIMA_PROGRAM } from "../../connection";
 import { getAvailableLIMAInstances } from "../../shared";
@@ -18,6 +19,9 @@ import { AbstractContainerEngineHostClient } from "../abstract/base";
 export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends AbstractContainerEngineHostClient {
   public CONTROLLER: string = LIMA_PROGRAM;
   public startedScopesMap: Map<string, boolean> = new Map<string, boolean>();
+  shouldKeepStartedScopeRunning() {
+    return true;
+  }
   // Helpers
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
     const settings = customSettings || (await this.getSettings());
@@ -81,7 +85,7 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
       args
     });
   }
-  async startScope(scope: ControllerScope): Promise<boolean> {
+  async startScope(scope: ControllerScope): Promise<StartupStatus> {
     const check = await this.startLIMAInstance(scope.Name);
     return check;
   }
@@ -89,7 +93,7 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
     const check = await this.stopLIMAInstance(scope.Name);
     return check;
   }
-  async startScopeByName(name: string): Promise<boolean> {
+  async startScopeByName(name: string): Promise<StartupStatus> {
     return await this.startLIMAInstance(name);
   }
   async stopScopeByName(name: string): Promise<boolean> {
@@ -145,23 +149,23 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
     return await this.runHostCommand(hostLauncher, hostArgs, settings);
   }
   // LIMA specific
-  async startLIMAInstance(name: string): Promise<boolean> {
+  async startLIMAInstance(name: string): Promise<StartupStatus> {
     const scopes = await this.getControllerScopes();
     const matchingScope = scopes.find((scope) => scope.Name === name);
     if (matchingScope) {
       if (matchingScope.Usable) {
         this.logger.warn(this.id, `LIMA instance ${name} is already running`);
-        return true;
+        return StartupStatus.RUNNING;
       } else {
         const { controller } = await this.getSettings();
         const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
         const check = await this.runHostCommand(programLauncher, ["start", name]);
-        return check.success;
+        return check.success ? StartupStatus.STARTED : StartupStatus.ERROR;
       }
     } else {
       this.logger.error(this.id, `LIMA instance ${name} not found`);
     }
-    return false;
+    return StartupStatus.ERROR;
   }
 
   async stopLIMAInstance(name: string): Promise<boolean> {

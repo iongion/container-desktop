@@ -1,7 +1,17 @@
 import { isEmpty } from "lodash-es";
 
+import { findProgramPath } from "@/container-client/detector";
 import { AbstractContainerEngineHostClient, ContainerEngineHostClient } from "@/container-client/runtimes/abstract";
-import { CommandExecutionResult, Connection, ContainerEngineHost, CreateMachineOptions, EngineConnectorSettings, PodmanMachineInspect, SystemInfo } from "@/env/Types";
+import {
+  CommandExecutionResult,
+  Connection,
+  ContainerEngineHost,
+  CreateMachineOptions,
+  EngineConnectorSettings,
+  PodmanMachineInspect,
+  StartupStatus,
+  SystemInfo
+} from "@/env/Types";
 import { getAvailablePodmanMachines } from "../../shared";
 
 export interface PodmanContainerEngineHostClientCommon extends ContainerEngineHostClient {
@@ -13,7 +23,7 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
   async getPodmanMachineInspect(name?: string, customSettings?: EngineConnectorSettings) {
     const settings = customSettings || (await this.getSettings());
     let inspect: PodmanMachineInspect | undefined;
-    const controllerPath = settings.controller?.path || settings.controller?.name;
+    const controllerPath = await this.getControllerLauncherPath();
     if (!controllerPath) {
       this.logger.error(this.id, "Unable to inspect - no program");
       return inspect;
@@ -55,7 +65,7 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
     }
     let commandLauncher = "";
     if (this.isScoped()) {
-      commandLauncher = settings.controller?.path || settings.controller?.name || "";
+      commandLauncher = await this.getControllerLauncherPath();
     } else {
       commandLauncher = settings.program?.path || settings.program?.name || "";
     }
@@ -68,7 +78,7 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
     const settings = await this.getSettings();
     let commandLauncher = "";
     if (this.isScoped()) {
-      commandLauncher = settings.controller?.path || settings.controller?.name || "";
+      commandLauncher = await this.getControllerLauncherPath();
     } else {
       commandLauncher = settings.program?.path || settings.program?.name || "";
     }
@@ -83,12 +93,13 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
   }
 
   async restartPodmanMachine(name: string): Promise<boolean> {
+    this.logger.debug("Restarting machine", name);
     const stop = await this.stopPodmanMachine(name);
-    const success = stop ? await this.startPodmanMachine(name) : false;
-    return success;
+    const status = stop ? await this.startPodmanMachine(name) : StartupStatus.ERROR;
+    return status === StartupStatus.STARTED || status === StartupStatus.RUNNING;
   }
 
-  async stopPodmanMachine(name: string): Promise<boolean> {
+  async getControllerLauncherPath(): Promise<string> {
     const { program, controller } = await this.getSettings();
     let programLauncher = "";
     if (this.isScoped()) {
@@ -98,7 +109,16 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
       programLauncher = controller.path;
       if (isEmpty(programLauncher)) {
         programLauncher = controller.name;
-        this.logger.warn("Program path is empty - using controller name", controller);
+        try {
+          const programPath = await findProgramPath(controller.name, { osType: Platform.OPERATING_SYSTEM });
+          if (programPath) {
+            programLauncher = programPath;
+          } else {
+            this.logger.warn("(detect) Program path is empty - using controller name", controller);
+          }
+        } catch (error: any) {
+          this.logger.error("(detect) Program path is empty - using controller name", controller, error.message);
+        }
       }
     } else {
       programLauncher = program.path;
@@ -107,31 +127,40 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
         this.logger.warn("Program path is empty - using program name", program);
       }
     }
+    return programLauncher;
+  }
+
+  async stopPodmanMachine(name: string): Promise<boolean> {
+    this.logger.debug("Stopping podman machine", name);
+    const programLauncher = await this.getControllerLauncherPath();
     const check = await this.runHostCommand(programLauncher, ["machine", "stop", name]);
     return check.success;
   }
 
-  async startPodmanMachine(name: string): Promise<boolean> {
-    const { program, controller } = await this.getSettings();
-    let programLauncher = "";
-    if (this.isScoped()) {
-      if (!controller) {
-        throw new Error("Controller is not set");
-      }
-      programLauncher = controller.path;
-      if (isEmpty(programLauncher)) {
-        programLauncher = controller.name;
-        this.logger.warn("Program path is empty - using controller name", controller);
-      }
-    } else {
-      programLauncher = program.path;
-      if (isEmpty(programLauncher)) {
-        programLauncher = program.name;
-        this.logger.warn("Program path is empty - using program name", program);
+  async startPodmanMachine(name: string): Promise<StartupStatus> {
+    let machineName = name;
+    if (!machineName) {
+      this.logger.warn("Machine name is not set - attempting to use default");
+      const machines = await this.getPodmanMachines();
+      const defaultMachine = machines.find((it) => it.Default === true);
+      machineName = defaultMachine?.Name || "podman-machine-default";
+      if (defaultMachine?.Running) {
+        this.logger.warn("Default machine is already running", defaultMachine.Name);
+        return StartupStatus.RUNNING;
       }
     }
+    const programLauncher = await this.getControllerLauncherPath();
+    try {
+      const status = await this.getPodmanMachineInspect(machineName);
+      if (status?.State === "running") {
+        this.logger.warn("Machine is already running", machineName);
+        return StartupStatus.RUNNING;
+      }
+    } catch (error: any) {
+      this.logger.error("Unable to check machine status", name, error.message);
+    }
     const check = await this.runHostCommand(programLauncher, ["machine", "start", name]);
-    return check.success;
+    return check.success ? StartupStatus.STARTED : StartupStatus.ERROR;
   }
 
   async removePodmanMachine(name: string): Promise<boolean> {
@@ -222,7 +251,7 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
     const programPath = settings.program.path || settings.program.name || "";
     if (this.isScoped()) {
       if (this.HOST === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
-        const controllerPath = settings.controller?.path || settings.controller?.name || "";
+        const controllerPath = await this.getControllerLauncherPath();
         result = await this.runHostCommand(controllerPath, ["system", "info", "--format", customFormat || "json"], customSettings);
       } else {
         result = await this.runScopeCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings.controller?.scope || "", customSettings);

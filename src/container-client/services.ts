@@ -128,7 +128,7 @@ export class SSHClient implements ISSHClient {
     if (child) {
       console.warn("Terminating SSH client tunnel child process");
       try {
-        child.kill("SIGTERM");
+        child.kill();
         this.nativeApiStarterProcessChild = null;
         console.warn("SSH client tunnel stopped", { process: this.nativeApiStarterProcess, child });
       } catch (error: any) {

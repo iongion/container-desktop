@@ -1,17 +1,17 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
-import adapter from "axios/lib/adapters/http";
+import adapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
-// import fetch from "node-fetch";
-import { ChildProcess, ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio } from "node:child_process";
+import { ChildProcess, ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio, spawnSync } from "node:child_process";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 
 import { getApiConfig } from "@/container-client/Api.clients";
 import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/services";
-import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, SpawnedProcess, Wrapper } from "@/env/Types";
+import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, Wrapper } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { deepMerge } from "@/utils";
+import { axiosConfigToCURL, deepMerge } from "@/utils";
+import { v4 } from "uuid";
 import { Platform } from "./node";
 
 const logger = createLogger("shared");
@@ -74,150 +74,204 @@ export async function exec_buffered(hostLauncher: string, commandLine: string[],
 }
 
 export class WSLRelayServer {
-  protected _connection: Connection;
-  // protected _server: net.Server;
-  protected _namedPipe: string = "";
-  protected _pid: any;
-  protected _relayPid: any;
+  protected server?: net.Server;
+  protected isStarted: boolean = false;
   protected isListening: boolean = false;
+  protected relayProcess: ChildProcessWithoutNullStreams | undefined;
+  protected stopRelayRespawn = false;
 
-  protected nativeApiStarterProcess: CommandExecutionResult | null = null;
-  protected nativeApiStarterProcessChild: SpawnedProcess | null = null;
+  constructor() {
+    this.isStarted = false;
+    this.isListening = false;
+  }
 
-  constructor(conn: Connection) {
-    this._connection = conn;
-  }
-  getAddress() {
-    return this._namedPipe;
-  }
-  async start(): Promise<WSLRelayServer> {
+  start = async (
+    // opts
+    {
+      pipeFullPath,
+      distribution,
+      unixSocketPath,
+      relayProgram,
+      maxRespawnRetries
+    }: {
+      pipeFullPath: string;
+      distribution: string;
+      unixSocketPath: string;
+      relayProgram: string;
+      maxRespawnRetries: number;
+    },
+    // handlers
+    onStart?: (server: WSLRelayServer, started: boolean) => void,
+    onStop?: (server: WSLRelayServer, code: number | null) => void,
+    onError?: (server: WSLRelayServer, error: any) => void
+  ): Promise<boolean> => {
     if (this.isListening) {
-      return this;
+      logger.debug("Named pipe server already started");
+      return true;
     }
-    let rejected = false;
-    const scope = this._connection.settings.controller?.scope || "";
-    const pipeName = `container-desktop-wsl-relay-${this._connection.id}`;
-    let wslWindowsNamedPipeRelayProgramPath = "";
+    this.stopRelayRespawn = false;
     let wslLinuxRelayProgramPath = "";
+    let args: string[] = [];
     try {
-      wslWindowsNamedPipeRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay.exe");
-      const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin/container-desktop-wsl-relay");
-      const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
-      const wslUidCommand = await Command.Execute("wsl.exe", ["--distribution", scope || "", "--exec", "id", "-u"]);
-      const wslUid = wslUidCommand.stdout.trim();
-      const pidDir = `/tmp/container-desktop-${wslUid}`;
-      //
+      const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", relayProgram);
+      const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
       wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim().replace(" ", "\\ ");
-      this._namedPipe = `\\\\.\\pipe\\${pipeName}`;
-      await exec_launcher("wsl.exe", ["--distribution", scope, "--exec", "mkdir", "-p", pidDir]);
-      logger.debug(">> WSL Relay path", {
-        resourcesPath: process.env.APP_PATH,
-        wslWindowsNamedPipeRelayProgramPath,
-        wslLinuxRelayProgramPath,
-        namedPipe: this._namedPipe,
-        userId: wslUid
-      });
+      distribution = distribution || "Ubuntu"; // Default to Ubuntu
+      relayProgram = relayProgram || "socat"; // Default to socat
+      maxRespawnRetries = maxRespawnRetries || 5;
+      args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `UNIX-CONNECT:${unixSocketPath},retry,forever`, "STDIO"];
     } catch (error: any) {
-      logger.error("Unable to start relay server", error);
-      this.isListening = false;
-      return this;
+      logger.error("Error getting WSL relay program path", error.message);
+      onError?.(this, error);
+      return false;
     }
-    const unixSocket = this._connection.settings.api.connection.relay.replace("unix://", "");
-    const started = await new Promise<boolean>((resolve, reject) => {
-      Command.ExecuteAsBackgroundService(
-        wslWindowsNamedPipeRelayProgramPath,
-        [
-          // source
-          `NPIPE-LISTEN:${pipeName}`,
-          // destination
-          `WSL:"${wslLinuxRelayProgramPath} STDIO UNIX-CONNECT:${unixSocket}",distribution=${scope}`
-        ],
-        {
-          checkStatus: async ({ pid, started }: any) => {
-            logger.debug("Checking RELAY status", { pid, started });
-            if (pid === null) {
-              logger.error("Unable to check status of relay server - no PID");
-              return false;
-            }
-            if (started) {
-              logger.debug("Checking status of relay server - already started", { pid });
-              return true;
-            }
-            try {
-              const statusConfig = {
-                socketPath: this._namedPipe,
-                baseURL: "http://d",
-                adapter,
-                timeout: 1000
-              };
-              logger.debug("Checking status of relay server", statusConfig);
-              const driver = axios.create(statusConfig);
-              const response = await driver.get("/_ping");
-              return response.status === 200;
-            } catch (error: any) {
-              logger.error("Unable to check status of relay server", error);
-              return false;
+    return new Promise((resolve) => {
+      logger.debug(`Creating named pipe server listening on ${pipeFullPath}, relaying to Unix socket ${unixSocketPath} in WSL distribution ${distribution}`);
+      const spawnRelayProcess = () => {
+        if (this.stopRelayRespawn) {
+          logger.debug("Respawn for relay process is disabled - quitting");
+          return;
+        }
+        const relayProcess = spawn("wsl.exe", args);
+        logger.debug(`Started relay process with PID ${relayProcess.pid}`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
+        relayProcess.on("close", (code) => {
+          logger.debug(`Relay process exited with code ${code}`);
+          this.isStarted = false;
+          onStop?.(this, code);
+          if (!this.stopRelayRespawn) {
+            logger.warn("Re-spawning relay process");
+            if (maxRespawnRetries > 0) {
+              maxRespawnRetries -= 1;
+              spawnRelayProcess();
+            } else {
+              logger.error("Max respawn retries reached");
             }
           }
-        }
-      )
-        .then(async (client) => {
-          client.on("ready", async ({ process, child }) => {
-            try {
-              this.nativeApiStarterProcess = process;
-              this.nativeApiStarterProcessChild = child;
-              logger.debug(">> Starting API - System service start ready", { process, child });
-              resolve(true);
-            } catch (error: any) {
-              if (rejected) {
-                logger.warn(">> Starting API - System service start - already rejected");
-              } else {
-                // rejected = true;
-                reject(error);
+        });
+        relayProcess.on("spawn", () => {
+          this.isStarted = isRelayProcessUsable();
+          onStart?.(this, this.isStarted);
+          resolve(this.isStarted);
+        });
+        this.relayProcess = relayProcess;
+      };
+      const isRelayProcessUsable = () => {
+        return this.relayProcess !== undefined && !this.relayProcess.killed && this.relayProcess.exitCode === null;
+      };
+      // Handle client connections
+      const server = net.createServer((clientSocket) => {
+        let writeable = true;
+        const guid = v4();
+        const onRelayData = (chunk) => {
+          if (!writeable) {
+            logger.debug(guid, "Client is not writeable, discarding relay output data", chunk.toString());
+            return;
+          }
+          logger.debug(guid, `Received data from Unix socket, sending to client: ${chunk.length} bytes`);
+          clientSocket.write(chunk, (err) => {
+            if (err) {
+              logger.error(guid, `Error writing to client: ${err.message}`);
+              writeable = false;
+              clientSocket.end();
+            }
+          });
+        };
+        logger.debug(guid, "Client connected to named pipe.");
+        // Handle the end of the client connection
+        clientSocket.on("end", () => {
+          writeable = false;
+          logger.debug(guid, "Client disconnected");
+          this.relayProcess!.stdout.off("data", onRelayData);
+        });
+        clientSocket.on("close", () => {
+          writeable = false;
+          logger.debug(guid, "Client closed");
+          this.relayProcess!.stdout.off("data", onRelayData);
+        });
+        // Relay data from the client to the relay process (Unix socket)
+        clientSocket.on("data", (chunk) => {
+          logger.debug(guid, `Received data from client, sending to Unix socket: ${chunk.length} bytes`);
+          if (isRelayProcessUsable()) {
+            this.relayProcess!.stdin.write(chunk, (err) => {
+              if (err) {
+                logger.error(guid, `Error writing to relay: ${err.message}`);
+                writeable = false;
+                clientSocket.end();
               }
-            }
-          });
-          client.on("error", (info) => {
-            logger.error(">> Starting API - System service start - process error", info);
-            if (rejected) {
-              logger.warn(">> Starting API - System service start - already rejected");
-            } else {
-              rejected = true;
-              reject(new Error("Unable to start service"));
-            }
-          });
-        })
-        .catch(reject);
+            });
+          } else {
+            logger.error(guid, "Relay process is not running, closing client connection.");
+            writeable = false;
+            clientSocket.end();
+          }
+        });
+        // Relay data from the relay process (Unix socket) to the client
+        if (isRelayProcessUsable()) {
+          this.relayProcess!.stdout.on("data", onRelayData);
+        } else {
+          logger.error(guid, "Relay process is not running, closing client connection.");
+          writeable = false;
+          clientSocket.end();
+        }
+      });
+      // Handle errors
+      server.on("error", (err: any) => {
+        logger.error(`Server error: ${err.message}`);
+        this.isStarted = false;
+        this.isListening = false;
+        onError?.(this, err);
+      });
+      server.on("close", () => {
+        logger.debug("Named pipe server closed");
+        this.isListening = false;
+      });
+      // Start the named pipe server
+      server.listen(pipeFullPath, async () => {
+        this.isListening = true;
+        logger.debug(`Named pipe server is listening on ${pipeFullPath}`);
+        spawnRelayProcess();
+      });
+      this.server = server;
     });
-    if (started) {
-      this.isListening = true;
-    } else {
-      this.isListening = false;
-      throw new Error("Unable to start relay server");
-    }
-    return this;
-  }
+  };
+
   async stop() {
-    this.isListening = false;
-    logger.debug("Stopping relay", { process: this.nativeApiStarterProcess, child: this.nativeApiStarterProcessChild });
-    if (this.nativeApiStarterProcessChild) {
-      logger.debug("Stopping relay - Terminating child process", this.nativeApiStarterProcessChild.pid);
+    this.stopRelayRespawn = true;
+    this.isStarted = false;
+    if (this.relayProcess) {
       try {
-        this.nativeApiStarterProcessChild.kill();
+        logger.debug("Stopping relay process");
+        this.relayProcess.on("close", () => {
+          logger.debug("Relay process stopped.");
+        });
+        this.relayProcess.kill();
+        try {
+          this.relayProcess.unref();
+        } catch (error: any) {
+          logger.error("Unref relay process failed", error);
+        }
       } catch (error: any) {
-        logger.error("Stopping relay - Kill child process failed", error);
+        logger.error("Error killing relay process", error);
       }
-      this.nativeApiStarterProcessChild = null;
-    } else {
-      logger.debug("No native starter process child found - nothing to stop");
     }
-    logger.debug("Stopped relay", { process: this.nativeApiStarterProcess, child: this.nativeApiStarterProcessChild });
+    // Stop the server
+    return new Promise((resolve) => {
+      try {
+        this.server?.close(() => {
+          logger.debug("Named pipe server stopped.");
+          resolve(true);
+        });
+      } catch {
+        logger.error("Error stopping named pipe server");
+        resolve(true);
+      }
+    });
   }
 }
 
 export function withWSLRelayServer(connection: Connection, callback: (server: WSLRelayServer) => void) {
   if (!RELAY_SERVERS_CACHE[connection.id]) {
-    RELAY_SERVERS_CACHE[connection.id] = new WSLRelayServer(connection);
+    RELAY_SERVERS_CACHE[connection.id] = new WSLRelayServer();
   }
   callback(RELAY_SERVERS_CACHE[connection.id]);
 }
@@ -264,17 +318,56 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
     //
     withWSLRelayServer(connection, async (server) => {
       // Make actual request to the temporary socket server created above
+      let resolved = false;
       try {
-        await server.start();
-        request.headers = deepMerge({}, config.headers || {}, request.headers || {});
-        request.timeout = request.timeout || config.timeout || 5000;
-        request.baseURL = request.baseURL || "http://d";
-        request.socketPath = server.getAddress();
-        const driver = await createNodeJSApiDriver(request);
-        const response = await driver.request(request);
-        resolve(response);
+        const pipeName = `container-desktop-wsl-relay-${connection.id}`;
+        const pipeFullPath = `\\\\.\\pipe\\${pipeName}`;
+        const started = await server.start(
+          {
+            pipeFullPath,
+            distribution: connection.settings.controller?.scope || "Ubuntu",
+            unixSocketPath: `${connection.settings.api.connection.relay}`.replace("unix://", ""),
+            relayProgram: "container-desktop-wsl-relay",
+            maxRespawnRetries: 5
+          },
+          (_, started) => {
+            logger.debug("WSL Relay server started", started);
+          },
+          (_, code) => {
+            logger.debug("WSL Relay server stopped", code);
+          },
+          // On error
+          (_, error) => {
+            logger.error("WSL Relay server error", error);
+            if (!resolved) {
+              resolved = true;
+              reject(error);
+            }
+          }
+        );
+        if (started) {
+          try {
+            request.headers = deepMerge({}, config.headers || {}, request.headers || {});
+            request.timeout = request.timeout || config.timeout || 5000;
+            request.baseURL = request.baseURL || "http://d";
+            request.socketPath = pipeFullPath;
+            const driver = await createNodeJSApiDriver(request);
+            const response = await driver.request(request);
+            resolved = true;
+            resolve(response);
+          } catch (error: any) {
+            if (!resolved) {
+              resolved = true;
+              reject(error);
+            }
+          }
+        }
       } catch (error: any) {
-        reject(error);
+        logger.error("WSL Relay communication error", error);
+        if (!resolved) {
+          resolved = true;
+          reject(error);
+        }
       }
     });
   });
@@ -511,8 +604,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
               child: {
                 pid,
                 kill: async (signal?: NodeJS.Signals | number) => {
-                  const sendSignal = signal || "SIGTERM";
-                  logger.debug("(OS) Killing child process started", pid, { signal: sendSignal });
+                  logger.debug("(OS) Killing child process started", pid, { signal });
                   try {
                     logger.debug("(OS) Destroying child process streams");
                     if (child.stdout) {
@@ -528,17 +620,20 @@ export async function exec_service(programPath: string, programArgs: string[], o
                     logger.error("(OS) Destroying child process streams failed", error);
                   }
                   try {
-                    child.kill(sendSignal);
+                    child.kill(signal);
                   } catch (error: any) {
                     logger.error("(OS) Kill child process failed", error);
                   }
+                  logger.debug("(OS) Killing child process completed", pid, { child });
+                },
+                unref: () => {
+                  logger.debug("(OS) Unref child process started", pid);
                   try {
-                    logger.debug("(OS) Dereferencing child process");
                     child.unref();
                   } catch (error: any) {
-                    logger.error("(OS) Dereferencing child process failed", error);
+                    logger.error("(OS) Unref child process failed", error);
                   }
-                  logger.debug("(OS) Killing child process completed", pid, { child });
+                  logger.debug("(OS) Unref child process completed", pid);
                 }
               }
             });
@@ -557,6 +652,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
       child = await wrapSpawnAsync(programPath, programArgs, launcherOpts);
       proc.pid = child.pid!;
       proc.code = child.exitCode;
+      logger.debug("Child process spawned", child.pid, { programPath, programArgs, launcherOpts });
       child.on("exit", (code) => onProcessExit(child, code));
       child.on("close", (code) => onProcessClose(child, code));
       child.on("error", (error) => onProcessError(child, error));
@@ -582,6 +678,10 @@ export async function exec_service(programPath: string, programArgs: string[], o
 }
 
 export const Command: ICommand = {
+  async Spawn(command: string, args?: readonly string[], options?: any) {
+    return spawnSync(command, args, options);
+  },
+
   async Execute(launcher: string, args: string[], opts?: WrapperOpts) {
     return await exec_launcher_async(launcher, args, opts);
   },
@@ -668,7 +768,7 @@ export const Command: ICommand = {
         statusText: "Server error",
         data: undefined,
         headers: {},
-        config: request
+        config: request as any
       };
       if (error?.response) {
         fakeResponse = error?.response;
@@ -690,10 +790,17 @@ export const Command: ICommand = {
       case ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA:
         {
           const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
-          logger.debug("Proxying request to host", { connection, config, request });
+          let curl: string = "";
+          try {
+            const socketPath = connection?.settings?.api?.connection?.relay || config.socketPath;
+            curl = axiosConfigToCURL({ ...config, ...request, socketPath }) as string;
+          } catch (error: any) {
+            logger.warn("Error converting axios config to CURL", error);
+          }
+          logger.debug("Proxying request to host", { connection, config, request, curl });
           const driver = await createNodeJSApiDriver(config);
           response = await driver.request(request);
-          logger.debug("Proxy response", response);
+          logger.debug("Proxy response", { data: response?.data, status: response?.status, statusText: response?.statusText });
         }
         break;
       case ContainerEngineHost.PODMAN_VIRTUALIZED_WSL:

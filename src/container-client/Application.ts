@@ -29,7 +29,8 @@ import {
   RegistriesMap,
   Registry,
   RegistryPullOptions,
-  RegistrySearchOptions
+  RegistrySearchOptions,
+  StartupStatus
 } from "@/env/Types";
 import { createLogger, getLevel, setLevel } from "@/logger";
 import { deepMerge } from "@/utils";
@@ -112,6 +113,7 @@ export function detectOperatingSystem() {
 export class Application {
   private static instance: Application;
 
+  protected logLevel: string = "debug";
   protected logger!: ILogger;
   protected messageBus!: IMessageBus;
   protected userConfiguration!: UserConfiguration;
@@ -143,6 +145,19 @@ export class Application {
       });
     }
     return Application.instance;
+  }
+
+  setLogLevel(level: string) {
+    console.debug("Setting application log level", level);
+    try {
+      const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
+      if (currentApi) {
+        currentApi.setLogLevel(level);
+      }
+    } catch (error: any) {
+      console.error("Unable to set log level", error);
+    }
+    this.logLevel = level;
   }
 
   getConnectors() {
@@ -247,6 +262,8 @@ export class Application {
 
   async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
     if (settings && settings?.logging?.level) {
+      this.logger.info("Setting preferences log level", settings?.logging?.level);
+      this.logLevel = settings?.logging?.level;
       await setLevel(settings?.logging?.level);
     }
     await this.userConfiguration.setSettings(settings);
@@ -326,14 +343,14 @@ export class Application {
   }
 
   async startScope(scope: ControllerScope, connection: Connection, skipAvailabilityCheck: boolean) {
-    let flag = false;
+    let status = StartupStatus.ERROR;
     const currentApi = await this.getConnectionApi(connection, skipAvailabilityCheck);
     if (currentApi.isScoped()) {
       this.logger.debug(">> Starting scope", scope, "with connection", connection);
-      flag = await currentApi.startScope(scope);
-      this.logger.debug("<< Starting scope", scope, "with connection", flag, connection);
+      status = await currentApi.startScope(scope);
+      this.logger.debug("<< Starting scope", scope, "with connection", status, connection);
     }
-    return flag;
+    return status;
   }
 
   async stopScope(scope: ControllerScope, connection: Connection, skipAvailabilityCheck: boolean) {
@@ -807,6 +824,8 @@ export class Application {
     return this._currentContainerEngineHostClient as T;
   }
 
+  protected startupStatus: StartupStatus = StartupStatus.STOPPED;
+
   async createConnectorContainerEngineHostClient(
     connector: Connector,
     opts?: ConnectOptions
@@ -832,8 +851,10 @@ export class Application {
       if (host) {
         const settings = opts?.connection?.settings || connector.settings;
         this.logger.debug(connector.id, "Using custom host - settings", { user: opts?.connection?.settings, defaults: connector.settings });
+        host.setLogLevel(this.logLevel);
         await host.setSettings(settings);
         if (settings.mode === "mode.automatic") {
+          const scope = settings.controller?.scope || "";
           if (opts?.skipAvailabilityCheck) {
             this.logger.warn(connector.id, "Skipping automatic settings - availability check disabled");
           } else {
@@ -841,8 +862,16 @@ export class Application {
               trace: "Performing automatic connection detection"
             });
             if (host.isScoped()) {
-              await host.stopScopeByName(settings.controller?.scope || "");
-              await host.startScopeByName(settings.controller?.scope || "");
+              if (this.startupStatus === StartupStatus.STARTED) {
+                systemNotifier.transmit("startup.phase", {
+                  trace: `Stopping ${scope}`
+                });
+                await host.stopScopeByName(scope);
+              }
+              systemNotifier.transmit("startup.phase", {
+                trace: `Starting ${scope}`
+              });
+              this.startupStatus = await host.startScopeByName(scope);
             }
             const automaticSettings = await host.getAutomaticSettings();
             this.logger.warn("Using automatic settings", automaticSettings);
@@ -854,7 +883,7 @@ export class Application {
             trace: "Starting connection api"
           });
           try {
-            await host.startApi();
+            await host.startApi(undefined, { logLevel: this.logLevel });
           } catch (error: any) {
             this.logger.error(connector.id, "Unable to start the host API", error);
           }
@@ -899,7 +928,10 @@ export class Application {
         RUNTIMES.map(
           (Engine) => (cb: any) =>
             Engine.create(this.osType)
-              .then((engine) => cb(null, engine))
+              .then((engine) => {
+                engine.setLogLevel(this.logLevel);
+                cb(null, engine);
+              })
               .catch(cb)
         )
       );

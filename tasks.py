@@ -18,7 +18,6 @@ TARGET = os.environ.get("TARGET", "linux")
 PORT = int(os.environ.get("PORT", str(3000)))
 PTY = os.name != "nt"
 SIGNTOOL_PATH = os.environ.get("SIGNTOOL_PATH", "")
-RELAY_VERSION = "1.0.8"
 
 def url_download(url, path):
     url = url
@@ -85,7 +84,7 @@ def gen_sign(ctx):
         run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-9fb3975f-40bd-4198-908f-01e962cc790d --tsaurl "{ts_url}" "{exe_path}"')
         run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-9fb3975f-40bd-4198-908f-01e962cc790d --tsaurl "{ts_url}" "{appx_path}"')
     # "C:\Program Files (x86)\Windows
-    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\ContainerDesktop.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.6.appx"
+    #  Kits\10\bin\10.0.22000.0\x64\signtool.exe" sign /a /f "C:\Workspace\is\container-desktop\ContainerDesktop.pfx" /tr "http://ts.ssl.com" /td sha256 /fd sha256 /v "C:\Workspace\is\container-desktop\release\container-desktop-x64-5.2.7.appx"
     # appx_path = os.path.join(path, "release", f"container-desktop-x64-{PROJECT_VERSION}.appx")
     # with ctx.cd(path):
     #     run_env(ctx, f'java -jar "{jar_path}" --keystore ContainerDesktop.pfx --storetype PKCS12 --storepass "" --alias te-9fb3975f-40bd-4198-908f-01e962cc790d --tsaurl "{ts_url}" "{appx_path}"')
@@ -103,13 +102,19 @@ def build(ctx, env=None):
             shutil.copy(file, "./build")
 
 @task
-def fetch_relay(ctx, env=None):
+def build_relay(ctx, env=None):
     path = Path(PROJECT_HOME)
-    with ctx.cd(path):
+    support_dir = os.path.join(path, "support")
+    with ctx.cd(support_dir):
         os.makedirs(os.path.join(PROJECT_HOME, "bin"), exist_ok=True)
-        url_download(f"https://github.com/iongion/container-desktop-wsl-relay/releases/download/{RELAY_VERSION}/container-desktop-wsl-relay", os.path.join(PROJECT_HOME, "bin/container-desktop-wsl-relay"))
-        url_download(f"https://github.com/iongion/container-desktop-wsl-relay/releases/download/{RELAY_VERSION}/container-desktop-wsl-relay.exe", os.path.join(PROJECT_HOME, "bin/container-desktop-wsl-relay.exe"))
-
+        system = platform.system()
+        print(f"Building relay on {system}")
+        if system == "Linux":
+            run_env(ctx, f'cd "{support_dir}" && ./build-relay.sh', env)
+        elif system == "Windows":
+            run_env(ctx, f"wsl.exe --exec bash -i -l -c ./build-relay.sh", env)
+        else:
+            raise Exception(f"Unsupported system: {system}")
 
 @task
 def bundle(ctx, env=None):
@@ -124,7 +129,7 @@ def bundle(ctx, env=None):
             run_env(ctx, "yarn package:linux_x86", env)
             run_env(ctx, "yarn package:linux_arm", env)
         else:
-            fetch_relay(ctx, env)
+            build_relay(ctx, env)
             run_env(ctx, "yarn package:win_x86", env)
 
 @task
@@ -185,4 +190,4 @@ def start(ctx, docs=False):
         run_env(ctx, "yarn dev")
 
 
-namespace = Collection(clean, prepare, build, fetch_relay, bundle, release, start, checksums, gen_sign)
+namespace = Collection(clean, prepare, build, build_relay, bundle, release, start, checksums, gen_sign)

@@ -14,15 +14,27 @@ export class Runner {
     this.client = client;
     this.nativeApiStarterProcess = undefined;
     this.nativeApiStarterProcessChild = undefined;
+    this.logger = createLogger("container-client.api.Runner");
+  }
+
+  setApiStarted(flag: boolean) {
+    this.started = flag;
   }
 
   // API connectivity and startup
   async startApi(opts?: ApiStartOptions, starter?: RunnerStarterOptions) {
+    this.logger.warn(">> Starting API - begin");
+    if (this.started) {
+      this.logger.debug("<< Starting API - already started");
+      systemNotifier.transmit("startup.phase", {
+        trace: "Api started"
+      });
+      return true;
+    }
     this.started = true;
     systemNotifier.transmit("startup.phase", {
-      trace: `Staring the api`
+      trace: "Staring the api"
     });
-    this.logger = createLogger("container-client.api.Runner");
     this.logger.debug(">> Starting API - guard configuration", { starter });
     if (!starter || !starter?.path) {
       this.logger.error("<< Starting API - Starter program not configured");
@@ -69,6 +81,7 @@ export class Runner {
           })
           .catch(reject);
       });
+      this.logger.debug("<< Starting API - System service start completed", started);
       return started;
     } catch (error: any) {
       this.logger.error("<< Starting API - System service start failed", error.message);
@@ -80,6 +93,7 @@ export class Runner {
 
   async stopApi(customSettings?: EngineConnectorSettings, stopper?: RunnerStopperOptions) {
     if (!this.started) {
+      this.logger.debug("Stopping API - skip (not started here)");
       return;
     }
     this.logger.debug(">> Stopping API - begin");
@@ -91,13 +105,33 @@ export class Runner {
       this.logger.warn("Stopping API - no stopper specified");
     }
     if (this.nativeApiStarterProcessChild) {
+      const child = this.nativeApiStarterProcessChild;
       try {
-        this.nativeApiStarterProcessChild.kill("SIGTERM");
-        this.nativeApiStarterProcessChild = null;
-        flag = true;
+        this.logger.debug("(OS) Destroying child process streams");
+        if (child.stdout) {
+          child.stdout.destroy();
+        }
+        if (child.stdin) {
+          child.stdin.destroy();
+        }
+        if (child.stderr) {
+          child.stderr.destroy();
+        }
+      } catch (error: any) {
+        this.logger.error("(OS) Destroying child process streams failed", error);
+      }
+      try {
+        child.kill();
       } catch (error: any) {
         this.logger.warn("Stopping API - failed", error.message);
       }
+      try {
+        child.unref();
+      } catch (error: any) {
+        this.logger.warn("Stopping API - failed to unref child process", error.message);
+      }
+      this.nativeApiStarterProcessChild = null;
+      flag = true;
     } else {
       this.logger.debug("No native starter process child found - nothing to stop");
       flag = true;

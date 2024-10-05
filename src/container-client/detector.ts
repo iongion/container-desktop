@@ -25,8 +25,8 @@ export const findWindowsProgramByRegistryKey = async (programName: string, regis
     $location = Get-ChildItem "${registryKey}*" | % { Get-ItemProperty $_.PsPath } | Select DisplayName,InstallLocation | Sort-Object Displayname -Descending | ConvertTo-JSON -Compress
     [Console]::Write("$location")
   `;
-  const result = await Command.Execute("powershell", ["-Command", script], { encoding: "utf8" });
-  if (result.success) {
+  const result = await Command.Spawn("powershell", ["-Command", script], { encoding: "utf8" });
+  if (result.status === 0) {
     const info = JSON.parse(result.stdout || JSON.stringify({ DisplayName: "", InstallLocation: "" }));
     if (info.InstallLocation) {
       programPath = await Path.join(info.InstallLocation, "resources/bin", programName.endsWith(".exe") ? programName : `${programName}.exe`);
@@ -48,30 +48,23 @@ export const findProgramPath = async (
   const lookupProgram = windowsLookup && !programName.endsWith(".exe") ? `${programName}.exe` : programName;
   const finder = executor ? executor : Command.Execute;
   if (windowsLookup) {
-    // User registry based search for programs that are not in PATH
-    if (lookupProgram.startsWith("docker")) {
-      programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Docker Desktop");
-    } else if (lookupProgram.startsWith("podman")) {
-      programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Red Hat\\Podman");
+    // Powershell based search for programs that are in PATH
+    try {
+      const result = await Command.Spawn("powershell.exe", ["-Command", `((gcm '${lookupProgram}').Path)`], { encoding: "utf8" });
+      programPath = result.status === 0 ? `${result.stdout.toString()}`.trim().replace("\r\n", "") : "";
+      logger.debug("Detecting", lookupProgram, "using powershell >", result);
+    } catch (error: any) {
+      logger.error("Unable to detect program path with powershell", error.message);
     }
+    // Use registry based search for programs that are not in PATH
     if (!programPath) {
-      result = await finder("where", [lookupProgram], opts);
-      logger.debug("Detecting", lookupProgram, "using - where >", result);
-      if (result.success) {
-        const output = result.stdout || "";
-        const items = output.split("\r\n");
-        const firstExe = items.find((it) => it.endsWith(".exe"));
-        const firstItem = items[0];
-        if (firstExe) {
-          programPath = firstExe;
-        } else if (firstItem) {
-          programPath = firstItem;
-        } else {
-          logger.warn(`Unable to detect ${lookupProgram} cli program path path from parts - using where`, result);
-        }
-      } else {
-        logger.warn(`Unable to detect ${lookupProgram} cli program path - using where`, result);
+      logger.warn(`Unable to detect ${lookupProgram} cli program path with powershell - using registry`);
+      if (lookupProgram.startsWith("docker")) {
+        programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Docker Desktop");
+      } else if (lookupProgram.startsWith("podman")) {
+        programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Red Hat\\Podman");
       }
+      logger.debug("Detecting", lookupProgram, "using registry >", programPath);
     }
   } else {
     if (!programPath) {

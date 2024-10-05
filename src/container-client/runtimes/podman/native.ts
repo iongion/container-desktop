@@ -7,7 +7,8 @@ import {
   ContainerEngineHost,
   ControllerScope,
   EngineConnectorSettings,
-  OperatingSystem
+  OperatingSystem,
+  StartupStatus
 } from "@/env/Types";
 import { PODMAN_PROGRAM } from "../../connection";
 import { PodmanAbstractContainerEngineHostClient } from "./base";
@@ -23,6 +24,10 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
     instance.id = id;
     await instance.setup();
     return instance;
+  }
+
+  shouldKeepStartedScopeRunning() {
+    return true;
   }
 
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
@@ -50,6 +55,8 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
   // Engine
   async startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions) {
     const running = await this.isApiRunning();
+    const logLevel = opts?.logLevel || "debug";
+    this.logger.debug(this.id, "Starting API", { logLevel });
     if (running.success) {
       this.logger.debug(this.id, "API is already running");
       return true;
@@ -78,10 +85,9 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
         await FS.mkdir(baseDir, { recursive: true });
       }
     }
-    this.logger.debug(this.id, "Starting API", { programPath, socketPath });
     const started = await this.runner.startApi(opts, {
       path: programPath,
-      args: ["system", "service", "--time=0", `unix://${socketPath}`, "--log-level=debug"]
+      args: ["system", "service", "--time=0", `unix://${socketPath}`, `--log-level=${logLevel}`]
     });
     this.apiStarted = started;
     this.logger.debug("Start API complete", started);
@@ -106,18 +112,18 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
     throw new Error("Scope is not supported in native mode");
   }
 
-  async startScope(scope: ControllerScope): Promise<boolean> {
+  async startScope(scope: ControllerScope): Promise<StartupStatus> {
     this.logger.warn("Scope is not supported in native mode");
-    return false;
+    return StartupStatus.ERROR;
   }
   async stopScope(scope: ControllerScope): Promise<boolean> {
     this.logger.warn("Scope is not supported in native mode");
     return false;
   }
 
-  async startScopeByName(name: string): Promise<boolean> {
+  async startScopeByName(name: string): Promise<StartupStatus> {
     this.logger.warn("Scope is not supported in native mode");
-    return false;
+    return StartupStatus.ERROR;
   }
   async stopScopeByName(name: string): Promise<boolean> {
     this.logger.warn("Scope is not supported in native mode");

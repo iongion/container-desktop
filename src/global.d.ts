@@ -11,6 +11,7 @@ interface SSHHost {
 }
 
 interface ICommand {
+  Spawn: (launcher: string, args: string[], opts?: any) => Promise<CommandExecutionResult>;
   Execute: (launcher: string, args: string[], opts?: any) => Promise<CommandExecutionResult>;
   ExecuteAsBackgroundService: (
     launcher: string,
