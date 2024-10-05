@@ -48,7 +48,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         if (isPending.current) {
           console.debug("Polling cycle skipped");
         } else {
-          console.debug("Polling cycle started");
+          // console.debug("Polling cycle started");
           await poll();
         }
       } catch (error: any) {
@@ -56,7 +56,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         clearInterval(pollerID.current);
       } finally {
         isPending.current = false;
-        console.debug("Poller cycle complete");
+        // console.debug("Poller cycle complete");
       }
     };
     if (isPollingEnabled) {

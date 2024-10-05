@@ -106,7 +106,7 @@ export class WSLRelayServer {
     onError?: (server: WSLRelayServer, error: any) => void
   ): Promise<boolean> => {
     if (this.isListening) {
-      logger.debug("Named pipe server already started");
+      // logger.debug("Named pipe server already started");
       return true;
     }
     this.stopRelayRespawn = false;
@@ -115,7 +115,7 @@ export class WSLRelayServer {
     try {
       const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", relayProgram);
       const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
-      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim().replace(" ", "\\ ");
+      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
       distribution = distribution || "Ubuntu"; // Default to Ubuntu
       relayProgram = relayProgram || "socat"; // Default to socat
       maxRespawnRetries = maxRespawnRetries || 5;
@@ -132,6 +132,7 @@ export class WSLRelayServer {
           logger.debug("Respawn for relay process is disabled - quitting");
           return;
         }
+        logger.debug(`Starting relay process: wsl.exe ${args.join(" ")}`);
         const relayProcess = spawn("wsl.exe", args);
         logger.debug(`Started relay process with PID ${relayProcess.pid}`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
         relayProcess.on("close", (code) => {
@@ -348,7 +349,7 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
         if (started) {
           try {
             request.headers = deepMerge({}, config.headers || {}, request.headers || {});
-            request.timeout = request.timeout || config.timeout || 5000;
+            request.timeout = request.timeout || config.timeout || 1000;
             request.baseURL = request.baseURL || "http://d";
             request.socketPath = pipeFullPath;
             const driver = await createNodeJSApiDriver(request);
