@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.8 - 2024-10-07
+
+## Changed
+
+- WSL - Use custom `socat` relay build - deploy to WSL file-system before spawning to avoid `execvp` errors
+
 ## 5.2.7 - 2024-10-05
 
 ## Changed
