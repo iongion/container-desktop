@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.9 - 2024-10-07
+
+## Changed
+
+- WSL - Add `socat` retry mechanism for Docker engine
+
 ## 5.2.8 - 2024-10-07
 
 ## Changed

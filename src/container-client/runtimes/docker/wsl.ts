@@ -44,6 +44,8 @@ export class DockerContainerEngineHostClientVirtualizedWSL extends AbstractConta
     };
   }
 
+  // Engine
+
   isScoped() {
     return true;
   }

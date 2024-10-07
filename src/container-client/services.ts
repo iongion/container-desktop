@@ -83,7 +83,7 @@ export class SSHClient implements ISSHClient {
               const response = await Command.proxyTCPRequest(
                 {
                   method: "GET",
-                  url: `/_ping`
+                  url: "/_ping"
                 },
                 config.localAddress
               );

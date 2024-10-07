@@ -8,7 +8,7 @@ import os from "node:os";
 
 import { getApiConfig } from "@/container-client/Api.clients";
 import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/services";
-import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, Wrapper } from "@/env/Types";
+import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, Wrapper } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { axiosConfigToCURL, deepMerge } from "@/utils";
 import { v4 } from "uuid";
@@ -17,6 +17,7 @@ import { Platform } from "./node";
 const logger = createLogger("shared");
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
+const DEFAULT_RETRIES_COUNT = 15;
 
 // Servers
 export async function exec_buffered(hostLauncher: string, commandLine: string[], onChunk?: (buffer: Buffer) => void) {
@@ -106,13 +107,15 @@ export class WSLRelayServer {
       distribution,
       unixSocketPath,
       relayProgram,
-      maxRespawnRetries
+      maxRespawnRetries,
+      ping
     }: {
       pipeName: string;
       distribution: string;
       unixSocketPath: string;
       relayProgram: string;
       maxRespawnRetries: number;
+      ping?: boolean;
     },
     // handlers
     onStart?: (server: WSLRelayServer, started: boolean) => void,
@@ -146,7 +149,15 @@ export class WSLRelayServer {
           {
             await ensureRelayProgramExistsInWSLDistribution(wslLinuxRelayProgramPath, bundleLinuxRelayProgramPath, distribution);
             pipeFullPath = `\\\\.\\pipe\\${pipeName}`;
-            args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `UNIX-CONNECT:${unixSocketPath},retry,forever`, "STDIO"];
+            args = [
+              // relay
+              "--distribution",
+              distribution,
+              "--exec",
+              wslLinuxRelayProgramPath,
+              `UNIX-CONNECT:${unixSocketPath},retry,forever`,
+              "STDIO"
+            ];
             this.socketPath = pipeFullPath;
             this.tcpAddress = undefined;
           }
@@ -158,6 +169,7 @@ export class WSLRelayServer {
             const port = await getFreeTCPPort();
             tcpAddress = `http://${host}:${port}`;
             args = [
+              // relay
               "--distribution",
               distribution,
               "--exec",
@@ -237,11 +249,47 @@ export class WSLRelayServer {
         this.relayProcesses[guid] = relayProcess;
         this.isStarted = true;
         this.isListening = true;
+        let retries = DEFAULT_RETRIES_COUNT;
+        let isChecking = false;
+        const opts = tcpAddress ? { baseURL: tcpAddress.startsWith("http") ? tcpAddress : `http://${tcpAddress}` } : { socketPath: pipeFullPath };
+        const driver = createNodeJSApiDriver(opts);
         return await new Promise((resolve) => {
-          setTimeout(() => {
-            onStart?.(this, true);
-            resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
-          }, 1500);
+          const iid = setInterval(() => {
+            if (isChecking) {
+              return;
+            }
+            isChecking = true;
+            retries -= 1;
+            if (retries <= 0) {
+              clearInterval(iid);
+              isChecking = false;
+              resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+            } else {
+              if (ping) {
+                driver
+                  .get("/_ping")
+                  .then((response) => {
+                    if (response.data === "OK") {
+                      clearInterval(iid);
+                      isChecking = false;
+                      onStart?.(this, true);
+                      resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+                    } else {
+                      isChecking = false;
+                    }
+                  })
+                  .catch((error) => {
+                    isChecking = false;
+                    logger.warn("Ping response failed", { retries }, error);
+                  });
+              } else {
+                clearInterval(iid);
+                isChecking = false;
+                onStart?.(this, true);
+                resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+              }
+            }
+          }, 250);
         });
       } catch (error: any) {
         this.isStarted = false;
@@ -457,7 +505,8 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
             distribution: connection.settings.controller?.scope || "Ubuntu",
             unixSocketPath: `${connection.settings.api.connection.relay}`.replace("unix://", ""),
             relayProgram: "container-desktop-wsl-relay",
-            maxRespawnRetries: 5
+            maxRespawnRetries: 5,
+            ping: connection.engine === ContainerEngine.DOCKER
           },
           (_, started) => {
             logger.debug("WSL Relay server started", started);
@@ -701,7 +750,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
     };
     const waitForProcess = (child: ChildProcess) => {
       let pending = false;
-      const maxRetries = retry?.count || 15;
+      const maxRetries = retry?.count || DEFAULT_RETRIES_COUNT;
       let retries = maxRetries;
       const wait = retry?.wait || 2000;
       const IID = setInterval(async () => {
@@ -885,7 +934,7 @@ export const Command: ICommand = {
         adapter: httpAdapter,
         httpAgent: httpAgent,
         httpsAgent: httpAgent,
-        baseURL: `http://${tcpAddress}`
+        baseURL: tcpAddress.startsWith("http") ? tcpAddress : `http://${tcpAddress}`
       });
       request.withCredentials = false;
       const tunneledRequest = { ...request, socketPath: undefined, baseURL: undefined };
