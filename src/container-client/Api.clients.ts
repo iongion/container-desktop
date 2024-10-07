@@ -232,7 +232,7 @@ export async function getApiConfig(api: EngineConnectorApiSettings, scope: strin
     }
   }
   const config: ApiDriverConfig = {
-    timeout: 60000,
+    timeout: 3000,
     socketPath,
     baseURL,
     headers: {
@@ -512,7 +512,7 @@ export class ContainerClient {
       } catch (error: any) {
         console.error("Failed to stop container", error);
       }
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       const result = await this.driver.post<boolean>(`/containers/${encodeURIComponent(id)}/restart`);
       return isOk(result);
     });

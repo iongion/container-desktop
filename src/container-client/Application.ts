@@ -961,6 +961,9 @@ export class Application {
       );
       // console.debug(">> INIT", { osType: this.osType });
       this.connectors = getDefaultConnectors(this.osType);
+      this.connectors.forEach((connector) => {
+        connector.logLevel = this.logLevel;
+      });
     } catch (error: any) {
       this.logger.error("Init - Unable to initialize application runtimes", error.message, error.stack);
     }
@@ -995,6 +998,7 @@ export class Application {
         connector.label = opts.connection.label;
         connector.disabled = opts.connection.disabled ?? false;
         connector.settings = deepMerge({}, opts.connection.settings);
+        connector.logLevel = this.logLevel;
         if (!connector) {
           this.logger.error("Bridge startup - no connector found", opts);
           throw new Error("No connector found");

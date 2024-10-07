@@ -113,9 +113,10 @@ ipcMain.on("register.process", (p) => {
 ipcMain.on("openDevTools", () => {
   activateTools();
 });
-ipcMain.on("notify", (event, arg) => {
+ipcMain.on("notify", async (event, arg) => {
   if (arg && arg.message === "ready") {
     notified = true;
+    logger.debug("Settings received", arg.payload);
     applicationWindow.show();
   }
 });

@@ -339,6 +339,8 @@ export interface EngineConnectorAvailability {
 }
 
 export interface Connection {
+  logLevel?: string;
+  //
   name: string;
   label: string;
   description?: string;

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.10 - 2024-10-08
+
+## Changed
+
+- WSL - Use socat / local named pipe server instead of TCP to connect to a custom distribution
+- Reduced default timeouts to 3 seconds
+
 ## 5.2.9 - 2024-10-07
 
 ## Changed

@@ -94,10 +94,12 @@ export class WSLRelayServer {
 
   protected socketPath?: string;
   protected tcpAddress?: string;
+  protected logLevel: string = "debug";
 
-  constructor() {
+  constructor(opts: { logLevel: string }) {
     this.isStarted = false;
     this.isListening = false;
+    this.logLevel = opts.logLevel;
   }
 
   start = async (
@@ -132,7 +134,7 @@ export class WSLRelayServer {
     let wslLinuxRelayProgramPath = "";
     let bundleLinuxRelayProgramPath = "";
     let args: string[] = [];
-    const relayMethod: string = "socat-tcp";
+    const relayMethod: string = "socat";
     try {
       windowsRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", `${relayProgram}.exe`);
       const wslUser = await getWSLDistributionUser(distribution);
@@ -155,6 +157,10 @@ export class WSLRelayServer {
               distribution,
               "--exec",
               wslLinuxRelayProgramPath,
+              "-v",
+              "-d",
+              "-d",
+              "-d",
               `UNIX-CONNECT:${unixSocketPath},retry,forever`,
               "STDIO"
             ];
@@ -174,7 +180,11 @@ export class WSLRelayServer {
               distribution,
               "--exec",
               wslLinuxRelayProgramPath,
-              `TCP-LISTEN:${port},reuseaddr,fork,bind=127.0.0.1`,
+              "-v",
+              "-d",
+              "-d",
+              "-d",
+              `TCP4-LISTEN:${port},reuseaddr,fork,bind=127.0.0.1`,
               `UNIX-CONNECT:${unixSocketPath},retry,forever`
             ];
             this.socketPath = undefined;
@@ -209,12 +219,14 @@ export class WSLRelayServer {
       let resolved = false;
       return new Promise((resolve, reject) => {
         const relayProgram = relayMethod === "winsocat" ? windowsRelayProgramPath : "wsl.exe";
-        logger.warn(`Starting relay process: ${relayProgram} ${args.join(" ")}`);
+        logger.warn(process.pid, `Starting relay process: ${relayProgram} ${args.join(" ")}`, this.logLevel);
         const relayProcess = spawn(relayProgram, args);
-        relayProcess.stderr.setEncoding("utf8");
-        relayProcess.stderr.on("data", (data) => {
-          logger.error(`Relay process error: ${data}`);
-        });
+        if (this.logLevel === "trace") {
+          relayProcess.stderr.setEncoding("utf8");
+          relayProcess.stderr.on("data", (data) => {
+            logger.warn(`Relay process stderr: ${data}`);
+          });
+        }
         logger.debug(`Started relay process with PID: ${relayProcess.pid}`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
         relayProcess.on("close", (code) => {
           logger.debug(`Relay process close with code ${code}`, relayProcess.exitCode);
@@ -228,7 +240,7 @@ export class WSLRelayServer {
           this.isStarted = isRelayProcessUsable(relayProcess);
           if (!resolved) {
             resolved = true;
-            logger.debug("Relay process spawned", relayProcess.pid);
+            logger.warn("Relay process spawned", relayProcess.pid);
             resolve(relayProcess);
           }
         });
@@ -313,7 +325,9 @@ export class WSLRelayServer {
             logger.debug(guid, "Client is not writeable, discarding relay output data", chunk.toString());
             return;
           }
-          logger.debug(guid, `Received data from Unix socket, sending to client: ${chunk.length} bytes`);
+          if (this.logLevel === "trace") {
+            logger.debug(guid, `Received data from Unix socket, sending to client: ${chunk.length} bytes`);
+          }
           clientSocket.write(chunk, (err) => {
             if (err) {
               logger.error(guid, `Error writing to client: ${err.message}`);
@@ -336,7 +350,9 @@ export class WSLRelayServer {
         });
         // Relay data from the client to the relay process (Unix socket)
         clientSocket.on("data", (chunk) => {
-          logger.debug(guid, `Received data from client, sending to Unix socket: ${chunk.length} bytes`);
+          if (this.logLevel === "trace") {
+            logger.debug(guid, `Received data from client, sending to Unix socket: ${chunk.length} bytes`);
+          }
           if (isRelayProcessUsable(relayProcess)) {
             relayProcess.stdin.write("");
             relayProcess.stdin.write(chunk, (err) => {
@@ -399,16 +415,16 @@ export class WSLRelayServer {
 
   async killProcess(proc: ChildProcessWithoutNullStreams) {
     try {
-      logger.debug("Killing relay process");
+      logger.debug(proc.pid, "Killing relay process");
       proc.kill();
     } catch (error: any) {
-      logger.error("Error killing relay process", error);
+      logger.error(proc.pid, "Error killing relay process", error);
     }
     try {
-      logger.debug("Unref relay process");
+      logger.debug(proc.pid, "Unref relay process");
       proc.unref();
     } catch (error: any) {
-      logger.error("Unref relay process failed", error);
+      logger.error(proc.pid, "Unref relay process failed", error);
     }
   }
 
@@ -441,9 +457,9 @@ export class WSLRelayServer {
   }
 }
 
-export function withWSLRelayServer(connection: Connection, callback: (server: WSLRelayServer) => void) {
+export function withWSLRelayServer(connection: Connection, opts: { logLevel: string }, callback: (server: WSLRelayServer) => void) {
   if (!RELAY_SERVERS_CACHE[connection.id]) {
-    RELAY_SERVERS_CACHE[connection.id] = new WSLRelayServer();
+    RELAY_SERVERS_CACHE[connection.id] = new WSLRelayServer(opts);
   }
   callback(RELAY_SERVERS_CACHE[connection.id]);
 }
@@ -478,7 +494,7 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
   const httpAgent = new http.Agent({
     keepAlive: true,
     keepAliveMsecs: 10,
-    timeout: 30000
+    timeout: config.timeout || 3000
   });
   httpAgent.maxSockets = 1;
   const driver = axios.create({
@@ -494,7 +510,7 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
 export async function proxyRequestToWSLDistribution(connection: Connection, config: ApiDriverConfig, request: Partial<AxiosRequestConfig>) {
   return await new Promise<AxiosResponse<any, any> | undefined>((resolve, reject) => {
     //
-    withWSLRelayServer(connection, async (server) => {
+    withWSLRelayServer(connection, { logLevel: connection.logLevel || "debug" }, async (server) => {
       // Make actual request to the temporary socket server created above
       let resolved = false;
       try {
@@ -927,7 +943,7 @@ export const Command: ICommand = {
       const httpAgent = new http.Agent({
         keepAlive: true,
         keepAliveMsecs: 10,
-        timeout: 30000
+        timeout: request?.timeout || 3000
       });
       httpAgent.maxSockets = 1;
       const driver = axios.create({

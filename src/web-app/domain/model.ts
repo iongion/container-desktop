@@ -126,7 +126,6 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           trace: "Startup entering setup"
         });
         await instance.setup();
-        await instance.notify("ready");
         try {
           await actions.setPhase(nextPhase);
           await actions.reset();
@@ -174,7 +173,8 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
         systemNotifier.transmit("startup.phase", {
           trace: "Setup ready"
         });
-        await instance.notify("ready");
+        const userSettings = await instance.getGlobalUserSettings();
+        await instance.notify("ready", userSettings);
         try {
           await actions.setPhase(nextPhase);
           await actions.reset();
