@@ -18,12 +18,14 @@ import {
   Program,
   RunnerStopperOptions,
   StartupStatus,
+  SubscriptionOptions,
   SystemInfo,
   SystemPruneReport,
   SystemResetReport
 } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { deepMerge } from "@/utils";
+import EventEmitter from "eventemitter3";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { findProgramPath, findProgramVersion } from "../../detector";
 
@@ -88,6 +90,7 @@ export interface ContainerEngineHostClient {
   getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings): Promise<SystemInfo>;
 
   setLogLevel(level: string): void;
+  getEvents(opts?: SubscriptionOptions): Promise<any[]>;
 }
 
 export abstract class AbstractContainerEngineHostClient implements ContainerEngineHostClient {
@@ -142,6 +145,9 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   constructor(osType: OperatingSystem) {
     this.osType = osType || CURRENT_OS_TYPE;
     this.apiStarted = false;
+  }
+  getEvents(opts?: SubscriptionOptions): Promise<any[]> {
+    throw new Error("Method not implemented.");
   }
 
   setLogLevel(level: string): void {
@@ -234,17 +240,19 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   }
 
   async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
+    this.logger.debug("Stopping API - begin");
     const settings = customSettings || (await this.getSettings());
     await Command.StopConnectionServices(this.id, settings);
     if (!this.runner) {
+      this.logger.warn("Stopping API - skip(no runner)");
       return true;
     }
     if (!this.apiStarted) {
       this.logger.debug("Stopping API - skip(not started here)");
       return false;
     }
-    this.logger.debug("Stopping API - begin");
     const stopped = await this.runner.stopApi(settings, opts);
+    this.logger.debug("Stopping API - complete", { stopped });
     if (stopped) {
       this.apiStarted = false;
     }
@@ -326,7 +334,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       }
     } catch (error: any) {
       result.details = "API is not reachable - start manually or connect";
-      this.logger.error(this.id, "API ping service failed", error.message, error.response ? { code: error.response.status, statusText: error.response.statusText } : "");
+      this.logger.error(this.id, "API ping service failed", error, driver);
     }
     this.logger.debug(this.id, "<< Checking if API is running", result);
     return result;
@@ -437,6 +445,26 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       this.logger.error(this.id, "System reset error", result);
     }
     throw new Error("Unable to reset system");
+  }
+
+  // System events
+
+  async getEventsStream(opts?: SubscriptionOptions) {
+    try {
+      this.logger.warn(this.id, "Subscribing to connection events - creating api client", opts);
+      const client = await this.getContainerApiClient();
+      const driver = client.getDriver();
+      this.logger.warn(this.id, "Subscribing to connection events - issuing request");
+      const response = await driver.get("/events", { timeout: 0, responseType: "stream" });
+      return response.data as EventEmitter;
+    } catch (error: any) {
+      this.logger.error(
+        this.id,
+        "Subscribing to connection events failed",
+        error.message,
+        error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+      );
+    }
   }
 
   // Controller behavior

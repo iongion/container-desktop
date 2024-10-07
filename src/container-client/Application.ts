@@ -30,7 +30,8 @@ import {
   Registry,
   RegistryPullOptions,
   RegistrySearchOptions,
-  StartupStatus
+  StartupStatus,
+  SubscriptionOptions
 } from "@/env/Types";
 import { createLogger, getLevel, setLevel } from "@/logger";
 import { deepMerge } from "@/utils";
@@ -297,6 +298,25 @@ export class Application {
     return await this.userConfiguration.getKey<EngineConnectorSettings>(id);
   }
 
+  // Shared
+  subscribeToEvents(opts?: SubscriptionOptions) {
+    const currentApi = this.getCurrentEngineConnectionApi();
+    const subscribe = async () => {
+      console.debug(">>>>>>>> EVENTS STREAM REQUESTED");
+      const stream = await currentApi.getEventsStream(opts);
+      if (stream) {
+        console.debug(">>>>>>>> EVENTS STREAM RECEIVED", stream);
+      } else {
+        console.error(">>>>>>>> EVENTS STREAM FAILED");
+      }
+    };
+    subscribe();
+    return {
+      subscribe,
+      unsubscribe: () => {}
+    };
+  }
+
   // Podman specific
   async getPodLogs(id?: any, tail?: any) {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
@@ -305,6 +325,10 @@ export class Application {
   async generateKube(entityId?: any) {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
     return await currentApi.generateKube(entityId);
+  }
+  async getEvents(opts?: SubscriptionOptions) {
+    const currentApi = this.getCurrentEngineConnectionApi<ContainerEngineHostClient>();
+    return await currentApi.getEvents(opts);
   }
   async getPodmanMachineInspect(name: string) {
     const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
@@ -947,6 +971,7 @@ export class Application {
   async stop(opts?: DisconnectOptions): Promise<boolean> {
     const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
     if (host) {
+      this.logger.debug(">> Bridge stop start", opts, host.id);
       const stopped = await host.stopApi();
       this.logger.debug(">> Bridge stop completed", opts, host.id, { stopped });
     } else {

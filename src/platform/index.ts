@@ -1,3 +1,3 @@
-export function getWindowsPipePath(scope: string) {
-  return `\\\\.\\pipe\\${scope}`;
+export function getWindowsPipePath(name: string) {
+  return `\\\\.\\pipe\\${name}`;
 }

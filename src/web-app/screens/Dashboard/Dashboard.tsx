@@ -1,6 +1,6 @@
 import { AnchorButton, Button, FormGroup, HTMLTable, Icon, InputGroup, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
@@ -10,6 +10,7 @@ import { usePoller } from "@/web-app/Hooks";
 import { Notification } from "@/web-app/Notification";
 import { AppScreen, AppScreenProps } from "@/web-app/Types";
 
+import { Application } from "@/container-client/Application";
 import "./Dashboard.css";
 
 export const ID = "dashboard";
@@ -60,6 +61,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   // Change hydration
   usePoller({ poller: containersFetchStats });
+
+  useEffect(() => {
+    const instance = Application.getInstance();
+    const subscription = instance.subscribeToEvents({
+      filters: {},
+      reports: [
+        {
+          type: "container",
+          action: "*"
+        }
+      ]
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <div className="AppScreen" data-screen={ID}>

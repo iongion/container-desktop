@@ -34,7 +34,11 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
     // Stop runner
     if (this.runner) {
       try {
-        await this.runner.stopApi();
+        this.logger.debug(this.id, "Stop api - stopping runner");
+        const stopped = await this.runner.stopApi();
+        if (!stopped) {
+          this.logger.error(this.id, "Stop api - failed to stop runner");
+        }
       } catch (e: any) {
         this.logger.error(this.id, "Stop api - failed to stop runner", e);
       }

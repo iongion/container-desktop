@@ -1,5 +1,3 @@
-import { AxiosRequestHeaders, AxiosResponse, AxiosResponseHeaders } from "axios";
-
 export interface SpawnedProcess {
   pid: any;
   code: any;
@@ -61,10 +59,11 @@ export interface SystemNotification {
 
 export interface ApiDriverConfig {
   baseURL: string;
-  headers: Partial<Record<string, string>> | AxiosResponseHeaders | AxiosRequestHeaders;
+  headers: Partial<Record<string, string>>;
   socketPath?: string | null;
   timeout?: number;
   scope?: string;
+  responseType?: any;
 }
 
 export interface FileSelection {
@@ -797,6 +796,13 @@ export interface ProgramOptions {
   wrapper?: Wrapper;
 }
 
+export interface SubscriptionOptions {
+  since?: string;
+  until?: string;
+  filters?: { [key: string]: string };
+  reports?: { type: string; action: string }[];
+}
+
 export interface GenerateKubeOptions {
   entityId: string;
 }
@@ -812,7 +818,7 @@ export interface FetchMachineOptions {
   Name: string; // name or id
 }
 
-export interface ContainerClientResponse<T = unknown, D = unknown> extends AxiosResponse<T, D> {
+export interface ContainerClientResponse<T = unknown, D = unknown> {
   ok: boolean;
   status: number;
   statusText: string;

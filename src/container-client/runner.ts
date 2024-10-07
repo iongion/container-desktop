@@ -91,10 +91,10 @@ export class Runner {
     return false;
   }
 
-  async stopApi(customSettings?: EngineConnectorSettings, stopper?: RunnerStopperOptions) {
+  async stopApi(customSettings?: EngineConnectorSettings, stopper?: RunnerStopperOptions): Promise<boolean> {
     if (!this.started) {
       this.logger.debug("Stopping API - skip (not started here)");
-      return;
+      return true;
     }
     this.logger.debug(">> Stopping API - begin");
     let flag = false;

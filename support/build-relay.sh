@@ -14,6 +14,9 @@ dir=$(
 SCRIPTPATH=$dir/$(basename -- "$SCRIPTPATH") || exit
 PROJECT_HOME="$(dirname "$(dirname "$SCRIPTPATH")" )"
 
+WINSOCAT_REPO="git@github.com:iongion/WinSocat.git"
+WINSOCAT_BRANCH="upgrade-all-deps-update-to-dotnet8"
+
 SOCAT_VERSION="1.8.0.1"
 SOCAT_TARBALL="socat-${SOCAT_VERSION}.tar.gz"
 SOCAT_PACKAGE="http://www.dest-unreach.org/socat/download/${SOCAT_TARBALL}"
@@ -21,7 +24,23 @@ SOCAT_PACKAGE="http://www.dest-unreach.org/socat/download/${SOCAT_TARBALL}"
 mkdir -p "$PROJECT_HOME/bin"
 mkdir -p "$PROJECT_HOME/temp"
 
-if [[ ! -f "$PROJECT_HOME/temp/${SOCAT_TARBALL}" ]]; then
+if [[ ! -d "$PROJECT_HOME/temp/WinSocat" ]]; then
+  git clone --branch "$WINSOCAT_BRANCH" "$WINSOCAT_REPO" "$PROJECT_HOME/temp/WinSocat"
+fi
+
+if [[ -f "$PROJECT_HOME/temp/WinSocat/winsocat/bin/Release/net8.0/win-x64/publish/winsocat.exe" ]]; then
+  echo "winsocat.exe already exists in $PROJECT_HOME/temp/WinSocat/winsocat/bin/Release/net8.0/win-x64/publish"
+else
+  cd "$PROJECT_HOME/temp/WinSocat"
+  git fetch origin
+  git checkout "$WINSOCAT_BRANCH"
+  git pull origin "$WINSOCAT_BRANCH"
+  dotnet restore
+  cd "winsocat"
+  dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:PublishReadyToRun=false --self-contained true -p:PublishTrimmed=true
+fi
+
+if [[ ! -f "$PROJECT_HOME/temp/${SOCAT_TARBALL}" ]] || [[ ! -d "$PROJECT_HOME/temp/socat-${SOCAT_VERSION}" ]]; then
   echo "Downloading socat ${SOCAT_VERSION} from $SOCAT_PACKAGE"
   curl -L "$SOCAT_PACKAGE" -o "$PROJECT_HOME/temp/${SOCAT_TARBALL}"
   tar -xzf "$PROJECT_HOME/temp/${SOCAT_TARBALL}" -C "$PROJECT_HOME/temp"
@@ -48,11 +67,9 @@ else
     --disable-creat \
     --disable-socketpair \
     --disable-termios \
-    --disable-ip4 \
     --disable-ip6 \
     --disable-rawip \
     --disable-interface \
-    --disable-tcp \
     --disable-udp \
     --disable-udplite \
     --disable-sctp \
@@ -82,13 +99,23 @@ else
   chmod +x socat
 fi
 
+# Deploying
+
+if [[ ! -f "$PROJECT_HOME/temp/WinSocat/winsocat/bin/Release/net8.0/win-x64/publish/winsocat.exe" ]]; then
+  echo "Relay binary not found"
+  exit 1
+fi
+
+
 if [[ ! -f "$PROJECT_HOME/temp/socat-${SOCAT_VERSION}/socat" ]]; then
   echo "Relay binary not found"
   exit 1
 fi
 
-echo "Copying relay to $PROJECT_HOME/bin"
+echo "Copying relay programs to $PROJECT_HOME/bin"
+cp "$PROJECT_HOME/temp/WinSocat/winsocat/bin/Release/net8.0/win-x64/publish/winsocat.exe" "$PROJECT_HOME/bin/container-desktop-wsl-relay.exe"
 cp "$PROJECT_HOME/temp/socat-${SOCAT_VERSION}/socat" "$PROJECT_HOME/bin/container-desktop-wsl-relay"
 
-echo "Computing relay sha256sum"
+echo "Computing relay programs checksums"
+sha256sum < "$PROJECT_HOME/bin/container-desktop-wsl-relay.exe" > "$PROJECT_HOME/bin/container-desktop-wsl-relay.exe.sha256"
 sha256sum < "$PROJECT_HOME/bin/container-desktop-wsl-relay" > "$PROJECT_HOME/bin/container-desktop-wsl-relay.sha256"

@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
-import adapter from "axios/unsafe/adapters/http.js";
+import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
 import { ChildProcess, ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio, spawnSync } from "node:child_process";
 import http from "node:http";
@@ -77,8 +77,10 @@ export class WSLRelayServer {
   protected server?: net.Server;
   protected isStarted: boolean = false;
   protected isListening: boolean = false;
-  protected relayProcess: ChildProcessWithoutNullStreams | undefined;
-  protected stopRelayRespawn = false;
+  protected relayProcesses: { [key: string]: ChildProcessWithoutNullStreams } = {};
+
+  protected socketPath?: string;
+  protected tcpAddress?: string;
 
   constructor() {
     this.isStarted = false;
@@ -88,13 +90,13 @@ export class WSLRelayServer {
   start = async (
     // opts
     {
-      pipeFullPath,
+      pipeName,
       distribution,
       unixSocketPath,
       relayProgram,
       maxRespawnRetries
     }: {
-      pipeFullPath: string;
+      pipeName: string;
       distribution: string;
       unixSocketPath: string;
       relayProgram: string;
@@ -102,67 +104,137 @@ export class WSLRelayServer {
     },
     // handlers
     onStart?: (server: WSLRelayServer, started: boolean) => void,
-    onStop?: (server: WSLRelayServer, code: number | null) => void,
+    onStop?: (server: WSLRelayServer, stopped: boolean) => void,
     onError?: (server: WSLRelayServer, error: any) => void
-  ): Promise<boolean> => {
+  ): Promise<{ started: boolean; socketPath?: string; tcpAddress?: string }> => {
+    let pipeFullPath = "";
+    let tcpAddress: string = "";
     if (this.isListening) {
-      // logger.debug("Named pipe server already started");
-      return true;
+      logger.debug("Named pipe server already started");
+      return Promise.resolve({ started: true, socketPath: this.socketPath, tcpAddress: this.tcpAddress });
     }
-    this.stopRelayRespawn = false;
+    let windowsRelayProgramPath = "";
     let wslLinuxRelayProgramPath = "";
     let args: string[] = [];
+    const relayMethod: string = "socat-tcp";
     try {
+      windowsRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", `${relayProgram}.exe`);
       const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", relayProgram);
       const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
       wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
       distribution = distribution || "Ubuntu"; // Default to Ubuntu
       relayProgram = relayProgram || "socat"; // Default to socat
       maxRespawnRetries = maxRespawnRetries || 5;
-      args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `UNIX-CONNECT:${unixSocketPath},retry,forever`, "STDIO"];
+      switch (relayMethod) {
+        case "socat":
+          {
+            pipeFullPath = `\\\\.\\pipe\\${pipeName}`;
+            args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `UNIX-CONNECT:${unixSocketPath}`, "STDIO"];
+            this.socketPath = pipeFullPath;
+            this.tcpAddress = undefined;
+          }
+          break;
+        case "socat-tcp":
+          {
+            const host = "localhost";
+            const port = await getFreeTCPPort();
+            tcpAddress = `http://${host}:${port}`;
+            args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `TCP-LISTEN:${port},reuseaddr,fork`, `UNIX-CONNECT:${unixSocketPath},retry,forever`];
+            this.socketPath = undefined;
+            this.tcpAddress = tcpAddress;
+          }
+          break;
+        case "winsocat":
+          {
+            pipeFullPath = `//./pipe/${pipeName}`;
+            args = [
+              //
+              `NPIPE-LISTEN:${pipeName}`,
+              `WSL:"${wslLinuxRelayProgramPath} STDIO UNIX-CONNECT:${unixSocketPath}",distribution=${distribution}`
+            ];
+            this.socketPath = pipeFullPath;
+            this.tcpAddress = undefined;
+          }
+          break;
+        default:
+          break;
+      }
     } catch (error: any) {
       logger.error("Error getting WSL relay program path", error.message);
       onError?.(this, error);
-      return false;
+      return Promise.resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
     }
-    return new Promise((resolve) => {
-      logger.debug(`Creating named pipe server listening on ${pipeFullPath}, relaying to Unix socket ${unixSocketPath} in WSL distribution ${distribution}`);
-      const spawnRelayProcess = () => {
-        if (this.stopRelayRespawn) {
-          logger.debug("Respawn for relay process is disabled - quitting");
-          return;
-        }
-        logger.debug(`Starting relay process: wsl.exe ${args.join(" ")}`);
-        const relayProcess = spawn("wsl.exe", args);
-        logger.debug(`Started relay process with PID ${relayProcess.pid}`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
+    let serverResolved = false;
+    const isRelayProcessUsable = (relayProcess?: ChildProcessWithoutNullStreams) => {
+      return relayProcess !== undefined && !relayProcess.killed && relayProcess.exitCode === null;
+    };
+    const spawnRelayProcess = (opts?: { onClose?: (relayProcess: ChildProcessWithoutNullStreams, code?: any) => void }): Promise<ChildProcessWithoutNullStreams> => {
+      let resolved = false;
+      return new Promise((resolve, reject) => {
+        const relayProgram = relayMethod === "winsocat" ? windowsRelayProgramPath : "wsl.exe";
+        logger.warn(`Starting relay process: ${relayProgram} ${args.join(" ")}`);
+        const relayProcess = spawn(relayProgram, args);
+        relayProcess.stderr.setEncoding("utf8");
+        relayProcess.stderr.on("data", (data) => {
+          logger.error(`Relay process error: ${data}`);
+        });
+        logger.debug(`Started relay process with PID: ${relayProcess.pid}`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
         relayProcess.on("close", (code) => {
-          logger.debug(`Relay process exited with code ${code}`);
-          this.isStarted = false;
-          onStop?.(this, code);
-          if (!this.stopRelayRespawn) {
-            logger.warn("Re-spawning relay process");
-            if (maxRespawnRetries > 0) {
-              maxRespawnRetries -= 1;
-              spawnRelayProcess();
-            } else {
-              logger.error("Max respawn retries reached");
-            }
+          logger.debug(`Relay process close with code ${code}`, relayProcess.exitCode);
+          opts?.onClose?.(relayProcess, code);
+          if (!resolved) {
+            resolved = true;
+            reject(new Error(`Relay process exited with code ${code}`));
           }
         });
         relayProcess.on("spawn", () => {
-          this.isStarted = isRelayProcessUsable();
-          onStart?.(this, this.isStarted);
-          resolve(this.isStarted);
+          this.isStarted = isRelayProcessUsable(relayProcess);
+          if (!resolved) {
+            resolved = true;
+            logger.debug("Relay process spawned", relayProcess.pid);
+            resolve(relayProcess);
+          }
         });
-        this.relayProcess = relayProcess;
-      };
-      const isRelayProcessUsable = () => {
-        return this.relayProcess !== undefined && !this.relayProcess.killed && this.relayProcess.exitCode === null;
-      };
+      });
+    };
+    if (relayMethod === "winsocat" || relayMethod === "socat-tcp") {
+      this.isListening = true;
+      const guid = v4();
+      try {
+        const relayProcess = await spawnRelayProcess({
+          onClose: (_, code) => {
+            this.isStarted = false;
+            this.isListening = false;
+            logger.debug(guid, "Relay process closed", code);
+            onStop?.(this, true);
+          }
+        });
+        this.relayProcesses[guid] = relayProcess;
+        this.isStarted = true;
+        this.isListening = true;
+        return await new Promise((resolve) => {
+          setTimeout(() => {
+            onStart?.(this, true);
+            resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+          }, 1500);
+        });
+      } catch (error: any) {
+        this.isStarted = false;
+        this.isListening = false;
+        logger.error(guid, "Error starting relay process", error);
+        onError?.(this, error);
+        return Promise.resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+      }
+    }
+    return new Promise((resolve, reject) => {
+      logger.debug(`Creating named pipe server listening on ${pipeFullPath}, relaying to Unix socket ${unixSocketPath} in WSL distribution ${distribution}`);
       // Handle client connections
-      const server = net.createServer((clientSocket) => {
+      const server = net.createServer(async (clientSocket) => {
         let writeable = true;
         const guid = v4();
+        logger.debug(guid, "Client connected to named pipe - allocating relay process");
+        const relayProcess = await spawnRelayProcess();
+        this.relayProcesses[guid] = relayProcess;
         const onRelayData = (chunk) => {
           if (!writeable) {
             logger.debug(guid, "Client is not writeable, discarding relay output data", chunk.toString());
@@ -177,23 +249,24 @@ export class WSLRelayServer {
             }
           });
         };
-        logger.debug(guid, "Client connected to named pipe.");
         // Handle the end of the client connection
         clientSocket.on("end", () => {
           writeable = false;
           logger.debug(guid, "Client disconnected");
-          this.relayProcess!.stdout.off("data", onRelayData);
+          relayProcess.stdout.off("data", onRelayData);
+          this.killProcess(relayProcess);
+          delete this.relayProcesses[guid];
         });
         clientSocket.on("close", () => {
           writeable = false;
           logger.debug(guid, "Client closed");
-          this.relayProcess!.stdout.off("data", onRelayData);
         });
         // Relay data from the client to the relay process (Unix socket)
         clientSocket.on("data", (chunk) => {
           logger.debug(guid, `Received data from client, sending to Unix socket: ${chunk.length} bytes`);
-          if (isRelayProcessUsable()) {
-            this.relayProcess!.stdin.write(chunk, (err) => {
+          if (isRelayProcessUsable(relayProcess)) {
+            relayProcess.stdin.write("");
+            relayProcess.stdin.write(chunk, (err) => {
               if (err) {
                 logger.error(guid, `Error writing to relay: ${err.message}`);
                 writeable = false;
@@ -207,8 +280,8 @@ export class WSLRelayServer {
           }
         });
         // Relay data from the relay process (Unix socket) to the client
-        if (isRelayProcessUsable()) {
-          this.relayProcess!.stdout.on("data", onRelayData);
+        if (isRelayProcessUsable(relayProcess)) {
+          relayProcess.stdout.on("data", onRelayData);
         } else {
           logger.error(guid, "Relay process is not running, closing client connection.");
           writeable = false;
@@ -221,43 +294,68 @@ export class WSLRelayServer {
         this.isStarted = false;
         this.isListening = false;
         onError?.(this, err);
+        if (!serverResolved) {
+          serverResolved = true;
+          resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+        }
       });
       server.on("close", () => {
         logger.debug("Named pipe server closed");
+        this.isStarted = false;
         this.isListening = false;
+        onStop?.(this, true);
+        if (!serverResolved) {
+          serverResolved = true;
+          resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+        }
       });
       // Start the named pipe server
       server.listen(pipeFullPath, async () => {
+        this.isStarted = true;
         this.isListening = true;
         logger.debug(`Named pipe server is listening on ${pipeFullPath}`);
-        spawnRelayProcess();
+        onStart?.(this, true);
+        if (!serverResolved) {
+          serverResolved = true;
+          resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+        }
       });
       this.server = server;
     });
   };
 
+  async killProcess(proc: ChildProcessWithoutNullStreams) {
+    try {
+      logger.debug("Killing relay process");
+      proc.kill();
+    } catch (error: any) {
+      logger.error("Error killing relay process", error);
+    }
+    try {
+      logger.debug("Unref relay process");
+      proc.unref();
+    } catch (error: any) {
+      logger.error("Unref relay process failed", error);
+    }
+  }
+
   async stop() {
-    this.stopRelayRespawn = true;
     this.isStarted = false;
-    if (this.relayProcess) {
-      try {
-        logger.debug("Stopping relay process");
-        this.relayProcess.on("close", () => {
-          logger.debug("Relay process stopped.");
-        });
-        this.relayProcess.kill();
-        try {
-          this.relayProcess.unref();
-        } catch (error: any) {
-          logger.error("Unref relay process failed", error);
-        }
-      } catch (error: any) {
-        logger.error("Error killing relay process", error);
+    Object.keys(this.relayProcesses).forEach((key) => {
+      const relayProcess = this.relayProcesses[key];
+      if (relayProcess) {
+        this.killProcess(relayProcess);
+        delete this.relayProcesses[key];
       }
+    });
+    if (!this.server) {
+      logger.debug("Named pipe server not started - stop skipped");
+      return Promise.resolve(true);
     }
     // Stop the server
     return new Promise((resolve) => {
       try {
+        logger.debug("Stopping named pipe server");
         this.server?.close(() => {
           logger.debug("Named pipe server stopped.");
           resolve(true);
@@ -304,12 +402,18 @@ export async function getFreeTCPPort() {
 }
 
 export function createNodeJSApiDriver(config: AxiosRequestConfig) {
-  const adapterConfig = {
+  const httpAgent = new http.Agent({
+    keepAlive: true,
+    keepAliveMsecs: 10,
+    timeout: 30000
+  });
+  httpAgent.maxSockets = 1;
+  const driver = axios.create({
     ...config,
-    adapter
-  };
-  // logger.debug(">> Create NodeJS API driver", adapterConfig);
-  const driver = axios.create(adapterConfig);
+    adapter: httpAdapter,
+    httpAgent: httpAgent,
+    httpsAgent: httpAgent
+  });
   // Configure http client logging
   return driver;
 }
@@ -322,10 +426,9 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
       let resolved = false;
       try {
         const pipeName = `container-desktop-wsl-relay-${connection.id}`;
-        const pipeFullPath = `\\\\.\\pipe\\${pipeName}`;
-        const started = await server.start(
+        const { started, socketPath, tcpAddress } = await server.start(
           {
-            pipeFullPath,
+            pipeName,
             distribution: connection.settings.controller?.scope || "Ubuntu",
             unixSocketPath: `${connection.settings.api.connection.relay}`.replace("unix://", ""),
             relayProgram: "container-desktop-wsl-relay",
@@ -350,13 +453,16 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
           try {
             request.headers = deepMerge({}, config.headers || {}, request.headers || {});
             request.timeout = request.timeout || config.timeout || 1000;
-            request.baseURL = request.baseURL || "http://d";
-            request.socketPath = pipeFullPath;
+            request.baseURL = tcpAddress || request.baseURL || "http://d";
+            request.socketPath = socketPath;
+            logger.debug(">> WSL Relay request", request, { socketPath, tcpAddress });
             const driver = await createNodeJSApiDriver(request);
             const response = await driver.request(request);
+            logger.debug("<< WSL Relay response", response);
             resolved = true;
             resolve(response);
           } catch (error: any) {
+            logger.error("<< WSL Relay response", error);
             if (!resolved) {
               resolved = true;
               reject(error);
@@ -751,7 +857,7 @@ export const Command: ICommand = {
       });
       httpAgent.maxSockets = 1;
       const driver = axios.create({
-        adapter,
+        adapter: httpAdapter,
         httpAgent: httpAgent,
         httpsAgent: httpAgent,
         baseURL: `http://${tcpAddress}`

@@ -170,7 +170,6 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
         systemNotifier.transmit("startup.phase", {
           trace: "Starting setup"
         });
-        instance.setLogLevel(state.userSettings?.logging?.level || "debug");
         await instance.setup();
         systemNotifier.transmit("startup.phase", {
           trace: "Setup ready"
