@@ -11,10 +11,10 @@ export function createApiDriver() {
   const driver = axios.create({
     adapter: httpAdapter,
     httpAgent,
-    baseURL: "http://d",
+    baseURL: "http://d"
     // socketPath: "\\\\.\\pipe\\podman-machine-default"
     // socketPath: "/run/user/1000/podman/podman.sock",
-    socketPath: "/var/run/docker.sock"
+    // socketPath: "/var/run/docker.sock"
   });
   return driver;
 }
@@ -25,4 +25,5 @@ let response = await driver.get("/_ping");
 console.debug("<< PING", response.data);
 console.debug(">> EVENTS STREAM");
 response = await driver.get("/events", { responseType: "stream" });
-console.debug("<< EVENTS STREAM", response);
+response.data.pipe(process.stdout);
+console.debug("<< EVENTS STREAM", response.data);

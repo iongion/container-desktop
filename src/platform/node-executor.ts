@@ -73,6 +73,18 @@ export async function exec_buffered(hostLauncher: string, commandLine: string[],
   });
 }
 
+async function getWSLDistributionUser(distribution: string) {
+  const wslUserOutput = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "whoami"]);
+  const wslUser = wslUserOutput.stdout.toString().trim();
+  return wslUser;
+}
+
+async function ensureRelayProgramExistsInWSLDistribution(wslPath: string, windowsPath: string, distribution: string) {
+  const baseDirectory = await Path.dirname(wslPath);
+  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "mkdir", "-p", baseDirectory]);
+  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "cp", "-u", windowsPath, wslPath]);
+}
+
 export class WSLRelayServer {
   protected server?: net.Server;
   protected isStarted: boolean = false;
@@ -115,31 +127,44 @@ export class WSLRelayServer {
     }
     let windowsRelayProgramPath = "";
     let wslLinuxRelayProgramPath = "";
+    let bundleLinuxRelayProgramPath = "";
     let args: string[] = [];
     const relayMethod: string = "socat-tcp";
     try {
       windowsRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", `${relayProgram}.exe`);
-      const wslUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", relayProgram);
-      const wslUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", wslUnixSocketRelayProgramPath]);
-      wslLinuxRelayProgramPath = wslUnixSocketRelayProgramCommand.stdout.trim();
+      const wslUser = await getWSLDistributionUser(distribution);
+      const safePathWSLUser = wslUser.replace(/ /g, "\\ ");
+      const bundleWinUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", relayProgram);
+      const bundleWSLUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", bundleWinUnixSocketRelayProgramPath]);
+      bundleLinuxRelayProgramPath = bundleWSLUnixSocketRelayProgramCommand.stdout.trim();
+      wslLinuxRelayProgramPath = `/home/${safePathWSLUser}/.local/bin/${relayProgram}`;
       distribution = distribution || "Ubuntu"; // Default to Ubuntu
       relayProgram = relayProgram || "socat"; // Default to socat
       maxRespawnRetries = maxRespawnRetries || 5;
       switch (relayMethod) {
         case "socat":
           {
+            await ensureRelayProgramExistsInWSLDistribution(wslLinuxRelayProgramPath, bundleLinuxRelayProgramPath, distribution);
             pipeFullPath = `\\\\.\\pipe\\${pipeName}`;
-            args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `UNIX-CONNECT:${unixSocketPath}`, "STDIO"];
+            args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `UNIX-CONNECT:${unixSocketPath},retry,forever`, "STDIO"];
             this.socketPath = pipeFullPath;
             this.tcpAddress = undefined;
           }
           break;
         case "socat-tcp":
           {
-            const host = "localhost";
+            await ensureRelayProgramExistsInWSLDistribution(wslLinuxRelayProgramPath, bundleLinuxRelayProgramPath, distribution);
+            const host = "127.0.0.1";
             const port = await getFreeTCPPort();
             tcpAddress = `http://${host}:${port}`;
-            args = ["--distribution", distribution, "--exec", wslLinuxRelayProgramPath, `TCP-LISTEN:${port},reuseaddr,fork`, `UNIX-CONNECT:${unixSocketPath},retry,forever`];
+            args = [
+              "--distribution",
+              distribution,
+              "--exec",
+              wslLinuxRelayProgramPath,
+              `TCP-LISTEN:${port},reuseaddr,fork,bind=127.0.0.1`,
+              `UNIX-CONNECT:${unixSocketPath},retry,forever`
+            ];
             this.socketPath = undefined;
             this.tcpAddress = tcpAddress;
           }
