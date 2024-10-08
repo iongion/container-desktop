@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.11 - 2024-10-08
+
+## Changed
+
+- WSL - Ensure `$HOME/.local/bin/container-desktop-wsl-relay` has executable permissions once deployed
+
 ## 5.2.10 - 2024-10-08
 
 ## Changed

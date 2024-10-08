@@ -84,6 +84,7 @@ async function ensureRelayProgramExistsInWSLDistribution(wslPath: string, window
   const baseDirectory = await Path.dirname(wslPath);
   await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "mkdir", "-p", baseDirectory]);
   await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "cp", "-u", windowsPath, wslPath]);
+  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "chmod", "+x", wslPath]);
 }
 
 export class WSLRelayServer {

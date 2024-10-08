@@ -60,35 +60,35 @@
   "tap": "homebrew/cask",
   "tap_git_head": "2e01e559350aa6f88679fcc94a5e74b90c432cc6",
   "token": "container-desktop",
-  "url": "https://github.com/iongion/container-desktop/releases/container-desktop-arm64-5.2.10.dmg",
+  "url": "https://github.com/iongion/container-desktop/releases/container-desktop-arm64-5.2.11.dmg",
   "url_specs": {
     "verified": "github.com/iongion/container-desktop/"
   },
   "variations": {
     "big_sur": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.10.dmg"
+      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.11.dmg"
     },
     "catalina": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.10.dmg"
+      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.11.dmg"
     },
     "monterey": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.10.dmg"
+      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.11.dmg"
     },
     "sequoia": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.10.dmg"
+      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.11.dmg"
     },
     "sonoma": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.10.dmg"
+      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.11.dmg"
     },
     "ventura": {
       "sha256": "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf",
-      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.10.dmg"
+      "url": "https://github.com/iongion/container-desktop/releases/container-desktop-x64-5.2.11.dmg"
     }
   },
-  "version": "5.2.10"
+  "version": "5.2.11"
 }
