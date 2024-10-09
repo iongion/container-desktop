@@ -1,5 +1,6 @@
 :root {
   --app-data-table-items-padding: 10px;
+  --monospace-font: Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono", "Fira Code", monospace, "Powerline Extra Symbols";
 }
 
 body.bp5-dark .bp5-menu {

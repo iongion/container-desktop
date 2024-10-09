@@ -1,15 +1,26 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
-import { ChildProcess, ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio, spawnSync } from "node:child_process";
+import { ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio, spawnSync } from "node:child_process";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 
 import { getApiConfig } from "@/container-client/Api.clients";
 import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/services";
-import { ApiDriverConfig, CommandExecutionResult, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem, Wrapper } from "@/env/Types";
+import {
+  ApiDriverConfig,
+  CommandExecutionResult,
+  Connection,
+  ContainerEngine,
+  ContainerEngineHost,
+  EngineConnectorSettings,
+  OperatingSystem,
+  ServiceOpts,
+  Wrapper
+} from "@/env/Types";
 import { createLogger } from "@/logger";
+import { getWindowsPipePath } from "@/platform";
 import { axiosConfigToCURL, deepMerge } from "@/utils";
 import { v4 } from "uuid";
 import { Platform } from "./node";
@@ -17,74 +28,157 @@ import { Platform } from "./node";
 const logger = createLogger("shared");
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
-const DEFAULT_RETRIES_COUNT = 15;
+const DEFAULT_RETRIES_COUNT = 10;
+
+const PROGRAM_SOCAT_RELAY = "container-desktop-wsl-relay-socat";
+const PROGRAM_SSHD_RELAY = "container-desktop-ssh-relay-sshd";
+const PROGRAM_SSH_RELAY = "container-desktop-ssh-relay.exe";
 
 // Servers
-export async function exec_buffered(hostLauncher: string, commandLine: string[], onChunk?: (buffer: Buffer) => void) {
-  return await new Promise<{ stdout: Buffer; stderr: Buffer; exitCode: number | null; command: string }>((resolve, reject) => {
-    const stdoutChunks: Buffer[] = [];
-    const stderrChunks: Buffer[] = [];
-    let resolved = false;
-    logger.debug("Spawning WSL process", [hostLauncher, ...commandLine].join(" "));
-    const child = spawn(hostLauncher, commandLine, {
-      shell: false,
-      windowsHide: true,
-      stdio: ["inherit", "pipe", "pipe"]
-    });
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", function (data) {
-      const chunk = Buffer.from(data);
-      stdoutChunks.push(chunk);
-      if (onChunk) {
-        onChunk(chunk);
-      }
-    });
-    child.stderr.on("data", function (data) {
-      stderrChunks.push(Buffer.from(data));
-    });
-    child.on("exit", function (code) {
-      if (!resolved) {
-        resolved = true;
-        logger.debug("Child process exited", code);
-        try {
-          if (child.stdin) {
-            logger.debug("Ending child process stdin");
-            (child.stdin as any).end();
-          }
-        } catch (error) {
-          logger.error("child process stdin end error", error);
-        }
-        resolve({
-          //
-          stdout: Buffer.concat(stdoutChunks),
-          stderr: Buffer.concat(stderrChunks),
-          exitCode: child.exitCode,
-          command: [hostLauncher, ...commandLine].join(" ")
-        });
-      }
-    });
-    child.on("error", function (error) {
-      logger.error("child process error", error);
-      if (!resolved) {
-        resolved = true;
-        reject(error);
-      }
-    });
-  });
+async function getWSLDistributionEnvironmentVariable(distribution: string, variable: string) {
+  const wslCommandOutput = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "printenv", variable]);
+  const wslUser = wslCommandOutput.stdout.toString().trim();
+  return wslUser;
 }
 
-async function getWSLDistributionUser(distribution: string) {
+async function getWSLDistributionUsername(distribution: string) {
   const wslUserOutput = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "whoami"]);
   const wslUser = wslUserOutput.stdout.toString().trim();
   return wslUser;
 }
 
-async function ensureRelayProgramExistsInWSLDistribution(wslPath: string, windowsPath: string, distribution: string) {
-  const baseDirectory = await Path.dirname(wslPath);
+async function getWSLDistributionApplicationConfigDir(distribution: string) {
+  const appName = import.meta.env.PROJECT_NAME || "container-desktop";
+  const XDG_CONFIG_HOME = await getWSLDistributionEnvironmentVariable(distribution, "XDG_CONFIG_HOME");
+  if (XDG_CONFIG_HOME) {
+    return `${XDG_CONFIG_HOME}/${appName}`;
+  }
+  const home = await getWSLDistributionEnvironmentVariable(distribution, "HOME");
+  return `${home}/.config/${appName}`;
+}
+
+async function getWSLDistributionApplicationDataDir(distribution: string) {
+  const appName = import.meta.env.PROJECT_NAME || "container-desktop";
+  const XDG_DATA_HOME = await getWSLDistributionEnvironmentVariable(distribution, "XDG_DATA_HOME");
+  if (XDG_DATA_HOME) {
+    return `${XDG_DATA_HOME}/${appName}`;
+  }
+  const home = await getWSLDistributionEnvironmentVariable(distribution, "HOME");
+  return `${home}/.local/share/${appName}`;
+}
+
+async function convertWindowsPathToWSLPath(distribution: string, windowsPath: string) {
+  const command = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", windowsPath]);
+  const wslPath = command.stdout.trim();
+  return wslPath;
+}
+
+async function ensureRelayProgramExistsInWSLDistribution(distribution: string, dstWSLPath: string, srcWinPath: string) {
+  const baseDirectory = await Path.dirname(dstWSLPath);
+  const srcWSLPath = await convertWindowsPathToWSLPath(distribution, srcWinPath);
   await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "mkdir", "-p", baseDirectory]);
-  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "cp", "-u", windowsPath, wslPath]);
-  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "chmod", "+x", wslPath]);
+  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "cp", "-u", srcWSLPath, dstWSLPath]);
+  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "chmod", "+x", dstWSLPath]);
+  return dstWSLPath;
+}
+
+export async function waitForApi({
+  ping,
+  pipeFullPath,
+  tcpAddress,
+  timeout,
+  onStart,
+  abort
+}: {
+  ping: boolean | undefined;
+  pipeFullPath: string;
+  tcpAddress: string;
+  timeout: number;
+  abort: AbortController;
+  onStart?: () => void;
+}): Promise<{ started: boolean; socketPath: string; tcpAddress: string }> {
+  let retries = DEFAULT_RETRIES_COUNT;
+  let isChecking = false;
+  const opts = { socketPath: pipeFullPath };
+  const driver = createNodeJSApiDriver(opts);
+  return await new Promise((resolve) => {
+    const iid = setInterval(() => {
+      if (isChecking) {
+        return;
+      }
+      isChecking = true;
+      retries -= 1;
+      if (retries <= 0) {
+        logger.warn("API check retries exhausted", { retries });
+        clearInterval(iid);
+        isChecking = false;
+        resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+      } else {
+        if (ping && !abort.signal.aborted) {
+          driver
+            .get("/_ping", { signal: abort.signal })
+            .then((response) => {
+              if (response.data === "OK") {
+                clearInterval(iid);
+                isChecking = false;
+                onStart?.();
+                resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+              } else {
+                isChecking = false;
+              }
+            })
+            .catch((error) => {
+              isChecking = false;
+              logger.error("Ping response failed", { retries }, error);
+            });
+        } else {
+          clearInterval(iid);
+          isChecking = false;
+          onStart?.();
+          resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+        }
+      }
+    }, timeout);
+  });
+}
+
+export function killProcess(proc: ChildProcessWithoutNullStreams, signal?: NodeJS.Signals | number) {
+  if (proc.stdin) {
+    try {
+      proc.stdin.end();
+      proc.stdin.destroy();
+    } catch (error: any) {
+      logger.error(proc.pid, "Error closing stdin", error);
+    }
+  }
+  if (proc.stdout) {
+    try {
+      proc.stdout.removeAllListeners();
+      proc.stdout.destroy();
+    } catch (error: any) {
+      logger.error(proc.pid, "Error closing stdout", error);
+    }
+  }
+  if (proc.stderr) {
+    try {
+      proc.stderr.removeAllListeners();
+      proc.stderr.destroy();
+    } catch (error: any) {
+      logger.error(proc.pid, "Error closing stderr", error);
+    }
+  }
+  try {
+    logger.debug(proc.pid, "Killing process");
+    proc.kill(signal);
+  } catch (error: any) {
+    logger.error(proc.pid, "Error killing process", error);
+  }
+  try {
+    logger.debug(proc.pid, "Unref process");
+    proc.unref();
+  } catch (error: any) {
+    logger.error(proc.pid, "Unref process failed", error);
+  }
 }
 
 export class WSLRelayServer {
@@ -106,18 +200,18 @@ export class WSLRelayServer {
   start = async (
     // opts
     {
-      pipeName,
+      pipePath,
       distribution,
       unixSocketPath,
-      relayProgram,
       maxRespawnRetries,
+      abort,
       ping
     }: {
-      pipeName: string;
+      pipePath: string;
       distribution: string;
       unixSocketPath: string;
-      relayProgram: string;
       maxRespawnRetries: number;
+      abort: AbortController;
       ping?: boolean;
     },
     // handlers
@@ -131,33 +225,45 @@ export class WSLRelayServer {
       logger.debug("Named pipe server already started");
       return Promise.resolve({ started: true, socketPath: this.socketPath, tcpAddress: this.tcpAddress });
     }
-    let windowsRelayProgramPath = "";
-    let wslLinuxRelayProgramPath = "";
-    let bundleLinuxRelayProgramPath = "";
+    distribution = distribution || "Ubuntu"; // Default to Ubuntu
+    let wslAppHome = "";
+    let bundleWindowsSocatRelayProgramPath = "";
+    let bundleWindowsSSHRelayProgramPath = "";
+    let bundleWindowsSSHServerRelayProgramPath = "";
+    // Runtime wsl program paths
+    let wslSocatRelayProgramPath = "";
+    let wslSSHServerRelayProgramPath = "";
     let args: string[] = [];
-    const relayMethod: string = "socat";
+    const relayMethod: string = import.meta.env.FEATURE_WSL_RELAY_METHOD;
     try {
-      windowsRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", `${relayProgram}.exe`);
-      const wslUser = await getWSLDistributionUser(distribution);
-      const safePathWSLUser = wslUser.replace(/ /g, "\\ ");
-      const bundleWinUnixSocketRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", relayProgram);
-      const bundleWSLUnixSocketRelayProgramCommand = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "wslpath", bundleWinUnixSocketRelayProgramPath]);
-      bundleLinuxRelayProgramPath = bundleWSLUnixSocketRelayProgramCommand.stdout.trim();
-      wslLinuxRelayProgramPath = `/home/${safePathWSLUser}/.local/bin/${relayProgram}`;
-      distribution = distribution || "Ubuntu"; // Default to Ubuntu
-      relayProgram = relayProgram || "socat"; // Default to socat
+      wslAppHome = await getWSLDistributionApplicationDataDir(distribution);
+      // Bundle Windows paths
+      bundleWindowsSSHRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSH_RELAY); // Windows binary
+      bundleWindowsSocatRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SOCAT_RELAY); // Linux binary
+      bundleWindowsSSHServerRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSHD_RELAY); // Linux binary
+      // Runtime WSL paths
+      wslSocatRelayProgramPath = `${wslAppHome}/bin/${PROGRAM_SOCAT_RELAY}`;
+      wslSSHServerRelayProgramPath = `${wslAppHome}/bin/${PROGRAM_SSHD_RELAY}`;
       maxRespawnRetries = maxRespawnRetries || 5;
       switch (relayMethod) {
+        case "sshd":
+          {
+            await ensureRelayProgramExistsInWSLDistribution(distribution, wslSSHServerRelayProgramPath, bundleWindowsSSHServerRelayProgramPath);
+            pipeFullPath = pipePath;
+            this.socketPath = pipeFullPath;
+            this.tcpAddress = undefined;
+          }
+          break;
         case "socat":
           {
-            await ensureRelayProgramExistsInWSLDistribution(wslLinuxRelayProgramPath, bundleLinuxRelayProgramPath, distribution);
-            pipeFullPath = `\\\\.\\pipe\\${pipeName}`;
+            await ensureRelayProgramExistsInWSLDistribution(distribution, wslSocatRelayProgramPath, bundleWindowsSocatRelayProgramPath);
+            pipeFullPath = pipePath;
             args = [
               // relay
               "--distribution",
               distribution,
               "--exec",
-              wslLinuxRelayProgramPath,
+              wslSocatRelayProgramPath,
               "-v",
               "-d",
               "-d",
@@ -171,7 +277,7 @@ export class WSLRelayServer {
           break;
         case "socat-tcp":
           {
-            await ensureRelayProgramExistsInWSLDistribution(wslLinuxRelayProgramPath, bundleLinuxRelayProgramPath, distribution);
+            await ensureRelayProgramExistsInWSLDistribution(distribution, wslSocatRelayProgramPath, bundleWindowsSocatRelayProgramPath);
             const host = "127.0.0.1";
             const port = await getFreeTCPPort();
             tcpAddress = `http://${host}:${port}`;
@@ -180,7 +286,7 @@ export class WSLRelayServer {
               "--distribution",
               distribution,
               "--exec",
-              wslLinuxRelayProgramPath,
+              wslSocatRelayProgramPath,
               "-v",
               "-d",
               "-d",
@@ -190,18 +296,6 @@ export class WSLRelayServer {
             ];
             this.socketPath = undefined;
             this.tcpAddress = tcpAddress;
-          }
-          break;
-        case "winsocat":
-          {
-            pipeFullPath = `//./pipe/${pipeName}`;
-            args = [
-              //
-              `NPIPE-LISTEN:${pipeName}`,
-              `WSL:"${wslLinuxRelayProgramPath} STDIO UNIX-CONNECT:${unixSocketPath}",distribution=${distribution}`
-            ];
-            this.socketPath = pipeFullPath;
-            this.tcpAddress = undefined;
           }
           break;
         default:
@@ -216,21 +310,26 @@ export class WSLRelayServer {
     const isRelayProcessUsable = (relayProcess?: ChildProcessWithoutNullStreams) => {
       return relayProcess !== undefined && !relayProcess.killed && relayProcess.exitCode === null;
     };
-    const spawnRelayProcess = (opts?: { onClose?: (relayProcess: ChildProcessWithoutNullStreams, code?: any) => void }): Promise<ChildProcessWithoutNullStreams> => {
+    const spawnRelayProcess = (
+      relayProgram = "wsl.exe",
+      args: string[],
+      opts?: { onClose?: (relayProcess: ChildProcessWithoutNullStreams, code?: any) => void }
+    ): Promise<ChildProcessWithoutNullStreams> => {
       let resolved = false;
       return new Promise((resolve, reject) => {
-        const relayProgram = relayMethod === "winsocat" ? windowsRelayProgramPath : "wsl.exe";
-        logger.warn(process.pid, `Starting relay process: ${relayProgram} ${args.join(" ")}`, this.logLevel);
+        logger.warn(`[${relayProgram}] Starting relay process - ${relayProgram} ${args.join(" ")}`, this.logLevel);
         const relayProcess = spawn(relayProgram, args);
-        if (this.logLevel === "trace") {
+        if (this.logLevel === "debug") {
           relayProcess.stderr.setEncoding("utf8");
           relayProcess.stderr.on("data", (data) => {
-            logger.warn(`Relay process stderr: ${data}`);
+            logger.warn(relayProcess.pid, `[${relayProgram}] Relay process stderr: ${data}`);
           });
         }
-        logger.debug(`Started relay process with PID: ${relayProcess.pid}`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
+        logger.warn(relayProcess.pid, `[${relayProgram}] Started relay process`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
         relayProcess.on("close", (code) => {
-          logger.debug(`Relay process close with code ${code}`, relayProcess.exitCode);
+          logger.warn(relayProcess.pid, `[${relayProgram}] Relay process close with code ${code}`, relayProcess.exitCode);
+          killProcess(relayProcess);
+          abort.abort();
           opts?.onClose?.(relayProcess, code);
           if (!resolved) {
             resolved = true;
@@ -241,17 +340,86 @@ export class WSLRelayServer {
           this.isStarted = isRelayProcessUsable(relayProcess);
           if (!resolved) {
             resolved = true;
-            logger.warn("Relay process spawned", relayProcess.pid);
+            logger.warn(relayProcess.pid, `[${relayProgram}] Relay process spawned`);
             resolve(relayProcess);
           }
         });
       });
     };
-    if (relayMethod === "winsocat" || relayMethod === "socat-tcp") {
+    // Start the SSH relay process
+    if (relayMethod === "sshd") {
+      this.isListening = true;
+      const relay_guid = v4();
+      const windowsIdentityPath = await Path.join(await Platform.getUserDataPath(), "id_rsa");
+      let connectionString: string = "";
+      let sshServerAddress = "";
+      try {
+        const wslUser = await getWSLDistributionUsername(distribution);
+        const wslRelayHost = "localhost";
+        const wslRelayPort = await getFreeTCPPort();
+        sshServerAddress = `${wslRelayHost}:${wslRelayPort}`;
+        connectionString = `ssh://${wslUser}@${sshServerAddress}${unixSocketPath}`;
+        // Spawn a windows named pipe to ssh tunnel relay process
+        const relayNamedPipeSSHTunnelServerProcess = await spawnRelayProcess(
+          bundleWindowsSSHRelayProgramPath,
+          [
+            // SSHD arguments
+            "--named-pipe",
+            `npipe://${pipePath.replaceAll("\\", "/")}`,
+            "--ssh-connection",
+            connectionString,
+            "--ssh-timeout",
+            "15",
+            "--identity-path",
+            windowsIdentityPath,
+            // Relay arguments
+            "--distribution",
+            distribution,
+            "--relay-program-path",
+            wslSSHServerRelayProgramPath,
+            "--watch-process-termination",
+            "--generate-key-pair",
+            "--host",
+            wslRelayHost,
+            "--port",
+            `${wslRelayPort}`
+          ],
+          {
+            onClose: (_, code) => {
+              this.isStarted = false;
+              this.isListening = false;
+              logger.debug(relay_guid, "Relay process closed", code);
+              onStop?.(this, true);
+            }
+          }
+        );
+        this.relayProcesses[relay_guid] = relayNamedPipeSSHTunnelServerProcess;
+      } catch (error: any) {
+        this.isStarted = false;
+        this.isListening = false;
+        logger.error(relay_guid, "Error starting relay process", error);
+        onError?.(this, error);
+        return Promise.resolve({ started: false, socketPath: pipeFullPath, tcpAddress: "" });
+      }
+      this.isStarted = true;
+      this.isListening = true;
+      return await waitForApi({
+        ping,
+        pipeFullPath,
+        tcpAddress,
+        onStart: () => {
+          onStart?.(this, true);
+        },
+        timeout: 3000,
+        abort
+      });
+    }
+    // Start the TCP relay process
+    if (relayMethod === "socat-tcp") {
       this.isListening = true;
       const guid = v4();
       try {
-        const relayProcess = await spawnRelayProcess({
+        const relayProcess = await spawnRelayProcess("wsl.exe", args, {
           onClose: (_, code) => {
             this.isStarted = false;
             this.isListening = false;
@@ -262,47 +430,15 @@ export class WSLRelayServer {
         this.relayProcesses[guid] = relayProcess;
         this.isStarted = true;
         this.isListening = true;
-        let retries = DEFAULT_RETRIES_COUNT;
-        let isChecking = false;
-        const opts = tcpAddress ? { baseURL: tcpAddress.startsWith("http") ? tcpAddress : `http://${tcpAddress}` } : { socketPath: pipeFullPath };
-        const driver = createNodeJSApiDriver(opts);
-        return await new Promise((resolve) => {
-          const iid = setInterval(() => {
-            if (isChecking) {
-              return;
-            }
-            isChecking = true;
-            retries -= 1;
-            if (retries <= 0) {
-              clearInterval(iid);
-              isChecking = false;
-              resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
-            } else {
-              if (ping) {
-                driver
-                  .get("/_ping")
-                  .then((response) => {
-                    if (response.data === "OK") {
-                      clearInterval(iid);
-                      isChecking = false;
-                      onStart?.(this, true);
-                      resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
-                    } else {
-                      isChecking = false;
-                    }
-                  })
-                  .catch((error) => {
-                    isChecking = false;
-                    logger.warn("Ping response failed", { retries }, error);
-                  });
-              } else {
-                clearInterval(iid);
-                isChecking = false;
-                onStart?.(this, true);
-                resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
-              }
-            }
-          }, 250);
+        return await waitForApi({
+          ping,
+          pipeFullPath,
+          tcpAddress,
+          timeout: 250,
+          onStart: () => {
+            onStart?.(this, true);
+          },
+          abort
         });
       } catch (error: any) {
         this.isStarted = false;
@@ -319,14 +455,14 @@ export class WSLRelayServer {
         let writeable = true;
         const guid = v4();
         logger.debug(guid, "Client connected to named pipe - allocating relay process");
-        const relayProcess = await spawnRelayProcess();
+        const relayProcess = await spawnRelayProcess("wsl.exe", args);
         this.relayProcesses[guid] = relayProcess;
         const onRelayData = (chunk) => {
           if (!writeable) {
             logger.debug(guid, "Client is not writeable, discarding relay output data", chunk.toString());
             return;
           }
-          if (this.logLevel === "trace") {
+          if (this.logLevel === "debug") {
             logger.debug(guid, `Received data from Unix socket, sending to client: ${chunk.length} bytes`);
           }
           clientSocket.write(chunk, (err) => {
@@ -342,7 +478,7 @@ export class WSLRelayServer {
           writeable = false;
           logger.debug(guid, "Client disconnected");
           relayProcess.stdout.off("data", onRelayData);
-          this.killProcess(relayProcess);
+          killProcess(relayProcess);
           delete this.relayProcesses[guid];
         });
         clientSocket.on("close", () => {
@@ -414,27 +550,12 @@ export class WSLRelayServer {
     });
   };
 
-  async killProcess(proc: ChildProcessWithoutNullStreams) {
-    try {
-      logger.debug(proc.pid, "Killing relay process");
-      proc.kill();
-    } catch (error: any) {
-      logger.error(proc.pid, "Error killing relay process", error);
-    }
-    try {
-      logger.debug(proc.pid, "Unref relay process");
-      proc.unref();
-    } catch (error: any) {
-      logger.error(proc.pid, "Unref relay process failed", error);
-    }
-  }
-
   async stop() {
     this.isStarted = false;
     Object.keys(this.relayProcesses).forEach((key) => {
       const relayProcess = this.relayProcesses[key];
       if (relayProcess) {
-        this.killProcess(relayProcess);
+        killProcess(relayProcess);
         delete this.relayProcesses[key];
       }
     });
@@ -469,13 +590,6 @@ export interface WrapperOpts extends SpawnOptionsWithoutStdio {
   wrapper: Wrapper;
 }
 
-export interface ServiceOpts {
-  checkStatus: (process: any) => Promise<boolean>;
-  retry?: { count: number; wait: number };
-  cwd?: string;
-  env?: any;
-}
-
 // locals
 export async function getFreeTCPPort() {
   return new Promise<number>((resolve, reject) => {
@@ -498,13 +612,14 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
     timeout: config.timeout || 3000
   });
   httpAgent.maxSockets = 1;
-  const driver = axios.create({
+  const configuration = {
     ...config,
     adapter: httpAdapter,
     httpAgent: httpAgent,
     httpsAgent: httpAgent
-  });
-  // Configure http client logging
+  };
+  const driver = axios.create(configuration);
+  logger.debug("Created NodeJS API driver", configuration);
   return driver;
 }
 
@@ -515,21 +630,23 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
       // Make actual request to the temporary socket server created above
       let resolved = false;
       try {
-        const pipeName = `container-desktop-wsl-relay-${connection.id}`;
+        const abort = new AbortController();
+        const pipePath = getWindowsPipePath(connection.id);
         const { started, socketPath, tcpAddress } = await server.start(
           {
-            pipeName,
+            pipePath,
             distribution: connection.settings.controller?.scope || "Ubuntu",
             unixSocketPath: `${connection.settings.api.connection.relay}`.replace("unix://", ""),
-            relayProgram: "container-desktop-wsl-relay",
             maxRespawnRetries: 5,
-            ping: connection.engine === ContainerEngine.DOCKER
+            ping: connection.engine === ContainerEngine.DOCKER,
+            abort
           },
           (_, started) => {
             logger.debug("WSL Relay server started", started);
           },
           (_, code) => {
             logger.debug("WSL Relay server stopped", code);
+            abort.abort();
           },
           // On error
           (_, error) => {
@@ -559,6 +676,11 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
               reject(error);
             }
           }
+        } else {
+          if (!resolved) {
+            resolved = true;
+            reject(new Error("WSL Relay server failed to start"));
+          }
         }
       } catch (error: any) {
         logger.error("WSL Relay communication error", error);
@@ -571,6 +693,16 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
   });
 }
 
+export async function getSSHRelayLocalAddress(connection: Connection, socketPath?: string | null) {
+  if (os.type() === OperatingSystem.Windows) {
+    const namedPipe = getWindowsPipePath(connection.id);
+    return namedPipe;
+  }
+  const userData = await Platform.getUserDataPath();
+  const localAddress = await Path.join(userData, `container-desktop-ssh-relay-${connection.id}`);
+  return localAddress;
+}
+
 export async function proxyRequestToSSHConnection(
   connection: Connection,
   config: ApiDriverConfig,
@@ -578,19 +710,25 @@ export async function proxyRequestToSSHConnection(
   context?: any
 ): Promise<AxiosResponse<any, any>> {
   const remoteAddress = connection.settings.api.connection.relay ?? "";
+  const localAddress = connection.settings.api.connection.uri ?? "";
   if (SSH_TUNNELS_CACHE[remoteAddress]) {
     logger.debug("Reusing SSH tunnel", remoteAddress, SSH_TUNNELS_CACHE[remoteAddress]);
   } else {
     logger.debug("Creating SSH tunnel", remoteAddress);
     const sshConnection: ISSHClient = await context.getSSHConnection();
-    const port = await getFreeTCPPort();
-    const localAddress = `localhost:${port}`;
     if (!remoteAddress) {
       throw new Error("Remote address must be set");
     }
-    const em = await sshConnection.startTunnel({
+    let em: EventEmitter;
+    // eslint-disable-next-line prefer-const
+    em = await sshConnection.startTunnel({
       localAddress,
       remoteAddress,
+      onStatusCheck: (status) => {
+        if (em) {
+          em.emit("status.check", status);
+        }
+      },
       onStopTunnel: () => {
         delete SSH_TUNNELS_CACHE[remoteAddress];
       }
@@ -600,12 +738,13 @@ export async function proxyRequestToSSHConnection(
     }
   }
   if (SSH_TUNNELS_CACHE[remoteAddress]) {
-    const localAddress = SSH_TUNNELS_CACHE[remoteAddress];
+    logger.debug("Proxying request to SSH tunnel", remoteAddress, "=>", localAddress, { connection, config, request });
     request.headers = deepMerge({}, config.headers || {}, request.headers || {});
     request.timeout = request.timeout || config.timeout || 5000;
-    request.baseURL = request.baseURL || config.baseURL;
-    request.socketPath = request.socketPath || config.socketPath;
-    const response = await Command.proxyTCPRequest(request, localAddress);
+    request.baseURL = request.baseURL || config.baseURL || "http://d";
+    request.socketPath = localAddress;
+    const driver = createNodeJSApiDriver(request);
+    const response = await driver.request(request);
     return response;
   }
   throw new Error("Tunneling failed - unable to start tunnel");
@@ -722,7 +861,40 @@ export async function exec_launcher(launcher, launcherArgs, opts?: WrapperOpts) 
   return await exec_launcher_async(launcher, launcherArgs, opts);
 }
 
-export async function exec_service(programPath: string, programArgs: string[], opts: ServiceOpts) {
+export function wrap_process(proc: any, child: any) {
+  return {
+    process: proc,
+    child: {
+      code: proc.code,
+      success: proc.success,
+      pid: proc.pid,
+      kill: async (signal?: NodeJS.Signals | number) => {
+        logger.debug("(OS) Killing child process started", proc.pid, { signal });
+        if (child) {
+          killProcess(child, signal);
+        } else {
+          logger.warn("(OS) Killing child process skipped - child not started here", proc.pid);
+        }
+        logger.debug("(OS) Killing child process completed", proc.pid, { child });
+      },
+      unref: () => {
+        logger.debug("(OS) Unref child process started", proc.pid);
+        try {
+          if (child) {
+            child.unref();
+          } else {
+            logger.warn("(OS) Unref child process skipped - child not started here", proc.pid);
+          }
+        } catch (error: any) {
+          logger.error("(OS) Unref child process failed", error);
+        }
+        logger.debug("(OS) Unref child process completed", proc.pid);
+      }
+    }
+  };
+}
+
+export async function exec_service(programPath: string, programArgs: string[], opts?: Partial<ServiceOpts>) {
   let isManagedExit = false;
   let child: ChildProcessWithoutNullStreams | undefined;
   const proc: CommandExecutionResult = {
@@ -732,16 +904,16 @@ export async function exec_service(programPath: string, programArgs: string[], o
     stdout: "",
     stderr: ""
   };
-  const { checkStatus, retry } = opts;
   const em = new EventEmitter();
   // Check
-  const running = await checkStatus({ pid: null, started: false });
+  const running = opts?.checkStatus ? await opts.checkStatus({ pid: null, started: false }) : false;
   if (running) {
     logger.debug("Already running - reusing");
     proc.success = true;
-    setImmediate(() => {
-      em.emit("ready", { process: proc, child });
-    });
+    if (opts?.onSpawn) {
+      opts?.onSpawn(wrap_process(proc, child));
+    }
+    em.emit("ready", wrap_process(proc, child));
   } else {
     // Handle
     const onProcessError = (child, error) => {
@@ -765,11 +937,11 @@ export async function exec_service(programPath: string, programArgs: string[], o
       }
       em.emit("data", { from, data });
     };
-    const waitForProcess = (child: ChildProcess) => {
+    const waitForProcess = (child: ChildProcessWithoutNullStreams) => {
       let pending = false;
-      const maxRetries = retry?.count || DEFAULT_RETRIES_COUNT;
+      const maxRetries = opts?.retry?.count || DEFAULT_RETRIES_COUNT;
       let retries = maxRetries;
-      const wait = retry?.wait || 2000;
+      const wait = opts?.retry?.wait || 2000;
       const IID = setInterval(async () => {
         if (pending) {
           logger.debug("Waiting for result of last retry - skipping new retry");
@@ -785,7 +957,12 @@ export async function exec_service(programPath: string, programArgs: string[], o
           pending = true;
           let running = false;
           try {
-            running = await checkStatus({ pid: child.pid, started: true });
+            logger.debug("Checking status", { pid: child.pid });
+            em.emit("status.check", { retries, maxRetries });
+            if (opts?.onStatusCheck) {
+              opts?.onStatusCheck({ retries, maxRetries });
+            }
+            running = opts?.checkStatus ? await opts.checkStatus({ pid: child.pid, started: true }) : false;
           } catch (error: any) {
             logger.error("Checked status - failed", error.message);
           } finally {
@@ -796,79 +973,41 @@ export async function exec_service(programPath: string, programArgs: string[], o
             clearInterval(IID);
             isManagedExit = true;
             proc.success = true;
-            const pid = child.pid;
-            em.emit("ready", {
-              process: proc,
-              child: {
-                pid,
-                kill: async (signal?: NodeJS.Signals | number) => {
-                  logger.debug("(OS) Killing child process started", pid, { signal });
-                  try {
-                    logger.debug("(OS) Destroying child process streams");
-                    if (child.stdout) {
-                      child.stdout.destroy();
-                    }
-                    if (child.stdin) {
-                      child.stdin.destroy();
-                    }
-                    if (child.stderr) {
-                      child.stderr.destroy();
-                    }
-                  } catch (error: any) {
-                    logger.error("(OS) Destroying child process streams failed", error);
-                  }
-                  try {
-                    child.kill(signal);
-                  } catch (error: any) {
-                    logger.error("(OS) Kill child process failed", error);
-                  }
-                  logger.debug("(OS) Killing child process completed", pid, { child });
-                },
-                unref: () => {
-                  logger.debug("(OS) Unref child process started", pid);
-                  try {
-                    child.unref();
-                  } catch (error: any) {
-                    logger.error("(OS) Unref child process failed", error);
-                  }
-                  logger.debug("(OS) Unref child process completed", pid);
-                }
-              }
-            });
+            em.emit("ready", wrap_process(proc, child));
           } else {
             logger.error("Move to next retry", retries);
           }
         }
       }, wait);
     };
-    const onStart = async () => {
-      const launcherOpts = {
-        encoding: "utf-8",
-        cwd: opts?.cwd,
-        env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined
-      };
-      child = await wrapSpawnAsync(programPath, programArgs, launcherOpts);
-      proc.pid = child.pid!;
-      proc.code = child.exitCode;
-      logger.debug("Child process spawned", child.pid, { programPath, programArgs, launcherOpts });
-      child.on("exit", (code) => onProcessExit(child, code));
-      child.on("close", (code) => onProcessClose(child, code));
-      child.on("error", (error) => onProcessError(child, error));
-      child.stdout.setEncoding("utf8");
-      child.stdout.on("data", (data) => onProcessData(child, "stdout", data.toString()));
-      child.stderr.setEncoding("utf8");
-      child.stderr.on("data", (data) => onProcessData(child, "stderr", data.toString()));
-      if (typeof child.pid === "undefined") {
-        proc.success = false;
-        logger.error("Child process spawn failure", proc);
-      } else {
-        proc.success = !child.killed;
-        logger.debug("Child process spawn success", proc);
-        waitForProcess(child);
-      }
+    // Starting spawn
+    const launcherOpts = {
+      encoding: "utf-8",
+      cwd: opts?.cwd,
+      env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined
     };
-    em.on("start", onStart);
-    em.emit("start");
+    child = await wrapSpawnAsync(programPath, programArgs, launcherOpts);
+    proc.pid = child.pid!;
+    proc.code = child.exitCode;
+    if (opts?.onSpawn) {
+      opts?.onSpawn(wrap_process(proc, child));
+    }
+    logger.debug("Child process spawned", child.pid, { programPath, programArgs, launcherOpts });
+    child.on("exit", (code) => onProcessExit(child, code));
+    child.on("close", (code) => onProcessClose(child, code));
+    child.on("error", (error) => onProcessError(child, error));
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (data) => onProcessData(child, "stdout", data.toString()));
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (data) => onProcessData(child, "stderr", data.toString()));
+    if (typeof child.pid === "undefined") {
+      proc.success = false;
+      logger.error("Child process spawn failure", proc);
+    } else {
+      proc.success = !child.killed;
+      logger.debug("Child process spawn success", proc);
+      waitForProcess(child);
+    }
   }
   return {
     on: (event, listener, context?: any) => em.on(event, listener, context)
@@ -876,19 +1015,27 @@ export async function exec_service(programPath: string, programArgs: string[], o
 }
 
 export const Command: ICommand = {
+  async CreateNodeJSApiDriver(config: AxiosRequestConfig<any>) {
+    return createNodeJSApiDriver(config);
+  },
+
   async Spawn(command: string, args?: readonly string[], options?: any) {
     return spawnSync(command, args, options);
+  },
+
+  async Kill(proc: ChildProcessWithoutNullStreams, signal?: NodeJS.Signals | number) {
+    return killProcess(proc, signal);
   },
 
   async Execute(launcher: string, args: string[], opts?: WrapperOpts) {
     return await exec_launcher_async(launcher, args, opts);
   },
 
-  async ExecuteAsBackgroundService(launcher: string, args: string[], opts: ServiceOpts) {
+  async ExecuteAsBackgroundService(launcher: string, args: string[], opts?: Partial<ServiceOpts>) {
     return await exec_service(launcher, args, opts);
   },
 
-  async StartSSHConnection(host: SSHHost, cli?: string) {
+  async StartSSHConnection(host: SSHHost, opts?: Partial<ServiceOpts>) {
     const homeDir = await Platform.getHomeDir();
     let privateKeyPath = await Path.join(homeDir, ".ssh/id_rsa");
     if (host.IdentityFile) {
@@ -900,20 +1047,39 @@ export const Command: ICommand = {
         privateKeyPath = privateKeyPath.replace("$HOME", homeDir);
       }
     }
+    host.IdentityFile = privateKeyPath;
+    const isWindows = (os.type() as OperatingSystem) === OperatingSystem.Windows;
+    const sshRelayProgramCLI = isWindows ? await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSH_RELAY) : "ssh";
     return new Promise<ISSHClient>((resolve, reject) => {
       // function Client() {}
-      const connection = new SSHClient({ osType: os.type() as OperatingSystem });
-      connection.cli = cli ?? (os.type() === OperatingSystem.Windows ? "ssh.exe" : "ssh");
+      const connection = new SSHClient({
+        osType: os.type() as OperatingSystem,
+        cli: isWindows ? "ssh.exe" : "ssh",
+        relayCLI: sshRelayProgramCLI
+      });
       connection.on("connection.established", () => {
-        logger.warn("Connection established", connection);
+        logger.debug("Connection established", connection);
         // Wrap as object as it is passed from electron to renderer process - that one can't pass class instances
         resolve({
           isConnected: () => connection.isConnected(),
           connect: async (params: SSHClientConnection) => await connection.connect(params),
           execute: async (command: string[]) => await connection.execute(command),
-          startTunnel: async (params: { localAddress: string; remoteAddress: string; onStopTunnel: () => void }) => await connection.startTunnel(params),
+          startTunnel: async (params: { localAddress: string; remoteAddress: string; onStatusCheck: (status: any) => void; onStopTunnel: () => void }) =>
+            await connection.startTunnel({
+              ...params,
+              onStatusCheck: (status) => {
+                connection.emit("status.check", status);
+                if (opts?.onStatusCheck) {
+                  opts?.onStatusCheck(status);
+                }
+                if (params?.onStatusCheck) {
+                  params?.onStatusCheck(status);
+                }
+              }
+            }),
           stopTunnel: () => connection.stopTunnel(),
           on: (event, listener, context) => connection.on(event, listener, context),
+          emit: (event, data) => connection.emit(event, data),
           close: () => connection.close()
         } as ISSHClient);
       });
@@ -923,7 +1089,7 @@ export const Command: ICommand = {
       });
       const credentials = {
         host: host.HostName,
-        port: Number(host.Port) || 22,
+        port: host.Port || 22,
         username: host.User,
         privateKeyPath: privateKeyPath
       };
@@ -939,45 +1105,7 @@ export const Command: ICommand = {
     }
   },
 
-  async proxyTCPRequest(request: Partial<AxiosRequestConfig>, tcpAddress: string): Promise<AxiosResponse<any, any>> {
-    try {
-      const httpAgent = new http.Agent({
-        keepAlive: true,
-        keepAliveMsecs: 10,
-        timeout: request?.timeout || 3000
-      });
-      httpAgent.maxSockets = 1;
-      const driver = axios.create({
-        adapter: httpAdapter,
-        httpAgent: httpAgent,
-        httpsAgent: httpAgent,
-        baseURL: tcpAddress.startsWith("http") ? tcpAddress : `http://${tcpAddress}`
-      });
-      request.withCredentials = false;
-      const tunneledRequest = { ...request, socketPath: undefined, baseURL: undefined };
-      logger.debug(">> Proxying TCP request", request, "tunneled", tunneledRequest);
-      const response = await driver.request(tunneledRequest);
-      (response as any).success = response.status >= 200 && response.status < 300;
-      logger.debug("<< Proxying TCP request success - response", response);
-      return response;
-    } catch (error: any) {
-      let fakeResponse: AxiosResponse<any, any> = {
-        status: 500,
-        statusText: "Server error",
-        data: undefined,
-        headers: {},
-        config: request as any
-      };
-      if (error?.response) {
-        fakeResponse = error?.response;
-      }
-      (fakeResponse as any).success = false;
-      logger.error("<< Proxying TCP request failed - response", fakeResponse, error);
-      return fakeResponse;
-    }
-  },
-
-  async proxyRequest(request: Partial<AxiosRequestConfig>, connection: Connection, context?: any) {
+  async ProxyRequest(request: Partial<AxiosRequestConfig>, connection: Connection, context?: any) {
     let response: AxiosResponse<any, any> | undefined;
     switch (connection.host) {
       case ContainerEngineHost.PODMAN_NATIVE:
@@ -1014,7 +1142,7 @@ export const Command: ICommand = {
       case ContainerEngineHost.DOCKER_REMOTE:
         {
           const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
-          config.socketPath = connection.settings.api.connection.relay;
+          config.socketPath = connection.settings.api.connection.uri;
           logger.debug("Proxying request to SSH connection", { connection, config });
           response = await proxyRequestToSSHConnection(connection, config, request, context);
         }

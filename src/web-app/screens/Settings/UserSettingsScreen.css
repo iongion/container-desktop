@@ -73,7 +73,7 @@
   display: flex;
   flex: 1;
   color: #fff;
-  font-family: monospace;
+  font-family: var(--monospace-font);
   border-radius: 4px;
 }
 .AppSettingsForm[data-form="flags"] {

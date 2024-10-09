@@ -5,7 +5,7 @@
 }
 [data-table="container.inspect"] tr td {
   text-align: left;
-  font-family: monospace;
+  font-family: var(--monospace-font);
 }
 [data-table="container.inspect"] tr td:first-child {
   width: 1px;
@@ -15,8 +15,74 @@
   width: 100%;
   text-align: left;
 }
+[data-table="container.inspect"] tr td code:first-child {
+  border: 1px solid transparent;
+  padding: 4px;
+  display: block;
+  border-radius: 5px;
+}
 [data-table="container.inspect"] [data-table-row="group.name"] td {
   font-family: sans-serif;
   font-size: 14px;
   font-weight: bold;
+}
+.ContainerVolume {
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.4em;
+  vertical-align: middle;
+  display: flex;
+  flex: 1;
+}
+.ContainerVolumeIndex {
+  font-size: 12px;
+  font-weight: bold;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+}
+.ContainerVolumeMapping {
+  margin: 0;
+  padding: 0;
+  padding-left: 10px;
+  list-style: none;
+}
+.ContainerVolumeMapping li {
+  margin-bottom: 5px;
+}
+.ContainerVolumeMapping li:last-child {
+  margin-bottom: 0;
+}
+.ContainerVolumeMapping li strong {
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  width: 90px !important;
+  display: inline-block;
+  padding: 4px;
+  margin-right: 10px;
+}
+.ContainerVolumeMapping li code {
+  font-size: 12px;
+  font-weight: normal;
+}
+
+[data-theme="bp5-dark"] .ContainerVolumeMapping li strong {
+  color: #ccc;
+  background-color: #003055;
+}
+[data-theme="bp5-dark"] .ContainerVolumeIndex,
+[data-theme="bp5-dark"] .ContainerVolumeMapping li code {
+  color: #ccc;
+}
+
+[data-theme="bp5-light"] .ContainerVolumeMapping li strong {
+  color: #333;
+  background-color: #b5c8d6;
+}
+[data-theme="bp5-light"] .ContainerVolumeIndex,
+[data-theme="bp5-light"] .ContainerVolumeMapping li code {
+  color: #333;
 }

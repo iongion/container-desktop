@@ -17,7 +17,7 @@
   background: black;
 }
 .DashboardContainerExampleCode input {
-  font-family: monospace;
+  font-family: var(--monospace-font);
   font-size: 12px;
   text-align: center;
 }
@@ -36,5 +36,5 @@
 }
 .DashboardContainersReportTable tr td:last-child {
   text-align: center;
-  font-family: monospace;
+  font-family: var(--monospace-font);
 }

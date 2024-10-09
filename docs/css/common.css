@@ -4,6 +4,7 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
+  font-family: "Montserrat", sans-serif;
 }
 
 .navbar {
@@ -36,9 +37,18 @@ body {
   padding-bottom: 40px;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Montserrat", sans-serif;
+  text-align: center;
+}
+
 h1 {
   font-size: 60px;
-  font-family: "Montserrat", sans-serif;
   font-weight: 500;
   text-align: center;
 }
@@ -67,8 +77,8 @@ h1 {
 }
 
 .callout {
-  margin-top: 40px;
-  margin-bottom: 40px;
+  margin: 20px;
+  margin-top: 20px;
   color: #e7ff00;
   text-align: center;
 }
@@ -82,6 +92,7 @@ h1 {
 }
 .callout p.cp1 {
   font-size: 14px !important;
+  margin: 0;
 }
 .callout p.cp2 {
   font-size: 14px !important;
@@ -117,15 +128,30 @@ h1 {
   font-weight: 500;
   font-size: 16px;
   text-align: center;
+  min-width: 235px;
+}
+[data-operating-system="MacOS"] .downloadBundles li {
+  display: inline;
+}
+[data-operating-system="MacOS"] .downloadBundles li:last-child {
+  margin-left: 5px;
+  margin-right: 0;
+  padding-left: 10px;
+  border-left: 2px solid white;
+}
+
+.content-setup-guide {
+  padding-top: 20px;
+  text-align: center;
 }
 
 ul.downloadBundles,
 ul.downloadBundles li {
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 ul.downloadBundles li {
-  display: inline-block;
   padding-left: 5px;
   padding-right: 5px;
 }
@@ -136,11 +162,18 @@ ul.downloadBundles {
   padding: 10px;
 }
 
-.publications {
+.publications,
+.guides {
   text-align: center;
   color: #eee;
   font-size: 40px;
   margin-bottom: 0;
+}
+.guides-subtitle {
+  font-size: 14px;
+  font-weight: normal;
+  color: #eee;
+  margin: 0;
 }
 
 .books {
@@ -166,10 +199,16 @@ ul.downloadBundles {
 }
 
 .content {
-  margin-left: 15%;
-  margin-right: 15%;
-  padding-top: 20px;
+  margin-left: 12.5%;
+  margin-right: 12.5%;
   margin-top: 0;
+}
+
+.footer-content {
+  background: #140119;
+  margin: 0;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .content h2,
@@ -517,7 +556,7 @@ ul.footerMenu {
   padding: 10px;
 }
 .command-line {
-  font-family: monospace;
+  font-family: var(--monospace-font);
   background: #222;
   border: 1px solid #333;
   color: green;
@@ -569,4 +608,172 @@ ul.footerMenu {
 .intro-nav a:hover {
   color: #fff !important;
   text-decoration: underline;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  background: #e5e5e5;
+  box-shadow: 0 48px 80px -32px rgba(0, 0, 0, 0.3);
+  text-align: left;
+}
+.tabs .input {
+  position: absolute;
+  opacity: 0;
+}
+.tabs .label {
+  padding: 20px 30px;
+  background: #e5e5e5;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 18px;
+  color: #7f7f7f;
+  width: calc(100% / 3 - 60px);
+  text-align: center;
+}
+.tabs .label:hover {
+  background: #d8d8d8;
+}
+.tabs .label:active {
+  background: #ccc;
+}
+.tabs .input:focus + .label {
+  z-index: 1;
+}
+.tabs .input:checked + .label {
+  background: #fff;
+  color: #000;
+}
+.tabs .panel {
+  order: 99;
+  display: none;
+  padding: 20px 30px 30px;
+  background: #fff;
+  text-align: left;
+  color: #d588ea;
+  background: #2e1640;
+  width: calc(100% - 60px);
+}
+.tabs .input:checked + .label + .panel {
+  display: block;
+}
+
+.panel span {
+  animation: 0.5s ease-out 0s 1 slideInFromTop;
+}
+.panel h1,
+.panel h2,
+.panel h3,
+.panel h4,
+.panel h5,
+.panel h6 {
+  text-align: left;
+}
+.panel p {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  color: #333;
+}
+.panel dl dt {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  color: #ffffff;
+}
+.panel dl dd {
+  margin: 0;
+  padding: 0;
+  padding-left: 10px;
+  line-height: 28px;
+  color: #c3c3c3;
+  font-size: 14px;
+}
+.panel dl dd ul {
+  margin: 0;
+  padding: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+.panel dl dd ul li {
+  padding-bottom: 0;
+}
+.panel ol {
+  margin: 0;
+  padding: 0;
+  padding-left: 20px;
+}
+.panel code {
+  border: 1px solid #8a2c82;
+  border-radius: 5px;
+  padding: 4px;
+  white-space: nowrap;
+  margin: 0;
+  background: #020103;
+}
+.panel a {
+  color: #f8dfff;
+  text-decoration: underline;
+}
+.panel a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+.panel dl dd code {
+  color: #fdd8ff;
+}
+.panel pre {
+  overflow: auto;
+  border: 1px solid #8a2c82;
+  border-radius: 5px;
+  padding: 4px;
+  margin: 0;
+  background: #020103;
+  color: #fdd8ff;
+}
+p.tip-note {
+  margin: 0;
+  margin-top: 10px;
+  background: #111;
+  padding: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-weight: normal;
+  font-size: 12px;
+  color: #fff;
+  border-radius: 5px;
+}
+p.important-note {
+  margin: 0;
+  margin-top: 10px;
+  background: #b39ab9;
+  padding: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-weight: normal;
+  font-size: 14px;
+  color: #000;
+  border-radius: 5px;
+}
+p.important-note code {
+  background: #574d4d;
+  padding: 2px;
+  border: 1px solid #000;
+  border-radius: 5px;
+  color: #fdd8ff;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+p.important-note-requirements {
+  font-size: 13px;
+  font-weight: normal;
+  font-style: italic;
+  background: #d8a8ff;
+}
+pre.text-file {
+  background: #222;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 5px;
+  display: inline-block;
+  white-space: pre-wrap;
 }

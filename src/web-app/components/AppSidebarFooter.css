@@ -22,6 +22,9 @@
 [data-engine="docker"] .AppSidebarFooter .bp5-navbar {
   background-image: url("../images/docker-engine.svg");
 }
+[data-theme="bp5-light"] [data-engine="docker"] .AppSidebarFooter .bp5-navbar {
+  background-blend-mode: difference;
+}
 .AppSidebarFooter .bp5-navbar-group {
   height: 32px;
   padding-left: 32px;

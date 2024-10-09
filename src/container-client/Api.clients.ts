@@ -254,7 +254,7 @@ export function createApplicationApiDriver(connection: Connection, context?: any
       return acc;
     }, {} as any);
     req.headers = headersFlat as any;
-    return await Command.proxyRequest(req, connection, context);
+    return await Command.ProxyRequest(req, connection, context);
   };
   const driver: AxiosInstance = {
     request,

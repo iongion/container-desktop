@@ -305,8 +305,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   }
 
   async isApiRunning() {
-    systemNotifier.transmit("host.availability", {
-      trace: `Checking if API is running`
+    systemNotifier.transmit("engine.availability", {
+      trace: "Checking if API is running"
     });
     this.logger.debug(this.id, ">> Checking if API is running");
     // Guard configuration
@@ -322,20 +322,23 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     };
     const client = await this.getContainerApiClient();
     const driver = client.getDriver();
-    systemNotifier.transmit("host.availability", {
-      trace: `Performing api health check`
+    systemNotifier.transmit("engine.availability", {
+      trace: "Performing api health check - start"
     });
     try {
       const response = await driver.request({ method: "GET", url: "/_ping", timeout: 3000 });
       result.success = response?.data === "OK";
       result.details = result.success ? "Api is reachable" : response?.data;
       if (!result.success) {
-        this.logger.error(this.id, "API ping service failed", response);
+        this.logger.error(this.id, "API ping service failed - response error", response);
       }
     } catch (error: any) {
       result.details = "API is not reachable - start manually or connect";
-      this.logger.error(this.id, "API ping service failed", error, driver);
+      this.logger.error(this.id, "API ping service failed - response failure", error, driver);
     }
+    systemNotifier.transmit("engine.availability", {
+      trace: "Performing api health check - complete"
+    });
     this.logger.debug(this.id, "<< Checking if API is running", result);
     return result;
   }
@@ -490,8 +493,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   async getAvailability(userSettings?: EngineConnectorSettings) {
     this.logger.debug(this.id, ">> Checking availability");
     const settings = userSettings || (await this.getSettings());
-    systemNotifier.transmit("host.availability", {
-      trace: `Detecting host availability`
+    systemNotifier.transmit("engine.availability", {
+      trace: "Detecting host availability"
     });
     const check = await this.isEngineAvailable();
     const availability: EngineConnectorAvailability = {
@@ -514,8 +517,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       availability.host = true;
     }
     if (availability.host) {
-      systemNotifier.transmit("host.availability", {
-        trace: `Detecting host program availability`
+      systemNotifier.transmit("engine.availability", {
+        trace: "Detecting host program availability"
       });
       const controllerAvailability = await this.isControllerAvailable(settings);
       availability.report.controller = controllerAvailability.details;
@@ -535,8 +538,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       availability.report.controllerScope = "Not checked - controller not available";
     }
     if (availability.controllerScope) {
-      systemNotifier.transmit("host.availability", {
-        trace: `Detecting guest program availability`
+      systemNotifier.transmit("engine.availability", {
+        trace: "Detecting guest program availability"
       });
       const program = await this.isProgramAvailable(settings);
       availability.report.program = program.details || "";
@@ -546,6 +549,9 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     } else {
       availability.report.program = "Not checked - controller scope not available";
     }
+    systemNotifier.transmit("engine.availability", {
+      trace: "Detecting guest api availability"
+    });
     const api = await this.isApiRunning();
     availability.report.api = api.details ?? "";
     if (api.success) {
@@ -555,8 +561,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       availability.api = false;
       availability.report.api = "API is not running";
     }
-    systemNotifier.transmit("host.availability", {
-      trace: `Availability check complete`
+    systemNotifier.transmit("engine.availability", {
+      trace: "Availability check complete"
     });
     this.logger.debug(this.id, "<< Checking availability", availability);
     return availability;
@@ -588,7 +594,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   }
 
   async findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
-    systemNotifier.transmit("host.availability", {
+    systemNotifier.transmit("engine.availability", {
       trace: `Detecting host ${program.name} program path and version`
     });
     const output = deepMerge({}, program);
@@ -602,7 +608,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   }
 
   async findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
-    systemNotifier.transmit("host.availability", {
+    systemNotifier.transmit("engine.availability", {
       trace: `Detecting guest ${program.name} program path and version`
     });
     const executor = async (path: string, args: string[]) => {
@@ -624,8 +630,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   }
 
   async getConnectionDataDir() {
-    systemNotifier.transmit("host.availability", {
-      trace: `Detecting connection system data dir`
+    systemNotifier.transmit("engine.availability", {
+      trace: "Detecting connection system data dir"
     });
     let dataDir: string | undefined;
     this.logger.debug(this.id, "Get this data dir", this);

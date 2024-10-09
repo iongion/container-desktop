@@ -10,6 +10,7 @@ import {
   ControllerScope,
   EngineConnectorSettings,
   RunnerStopperOptions,
+  ServiceOpts,
   StartupStatus
 } from "@/env/Types";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
@@ -44,21 +45,27 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
         connection,
         createApplicationApiDriver(connection, {
           getSSHConnection: async () => {
-            systemNotifier.transmit("host.availability", {
+            systemNotifier.transmit("engine.availability", {
               trace: "Starting SSH connection"
             });
             // console
             const scopes = await this.getControllerScopes();
             const scope = scopes.find((s) => s.Name === this.settings.controller?.scope);
-            const connected = await this.startSSHConnection(scope as SSHHost);
+            const connected = await this.startSSHConnection(scope as SSHHost, {
+              onStatusCheck: (info) => {
+                systemNotifier.transmit("engine.availability", {
+                  trace: `API status checking - retry ${info.retries + 1} of ${info.maxRetries}`
+                });
+              }
+            });
             if (connected) {
               console.debug("Returning connection", this, scope);
-              systemNotifier.transmit("host.availability", {
+              systemNotifier.transmit("engine.availability", {
                 trace: "SSH connection has been established"
               });
               return this._connection;
             } else {
-              systemNotifier.transmit("host.availability", {
+              systemNotifier.transmit("engine.availability", {
                 trace: "SSH connection has failed"
               });
             }
@@ -95,7 +102,11 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
   }
 
   async startScope(scope: ControllerScope): Promise<StartupStatus> {
-    const check = await this.startSSHConnection(scope as SSHHost);
+    const check = await this.startSSHConnection(scope as SSHHost, {
+      onStatusCheck: (status) => {
+        console.debug("SSH connection status check", status);
+      }
+    });
     return check;
   }
   async stopScope(scope: ControllerScope): Promise<boolean> {
@@ -105,7 +116,11 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
   async startScopeByName(name: string): Promise<StartupStatus> {
     const scopes = await this.getControllerScopes();
     const scope = scopes.find((s) => s.Name === name);
-    return await this.startSSHConnection(scope as SSHHost);
+    return await this.startSSHConnection(scope as SSHHost, {
+      onStatusCheck: (status) => {
+        console.debug("SSH connection status check", status);
+      }
+    });
   }
   async stopScopeByName(name: string): Promise<boolean> {
     const scopes = await this.getControllerScopes();
@@ -150,13 +165,11 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
   }
 
   // SSH specific
-  async startSSHConnection(host: SSHHost): Promise<StartupStatus> {
+  async startSSHConnection(host: SSHHost, opts?: Partial<ServiceOpts>): Promise<StartupStatus> {
     if (this._connection && this._connection.isConnected()) {
       return StartupStatus.RUNNING;
     }
-    const settings = await this.getSettings();
-    const sshExecutable = settings.controller?.path || settings.controller?.name || SSH_PROGRAM;
-    this._connection = await Command.StartSSHConnection(host, sshExecutable);
+    this._connection = await Command.StartSSHConnection(host, opts);
     if (this._connection) {
       this.connectionsTracker[host.Name] = this._connection;
       const running = this._connection && this._connection.isConnected();

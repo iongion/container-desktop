@@ -1,3 +1,26 @@
+.bp5-navbar {
+  box-shadow: none !important;
+}
+
+.bp5-toast {
+  max-width: 50%;
+}
+
+.bp5-drawer-header {
+  padding-left: 5px;
+}
+
+.bp5-button-text {
+  font-size: 12px;
+}
+
+code,
+pre,
+.bp5-code {
+  font-family: var(--monospace-font);
+  font-size: 10px;
+}
+
 .App {
   font-family: sans-serif;
   font-smoothing: subpixel-antialiased;
@@ -274,29 +297,13 @@
   background-color: #4db98c;
 }
 
-.bp5-navbar {
-  box-shadow: none !important;
-}
-
-.bp5-toast {
-  max-width: 50%;
-}
-
-.bp5-drawer-header {
-  padding-left: 5px;
-}
-
-.bp5-button-text {
-  font-size: 12px;
-}
-
 code.DocsCodeBox {
   margin-left: 2px;
   border: 1px solid #333;
   padding: 3px;
   background: #000;
   border-radius: 5px;
-  font-family: monospace;
+  font-family: var(--monospace-font);
   color: #ccc;
 }
 

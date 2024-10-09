@@ -93,6 +93,18 @@ body.bp5-dark[data-engine="docker"] [data-table="containers"] .ContainerReportSt
 body.bp5-dark[data-engine="docker"] .AppDataFormHeader {
   background: #02091f;
 }
+body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
+  background-color: #273553;
+  color: #ccc;
+}
+body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
+  background-color: #202a3f;
+  color: #ccc;
+}
+body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr td code:first-child {
+  background: #04153b;
+  color: #a6b5ce;
+}
 
 /* Light */
 :root {
@@ -171,6 +183,16 @@ body.bp5-light[data-engine="docker"] [data-screen="settings-settings"] .AppScree
 }
 body.bp5-light[data-engine="docker"] [data-table="container.inspect"] [data-table-row="group.name"] td {
   background: #96a2b3 !important;
+}
+body.bp5-light[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
+  background-color: #cfd3d7;
+}
+body.bp5-light[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
+  background-color: #e1e1e1;
+}
+body.bp5-light[data-engine="docker"] [data-table="container.inspect"] tr td code:first-child {
+  background: #cbc8cb;
+  border: 1px solid #412d4b;
 }
 
 /* Security */

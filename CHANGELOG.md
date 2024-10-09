@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 5.2.13 - 2024-10-15
+
+## Added
+
+- WSL: Relay method using custom ssh client + custom ssh server and windows named pipes
+
+## Changed
+
+- Improved the way volume mounts are displayed
+- Improved layers display (use `div` instead of a `textarea`)
+- Default monospace font is now `Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono", "Fira Code", monospace, "Powerline Extra Symbols"`
+- Improved environment variables display(Container Inspect)
+- Windows is now using only named pipes for remote and WSL connections instead of TCP
+- Linux and MacOS use relayed unix sockets instead of TCP
+
+## 5.2.12 - 2024-10-10
+
+## Added
+
+- WSL - All relay binaries and build scripts
+
 ## 5.2.11 - 2024-10-08
 
 ## Changed

@@ -19,19 +19,19 @@ export class PodmanContainerEngineHostClientSSH extends AbstractContainerEngineH
   }
 
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    let uri = "";
+    let relay = "";
+    if (this.osType === OperatingSystem.Windows) {
+      uri = getWindowsPipePath(this.id);
+    }
     const settings = customSettings || (await this.getSettings());
     const scope = settings.controller?.scope || "";
     if (!scope) {
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
-        uri: "",
-        relay: ""
+        uri: uri || settings?.api?.connection?.uri || "",
+        relay: relay || settings?.api?.connection?.relay || ""
       };
-    }
-    let uri = "";
-    let relay = "";
-    if (this.osType === OperatingSystem.Windows) {
-      uri = getWindowsPipePath(`${this.ENGINE}-${scope}-${settings.mode}`);
     }
     // Get environment variable inside the scope
     try {
@@ -41,8 +41,8 @@ export class PodmanContainerEngineHostClientSSH extends AbstractContainerEngineH
       this.logger.warn(this.id, "Unable to get system info", error);
     }
     return {
-      uri,
-      relay
+      uri: uri || settings?.api?.connection?.uri || "",
+      relay: relay || settings?.api?.connection?.relay || ""
     };
   }
 

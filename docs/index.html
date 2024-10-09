@@ -4,19 +4,176 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-
   <link rel="icon" href="./favicon.ico" type="image/x-icon" />
   <link rel="icon" href="./favicon-32x32.png" type="image/png" />
-
   <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.15.0/css/all.css" />
   <link rel="preconnect" href="//fonts.googleapis.com" />
   <link rel="preconnect" href="//fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="//fonts.googleapis.com/css2?family=Montserrat:wght@100;300;500;700&display=swap" />
   <link rel="stylesheet" href="./css/common.css?v=5.2.4" />
   <link rel="stylesheet" href="./css/dark-theme.css?v=5.2.4" id="themelink" />
-  <link rel="stylesheet" href="./css/responsive.css?v=5.2.4" />
   <title>Container Desktop</title>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/UAParser.js/0.7.20/ua-parser.min.js" integrity="sha512-70OZ+iUuudMmd7ikkUWcEogIw/+MIE17z17bboHhj56voxuy+OPB71GWef47xDEt5+MxFdrigC1tRDmuvIVrCA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    const version = document.querySelector('html').getAttribute('data-version');
+    const downloads = {
+      Linux: {
+        x86: {
+          label: "x86",
+          default: 0,
+          links: [{
+              label: 'AppImage',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x86_64-${version}.AppImage`
+            },
+            {
+              label: 'flatpak',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x86_64-${version}.flatpak`
+            },
+            {
+              label: 'rpm',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x86_64-${version}.rpm`
+            },
+            {
+              label: 'deb',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-amd64-${version}.deb`
+            },
+            {
+              label: 'pacman',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x64-${version}.pacman`
+            },
+          ]
+        },
+        arm: {
+          label: "arm",
+          default: 0,
+          links: [{
+              label: 'AppImage',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-arm64-${version}.AppImage`
+            },
+            {
+              label: 'flatpak',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-aarch64-${version}.flatpak`
+            },
+            {
+              label: 'rpm',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-aarch64-${version}.rpm`
+            },
+            {
+              label: 'deb',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-arm64-${version}.deb`
+            },
+            {
+              label: 'pacman',
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-aarch64-${version}.pacman`
+            },
+          ]
+        }
+      },
+      Windows: {
+        x86: {
+          label: "x86",
+          default: 0,
+          links: [{
+              url: 'https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct',
+              label: 'Windows Store',
+              skipFromList: true
+            },
+            {
+              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-installer.exe`,
+              label: 'Installer - exe'
+            }
+          ],
+        }
+      },
+      MacOS: {
+        x86: {
+          default: 0,
+          links: [{
+            url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-arm64-${version}.dmg`,
+            label: "Apple"
+          }]
+        },
+        arm: {
+          default: 0,
+          links: [{
+            url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x64-${version}.dmg`,
+            label: "Intel"
+          }]
+        }
+      }
+    }
+    document.addEventListener("DOMContentLoaded", async (event) => {
+      try {
+        const getOperatingSystem = () => {
+          let OSName = "Unknown OS";
+          if (navigator.appVersion.indexOf("Win") != -1) OSName = "Windows";
+          if (navigator.appVersion.indexOf("Mac") != -1) OSName = "MacOS";
+          if (navigator.appVersion.indexOf("X11") != -1) OSName = "Linux";
+          if (navigator.appVersion.indexOf("Linux") != -1) OSName = "Linux";
+          return OSName;
+        }
+        const parser = new UAParser(navigator.userAgent);
+        const cpu = parser.getCPU();
+        const os = parser.getOS();
+        if (os?.name && cpu?.architecture) {
+          const isArm = `${cpu.architecture || ''}`.toLocaleLowerCase().includes('arm');
+          const arch = isArm ? 'arm' : 'x86';
+          console.debug("Adjusting content to detection", os, cpu, arch);
+          const sections = document.querySelectorAll('.download[data-operating-system]');
+          sections.forEach(section => {
+            const osName = section.getAttribute('data-operating-system');
+            const downloadButton = section.querySelector('.downloadButton');
+            const downloadUrls = downloads[osName]?.[arch]?.links || [];
+            const defaultDownload = downloadUrls[downloads[osName]?.[arch]?.default];
+            downloadButton.setAttribute('href', defaultDownload.url);
+            const downloadBundles = section.querySelector('.downloadBundles');
+            downloadBundles.innerHTML = '';
+            const injectURLs = (links) => {
+              links.forEach((link) => {
+                if (link.skipFromList) {
+                  return;
+                }
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.setAttribute('href', link.url);
+                a.innerText = link.label;
+                li.appendChild(a);
+                downloadBundles.appendChild(li);
+              });
+            }
+            if (osName === "MacOS") {
+              const x86DownloadUrls = downloads[osName]?.x86.links || [];
+              const armDownloadUrls = downloads[osName]?.arm.links || [];
+              injectURLs(x86DownloadUrls);
+              injectURLs(armDownloadUrls);
+            } else {
+              injectURLs(downloadUrls);
+            }
+          });
+          // Set documentation active tab
+          const hash = window.location.hash;
+          const tab = document.querySelector(hash || `#guide-${(os?.name || "linux").toLocaleLowerCase()}`);
+          if (tab) {
+            tab.checked = true;
+          }
+          // Handle history
+          const tabs = document.querySelectorAll(`input[name="tabs"]`);
+          tabs.forEach(tab => {
+            tab.addEventListener('click', (event) => {
+              window.location.hash = tab.getAttribute('id');
+            });
+          });
+        } else {
+          console.warn("Not able to detect operating system and CPU", {
+            cpu,
+            os
+          });
+        }
+      } catch (error) {
+        console.warn("Unable to detect operating system and CPU", error);
+      }
+    });
+  </script>
 </head>
 
 <body>
@@ -37,66 +194,72 @@
     </h1>
     <div class="callout">
       <p class="cp1">
-        A cross-platform desktop UI made by the podman team itself, is available at <a class="pd" target="_blank" href="https://podman-desktop.io/">Podman Desktop</a><br />
+        A cross-platform desktop UI made by the podman team itself, is available at <a class="pd" target="_blank" rel="noopener noreferrer" href="https://podman-desktop.io/">Podman Desktop</a><br />
       </p>
     </div>
     <p>
       A familiar desktop graphical interface for the free and open container manager -
-      <a href="https://podman.io/" target="_blank">Podman</a>!
+      <a href="https://podman.io/" target="_blank" rel="noopener noreferrer">Podman</a>!
     </p>
+
     <div class="installationSection">
-      <a href="https://podman.io/docs/installation" target="_blank">Getting started with podman</a>
+      <a href="https://podman.io/docs/installation" target="_blank" rel="noopener noreferrer">Getting started with podman</a>
       &nbsp;
-      <a href="https://github.com/containers/podman/releases" target="_blank"> Podman releases and downloads </a>
+      <a href="https://github.com/containers/podman/releases" target="_blank" rel="noopener noreferrer">Podman releases and downloads</a>
     </div>
     <div class="downloadSection">
-      <div class="download">
+      <div class="download" data-operating-system="Linux">
         <a class="downloadButton" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">
           <i class="fab fa-linux"></i>
           &nbsp;Download for Linux
         </a>
         <ul class="downloadBundles">
-          <li>
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">AppImage</a>
-          </li>
-          <li>
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.flatpak">flatpak</a>
-          </li>
-          <li>
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.rpm">rpm</a>
-          </li>
-          <li>
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-amd64-5.2.4.deb">deb</a>
-          </li>
-          <li>
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.pacman">pacman</a>
-          </li>
+          <noscript>
+            <li>
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">AppImage</a>
+            </li>
+            <li>
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.flatpak">flatpak</a>
+            </li>
+            <li>
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.rpm">rpm</a>
+            </li>
+            <li>
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-amd64-5.2.4.deb">deb</a>
+            </li>
+            <li>
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.pacman">pacman</a>
+            </li>
+          </noscript>
         </ul>
       </div>
-      <div class="download">
+      <div class="download" data-operating-system="Windows">
         <a class="downloadButton" href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct">
           <i class="fab fa-windows"></i>
           &nbsp;Download for Windows
         </a>
         <ul class="downloadBundles">
-          <li>
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-installer.exe" target="_blank">Installer - exe</a>
-          </li>
+          <noscript>
+            <li>
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-installer.exe" target="_blank" rel="noopener noreferrer">Installer - exe</a>
+            </li>
+          </noscript>
         </ul>
       </div>
-      <div class="download">
-        <a class="downloadButton" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.dmg">
+      <div class="download" data-operating-system="MacOS">
+        <a class="downloadButton" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.dmg">
           <i class="fab fa-apple"></i>
           &nbsp;Download for Mac
         </a>
         <ul class="downloadBundles">
-          <li>Disk image</li>
-          <li>
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.dmg">Intel</a>
-          </li>
-          <li class="alternative">
-            <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.dmg">Apple</a>
-          </li>
+          <noscript>
+            <li class="alternative">
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.dmg">Apple</a>
+            </li>
+            <li>
+              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.dmg">Intel</a>
+            </li>
+          </noscript>
         </ul>
       </div>
     </div>
@@ -106,13 +269,13 @@
   <div class="books">
     <ul>
       <li>
-        <a href="https://www.manning.com/books/podman-in-action" target="_blank">
+        <a href="https://www.manning.com/books/podman-in-action" target="_blank" rel="noopener noreferrer">
           <img src="./img/book-podman-in-action.png" width="200" />
           <p>Podman in Action</p>
         </a>
       </li>
       <li>
-        <a href="https://www.packtpub.com/en-be/product/podman-for-devops-9781803248233" target="_blank">
+        <a href="https://www.packtpub.com/en-be/product/podman-for-devops-9781803248233" target="_blank" rel="noopener noreferrer">
           <img src="./img/book-podman-for-devops.png" width="200" />
           <p>Podman for Devops</p>
         </a>
@@ -120,7 +283,309 @@
     </ul>
   </div>
 
-  <div class="content">
+  <br />
+  <br />
+
+  <h3 class="guides">Guides &amp; tutorials</h3>
+  <h4 class="guides-subtitle">(Bring your own container engine)</h4>
+  <div class="content content-setup-guide">
+    <div class="setup-guide">
+      <div class="tabs">
+        <!-- Linux -->
+        <input type="radio" class="input" name="tabs" id="guide-linux" checked />
+        <label class="label" for="guide-linux"><i class="fab fa-linux"></i> &nbsp; Linux</label>
+        <div class="panel">
+          <h3>Guides</h3>
+          <ol>
+            <li><a href="#guide-linux-quick-guide">Quick guide</a></li>
+            <li><a href="#guide-linux-podman-as-docker">Podman &amp; Podman acting as Docker</a></li>
+            <li><a href="#guide-linux-docker-desktop-alternative">Docker Desktop alternative</a></li>
+            <li><a href="#guide-linux-sharing-connection">Sharing connection with Container Desktop</a></li>
+          </ol>
+          <h3>Requirements</h3>
+          <p class="important-note important-note-requirements"><strong>Linux offers the best experience</strong> and fastest speed when working with containers. Besides from avoiding the need for virtualization, when we develop, we usually target Linux for production purposes. The file-system speed and permissions don't fit good when not using something made for Linux. <strong>Although there is love for all operating systems, Linux is really shining here.</strong></p>
+          <dl>
+            <dt>Examples are following Ubuntu distribution but can easily be adapted to any distribution.</dt>
+          </dl>
+          <h3 id="guide-linux-quick-guide">1. Quick guide</h3>
+          <dl>
+            <dt>Examples are following Ubuntu distribution but can easily be adapted to any distribution.</dt>
+            <dd>
+              <h4>Update your system</h4>
+              <pre>sudo apt-get update -y && sudo apt-get upgrade -y</pre>
+              <h4>Install development tools</h4>
+              <pre>sudo apt-get install -y build-essential
+sudo apt install apt-transport-https ca-certificates curl software-properties-common -y</pre>
+              <h4>Install docker</h4>
+              <pre>sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update -y
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker ${USER} # Close and restart your terminal after adding your user to the docker group
+sudo systemctl enable docker # To start docker on boot
+sudo systemctl restart docker # To start docker now
+sudo systemctl is-active docker # To check if docker is running
+docker run hello-world # This to test the installation - docker cli must be able to run without sudo at this point</pre>
+              <h4>Install podman &amp; podman-compose</h4>
+              <pre>sudo apt-get install -y podman podman-compose</pre>
+              <p class="tip-note">Distributions usually have very old podman versions, for more recent versions, use <a href="https://software.opensuse.org/download/package?package=podman&project=home%3Aalvistack" target="_blank" rel="noopener noreferrer">Alvistack project</a> that provides repositories for most of the linux flavors.</p>
+          </dl>
+          <h3 id="guide-linux-podman-as-docker">2. Podman &amp; Podman acting as Docker</h3>
+          <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
+          <dl>
+            <dt>Start podman api listening to <code>/var/run/docker.sock</code></dt>
+            <dd>
+              <pre>export DOCKER_HOST=/var/run/docker.sock
+podman system service --time=0 unix://${DOCKER_HOST} --log-level=debug</pre>
+            </dd>
+          </dl>
+          <h3 id="guide-linux-docker-desktop-alternative">3. Docker Desktop alternative</h3>
+          <dl>
+            <dt>Easy</dt>
+            <dd>Follow the quick guide to support both podman and docker, or just skip the podman part and focus on docker only.</dd>
+          </dl>
+          <h3 id="guide-linux-sharing-connection">4. Sharing connection with Container Desktop</h3>
+          <dl>
+            <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
+            <dd>
+              The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+            </dd>
+          </dl>
+        </div>
+        <!-- MacOS -->
+        <input type="radio" class="input" name="tabs" id="guide-macos" />
+        <label class="label" for="guide-macos"><i class="fab fa-apple"></i> &nbsp; Mac</label>
+        <div class="panel">
+          <h3>Guides</h3>
+          <ol>
+            <li><a href="#guide-macos-quick-guide">Quick guide</a></li>
+            <li><a href="#guide-macos-best-experience">Podman &amp; Docker - best experience</a></li>
+            <li><a href="#guide-macos-podman-as-docker">Podman &amp; Podman acting as Docker</a></li>
+            <li><a href="#guide-macos-docker-desktop-alternative">Docker Desktop alternative</a></li>
+            <li><a href="#guide-macos-sharing-connection">Sharing connection with Container Desktop</a></li>
+          </ol>
+          <h3>Requirements</h3>
+          <p class="important-note important-note-requirements">On MacOS, virtualization is required to support both podman and docker container engines. Also homebrew is seriously recommended to simplify the user experience with provisioning and setup. Due to high cost, at this moment, Container Desktop does not afford the subscription to be able to digitally sign applications, neither buying a digital certificate which is even more expensive.</p>
+          <dl>
+            <dt>As non-administrator user</dt>
+            <dd>
+              <h4>Install <a href="https://brew.sh/" target="_blank" rel="noopener noreferrer">homebrew</a></h4>
+              <pre>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew update
+brew upgrade</pre>
+            </dd>
+          </dl>
+          <h3 id="guide-macos-quick-guide">1. Quick guide</h3>
+          <dl>
+            <dt>Install <a href="https://github.com/abiosoft/colima" target="_blank" rel="noopener noreferrer">colima</a></dt>
+            <dd>
+              <code>brew install colima</code>
+            </dd>
+            <dt>Start colima VM</a></dt>
+            <dd>
+              <code>colima start</code>
+            </dd>
+            <dt>Install <a href="https://formulae.brew.sh/formula/docker" target="_blank" rel="noopener noreferrer">docker</a> command line tools, this does not install Docker Desktop</dt>
+            <dd>
+              <code>brew install docker</code>
+            </dd>
+            <dt>Download and install Container Desktop for MacOS, then due to missing digital signature, allow it to run using</dt>
+            <dd>
+              <code>xattr -d com.apple.quarantine /Applications/Container\ Desktop.app</code>
+            </dd>
+          </dl>
+          <h3 id="guide-macos-best-experience">2. Podman &amp; Docker - best experience</h3>
+          <dl>
+            <dt>Install lima from <a href="https://lima-vm.io/" target="_blank" rel="noopener noreferrer">https://lima-vm.io/</a> - LIMA uses MacOS native virtualization to provide linux environments, it is like WSL, but MacOS.</dt>
+            <dd>
+              <code>brew install lima</code>
+            </dd>
+            <dt>Start VM for podman</dt>
+            <dd>
+              <code>limactl start podman</code>
+            </dd>
+            <dt>Login to podman VM</dt>
+            <dd>
+              <code>limactl shell podman</code>
+            </dd>
+            <dt>Start VM for docker</dt>
+            <dd>
+              <code>limactl start docker</code>
+            </dd>
+            <dt>Login to docker VM</dt>
+            <dd>
+              <code>limactl shell docker</code>
+            </dd>
+          </dl>
+          <h3 id="guide-macos-podman-as-docker">3. Podman &amp; Podman acting as Docker</h3>
+          <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
+          <dl>
+            <dt>Latest and greatest</dt>
+            <dd>
+              Go to the <a href="https://github.com/containers/podman/releases" target="_blank" rel="noopener noreferrer">Podman releases downloads page</a> and download and install the latest MacOS pkg file for your CPU.
+              <br />
+              Please consider the following
+              <ul>
+                <li>Upon installation, podman will create its own VM also know as Podman Machine</li>
+                <li>Aside from this, it will also set the <code>DOCKER_HOST</code> environment variable to point to the podman unix socket. This makes it easy for the docker cli to just use it.</li>
+              </ul>
+            </dd>
+            <dt>Easiest (skip if using latest and greatest)</dt>
+            <dd>
+              <code>brew install podman</code>
+            </dd>
+          </dl>
+          <h3 id="guide-macos-docker-desktop-alternative">4. Docker Desktop alternative</h3>
+          <dl>
+            <dt>Using <strong>colima</strong>, prepare a Linux VM with backed-in docker support</dt>
+            <dd>
+              Open a terminal and run the following
+              <br />
+              <code>brew install colima</code>
+              <br />
+              Start the colima VM
+              <br />
+              <code>colima start</code>
+            </dd>
+            <dt>Adding support for native <strong>docker</strong> binary</dt>
+            <dd>
+              This only installs the <strong>docker</strong> CLI, not the full Docker Desktop application.
+              <br />
+              <code>brew install docker</code>
+              <br />
+              Latest <strong>docker</strong> CLI binaries can also be found at
+              <a href="https://download.docker.com/mac/static/stable/aarch64/" target="_blank" rel="noopener noreferrer">https://download.docker.com/mac/static/stable/aarch64/</a> for Apple CPUs and at <a href="https://download.docker.com/mac/static/stable/x86_64/" target="_blank" rel="noopener noreferrer">https://download.docker.com/mac/static/stable/x86_64/</a> for Intel CPUs.
+            </dd>
+          </dl>
+          <h3 id="guide-macos-sharing-connection">5. Sharing connection with Container Desktop</h3>
+          <dl>
+            <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
+            <dd>
+              The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+            </dd>
+          </dl>
+        </div>
+        <!-- Windows -->
+        <input type="radio" class="input" name="tabs" id="guide-windows" />
+        <label class="label" for="guide-windows"><i class="fab fa-windows"></i> &nbsp; Windows</label>
+        <div class="panel">
+          <h3>Guides</h3>
+          <ol>
+            <li><a href="#guide-windows-podman-custom">Podman - custom installation</a></li>
+            <li><a href="#guide-windows-podman-as-docker">Podman &amp; Podman acting as Docker</a></li>
+            <li><a href="#guide-windows-docker-desktop-alternative">Docker Desktop alternative</a></li>
+            <li><a href="#guide-windows-best-experience">Podman &amp; Docker best experience</a></li>
+            <li><a href="#guide-windows-sharing-connection">Sharing connection with Container Desktop</a></li>
+            <li><a href="#guide-windows-tips">Tips &amp; tricks</a></li>
+          </ol>
+          <h3>Requirements</h3>
+          <p class="important-note important-note-requirements">With the introduction of WSL, the development world has changed on Windows. It is highly recommended to move away from msys/cygwin and just use WSL. Most of the times we deploy on Linux anyway, so it is appropriate to have an experience closer to reality. It also gives one a good opportunity to learn Linux, just embrace it.</p>
+          <dl>
+            <dt>As non-administrator user</dt>
+            <dd>
+              <pre>winget install -e --id=Microsoft.WindowsTerminal
+winget install "Container Desktop"</pre>
+            </dd>
+            <dt>Enable and install <strong>Windows Subsystem for Linux (WSL)</strong> as administrator</dt>
+            <dd>
+              <pre>dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+winget install -e --id=Microsoft.WSL</pre>
+            </dd>
+            <p class="important-note">Restart the computer and then set-up the WSL distribution user account by starting <code>wsl.exe</code> in a Windows Terminal</p>
+          </dl>
+          <h3 id="guide-windows-podman-custom">1. Podman - custom installation</h3>
+          <dl>
+            <dt>Podman engine setup inside WSL</dt>
+            <dd>
+              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install podman container engine.
+            </dd>
+            <dt>Container Desktop</dt>
+            <dd>
+              Open Container Desktop UI and create a new Podman engine connection using the WSL host and select your distribution of choice.
+            </dd>
+          </dl>
+          <h3 id="guide-windows-podman-as-docker">2. Podman &amp; Podman acting as Docker</h3>
+          <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
+          <dl>
+            <dt>Latest and greatest</dt>
+            <dd>
+              Go to the <a href="https://github.com/containers/podman/releases" target="_blank" rel="noopener noreferrer">Podman releases downloads page</a> and get the latest Windows installer.
+              <br />
+              Please consider the following
+              <ul>
+                <li>Upon installation, podman will create its own WSL distribution</li>
+                <li>Aside from this, it will also set the <code>DOCKER_HOST</code> environment variable to point to the podman named pipe</li>
+              </ul>
+            </dd>
+            <dt>Easiest (skip if using latest and greatest)</dt>
+            <dd>
+              <code>winget install -e --id=RedHat.Podman</code>
+            </dd>
+          </dl>
+          <h3 id="guide-windows-docker-desktop-alternative">3. Docker Desktop alternative</h3>
+          <dl>
+            <dt>Custom WSL</dt>
+            <dd>
+              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install docker container engine.
+            </dd>
+            <dt>Adding support for native <strong>docker.exe</strong> binary</dt>
+            <dd>
+              <code>winget install -e --id=Docker.DockerCLI</code>
+              <br />
+              A restart of your terminal is recommended after the installation of the CLI tools.
+              <br />
+              Please note that the latest <strong>docker.exe</strong> binary can also be found at
+              <a href="https://download.docker.com/win/static/stable/x86_64/" target="_blank">https://download.docker.com/win/static/stable/x86_64/</a>
+            </dd>
+            <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
+            <dd>
+              The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+            </dd>
+          </dl>
+          <h3 id="guide-windows-best-experience">4. Podman &amp; Docker best experience</h3>
+          <dl>
+            <dt>Custom WSL</dt>
+            <dd>
+              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install podman & docker container engines.
+            </dd>
+            <dt>Best developer experience</dt>
+            <dd>
+              Perform all container operations inside the WSL distribution directly, it is just Linux in the end. WSL is the best way to run Linux on Windows.
+            </dd>
+          </dl>
+          <h3 id="guide-windows-sharing-connection">5. Sharing connection with Container Desktop</h3>
+          <dl>
+            <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
+            <dd>
+              The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+            </dd>
+          </dl>
+          <h3 id="guide-windows-tips">6. Tips &amp; tricks</h3>
+          <dl>
+            <dt>Tips</dt>
+            <dd>
+              <ol>
+                <li>To ensure WSL version 2 is set <code>wsl --set-default-version 2</code></li>
+                <li>To ensure the recommended cgroups v2 - modify or create
+                  <code>.wslconfig</code> file in <code>%USERPROFILE%</code> directory, with the following: <br />
+                  <pre class="text-file">[wsl2]
+# ...
+kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all</pre>
+                </li>
+                <li>
+                  Although possible, <strong>it is not required</strong> to install the Container Desktop application inside WSL
+                </li>
+              </ol>
+            </dd>
+          </dl>
+          <p class="important-note">After modify/create, stop WSL engine using <code>wsl.exe --shutdown</code> and then restart with <code>wsl.exe</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class=" content">
     <div class="section0">
       <div class="column1">
         <h2>Cross-platform desktop integrated application with consistent UI</h2>
@@ -295,13 +760,13 @@
     </div>
   </div>
 
-  <div class="content">
+  <div class="content footer-content">
 
     <div class="footer">
       <div class="author1">
         <p>
           &copy; 2024 |
-          <a href="//github.com/iongion" target="_blank">Ionut Stoica</a>
+          <a href="//github.com/iongion" target="_blank" rel="noopener noreferrer">Ionut Stoica</a>
         </p>
       </div>
       <ul class="footerMenu">
@@ -314,7 +779,7 @@
       <div class="author2">
         <p>
           Webpage by
-          <a href="//github.com/teodorapletosu" target="_blank">Teodora Pletosu</a>
+          <a href="//github.com/teodorapletosu" target="_blank" rel="noopener noreferrer">Teodora Pletosu</a>
         </p>
       </div>
     </div>

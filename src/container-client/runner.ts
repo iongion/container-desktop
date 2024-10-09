@@ -1,6 +1,6 @@
 import { systemNotifier } from "@/container-client/notifier";
 import { AbstractContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
-import { ApiStartOptions, EngineConnectorSettings, ILogger, RunnerStarterOptions, RunnerStopperOptions } from "@/env/Types";
+import { ApiStartOptions, EngineConnectorSettings, ILogger, RunnerStarterOptions, RunnerStopperOptions, ServiceOpts } from "@/env/Types";
 import { createLogger } from "@/logger";
 
 export class Runner {
@@ -40,8 +40,15 @@ export class Runner {
       this.logger.error("<< Starting API - Starter program not configured");
       return false;
     }
-    const clientOpts = {
+    const clientOpts: ServiceOpts = {
       retry: { count: 10, wait: 5000 },
+      onStatusCheck: ({ retries, maxRetries }) => {
+        this.logger.debug(">> Starting API - Checking API status", retries, maxRetries);
+      },
+      onSpawn: ({ process, child }) => {
+        this.nativeApiStarterProcess = process;
+        this.nativeApiStarterProcessChild = child;
+      },
       checkStatus: async () => {
         this.logger.debug(">> Starting API - Checking API status - checking if running");
         const result = await this.client.isApiRunning();
@@ -52,12 +59,10 @@ export class Runner {
       this.logger.debug(">> Starting API - System service start requested", clientOpts);
       let rejected = false;
       const started = await new Promise<boolean>((resolve, reject) => {
-        Command.ExecuteAsBackgroundService(starter.path!, starter.args || [], clientOpts)
+        return Command.ExecuteAsBackgroundService(starter.path!, starter.args || [], clientOpts)
           .then(async (client) => {
             client.on("ready", async ({ process, child }) => {
               try {
-                this.nativeApiStarterProcess = process;
-                this.nativeApiStarterProcessChild = child;
                 this.logger.debug(">> Starting API - System service start ready", { process, child });
                 resolve(true);
               } catch (error: any) {
@@ -106,30 +111,7 @@ export class Runner {
     }
     if (this.nativeApiStarterProcessChild) {
       const child = this.nativeApiStarterProcessChild;
-      try {
-        this.logger.debug("(OS) Destroying child process streams");
-        if (child.stdout) {
-          child.stdout.destroy();
-        }
-        if (child.stdin) {
-          child.stdin.destroy();
-        }
-        if (child.stderr) {
-          child.stderr.destroy();
-        }
-      } catch (error: any) {
-        this.logger.error("(OS) Destroying child process streams failed", error);
-      }
-      try {
-        child.kill();
-      } catch (error: any) {
-        this.logger.warn("Stopping API - failed", error.message);
-      }
-      try {
-        child.unref();
-      } catch (error: any) {
-        this.logger.warn("Stopping API - failed to unref child process", error.message);
-      }
+      await Command.Kill(child);
       this.nativeApiStarterProcessChild = null;
       flag = true;
     } else {

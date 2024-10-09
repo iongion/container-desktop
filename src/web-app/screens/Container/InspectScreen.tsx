@@ -104,17 +104,44 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <HTMLTable compact striped className="AppDataTable" data-table="container.inspect">
           <tbody>
             {groups.map((group) => {
-              const items = group.items.map((item) => {
-                return (
-                  <tr key={`${group.name}_${item.key}_${item.value}`}>
-                    <td>{item.key}</td>
-                    <td>{item.value}</td>
-                    <td>
-                      <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
-                    </td>
-                  </tr>
-                );
-              });
+              let items: any[] = [];
+              if (group.name === "mounts") {
+                items = group.items.map((item, index) => {
+                  return (
+                    <tr key={`group_${group.name}_${item.key}_${item.value}`}>
+                      <td colSpan={3}>
+                        <div className="ContainerVolume">
+                          <div className="ContainerVolumeIndex">{index + 1}.</div>
+                          <ul className="ContainerVolumeMapping">
+                            <li>
+                              <strong title={t("Host path")}>{t("Host")}</strong>
+                              <code>{item.key}</code>
+                            </li>
+                            <li>
+                              <strong title={t("Container path")}>{t("Container")}</strong>
+                              <code>{item.value}</code>
+                            </li>
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                });
+              } else {
+                items = group.items.map((item) => {
+                  return (
+                    <tr key={`${group.name}_${item.key}_${item.value}`}>
+                      <td>
+                        <code>{item.key}</code>
+                      </td>
+                      <td>{item.value}</td>
+                      <td>
+                        <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                      </td>
+                    </tr>
+                  );
+                });
+              }
               return (
                 <React.Fragment key={group.name}>
                   <tr key={`group_${group.name}`} data-table-row="group.name" data-section-group={group.name}>

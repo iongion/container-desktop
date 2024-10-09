@@ -9,6 +9,15 @@ export interface SpawnedProcess {
   unref: () => void;
 }
 
+export interface ServiceOpts {
+  onStatusCheck?: ({ retries, maxRetries }: { retries: number; maxRetries: number }) => void;
+  onSpawn?: ({ process, child }: { process: CommandExecutionResult; child: SpawnedProcess }) => void;
+  checkStatus: (process: any) => Promise<boolean>;
+  retry?: { count: number; wait: number };
+  cwd?: string;
+  env?: any;
+}
+
 export enum StartupStatus {
   STARTED = "started",
   STOPPED = "stopped",
