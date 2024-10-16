@@ -5,7 +5,7 @@
 }
 [data-table="pod.inspect"] tr td {
   text-align: left;
-  font-family: monospace;
+  font-family: var(--monospace-font);
 }
 [data-table="pod.inspect"] tr td:first-child {
   width: 50%;

@@ -1,6 +1,9 @@
 import { ResizeEntry, ResizeSensor } from "@blueprintjs/core";
 import { FitAddon } from "@xterm/addon-fit";
-// import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { LigaturesAddon } from "@xterm/addon-ligatures";
+import { SearchAddon } from "@xterm/addon-search";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useRef } from "react";
@@ -34,31 +37,42 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
     if (!term.current) {
       const fitAddon = new FitAddon();
       const webglAddon = new FitAddon();
-      // const unicode11Addon = new Unicode11Addon();
+      const unicode11Addon = new Unicode11Addon();
       const terminal = new XTermTerminal({
         convertEol: true,
-        fontSize: 11,
+        drawBoldTextInBrightColors: true,
+        rescaleOverlappingGlyphs: true,
+        rightClickSelectsWord: true,
+        fontSize: 12,
+        fontFamily: `Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono", "Fira Code", monospace, "Powerline Extra Symbols"`,
         disableStdin: true,
         scrollback: 16 * 1024,
         logLevel: "error",
-        allowProposedApi: true
+        allowProposedApi: true,
+        fontWeight: "normal"
       });
+      terminal.open(viewRef.current!);
       terminal.loadAddon(fitAddon);
-      // terminal.loadAddon(unicode11Addon);
+      terminal.loadAddon(unicode11Addon);
+      terminal.loadAddon(new WebLinksAddon());
+      terminal.loadAddon(new SearchAddon());
+      terminal.loadAddon(new LigaturesAddon());
       try {
         terminal.loadAddon(webglAddon);
       } catch (error: any) {
         console.error("Unable to activate web gl");
       }
-      // terminal.unicode.activeVersion = "11";
-      terminal.open(viewRef.current!);
       fitAddon.fit();
       terminal.focus();
+      terminal.clear();
+      terminal.unicode.activeVersion = "11";
+      terminal.write("\x1b[?25l"); // disable cursor
+      terminal.writeln("If they exist, logs will be displayed shortly");
       term.current = terminal;
       fit.current = fitAddon;
     }
     if (value) {
-      term.current?.write(value);
+      term.current.write(value as any);
     }
     return () => {
       if (term.current) {

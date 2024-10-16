@@ -180,15 +180,17 @@ def build(ctx, env=None):
 @task
 def build_relay(ctx, env=None):
     path = Path(PROJECT_HOME)
-    support_dir = os.path.join(path, "support")
-    with ctx.cd(support_dir):
+    relay_dir = os.path.join(path, "support/container-desktop-relay")
+    with ctx.cd(relay_dir):
         os.makedirs(os.path.join(PROJECT_HOME, "bin"), exist_ok=True)
         system = platform.system()
         print(f"Building relay on {system}")
         if system == "Linux":
-            run_env(ctx, f'cd "{support_dir}" && ./build-relay.sh', env)
+            run_env(ctx, f'cd "{relay_dir}" && ./relay-build.sh', env)
         elif system == "Windows":
-            run_env(ctx, f"wsl.exe --exec bash -i -l -c ./build-relay.sh", env)
+            run_env(ctx, f"relay-build.cmd", env)
+            for file in glob.glob(os.path.join(relay_dir, "bin", "**")):
+                shutil.copy(file, os.path.join(path, "bin"))
         else:
             raise Exception(f"Unsupported system: {system}")
 

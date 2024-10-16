@@ -294,7 +294,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(true);
         setContainerEngineHostOptions(connectors.filter((it) => it.engine === engine));
         console.debug("Detecting container engine", engine);
-        const updated = createConnectorBy(osType, engine);
+        const updated = await createConnectorBy(osType, engine);
         resetFormData(updated);
       } catch (error: any) {
         console.error("Error during container engine detection", error);
@@ -323,7 +323,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       try {
         setPending(true);
         console.debug("Detecting container host", host);
-        const connector = createConnectorBy(osType, engine, host);
+        const connector = await createConnectorBy(osType, engine, host);
         const updated = await fetchControllerScopes(connector, true);
         if (engine === ContainerEngine.PODMAN) {
           // These should default to auto-start

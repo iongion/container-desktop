@@ -42,7 +42,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       registry.getStore().getActions().insertBootstrapPhase(event);
     }
   });
-  systemNotifier.on("host.availability", (event) => {
+  systemNotifier.on("engine.availability", (event) => {
     const state = registry.getStore().getState();
     if (state.phase === AppBootstrapPhase.STARTING) {
       registry.getStore().getActions().insertBootstrapPhase(event);

@@ -14,7 +14,7 @@ table[data-table="image.layers"] {
   padding-left: 4px;
   padding-right: 4px;
   color: #dedede !important;
-  font-family: monospace;
+  font-family: var(--monospace-font);
 }
 
 [data-table="image.layers.history"] {
@@ -24,7 +24,7 @@ table[data-table="image.layers"] {
 [data-table="image.layers.history"] tr td {
   vertical-align: middle;
   font-size: 11px;
-  font-family: monospace;
+  font-family: var(--monospace-font);
   text-align: left;
 }
 [data-table="image.layers.history"] tr th:first-child,
@@ -53,13 +53,27 @@ table[data-table="image.layers"] {
   margin: 0;
 }
 [data-table="image.layers.history"] .LayerHistory {
-  font-family: monospace;
-  font-size: 11px;
-  width: 100% !important;
-  border: none;
-  padding: 4px;
-  resize: none;
-  overflow: hidden;
-  min-height: 50px;
+  font-family: var(--monospace-font);
+  font-size: 12px;
+  padding: 5px;
   max-height: 100px;
+  white-space: wrap;
+  border-radius: 5px;
+}
+[data-table="image.layers.history"] .LayerIndex {
+  font-size: 12px;
+  font-weight: bold;
+  vertical-align: middle;
+}
+[data-theme="bp5-dark"] [data-table="image.layers.history"] .LayerIndex {
+  color: #ccc;
+}
+[data-theme="bp5-dark"] [data-table="image.layers.history"] .LayerHistory {
+  background-color: #333;
+}
+[data-theme="bp5-light"] [data-table="image.layers.history"] .LayerIndex {
+  color: #333;
+}
+[data-theme="bp5-light"] [data-table="image.layers.history"] .LayerHistory {
+  background-color: #ccc;
 }

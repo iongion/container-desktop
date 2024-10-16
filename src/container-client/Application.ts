@@ -34,6 +34,7 @@ import {
   SubscriptionOptions
 } from "@/env/Types";
 import { createLogger, getLevel, setLevel } from "@/logger";
+import { getWindowsPipePath } from "@/platform";
 import { deepMerge } from "@/utils";
 
 const AUTOMATIC_REGISTRIES: Registry[] = [
@@ -561,13 +562,6 @@ export class Application {
   }
 
   // System
-  async getIsApiRunning(connection?: Connection) {
-    let currentApi = this._currentContainerEngineHostClient;
-    if (connection) {
-      currentApi = await this.getConnectionApi(connection, false);
-    }
-    return currentApi ? await currentApi.isApiRunning() : false;
-  }
 
   async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
     let currentApi = this._currentContainerEngineHostClient;
@@ -927,6 +921,14 @@ export class Application {
             systemNotifier.transmit("startup.phase", {
               trace: "Availability checks completed"
             });
+            if (!availability.api) {
+              this.logger.warn(connector.id, "Connector host api is not available - cleaning up");
+              try {
+                await host.stopApi();
+              } catch (error: any) {
+                this.logger.error(connector.id, "Connector host api stop error", error);
+              }
+            }
           }
         } catch (error: any) {
           this.logger.error(connector.id, "<< Reading host availability failed", error);
@@ -988,25 +990,42 @@ export class Application {
     let connector: Connector | undefined;
     try {
       this.logger.debug("Bridge startup - creating current");
+      const currentOpts = deepMerge({}, opts || {});
       if (opts?.connection) {
         systemNotifier.transmit("startup.phase", {
           trace: "Creating connectors"
         });
-        connector = createConnectorBy(this.osType, opts.connection.engine, opts.connection.host, opts.connection.id);
+        connector = await createConnectorBy(this.osType, opts.connection.engine, opts.connection.host, opts.connection.id);
         connector.connectionId = opts.connection.id;
         connector.name = opts.connection.name;
         connector.label = opts.connection.label;
         connector.disabled = opts.connection.disabled ?? false;
         connector.settings = deepMerge({}, opts.connection.settings);
         connector.logLevel = this.logLevel;
+        currentOpts.connection.settings = connector.settings;
+        if (!connector.settings?.api?.connection?.uri) {
+          switch (opts.connection?.host) {
+            case ContainerEngineHost.PODMAN_REMOTE:
+            case ContainerEngineHost.DOCKER_REMOTE:
+              if (this.osType === OperatingSystem.Windows) {
+                connector.settings.api.connection.uri = getWindowsPipePath(connector.id);
+              } else {
+                const userData = await Platform.getUserDataPath();
+                connector.settings.api.connection.uri = await Path.join(userData, `container-desktop-ssh-relay-${connector.id}`);
+              }
+              break;
+            default:
+              break;
+          }
+        }
         if (!connector) {
-          this.logger.error("Bridge startup - no connector found", opts);
+          this.logger.error("Bridge startup - no connector found", currentOpts);
           throw new Error("No connector found");
         }
         systemNotifier.transmit("startup.phase", {
           trace: "Creating connector host starting"
         });
-        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, { ...opts, origin: "start" });
+        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, { ...currentOpts, origin: "start" });
         if (host) {
           const engineSettings = await host.getSettings();
           connector.settings = deepMerge(connector.settings, engineSettings);

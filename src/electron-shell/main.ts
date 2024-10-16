@@ -207,8 +207,8 @@ async function createApplicationWindow() {
     }
     return false;
   };
-  const onWindowMinimize = async (event: any) => {
-    const inTray = await hideToTray(event);
+  const onWindowMinimize = async () => {
+    const inTray = await hideToTray();
     sendToRenderer("window:minimize", { inTray });
   };
   const onWindowClose = async (event: any) => {
@@ -227,14 +227,14 @@ async function createApplicationWindow() {
   };
   // Application window
   applicationWindow = new BrowserWindow(windowOptions);
-  applicationWindow.on("resize", async (event: any) => {
+  applicationWindow.on("resize", async () => {
     const [width, height] = applicationWindow.getSize();
     const config = await getWindowConfigOptions();
     config.width = width;
     config.height = height;
     await setWindowConfigOptions(config);
   });
-  applicationWindow.on("move", async (event: any) => {
+  applicationWindow.on("move", async () => {
     const [x, y] = applicationWindow.getPosition();
     const config = await getWindowConfigOptions();
     config.x = x;
@@ -242,7 +242,7 @@ async function createApplicationWindow() {
     await setWindowConfigOptions(config);
   });
   applicationWindow.on("minimize", onWindowMinimize);
-  applicationWindow.on("maximize", async (event: any) => {
+  applicationWindow.on("maximize", async () => {
     const isMaximized = applicationWindow.isMaximized();
     const config = await getWindowConfigOptions();
     (config as any).isMaximized = isMaximized;

@@ -37,11 +37,11 @@ export class DockerContainerEngineHostClientVirtualizedVendor extends DockerCont
       const host = await Platform.getEnvironmentVariable("DOCKER_HOST");
       if (isEmpty(host)) {
         let scope = "dockerDesktopLinuxEngine";
-        const defaultPipeExists = await FS.isFilePresent(getWindowsPipePath(scope));
+        const defaultPipeExists = await FS.isFilePresent(getWindowsPipePath(scope, true));
         if (!defaultPipeExists) {
           scope = "docker_engine";
         }
-        uri = getWindowsPipePath(scope!) || "";
+        uri = getWindowsPipePath(scope, true) || "";
       } else {
         uri = host || "";
       }

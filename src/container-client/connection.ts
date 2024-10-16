@@ -383,7 +383,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
   return connectors;
 }
 
-export function createConnectorBy(osType: OperatingSystem, engine: ContainerEngine = DEFAULT_CONTAINER_RUNTIME, host?: ContainerEngineHost, id?: string) {
+export async function createConnectorBy(osType: OperatingSystem, engine: ContainerEngine = DEFAULT_CONTAINER_RUNTIME, host?: ContainerEngineHost, id?: string) {
   const canUseNativeEngine = osType === OperatingSystem.Linux;
   let currentEngineHost: ContainerEngineHost = host!;
   if (currentEngineHost) {
@@ -397,8 +397,7 @@ export function createConnectorBy(osType: OperatingSystem, engine: ContainerEngi
   }
   const connectors = getDefaultConnectors(osType);
   const connector = connectors.find((it) => it.engine === engine && it.host === currentEngineHost)!;
-  const copyOf = deepMerge<Connector>({}, { ...connector });
+  const copyOf = JSON.parse(JSON.stringify(deepMerge<Connector>({}, { ...connector }))) as Connector;
   copyOf.id = id || `host.${v4()}.${connector.host}`;
-  console.debug("Create connector by", { osType, engine, host: currentEngineHost, canUseNativeEngine });
   return copyOf;
 }

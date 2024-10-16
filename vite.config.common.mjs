@@ -116,19 +116,9 @@ export const sourcemap = ENVIRONMENT === "development";
  */
 export function getCommonViteConfig({ mode, define, resolve, outputName, outputFormat, plugins, rollupOptions }) {
   const userDefine = {
-    // Define environment variables
-    "import.meta.env.NODE_ENV": `"${mode}"`,
-    "import.meta.env.TARGET": `"${os.type()}"`,
-    "import.meta.env.ENVIRONMENT": JSON.stringify(ENVIRONMENT),
-    "import.meta.env.PUBLIC_URL": JSON.stringify("."),
-    "import.meta.env.PROJECT_VERSION": JSON.stringify(pkg.version),
-    "import.meta.env.PROJECT_NAME": JSON.stringify(pkg.name),
-    "import.meta.env.PROJECT_TITLE": JSON.stringify(pkg.title),
-    "import.meta.env.PROJECT_DESCRIPTION": JSON.stringify(pkg.description),
-    "import.meta.env.ONLINE_API": JSON.stringify(process.env.ONLINE_API),
-    // Bugs
-    "process.env.NODE_DEBUG": JSON.stringify(false),
-    // Defines
+    // Define default environment variables
+    ...createDefine(mode),
+    // Define user overridden environment variables
     ...define,
     // Fix
     __dirname: "import.meta.dirname"
@@ -184,6 +174,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
 export const createDefine = (mode) => {
   // Bootstrap
   const define = {
+    "import.meta.env.TARGET": `"${os.type()}"`,
     // Define environment variables
     "import.meta.env.NODE_ENV": `"${mode}"`,
     "import.meta.env.ENVIRONMENT": JSON.stringify(ENVIRONMENT),
@@ -193,6 +184,8 @@ export const createDefine = (mode) => {
     "import.meta.env.PROJECT_TITLE": JSON.stringify(pkg.title),
     "import.meta.env.PROJECT_DESCRIPTION": JSON.stringify(pkg.description),
     "import.meta.env.ONLINE_API": JSON.stringify(process.env.ONLINE_API),
+    // Features
+    "import.meta.env.FEATURE_WSL_RELAY_METHOD": JSON.stringify(process.env.FEATURE_WSL_RELAY_METHOD),
     // Bugs
     "process.env.NODE_DEBUG": JSON.stringify(false)
   };

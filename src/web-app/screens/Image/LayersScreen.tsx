@@ -62,7 +62,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID} ref={screenRef}>
       <ScreenHeader image={image} currentScreen={ID} />
       <div className="AppScreenContent">
-        <HTMLTable compact striped interactive className="AppDataTable" data-table="image.layers.history">
+        <HTMLTable compact striped className="AppDataTable" data-table="image.layers.history">
           <thead>
             <tr>
               <th data-column="layer">#</th>
@@ -75,9 +75,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
             {layers.map((layer, index) => {
               return (
                 <tr key={index}>
-                  <td>{index}</td>
                   <td>
-                    <textarea className="LayerHistory" readOnly rows={3} value={layer.CreatedBy || ""}></textarea>
+                    <strong className="LayerIndex">{index + 1}.</strong>
+                  </td>
+                  <td>
+                    <div className="LayerHistory">{layer.CreatedBy || ""}</div>
                   </td>
                   <td>{layer.Size !== undefined ? prettyBytes(layer.Size) : t("- n/a -")}</td>
                   <td>

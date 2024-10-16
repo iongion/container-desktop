@@ -74,7 +74,7 @@ table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="
   font-weight: bold;
 }
 .SecurityDetails table tr td:last-child {
-  font-family: monospace;
+  font-family: var(--monospace-font);
   font-size: 10px !important;
 }
 .SecurityList {

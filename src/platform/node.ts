@@ -6,6 +6,8 @@ import SSHConfigParser from "ssh-config";
 
 import { CommandExecutionResult, ControllerScopeType, OperatingSystem, SSHHost } from "@/env/Types";
 
+export const CURRENT_OS_TYPE = os.type();
+
 export const Platform: IPlatform = {
   OPERATING_SYSTEM: os.type() as OperatingSystem,
 
@@ -156,5 +158,3 @@ export const Path: IPath = {
     return await path.resolve(...paths);
   }
 };
-
-export const CURRENT_OS_TYPE = os.type();

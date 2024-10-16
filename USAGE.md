@@ -8,9 +8,19 @@
 
 - Allow unsigned application to execute - `xattr -d com.apple.quarantine /Applications/Container\ Desktop.app`
 
+```bash
+brew install colima
+brew install docker
+```
+
 ### Windows
 
-- Download the application from Microsoft Store, it is digitally signed, courtesy of Microsoft. You can also install it using `winget install "Container Desktop"`
+- Download the application from Microsoft Store, it is digitally signed, courtesy of Microsoft. You can also install it using
+
+```bash
+winget install "Docker.DockerCLI"
+winget install "Container Desktop"
+```
 
 ### Linux
 

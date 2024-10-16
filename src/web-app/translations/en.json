@@ -274,5 +274,11 @@
   "containersRunning_one": "There is {{count}} running container",
   "containersRunning_other": "There are {{count}} running containers",
   "dark": "dark",
-  "light": "light"
+  "light": "light",
+  "The value was copied to clipboard": "The value was copied to clipboard",
+  "Environment variables": "Environment variables",
+  "Ports": "Ports",
+  "Host path": "Host path",
+  "Host": "Host",
+  "Container path": "Container path"
 }

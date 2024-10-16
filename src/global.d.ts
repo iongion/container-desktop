@@ -11,17 +11,14 @@ interface SSHHost {
 }
 
 interface ICommand {
+  CreateNodeJSApiDriver: (opts: AxiosRequestConfig<any>) => Promise<any>;
   Spawn: (launcher: string, args: string[], opts?: any) => Promise<CommandExecutionResult>;
   Execute: (launcher: string, args: string[], opts?: any) => Promise<CommandExecutionResult>;
-  ExecuteAsBackgroundService: (
-    launcher: string,
-    args: string[],
-    opts: { checkStatus: (process: any) => Promise<boolean>; retry?: { count: number; wait: number }; cwd?: string; env?: any }
-  ) => Promise<EventEmitter>;
-  StartSSHConnection: (opts?: any, cli?: string) => Promise<ISSHClient>;
+  Kill: (process: any) => Promise<void>;
+  ExecuteAsBackgroundService: (launcher: string, args: string[], opts?: Partial<ServiceOpts>) => Promise<EventEmitter>;
+  StartSSHConnection: (host: SSHHost, opts?: Partial<ServiceOpts>) => Promise<ISSHClient>;
   StopConnectionServices: (connection_id: string, settings: EngineConnectorSettings) => Promise<void>;
-  proxyRequest: (request: any, settings: any, context?: any) => any;
-  proxyTCPRequest: (request: any, tcpAddress: string) => any;
+  ProxyRequest: (request: any, settings: any, context?: any) => any;
 }
 
 interface IPlatform {
