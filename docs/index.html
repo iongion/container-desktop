@@ -309,6 +309,7 @@
           </dl>
           <h3 id="guide-linux-quick-guide">1. Quick guide</h3>
           <dl>
+            <dt>Install requirements</dt>
             <dd>
               <h4>Update your system</h4>
               <pre>sudo apt-get update -y && sudo apt-get upgrade -y</pre>
@@ -328,6 +329,11 @@ docker run hello-world # This to test the installation - docker cli must be able
               <h4>Install podman &amp; podman-compose</h4>
               <pre>sudo apt-get install -y podman podman-compose</pre>
               <p class="tip-note">Distributions usually have very old podman versions, for more recent versions, use <a href="https://software.opensuse.org/download/package?package=podman&project=home%3Aalvistack" target="_blank" rel="noopener noreferrer">Alvistack project</a> that provides repositories for most of the linux flavors.</p>
+            </dd>
+            <dt>Open Container Desktop</dt>
+            <dd>
+              Connect to <code>System Docker</code> or <code>System Podman</code> default connections and all should work, choose and make the one you prefer, default if you want.
+            </dd>
           </dl>
           <h3 id="guide-linux-podman-as-docker">2. Podman &amp; Podman acting as Docker</h3>
           <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
@@ -391,6 +397,10 @@ brew upgrade</pre>
             <dt>Download and install Container Desktop for MacOS, then due to missing digital signature, allow it to run using</dt>
             <dd>
               <code>xattr -d com.apple.quarantine /Applications/Container\ Desktop.app</code>
+            </dd>
+            <dt>Open Container Desktop</dt>
+            <dd>
+              Connect to <code>System Docker</code> default connection and all should work, make it default if you want.
             </dd>
           </dl>
           <h3 id="guide-macos-best-experience">2. Podman &amp; Docker - best experience</h3>
@@ -470,6 +480,7 @@ brew upgrade</pre>
         <div class="panel">
           <h3>Guides</h3>
           <ol>
+            <li><a href="#guide-windows-quick-guide">Quick guide</a></li>
             <li><a href="#guide-windows-podman-custom">Podman - custom installation</a></li>
             <li><a href="#guide-windows-podman-as-docker">Podman &amp; Podman acting as Docker</a></li>
             <li><a href="#guide-windows-docker-desktop-alternative">Docker Desktop alternative</a></li>
@@ -493,7 +504,28 @@ winget install -e --id=Microsoft.WSL</pre>
             </dd>
             <p class="important-note">Restart the computer and then set-up the WSL distribution user account by starting <code>wsl.exe</code> in a Windows Terminal</p>
           </dl>
-          <h3 id="guide-windows-podman-custom">1. Podman - custom installation</h3>
+          <h3 id="guide-windows-quick-guide">1. Quick guide</h3>
+          <dl>
+            <dt>Enable and install <strong>Windows Subsystem for Linux (WSL)</strong> as administrator</dt>
+            <dd>
+              <pre>winget install -e --id=Microsoft.WSL</pre>
+              This will install the default Ubuntu distribution, which is fine for most users - Ubuntu-24.04 is the latest at the time of writing.
+              <br />
+              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install docker and/or podman container engines.
+            </dd>
+            <dt>As non-administrator user</dt>
+            <dd>
+              <pre>winget install -e --id=Microsoft.WindowsTerminal
+winget install -e --id=Docker.DockerCLI
+winget install -e --id=RedHat.Podman
+winget install "Container Desktop"</pre>
+            </dd>
+            <dt>Open Container Desktop</dt>
+            <dd>
+              Create an automatic connection to your WSL distribution, using either docker or podman engines. If you want, choose and make the one you prefer, default and click <strong>Connect</strong> button.
+            </dd>
+          </dl>
+          <h3 id="guide-windows-podman-custom">2. Podman - custom installation</h3>
           <dl>
             <dt>Podman engine setup inside WSL</dt>
             <dd>
@@ -504,7 +536,7 @@ winget install -e --id=Microsoft.WSL</pre>
               Open Container Desktop UI and create a new Podman engine connection using the WSL host and select your distribution of choice.
             </dd>
           </dl>
-          <h3 id="guide-windows-podman-as-docker">2. Podman &amp; Podman acting as Docker</h3>
+          <h3 id="guide-windows-podman-as-docker">3. Podman &amp; Podman acting as Docker</h3>
           <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
           <dl>
             <dt>Latest and greatest</dt>
@@ -522,7 +554,7 @@ winget install -e --id=Microsoft.WSL</pre>
               <code>winget install -e --id=RedHat.Podman</code>
             </dd>
           </dl>
-          <h3 id="guide-windows-docker-desktop-alternative">3. Docker Desktop alternative</h3>
+          <h3 id="guide-windows-docker-desktop-alternative">4. Docker Desktop alternative</h3>
           <dl>
             <dt>Requirements</dt>
             <dd>
@@ -542,7 +574,7 @@ winget install -e --id=Microsoft.WSL</pre>
               <a href="https://download.docker.com/win/static/stable/x86_64/" target="_blank">https://download.docker.com/win/static/stable/x86_64/</a>
             </dd>
           </dl>
-          <h3 id="guide-windows-best-experience">4. Podman &amp; Docker best experience</h3>
+          <h3 id="guide-windows-best-experience">5. Podman &amp; Docker best experience</h3>
           <dl>
             <dt>Requirements</dt>
             <dd>
@@ -557,14 +589,14 @@ winget install -e --id=Microsoft.WSL</pre>
               Perform all container operations inside the WSL distribution directly, it is just Linux in the end. WSL is the best way to run Linux on Windows.
             </dd>
           </dl>
-          <h3 id="guide-windows-sharing-connection">5. Sharing connection with Container Desktop</h3>
+          <h3 id="guide-windows-sharing-connection">6. Sharing connection with Container Desktop</h3>
           <dl>
             <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
             <dd>
               The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
             </dd>
           </dl>
-          <h3 id="guide-windows-tips">6. Tips &amp; tricks</h3>
+          <h3 id="guide-windows-tips">7. Tips &amp; tricks</h3>
           <dl>
             <dt>Tips</dt>
             <dd>
