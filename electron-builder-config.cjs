@@ -29,6 +29,9 @@ const identityName = "IonutStoica.ContainerDesktop";
 const applicationId = identityName;
 const displayName = pkg.title;
 const releaseName = `${displayName} ${version}`;
+const author = (pkg.author || "").replace(/\s+/g, ".");
+const publisher = process.env.PUBLISHER || `CN=${author}`;
+const publisherDisplayName = (process.env.PUBLISHER_DISPLAY_NAME || pkg.author).replace(/\s+/g, ".");
 const config = {
   appId: "container-desktop.iongion.github.io",
   productName: process.platform === "linux" ? pkg.name : displayName,
@@ -129,15 +132,15 @@ const config = {
   },
   appx: {
     identityName,
-    publisher: process.env.PUBLISHER || pkg.author,
-    publisherDisplayName: process.env.PUBLISHER_DISPLAY_NAME || pkg.author,
+    publisher,
+    publisherDisplayName: publisherDisplayName,
     applicationId,
     setBuildNumber: false, // Always false otherwise rejected by Windows Store
     displayName
   },
   linux: {
     executableName: "container-desktop",
-    maintainer: process.env.PUBLISHER || pkg.author,
+    maintainer: publisher,
     icon: "icons/appIcon.icns",
     target: ["deb", "pacman", "rpm", "flatpak", "AppImage"],
     category: "Development;System;Utility",

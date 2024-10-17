@@ -179,6 +179,10 @@ func testNamedPipe() {
 }
 
 func getWSLPath(distribution string, windowsPath string) (string, error) {
+	if strings.HasPrefix(windowsPath, "/") {
+		log.Debugf("Path appears to already by a WSL path for %s\n", windowsPath)
+		return windowsPath, nil
+	}
 	args := []string{
 		"--distribution",
 		distribution,

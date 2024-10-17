@@ -56,7 +56,6 @@ table[data-table="image.layers"] {
   font-family: var(--monospace-font);
   font-size: 12px;
   padding: 5px;
-  max-height: 100px;
   white-space: wrap;
   border-radius: 5px;
 }

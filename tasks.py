@@ -21,7 +21,6 @@ APP_PROJECT_VERSION = PROJECT_VERSION
 TARGET = os.environ.get("TARGET", "linux")
 PORT = int(os.environ.get("PORT", str(3000)))
 PTY = os.name != "nt"
-SIGNTOOL_PATH = os.environ.get("SIGNTOOL_PATH", "")
 
 
 def url_download(url, path):
@@ -45,7 +44,6 @@ def get_env():
         # Global
         "ENVIRONMENT": ENVIRONMENT,
         "APP_PROJECT_VERSION": APP_PROJECT_VERSION,
-        "SIGNTOOL_PATH": SIGNTOOL_PATH,
     }
 
 

@@ -43,6 +43,7 @@
   "cSpell.words": [
     "Aalvistack",
     "ALLUSERS",
+    "Alvistack",
     "aquasec",
     "aquasecurity",
     "asar",
@@ -50,9 +51,12 @@
     "blueprintjs",
     "browserslistrc",
     "buildcheck",
+    "buildx",
+    "cgroups",
     "CGROUPSV",
     "chans",
     "Consolas",
+    "containerd",
     "cppvsdbg",
     "csstools",
     "CURRENTUSER",
@@ -65,6 +69,7 @@
     "devpts",
     "DISTRO",
     "dotnettools",
+    "dpkg",
     "Editability",
     "electronjs",
     "elfutils",
@@ -72,6 +77,7 @@
     "Errorln",
     "execvp",
     "Expt",
+    "featurename",
     "Fira",
     "flathub",
     "flatpak",
@@ -101,6 +107,7 @@
     "Japonic",
     "jsign",
     "kernelmode",
+    "keyrings",
     "keystyle",
     "knownhosts",
     "libpod",
@@ -113,10 +120,12 @@
     "Mountpoint",
     "mscdex",
     "mstile",
+    "msys",
     "Netcat",
     "netns",
     "nodemon",
     "nolint",
+    "norestart",
     "nosec",
     "npipe",
     "nsis",
@@ -185,6 +194,7 @@
     "undici",
     "unplugin",
     "usehooks",
+    "usermod",
     "usermode",
     "USERPROFILE",
     "vscodeintellicode",
@@ -197,6 +207,7 @@
     "winquit",
     "winsocat",
     "Wrapf",
+    "wslconfig",
     "wslg",
     "wslpath",
     "WSLSSH",
@@ -260,5 +271,8 @@
   "[go]": {
     "editor.defaultFormatter": "golang.go"
   },
-  "git.ignoreLimitWarning": true
+  "git.ignoreLimitWarning": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  }
 }

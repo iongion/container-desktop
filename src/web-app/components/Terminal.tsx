@@ -1,6 +1,5 @@
 import { ResizeEntry, ResizeSensor } from "@blueprintjs/core";
 import { FitAddon } from "@xterm/addon-fit";
-import { LigaturesAddon } from "@xterm/addon-ligatures";
 import { SearchAddon } from "@xterm/addon-search";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -56,7 +55,6 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
       terminal.loadAddon(unicode11Addon);
       terminal.loadAddon(new WebLinksAddon());
       terminal.loadAddon(new SearchAddon());
-      terminal.loadAddon(new LigaturesAddon());
       try {
         terminal.loadAddon(webglAddon);
       } catch (error: any) {
