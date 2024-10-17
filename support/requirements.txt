@@ -1,2 +1,3 @@
 invoke
+ruff
 python-dotenv

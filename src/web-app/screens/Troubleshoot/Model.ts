@@ -15,7 +15,7 @@ export interface TroubleshootModel extends TroubleshootModelState, ResetableMode
 
 export const createModel = async (registry: AppRegistry): Promise<TroubleshootModel> => {
   return {
-    reset: action((state) => {}),
+    reset: action((state) => { }),
     troubleShootPrune: thunk(async (actions) =>
       registry.withPending(async () => {
         const client = await registry.getContainerClient();

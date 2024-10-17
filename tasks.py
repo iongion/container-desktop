@@ -1,4 +1,3 @@
-import subprocess
 import json
 import glob
 import shutil
@@ -186,7 +185,7 @@ def build_relay(ctx, env=None):
         if system == "Linux":
             run_env(ctx, f'cd "{relay_dir}" && ./relay-build.sh', env)
         elif system == "Windows":
-            run_env(ctx, f"relay-build.cmd", env)
+            run_env(ctx, "relay-build.cmd", env)
             for file in glob.glob(os.path.join(relay_dir, "bin", "**")):
                 shutil.copy(file, os.path.join(path, "bin"))
         else:

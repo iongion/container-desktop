@@ -1,5 +1,6 @@
 {
   "recommendations": [
+    "golang.Go",
     "biomejs.biome",
     "csstools.postcss",
     "orta.vscode-jest",
