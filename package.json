@@ -81,7 +81,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.8",
-    "@biomejs/biome": "^1.9.3",
+    "@biomejs/biome": "^1.9.4",
     "@electron/packager": "^18.3.5",
     "@hookform/devtools": "^4.3.1",
     "@types/electron": "^1.6.10",
