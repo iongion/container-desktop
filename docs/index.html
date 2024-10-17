@@ -316,7 +316,7 @@
               <h4>Install development tools</h4>
               <pre>sudo apt-get install -y build-essential
 sudo apt install apt-transport-https ca-certificates curl software-properties-common -y</pre>
-              <h4>Install docker</h4>
+              <h4>Install docker container engine - <span>this does not install Docker Desktop</span></h4>
               <pre>sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt update -y
@@ -326,7 +326,7 @@ sudo systemctl enable docker # To start docker on boot
 sudo systemctl restart docker # To start docker now
 sudo systemctl is-active docker # To check if docker is running
 docker run hello-world # This to test the installation - docker cli must be able to run without sudo at this point</pre>
-              <h4>Install podman &amp; podman-compose</h4>
+              <h4>Install podman container engine and podman-compose</h4>
               <pre>sudo apt-get install -y podman podman-compose</pre>
               <p class="tip-note">Distributions usually have very old podman versions, for more recent versions, use <a href="https://software.opensuse.org/download/package?package=podman&project=home%3Aalvistack" target="_blank" rel="noopener noreferrer">Alvistack project</a> that provides repositories for most of the linux flavors.</p>
             </dd>
@@ -390,9 +390,9 @@ brew upgrade</pre>
             <dd>
               <code>colima start</code>
             </dd>
-            <dt>Install <a href="https://formulae.brew.sh/formula/docker" target="_blank" rel="noopener noreferrer">docker</a> command line tools, this does not install Docker Desktop</dt>
+            <dt>Install <a href="https://formulae.brew.sh/formula/docker" target="_blank" rel="noopener noreferrer">docker</a> command line tools</dt>
             <dd>
-              <code>brew install docker</code>
+              <code>brew install docker</code> - <span>this does not install Docker Desktop</span>
             </dd>
             <dt>Download and install Container Desktop for MacOS, then due to missing digital signature, allow it to run using</dt>
             <dd>
@@ -458,12 +458,13 @@ brew upgrade</pre>
             </dd>
             <dt>Adding support for native <strong>docker</strong> binary</dt>
             <dd>
-              This only installs the <strong>docker</strong> CLI, not the full Docker Desktop application.
-              <br />
-              <code>brew install docker</code>
+              <code>brew install docker</code> - <span>this does not install Docker Desktop</span>
               <br />
               Latest <strong>docker</strong> CLI binaries can also be found at
-              <a href="https://download.docker.com/mac/static/stable/aarch64/" target="_blank" rel="noopener noreferrer">https://download.docker.com/mac/static/stable/aarch64/</a> for Apple CPUs and at <a href="https://download.docker.com/mac/static/stable/x86_64/" target="_blank" rel="noopener noreferrer">https://download.docker.com/mac/static/stable/x86_64/</a> for Intel CPUs.
+              <ul>
+                <li><strong>Apple CPUs</strong> - <a href="https://download.docker.com/mac/static/stable/aarch64/" target="_blank" rel="noopener noreferrer">https://download.docker.com/mac/static/stable/aarch64/</a></li>
+                <li>Intel CPUs - <a href="https://download.docker.com/mac/static/stable/x86_64/" target="_blank" rel="noopener noreferrer">https://download.docker.com/mac/static/stable/x86_64/</a></li>
+              </ul>
             </dd>
           </dl>
           <h3 id="guide-macos-sharing-connection">5. Sharing connection with Container Desktop</h3>
@@ -572,8 +573,10 @@ winget install "Container Desktop"</pre>
               <br />
               A restart of your terminal is recommended after the installation of the CLI tools.
               <br />
-              Please note that the latest <strong>docker.exe</strong> binary can also be found at
-              <a href="https://download.docker.com/win/static/stable/x86_64/" target="_blank">https://download.docker.com/win/static/stable/x86_64/</a>
+              Latest <strong>docker.exe</strong> CLI binaries can also be found at
+              <ul>
+                <li><strong>Intel CPUs</strong> - <a href="https://download.docker.com/win/static/stable/x86_64/" target="_blank" rel="noopener noreferrer">https://download.docker.com/win/static/stable/x86_64/</a></li>
+              </ul>
             </dd>
           </dl>
           <h3 id="guide-windows-best-experience">5. Podman &amp; Docker best experience</h3>
