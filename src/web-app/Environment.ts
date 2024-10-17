@@ -1,4 +1,4 @@
-import { Environment, Environments } from "@/env/Types";
+import { type Environment, Environments } from "@/env/Types";
 
 export const PROJECT_VERSION = import.meta.env.PROJECT_VERSION || "1.0.0";
 export const PROJECT_NAME = import.meta.env.PROJECT_NAME;
@@ -8,12 +8,12 @@ export const CONTAINER_DOCS_EXAMPLE_CODE = "{program} run -dt -p 8889:80/tcp doc
 export const PROGRAM_DOCKER = {
   name: "docker",
   title: "Docker",
-  homepage: "https://docker.io"
+  homepage: "https://docker.io",
 };
 export const PROGRAM_PODMAN = {
   name: "podman",
   title: "Podman",
-  homepage: "https://podman.io"
+  homepage: "https://podman.io",
 };
 export const PROGRAM_DEFAULT = "podman";
 export const POLL_RATE_DEFAULT = 2000;
@@ -21,17 +21,17 @@ export const API_BASE_URL_DEFAULT = "http://d/v3.0.0/libpod";
 export const ENV_DEFAULT: Pick<Environment, "settings" | "features"> = {
   settings: {
     api: {
-      baseUrl: API_BASE_URL_DEFAULT
+      baseUrl: API_BASE_URL_DEFAULT,
     },
     poll: {
-      rate: POLL_RATE_DEFAULT
-    }
+      rate: POLL_RATE_DEFAULT,
+    },
   },
   features: {
     polling: {
-      enabled: true
-    }
-  }
+      enabled: true,
+    },
+  },
 };
 
 export const EnvironmentsMap: { [key in Environments]: Environment } = {
@@ -42,20 +42,20 @@ export const EnvironmentsMap: { [key in Environments]: Environment } = {
       features: {
         ...ENV_DEFAULT.features,
         polling: {
-          enabled: false
-        }
-      }
-    }
+          enabled: false,
+        },
+      },
+    },
   },
   [Environments.PRODUCTION]: {
     name: Environments.PRODUCTION,
     ...ENV_DEFAULT,
     ...{
       features: {
-        ...ENV_DEFAULT.features
-      }
-    }
-  }
+        ...ENV_DEFAULT.features,
+      },
+    },
+  },
 };
 
 const CurrentEnvironment = EnvironmentsMap[CURRENT_ENVIRONMENT];

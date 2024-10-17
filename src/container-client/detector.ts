@@ -1,4 +1,4 @@
-import { CommandExecutionResult, OperatingSystem, ProgramOptions } from "@/env/Types";
+import { type CommandExecutionResult, OperatingSystem, type ProgramOptions } from "@/env/Types";
 import { createLogger } from "@/logger";
 
 const logger = createLogger("container-client.Detector");
@@ -20,16 +20,22 @@ export const parseProgramVersion = (input: string | undefined) => {
 };
 
 export const findWindowsProgramByRegistryKey = async (programName: string, registryKey: string) => {
-  let programPath: string = "";
+  let programPath = "";
   const script = `
     $location = Get-ChildItem "${registryKey}*" | % { Get-ItemProperty $_.PsPath } | Select DisplayName,InstallLocation | Sort-Object Displayname -Descending | ConvertTo-JSON -Compress
     [Console]::Write("$location")
   `;
-  const result = await Command.Spawn("powershell", ["-Command", script], { encoding: "utf8" });
+  const result = await Command.Spawn("powershell", ["-Command", script], {
+    encoding: "utf8",
+  });
   if (result.status === 0) {
     const info = JSON.parse(result.stdout || JSON.stringify({ DisplayName: "", InstallLocation: "" }));
     if (info.InstallLocation) {
-      programPath = await Path.join(info.InstallLocation, "resources/bin", programName.endsWith(".exe") ? programName : `${programName}.exe`);
+      programPath = await Path.join(
+        info.InstallLocation,
+        "resources/bin",
+        programName.endsWith(".exe") ? programName : `${programName}.exe`,
+      );
     }
   }
   return programPath;
@@ -38,9 +44,9 @@ export const findWindowsProgramByRegistryKey = async (programName: string, regis
 export const findProgramPath = async (
   programName: string,
   opts: ProgramOptions,
-  executor?: (path: string, args: string[], opts?: ProgramOptions) => Promise<CommandExecutionResult>
+  executor?: (path: string, args: string[], opts?: ProgramOptions) => Promise<CommandExecutionResult>,
 ) => {
-  let result;
+  let result: CommandExecutionResult;
   let programPath: string | undefined = undefined;
   logger.debug("Finding program path for", programName);
   const osType = opts.osType || CURRENT_OS_TYPE;
@@ -50,7 +56,9 @@ export const findProgramPath = async (
   if (windowsLookup) {
     // Powershell based search for programs that are in PATH
     try {
-      const result = await Command.Spawn("powershell.exe", ["-Command", `((gcm '${lookupProgram}').Path)`], { encoding: "utf8" });
+      const result = await Command.Spawn("powershell.exe", ["-Command", `((gcm '${lookupProgram}').Path)`], {
+        encoding: "utf8",
+      });
       programPath = result.status === 0 ? `${result.stdout.toString()}`.trim().replace("\r\n", "") : "";
       logger.debug("Detecting", lookupProgram, "using powershell >", result);
     } catch (error: any) {
@@ -60,7 +68,10 @@ export const findProgramPath = async (
     if (!programPath) {
       logger.warn(`Unable to detect ${lookupProgram} cli program path with powershell - using registry`);
       if (lookupProgram.startsWith("docker")) {
-        programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Docker Desktop");
+        programPath = await findWindowsProgramByRegistryKey(
+          lookupProgram,
+          "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Docker Desktop",
+        );
       } else if (lookupProgram.startsWith("podman")) {
         programPath = await findWindowsProgramByRegistryKey(lookupProgram, "HKLM:\\SOFTWARE\\Red Hat\\Podman");
       }
@@ -103,7 +114,7 @@ export const findProgramPath = async (
 export const findProgramVersion = async (
   programPath: string,
   opts: ProgramOptions,
-  executor?: (path: string, args: string[], opts?: ProgramOptions) => Promise<CommandExecutionResult>
+  executor?: (path: string, args: string[], opts?: ProgramOptions) => Promise<CommandExecutionResult>,
 ) => {
   let version = "";
   let versionFlag = "--version";
@@ -120,7 +131,9 @@ export const findProgramVersion = async (
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         [Console]::Write("$version")
       `;
-      const result = await Command.Execute("powershell", ["-Command", script], { encoding: "utf8" });
+      const result = await Command.Execute("powershell", ["-Command", script], {
+        encoding: "utf8",
+      });
       if (result.success) {
         const output = JSON.parse(result.stdout || JSON.stringify({ Version: "2" }));
         version = output.Version;

@@ -1,5 +1,5 @@
 import { userConfiguration } from "@/container-client/config";
-import { ILogger } from "@/env/Types";
+import type { ILogger } from "@/env/Types";
 
 const loggers: ILogger[] = [];
 

@@ -1,4 +1,4 @@
-import { Container } from "@/env/Types";
+import type { Container } from "@/env/Types";
 import { pathTo } from "@/web-app/Navigator";
 
 export const getContainerUrl = (id: string, view: string) => {
@@ -7,7 +7,7 @@ export const getContainerUrl = (id: string, view: string) => {
 
 export const getContainerServiceUrl = (container: Container) => {
   const port = (container.Ports || [])[0];
-  let serviceUrl;
+  let serviceUrl = "";
   if (port) {
     if (port.PublicPort) {
       serviceUrl = `http://localhost:${port.PublicPort}`;
@@ -20,7 +20,7 @@ export const getContainerServiceUrl = (container: Container) => {
     const portFromNetworkSettings = container.NetworkSettings?.Ports || {};
     const servicePorts = Object.values(portFromNetworkSettings);
     const [firstPort] = servicePorts;
-    if (firstPort && firstPort[0]) {
+    if (firstPort?.[0]) {
       const hostIp = firstPort[0].HostIp || "localhost";
       serviceUrl = `http://${hostIp === "0.0.0.0" ? "localhost" : hostIp}:${firstPort[0].HostPort}`;
     }

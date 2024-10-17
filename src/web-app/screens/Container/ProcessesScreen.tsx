@@ -4,12 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { Container } from "@/env/Types";
+import type { Container } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./ProcessesScreen.css";
@@ -23,7 +23,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const processesMap: any = container?.Processes || { Processes: [], Titles: [] };
+  const processesMap: any = container?.Processes || {
+    Processes: [],
+    Titles: [],
+  };
   const processesList = processesMap.Processes || [];
   const processesTitles = processesMap.Titles || [];
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
@@ -33,7 +36,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       const container = await containerFetch({
         Id: decodeURIComponent(id as any),
         withStats: false,
-        withProcesses: true
+        withProcesses: true,
       });
       setContainer(container);
     } catch (error: any) {
@@ -46,9 +49,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     async (e) => {
       const contentNode = e.currentTarget?.parentNode.closest("td");
       await navigator.clipboard.writeText(contentNode?.getAttribute("data-command") || "");
-      Notification.show({ message: t("The command was copied to clipboard"), intent: Intent.SUCCESS });
+      Notification.show({
+        message: t("The command was copied to clipboard"),
+        intent: Intent.SUCCESS,
+      });
     },
-    [t]
+    [t],
   );
 
   useEffect(() => {
@@ -111,7 +117,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </tbody>
           </HTMLTable>
         ) : (
-          <NonIdealState icon={IconNames.PANEL_TABLE} title={t("No processes")} description={<p>{t("This container is not running")}</p>} />
+          <NonIdealState
+            icon={IconNames.PANEL_TABLE}
+            title={t("No processes")}
+            description={<p>{t("This container is not running")}</p>}
+          />
         )}
       </div>
     </div>
@@ -121,9 +131,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Processes";
 Screen.Route = {
-  Path: `/screens/container/:id/processes`
+  Path: "/screens/container/:id/processes",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.PANEL_TABLE,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

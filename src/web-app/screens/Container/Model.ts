@@ -1,14 +1,14 @@
 import { IconNames } from "@blueprintjs/icons";
 import * as async from "async";
-import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
+import { type Action, type Computed, type Thunk, action, computed, thunk } from "easy-peasy";
 import { v4 } from "uuid";
 
-import { CreateContainerOptions, FetchContainerOptions } from "@/container-client/Api.clients";
-import { Container, ContainerStateList, ContainerStats } from "@/env/Types";
+import type { CreateContainerOptions, FetchContainerOptions } from "@/container-client/Api.clients";
+import { type Container, ContainerStateList, type ContainerStats } from "@/env/Types";
 import { deepMerge } from "@/utils";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
-import { ContainerGroup } from "@/web-app/Types";
+import type { ContainerGroup } from "@/web-app/Types";
 
 const createContainerSearchFilter = (searchTerm: string) => {
   return (it: Container) => {
@@ -19,6 +19,7 @@ const createContainerSearchFilter = (searchTerm: string) => {
 };
 
 export interface ContainersModelState {
+  version?: string;
   containers: Container[];
   containersMap: { [key: string]: Container };
 }
@@ -109,9 +110,9 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
                 [ContainerStateList.PAUSED]: 0,
                 [ContainerStateList.RUNNING]: 0,
                 [ContainerStateList.DEGRADED]: 0,
-                [ContainerStateList.STOPPED]: 0
+                [ContainerStateList.STOPPED]: 0,
               },
-              Weight: 1000
+              Weight: 1000,
             };
             groups.push(group);
             groupsMap[it.Computed.Group] = group;
@@ -175,14 +176,21 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
         } catch (error: any) {
           console.error("Unable to retrieve processes", error);
         }
-        const hydrated: Container = { ...container, Logs: logs, Stats: stats, Processes: processes };
+        const hydrated: Container = {
+          ...container,
+          Logs: logs,
+          Stats: stats,
+          Processes: processes,
+        };
         if (options.withKube) {
-          const generation = await client.generateKube({ entityId: options.Id });
+          const generation = await client.generateKube({
+            entityId: options.Id,
+          });
           hydrated.Kube = generation.success ? generation.stdout : "";
         }
         actions.containerUpdate(hydrated);
         return hydrated;
-      })
+      }),
     ),
     containerPause: thunk(async (actions, container) =>
       registry.withPending(async () => {
@@ -196,7 +204,7 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
           }
         }
         return removed;
-      })
+      }),
     ),
     containerUnpause: thunk(async (actions, container) =>
       registry.withPending(async () => {
@@ -210,7 +218,7 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
           }
         }
         return updated;
-      })
+      }),
     ),
     containerStop: thunk(async (actions, container) =>
       registry.withPending(async () => {
@@ -224,7 +232,7 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
           }
         }
         return stopped;
-      })
+      }),
     ),
     containerRestart: thunk(async (actions, container) =>
       registry.withPending(async () => {
@@ -238,7 +246,7 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
           }
         }
         return restarted;
-      })
+      }),
     ),
     containerRemove: thunk(async (actions, container) =>
       registry.withPending(async () => {
@@ -251,7 +259,7 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
           actions.containerDelete(container);
         }
         return removed;
-      })
+      }),
     ),
     containerCreate: thunk(async (actions, options) =>
       registry.withPending(async () => {
@@ -282,13 +290,12 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
           const results = await async.parallel(creatorCallbacks);
           return {
             created: results.filter((it: any) => it.created).length === results.length,
-            started: results.filter((it: any) => it.started).length === results.length
+            started: results.filter((it: any) => it.started).length === results.length,
           };
-        } else {
-          const create = await client.createContainer(options);
-          return create;
         }
-      })
+        const create = await client.createContainer(options);
+        return create;
+      }),
     ),
     containerConnect: thunk(async (actions, options) =>
       registry.withPending(async () => {
@@ -300,7 +307,7 @@ export const createModel = async (registry: AppRegistry): Promise<ContainersMode
           console.warn("Unable to connect to container without name", options);
         }
         return connected;
-      })
-    )
+      }),
+    ),
   };
 };

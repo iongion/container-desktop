@@ -1,12 +1,21 @@
-/* eslint-disable jsx-a11y/no-autofocus */
-import { Alignment, Button, ButtonGroup, Classes, Divider, InputGroupProps, Intent, MenuItem } from "@blueprintjs/core";
+import {
+  Alignment,
+  Button,
+  ButtonGroup,
+  Classes,
+  Divider,
+  type InputGroupProps,
+  Intent,
+  MenuItem,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { ItemRenderer, Select } from "@blueprintjs/select";
+import { type ItemRenderer, Select } from "@blueprintjs/select";
 import classNames from "classnames";
-import React, { useCallback } from "react";
+import type React from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine, ContainerEngineOption } from "@/env/Types";
+import type { ContainerEngine, ContainerEngineOption } from "@/env/Types";
 
 import "./EngineSelect.css";
 
@@ -41,14 +50,23 @@ export interface EngineSelectProps {
   onDetect?: (item: ContainerEngine, event?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
-export const EngineSelect: React.FC<EngineSelectProps> = ({ items, inputProps, disabled, pending, withoutDetect, engine, onChange, onDetect }: EngineSelectProps) => {
+export const EngineSelect: React.FC<EngineSelectProps> = ({
+  items,
+  inputProps,
+  disabled,
+  pending,
+  withoutDetect,
+  engine,
+  onChange,
+  onDetect,
+}: EngineSelectProps) => {
   const { t } = useTranslation();
   const activeItem = engine ? items.find((it) => it.engine === engine) : undefined;
   const onItemSelect = useCallback(
     (e: any) => {
       onChange?.(e.engine);
     },
-    [onChange]
+    [onChange],
   );
   const onItemDetect = useCallback(
     (e: any) => {
@@ -56,7 +74,7 @@ export const EngineSelect: React.FC<EngineSelectProps> = ({ items, inputProps, d
         onDetect?.(activeItem.engine, e);
       }
     },
-    [onDetect, activeItem]
+    [onDetect, activeItem],
   );
   return (
     <div className="ConnectionEntitySelect EngineSelect">
@@ -79,7 +97,7 @@ export const EngineSelect: React.FC<EngineSelectProps> = ({ items, inputProps, d
           rightIcon={IconNames.CARET_DOWN}
           text={activeItem?.label ?? t("-- Select --")}
           textClassName={classNames({
-            [Classes.TEXT_MUTED]: activeItem === undefined
+            [Classes.TEXT_MUTED]: activeItem === undefined,
           })}
         />
       </Select>

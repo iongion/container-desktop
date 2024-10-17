@@ -22,7 +22,7 @@ export enum StartupStatus {
   STARTED = "started",
   STOPPED = "stopped",
   RUNNING = "running", // Already running
-  ERROR = "error"
+  ERROR = "error",
 }
 
 export interface ILogger {
@@ -36,7 +36,7 @@ export enum ControllerScopeType {
   PodmanMachine = "PodmanMachine",
   WSLDistribution = "WSLDistribution",
   LIMAInstance = "LIMAInstance",
-  SSHConnection = "SSHConnection"
+  SSHConnection = "SSHConnection",
 }
 
 export enum OperatingSystem {
@@ -44,19 +44,19 @@ export enum OperatingSystem {
   Linux = "Linux",
   MacOS = "Darwin",
   Windows = "Windows_NT",
-  Unknown = "unknown"
+  Unknown = "unknown",
 }
 
 export enum Environments {
   DEVELOPMENT = "development",
-  PRODUCTION = "production"
+  PRODUCTION = "production",
 }
 
 export enum WindowAction {
   Minimize = "window.minimize",
   Maximize = "window.maximize",
   Restore = "window.restore",
-  Close = "window.close"
+  Close = "window.close",
 }
 
 export interface SystemNotification {
@@ -295,7 +295,7 @@ export interface ProgramTestResult extends TestResult {
 
 export enum ContainerEngine {
   PODMAN = "podman",
-  DOCKER = "docker"
+  DOCKER = "docker",
 }
 
 export enum ContainerEngineHost {
@@ -310,13 +310,13 @@ export enum ContainerEngineHost {
   DOCKER_VIRTUALIZED_WSL = "docker.virtualized.wsl",
   DOCKER_VIRTUALIZED_LIMA = "docker.virtualized.lima",
   DOCKER_VIRTUALIZED_VENDOR = "docker.virtualized.vendor",
-  DOCKER_REMOTE = "docker.remote"
+  DOCKER_REMOTE = "docker.remote",
 }
 
 export enum Presence {
   AVAILABLE = "available",
   MISSING = "missing",
-  UNKNOWN = "unknown"
+  UNKNOWN = "unknown",
 }
 
 export interface ContainerEngineOption {
@@ -404,7 +404,7 @@ export interface SystemVersion {
   Version: string;
 }
 
-export interface SystemPlugin {}
+export type SystemPlugin = any;
 export interface SystemPluginMap {
   [key: string]: SystemPlugin;
 }
@@ -527,7 +527,7 @@ export enum ContainerStateList {
   PAUSED = "paused",
   RUNNING = "running",
   DEGRADED = "degraded",
-  STOPPED = "stopped"
+  STOPPED = "stopped",
 }
 export interface ContainerState {
   Dead: boolean;
@@ -739,7 +739,7 @@ export interface ContainerImageMount {
 export const MOUNT_TYPES = ["bind", "tmpfs", "volume", "image", "devpts"];
 export const MOUNT_ACCESS = [
   { title: "Read only", type: "ro" },
-  { title: "Read / Write", type: "rw" }
+  { title: "Read / Write", type: "rw" },
 ];
 
 export enum PodStatusList {
@@ -750,10 +750,10 @@ export enum PodStatusList {
   RUNNING = "Running",
   DEGRADED = "Degraded",
   STOPPED = "Stopped",
-  DEAD = "Dead"
+  DEAD = "Dead",
 }
 
-export interface PodContainer {}
+export type PodContainer = any;
 export interface PodProcessReport {
   Processes: string[];
   Titles: string[];
@@ -794,7 +794,7 @@ export interface SystemPruneReport {
   VolumePruneReports: any;
 }
 
-export interface SystemResetReport {}
+export type SystemResetReport = any;
 
 export interface FindProgramOptions {
   connection: Connection;
@@ -1006,7 +1006,7 @@ export interface Wrapper {
 }
 
 export enum Features {
-  polling = "polling"
+  polling = "polling",
 }
 export interface Feature {
   enabled: boolean;

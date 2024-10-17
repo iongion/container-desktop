@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { Secret } from "@/env/Types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { Secret } from "@/env/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { useStoreActions } from "@/web-app/domain/types";
@@ -27,7 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   useEffect(() => {
     (async () => {
       const secret = await secretFetch({
-        Id: id as any
+        Id: id as any,
       });
       setSecret(secret);
     })();
@@ -36,13 +36,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
   if (!secret) {
     return (
       <div className="AppScreen" data-screen={ID}>
-        <NonIdealState icon={IconNames.WARNING_SIGN} title={t("There is no such secret")} description={<p>{t("The secret was not found")}</p>} />
+        <NonIdealState
+          icon={IconNames.WARNING_SIGN}
+          title={t("There is no such secret")}
+          description={<p>{t("The secret was not found")}</p>}
+        />
       </div>
     );
   }
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader withoutSearch withBack titleText={secret.Spec.Name} titleIcon={IconNames.KEY} rightContent={<SecretActionsMenu secret={secret} withoutCreate />} />
+      <AppScreenHeader
+        withoutSearch
+        withBack
+        titleText={secret.Spec.Name}
+        titleIcon={IconNames.KEY}
+        rightContent={<SecretActionsMenu secret={secret} withoutCreate />}
+      />
       <div className="AppScreenContent">
         <CodeEditor value={JSON.stringify(secret, null, 2)} />
       </div>
@@ -53,9 +63,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/secrets/:id/inspect`
+  Path: "/screens/secrets/:id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.KEY,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

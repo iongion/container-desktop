@@ -17,7 +17,6 @@ export const getCurrentLanguage = () => {
   return storedLanguage;
 };
 
-// eslint-disable-next-line
 (i18n as any)
   .use(initReactI18next) // passes i18n down to react-i18next
   .init({
@@ -32,12 +31,12 @@ export const getCurrentLanguage = () => {
     keySeparator: false, // we use content as keys
     resources: {
       en: {
-        translation: en
-      }
+        translation: en,
+      },
     },
     interpolation: {
-      escapeValue: false
-    }
+      escapeValue: false,
+    },
   });
 
 export interface II18nContext {
@@ -47,7 +46,7 @@ export interface II18nContext {
 
 export const I18nContext = React.createContext<II18nContext>({
   currentLanguage: (i18n as any).language,
-  setCurrentLanguage: () => {}
+  setCurrentLanguage: () => {},
 });
 
 export const I18nContextProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
@@ -61,7 +60,7 @@ export const I18nContextProvider: React.FC<{ children?: React.ReactNode }> = ({ 
           localStorage.setItem("i18nextLng", lang);
           (i18n as any).changeLanguage(lang);
           setCurrentLanguage(lang);
-        }
+        },
       }}
     >
       {children}
@@ -84,7 +83,7 @@ export const useTranslate = () => {
   return {
     t: (key: string, rest?: any) => (i18n as any).t(key, rest, { lng: currentLanguage }),
     currentLanguage,
-    i18n
+    i18n,
   };
 };
 

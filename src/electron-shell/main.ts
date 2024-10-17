@@ -37,7 +37,7 @@ const URLS_ALLOWED = [
   "https://iongion.github.io/container-desktop/", // Project github pages website
   "https://github.com/iongion/container-desktop/releases", // Project github releases
   "https://github.com/containers/podman-compose", // Podman Compose 3rd party
-  "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct" // Project Microsoft Store link
+  "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct", // Project Microsoft Store link
 ];
 const DOMAINS_ALLOW_LIST = [
   // Allowed
@@ -45,7 +45,7 @@ const DOMAINS_ALLOW_LIST = [
   "podman.io", // Podman website
   "docs.podman.io", // Podman documentation
   "avd.aquasec.com", // Aqua Security (trivy)
-  "aquasecurity.github.io" // Aqua Security (trivy)
+  "aquasecurity.github.io", // Aqua Security (trivy)
 ];
 const logger = createLogger("shell.main");
 const quitRegistry: any[] = [];
@@ -63,7 +63,10 @@ const setWindowConfigOptions = debounce(async (opts: Electron.BrowserWindowConst
 }, 500);
 const isDebug = ["yes", "true", "1"].includes(`${process.env.CONTAINER_DESKTOP_DEBUG || ""}`.toLowerCase());
 const isDevelopment = () => {
-  logger.debug("Checking if development", { isPackaged: app.isPackaged, env: import.meta.env.ENVIRONMENT });
+  logger.debug("Checking if development", {
+    isPackaged: app.isPackaged,
+    env: import.meta.env.ENVIRONMENT,
+  });
   return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
 };
 const activateTools = () => {
@@ -120,20 +123,20 @@ ipcMain.on("notify", async (event, arg) => {
     applicationWindow.show();
   }
 });
-ipcMain.handle("register.quit", async function (event, options) {
+ipcMain.handle("register.quit", async (event, options) => {
   quitRegistry.push(options);
 });
-ipcMain.handle("openFileSelector", async function (event, options) {
+ipcMain.handle("openFileSelector", async (event, options) => {
   logger.debug("IPC - openFileSelector - start", options);
   const selection = await dialog.showOpenDialog(applicationWindow, {
     defaultPath: app.getPath("home"),
     properties: [options?.directory ? "openDirectory" : "openFile"],
-    filters: options?.filters || []
+    filters: options?.filters || [],
   });
   logger.debug("IPC - openFileSelector - result", selection);
   return selection;
 });
-ipcMain.handle("openTerminal", async function (event, options) {
+ipcMain.handle("openTerminal", async (event, options) => {
   logger.debug("IPC - openTerminal - start", options);
   const success = await Platform.launchTerminal(options);
   logger.debug("IPC - openTerminal - result", options, success);
@@ -161,11 +164,13 @@ async function createApplicationWindow() {
   const appProdURL = url.format({
     pathname: path.join(__dirname, "index.html"),
     protocol: "file:",
-    slashes: true
+    slashes: true,
   });
   const appURL = isDevelopment() ? appDevURL : appProdURL;
   const iconFile = CURRENT_OS_TYPE === OperatingSystem.MacOS ? "appIcon.png" : "appIcon-duotone.png";
-  const iconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons", iconFile) : path.join(__dirname, iconFile);
+  const iconPath = isDevelopment()
+    ? path.join(PROJECT_HOME, "src/resources/icons", iconFile)
+    : path.join(__dirname, iconFile);
   const windowConfigOptions: Partial<Electron.BrowserWindowConstructorOptions> = await getWindowConfigOptions();
   const windowOptions: Electron.BrowserWindowConstructorOptions = {
     show: false, // Use the 'ready-to-show' event to show the instantiated BrowserWindow.
@@ -180,9 +185,9 @@ async function createApplicationWindow() {
       contextIsolation: true,
       sandbox: false, // Sandbox disabled because the demo of preload script depend on the Node.js api
       webviewTag: false, // The webview tag is not recommended. Consider alternatives like an iframe or Electron's BrowserView. @see https://www.electronjs.org/docs/latest/api/webview-tag#warning
-      preload: preloadURL
+      preload: preloadURL,
     },
-    icon: iconPath
+    icon: iconPath,
   };
   logger.debug("Setting application icon", iconPath);
   if (CURRENT_OS_TYPE === OperatingSystem.Linux || CURRENT_OS_TYPE === OperatingSystem.Windows) {
@@ -277,9 +282,14 @@ async function createApplicationWindow() {
   // Set-up context menu
   contextMenu({
     window: applicationWindow,
-    showInspectElement: true
+    showInspectElement: true,
   });
-  logger.debug("Application is", { appURL, preloadURL, current: __dirname, path: APP_PATH });
+  logger.debug("Application is", {
+    appURL,
+    preloadURL,
+    current: __dirname,
+    path: APP_PATH,
+  });
   try {
     await applicationWindow.loadURL(appURL);
   } catch (error: any) {
@@ -294,8 +304,11 @@ async function createApplicationWindow() {
 
 function getTrayIcon(isDark = Electron.nativeTheme.shouldUseDarkColors): string {
   const theme = isDark ? "dark" : "light";
-  const trayIconFile = CURRENT_OS_TYPE === OperatingSystem.MacOS ? `trayIcon-${theme}-mac.png` : `trayIcon-${theme}.png`;
-  const trayIconPath = isDevelopment() ? path.join(PROJECT_HOME, "src/resources/icons", trayIconFile) : path.join(__dirname, trayIconFile);
+  const trayIconFile =
+    CURRENT_OS_TYPE === OperatingSystem.MacOS ? `trayIcon-${theme}-mac.png` : `trayIcon-${theme}.png`;
+  const trayIconPath = isDevelopment()
+    ? path.join(PROJECT_HOME, "src/resources/icons", trayIconFile)
+    : path.join(__dirname, trayIconFile);
   logger.debug("Using tray icon from", { trayIconPath });
   return path.resolve(trayIconPath);
 }
@@ -318,7 +331,7 @@ function createSystemTray() {
         if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
           app.dock.show();
         }
-      }
+      },
     },
     { label: "", type: "separator" },
     {
@@ -326,8 +339,8 @@ function createSystemTray() {
       click: () => {
         applicationWindow.destroy();
         app.quit();
-      }
-    }
+      },
+    },
   ]);
   tray.setToolTip("Container Desktop");
   tray.setContextMenu(trayMenu);

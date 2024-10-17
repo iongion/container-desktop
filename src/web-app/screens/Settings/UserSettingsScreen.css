@@ -30,7 +30,9 @@
 }
 .AppSettingsFormVersionCheckStore {
   background-color: transparent !important;
-  background: url("../../images/microsoft-store.svg") no-repeat 0 center;
+  background-image: url("../../images/microsoft-store.svg");
+  background-repeat: no-repeat;
+  background-position: 0 center;
   background-size: contain;
   border: none;
   border: none !important;
@@ -131,7 +133,11 @@
   text-align: left !important;
   width: 100%;
 }
-.AppSettingsEngineManagerConnections [data-table="host.connections"] tr[data-connection-is-default="yes"] td[data-flag="default"] strong {
+.AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-default="yes"]
+  td[data-flag="default"]
+  strong {
   background-color: #670841;
   padding: 4px;
   border-radius: 5px;
@@ -191,17 +197,29 @@
   strong {
   background-color: #00395a;
 }
-[data-theme="bp5-dark"] [data-engine="docker"] .AppSettingsEngineManagerConnections [data-table="host.connections"] tr[data-connection-is-connected="yes"] {
+[data-theme="bp5-dark"]
+  [data-engine="docker"]
+  .AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-connected="yes"] {
   background-color: #0b4e0b;
 }
 
 [data-theme="bp5-light"] .AppSettingsEngineManagerConnections {
   background-color: var(--docker-light-bg-color);
 }
-[data-theme="bp5-light"] .AppSettingsEngineManagerConnections [data-table="host.connections"] tr[data-connection-is-default="yes"] td[data-flag="default"] strong {
+[data-theme="bp5-light"]
+  .AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-default="yes"]
+  td[data-flag="default"]
+  strong {
   background-color: #ffffff;
 }
-[data-theme="bp5-light"] .AppSettingsEngineManagerConnections [data-table="host.connections"] tr[data-connection-is-connected="yes"] {
+[data-theme="bp5-light"]
+  .AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-connected="yes"] {
   background-color: #baffba;
 }
 [data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformScopeLabel {

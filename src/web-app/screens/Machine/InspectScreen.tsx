@@ -2,11 +2,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { PodmanMachine } from "@/env/Types";
+import type { PodmanMachine } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 
@@ -27,7 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const machine = await machineInspect({
-          Name: name as string
+          Name: name as string,
         });
         setMachine(machine);
       } catch (error: any) {
@@ -53,9 +53,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/machines/:name/inspect`
+  Path: "/screens/machines/:name/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.HEAT_GRID,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

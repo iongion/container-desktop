@@ -3,11 +3,20 @@ import merge from "deepmerge";
 export function deepMerge<T = any>(x: Partial<T>, ...y: Partial<T & any>[]) {
   return merge.all<Partial<T>>([x, ...y], {
     arrayMerge: (_, source) => source,
-    isMergeableObject: (value) => value && typeof value === "object" && !Array.isArray(value)
+    isMergeableObject: (value) => value && typeof value === "object" && !Array.isArray(value),
   }) as T;
 }
 
-export function axiosConfigToCURL(config, opts?: { as_array?: boolean; silent?: boolean; with_headers?: boolean; raw?: boolean; without_buffer?: boolean }) {
+export function axiosConfigToCURL(
+  config,
+  opts?: {
+    as_array?: boolean;
+    silent?: boolean;
+    with_headers?: boolean;
+    raw?: boolean;
+    without_buffer?: boolean;
+  },
+) {
   if (!config || !config.baseURL || !config.socketPath) {
     console.error("Request config is not valid", config);
     throw new Error("Unable to construct curl from config");

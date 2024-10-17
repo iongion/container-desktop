@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Pod, PodStatusList } from "@/env/Types";
+import { type Pod, PodStatusList } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -31,7 +31,12 @@ interface PerformActionOptions {
   };
 }
 
-export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, isActive, onReload }: ItemActionsMenuProps) => {
+export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
+  pod,
+  expand,
+  isActive,
+  onReload,
+}: ItemActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const podFetch = useStoreActions((actions) => actions.pod.podFetch);
@@ -41,7 +46,12 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
   const podRestart = useStoreActions((actions) => actions.pod.podRestart);
   const podRemove = useStoreActions((actions) => actions.pod.podRemove);
   const performActionCommand = useCallback(
-    async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
+    async (
+      action: string,
+      { confirm }: PerformActionOptions = {
+        confirm: { success: true, error: true },
+      },
+    ) => {
       setDisabledAction(action);
       try {
         // TODO: Improve notifications
@@ -70,7 +80,10 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
             break;
         }
         if (notifyFailure && !success) {
-          Notification.show({ message: t("Command failed"), intent: Intent.DANGER });
+          Notification.show({
+            message: t("Command failed"),
+            intent: Intent.DANGER,
+          });
         }
         if (action === "pod.remove") {
           goToScreen("/screens/pods");
@@ -80,14 +93,14 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [pod, podFetch, podPause, podUnpause, podStop, podRestart, podRemove, t]
+    [pod, podFetch, podPause, podUnpause, podStop, podRestart, podRemove, t],
   );
   const onRemove = useCallback(
     (tag, confirmed) => {
@@ -95,7 +108,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
         performActionCommand("pod.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const onActionClick = useCallback(
     async (e) => {
@@ -103,7 +116,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
       const action = sender.getAttribute("data-action");
       performActionCommand(action);
     },
-    [performActionCommand]
+    [performActionCommand],
   );
 
   const isKubeDisabled = pod.Containers.length <= 1;
@@ -111,9 +124,27 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
 
   const expandAsButtons = expand ? (
     <>
-      <AnchorButton minimal active={isActive ? isActive("pod.logs") : false} icon={IconNames.LIST} text={t("Logs")} href={getPodUrl(pod.Id, "logs")} />
-      <AnchorButton minimal active={isActive ? isActive("pod.processes") : false} icon={IconNames.LIST_COLUMNS} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
-      <AnchorButton minimal active={isActive ? isActive("pod.inspect") : false} icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect")} />
+      <AnchorButton
+        minimal
+        active={isActive ? isActive("pod.logs") : false}
+        icon={IconNames.LIST}
+        text={t("Logs")}
+        href={getPodUrl(pod.Id, "logs")}
+      />
+      <AnchorButton
+        minimal
+        active={isActive ? isActive("pod.processes") : false}
+        icon={IconNames.LIST_COLUMNS}
+        text={t("Processes")}
+        href={getPodUrl(pod.Id, "processes")}
+      />
+      <AnchorButton
+        minimal
+        active={isActive ? isActive("pod.inspect") : false}
+        icon={IconNames.EYE_OPEN}
+        text={t("Inspect")}
+        href={getPodUrl(pod.Id, "inspect")}
+      />
       <AnchorButton
         minimal
         disabled={isKubeDisabled}
@@ -130,7 +161,13 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
       <MenuItem icon={IconNames.LIST} text={t("Logs")} href={getPodUrl(pod.Id, "logs")} />
       <MenuItem icon={IconNames.LIST_COLUMNS} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect")} />
-      <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getPodUrl(pod.Id, "kube")} disabled={isKubeDisabled} title={kubeTitle} />
+      <MenuItem
+        icon={IconNames.TEXT_HIGHLIGHT}
+        text={t("Kube")}
+        href={getPodUrl(pod.Id, "kube")}
+        disabled={isKubeDisabled}
+        title={kubeTitle}
+      />
     </>
   );
 
@@ -156,8 +193,22 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({ pod, expand, i
             text={isPaused ? t("Resume") : t("Pause")}
             onClick={onActionClick}
           />
-          <MenuItem data-pod={pod.Id} data-action="pod.stop" disabled={!canStop} icon={IconNames.STOP} text={t("Stop")} onClick={onActionClick} />
-          <MenuItem data-pod={pod.Id} data-action="pod.restart" disabled={!canRestart} icon={IconNames.RESET} text={t("Restart")} onClick={onActionClick} />
+          <MenuItem
+            data-pod={pod.Id}
+            data-action="pod.stop"
+            disabled={!canStop}
+            icon={IconNames.STOP}
+            text={t("Stop")}
+            onClick={onActionClick}
+          />
+          <MenuItem
+            data-pod={pod.Id}
+            data-action="pod.restart"
+            disabled={!canRestart}
+            icon={IconNames.RESET}
+            text={t("Restart")}
+            onClick={onActionClick}
+          />
         </ConfirmMenu>
       </ButtonGroup>
     </>
@@ -173,7 +224,9 @@ export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate,
   const onCreateSecretClose = useCallback(() => {
     setWithCreate(false);
   }, []);
-  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
+  const startButton = withoutCreate ? null : (
+    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+  );
   return (
     <>
       <ButtonGroup>
@@ -181,7 +234,14 @@ export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate,
         {onReload && (
           <>
             {startButton ? <Divider /> : null}
-            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+            <Button
+              small
+              minimal
+              intent={Intent.NONE}
+              title={t("Reload current list")}
+              icon={IconNames.REFRESH}
+              onClick={onReload}
+            />
           </>
         )}
       </ButtonGroup>

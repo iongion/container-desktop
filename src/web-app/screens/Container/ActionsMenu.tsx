@@ -5,13 +5,14 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Container, ContainerEngine, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerEngine, ContainerStateList } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { getContainerServiceUrl, getContainerUrl } from "./Navigation";
 
+import { v4 } from "uuid";
 import "./ActionsMenu.css";
 
 // Actions menu
@@ -31,7 +32,14 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContainer, expand, isActive, withInlinePlayerActions, onReload, withOverlay }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({
+  container: userContainer,
+  expand,
+  isActive,
+  withInlinePlayerActions,
+  onReload,
+  withOverlay,
+}: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
@@ -45,7 +53,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
   const containerRemove = useStoreActions((actions) => actions.container.containerRemove);
   const containerConnect = useStoreActions((actions) => actions.container.containerConnect);
   const performActionCommand = useCallback(
-    async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
+    async (
+      action: string,
+      { confirm }: PerformActionOptions = {
+        confirm: { success: true, error: true },
+      },
+    ) => {
       if (!container) {
         console.error("No container to perform action on");
         return;
@@ -95,17 +108,26 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
             successMessage = t("The container has been removed");
             break;
           case "container.connect":
-            success = await containerConnect({ ...container, Name: t("Terminal console for {{title}} container", { title }) });
+            success = await containerConnect({
+              ...container,
+              Name: t("Terminal console for {{title}} container", { title }),
+            });
             break;
           default:
             break;
         }
         setContainer(nextContainer);
         if (notifyFailure && !success) {
-          Notification.show({ message: t("Command failed"), intent: Intent.DANGER });
+          Notification.show({
+            message: t("Command failed"),
+            intent: Intent.DANGER,
+          });
         }
         if (success && successMessage) {
-          Notification.show({ message: successMessage, intent: Intent.SUCCESS });
+          Notification.show({
+            message: successMessage,
+            intent: Intent.SUCCESS,
+          });
           await onReload?.();
         }
         if (action === "container.remove") {
@@ -114,10 +136,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
       } catch (error: any) {
         console.error("Command execution failed", error);
         const message = t("Command did not complete properly");
-        const details: string[] = [`${error.message}`];
+        const details: { message: string; guid: string }[] = [{ message: `${error.message}`, guid: v4() }];
         if (error.name === "AxiosError") {
           if (error.response?.data?.message) {
-            details.push(error.response.data.message);
+            details.push({
+              message: error.response.data.message,
+              guid: v4(),
+            });
           }
         }
         Notification.show({
@@ -126,22 +151,33 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
               <div className="NotificationAdvancedDetails">
                 <h1>{message}</h1>
                 <ul>
-                  {details.map((detail, index) => (
-                    <li key={index}>{detail}</li>
+                  {details.map((detail) => (
+                    <li key={detail.guid}>{detail.message}</li>
                   ))}
                 </ul>
               </div>
             ) : (
               message
             ),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       } finally {
         setPending(false);
       }
       setDisabledAction(undefined);
     },
-    [container, containerFetch, containerPause, containerUnpause, containerStop, containerRestart, containerRemove, containerConnect, t]
+    [
+      container,
+      containerFetch,
+      containerPause,
+      containerUnpause,
+      containerStop,
+      containerRestart,
+      containerRemove,
+      containerConnect,
+      onReload,
+      t,
+    ],
   );
   const onRemove = useCallback(
     (tag, confirmed) => {
@@ -149,7 +185,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
         performActionCommand("container.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const onActionClick = useCallback(
     async (e) => {
@@ -157,18 +193,26 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
       const action = sender.getAttribute("data-action");
       performActionCommand(action);
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const onOpenTerminalConsole = useCallback(async () => {
     performActionCommand("container.connect", { confirm: { success: false } });
   }, [performActionCommand]);
 
   const isKubeAvailable = currentEngine === ContainerEngine.PODMAN;
-  const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available when using {{currentEngine}} host", { currentEngine });
+  const kubeDisabledTitle = isKubeAvailable
+    ? ""
+    : t("Not available when using {{currentEngine}} host", { currentEngine });
   const expandAsButtons =
     expand && container ? (
       <>
-        <AnchorButton minimal active={isActive ? isActive("container.logs") : false} icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
+        <AnchorButton
+          minimal
+          active={isActive ? isActive("container.logs") : false}
+          icon={IconNames.ALIGN_JUSTIFY}
+          text={t("Logs")}
+          href={getContainerUrl(container.Id, "logs")}
+        />
         <AnchorButton
           minimal
           active={isActive ? isActive("container.inspect") : false}
@@ -199,8 +243,18 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
       <>
         <MenuItem icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
         <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getContainerUrl(container.Id, "inspect")} />
-        <MenuItem icon={IconNames.PANEL_TABLE} text={t("Processes")} href={getContainerUrl(container.Id, "processes")} />
-        <MenuItem icon={IconNames.TEXT_HIGHLIGHT} text={t("Kube")} href={getContainerUrl(container.Id, "kube")} disabled={!isKubeAvailable} title={kubeDisabledTitle} />
+        <MenuItem
+          icon={IconNames.PANEL_TABLE}
+          text={t("Processes")}
+          href={getContainerUrl(container.Id, "processes")}
+        />
+        <MenuItem
+          icon={IconNames.TEXT_HIGHLIGHT}
+          text={t("Kube")}
+          href={getContainerUrl(container.Id, "kube")}
+          disabled={!isKubeAvailable}
+          title={kubeDisabledTitle}
+        />
       </>
     );
 
@@ -214,7 +268,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
   const canRemove = !isRunning && !pending;
 
   let containerServiceUrl = "";
-  let expandAsOverlay;
+  let expandAsOverlay: React.ReactNode | null = null;
   let withInlinePlayerActionsWidget: React.ReactNode | undefined;
   if (container) {
     containerServiceUrl = getContainerServiceUrl(container);
@@ -355,7 +409,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
                 text={isPaused ? t("Resume") : t("Pause")}
                 onClick={onActionClick}
               />
-              <MenuItem data-container={container.Id} data-action="container.stop" disabled={!canStop} icon={IconNames.STOP} text={t("Stop")} onClick={onActionClick} />
+              <MenuItem
+                data-container={container.Id}
+                data-action="container.stop"
+                disabled={!canStop}
+                icon={IconNames.STOP}
+                text={t("Stop")}
+                onClick={onActionClick}
+              />
               <MenuItem
                 data-container={container.Id}
                 data-action="container.restart"
@@ -371,7 +432,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ container: userContain
       {onReload && (
         <>
           {expandAsOverlay || withInlinePlayerActionsWidget ? <Divider /> : null}
-          <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+          <Button
+            small
+            minimal
+            intent={Intent.NONE}
+            title={t("Reload current list")}
+            icon={IconNames.REFRESH}
+            onClick={onReload}
+          />
         </>
       )}
     </ButtonGroup>

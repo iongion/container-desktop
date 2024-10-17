@@ -1,7 +1,7 @@
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
-import { Container } from "@/env/Types";
+import type { Container } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo } from "@/web-app/Navigator";
 
@@ -15,7 +15,13 @@ interface ScreenHeaderProps {
   onReload?: () => void;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ container, currentScreen, listRoutePath, listRouteIcon, onReload }: ScreenHeaderProps) => {
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
+  container,
+  currentScreen,
+  listRoutePath,
+  listRouteIcon,
+  onReload,
+}: ScreenHeaderProps) => {
   const { t } = useTranslation();
   let currentListRoutePath = listRoutePath;
   if (container && !currentListRoutePath) {
@@ -30,7 +36,15 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ container, currentSc
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.BOX}
       titleText={nameText.startsWith("/") ? nameText.slice(1) : nameText}
-      rightContent={<ActionsMenu container={container} expand withInlinePlayerActions onReload={onReload} isActive={(input) => input === currentScreen} />}
+      rightContent={
+        <ActionsMenu
+          container={container}
+          expand
+          withInlinePlayerActions
+          onReload={onReload}
+          isActive={(input) => input === currentScreen}
+        />
+      }
     />
   );
 };

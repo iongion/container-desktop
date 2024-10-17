@@ -82,8 +82,14 @@ body.bp5-dark[data-engine="podman"] [data-table="containers"] .ContainerReportSt
 body.bp5-dark[data-engine="podman"] [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
   background-color: #8b104c;
 }
-body.bp5-dark[data-engine="podman"] [data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
-body.bp5-dark[data-engine="podman"] [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
+body.bp5-dark[data-engine="podman"]
+  [data-table="containers"]
+  .ContainerReportStateCounts
+  li[data-state="running"][data-count="0"],
+body.bp5-dark[data-engine="podman"]
+  [data-table="containers"]
+  .ContainerReportStateCounts
+  li[data-state="exited"][data-count="0"] {
   background-color: #111;
   color: #fff;
 }
@@ -222,20 +228,48 @@ body.bp5-light[data-engine="podman"] .AppDataTable[data-table="image.scanning.re
 body.bp5-light[data-engine="podman"] .Severity {
   color: #fff;
 }
-body.bp5-light[data-engine="podman"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="CRITICAL"] .Severity,
-body.bp5-light[data-engine="podman"] table[data-table="image.scanning.report.counts"] tr[data-severity="CRITICAL"] td .Severity {
+body.bp5-light[data-engine="podman"]
+  .AppDataTable[data-table="image.scanning.report"]
+  tr[data-severity="CRITICAL"]
+  .Severity,
+body.bp5-light[data-engine="podman"]
+  table[data-table="image.scanning.report.counts"]
+  tr[data-severity="CRITICAL"]
+  td
+  .Severity {
   background-color: #c40000;
 }
-body.bp5-light[data-engine="podman"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="HIGH"] .Severity,
-body.bp5-light[data-engine="podman"] table[data-table="image.scanning.report.counts"] tr[data-severity="HIGH"] td .Severity {
+body.bp5-light[data-engine="podman"]
+  .AppDataTable[data-table="image.scanning.report"]
+  tr[data-severity="HIGH"]
+  .Severity,
+body.bp5-light[data-engine="podman"]
+  table[data-table="image.scanning.report.counts"]
+  tr[data-severity="HIGH"]
+  td
+  .Severity {
   background-color: #590000;
 }
-body.bp5-light[data-engine="podman"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="MEDIUM"] .Severity,
-body.bp5-light[data-engine="podman"] table[data-table="image.scanning.report.counts"] tr[data-severity="MEDIUM"] td .Severity {
+body.bp5-light[data-engine="podman"]
+  .AppDataTable[data-table="image.scanning.report"]
+  tr[data-severity="MEDIUM"]
+  .Severity,
+body.bp5-light[data-engine="podman"]
+  table[data-table="image.scanning.report.counts"]
+  tr[data-severity="MEDIUM"]
+  td
+  .Severity {
   background-color: #300606;
 }
-body.bp5-light[data-engine="podman"] .AppDataTable[data-table="image.scanning.report"] tr[data-severity="LOW"] .Severity,
-body.bp5-light[data-engine="podman"] table[data-table="image.scanning.report.counts"] tr[data-severity="LOW"] td .Severity {
+body.bp5-light[data-engine="podman"]
+  .AppDataTable[data-table="image.scanning.report"]
+  tr[data-severity="LOW"]
+  .Severity,
+body.bp5-light[data-engine="podman"]
+  table[data-table="image.scanning.report.counts"]
+  tr[data-severity="LOW"]
+  td
+  .Severity {
   background-color: #c5c5c5;
   color: #666;
 }

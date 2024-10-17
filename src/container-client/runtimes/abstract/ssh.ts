@@ -2,20 +2,20 @@ import { isEmpty } from "lodash-es";
 
 import { systemNotifier } from "@/container-client/notifier";
 import {
-  ApiConnection,
-  ApiStartOptions,
-  AvailabilityCheck,
-  CommandExecutionResult,
-  Connection,
-  ControllerScope,
-  EngineConnectorSettings,
-  RunnerStopperOptions,
-  ServiceOpts,
-  StartupStatus
+  type ApiConnection,
+  type ApiStartOptions,
+  type AvailabilityCheck,
+  type CommandExecutionResult,
+  type Connection,
+  type ControllerScope,
+  type EngineConnectorSettings,
+  type RunnerStopperOptions,
+  type ServiceOpts,
+  StartupStatus,
 } from "@/env/Types";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { SSH_PROGRAM } from "../../connection";
-import { ISSHClient } from "../../services";
+import type { ISSHClient } from "../../services";
 import { getAvailableSSHConnections } from "../../shared";
 import { AbstractContainerEngineHostClient } from "../abstract/base";
 
@@ -39,14 +39,14 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
         settings: this.settings,
         engine: this.ENGINE,
         host: this.HOST,
-        id: this.id
+        id: this.id,
       };
       this.containerApiClient = new ContainerClient(
         connection,
         createApplicationApiDriver(connection, {
           getSSHConnection: async () => {
             systemNotifier.transmit("engine.availability", {
-              trace: "Starting SSH connection"
+              trace: "Starting SSH connection",
             });
             // console
             const scopes = await this.getControllerScopes();
@@ -54,25 +54,24 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
             const connected = await this.startSSHConnection(scope as SSHHost, {
               onStatusCheck: (info) => {
                 systemNotifier.transmit("engine.availability", {
-                  trace: `API status checking - retry ${info.retries + 1} of ${info.maxRetries}`
+                  trace: `API status checking - retry ${info.retries + 1} of ${info.maxRetries}`,
                 });
-              }
+              },
             });
             if (connected) {
               console.debug("Returning connection", this, scope);
               systemNotifier.transmit("engine.availability", {
-                trace: "SSH connection has been established"
+                trace: "SSH connection has been established",
               });
               return this._connection;
-            } else {
-              systemNotifier.transmit("engine.availability", {
-                trace: "SSH connection has failed"
-              });
             }
+            systemNotifier.transmit("engine.availability", {
+              trace: "SSH connection has failed",
+            });
             console.error("SSH connection is not established", this, scope, connected);
             throw new Error("SSH connection is not established");
-          }
-        })
+          },
+        }),
       );
     }
     return this.containerApiClient;
@@ -105,7 +104,7 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
     const check = await this.startSSHConnection(scope as SSHHost, {
       onStatusCheck: (status) => {
         console.debug("SSH connection status check", status);
-      }
+      },
     });
     return check;
   }
@@ -119,7 +118,7 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
     return await this.startSSHConnection(scope as SSHHost, {
       onStatusCheck: (status) => {
         console.debug("SSH connection status check", status);
-      }
+      },
     });
   }
   async stopScopeByName(name: string): Promise<boolean> {
@@ -130,7 +129,10 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
 
   // Availability
   async isEngineAvailable() {
-    const result: AvailabilityCheck = { success: true, details: "Engine is available" };
+    const result: AvailabilityCheck = {
+      success: true,
+      details: "Engine is available",
+    };
     return result;
   }
 
@@ -155,9 +157,8 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
       if (customSettings?.controller?.scope) {
         const matchingScope = scopes.find((s) => s.Name === customSettings?.controller?.scope);
         return matchingScope;
-      } else {
-        this.logger.error(this.id, "Controller scope is not set", customSettings);
       }
+      this.logger.error(this.id, "Controller scope is not set", customSettings);
     } else {
       this.logger.error(this.id, "No controller scopes available - no SSH connections configured", customSettings);
     }
@@ -166,13 +167,13 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
 
   // SSH specific
   async startSSHConnection(host: SSHHost, opts?: Partial<ServiceOpts>): Promise<StartupStatus> {
-    if (this._connection && this._connection.isConnected()) {
+    if (this._connection?.isConnected()) {
       return StartupStatus.RUNNING;
     }
     this._connection = await Command.StartSSHConnection(host, opts);
     if (this._connection) {
       this.connectionsTracker[host.Name] = this._connection;
-      const running = this._connection && this._connection.isConnected();
+      const running = this._connection?.isConnected();
       return running ? StartupStatus.RUNNING : StartupStatus.ERROR;
     }
     return StartupStatus.ERROR;
@@ -188,7 +189,12 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
     return true;
   }
 
-  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+  async runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult> {
     if (!this._connection || !this._connection.isConnected()) {
       throw new Error("SSH connection is not established");
     }
@@ -202,7 +208,7 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
       this.logger.error("Unable to generate kube - program path is empty", program);
       throw new Error("Unable to generate kube - program path is empty");
     }
-    let result;
+    let result: CommandExecutionResult;
     if (this.isScoped()) {
       result = await this.runScopeCommand(program.path || "", ["generate", "kube", entityId], controller?.scope || "");
     } else {

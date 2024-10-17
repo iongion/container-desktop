@@ -10,7 +10,7 @@ import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 
-import { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/env/Types";
 import { CreateDrawer } from "./CreateDrawer";
 import { getImageUrl } from "./Navigation";
 
@@ -22,7 +22,13 @@ interface ActionsMenuProps {
   onReload?: () => void;
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, withoutStart, isActive, onReload }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({
+  expand,
+  image,
+  withoutStart,
+  isActive,
+  onReload,
+}: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -31,7 +37,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
   const imageRemove = useStoreActions((actions) => actions.image.imageRemove);
   const performActionCommand = useCallback(
     async (action: string) => {
-      let result = { success: false, message: `No action handler for ${action}` };
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -47,7 +56,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
           default:
             break;
         }
-        Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+        Notification.show({
+          message: t("Command completed"),
+          intent: Intent.SUCCESS,
+        });
         if (action === "image.remove") {
           goToScreen("/screens/images");
         }
@@ -56,14 +68,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [image, imagePull, imagePush, imageRemove, t]
+    [image, imagePull, imagePush, imageRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -77,7 +89,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
         performActionCommand("image.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const onActionClick = useCallback(
     async (e) => {
@@ -85,16 +97,35 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
       const action = sender.getAttribute("data-action");
       performActionCommand(action);
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const startButton = withoutStart ? null : (
-    <Button small minimal intent={Intent.SUCCESS} text={t("Start")} icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />} onClick={onCreateClick} />
+    <Button
+      small
+      minimal
+      intent={Intent.SUCCESS}
+      text={t("Start")}
+      icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />}
+      onClick={onCreateClick}
+    />
   );
   const expandAsButtons =
     image && expand ? (
       <>
-        <AnchorButton minimal active={isActive ? isActive("image.layers") : false} icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
-        <AnchorButton minimal active={isActive ? isActive("image.inspect") : false} icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
+        <AnchorButton
+          minimal
+          active={isActive ? isActive("image.layers") : false}
+          icon={IconNames.LAYERS}
+          text={t("Layers")}
+          href={getImageUrl(image.Id, "layers")}
+        />
+        <AnchorButton
+          minimal
+          active={isActive ? isActive("image.inspect") : false}
+          icon={IconNames.EYE_OPEN}
+          text={t("Inspect")}
+          href={getImageUrl(image.Id, "inspect")}
+        />
         <AnchorButton
           minimal
           active={isActive ? isActive("image.security") : false}
@@ -120,7 +151,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ expand, image, without
         {onReload && (
           <>
             {startButton ? <Divider /> : null}
-            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+            <Button
+              small
+              minimal
+              intent={Intent.NONE}
+              title={t("Reload current list")}
+              icon={IconNames.REFRESH}
+              onClick={onReload}
+            />
           </>
         )}
         {expandAsButtons}

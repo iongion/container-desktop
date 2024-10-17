@@ -1,6 +1,13 @@
 import { AbstractContainerEngineHostClientSSH } from "@/container-client/runtimes/abstract/ssh";
 import { coercePodmanMachines } from "@/container-client/shared";
-import { ApiConnection, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import {
+  type ApiConnection,
+  type Connection,
+  ContainerEngine,
+  ContainerEngineHost,
+  type EngineConnectorSettings,
+  OperatingSystem,
+} from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM, SSH_PROGRAM } from "../../connection";
 
@@ -30,7 +37,7 @@ export class PodmanContainerEngineHostClientSSH extends AbstractContainerEngineH
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: uri || settings?.api?.connection?.uri || "",
-        relay: relay || settings?.api?.connection?.relay || ""
+        relay: relay || settings?.api?.connection?.relay || "",
       };
     }
     // Get environment variable inside the scope
@@ -42,7 +49,7 @@ export class PodmanContainerEngineHostClientSSH extends AbstractContainerEngineH
     }
     return {
       uri: uri || settings?.api?.connection?.uri || "",
-      relay: relay || settings?.api?.connection?.relay || ""
+      relay: relay || settings?.api?.connection?.relay || "",
     };
   }
 

@@ -1,6 +1,6 @@
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 
-import { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo } from "@/web-app/Navigator";
 
@@ -15,7 +15,12 @@ interface ScreenHeaderProps {
   listRouteIcon?: IconName;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ image, currentScreen, listRoutePath, listRouteIcon }: ScreenHeaderProps) => {
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
+  image,
+  currentScreen,
+  listRoutePath,
+  listRouteIcon,
+}: ScreenHeaderProps) => {
   let currentListRoutePath = listRoutePath;
   if (image && !currentListRoutePath) {
     currentListRoutePath = pathTo("/screens/images");

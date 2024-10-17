@@ -4,11 +4,11 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
 import { usePoller } from "@/web-app/Hooks";
 import { Notification } from "@/web-app/Notification";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 
 import "./Dashboard.css";
 
@@ -30,32 +30,42 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { exampleCode, commandPrefix, commandTitle } = useMemo(() => {
     const programName = program?.name || "podman";
     const exampleCode = CONTAINER_DOCS_EXAMPLE_CODE.replace("{program}", programName);
-    let commandPrefix;
-    let commandTitle;
+    let commandPrefix = "";
+    let commandTitle: any;
     if (osType === OperatingSystem.Windows) {
       if (host === ContainerEngineHost.PODMAN_VIRTUALIZED_WSL || host === ContainerEngineHost.DOCKER_VIRTUALIZED_WSL) {
         commandPrefix = `wsl.exe --distribution ${scope} --exec bash -i -l`;
-        commandTitle = t("On WSL, to dissociated between commands targeting the native podman host, a wsl prefix must be used.");
+        commandTitle = t(
+          "On WSL, to dissociated between commands targeting the native podman host, a wsl prefix must be used.",
+        );
       }
     } else if (osType === OperatingSystem.MacOS) {
-      if (host === ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA || host === ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA) {
+      if (
+        host === ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA ||
+        host === ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA
+      ) {
         commandPrefix = `limactl shell ${scope}`;
-        commandTitle = t("On MacOS, to dissociated between commands targeting the native podman host, a limactl prefix must be used.");
+        commandTitle = t(
+          "On MacOS, to dissociated between commands targeting the native podman host, a limactl prefix must be used.",
+        );
       }
     }
     return {
       exampleCode,
       commandPrefix,
-      commandTitle
+      commandTitle,
     };
   }, [t, host, osType, scope, program]);
 
   const onCopyToClipboardClick = useCallback(
     async (e) => {
       await navigator.clipboard.writeText(exampleCode);
-      Notification.show({ message: t("The command was copied to clipboard"), intent: Intent.SUCCESS });
+      Notification.show({
+        message: t("The command was copied to clipboard"),
+        intent: Intent.SUCCESS,
+      });
     },
-    [t, exampleCode]
+    [t, exampleCode],
   );
 
   // Change hydration
@@ -66,7 +76,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
       <div className="AppScreenContent">
         <NonIdealState
           icon={<Icon icon={IconNames.CUBE} size={120} />}
-          title={t("containersRunning", { count: containerStats.running, context: `${containerStats.running}` })}
+          title={t("containersRunning", {
+            count: containerStats.running,
+            context: `${containerStats.running}`,
+          })}
           description={
             <div className="AppScreenContentViewport">
               <HTMLTable className="DashboardContainersReportTable" striped compact bordered>
@@ -115,8 +128,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: "/"
+  Path: "/",
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.DASHBOARD
+  LeftIcon: IconNames.DASHBOARD,
 };

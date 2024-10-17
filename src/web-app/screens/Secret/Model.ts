@@ -1,11 +1,12 @@
-import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
+import { type Action, type Computed, type Thunk, action, computed, thunk } from "easy-peasy";
 
-import { CreateSecretOptions, FetchSecretOptions } from "@/container-client/Api.clients";
-import { Secret } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { CreateSecretOptions, FetchSecretOptions } from "@/container-client/Api.clients";
+import type { Secret } from "@/env/Types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 
 export interface SecretsModelState {
+  version?: string;
   secrets: Secret[];
 }
 
@@ -54,21 +55,21 @@ export const createModel = async (registry: AppRegistry): Promise<SecretsModel> 
       const secrets = await client.getSecrets();
       actions.setSecrets(secrets);
       return secrets;
-    })
+    }),
   ),
   secretFetch: thunk(async (actions, options) =>
     registry.withPending(async () => {
       const client = await registry.getContainerClient();
       const secret = await client.getSecret(options.Id);
       return secret;
-    })
+    }),
   ),
   secretCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
       const client = await registry.getContainerClient();
       const created = await client.createSecret(options);
       return created;
-    })
+    }),
   ),
   secretRemove: thunk(async (actions, options) =>
     registry.withPending(async () => {
@@ -81,7 +82,7 @@ export const createModel = async (registry: AppRegistry): Promise<SecretsModel> 
         }
       }
       return removed;
-    })
+    }),
   ),
   secretsSearchByTerm: computed((state) => {
     return (searchTerm: string) => {
@@ -96,5 +97,5 @@ export const createModel = async (registry: AppRegistry): Promise<SecretsModel> 
           return !!matching;
         });
     };
-  })
+  }),
 });

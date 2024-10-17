@@ -4,9 +4,9 @@ import { mdiScrewdriver } from "@mdi/js";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-import { Volume } from "@/env/Types";
+import type { Volume } from "@/env/Types";
 import { usePoller } from "@/web-app/Hooks";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -31,10 +31,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.DATABASE} rightContent={<VolumeActionsMenu onReload={volumesFetch} />} />
+      <AppScreenHeader
+        searchTerm={searchTerm}
+        onSearch={onSearchChange}
+        titleIcon={IconNames.DATABASE}
+        rightContent={<VolumeActionsMenu onReload={volumesFetch} />}
+      />
       <div className="AppScreenContent">
         {volumes.length === 0 ? (
-          <NonIdealState icon={IconNames.GEOSEARCH} title={t("No results")} description={<p>{t("There are no volumes")}</p>} />
+          <NonIdealState
+            icon={IconNames.GEOSEARCH}
+            title={t("No results")}
+            description={<p>{t("There are no volumes")}</p>}
+          />
         ) : (
           <HTMLTable interactive compact striped className="AppDataTable" data-table="volumes">
             <thead>
@@ -86,8 +95,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Volumes";
 Screen.Route = {
-  Path: `/screens/${ID}`
+  Path: `/screens/${ID}`,
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.DATABASE
+  LeftIcon: IconNames.DATABASE,
 };

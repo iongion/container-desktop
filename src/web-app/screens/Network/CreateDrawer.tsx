@@ -4,12 +4,12 @@ import { useMemo, useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import { NetworkSubnet } from "@/env/Types";
+import type { NetworkSubnet } from "@/env/Types";
 import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
 import dayjs from "dayjs";
 import { NetworkPropertiesForm } from "./NetworkPropertiesForm";
-import { createNetworkSubnet, NetworkSubnetItem, NetworkSubnetsForm } from "./NetworkSubnetsForm";
+import { createNetworkSubnet, type NetworkSubnetItem, NetworkSubnetsForm } from "./NetworkSubnetsForm";
 
 // Drawer
 
@@ -28,7 +28,7 @@ export function toNetworkSubnets(subnets: NetworkSubnetItem[]) {
     .map((it) => {
       const coerced = {
         ...it,
-        guid: undefined
+        guid: undefined,
       };
       return coerced;
     })
@@ -47,11 +47,20 @@ export interface FormActionsProps {
 export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActionsProps) => {
   const { t } = useTranslation();
   const { formState } = useFormContext();
-  const pendingIndicator = <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>;
+  const pendingIndicator = (
+    <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
+  );
   return (
     <>
       <ButtonGroup fill>
-        <Button disabled={pending || !formState.isValid} intent={Intent.PRIMARY} icon={IconNames.GRAPH} title={t("Click to launch creation")} text={t("Create")} type="submit" />
+        <Button
+          disabled={pending || !formState.isValid}
+          intent={Intent.PRIMARY}
+          icon={IconNames.GRAPH}
+          title={t("Click to launch creation")}
+          text={t("Create")}
+          type="submit"
+        />
       </ButtonGroup>
       {pendingIndicator}
     </>
@@ -77,8 +86,8 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
       internal: false,
       ipv6Enabled: false,
       driver: "",
-      subnets
-    }
+      subnets,
+    },
   });
   const { handleSubmit } = methods;
   const [pending, setPending] = useState(false); // Form initial data
@@ -94,24 +103,36 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
         internal: data.internal,
         name: data.networkName,
         network_interface: data.networkInterface,
-        subnets: toNetworkSubnets(data.subnets)
+        subnets: toNetworkSubnets(data.subnets),
       });
       onClose();
-      Notification.show({ message: t("Network has been created"), intent: Intent.SUCCESS });
+      Notification.show({
+        message: t("Network has been created"),
+        intent: Intent.SUCCESS,
+      });
     } catch (error: any) {
       Notification.show({
         message: t("{{message}} - {{data}}", {
           message: error.message || t("Command failed"),
-          data: error.details?.result?.result?.data?.cause
+          data: error.details?.result?.result?.data?.cause,
         }),
-        intent: Intent.DANGER
+        intent: Intent.DANGER,
       });
     } finally {
       setPending(false);
     }
   });
   return (
-    <Drawer className="AppDrawer" icon={IconNames.PLUS} title={t("Create new network")} usePortal size={DrawerSize.SMALL} onClose={onClose} isOpen hasBackdrop={false}>
+    <Drawer
+      className="AppDrawer"
+      icon={IconNames.PLUS}
+      title={t("Create new network")}
+      usePortal
+      size={DrawerSize.SMALL}
+      onClose={onClose}
+      isOpen
+      hasBackdrop={false}
+    >
       <div className={Classes.DRAWER_BODY}>
         <FormProvider {...methods}>
           <form name="CreateNetworkForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>

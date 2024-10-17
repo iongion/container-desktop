@@ -1,4 +1,4 @@
-import { GlobalUserSettings } from "@/env/Types";
+import type { GlobalUserSettings } from "@/env/Types";
 import { deepMerge } from "@/utils";
 
 async function getUserSettingsPath() {
@@ -62,7 +62,12 @@ export class UserConfiguration {
   async setKey(name: string, value: any) {
     const settings = await this.getSettings();
     // console.debug("Setting key", { name, value });
-    const updated = deepMerge<GlobalUserSettings>({}, settings, { [name]: value }, { version: import.meta.env.PROJECT_VERSION || "latest" });
+    const updated = deepMerge<GlobalUserSettings>(
+      {},
+      settings,
+      { [name]: value },
+      { version: import.meta.env.PROJECT_VERSION || "latest" },
+    );
     // console.debug("Setting key", updated);
     return await update(updated);
   }

@@ -2,14 +2,14 @@ import { Button, HTMLTable, Intent, NonIdealState, Radio, Spinner } from "@bluep
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
-import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { RegistrySearchFilters, RegistrySearchResult } from "@/env/Types";
+import type { RegistrySearchFilters, RegistrySearchResult } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ActionsMenu, ScreenHeader } from ".";
 import "./ManageScreen.css";
@@ -28,11 +28,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const currentConnector = useStoreState((state) => state.currentConnector);
   const registriesFetch = useStoreActions((actions) => actions.registry.registriesFetch);
   const registrySearch = useStoreActions((actions) => actions.registry.registrySearch);
-  const registries = useMemo(() => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])], [registriesMap]);
+  const registries = useMemo(
+    () => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])],
+    [registriesMap],
+  );
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
   const firstEnabledRegistry = useMemo(
-    () => registries.find((it) => it.enabled && currentConnector?.engine && it.engine.includes(currentConnector?.engine)),
-    [currentConnector, registries]
+    () =>
+      registries.find((it) => it.enabled && currentConnector?.engine && it.engine.includes(currentConnector?.engine)),
+    [currentConnector, registries],
   );
   const [currentRegistry, setCurrentRegistry] = useState<string | undefined>(firstEnabledRegistry?.name);
   const [searchResult, setSearchResult] = useState<RegistrySearchResult>();
@@ -55,7 +59,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setState("state.looked-up");
       }
     },
-    [registries, searchTerm, registrySearch, selectedRegistry]
+    [registries, searchTerm, registrySearch, selectedRegistry],
   );
 
   const onRegistrySearchResultClick = useCallback(async (it: RegistrySearchResult) => {
@@ -67,20 +71,32 @@ export const Screen: AppScreen<ScreenProps> = () => {
       const registry = registries.find((it) => it.name === e.currentTarget.value);
       setCurrentRegistry(registry?.name);
     },
-    [registries]
+    [registries],
   );
 
   useEffect(() => {
     registriesFetch();
   }, [registriesFetch]);
 
-  let content;
+  let content: React.ReactNode | null = null;
   switch (state) {
     case "state.initial":
-      content = <NonIdealState icon={IconNames.GEOSEARCH} title={t("Search not started")} description={<p>{t("Type a term and click Search")}</p>} />;
+      content = (
+        <NonIdealState
+          icon={IconNames.GEOSEARCH}
+          title={t("Search not started")}
+          description={<p>{t("Type a term and click Search")}</p>}
+        />
+      );
       break;
     case "state.no-results":
-      content = <NonIdealState icon={IconNames.LIST} title={t("No results")} description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>} />;
+      content = (
+        <NonIdealState
+          icon={IconNames.LIST}
+          title={t("No results")}
+          description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>}
+        />
+      );
       break;
     case "state.looking-up":
       content = <NonIdealState title={<Spinner size={48} />} description={<p>{t("Looking up")}</p>} />;
@@ -88,7 +104,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
     case "state.looked-up":
       content =
         searchResults.length === 0 ? (
-          <NonIdealState icon={IconNames.LIST} title={t("No results")} description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>} />
+          <NonIdealState
+            icon={IconNames.LIST}
+            title={t("No results")}
+            description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>}
+          />
         ) : (
           <HTMLTable interactive compact striped className="AppDataTable" data-table="search.results">
             <thead>
@@ -139,7 +159,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} onSearchTrigger={onSearchTrigger} withSearchTrigger rightContent={<ActionsMenu />} />
+      <ScreenHeader
+        searchTerm={searchTerm}
+        onSearch={onSearchChange}
+        onSearchTrigger={onSearchTrigger}
+        withSearchTrigger
+        rightContent={<ActionsMenu />}
+      />
       <div className="AppScreenContent">
         <div className="AppScreenContentView" data-column="left">
           {content}
@@ -158,9 +184,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </thead>
             <tbody>
               {(registries || []).map((registry) => {
-                let title;
+                let title = "";
                 if (registry.id === "system") {
-                  title = registry.enabled ? t("Podman registry.conf file must be adjusted - it allows parallel search") : t("Not available for current host");
+                  title = registry.enabled
+                    ? t("Podman registry.conf file must be adjusted - it allows parallel search")
+                    : t("Not available for current host");
                 }
                 const isUsable = currentConnector?.engine ? registry.engine.includes(currentConnector?.engine) : false;
                 return (
@@ -194,8 +222,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Registries";
 Screen.Route = {
-  Path: `/screens/${ID}`
+  Path: `/screens/${ID}`,
 };
 Screen.Metadata = {
-  LeftIcon: <ReactIcon.Icon className="ReactIcon" path={mdiCubeUnfolded} size={0.75} />
+  LeftIcon: <ReactIcon.Icon className="ReactIcon" path={mdiCubeUnfolded} size={0.75} />,
 };

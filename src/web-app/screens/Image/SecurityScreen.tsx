@@ -5,10 +5,10 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { ContainerImage, SecurityReport, SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
+import type { ContainerImage, SecurityReport, SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { Application } from "@/container-client/Application";
 import { ScreenHeader } from ".";
@@ -32,7 +32,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [state, setState] = useState<AppScreenState>({
     pending: true,
     scanning: false,
-    image: undefined
+    image: undefined,
   });
 
   const { pending, scanning, image, report } = state;
@@ -44,19 +44,31 @@ export const Screen: AppScreen<ScreenProps> = () => {
     (async () => {
       try {
         const image = await imageFetch({
-          Id: decodeURIComponent(id as any)
+          Id: decodeURIComponent(id as any),
         });
-        setState((prev) => ({ ...prev, pending: false, scanning: true, image, report: undefined }));
+        setState((prev) => ({
+          ...prev,
+          pending: false,
+          scanning: true,
+          image,
+          report: undefined,
+        }));
         try {
           // check security
           const instance = Application.getInstance();
           const report = await instance.checkSecurity({
             scanner: "trivy",
             subject: "image",
-            target: image.FullName
+            target: image.FullName,
           });
           console.debug(">> report", report);
-          setState((prev) => ({ ...prev, pending: false, image, scanning: false, report })); // go to scanning
+          setState((prev) => ({
+            ...prev,
+            pending: false,
+            image,
+            scanning: false,
+            report,
+          })); // go to scanning
         } catch (error: any) {
           console.error("Unable to fetch at this moment", error);
           setState((prev) => ({ ...prev, scanning: false }));
@@ -146,21 +158,35 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </tr>
                   <tr>
                     <td>{t("Downloaded")}</td>
-                    <td>{report?.scanner?.database?.VulnerabilityDB?.DownloadedAt ? (dayjs(report?.scanner?.database?.VulnerabilityDB?.DownloadedAt) as any).fromNow() : ""}</td>
+                    <td>
+                      {report?.scanner?.database?.VulnerabilityDB?.DownloadedAt
+                        ? (dayjs(report?.scanner?.database?.VulnerabilityDB?.DownloadedAt) as any).fromNow()
+                        : ""}
+                    </td>
                   </tr>
                   <tr>
                     <td>{t("Updated")}</td>
-                    <td>{report?.scanner?.database?.VulnerabilityDB?.UpdatedAt ? (dayjs(report?.scanner?.database?.VulnerabilityDB?.UpdatedAt) as any).fromNow() : ""}</td>
+                    <td>
+                      {report?.scanner?.database?.VulnerabilityDB?.UpdatedAt
+                        ? (dayjs(report?.scanner?.database?.VulnerabilityDB?.UpdatedAt) as any).fromNow()
+                        : ""}
+                    </td>
                   </tr>
                 </tbody>
               </HTMLTable>
               <Divider />
-              <AnchorButton icon={IconNames.HOME} intent={Intent.PRIMARY} href="https://trivy.dev" target="_blank" rel="noOpener">
+              <AnchorButton
+                icon={IconNames.HOME}
+                intent={Intent.PRIMARY}
+                href="https://trivy.dev"
+                target="_blank"
+                rel="noOpener"
+              >
                 <span>Trivy</span>
               </AnchorButton>
             </div>
 
-            {report && report.scanner?.path && report.status === "success" ? (
+            {report?.scanner?.path && report?.status === "success" ? (
               <div className="SecurityList">
                 <HTMLTable compact className="AppDataTable" data-table="image.scanning.report">
                   <thead>
@@ -246,9 +272,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/image/:id/security`
+  Path: "/screens/image/:id/security",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CONFIRM,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import SSHConfigParser from "ssh-config";
 
-import { CommandExecutionResult, ControllerScopeType, OperatingSystem, SSHHost } from "@/env/Types";
+import { type CommandExecutionResult, ControllerScopeType, OperatingSystem, type SSHHost } from "@/env/Types";
 
 export const CURRENT_OS_TYPE = os.type();
 
@@ -17,7 +17,7 @@ export const Platform: IPlatform = {
 
   async getEnvironmentVariable(name: string) {
     // console.debug("> Reading environment variable", name);
-    const value = await Promise.resolve((process.env || {})[name]);
+    const value = await Promise.resolve(process.env?.[name]);
     // console.debug("< Reading environment variable", name, value);
     return value;
   },
@@ -88,7 +88,7 @@ export const Platform: IPlatform = {
             Type: ControllerScopeType.SSHConnection,
             IdentityFile: `${matchIdentityFile?.value || ""}`,
             Connected: false,
-            Usable: false
+            Usable: false,
           };
           config.push(host);
         }
@@ -107,12 +107,25 @@ export const Platform: IPlatform = {
     if (os.type() === OperatingSystem.MacOS) {
       status = await Command.Execute("osascript", ["-e", `tell app "Terminal" to do script "${args}"`]);
     } else if (os.type() === OperatingSystem.Windows) {
-      status = await Command.Execute("wt", ["-w", "nt", "--title", title, "-p", "Command Prompt", "-d", ".", "cmd", "/k", commandLauncher, ...(params || [])]);
+      status = await Command.Execute("wt", [
+        "-w",
+        "nt",
+        "--title",
+        title,
+        "-p",
+        "Command Prompt",
+        "-d",
+        ".",
+        "cmd",
+        "/k",
+        commandLauncher,
+        ...(params || []),
+      ]);
     } else {
       status = await Command.Execute("gnome-terminal", ["--title", title, "-e", args]);
     }
     return status;
-  }
+  },
 };
 
 export const FS: IFileSystem = {
@@ -141,7 +154,7 @@ export const FS: IFileSystem = {
 
   async rename(oldPath: string, newPath: string, options?: any) {
     return await fs.renameSync(oldPath, newPath);
-  }
+  },
 };
 
 export const Path: IPath = {
@@ -156,5 +169,5 @@ export const Path: IPath = {
   },
   async resolve(...paths: string[]) {
     return await path.resolve(...paths);
-  }
+  },
 };

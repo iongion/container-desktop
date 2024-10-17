@@ -5,13 +5,13 @@ import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
 import { useTranslation } from "react-i18next";
 
-import { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { usePoller } from "@/web-app/Hooks";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ActionsMenu, getImageUrl } from ".";
 import "./ManageScreen.css";
@@ -32,10 +32,18 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} rightContent={<ActionsMenu withoutStart onReload={fetchAll} />} />
+      <AppScreenHeader
+        searchTerm={searchTerm}
+        onSearch={onSearchChange}
+        rightContent={<ActionsMenu withoutStart onReload={fetchAll} />}
+      />
       <div className="AppScreenContent">
         {images.length === 0 ? (
-          <NonIdealState icon={IconNames.GEOSEARCH} title={t("No results")} description={<p>{t("There are no images")}</p>} />
+          <NonIdealState
+            icon={IconNames.GEOSEARCH}
+            title={t("No results")}
+            description={<p>{t("There are no images")}</p>}
+          />
         ) : (
           <HTMLTable interactive striped compact className="AppDataTable" data-table="images">
             <thead>
@@ -64,7 +72,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </thead>
             <tbody>
               {images.map((image) => {
-                const imageLayersButton = <AnchorButton minimal small href={getImageUrl(image.Id, "layers")} text={image.Name} intent={Intent.PRIMARY} icon={IconNames.LAYERS} />;
+                const imageLayersButton = (
+                  <AnchorButton
+                    minimal
+                    small
+                    href={getImageUrl(image.Id, "layers")}
+                    text={image.Name}
+                    intent={Intent.PRIMARY}
+                    icon={IconNames.LAYERS}
+                  />
+                );
                 return (
                   <tr key={image.Id} data-image={image.Id}>
                     <td>{imageLayersButton}</td>
@@ -95,8 +112,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Images";
 Screen.Route = {
-  Path: `/screens/${ID}`
+  Path: `/screens/${ID}`,
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.BOX
+  LeftIcon: IconNames.BOX,
 };

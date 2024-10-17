@@ -3,7 +3,7 @@ export * from "./runner";
 export * from "./runtimes";
 export * from "./types";
 
-import { Connection, OperatingSystem } from "@/env/Types";
+import type { Connection, OperatingSystem } from "@/env/Types";
 import { Docker } from "./runtimes/docker";
 import { Podman } from "./runtimes/podman";
 

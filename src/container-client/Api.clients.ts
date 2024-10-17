@@ -1,43 +1,43 @@
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { merge } from "lodash-es";
 import semver from "semver";
 
 import {
-  ApiDriverConfig,
-  CommandExecutionResult,
-  Connection,
-  Container,
+  type ApiDriverConfig,
+  type CommandExecutionResult,
+  type Connection,
+  type Container,
   ContainerEngine,
   ContainerEngineHost,
-  ContainerImage,
-  ContainerImageHistory,
-  ContainerImageMount,
-  ContainerImagePortMapping,
-  ContainerStateList,
-  ContainerStats,
-  ControllerScope,
-  EngineConnectorApiSettings,
-  EngineConnectorSettings,
-  GenerateKubeOptions,
-  Network,
+  type ContainerImage,
+  type ContainerImageHistory,
+  type ContainerImageMount,
+  type ContainerImagePortMapping,
+  type ContainerStateList,
+  type ContainerStats,
+  type ControllerScope,
+  type EngineConnectorApiSettings,
+  type EngineConnectorSettings,
+  type GenerateKubeOptions,
+  type Network,
   OperatingSystem,
-  Pod,
-  PodProcessReport,
-  Registry,
-  RegistryPullOptions,
-  RegistrySearchOptions,
-  RegistrySearchResult,
-  Secret,
-  SystemInfo,
-  SystemResetReport,
-  Volume
+  type Pod,
+  type PodProcessReport,
+  type Registry,
+  type RegistryPullOptions,
+  type RegistrySearchOptions,
+  type RegistrySearchResult,
+  type Secret,
+  type SystemInfo,
+  type SystemResetReport,
+  type Volume,
 } from "@/env/Types";
 
-import { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { Application } from "./Application";
 
 export const CONTAINER_GROUP_SEPARATOR = "_";
 
-export interface FetchDomainOptions {}
+export type FetchDomainOptions = any;
 
 export interface FetchImageOptions {
   Id: string;
@@ -171,7 +171,7 @@ export const coerceImage = (image: ContainerImage) => {
 export const coercePod = (pod: Pod) => {
   pod.Processes = {
     Processes: [],
-    Titles: []
+    Titles: [],
   };
   // See issue #54 - it returns null on failure
   pod.Containers = Array.isArray(pod.Containers) ? pod.Containers : [];
@@ -191,7 +191,7 @@ export const coerceNetwork = (it: any): Network => {
     network_interface: "n/a",
     options: {},
     subnets: [],
-    created: it.Created
+    created: it.Created,
   };
 };
 
@@ -206,7 +206,11 @@ export function isOk(res: AxiosResponse) {
   return res.status >= 200 && res.status < 300;
 }
 
-export async function getApiConfig(api: EngineConnectorApiSettings, scope: string | undefined, host: ContainerEngineHost) {
+export async function getApiConfig(
+  api: EngineConnectorApiSettings,
+  scope: string | undefined,
+  host: ContainerEngineHost,
+) {
   // console.debug("Constructing api configuration", { api, scope, host });
   const baseURL = api.baseURL || "";
   let socketPath = `${api.connection?.uri || ""}`.replace("npipe://", "").replace("unix://", "");
@@ -219,7 +223,7 @@ export async function getApiConfig(api: EngineConnectorApiSettings, scope: strin
         ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
         ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
         ContainerEngineHost.PODMAN_REMOTE,
-        ContainerEngineHost.DOCKER_REMOTE
+        ContainerEngineHost.DOCKER_REMOTE,
       ].includes(host)
     ) {
       //
@@ -238,8 +242,8 @@ export async function getApiConfig(api: EngineConnectorApiSettings, scope: strin
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      "User-Agent": `Container Desktop ${import.meta.env.PROJECT_VERSION}`
-    }
+      "User-Agent": `Container Desktop ${import.meta.env.PROJECT_VERSION}`,
+    },
   };
   // logger.debug("API configuration", config);
   return config;
@@ -247,7 +251,9 @@ export async function getApiConfig(api: EngineConnectorApiSettings, scope: strin
 
 export function createApplicationApiDriver(connection: Connection, context?: any): AxiosInstance {
   const request = async <T = any, D = any>(request, config?: AxiosRequestConfig<any> | undefined) => {
-    const req = (config ? merge({}, request, config) : request) || { headers: {} };
+    const req = (config ? merge({}, request, config) : request) || {
+      headers: {},
+    };
     // flatten headers
     const headersFlat = Object.keys(req.headers || {}).reduce((acc, key) => {
       acc[key] = req.headers[key];
@@ -265,18 +271,18 @@ export function createApplicationApiDriver(connection: Connection, context?: any
       return await request<T, D>(
         {
           method: "DELETE",
-          url
+          url,
         },
-        config
+        config,
       );
     },
     head: async <T = any, D = any>(url: string, config?: AxiosRequestConfig<any> | undefined) => {
       return await request<T, D>(
         {
           method: "HEAD",
-          url
+          url,
         },
-        config
+        config,
       );
     },
     post: async <T = any, D = any>(url: string, data?: D, config?: AxiosRequestConfig<any> | undefined) => {
@@ -284,9 +290,9 @@ export function createApplicationApiDriver(connection: Connection, context?: any
         {
           method: "POST",
           url,
-          data
+          data,
         },
-        config
+        config,
       );
     },
     put: async <T = any, D = any>(url: string, data?: D, config?: AxiosRequestConfig<any> | undefined) => {
@@ -294,9 +300,9 @@ export function createApplicationApiDriver(connection: Connection, context?: any
         {
           method: "PUT",
           url,
-          data
+          data,
         },
-        config
+        config,
       );
     },
     patch: async <T = any, D = any>(url: string, data?: D, config?: AxiosRequestConfig<any> | undefined) => {
@@ -304,17 +310,17 @@ export function createApplicationApiDriver(connection: Connection, context?: any
         {
           method: "PATCH",
           url,
-          data
+          data,
         },
-        config
+        config,
       );
-    }
+    },
   } as AxiosInstance;
   return driver;
 }
 
 export class ContainerClient {
-  protected logLevel: string = "debug";
+  protected logLevel = "debug";
   protected readonly driver: AxiosInstance;
   protected readonly connection: Connection;
 
@@ -349,7 +355,7 @@ export class ContainerClient {
     return this.withResult<ContainerImage | undefined>(async () => {
       const params = new URLSearchParams();
       const result = await this.driver.get<ContainerImage>(`/images/${id}/json`, {
-        params
+        params,
       });
       if (isOk(result)) {
         const image = coerceImage(result.data);
@@ -385,10 +391,10 @@ export class ContainerClient {
   }
   async pullImage(name: string) {
     return this.withResult<boolean>(async () => {
-      const result = await this.driver.post<boolean>(`/images/pull`, undefined, {
+      const result = await this.driver.post<boolean>("/images/pull", undefined, {
         params: {
-          reference: name
-        }
+          reference: name,
+        },
       });
       return isOk(result);
     });
@@ -406,7 +412,7 @@ export class ContainerClient {
         }
       }
       const result = await this.driver.post<boolean>(`/images/${encodeURIComponent(id)}/push`, undefined, {
-        params
+        params,
       });
       return isOk(result);
     });
@@ -416,8 +422,8 @@ export class ContainerClient {
     return this.withResult<Container[]>(async () => {
       const result = await this.driver.get<Container[]>("/containers/json", {
         params: {
-          all: true
-        }
+          all: true,
+        },
       });
       return isOk(result) ? result.data.map((it) => coerceContainer(it)) : [];
     });
@@ -440,13 +446,13 @@ export class ContainerClient {
       const result = await this.driver.get<Uint8Array>(`/containers/${encodeURIComponent(id)}/logs`, {
         params: {
           stdout: true,
-          stderr: true
+          stderr: true,
         },
         headers: {
           Accept: "application/octet-stream",
-          "Content-Type": "application/octet-stream"
+          "Content-Type": "application/octet-stream",
         },
-        responseType: "arraybuffer"
+        responseType: "arraybuffer",
       });
       return result.data;
     });
@@ -455,8 +461,8 @@ export class ContainerClient {
     return this.withResult<ContainerStats>(async () => {
       const result = await this.driver.get<ContainerStats>(`/containers/${encodeURIComponent(id)}/stats`, {
         params: {
-          stream: false
-        }
+          stream: false,
+        },
       });
       return result.data;
     });
@@ -465,8 +471,8 @@ export class ContainerClient {
     return this.withResult<any>(async () => {
       const result = await this.driver.get<any>(`/containers/${encodeURIComponent(id)}/top`, {
         params: {
-          ps_args: "-aux"
-        }
+          ps_args: "-aux",
+        },
       });
       // Compatibility issue - See https://github.com/containers/podman/pull/23986/files#diff-2b1db9a60dcb3f8a41cba2b527ce9d1c8d7db6b8025bea3a6cfc0ba48dd123d9R95
       let mustPatch = false;
@@ -522,8 +528,8 @@ export class ContainerClient {
       const result = await this.driver.delete<boolean>(`/containers/${encodeURIComponent(id)}`, {
         params: {
           force: true,
-          v: true
-        }
+          v: true,
+        },
       });
       return isOk(result);
     });
@@ -538,7 +544,7 @@ export class ContainerClient {
           return {
             Source: mount.source,
             Destination: mount.destination,
-            Type: mount.type
+            Type: mount.type,
           };
         }),
         portmappings: opts.PortMappings?.map((mapping) => {
@@ -546,9 +552,9 @@ export class ContainerClient {
             protocol: mapping.protocol,
             container_port: mapping.container_port,
             host_ip: mapping.host_ip === "localhost" ? "127.0.0.1" : mapping.host_ip,
-            host_port: mapping.host_port
+            host_port: mapping.host_port,
           };
-        })
+        }),
       };
       let baseURL = "http://d/v4.0.0/libpod";
       const host = this.connection?.host || "";
@@ -563,15 +569,15 @@ export class ContainerClient {
                 Type: mount.type,
                 Source: mount.source,
                 Target: mount.destination,
-                ReadOnly: false
+                ReadOnly: false,
               };
-            })
+            }),
           },
           PortBindings: opts.PortMappings?.reduce((acc, mapping) => {
             const key = `${mapping.container_port}/${mapping.protocol}`;
             acc[key] = [{ HostPort: `${mapping.host_port}` }];
             return acc;
-          }, {} as any)
+          }, {} as any),
         };
       }
       let url = "/containers/create";
@@ -662,8 +668,8 @@ export class ContainerClient {
       const result = await this.driver.delete<boolean>(`/volumes/${encodeURIComponent(nameOrId)}`, {
         baseURL,
         params: {
-          force: true
-        }
+          force: true,
+        },
       });
       return isOk(result);
     });
@@ -675,7 +681,9 @@ export class ContainerClient {
       if (host.startsWith("docker")) {
         baseURL = "http://localhost";
       }
-      const result = await this.driver.post("/volumes/prune", filters, { baseURL });
+      const result = await this.driver.post("/volumes/prune", filters, {
+        baseURL,
+      });
       return isOk(result);
     });
   }
@@ -687,7 +695,7 @@ export class ContainerClient {
         baseURL = "http://localhost";
       }
       const result = await this.driver.get<Secret[]>("/secrets/json", {
-        baseURL
+        baseURL,
       });
       return isOk(result) ? result.data : [];
     });
@@ -699,7 +707,7 @@ export class ContainerClient {
         baseURL = "http://localhost";
       }
       const result = await this.driver.get<Secret>(`/secrets/${encodeURIComponent(nameOrId)}/json`, {
-        baseURL
+        baseURL,
       });
       return result.data;
     });
@@ -711,7 +719,7 @@ export class ContainerClient {
         baseURL = "http://localhost";
       }
       const result = await this.driver.get<Secret>(`/secrets/${encodeURIComponent(nameOrId)}/json`, {
-        baseURL
+        baseURL,
       });
       return result.data;
     });
@@ -723,7 +731,7 @@ export class ContainerClient {
         baseURL = "http://localhost";
       }
       const creator = {
-        Secret: opts.Secret
+        Secret: opts.Secret,
       };
       const params: { name: string; driver?: string } = { name: opts.name };
       if (opts.driver) {
@@ -731,7 +739,7 @@ export class ContainerClient {
       }
       const result = await this.driver.post<Secret>("/secrets/create", creator, {
         baseURL,
-        params
+        params,
       });
       return result.data;
     });
@@ -745,8 +753,8 @@ export class ContainerClient {
       const result = await this.driver.delete<boolean>(`/secrets/${encodeURIComponent(id)}`, {
         baseURL,
         params: {
-          force: true
-        }
+          force: true,
+        },
       });
       return isOk(result);
     });
@@ -772,7 +780,7 @@ export class ContainerClient {
       return await instance.connectToContainer({
         id: item.Id,
         title: item.Name || "",
-        shell: undefined
+        shell: undefined,
       });
     });
   }
@@ -791,8 +799,8 @@ export class ContainerClient {
       const result = await this.driver.get<Pod[]>("/pods/json", {
         baseURL: "http://d/v4.0.0/libpod",
         params: {
-          all: true
-        }
+          all: true,
+        },
       });
       return isOk(result) ? result.data.map((it) => coercePod(it)) : [];
     });
@@ -800,7 +808,7 @@ export class ContainerClient {
   async getPod(Id: string) {
     return this.withResult<Pod>(async () => {
       const result = await this.driver.get<Pod>(`/pods/${encodeURIComponent(Id)}/json`, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       const item = coercePod(result.data);
       return item;
@@ -809,12 +817,12 @@ export class ContainerClient {
   async getPodProcesses(Id: string) {
     return this.withResult<PodProcessReport>(async () => {
       const result = await this.driver.get<PodProcessReport>(`/pods/${encodeURIComponent(Id)}/top`, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       if (!result.data) {
         return {
           Processes: [],
-          Titles: []
+          Titles: [],
         };
       }
       return result.data;
@@ -830,7 +838,7 @@ export class ContainerClient {
   async createPod(opts: CreatePodOptions) {
     return this.withResult<{ created: boolean; started: boolean }>(async () => {
       const creator = {
-        name: opts.Name
+        name: opts.Name,
       };
       let url = "/pods/create";
       if (opts.Name) {
@@ -839,7 +847,7 @@ export class ContainerClient {
         url = `${url}?${searchParams.toString()}`;
       }
       const createResult = await this.driver.post<{ Id: string }>(url, creator, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       const create = { created: false, started: false };
       if (isOk(createResult)) {
@@ -847,7 +855,7 @@ export class ContainerClient {
         if (opts.Start) {
           const { Id } = createResult.data;
           const startResult = await this.driver.post(`/pods/${encodeURIComponent(Id)}/start`, null, {
-            baseURL: "http://d/v4.0.0/libpod"
+            baseURL: "http://d/v4.0.0/libpod",
           });
           if (isOk(startResult)) {
             create.started = true;
@@ -865,8 +873,8 @@ export class ContainerClient {
         baseURL: "http://d/v4.0.0/libpod",
         params: {
           force: true,
-          v: true
-        }
+          v: true,
+        },
       });
       return isOk(result);
     });
@@ -874,7 +882,7 @@ export class ContainerClient {
   async stopPod(Id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.driver.post<boolean>(`/pods/${encodeURIComponent(Id)}/stop`, null, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return isOk(result);
     });
@@ -882,7 +890,7 @@ export class ContainerClient {
   async restartPod(Id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.driver.post<boolean>(`/pods/${encodeURIComponent(Id)}/restart`, null, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return isOk(result);
     });
@@ -890,7 +898,7 @@ export class ContainerClient {
   async pausePod(Id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.driver.post<boolean>(`/pods/${encodeURIComponent(Id)}/pause`, null, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return isOk(result);
     });
@@ -898,7 +906,7 @@ export class ContainerClient {
   async unpausePod(Id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.driver.post<boolean>(`/pods/${encodeURIComponent(Id)}/unpause`, null, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return isOk(result);
     });
@@ -906,7 +914,7 @@ export class ContainerClient {
   async killPod(Id: string) {
     return this.withResult<boolean>(async () => {
       const result = await this.driver.post<boolean>(`/pods/${encodeURIComponent(Id)}/kill`, null, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return isOk(result);
     });
@@ -934,10 +942,14 @@ export class ContainerClient {
     return this.withResult<Network[]>(async () => {
       try {
         if (this.connection.engine === ContainerEngine.DOCKER) {
-          const result = await this.driver.get<Network[]>("/networks", { baseURL: "http://localhost" });
+          const result = await this.driver.get<Network[]>("/networks", {
+            baseURL: "http://localhost",
+          });
           return (result.data as any[]).map(coerceNetwork);
         }
-        const result = await this.driver.get<Network[]>("/networks/json", { baseURL: "http://d/v4.0.0/libpod" });
+        const result = await this.driver.get<Network[]>("/networks/json", {
+          baseURL: "http://d/v4.0.0/libpod",
+        });
         return result.data || [];
       } catch (error: any) {
         console.error("Unable to fetch networks", error);
@@ -950,12 +962,12 @@ export class ContainerClient {
     return this.withResult<Network>(async () => {
       if (this.connection.engine === ContainerEngine.DOCKER) {
         const result = await this.driver.get<Network[]>(`/networks/${encodeURIComponent(name)}`, {
-          baseURL: "http://localhost"
+          baseURL: "http://localhost",
         });
         return result.data as any;
       }
       const result = await this.driver.get<Network>(`/networks/${encodeURIComponent(name)}/json`, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return result.data;
     });
@@ -969,11 +981,11 @@ export class ContainerClient {
           Name: creator.name,
           Driver: creator.driver,
           Internal: creator.internal,
-          EnableIPv6: creator.ipv6_enabled
+          EnableIPv6: creator.ipv6_enabled,
         };
         // TODO: Subnets
         const result = await this.driver.post<Network>("/networks/create", creatorDocker, {
-          baseURL: "http://localhost"
+          baseURL: "http://localhost",
         });
         if (isOk(result)) {
           const network = await this.getNetwork((result.data as any).Id);
@@ -983,7 +995,7 @@ export class ContainerClient {
         throw new Error("Unable to create network");
       }
       const result = await this.driver.post<Network>("/networks/create", creator, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return result.data;
     });
@@ -993,12 +1005,12 @@ export class ContainerClient {
     return this.withResult<boolean>(async () => {
       if (this.connection.engine === ContainerEngine.DOCKER) {
         const result = await this.driver.delete<Network[]>(`/networks/${encodeURIComponent(name)}`, {
-          baseURL: "http://localhost"
+          baseURL: "http://localhost",
         });
         return isOk(result);
       }
       const result = await this.driver.delete<boolean>(`/networks/${encodeURIComponent(name)}`, {
-        baseURL: "http://d/v4.0.0/libpod"
+        baseURL: "http://d/v4.0.0/libpod",
       });
       return isOk(result);
     });
@@ -1054,14 +1066,16 @@ export class OnlineApi {
   }
   async checkLatestVersion(osType: OperatingSystem) {
     const versionSpecifier = osType === OperatingSystem.Windows ? `VERSION-${osType}` : "VERSION";
-    const re = await fetch(`${this.baseUrl}/${versionSpecifier}`, { headers: { "content-type": "text/plain" } });
+    const re = await fetch(`${this.baseUrl}/${versionSpecifier}`, {
+      headers: { "content-type": "text/plain" },
+    });
     const text = await re.text();
     const current = import.meta.env.PROJECT_VERSION;
     const latest = `${text || ""}`.split("\n")[0] ?? undefined;
     return {
       current,
       latest,
-      hasUpdate: latest ? semver.gt(latest, current) : false
+      hasUpdate: latest ? semver.gt(latest, current) : false,
     };
   }
 }

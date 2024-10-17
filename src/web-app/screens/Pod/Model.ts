@@ -1,11 +1,12 @@
-import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
+import { type Action, type Computed, type Thunk, action, computed, thunk } from "easy-peasy";
 
-import { CreatePodOptions, FetchPodOptions } from "@/container-client/Api.clients";
-import { Pod, PodStatusList } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { CreatePodOptions, FetchPodOptions } from "@/container-client/Api.clients";
+import { type Pod, PodStatusList } from "@/env/Types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 
 export interface PodsModelState {
+  version?: string;
   pods: Pod[];
   podsMap: { [key: string]: Pod };
 }
@@ -93,7 +94,9 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
       }
       if (options.withKube) {
         try {
-          const generation = await client.generateKube({ entityId: options.Id });
+          const generation = await client.generateKube({
+            entityId: options.Id,
+          });
           pod.Kube = generation.success ? generation.stdout : "";
         } catch (error: any) {
           console.error("Unable to load kube", error);
@@ -114,7 +117,7 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
       }
       actions.podUpdate(pod);
       return pod;
-    })
+    }),
   ),
   podFetchProcesses: thunk(async (actions, pod) =>
     registry.withPending(async () => {
@@ -127,7 +130,7 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
         }
       }
       return flag;
-    })
+    }),
   ),
   podPause: thunk(async (actions, pod) =>
     registry.withPending(async () => {
@@ -140,7 +143,7 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
         }
       }
       return flag;
-    })
+    }),
   ),
   podUnpause: thunk(async (actions, pod) =>
     registry.withPending(async () => {
@@ -153,7 +156,7 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
         }
       }
       return flag;
-    })
+    }),
   ),
   podStop: thunk(async (actions, pod) =>
     registry.withPending(async () => {
@@ -166,7 +169,7 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
         }
       }
       return flag;
-    })
+    }),
   ),
   podKill: thunk(async (actions, pod) =>
     registry.withPending(async () => {
@@ -179,7 +182,7 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
         }
       }
       return flag;
-    })
+    }),
   ),
   podRestart: thunk(async (actions, pod) =>
     registry.withPending(async () => {
@@ -192,7 +195,7 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
         }
       }
       return flag;
-    })
+    }),
   ),
   podRemove: thunk(async (actions, pod) =>
     registry.withPending(async () => {
@@ -205,13 +208,13 @@ export const createModel = async (registry: AppRegistry): Promise<PodsModel> => 
         actions.podDelete(pod);
       }
       return flag;
-    })
+    }),
   ),
   podCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
       const client = await registry.getContainerClient();
       const create = await client.createPod(options);
       return create;
-    })
-  )
+    }),
+  ),
 });

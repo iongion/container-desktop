@@ -1,14 +1,14 @@
 import {
-  ApiConnection,
-  ApiStartOptions,
-  AvailabilityCheck,
-  CommandExecutionResult,
-  Connection,
-  ControllerScope,
-  EngineConnectorSettings,
+  type ApiConnection,
+  type ApiStartOptions,
+  type AvailabilityCheck,
+  type CommandExecutionResult,
+  type Connection,
+  type ControllerScope,
+  type EngineConnectorSettings,
   OperatingSystem,
-  RunnerStopperOptions,
-  StartupStatus
+  type RunnerStopperOptions,
+  StartupStatus,
 } from "@/env/Types";
 import { WSL_PROGRAM } from "../../connection";
 import { getAvailableWSLDistributions } from "../../shared";
@@ -71,7 +71,10 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
   // Availability
 
   async isEngineAvailable() {
-    const result: AvailabilityCheck = { success: true, details: "Engine is available" };
+    const result: AvailabilityCheck = {
+      success: true,
+      details: "Engine is available",
+    };
     if (this.osType !== OperatingSystem.Windows) {
       result.success = false;
       result.details = `Engine is not available on ${this.osType}`;
@@ -89,7 +92,12 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
   }
 
   // Executes command inside controller scope
-  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+  async runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult> {
     const { controller } = settings || (await this.getSettings());
     const command: string[] = ["--distribution", scope, "--exec"];
     const restArgs: string[] = [];
@@ -114,31 +122,21 @@ export abstract class AbstractContainerEngineHostClientVirtualizedWSL extends Ab
       if (matchingScope.Usable) {
         this.logger.warn(this.id, `WSL distribution ${name} is already running`);
         return StartupStatus.RUNNING;
-      } else {
-        // Attempt to start
-        const check = await this.runScopeCommand("echo", ["started"], name);
-        if (check.success) {
-          this.startedScopesMap.set(name, true);
-        }
-        const running = check.success && `${check.stdout}`.trim().endsWith("started");
-        return running ? StartupStatus.STARTED : StartupStatus.ERROR;
       }
-    } else {
-      this.logger.error(this.id, `WSL distribution ${name} not found`);
+      // Attempt to start
+      const check = await this.runScopeCommand("echo", ["started"], name);
+      if (check.success) {
+        this.startedScopesMap.set(name, true);
+      }
+      const running = check.success && `${check.stdout}`.trim().endsWith("started");
+      return running ? StartupStatus.STARTED : StartupStatus.ERROR;
     }
+    this.logger.error(this.id, `WSL distribution ${name} not found`);
     return StartupStatus.ERROR;
   }
 
   async stopWSLDistribution(name: string): Promise<boolean> {
-    if (this.startedScopesMap.has(name)) {
-      const settings = await this.getSettings();
-      const commandLauncher = settings.controller?.path || settings.controller?.name || "";
-      this.logger.warn(this.id, `WSL distribution ${name} is being stopped`, this.startedScopesMap);
-      const check = await this.runHostCommand(commandLauncher, ["--terminate", name]);
-      return check.success;
-    } else {
-      this.logger.warn(this.id, `WSL distribution ${name} is not started here - stop skipped`);
-    }
+    this.logger.warn(this.id, `WSL distribution ${name} is not started here - stop skipped`);
     return true;
   }
 

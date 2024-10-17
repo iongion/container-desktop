@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { RegistrySearchResult } from "@/env/Types";
+import type { RegistrySearchResult } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { Notification } from "@/web-app/Notification";
 
@@ -25,21 +25,34 @@ export const FormActions: React.FC<FormActionsProps> = ({ searchResult, onClose 
     setPending(true);
     try {
       const instance = Application.getInstance();
-      const result = await instance.pullFromRegistry({ image: searchResult.Name });
+      const result = await instance.pullFromRegistry({
+        image: searchResult.Name,
+      });
       setPending(false);
       if (result.success) {
-        Notification.show({ message: t("Pull completed successfully"), intent: Intent.SUCCESS });
+        Notification.show({
+          message: t("Pull completed successfully"),
+          intent: Intent.SUCCESS,
+        });
         onClose();
       } else {
-        Notification.show({ message: t("Pull failed - check the logs"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Pull failed - check the logs"),
+          intent: Intent.DANGER,
+        });
       }
     } catch (error: any) {
       console.error("Error while performing image pull", error);
-      Notification.show({ message: t("Pull failed - check the logs"), intent: Intent.DANGER });
+      Notification.show({
+        message: t("Pull failed - check the logs"),
+        intent: Intent.DANGER,
+      });
       setPending(false);
     }
   }, [onClose, searchResult, t]);
-  const pendingIndicator = <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>;
+  const pendingIndicator = (
+    <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
+  );
   return (
     <>
       <ButtonGroup fill>
@@ -62,7 +75,10 @@ export interface SearchResultDrawerProps {
   onClose: () => void;
   searchResult: RegistrySearchResult;
 }
-export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({ onClose, searchResult }: SearchResultDrawerProps) => {
+export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({
+  onClose,
+  searchResult,
+}: SearchResultDrawerProps) => {
   const { t } = useTranslation();
   return (
     <Drawer

@@ -1,12 +1,12 @@
 import { Button, ControlGroup, FormGroup, H5, Icon, InputGroup } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 // import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
 
-import { NetworkSubnet } from "@/env/Types";
+import type { NetworkSubnet } from "@/env/Types";
 
 import "./NetworkSubnetsForm.css";
 
@@ -21,8 +21,8 @@ export const createNetworkSubnet = (): NetworkSubnetItem => {
     subnet: "",
     lease_range: {
       start_ip: "",
-      end_ip: ""
-    }
+      end_ip: "",
+    },
   };
 };
 
@@ -31,7 +31,10 @@ export interface NetworkSubnetFormAction {
   data: any;
   handler?: NetworkSubnetFormActionHandler;
 }
-export type NetworkSubnetFormActionHandler = (action: NetworkSubnetFormAction, networkSubnet: NetworkSubnetItem) => void;
+export type NetworkSubnetFormActionHandler = (
+  action: NetworkSubnetFormAction,
+  networkSubnet: NetworkSubnetItem,
+) => void;
 
 export interface NetworkSubnetFormProps {
   disabled?: boolean;
@@ -40,7 +43,12 @@ export interface NetworkSubnetFormProps {
   action: NetworkSubnetFormAction;
 }
 
-export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({ action, disabled, networkSubnet, networkSubnetIndex }: NetworkSubnetFormProps) => {
+export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({
+  action,
+  disabled,
+  networkSubnet,
+  networkSubnetIndex,
+}: NetworkSubnetFormProps) => {
   const { t } = useTranslation();
   const { control } = useFormContext<{
     subnets: NetworkSubnetItem[];
@@ -55,7 +63,12 @@ export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({ action, di
   return (
     <div className="NetworkSubnet" data-mount-index={networkSubnetIndex}>
       <div className="NetworkSubnetProperties">
-        <FormGroup inline className="ContainerNetworkSubnets" data-network-subnet={networkSubnetIndex} disabled={disabled}>
+        <FormGroup
+          inline
+          className="ContainerNetworkSubnets"
+          data-network-subnet={networkSubnetIndex}
+          disabled={disabled}
+        >
           <ControlGroup fill className="ContainerNetworkSubnet">
             <Controller
               control={control}
@@ -105,7 +118,12 @@ export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({ action, di
             />
           </ControlGroup>
         </FormGroup>
-        <FormGroup inline className="ContainerNetworkSubnets" data-network-subnet={networkSubnetIndex} disabled={disabled}>
+        <FormGroup
+          inline
+          className="ContainerNetworkSubnets"
+          data-network-subnet={networkSubnetIndex}
+          disabled={disabled}
+        >
           <ControlGroup fill>
             <Controller
               control={control}
@@ -169,7 +187,10 @@ export interface NetworkSubnetsFormProps {
   subnets: NetworkSubnetItem[];
 }
 
-export const NetworkSubnetsForm: React.FC<NetworkSubnetsFormProps> = ({ disabled, subnets }: NetworkSubnetsFormProps) => {
+export const NetworkSubnetsForm: React.FC<NetworkSubnetsFormProps> = ({
+  disabled,
+  subnets,
+}: NetworkSubnetsFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{
@@ -178,7 +199,7 @@ export const NetworkSubnetsForm: React.FC<NetworkSubnetsFormProps> = ({ disabled
 
   const { fields, remove, prepend } = useFieldArray({
     control,
-    name: "subnets"
+    name: "subnets",
   });
 
   const onNetworkSubnetFormAction = useCallback<NetworkSubnetFormActionHandler>(
@@ -190,7 +211,7 @@ export const NetworkSubnetsForm: React.FC<NetworkSubnetsFormProps> = ({ disabled
         remove(networkSubnetIndex);
       }
     },
-    [prepend, remove, subnets]
+    [prepend, remove, subnets],
   );
 
   return (
@@ -212,7 +233,7 @@ export const NetworkSubnetsForm: React.FC<NetworkSubnetsFormProps> = ({ disabled
               action={{
                 icon: isLast ? IconNames.PLUS : IconNames.MINUS,
                 data: isLast ? "add" : "remove",
-                handler: onNetworkSubnetFormAction
+                handler: onNetworkSubnetFormAction,
               }}
             />
           );

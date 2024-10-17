@@ -1,5 +1,5 @@
 // vendors
-import { Action, createTypedHooks, EasyPeasyConfig, Store, Thunk } from "easy-peasy";
+import { type Action, createTypedHooks, type EasyPeasyConfig, type Store, type Thunk } from "easy-peasy";
 // project
 import type { ContainerClient, OnlineApi } from "@/container-client/Api.clients";
 import type {
@@ -14,7 +14,7 @@ import type {
   GlobalUserSettings,
   GlobalUserSettingsOptions,
   OperatingSystem,
-  SystemNotification
+  SystemNotification,
 } from "@/env/Types";
 import type { ContainersModel } from "@/web-app/screens/Container/Model";
 import type { DashboardModel } from "@/web-app/screens/Dashboard/Model";
@@ -37,11 +37,11 @@ export enum AppBootstrapPhase {
   STOPPING = "stopping",
   STOPPED = "stopped",
   READY = "ready",
-  FAILED = "failed"
+  FAILED = "failed",
 }
 export enum AppTheme {
   DARK = "bp5-dark",
-  LIGHT = "bp5-light"
+  LIGHT = "bp5-light",
 }
 
 export interface AppModelState {
@@ -118,11 +118,11 @@ export interface DomainModel extends AppModel {
   machine: MachinesModel;
   secret: SecretsModel;
   settings: SettingsModel;
-  troubleshoot: TroubleshootModel;
   volume: VolumesModel;
   pod: PodsModel;
   network: NetworksModel;
   registry: RegistriesModel;
+  troubleshoot: TroubleshootModel;
 }
 
 export const { useStoreActions, useStoreDispatch, useStoreState } = createTypedHooks<DomainModel>();

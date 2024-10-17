@@ -12,59 +12,61 @@ interface RestrictedToProps {
 
 export const RestrictedTo: React.FC<RestrictedToProps> = ({ host, withTitle }: RestrictedToProps) => {
   const { t } = useTranslation();
-  const platformsMap: { [key: string]: { icon?: string; title: string; ignore?: boolean } } = {
+  const platformsMap: {
+    [key: string]: { icon?: string; title: string; ignore?: boolean };
+  } = {
     // Podman
     [ContainerEngineHost.PODMAN_NATIVE]: {
       icon: mdiLinux,
       title: t("Only on Linux"),
-      ignore: false
+      ignore: false,
     },
     [ContainerEngineHost.PODMAN_VIRTUALIZED_WSL]: {
       icon: mdiMicrosoftWindows,
       title: t("Only on Microsoft Windows"),
-      ignore: false
+      ignore: false,
     },
     [ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA]: {
       icon: mdiApple,
       title: t("Only on Apple MacOS"),
-      ignore: false
+      ignore: false,
     },
     [ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR]: {
       icon: undefined,
       title: "",
-      ignore: true
+      ignore: true,
     },
     [ContainerEngineHost.PODMAN_REMOTE]: {
       icon: undefined,
       title: "",
-      ignore: true
+      ignore: true,
     },
     // Docker
     [ContainerEngineHost.DOCKER_NATIVE]: {
       icon: mdiLinux,
       title: t("Only on Linux"),
-      ignore: false
+      ignore: false,
     },
     [ContainerEngineHost.DOCKER_VIRTUALIZED_WSL]: {
       icon: mdiMicrosoftWindows,
       title: t("Only on Microsoft Windows"),
-      ignore: false
+      ignore: false,
     },
     [ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA]: {
       icon: mdiApple,
       title: t("Only on Apple MacOS"),
-      ignore: false
+      ignore: false,
     },
     [ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR]: {
       icon: undefined,
       title: "",
-      ignore: true
+      ignore: true,
     },
     [ContainerEngineHost.DOCKER_REMOTE]: {
       icon: undefined,
       title: "",
-      ignore: true
-    }
+      ignore: true,
+    },
   };
   const info = platformsMap[host];
   return !info || info.ignore ? null : (

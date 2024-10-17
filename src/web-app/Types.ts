@@ -1,7 +1,7 @@
-import { IconName } from "@blueprintjs/icons";
-import React from "react";
+import type { IconName } from "@blueprintjs/icons";
+import type React from "react";
 
-import { Connector, Container, ContainerImage, ContainerStateList, PodmanMachine, Volume } from "@/env/Types";
+import type { Connector, Container, ContainerImage, ContainerStateList, PodmanMachine, Volume } from "@/env/Types";
 
 export interface Domain {
   containers: Container[];

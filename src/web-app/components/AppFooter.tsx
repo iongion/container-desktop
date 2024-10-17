@@ -15,7 +15,7 @@ export const AppFooter = () => {
   const program = currentConnector?.settings?.program;
   const programInfo = {
     name: program?.name || "",
-    version: ""
+    version: "",
   };
   if (currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
     programInfo.version = controller?.version || "";
@@ -27,7 +27,12 @@ export const AppFooter = () => {
       <Navbar className="AppFooterNavbar">
         <NavbarHeading>
           <div className="AppFooterCurrentConnectorStatus" data-connected={running ? "yes" : "no"}></div>
-          <div className="AppFooterCurrentConnector" title={currentConnector ? t("Connected to {{name}} - {{description}}", currentConnector) : t("No connection")}>
+          <div
+            className="AppFooterCurrentConnector"
+            title={
+              currentConnector ? t("Connected to {{name}} - {{description}}", currentConnector) : t("No connection")
+            }
+          >
             {currentConnector ? (
               <>
                 <strong>{currentConnector.name}</strong> - <span>{currentConnector.label}</span>
@@ -42,7 +47,10 @@ export const AppFooter = () => {
             <NavbarDivider />
             <NavbarHeading>
               <div className="AppFooterCurrentProgram" title={t("Container host engine")}>
-                {t("{{engine}} {{version}}", { engine: currentConnector.engine, version: programInfo.version || "" })}
+                {t("{{engine}} {{version}}", {
+                  engine: currentConnector.engine,
+                  version: programInfo.version || "",
+                })}
               </div>
             </NavbarHeading>
           </>

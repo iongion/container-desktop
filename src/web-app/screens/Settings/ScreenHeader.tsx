@@ -12,12 +12,21 @@ interface ScreenHeaderSectionsTabBarProps {
   isActive?: (screen: string) => boolean;
 }
 
-export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProps> = ({ expand, isActive }: ScreenHeaderSectionsTabBarProps) => {
+export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProps> = ({
+  expand,
+  isActive,
+}: ScreenHeaderSectionsTabBarProps) => {
   const { t } = useTranslation();
   const isRunning = useStoreState((state) => state.running);
   const expandAsButtons = expand ? (
     <>
-      <AnchorButton minimal active={isActive ? isActive("settings-settings") : false} icon={IconNames.COG} text={t("User settings")} href={getSettingsUrl("user-settings")} />
+      <AnchorButton
+        minimal
+        active={isActive ? isActive("settings-settings") : false}
+        icon={IconNames.COG}
+        text={t("User settings")}
+        href={getSettingsUrl("user-settings")}
+      />
       <AnchorButton
         minimal
         disabled={!isRunning}
@@ -38,9 +47,17 @@ interface ScreenHeaderProps {
   children?: any;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ currentScreen, titleText, children }: ScreenHeaderProps) => {
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
+  currentScreen,
+  titleText,
+  children,
+}: ScreenHeaderProps) => {
   return (
-    <AppScreenHeader titleText={titleText} withoutSearch rightContent={<ScreenHeaderSectionsTabBar expand isActive={(input) => input === currentScreen} />}>
+    <AppScreenHeader
+      titleText={titleText}
+      withoutSearch
+      rightContent={<ScreenHeaderSectionsTabBar expand isActive={(input) => input === currentScreen} />}
+    >
       {children}
     </AppScreenHeader>
   );

@@ -1,4 +1,17 @@
-import { AnchorButton, Button, ButtonGroup, Callout, Checkbox, ControlGroup, Divider, FormGroup, HTMLSelect, HTMLTable, Icon, Intent } from "@blueprintjs/core";
+import {
+  AnchorButton,
+  Button,
+  ButtonGroup,
+  Callout,
+  Checkbox,
+  ControlGroup,
+  Divider,
+  FormGroup,
+  HTMLSelect,
+  HTMLTable,
+  Icon,
+  Intent,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -7,10 +20,10 @@ import { isEmpty } from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Connection, Connector, GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
+import { type Connection, type Connector, type GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
 import { LOGGING_LEVELS, PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { registry } from "@/web-app/domain/registry";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 
@@ -72,10 +85,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
         connections: connections.map((it) => {
           delete (it as Connector).scopes;
           return it;
-        })
+        }),
       },
       null,
-      2
+      2,
     );
     saveAs(new Blob([data], { type: "application/json" }), "container-desktop-connections.json");
   }, []);
@@ -107,14 +120,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 connections = imported.connections || [];
               }
               if (connections.length === 0) {
-                Notification.show({ message: t("Unable to import connections - empty list"), intent: Intent.DANGER });
+                Notification.show({
+                  message: t("Unable to import connections - empty list"),
+                  intent: Intent.DANGER,
+                });
               } else {
                 await setGlobalUserSettings({ connections });
                 await refreshConnections();
-                Notification.show({ message: t("Connections have been imported"), intent: Intent.SUCCESS });
+                Notification.show({
+                  message: t("Connections have been imported"),
+                  intent: Intent.SUCCESS,
+                });
               }
             } catch (error: any) {
-              Notification.show({ message: t("Unable to import connections - invalid format"), intent: Intent.DANGER });
+              Notification.show({
+                message: t("Unable to import connections - invalid format"),
+                intent: Intent.DANGER,
+              });
             }
           }
         };
@@ -136,25 +158,29 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const onMinimizeToSystemTray = useCallback(
     async (e) => {
-      await setGlobalUserSettings({ minimizeToSystemTray: !!e.currentTarget.checked });
+      await setGlobalUserSettings({
+        minimizeToSystemTray: !!e.currentTarget.checked,
+      });
     },
-    [setGlobalUserSettings]
+    [setGlobalUserSettings],
   );
   const onCheckLatestVersion = useCallback(
     async (e) => {
-      await setGlobalUserSettings({ checkLatestVersion: !!e.currentTarget.checked });
+      await setGlobalUserSettings({
+        checkLatestVersion: !!e.currentTarget.checked,
+      });
     },
-    [setGlobalUserSettings]
+    [setGlobalUserSettings],
   );
   const onLoggingLevelChange = useCallback(
     async (e) => {
       const configuration: Partial<GlobalUserSettingsOptions> = {};
       configuration.logging = {
-        level: e.currentTarget.value
+        level: e.currentTarget.value,
       };
       await setGlobalUserSettings(configuration);
     },
-    [setGlobalUserSettings]
+    [setGlobalUserSettings],
   );
   const onToggleInspectorClick = useCallback(async (e) => {
     const instance = Application.getInstance();
@@ -168,13 +194,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
       if (check.hasUpdate) {
         Notification.show({
           message: t("A newer version {{latest}} has been found", check),
-          intent: Intent.PRIMARY
+          intent: Intent.PRIMARY,
         });
       } else {
-        Notification.show({ message: t("No new version detected"), intent: Intent.SUCCESS });
+        Notification.show({
+          message: t("No new version detected"),
+          intent: Intent.SUCCESS,
+        });
       }
     } catch (error: any) {
-      Notification.show({ message: t("Unable to check latest version"), intent: Intent.DANGER });
+      Notification.show({
+        message: t("Unable to check latest version"),
+        intent: Intent.DANGER,
+      });
     }
     setIsChecking(false);
   }, [t, osType]);
@@ -199,7 +231,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const contentWidget =
     provisioned && running ? null : (
-      <Callout className="AppSettingsCallout" title={title} icon={icon ? <ReactIcon.Icon path={icon} size={3} /> : undefined}>
+      <Callout
+        className="AppSettingsCallout"
+        title={title}
+        icon={icon ? <ReactIcon.Icon path={icon} size={3} /> : undefined}
+      >
         <p>{errorMessage}</p>
       </Callout>
     );
@@ -234,7 +270,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </thead>
               <tbody>
                 {connections.map((connection, index) => {
-                  const scopeLabel = runtimeEngineLabelsMap[`${connection.engine}:${connection.host}`] || connection.host;
+                  const scopeLabel =
+                    runtimeEngineLabelsMap[`${connection.engine}:${connection.host}`] || connection.host;
                   const isCurrent = currentConnector?.connectionId === connection?.id;
                   const isConnected = isCurrent && currentConnector.availability.api;
                   const isAutomatic = connection.settings.mode === "mode.automatic";
@@ -259,12 +296,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       </td>
                       <td>{connection.engine}</td>
                       <td>
-                        <p className="PlatformScopeName">{isAutomatic ? t("Auto") : connection.settings?.controller?.scope || ""}</p>
+                        <p className="PlatformScopeName">
+                          {isAutomatic ? t("Auto") : connection.settings?.controller?.scope || ""}
+                        </p>
                         <p className="PlatformScopeLabel">{scopeLabel}</p>
                       </td>
                       <td>{connection.settings.api.autoStart ? t("Yes") : t("No")}</td>
                       <td>{isAutomatic ? t("Detect") : connection.settings.rootfull ? t("Yes") : t("No")}</td>
-                      <td data-flag="default">{defaultConnector === connection.id ? <strong>{t("Yes")}</strong> : t("No")}</td>
+                      <td data-flag="default">
+                        {defaultConnector === connection.id ? <strong>{t("Yes")}</strong> : t("No")}
+                      </td>
                       <td>
                         <ActionsMenu onEdit={onEditConnection} connection={connection} />
                       </td>
@@ -273,7 +314,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 })}
               </tbody>
             </HTMLTable>
-            {withManageDrawer ? <ManageConnectionDrawer mode={editedConnection ? "edit" : "create"} connection={editedConnection} onClose={onConnectionManageDrawerClose} /> : null}
+            {withManageDrawer ? (
+              <ManageConnectionDrawer
+                mode={editedConnection ? "edit" : "create"}
+                connection={editedConnection}
+                onClose={onConnectionManageDrawerClose}
+              />
+            ) : null}
           </div>
           <div className="AppSettingsEngineManagerConnectionsController">
             <ButtonGroup>
@@ -284,7 +331,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 intent={Intent.PRIMARY}
                 onClick={onAddConnectionClick}
               />
-              <Button title={t("Reload connections")} icon={IconNames.REFRESH} intent={Intent.NONE} disabled={pending} loading={pending} onClick={onReloadConnectionsClick} />
+              <Button
+                title={t("Reload connections")}
+                icon={IconNames.REFRESH}
+                intent={Intent.NONE}
+                disabled={pending}
+                loading={pending}
+                onClick={onReloadConnectionsClick}
+              />
               {isAutoDetectEnabled ? (
                 <>
                   <Divider />
@@ -297,7 +351,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <Button
                 disabled={connections.length === 0}
                 text={t("Export")}
-                title={connections.length === 0 ? t("No connections defined - nothing to export") : t("Exports the current list of connections")}
+                title={
+                  connections.length === 0
+                    ? t("No connections defined - nothing to export")
+                    : t("Exports the current list of connections")
+                }
                 icon={IconNames.EXPORT}
                 intent={Intent.NONE}
                 onClick={onConnectionsExportClick}
@@ -333,9 +391,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </ControlGroup>
           </FormGroup>
           {import.meta.env.TARGET === OperatingSystem.Windows ? (
-            <FormGroup label={t("Check for new versions")} data-target={import.meta.env.TARGET} className="AppSettingsFormVersionCheck" labelFor="checkLatestVersion">
+            <FormGroup
+              label={t("Check for new versions")}
+              data-target={import.meta.env.TARGET}
+              className="AppSettingsFormVersionCheck"
+              labelFor="checkLatestVersion"
+            >
               <ButtonGroup className="AppSettingsFormVersionCheckActions">
-                <Button fill loading={isChecking} disabled={isChecking} intent={Intent.PRIMARY} small text={t("Check now")} icon={IconNames.UPDATED} onClick={onVersionCheck} />
+                <Button
+                  fill
+                  loading={isChecking}
+                  disabled={isChecking}
+                  intent={Intent.PRIMARY}
+                  small
+                  text={t("Check now")}
+                  icon={IconNames.UPDATED}
+                  onClick={onVersionCheck}
+                />
                 <AnchorButton
                   id="checkLatestVersion"
                   className="AppSettingsFormVersionCheckStore"
@@ -346,9 +418,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </ButtonGroup>
             </FormGroup>
           ) : (
-            <FormGroup label={t("Check for new versions")} data-target={import.meta.env.TARGET} className="AppSettingsFormVersionCheck" labelFor="checkLatestVersion">
+            <FormGroup
+              label={t("Check for new versions")}
+              data-target={import.meta.env.TARGET}
+              className="AppSettingsFormVersionCheck"
+              labelFor="checkLatestVersion"
+            >
               <ButtonGroup fill className="AppSettingsFormVersionCheckActions">
-                <Button loading={isChecking} disabled={isChecking} intent={Intent.PRIMARY} small text={t("Check now")} icon={IconNames.UPDATED} onClick={onVersionCheck} />
+                <Button
+                  loading={isChecking}
+                  disabled={isChecking}
+                  intent={Intent.PRIMARY}
+                  small
+                  text={t("Check now")}
+                  icon={IconNames.UPDATED}
+                  onClick={onVersionCheck}
+                />
                 <AnchorButton
                   icon={IconNames.DOWNLOAD}
                   text={t("Versions")}
@@ -371,7 +456,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <div className="AppSettingsFormLoggingLevel">
             <FormGroup label={t("Level")} labelFor="loggingLevel">
               <ControlGroup>
-                <HTMLSelect id="loggingLevel" value={userSettings.logging.level || "error"} onChange={onLoggingLevelChange}>
+                <HTMLSelect
+                  id="loggingLevel"
+                  value={userSettings.logging.level || "error"}
+                  onChange={onLoggingLevelChange}
+                >
                   {LOGGING_LEVELS.map((level) => {
                     const key = `logging.${level}`;
                     return (
@@ -398,9 +487,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/settings/${View}`
+  Path: `/screens/settings/${View}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

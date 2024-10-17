@@ -1,6 +1,6 @@
-/* eslint-disable jsx-a11y/no-autofocus */
-import { Button, ButtonGroup, Divider, HTMLSelect, HTMLSelectProps, Intent } from "@blueprintjs/core";
-import React, { useCallback } from "react";
+import { Button, ButtonGroup, Divider, HTMLSelect, type HTMLSelectProps, Intent } from "@blueprintjs/core";
+import type React from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { OperatingSystem } from "@/env/Types";
@@ -18,13 +18,21 @@ export interface OSTypeSelectProps {
   onDetect?: (item: OperatingSystem, event?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 }
 
-export const OSTypeSelect: React.FC<OSTypeSelectProps> = ({ inputProps, disabled, pending, withoutDetect, osType, onChange, onDetect }: OSTypeSelectProps) => {
+export const OSTypeSelect: React.FC<OSTypeSelectProps> = ({
+  inputProps,
+  disabled,
+  pending,
+  withoutDetect,
+  osType,
+  onChange,
+  onDetect,
+}: OSTypeSelectProps) => {
   const { t } = useTranslation();
   const onItemSelect = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       onChange?.(e.target.value as OperatingSystem, e);
     },
-    [onChange]
+    [onChange],
   );
   const onItemDetect = useCallback(
     (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -32,7 +40,7 @@ export const OSTypeSelect: React.FC<OSTypeSelectProps> = ({ inputProps, disabled
         onDetect?.(osType, e);
       }
     },
-    [onDetect, osType]
+    [onDetect, osType],
   );
   return (
     <div className="ConnectionEntitySelect OSTypeSelect">

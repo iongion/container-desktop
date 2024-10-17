@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Network } from "@/env/Types";
+import type { Network } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -33,8 +33,16 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
   const networkFetch = useStoreActions((actions) => actions.network.networkFetch);
   const networkRemove = useStoreActions((actions) => actions.network.networkRemove);
   const performActionCommand = useCallback(
-    async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
-      let result = { success: false, message: `No action handler for ${action}` };
+    async (
+      action: string,
+      { confirm }: PerformActionOptions = {
+        confirm: { success: true, error: true },
+      },
+    ) => {
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -52,7 +60,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
             break;
         }
         if (confirm?.success) {
-          Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+          Notification.show({
+            message: t("Command completed"),
+            intent: Intent.SUCCESS,
+          });
         }
         if (action === "network.remove") {
           goToScreen("/screens/networks");
@@ -62,14 +73,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [network, networkFetch, networkRemove, t]
+    [network, networkFetch, networkRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -83,10 +94,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
         performActionCommand("network.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
-  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
-  const removeWidget = network ? <ConfirmMenu onConfirm={onRemove} tag={network.name} disabled={disabledAction === "network.remove"}></ConfirmMenu> : undefined;
+  const startButton = withoutCreate ? null : (
+    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+  );
+  const removeWidget = network ? (
+    <ConfirmMenu onConfirm={onRemove} tag={network.name} disabled={disabledAction === "network.remove"}></ConfirmMenu>
+  ) : undefined;
   return (
     <>
       <ButtonGroup>
@@ -94,7 +109,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
         {onReload && (
           <>
             {startButton ? <Divider /> : null}
-            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+            <Button
+              small
+              minimal
+              intent={Intent.NONE}
+              title={t("Reload current list")}
+              icon={IconNames.REFRESH}
+              onClick={onReload}
+            />
           </>
         )}
         {removeWidget}

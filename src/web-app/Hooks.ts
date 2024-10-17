@@ -20,6 +20,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
   }, [poller]);
   // Clears old interval if rate changes, allowing new poller to be created
   useEffect(() => {
+    console.debug("Rate changed, clearing interval", rate);
     clearInterval(pollerID.current);
   }, [rate]);
   // Poller effect
@@ -82,6 +83,7 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
     };
   }, [rate]);
   useEffect(() => {
+    console.debug("Poller effect created", { rate, poller });
     if (pollerCallback.current) {
       isPending.current = true;
       // console.debug("Polling initial");

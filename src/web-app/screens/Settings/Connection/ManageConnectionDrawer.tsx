@@ -1,10 +1,9 @@
-/* eslint-disable jsx-a11y/no-autofocus */
 import { Classes, Drawer, DrawerSize, Position } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import React from "react";
+import type React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Connection } from "@/env/Types";
+import type { Connection } from "@/env/Types";
 import { ManageConnectionForm } from "./ManageConnectionForm";
 
 import "./ManageConnectionDrawer.css";

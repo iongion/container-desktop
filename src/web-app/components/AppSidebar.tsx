@@ -2,7 +2,7 @@ import { Alignment, AnchorButton, ButtonGroup } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
 import { pathTo } from "@/web-app/Navigator";
-import { AppScreen } from "@/web-app/Types";
+import type { AppScreen } from "@/web-app/Types";
 import { useStoreState } from "@/web-app/domain/types";
 import { AppSidebarFooter } from "./AppSidebarFooter";
 

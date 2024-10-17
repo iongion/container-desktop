@@ -1,14 +1,14 @@
 import {
-  ApiConnection,
-  ApiStartOptions,
-  CommandExecutionResult,
-  Connection,
+  type ApiConnection,
+  type ApiStartOptions,
+  type CommandExecutionResult,
+  type Connection,
   ContainerEngine,
   ContainerEngineHost,
-  ControllerScope,
-  EngineConnectorSettings,
+  type ControllerScope,
+  type EngineConnectorSettings,
   OperatingSystem,
-  StartupStatus
+  StartupStatus,
 } from "@/env/Types";
 import { PODMAN_PROGRAM } from "../../connection";
 import { PodmanAbstractContainerEngineHostClient } from "./base";
@@ -48,7 +48,7 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
     }
     return {
       uri,
-      relay: ""
+      relay: "",
     };
   }
 
@@ -87,7 +87,7 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
     }
     const started = await this.runner.startApi(opts, {
       path: programPath,
-      args: ["system", "service", "--time=0", `unix://${socketPath}`, `--log-level=${logLevel}`]
+      args: ["system", "service", "--time=0", `unix://${socketPath}`, `--log-level=${logLevel}`],
     });
     this.apiStarted = started;
     this.logger.debug("Start API complete", started);
@@ -108,7 +108,12 @@ export class PodmanContainerEngineHostClientNative extends PodmanAbstractContain
     return false;
   }
 
-  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+  async runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult> {
     throw new Error("Scope is not supported in native mode");
   }
 

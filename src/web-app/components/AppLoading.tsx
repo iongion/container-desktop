@@ -7,7 +7,7 @@ import { useStoreState } from "@/web-app/domain/types";
 // module
 import "./AppLoading.css";
 
-export interface AppLoadingProps {}
+export type AppLoadingProps = any;
 
 export const AppLoading: React.FC<AppLoadingProps> = () => {
   const pending = useStoreState((state) => state.pending);
@@ -15,7 +15,7 @@ export const AppLoading: React.FC<AppLoadingProps> = () => {
   const phasesRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     phasesRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [systemNotifications]);
+  }, []);
   return (
     <div className="AppLoading" data-pending={pending ? "yes" : "no"}>
       <div className="AppLoadingSplashContainer">

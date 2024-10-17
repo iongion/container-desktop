@@ -1,8 +1,8 @@
 // vendors
-import { Action, Thunk, action, thunk } from "easy-peasy";
+import { type Action, type Thunk, action, thunk } from "easy-peasy";
 // project
 import { ContainerStateList } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface ContainerStats {
   paused: number;
@@ -11,6 +11,7 @@ export interface ContainerStats {
   created: number;
 }
 export interface DashboardModelState {
+  version?: string;
   containerStats: ContainerStats;
 }
 
@@ -26,7 +27,7 @@ export const createModel = async (registry: AppRegistry): Promise<DashboardModel
     paused: 0,
     running: 0,
     exited: 0,
-    created: 0
+    created: 0,
   },
   // Actions
   reset: action((state) => {
@@ -34,7 +35,7 @@ export const createModel = async (registry: AppRegistry): Promise<DashboardModel
       paused: 0,
       running: 0,
       exited: 0,
-      created: 0
+      created: 0,
     };
   }),
   setContainersStats: action((state, value) => {
@@ -66,10 +67,10 @@ export const createModel = async (registry: AppRegistry): Promise<DashboardModel
         paused: pausedContainers.length,
         running: runningContainers.length,
         exited: exitedContainers.length,
-        created: createdContainers.length
+        created: createdContainers.length,
       });
       console.debug("Fetching containers stats", containers.length);
       return containers.length;
-    })
-  )
+    }),
+  ),
 });

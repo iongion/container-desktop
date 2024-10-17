@@ -1,6 +1,6 @@
 import { DockerContainerEngineHostClientSSH } from "@/container-client/runtimes/docker/ssh";
-import { ContainerEngine, OperatingSystem } from "@/env/Types";
-import { AbstractContainerEngineHostClient, AbstractEngine } from "../abstract";
+import { ContainerEngine, type OperatingSystem } from "@/env/Types";
+import { type AbstractContainerEngineHostClient, AbstractEngine } from "../abstract";
 import { DockerContainerEngineHostClientVirtualizedLIMA } from "./lima";
 import { DockerContainerEngineHostClientNative } from "./native";
 import { DockerContainerEngineHostClientVirtualizedVendor } from "./vendor";
@@ -15,7 +15,7 @@ export class Engine extends AbstractEngine {
     DockerContainerEngineHostClientVirtualizedVendor,
     DockerContainerEngineHostClientVirtualizedWSL,
     DockerContainerEngineHostClientVirtualizedLIMA,
-    DockerContainerEngineHostClientSSH
+    DockerContainerEngineHostClientSSH,
   ];
 
   static async create(osType: OperatingSystem) {
@@ -32,5 +32,5 @@ export const Docker = {
   DockerContainerEngineHostClientVirtualizedVendor,
   DockerContainerEngineHostClientVirtualizedWSL,
   DockerContainerEngineHostClientVirtualizedLIMA,
-  DockerContainerEngineHostClientSSH
+  DockerContainerEngineHostClientSSH,
 };

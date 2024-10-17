@@ -1,8 +1,8 @@
 import { Switch } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 
-import { ContainerEngine, Registry, RegistrySearchFilters } from "@/env/Types";
+import { ContainerEngine, type Registry, type RegistrySearchFilters } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useStoreState } from "@/web-app/domain/types";
 import { pathTo } from "@/web-app/Navigator";
@@ -30,13 +30,16 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   registry,
   listRoutePath,
   listRouteIcon,
-  rightContent
+  rightContent,
 }: ScreenHeaderProps) => {
   const { t } = useTranslation();
   const currentConnector = useStoreState((state) => state.currentConnector);
   const isOfficial = useStoreState((actions) => actions.registry.official);
   const isAutomated = useStoreState((actions) => actions.registry.automated);
-  const [filters, setFilters] = useState<RegistrySearchFilters>({ isOfficial, isAutomated });
+  const [filters, setFilters] = useState<RegistrySearchFilters>({
+    isOfficial,
+    isAutomated,
+  });
   let currentListRoutePath = listRoutePath;
   if (registry && !currentListRoutePath) {
     currentListRoutePath = pathTo("/screens/registries");
@@ -47,7 +50,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         onSearchTrigger(filters, e);
       }
     },
-    [filters, onSearchTrigger]
+    [filters, onSearchTrigger],
   );
   const onFilterChange = useCallback(
     (e) => {
@@ -64,7 +67,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       }
       setFilters((prev) => ({ ...prev, ...filters }));
     },
-    [filters]
+    [filters],
   );
 
   return (
@@ -79,7 +82,13 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       rightContent={rightContent}
     >
       <div className="SearchFilters">
-        <Switch label="Official" inline checked={filters.isOfficial} onChange={onFilterChange} data-filter="isOfficial" />
+        <Switch
+          label="Official"
+          inline
+          checked={filters.isOfficial}
+          onChange={onFilterChange}
+          data-filter="isOfficial"
+        />
         <Switch
           label="Automated"
           inline

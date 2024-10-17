@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Volume } from "@/env/Types";
+import type { Volume } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -18,7 +18,11 @@ export interface VolumeActionsMenuProps {
   onReload?: () => void;
 }
 
-export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, withoutCreate, onReload }: VolumeActionsMenuProps) => {
+export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
+  volume,
+  withoutCreate,
+  onReload,
+}: VolumeActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -27,7 +31,10 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
   const volumeFetch = useStoreActions((actions) => actions.volume.volumeFetch);
   const performActionCommand = useCallback(
     async (action: string) => {
-      let result = { success: false, message: `No action handler for ${action}` };
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -44,7 +51,10 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
           default:
             break;
         }
-        Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+        Notification.show({
+          message: t("Command completed"),
+          intent: Intent.SUCCESS,
+        });
         if (action === "volume.remove") {
           goToScreen("/screens/volumes");
         }
@@ -53,14 +63,14 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [volume, volumeRemove, volumeFetch, t]
+    [volume, volumeRemove, volumeFetch, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -74,9 +84,11 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
         performActionCommand("volume.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
-  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
+  const startButton = withoutCreate ? null : (
+    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+  );
   const removeWidget = volume ? (
     <ConfirmMenu onConfirm={onRemove} tag={volume.Name} disabled={disabledAction === "volume.remove"}>
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getVolumeUrl(volume.Name, "inspect")} />
@@ -89,7 +101,14 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({ volume, wi
         {onReload && (
           <>
             {startButton ? <Divider /> : null}
-            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+            <Button
+              small
+              minimal
+              intent={Intent.NONE}
+              title={t("Reload current list")}
+              icon={IconNames.REFRESH}
+              onClick={onReload}
+            />
           </>
         )}
         {removeWidget}

@@ -1,12 +1,13 @@
 import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
 import { matchPath } from "react-router";
 import { Route, HashRouter as Router, Switch, useLocation } from "react-router-dom";
 
-import { ContainerEngine, OperatingSystem, Program } from "@/env/Types";
+import { ContainerEngine, type OperatingSystem, type Program } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
@@ -16,7 +17,7 @@ import { AppHeader } from "@/web-app/components/AppHeader";
 import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
 import { StoreProvider } from "@/web-app/domain/store";
-import { AppBootstrapPhase, AppStore, useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { AppBootstrapPhase, type AppStore, useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Container/GenerateKubeScreen";
@@ -78,7 +79,7 @@ const Screens = [
   VolumeInspectScreen,
   UserSettingsScreen,
   SystemInfoScreen,
-  TroubleshootScreen
+  TroubleshootScreen,
 ];
 
 interface AppContentProps {
@@ -88,9 +89,15 @@ export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const ready = phase === AppBootstrapPhase.READY;
-  const currentScreen = Screens.find((screen) => matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true }));
+  const currentScreen = Screens.find((screen) =>
+    matchPath(location.pathname, {
+      path: screen.Route.Path,
+      exact: true,
+      strict: true,
+    }),
+  );
   const content = useMemo(() => {
-    let content;
+    let content: React.ReactNode;
     if (ready) {
       content = (
         <Switch>
@@ -151,7 +158,13 @@ interface AppMainScreenContentProps {
   running?: boolean;
   provisioned?: boolean;
 }
-export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ osType, program, phase, provisioned, running }) => {
+export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({
+  osType,
+  program,
+  phase,
+  provisioned,
+  running,
+}) => {
   const startApplication = useStoreActions((actions) => actions.startApplication);
   const { t } = useTranslation();
   const location = useLocation();
@@ -160,11 +173,24 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({ osTy
     startApplication();
   }, [startApplication]);
 
-  const currentScreen = Screens.find((screen) => matchPath(location.pathname, { path: screen.Route.Path, exact: true, strict: true }));
+  const currentScreen = Screens.find((screen) =>
+    matchPath(location.pathname, {
+      path: screen.Route.Path,
+      exact: true,
+      strict: true,
+    }),
+  );
 
   return (
     <>
-      <AppHeader osType={osType} program={program} provisioned={provisioned} running={running} screens={Screens} currentScreen={currentScreen} />
+      <AppHeader
+        osType={osType}
+        program={program}
+        provisioned={provisioned}
+        running={running}
+        screens={Screens}
+        currentScreen={currentScreen}
+      />
       <AppErrorBoundary
         onReconnect={onReconnect}
         reconnect={t("Try to recover")}
@@ -221,7 +247,13 @@ export function AppMainScreen() {
         <body className={theme === "dark" ? `bp5-${theme}` : theme} data-engine={engine} />
       </Helmet>
       <Router>
-        <AppMainScreenContent osType={osType} phase={phase} provisioned={provisioned} running={running} program={program} />
+        <AppMainScreenContent
+          osType={osType}
+          phase={phase}
+          provisioned={provisioned}
+          running={running}
+          program={program}
+        />
       </Router>
     </div>
   );

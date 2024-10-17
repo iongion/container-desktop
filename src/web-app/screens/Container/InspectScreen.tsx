@@ -4,12 +4,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { Container } from "@/env/Types";
+import type { Container } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { Notification } from "@/web-app/Notification";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
 
@@ -38,7 +38,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     try {
       setPending(true);
       const container = await containerFetch({
-        Id: decodeURIComponent(id as any)
+        Id: decodeURIComponent(id as any),
       });
       setContainer(container);
     } catch (error: any) {
@@ -56,9 +56,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     async (e) => {
       const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("td:nth-child(2)");
       await navigator.clipboard.writeText(contentNode?.innerText || "");
-      Notification.show({ message: t("The value was copied to clipboard"), intent: Intent.SUCCESS });
+      Notification.show({
+        message: t("The value was copied to clipboard"),
+        intent: Intent.SUCCESS,
+      });
     },
-    [t]
+    [t],
   );
 
   if (!container) {
@@ -69,13 +72,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const [key, value] = env.split("=");
     return {
       key,
-      value
+      value,
     };
   });
   const volumeMounts: InspectGroupValues[] = container.Mounts.map((mount) => {
     return {
       key: mount.Source,
-      value: mount.Destination
+      value: mount.Destination,
     };
   });
   const containerPorts: InspectGroupValues[] = [];
@@ -86,16 +89,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
       info.forEach((info) => {
         const item = {
           key: `${portProtocol}`,
-          value: `${info.HostIp}`.indexOf("::") !== -1 ? `${info.HostIp || "0.0.0.0"}${info.HostPort}` : `${info.HostIp || "0.0.0.0"}:${info.HostPort}`
+          value:
+            `${info.HostIp}`.indexOf("::") !== -1
+              ? `${info.HostIp || "0.0.0.0"}${info.HostPort}`
+              : `${info.HostIp || "0.0.0.0"}:${info.HostPort}`,
         };
         containerPorts.push(item);
       });
     });
   }
   const groups: InspectGroup[] = [
-    { name: "environment", title: t("Environment variables"), items: environmentVariables },
+    {
+      name: "environment",
+      title: t("Environment variables"),
+      items: environmentVariables,
+    },
     { name: "mounts", title: t("Mounts"), items: volumeMounts },
-    { name: "ports", title: t("Ports"), items: containerPorts }
+    { name: "ports", title: t("Ports"), items: containerPorts },
   ];
   return (
     <div className="AppScreen" data-screen={ID} ref={screenRef}>
@@ -161,9 +171,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Inspect";
 Screen.Route = {
-  Path: `/screens/container/:id/inspect`
+  Path: "/screens/container/:id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

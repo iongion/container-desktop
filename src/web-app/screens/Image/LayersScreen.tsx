@@ -5,11 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./LayersScreen.css";
@@ -29,9 +29,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     async (e) => {
       const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("td:nth-child(2)");
       await navigator.clipboard.writeText(contentNode?.innerText || "");
-      Notification.show({ message: t("The command was copied to clipboard"), intent: Intent.SUCCESS });
+      Notification.show({
+        message: t("The command was copied to clipboard"),
+        intent: Intent.SUCCESS,
+      });
     },
-    [t]
+    [t],
   );
   const layers = image?.History || [];
 
@@ -41,12 +44,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setPending(true);
         const image = await imageFetch({
           Id: decodeURIComponent(id as any),
-          withHistory: true
+          withHistory: true,
         });
         setImage(image);
       } catch (error: any) {
         console.error("Unable to fetch at this moment", error);
-        Notification.show({ message: t("Unable to load image - {{message}}", error), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Unable to load image - {{message}}", error),
+          intent: Intent.DANGER,
+        });
         history.back();
       } finally {
         setPending(false);
@@ -73,8 +79,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </thead>
           <tbody>
             {layers.map((layer, index) => {
+              const layerKey = layer.id || `l-${index}`;
               return (
-                <tr key={index}>
+                <tr key={layerKey}>
                   <td>
                     <strong className="LayerIndex">{index + 1}.</strong>
                   </td>
@@ -83,7 +90,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </td>
                   <td>{layer.Size !== undefined ? prettyBytes(layer.Size) : t("- n/a -")}</td>
                   <td>
-                    <Button small minimal icon={IconNames.CLIPBOARD} data-action="copy.to.clipboard" onClick={onCopyToClipboardClick} />
+                    <Button
+                      small
+                      minimal
+                      icon={IconNames.CLIPBOARD}
+                      data-action="copy.to.clipboard"
+                      onClick={onCopyToClipboardClick}
+                    />
                   </td>
                 </tr>
               );
@@ -98,9 +111,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Image Layers";
 Screen.Route = {
-  Path: `/screens/image/:id/layers`
+  Path: "/screens/image/:id/layers",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.BOX,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

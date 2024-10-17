@@ -24,11 +24,20 @@ export interface FormActionsProps {
 export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActionsProps) => {
   const { t } = useTranslation();
   const { formState } = useFormContext();
-  const pendingIndicator = <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>;
+  const pendingIndicator = (
+    <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
+  );
   return (
     <>
       <ButtonGroup fill>
-        <Button disabled={pending || !formState.isValid} intent={Intent.PRIMARY} icon={IconNames.PLUS} title={t("Click to launch creation")} text={t("Create")} type="submit" />
+        <Button
+          disabled={pending || !formState.isValid}
+          intent={Intent.PRIMARY}
+          icon={IconNames.PLUS}
+          title={t("Click to launch creation")}
+          text={t("Create")}
+          type="submit"
+        />
       </ButtonGroup>
       {pendingIndicator}
     </>
@@ -45,8 +54,8 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
     reValidateMode: "onChange",
     shouldUseNativeValidation: false,
     defaultValues: {
-      registryName: ""
-    }
+      registryName: "",
+    },
   });
   const { handleSubmit } = methods;
   const [pending, setPending] = useState(false); // Form initial data
@@ -63,17 +72,20 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
         enabled: true,
         isRemovable: true,
         isSystem: false,
-        engine: [ContainerEngine.PODMAN]
+        engine: [ContainerEngine.PODMAN],
       });
       onClose();
-      Notification.show({ message: t("Registry has been created"), intent: Intent.SUCCESS });
+      Notification.show({
+        message: t("Registry has been created"),
+        intent: Intent.SUCCESS,
+      });
     } catch (error: any) {
       Notification.show({
         message: t("{{message}} - {{data}}", {
           message: error.message || t("Command failed"),
-          data: error.details?.result?.result?.data?.cause
+          data: error.details?.result?.result?.data?.cause,
         }),
-        intent: Intent.DANGER
+        intent: Intent.DANGER,
       });
     } finally {
       setPending(false);

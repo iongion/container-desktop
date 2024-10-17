@@ -28,7 +28,7 @@ export async function renderApplication() {
         <body className="bp5-dark" data-engine={ContainerEngine.PODMAN} />
       </Helmet>
       <App store={store} />
-    </I18nContextProvider>
+    </I18nContextProvider>,
     //</StrictMode>
   );
 }

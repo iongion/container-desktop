@@ -3,34 +3,34 @@ import { isEmpty } from "lodash-es";
 import { systemNotifier } from "@/container-client/notifier";
 import { Runner } from "@/container-client/runner";
 import {
-  ApiConnection,
-  ApiStartOptions,
-  AvailabilityCheck,
-  CommandExecutionResult,
-  Connection,
-  ContainerEngine,
+  type ApiConnection,
+  type ApiStartOptions,
+  type AvailabilityCheck,
+  type CommandExecutionResult,
+  type Connection,
+  type ContainerEngine,
   ContainerEngineHost,
-  ControllerScope,
-  EngineConnectorAvailability,
-  EngineConnectorSettings,
-  ILogger,
+  type ControllerScope,
+  type EngineConnectorAvailability,
+  type EngineConnectorSettings,
+  type ILogger,
   OperatingSystem,
-  Program,
-  RunnerStopperOptions,
-  StartupStatus,
-  SubscriptionOptions,
-  SystemInfo,
-  SystemPruneReport,
-  SystemResetReport
+  type Program,
+  type RunnerStopperOptions,
+  type StartupStatus,
+  type SubscriptionOptions,
+  type SystemInfo,
+  type SystemPruneReport,
+  type SystemResetReport,
 } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { deepMerge } from "@/utils";
-import EventEmitter from "eventemitter3";
+import type EventEmitter from "eventemitter3";
 import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
 import { findProgramPath, findProgramVersion } from "../../detector";
 
 export abstract class AbstractEngine {
-  protected logLevel: string = "debug";
+  protected logLevel = "debug";
 
   public static ENGINE: ContainerEngine;
   public ENGINE!: ContainerEngine;
@@ -58,7 +58,10 @@ export abstract class AbstractEngine {
     this.logger.debug(this.ENGINE, "Created adapter");
   }
 
-  async createEngineHostClient(host: typeof AbstractContainerEngineHostClient, id: string): Promise<AbstractContainerEngineHostClient> {
+  async createEngineHostClient(
+    host: typeof AbstractContainerEngineHostClient,
+    id: string,
+  ): Promise<AbstractContainerEngineHostClient> {
     return await host.create(id, this.osType);
   }
 
@@ -80,14 +83,21 @@ export interface ContainerEngineHostClient {
   getAutomaticSettings(): Promise<EngineConnectorSettings>;
   // Controller behavior
   isScoped(): boolean;
-  getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean): Promise<ControllerScope[]>;
+  getControllerScopes(
+    customSettings?: EngineConnectorSettings,
+    skipAvailabilityCheck?: boolean,
+  ): Promise<ControllerScope[]>;
   startScope(scope: ControllerScope): Promise<StartupStatus>;
   stopScope(scope: ControllerScope): Promise<boolean>;
   startScopeByName(name: string): Promise<StartupStatus>;
   stopScopeByName(name: string): Promise<boolean>;
 
   isApiRunning(): Promise<AvailabilityCheck>;
-  getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings): Promise<SystemInfo>;
+  getSystemInfo(
+    connection?: Connection,
+    customFormat?: string,
+    customSettings?: EngineConnectorSettings,
+  ): Promise<SystemInfo>;
 
   setLogLevel(level: string): void;
   getEvents(opts?: SubscriptionOptions): Promise<any[]>;
@@ -96,7 +106,7 @@ export interface ContainerEngineHostClient {
 export abstract class AbstractContainerEngineHostClient implements ContainerEngineHostClient {
   public static HOST: ContainerEngineHost;
 
-  public LABEL: string = "Abstract";
+  public LABEL = "Abstract";
   public PROGRAM!: string;
   public CONTROLLER!: string;
   public ENGINE!: ContainerEngine;
@@ -105,7 +115,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
 
   protected osType: OperatingSystem;
   protected apiStarted: boolean;
-  protected logLevel: string = "debug";
+  protected logLevel = "debug";
 
   protected runner!: Runner;
   protected settings: EngineConnectorSettings = {
@@ -113,16 +123,16 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       baseURL: "",
       connection: {
         uri: "",
-        relay: ""
-      }
+        relay: "",
+      },
     },
     program: {
       name: this.PROGRAM,
       path: this.PROGRAM,
-      version: ""
+      version: "",
     },
     rootfull: false,
-    mode: "mode.automatic"
+    mode: "mode.automatic",
   };
 
   public logger!: ILogger;
@@ -133,7 +143,10 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
   // Controller behavior
   abstract isScoped(): boolean;
-  abstract getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean): Promise<ControllerScope[]>;
+  abstract getControllerScopes(
+    customSettings?: EngineConnectorSettings,
+    skipAvailabilityCheck?: boolean,
+  ): Promise<ControllerScope[]>;
   abstract getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined>;
   abstract startScope(scope: ControllerScope): Promise<StartupStatus>;
   abstract stopScope(scope: ControllerScope): Promise<boolean>;
@@ -166,7 +179,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
         settings: this.settings,
         engine: this.ENGINE,
         host: this.HOST,
-        id: this.id
+        id: this.id,
       };
       this.containerApiClient = new ContainerClient(connection, createApplicationApiDriver(connection));
       this.containerApiClient.setLogLevel(this.logLevel);
@@ -306,7 +319,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
 
   async isApiRunning() {
     systemNotifier.transmit("engine.availability", {
-      trace: "Checking if API is running"
+      trace: "Checking if API is running",
     });
     this.logger.debug(this.id, ">> Checking if API is running");
     // Guard configuration
@@ -318,15 +331,19 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     // Test reachability
     const result: AvailabilityCheck = {
       success: false,
-      details: undefined
+      details: undefined,
     };
     const client = await this.getContainerApiClient();
     const driver = client.getDriver();
     systemNotifier.transmit("engine.availability", {
-      trace: "Performing api health check - start"
+      trace: "Performing api health check - start",
     });
     try {
-      const response = await driver.request({ method: "GET", url: "/_ping", timeout: 3000 });
+      const response = await driver.request({
+        method: "GET",
+        url: "/_ping",
+        timeout: 3000,
+      });
       result.success = response?.data === "OK";
       result.details = result.success ? "Api is reachable" : response?.data;
       if (!result.success) {
@@ -337,7 +354,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       this.logger.error(this.id, "API ping service failed - response failure", error, driver);
     }
     systemNotifier.transmit("engine.availability", {
-      trace: "Performing api health check - complete"
+      trace: "Performing api health check - complete",
     });
     this.logger.debug(this.id, "<< Checking if API is running", result);
     return result;
@@ -346,11 +363,16 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
   // Executes command inside controller scope
 
   async runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings) {
-    const commandLauncher = this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
+    const commandLauncher =
+      this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
     const commandLine = [commandLauncher].concat(args || []).join(" ");
     this.logger.debug(this.id, ">> Running host command", commandLine);
     const result = await Command.Execute(commandLauncher, args || []);
-    this.logger.debug(this.id, "<< Running host command", commandLine, { success: result.success, code: result.code, stderr: result.stderr || "" });
+    this.logger.debug(this.id, "<< Running host command", commandLine, {
+      success: result.success,
+      code: result.code,
+      stderr: result.stderr || "",
+    });
     return result;
   }
 
@@ -362,7 +384,12 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     const settings = customSettings || (await this.getSettings());
     const programPath = settings.program.path || settings.program.name || "";
     if (this.isScoped()) {
-      result = await this.runScopeCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings.controller?.scope || "", settings);
+      result = await this.runScopeCommand(
+        programPath,
+        ["system", "info", "--format", customFormat || "json"],
+        settings.controller?.scope || "",
+        settings,
+      );
     } else {
       result = await this.runHostCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings);
     }
@@ -384,7 +411,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       filter: {},
       force: true,
       volumes: false,
-      ...(opts || {})
+      ...(opts || {}),
     };
     const args = ["system", "prune"];
     if (input.all) {
@@ -401,7 +428,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     }
     const settings = await this.getSettings();
     const programPath = settings.program.path || settings.program.name || "";
-    let result;
+    let result: CommandExecutionResult;
     if (this.isScoped()) {
       result = await this.runScopeCommand(programPath, args, settings.controller?.scope || "");
     } else {
@@ -430,7 +457,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     const settings = await this.getSettings();
     const programPath = settings.program.path || settings.program.name || "";
     const args = ["system", "reset", "--force", "--log-level=debug"];
-    let result;
+    let result: CommandExecutionResult;
     if (this.isScoped()) {
       result = await this.runScopeCommand(programPath, args, settings.controller?.scope || "");
     } else {
@@ -458,24 +485,37 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       const client = await this.getContainerApiClient();
       const driver = client.getDriver();
       this.logger.warn(this.id, "Subscribing to connection events - issuing request");
-      const response = await driver.get("/events", { timeout: 0, responseType: "stream" });
+      const response = await driver.get("/events", {
+        timeout: 0,
+        responseType: "stream",
+      });
       return response.data as EventEmitter;
     } catch (error: any) {
       this.logger.error(
         this.id,
         "Subscribing to connection events failed",
         error.message,
-        error.response ? { code: error.response.status, statusText: error.response.statusText } : ""
+        error.response
+          ? {
+              code: error.response.status,
+              statusText: error.response.statusText,
+            }
+          : "",
       );
     }
   }
 
   // Controller behavior
-  abstract runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult>;
+  abstract runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult>;
 
   async isControllerAvailable(settings: EngineConnectorSettings) {
     let success = false;
-    let details;
+    let details: string | undefined;
     const controllerPath = settings.controller?.path;
     if (controllerPath) {
       if (await FS.isFilePresent(controllerPath)) {
@@ -494,7 +534,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     this.logger.debug(this.id, ">> Checking availability");
     const settings = userSettings || (await this.getSettings());
     systemNotifier.transmit("engine.availability", {
-      trace: "Detecting host availability"
+      trace: "Detecting host availability",
     });
     const check = await this.isEngineAvailable();
     const availability: EngineConnectorAvailability = {
@@ -509,8 +549,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
         controller: "Not checked",
         controllerScope: "Not checked",
         program: "Not checked",
-        api: "Not checked"
-      }
+        api: "Not checked",
+      },
     };
     availability.report.host = check.details || "";
     if (check.success) {
@@ -518,7 +558,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     }
     if (availability.host) {
       systemNotifier.transmit("engine.availability", {
-        trace: "Detecting host program availability"
+        trace: "Detecting host program availability",
       });
       const controllerAvailability = await this.isControllerAvailable(settings);
       availability.report.controller = controllerAvailability.details;
@@ -539,7 +579,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     }
     if (availability.controllerScope) {
       systemNotifier.transmit("engine.availability", {
-        trace: "Detecting guest program availability"
+        trace: "Detecting guest program availability",
       });
       const program = await this.isProgramAvailable(settings);
       availability.report.program = program.details || "";
@@ -550,7 +590,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       availability.report.program = "Not checked - controller scope not available";
     }
     systemNotifier.transmit("engine.availability", {
-      trace: "Detecting guest api availability"
+      trace: "Detecting guest api availability",
     });
     const api = await this.isApiRunning();
     availability.report.api = api.details ?? "";
@@ -562,7 +602,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       availability.report.api = "API is not running";
     }
     systemNotifier.transmit("engine.availability", {
-      trace: "Availability check complete"
+      trace: "Availability check complete",
     });
     this.logger.debug(this.id, "<< Checking availability", availability);
     return availability;
@@ -595,11 +635,13 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
 
   async findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
     systemNotifier.transmit("engine.availability", {
-      trace: `Detecting host ${program.name} program path and version`
+      trace: `Detecting host ${program.name} program path and version`,
     });
     const output = deepMerge({}, program);
     output.path = await findProgramPath(program.name, { osType: this.osType });
-    output.version = await findProgramVersion(output.path, { osType: this.osType });
+    output.version = await findProgramVersion(output.path, {
+      osType: this.osType,
+    });
     return output;
   }
 
@@ -609,7 +651,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
 
   async findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program> {
     systemNotifier.transmit("engine.availability", {
-      trace: `Detecting guest ${program.name} program path and version`
+      trace: `Detecting guest ${program.name} program path and version`,
     });
     const executor = async (path: string, args: string[]) => {
       const userSettings = settings || (await this.getSettings());
@@ -631,7 +673,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
 
   async getConnectionDataDir() {
     systemNotifier.transmit("engine.availability", {
-      trace: "Detecting connection system data dir"
+      trace: "Detecting connection system data dir",
     });
     let dataDir: string | undefined;
     this.logger.debug(this.id, "Get this data dir", this);

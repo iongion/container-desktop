@@ -1,14 +1,14 @@
 import {
-  ApiConnection,
-  ApiStartOptions,
-  CommandExecutionResult,
-  Connection,
+  type ApiConnection,
+  type ApiStartOptions,
+  type CommandExecutionResult,
+  type Connection,
   ContainerEngine,
   ContainerEngineHost,
-  ControllerScope,
-  EngineConnectorSettings,
+  type ControllerScope,
+  type EngineConnectorSettings,
   OperatingSystem,
-  StartupStatus
+  StartupStatus,
 } from "@/env/Types";
 import { DOCKER_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClient } from "../../runtimes/abstract";
@@ -40,7 +40,7 @@ export class DockerContainerEngineHostClientNative extends AbstractContainerEngi
     }
     return {
       uri,
-      relay: ""
+      relay: "",
     };
   }
 
@@ -70,7 +70,12 @@ export class DockerContainerEngineHostClientNative extends AbstractContainerEngi
   isScoped() {
     return false;
   }
-  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+  async runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult> {
     throw new Error("Scope is not supported in native mode");
   }
   async startScope(scope: ControllerScope): Promise<StartupStatus> {

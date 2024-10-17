@@ -1,16 +1,19 @@
 import { isEmpty } from "lodash-es";
 
 import { findProgramPath } from "@/container-client/detector";
-import { AbstractContainerEngineHostClient, ContainerEngineHostClient } from "@/container-client/runtimes/abstract";
 import {
-  CommandExecutionResult,
-  Connection,
+  AbstractContainerEngineHostClient,
+  type ContainerEngineHostClient,
+} from "@/container-client/runtimes/abstract";
+import {
+  type CommandExecutionResult,
+  type Connection,
   ContainerEngineHost,
-  CreateMachineOptions,
-  EngineConnectorSettings,
-  PodmanMachineInspect,
+  type CreateMachineOptions,
+  type EngineConnectorSettings,
+  type PodmanMachineInspect,
   StartupStatus,
-  SystemInfo
+  type SystemInfo,
 } from "@/env/Types";
 import { getAvailablePodmanMachines } from "../../shared";
 
@@ -19,7 +22,10 @@ export interface PodmanContainerEngineHostClientCommon extends ContainerEngineHo
   generateKube: (id?: any, tail?: any) => Promise<CommandExecutionResult>;
 }
 
-export abstract class PodmanAbstractContainerEngineHostClient extends AbstractContainerEngineHostClient implements PodmanContainerEngineHostClientCommon {
+export abstract class PodmanAbstractContainerEngineHostClient
+  extends AbstractContainerEngineHostClient
+  implements PodmanContainerEngineHostClientCommon
+{
   async getPodmanMachineInspect(name?: string, customSettings?: EngineConnectorSettings) {
     const settings = customSettings || (await this.getSettings());
     let inspect: PodmanMachineInspect | undefined;
@@ -60,7 +66,7 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
     const canListScopes = engineAvailabilityTest.success;
     if (!canListScopes) {
       this.logger.warn(this.id, "Cannot list scopes - host or controller is not available", {
-        settings
+        settings,
       });
     }
     let commandLauncher = "";
@@ -84,7 +90,7 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
     }
     const commandArgs = ["machine", "ssh", name];
     const output = await Platform.launchTerminal(commandLauncher, commandArgs, {
-      title: title || `${this.ENGINE} machine`
+      title: title || `${this.ENGINE} machine`,
     });
     if (!output.success) {
       this.logger.error("Unable to connect to machine", name, title, output);
@@ -110,7 +116,9 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
       if (isEmpty(programLauncher)) {
         programLauncher = controller.name;
         try {
-          const programPath = await findProgramPath(controller.name, { osType: Platform.OPERATING_SYSTEM });
+          const programPath = await findProgramPath(controller.name, {
+            osType: Platform.OPERATING_SYSTEM,
+          });
           if (programPath) {
             programLauncher = programPath;
           } else {
@@ -193,7 +201,7 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
       `${opts.diskSize}`,
       "--memory",
       `${opts.ramSize}`,
-      opts.name
+      opts.name,
     ]);
     if (!output.success) {
       this.logger.error("Unable to create machine", opts, output);
@@ -252,12 +260,25 @@ export abstract class PodmanAbstractContainerEngineHostClient extends AbstractCo
     if (this.isScoped()) {
       if (this.HOST === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
         const controllerPath = await this.getControllerLauncherPath();
-        result = await this.runHostCommand(controllerPath, ["system", "info", "--format", customFormat || "json"], customSettings);
+        result = await this.runHostCommand(
+          controllerPath,
+          ["system", "info", "--format", customFormat || "json"],
+          customSettings,
+        );
       } else {
-        result = await this.runScopeCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings.controller?.scope || "", customSettings);
+        result = await this.runScopeCommand(
+          programPath,
+          ["system", "info", "--format", customFormat || "json"],
+          settings.controller?.scope || "",
+          customSettings,
+        );
       }
     } else {
-      result = await this.runHostCommand(programPath, ["system", "info", "--format", customFormat || "json"], customSettings);
+      result = await this.runHostCommand(
+        programPath,
+        ["system", "info", "--format", customFormat || "json"],
+        customSettings,
+      );
     }
     if (!result.success) {
       this.logger.error(this.id, "Unable to get system info", result);

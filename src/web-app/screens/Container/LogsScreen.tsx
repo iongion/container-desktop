@@ -2,11 +2,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { Container } from "@/env/Types";
+import type { Container } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
 import { useStoreActions } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
 
@@ -24,7 +24,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       setPending(true);
       const container = await containerFetch({
         Id: decodeURIComponent(id as any),
-        withLogs: true
+        withLogs: true,
       });
       setContainer(container);
     } catch (error: any) {
@@ -55,9 +55,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Logs";
 Screen.Route = {
-  Path: `/screens/container/:id/logs`
+  Path: "/screens/container/:id/logs",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

@@ -1,4 +1,12 @@
-import { CommandExecutionResult, ControllerScopeType, LIMAInstance, OperatingSystem, PodmanMachine, SSHHost, WSLDistribution } from "@/env/Types";
+import {
+  type CommandExecutionResult,
+  ControllerScopeType,
+  type LIMAInstance,
+  OperatingSystem,
+  type PodmanMachine,
+  type SSHHost,
+  type WSLDistribution,
+} from "@/env/Types";
 import { createLogger } from "@/logger";
 
 // locals
@@ -24,7 +32,9 @@ export async function getAvailableLIMAInstances(limactlPath?: string) {
     return items;
   }
   try {
-    const result: any = await Command.Execute(limactlPath, ["list"], { encoding: "utf8" });
+    const result: any = await Command.Execute(limactlPath, ["list"], {
+      encoding: "utf8",
+    });
     if (result.success) {
       const output = result.stdout.trim().split("\n").slice(1);
       items = output.map((it) => {
@@ -41,7 +51,7 @@ export async function getAvailableLIMAInstances(limactlPath?: string) {
           CPUs,
           Memory,
           Disk,
-          Dir
+          Dir,
         } as LIMAInstance;
       });
     } else {
@@ -108,7 +118,9 @@ export async function getAvailableWSLDistributions(wslPath?: string) {
       [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
       [Console]::Write("$distributions")
     `;
-    const result = await Command.Execute("powershell", ["-Command", script], { encoding: "utf8" });
+    const result = await Command.Execute("powershell", ["-Command", script], {
+      encoding: "utf8",
+    });
     if (result.success) {
       try {
         const lines = JSON.parse(result.stdout || "[]");
@@ -128,7 +140,7 @@ export async function getAvailableWSLDistributions(wslPath?: string) {
             State,
             Version,
             Default: isDefault,
-            Current: false
+            Current: false,
           };
           acc.push(distribution);
           return acc;

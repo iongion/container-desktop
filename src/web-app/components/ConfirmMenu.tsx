@@ -1,5 +1,5 @@
 import { Button, ButtonGroup, Intent, Menu, MenuItem, Popover, Position } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,7 +16,16 @@ export interface ConfirmMenuItemProps {
   onConfirm?: (tag: any, e: any) => void;
   onCancel?: (tag: any, e: any) => void;
 }
-export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, text, title, disabled, intent, onConfirm, onCancel }: ConfirmMenuItemProps) => {
+export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({
+  icon,
+  tag,
+  text,
+  title,
+  disabled,
+  intent,
+  onConfirm,
+  onCancel,
+}: ConfirmMenuItemProps) => {
   const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
   const onTrigger = useCallback(
@@ -26,7 +35,7 @@ export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, tex
       setConfirm(!confirm);
       return false;
     },
-    [confirm, setConfirm]
+    [confirm],
   );
   const onConfirmClick = useCallback(
     (e) => {
@@ -34,7 +43,7 @@ export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, tex
         onConfirm(tag, e);
       }
     },
-    [onConfirm, tag]
+    [onConfirm, tag],
   );
   const onCancelClick = useCallback(
     (e) => {
@@ -42,7 +51,7 @@ export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, tex
         onCancel(tag, e);
       }
     },
-    [onCancel, tag]
+    [onCancel, tag],
   );
 
   return confirm ? (
@@ -59,7 +68,14 @@ export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({ icon, tag, tex
       }
     />
   ) : (
-    <MenuItem disabled={disabled} icon={icon || IconNames.TRASH} title={title} text={text || t("Remove")} intent={intent || Intent.DANGER} onClick={onTrigger} />
+    <MenuItem
+      disabled={disabled}
+      icon={icon || IconNames.TRASH}
+      title={title}
+      text={text || t("Remove")}
+      intent={intent || Intent.DANGER}
+      onClick={onTrigger}
+    />
   );
 };
 export interface ConfirmMenuProps {
@@ -69,7 +85,13 @@ export interface ConfirmMenuProps {
   tag?: any;
   onConfirm: ConfirmMenuRemoveHandler;
 }
-export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({ disabled, tag, title, children, onConfirm }: ConfirmMenuProps) => {
+export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
+  disabled,
+  tag,
+  title,
+  children,
+  onConfirm,
+}: ConfirmMenuProps) => {
   const popoverRef = useRef<any>(null);
   const onActionConfirm = useCallback(
     (e) => {
@@ -78,7 +100,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({ disabled, tag, title, 
       }
       onConfirm(tag, true);
     },
-    [onConfirm, tag]
+    [onConfirm, tag],
   );
   const onActionCancel = useCallback(
     (e) => {
@@ -87,12 +109,18 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({ disabled, tag, title, 
       }
       onConfirm(tag, false);
     },
-    [onConfirm, tag]
+    [onConfirm, tag],
   );
   const menuContent = (
     <Menu>
       {children}
-      <ConfirmMenuItem tag={tag} title={title} disabled={disabled} onConfirm={onActionConfirm} onCancel={onActionCancel} />
+      <ConfirmMenuItem
+        tag={tag}
+        title={title}
+        disabled={disabled}
+        onConfirm={onActionConfirm}
+        onCancel={onActionCancel}
+      />
     </Menu>
   );
   return (

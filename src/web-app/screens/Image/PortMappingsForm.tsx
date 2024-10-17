@@ -1,12 +1,12 @@
 import { Button, FormGroup, H5, HTMLSelect, Icon, InputGroup, NumericInput } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 // import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
 
-import { ContainerImagePortMapping } from "@/env/Types";
+import type { ContainerImagePortMapping } from "@/env/Types";
 
 // locals
 import "./PortMappingsForm.css";
@@ -19,7 +19,7 @@ export const createPortMapping = (): ContainerImagePortMapping => {
     container_port: 80,
     host_ip: DEFAULT_HOST_IP,
     host_port: 8080,
-    protocol: "tcp"
+    protocol: "tcp",
   };
 };
 
@@ -33,7 +33,7 @@ export const toPortMappings = (exposed: { [key: string]: number }) => {
       container_port: Number(container_port),
       host_ip: DEFAULT_HOST_IP,
       host_port: host_port,
-      protocol: protocol as any
+      protocol: protocol as any,
     };
   });
   return mappings;
@@ -44,7 +44,10 @@ export interface PortMappingFormAction {
   data: any;
   handler?: PortMappingFormActionHandler;
 }
-export type PortMappingFormActionHandler = (action: PortMappingFormAction, portMapping: ContainerImagePortMapping) => void;
+export type PortMappingFormActionHandler = (
+  action: PortMappingFormAction,
+  portMapping: ContainerImagePortMapping,
+) => void;
 
 // Port mapping
 export interface PortMappingFormProps {
@@ -54,7 +57,12 @@ export interface PortMappingFormProps {
   action: PortMappingFormAction;
 }
 
-export const PortMappingForm: React.FC<PortMappingFormProps> = ({ action, disabled, portMapping, portMappingIndex }: PortMappingFormProps) => {
+export const PortMappingForm: React.FC<PortMappingFormProps> = ({
+  action,
+  disabled,
+  portMapping,
+  portMappingIndex,
+}: PortMappingFormProps) => {
   const { t } = useTranslation();
   const { control } = useFormContext<{
     amount: number;
@@ -188,7 +196,10 @@ export interface PortMappingsFormProps {
   portMappings: ContainerImagePortMapping[];
 }
 
-export const PortMappingsForm: React.FC<PortMappingsFormProps> = ({ disabled, portMappings }: PortMappingsFormProps) => {
+export const PortMappingsForm: React.FC<PortMappingsFormProps> = ({
+  disabled,
+  portMappings,
+}: PortMappingsFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{
@@ -197,7 +208,7 @@ export const PortMappingsForm: React.FC<PortMappingsFormProps> = ({ disabled, po
 
   const { fields, remove, prepend } = useFieldArray({
     control,
-    name: "mappings"
+    name: "mappings",
   });
 
   const onPortMappingFormAction = useCallback<PortMappingFormActionHandler>(
@@ -209,7 +220,7 @@ export const PortMappingsForm: React.FC<PortMappingsFormProps> = ({ disabled, po
         remove(portMappingIndex);
       }
     },
-    [prepend, remove, portMappings]
+    [prepend, remove, portMappings],
   );
 
   return (
@@ -231,7 +242,7 @@ export const PortMappingsForm: React.FC<PortMappingsFormProps> = ({ disabled, po
               action={{
                 icon: isLast ? IconNames.PLUS : IconNames.MINUS,
                 data: isLast ? "add" : "remove",
-                handler: onPortMappingFormAction
+                handler: onPortMappingFormAction,
               }}
             />
           );

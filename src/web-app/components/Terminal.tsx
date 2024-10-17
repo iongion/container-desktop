@@ -1,4 +1,4 @@
-import { ResizeEntry, ResizeSensor } from "@blueprintjs/core";
+import { type ResizeEntry, ResizeSensor } from "@blueprintjs/core";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
@@ -48,7 +48,7 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
         scrollback: 16 * 1024,
         logLevel: "error",
         allowProposedApi: true,
-        fontWeight: "normal"
+        fontWeight: "normal",
       });
       terminal.open(viewRef.current!);
       terminal.loadAddon(fitAddon);

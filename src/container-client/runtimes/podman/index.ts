@@ -1,6 +1,6 @@
 import { PodmanContainerEngineHostClientSSH } from "@/container-client/runtimes/podman/ssh";
-import { ContainerEngine, OperatingSystem } from "@/env/Types";
-import { AbstractContainerEngineHostClient, AbstractEngine } from "../../runtimes/abstract";
+import { ContainerEngine, type OperatingSystem } from "@/env/Types";
+import { type AbstractContainerEngineHostClient, AbstractEngine } from "../../runtimes/abstract";
 import { PodmanContainerEngineHostClientVirtualizedLIMA } from "./lima";
 import { PodmanContainerEngineHostClientNative } from "./native";
 import { PodmanContainerEngineHostClientVirtualizedVendor } from "./vendor";
@@ -15,7 +15,7 @@ export class Engine extends AbstractEngine {
     PodmanContainerEngineHostClientVirtualizedVendor,
     PodmanContainerEngineHostClientVirtualizedWSL,
     PodmanContainerEngineHostClientVirtualizedLIMA,
-    PodmanContainerEngineHostClientSSH
+    PodmanContainerEngineHostClientSSH,
   ];
 
   static async create(osType: OperatingSystem) {
@@ -33,5 +33,5 @@ export const Podman = {
   PodmanContainerEngineHostClientVirtualizedVendor,
   PodmanContainerEngineHostClientVirtualizedWSL,
   PodmanContainerEngineHostClientVirtualizedLIMA,
-  PodmanContainerEngineHostClientSSH
+  PodmanContainerEngineHostClientSSH,
 };

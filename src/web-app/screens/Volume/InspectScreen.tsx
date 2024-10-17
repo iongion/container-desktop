@@ -2,8 +2,8 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { Volume } from "@/env/Types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { Volume } from "@/env/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -26,7 +26,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const volume = await volumeFetch({
-          Id: id as any
+          Id: id as any,
         });
         setVolume(volume);
       } catch (error: any) {
@@ -41,7 +41,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader withoutSearch withBack titleText={volume.Name} titleIcon={IconNames.DATABASE} rightContent={<VolumeActionsMenu volume={volume} withoutCreate />} />
+      <AppScreenHeader
+        withoutSearch
+        withBack
+        titleText={volume.Name}
+        titleIcon={IconNames.DATABASE}
+        rightContent={<VolumeActionsMenu volume={volume} withoutCreate />}
+      />
       <div className="AppScreenContent">
         <CodeEditor value={JSON.stringify(volume, null, 2)} />
       </div>
@@ -52,9 +58,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/volumes/:id/inspect`
+  Path: "/screens/volumes/:id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.DATABASE,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

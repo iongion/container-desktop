@@ -1,5 +1,5 @@
 import { Alignment, AnchorButton, Button, Icon, InputGroup, Navbar } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
@@ -9,7 +9,9 @@ import "./AppScreenHeader.css";
 interface AppScreenHeaderProps {
   searchTerm?: string;
   onSearch?: React.ChangeEventHandler<HTMLInputElement> | undefined;
-  onSearchTrigger?: (((event: React.MouseEvent<HTMLElement, MouseEvent>) => void) & React.MouseEventHandler<HTMLButtonElement>) | undefined;
+  onSearchTrigger?:
+    | (((event: React.MouseEvent<HTMLElement, MouseEvent>) => void) & React.MouseEventHandler<HTMLButtonElement>)
+    | undefined;
   withoutSearch?: boolean;
   withSearchTrigger?: boolean;
   withBack?: boolean;
@@ -36,7 +38,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   rightContent,
   listRoutePath,
   listRouteIcon,
-  children
+  children,
 }: AppScreenHeaderProps) => {
   const { t } = useTranslation();
   const history = useHistory();
@@ -48,7 +50,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
         }
       }
     },
-    [onSearchTrigger]
+    [onSearchTrigger],
   );
   const onGoBackClick = useCallback(() => {
     history.go(-1);
@@ -58,7 +60,9 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
     <Navbar.Group align={Alignment.LEFT}>
       <Navbar.Heading>
         <Button minimal title={t("Go back")} icon={IconNames.CHEVRON_LEFT} onClick={onGoBackClick} />
-        {withList && <AnchorButton minimal icon={listRouteIcon || IconNames.LIST} href={listRoutePath} title={t("Jump to list")} />}
+        {withList && (
+          <AnchorButton minimal icon={listRouteIcon || IconNames.LIST} href={listRoutePath} title={t("Jump to list")} />
+        )}
       </Navbar.Heading>
     </Navbar.Group>
   ) : null;
@@ -73,13 +77,19 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
         onKeyPress={onSearchKeyPress}
         rightElement={
           withSearchTrigger ? (
-            <Button minimal text={t("Search")} onClick={onSearchTrigger} className="SearchButtonTrigger" disabled={searchTerm === undefined || searchTerm === ""} />
+            <Button
+              minimal
+              text={t("Search")}
+              onClick={onSearchTrigger}
+              className="SearchButtonTrigger"
+              disabled={searchTerm === undefined || searchTerm === ""}
+            />
           ) : undefined
         }
       />
     </Navbar.Group>
   );
-  let titleWidget;
+  let titleWidget: React.ReactNode | null = null;
   if (titleText) {
     titleWidget = (
       <>
@@ -89,7 +99,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
       </>
     );
   }
-  let rightWidget;
+  let rightWidget: React.ReactNode | null = null;
   if (rightContent) {
     rightWidget = <Navbar.Group align={Alignment.RIGHT}>{rightContent}</Navbar.Group>;
   }

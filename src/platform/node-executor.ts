@@ -1,23 +1,28 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
-import { ChildProcessWithoutNullStreams, spawn, SpawnOptionsWithoutStdio, spawnSync } from "node:child_process";
+import {
+  type ChildProcessWithoutNullStreams,
+  spawn,
+  type SpawnOptionsWithoutStdio,
+  spawnSync,
+} from "node:child_process";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 
 import { getApiConfig } from "@/container-client/Api.clients";
-import { ISSHClient, SSHClient, SSHClientConnection } from "@/container-client/services";
+import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/container-client/services";
 import {
-  ApiDriverConfig,
-  CommandExecutionResult,
-  Connection,
+  type ApiDriverConfig,
+  type CommandExecutionResult,
+  type Connection,
   ContainerEngine,
   ContainerEngineHost,
-  EngineConnectorSettings,
+  type EngineConnectorSettings,
   OperatingSystem,
-  ServiceOpts,
-  Wrapper
+  type ServiceOpts,
+  type Wrapper,
 } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { getWindowsPipePath } from "@/platform";
@@ -36,7 +41,13 @@ const PROGRAM_SSH_RELAY = "container-desktop-ssh-relay.exe";
 
 // Servers
 async function getWSLDistributionEnvironmentVariable(distribution: string, variable: string) {
-  const wslCommandOutput = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "printenv", variable]);
+  const wslCommandOutput = await Command.Execute("wsl.exe", [
+    "--distribution",
+    distribution,
+    "--exec",
+    "printenv",
+    variable,
+  ]);
   const wslUser = wslCommandOutput.stdout.toString().trim();
   return wslUser;
 }
@@ -88,7 +99,7 @@ export async function waitForApi({
   tcpAddress,
   timeout,
   onStart,
-  abort
+  abort,
 }: {
   ping: boolean | undefined;
   pipeFullPath: string;
@@ -122,7 +133,11 @@ export async function waitForApi({
                 clearInterval(iid);
                 isChecking = false;
                 onStart?.();
-                resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+                resolve({
+                  started: true,
+                  socketPath: pipeFullPath,
+                  tcpAddress,
+                });
               } else {
                 isChecking = false;
               }
@@ -183,13 +198,13 @@ export function killProcess(proc: ChildProcessWithoutNullStreams, signal?: NodeJ
 
 export class WSLRelayServer {
   protected server?: net.Server;
-  protected isStarted: boolean = false;
-  protected isListening: boolean = false;
+  protected isStarted = false;
+  protected isListening = false;
   protected relayProcesses: { [key: string]: ChildProcessWithoutNullStreams } = {};
 
   protected socketPath?: string;
   protected tcpAddress?: string;
-  protected logLevel: string = "debug";
+  protected logLevel = "debug";
 
   constructor(opts: { logLevel: string }) {
     this.isStarted = false;
@@ -205,7 +220,7 @@ export class WSLRelayServer {
       unixSocketPath,
       maxRespawnRetries,
       abort,
-      ping
+      ping,
     }: {
       pipePath: string;
       distribution: string;
@@ -217,13 +232,21 @@ export class WSLRelayServer {
     // handlers
     onStart?: (server: WSLRelayServer, started: boolean) => void,
     onStop?: (server: WSLRelayServer, stopped: boolean) => void,
-    onError?: (server: WSLRelayServer, error: any) => void
-  ): Promise<{ started: boolean; socketPath?: string; tcpAddress?: string }> => {
+    onError?: (server: WSLRelayServer, error: any) => void,
+  ): Promise<{
+    started: boolean;
+    socketPath?: string;
+    tcpAddress?: string;
+  }> => {
     let pipeFullPath = "";
-    let tcpAddress: string = "";
+    let tcpAddress = "";
     if (this.isListening) {
       logger.debug("Named pipe server already started");
-      return Promise.resolve({ started: true, socketPath: this.socketPath, tcpAddress: this.tcpAddress });
+      return Promise.resolve({
+        started: true,
+        socketPath: this.socketPath,
+        tcpAddress: this.tcpAddress,
+      });
     }
     distribution = distribution || "Ubuntu"; // Default to Ubuntu
     let wslAppHome = "";
@@ -248,7 +271,11 @@ export class WSLRelayServer {
       switch (relayMethod) {
         case "sshd":
           {
-            await ensureRelayProgramExistsInWSLDistribution(distribution, wslSSHServerRelayProgramPath, bundleWindowsSSHServerRelayProgramPath);
+            await ensureRelayProgramExistsInWSLDistribution(
+              distribution,
+              wslSSHServerRelayProgramPath,
+              bundleWindowsSSHServerRelayProgramPath,
+            );
             pipeFullPath = pipePath;
             this.socketPath = pipeFullPath;
             this.tcpAddress = undefined;
@@ -256,7 +283,11 @@ export class WSLRelayServer {
           break;
         case "socat":
           {
-            await ensureRelayProgramExistsInWSLDistribution(distribution, wslSocatRelayProgramPath, bundleWindowsSocatRelayProgramPath);
+            await ensureRelayProgramExistsInWSLDistribution(
+              distribution,
+              wslSocatRelayProgramPath,
+              bundleWindowsSocatRelayProgramPath,
+            );
             pipeFullPath = pipePath;
             args = [
               // relay
@@ -269,7 +300,7 @@ export class WSLRelayServer {
               "-d",
               "-d",
               `UNIX-CONNECT:${unixSocketPath},retry,forever`,
-              "STDIO"
+              "STDIO",
             ];
             this.socketPath = pipeFullPath;
             this.tcpAddress = undefined;
@@ -277,7 +308,11 @@ export class WSLRelayServer {
           break;
         case "socat-tcp":
           {
-            await ensureRelayProgramExistsInWSLDistribution(distribution, wslSocatRelayProgramPath, bundleWindowsSocatRelayProgramPath);
+            await ensureRelayProgramExistsInWSLDistribution(
+              distribution,
+              wslSocatRelayProgramPath,
+              bundleWindowsSocatRelayProgramPath,
+            );
             const host = "127.0.0.1";
             const port = await getFreeTCPPort();
             tcpAddress = `http://${host}:${port}`;
@@ -292,7 +327,7 @@ export class WSLRelayServer {
               "-d",
               "-d",
               `TCP4-LISTEN:${port},reuseaddr,fork,bind=127.0.0.1`,
-              `UNIX-CONNECT:${unixSocketPath},retry,forever`
+              `UNIX-CONNECT:${unixSocketPath},retry,forever`,
             ];
             this.socketPath = undefined;
             this.tcpAddress = tcpAddress;
@@ -304,16 +339,22 @@ export class WSLRelayServer {
     } catch (error: any) {
       logger.error("Error getting WSL relay program path", error.message);
       onError?.(this, error);
-      return Promise.resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+      return Promise.resolve({
+        started: false,
+        socketPath: pipeFullPath,
+        tcpAddress,
+      });
     }
     let serverResolved = false;
     const isRelayProcessUsable = (relayProcess?: ChildProcessWithoutNullStreams) => {
       return relayProcess !== undefined && !relayProcess.killed && relayProcess.exitCode === null;
     };
     const spawnRelayProcess = (
-      relayProgram = "wsl.exe",
+      relayProgram: string,
       args: string[],
-      opts?: { onClose?: (relayProcess: ChildProcessWithoutNullStreams, code?: any) => void }
+      opts?: {
+        onClose?: (relayProcess: ChildProcessWithoutNullStreams, code?: any) => void;
+      },
     ): Promise<ChildProcessWithoutNullStreams> => {
       let resolved = false;
       return new Promise((resolve, reject) => {
@@ -325,9 +366,16 @@ export class WSLRelayServer {
             logger.warn(relayProcess.pid, `[${relayProgram}] Relay process stderr: ${data}`);
           });
         }
-        logger.warn(relayProcess.pid, `[${relayProgram}] Started relay process`, { killed: relayProcess.killed, exitCode: relayProcess.exitCode });
+        logger.warn(relayProcess.pid, `[${relayProgram}] Started relay process`, {
+          killed: relayProcess.killed,
+          exitCode: relayProcess.exitCode,
+        });
         relayProcess.on("close", (code) => {
-          logger.warn(relayProcess.pid, `[${relayProgram}] Relay process close with code ${code}`, relayProcess.exitCode);
+          logger.warn(
+            relayProcess.pid,
+            `[${relayProgram}] Relay process close with code ${code}`,
+            relayProcess.exitCode,
+          );
           killProcess(relayProcess);
           abort.abort();
           opts?.onClose?.(relayProcess, code);
@@ -351,7 +399,7 @@ export class WSLRelayServer {
       this.isListening = true;
       const relay_guid = v4();
       const windowsIdentityPath = await Path.join(await Platform.getUserDataPath(), "id_rsa");
-      let connectionString: string = "";
+      let connectionString = "";
       let sshServerAddress = "";
       try {
         const wslUser = await getWSLDistributionUsername(distribution);
@@ -382,7 +430,7 @@ export class WSLRelayServer {
             "--host",
             wslRelayHost,
             "--port",
-            `${wslRelayPort}`
+            `${wslRelayPort}`,
           ],
           {
             onClose: (_, code) => {
@@ -390,8 +438,8 @@ export class WSLRelayServer {
               this.isListening = false;
               logger.debug(relay_guid, "Relay process closed", code);
               onStop?.(this, true);
-            }
-          }
+            },
+          },
         );
         this.relayProcesses[relay_guid] = relayNamedPipeSSHTunnelServerProcess;
       } catch (error: any) {
@@ -399,7 +447,11 @@ export class WSLRelayServer {
         this.isListening = false;
         logger.error(relay_guid, "Error starting relay process", error);
         onError?.(this, error);
-        return Promise.resolve({ started: false, socketPath: pipeFullPath, tcpAddress: "" });
+        return Promise.resolve({
+          started: false,
+          socketPath: pipeFullPath,
+          tcpAddress: "",
+        });
       }
       this.isStarted = true;
       this.isListening = true;
@@ -411,7 +463,7 @@ export class WSLRelayServer {
           onStart?.(this, true);
         },
         timeout: 3000,
-        abort
+        abort,
       });
     }
     // Start the TCP relay process
@@ -425,7 +477,7 @@ export class WSLRelayServer {
             this.isListening = false;
             logger.debug(guid, "Relay process closed", code);
             onStop?.(this, true);
-          }
+          },
         });
         this.relayProcesses[guid] = relayProcess;
         this.isStarted = true;
@@ -438,18 +490,24 @@ export class WSLRelayServer {
           onStart: () => {
             onStart?.(this, true);
           },
-          abort
+          abort,
         });
       } catch (error: any) {
         this.isStarted = false;
         this.isListening = false;
         logger.error(guid, "Error starting relay process", error);
         onError?.(this, error);
-        return Promise.resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+        return Promise.resolve({
+          started: false,
+          socketPath: pipeFullPath,
+          tcpAddress,
+        });
       }
     }
     return new Promise((resolve, reject) => {
-      logger.debug(`Creating named pipe server listening on ${pipeFullPath}, relaying to Unix socket ${unixSocketPath} in WSL distribution ${distribution}`);
+      logger.debug(
+        `Creating named pipe server listening on ${pipeFullPath}, relaying to Unix socket ${unixSocketPath} in WSL distribution ${distribution}`,
+      );
       // Handle client connections
       const server = net.createServer(async (clientSocket) => {
         let writeable = true;
@@ -579,7 +637,11 @@ export class WSLRelayServer {
   }
 }
 
-export function withWSLRelayServer(connection: Connection, opts: { logLevel: string }, callback: (server: WSLRelayServer) => void) {
+export function withWSLRelayServer(
+  connection: Connection,
+  opts: { logLevel: string },
+  callback: (server: WSLRelayServer) => void,
+) {
   if (!RELAY_SERVERS_CACHE[connection.id]) {
     RELAY_SERVERS_CACHE[connection.id] = new WSLRelayServer(opts);
   }
@@ -595,7 +657,7 @@ export async function getFreeTCPPort() {
   return new Promise<number>((resolve, reject) => {
     const srv = net.createServer();
     srv.on("error", reject);
-    srv.listen(0, function () {
+    srv.listen(0, () => {
       const address = srv.address() as any;
       srv.close();
       setTimeout(() => {
@@ -609,21 +671,25 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
   const httpAgent = new http.Agent({
     keepAlive: true,
     keepAliveMsecs: 10,
-    timeout: config.timeout || 3000
+    timeout: config.timeout || 3000,
   });
   httpAgent.maxSockets = 1;
   const configuration = {
     ...config,
     adapter: httpAdapter,
     httpAgent: httpAgent,
-    httpsAgent: httpAgent
+    httpsAgent: httpAgent,
   };
   const driver = axios.create(configuration);
   logger.debug("Created NodeJS API driver", configuration);
   return driver;
 }
 
-export async function proxyRequestToWSLDistribution(connection: Connection, config: ApiDriverConfig, request: Partial<AxiosRequestConfig>) {
+export async function proxyRequestToWSLDistribution(
+  connection: Connection,
+  config: ApiDriverConfig,
+  request: Partial<AxiosRequestConfig>,
+) {
   return await new Promise<AxiosResponse<any, any> | undefined>((resolve, reject) => {
     //
     withWSLRelayServer(connection, { logLevel: connection.logLevel || "debug" }, async (server) => {
@@ -639,7 +705,7 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
             unixSocketPath: `${connection.settings.api.connection.relay}`.replace("unix://", ""),
             maxRespawnRetries: 5,
             ping: connection.engine === ContainerEngine.DOCKER,
-            abort
+            abort,
           },
           (_, started) => {
             logger.debug("WSL Relay server started", started);
@@ -655,7 +721,7 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
               resolved = true;
               reject(error);
             }
-          }
+          },
         );
         if (started) {
           try {
@@ -663,7 +729,10 @@ export async function proxyRequestToWSLDistribution(connection: Connection, conf
             request.timeout = request.timeout || config.timeout || 1000;
             request.baseURL = tcpAddress || request.baseURL || "http://d";
             request.socketPath = socketPath;
-            logger.debug(">> WSL Relay request", request, { socketPath, tcpAddress });
+            logger.debug(">> WSL Relay request", request, {
+              socketPath,
+              tcpAddress,
+            });
             const driver = await createNodeJSApiDriver(request);
             const response = await driver.request(request);
             logger.debug("<< WSL Relay response", response);
@@ -707,7 +776,7 @@ export async function proxyRequestToSSHConnection(
   connection: Connection,
   config: ApiDriverConfig,
   request: Partial<AxiosRequestConfig>,
-  context?: any
+  context?: any,
 ): Promise<AxiosResponse<any, any>> {
   const remoteAddress = connection.settings.api.connection.relay ?? "";
   const localAddress = connection.settings.api.connection.uri ?? "";
@@ -719,9 +788,7 @@ export async function proxyRequestToSSHConnection(
     if (!remoteAddress) {
       throw new Error("Remote address must be set");
     }
-    let em: EventEmitter;
-    // eslint-disable-next-line prefer-const
-    em = await sshConnection.startTunnel({
+    const em = await sshConnection.startTunnel({
       localAddress,
       remoteAddress,
       onStatusCheck: (status) => {
@@ -731,7 +798,7 @@ export async function proxyRequestToSSHConnection(
       },
       onStopTunnel: () => {
         delete SSH_TUNNELS_CACHE[remoteAddress];
-      }
+      },
     });
     if (em) {
       SSH_TUNNELS_CACHE[remoteAddress] = localAddress;
@@ -763,7 +830,7 @@ export function applyWrapper(launcher: string, args: string[], opts?: WrapperOpt
 }
 
 export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], launcherOpts?: Partial<WrapperOpts>) {
-  let spawnLauncher;
+  let spawnLauncher = "";
   let spawnArgs: string[] = [];
   let spawnOpts: any;
   if (await Platform.isFlatpak()) {
@@ -772,7 +839,7 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
       "--host",
       // remove flatpak container VFS prefix when executing
       launcher.replace("/var/run/host", ""),
-      ...launcherArgs
+      ...launcherArgs,
     ];
     spawnLauncher = hostLauncher;
     spawnArgs = hostArgs;
@@ -782,17 +849,33 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
     spawnArgs = launcherArgs;
     spawnOpts = launcherOpts;
   }
-  const spawnLauncherOpts: WrapperOpts = { encoding: "utf-8", ...(spawnOpts || {}) };
+  const spawnLauncherOpts: WrapperOpts = {
+    encoding: "utf-8",
+    ...(spawnOpts || {}),
+  };
   const command = [spawnLauncher, ...spawnArgs].join(" ");
   if (!spawnLauncher) {
-    logger.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
+    logger.error("[SC.A][>]", command, {
+      spawnLauncher,
+      spawnArgs,
+      spawnLauncherOpts,
+    });
     throw new Error("Launcher path must be set");
   }
   if (typeof spawnLauncher !== "string") {
-    logger.error("[SC.A][>]", command, { spawnLauncher, spawnArgs, spawnLauncherOpts });
+    logger.error("[SC.A][>]", command, {
+      spawnLauncher,
+      spawnArgs,
+      spawnLauncherOpts,
+    });
     throw new Error("Launcher path has invalid type");
   }
-  logger.debug("[SC.A][>][spawn]", { command: spawnLauncher, args: spawnArgs, opts: spawnLauncherOpts, commandLine: command });
+  logger.debug("[SC.A][>][spawn]", {
+    command: spawnLauncher,
+    args: spawnArgs,
+    opts: spawnLauncherOpts,
+    commandLine: command,
+  });
   const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
   // store for tracing and debugging
   (child as any).command = command;
@@ -805,7 +888,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
     env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined,
-    detached: opts?.detached
+    detached: opts?.detached,
   };
   const { commandLauncher, commandArgs } = applyWrapper(launcher, launcherArgs, opts);
   return new Promise<CommandExecutionResult>((resolve, reject) => {
@@ -819,7 +902,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
           success: false,
           stdout: "",
           stderr: "",
-          command: "" // Decorated by child process
+          command: "", // Decorated by child process
         };
         const command = (child as any).command;
         const processResolve = (from, data) => {
@@ -832,7 +915,12 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
             result.success = child.exitCode === 0;
             result.command = command;
             resolved = true;
-            logger.debug("[SC.A][<]", { pid: result.pid, code: result.code, success: result.success, command });
+            logger.debug("[SC.A][<]", {
+              pid: result.pid,
+              code: result.code,
+              success: result.success,
+              command,
+            });
             resolve(result);
           }
         };
@@ -869,13 +957,17 @@ export function wrap_process(proc: any, child: any) {
       success: proc.success,
       pid: proc.pid,
       kill: async (signal?: NodeJS.Signals | number) => {
-        logger.debug("(OS) Killing child process started", proc.pid, { signal });
+        logger.debug("(OS) Killing child process started", proc.pid, {
+          signal,
+        });
         if (child) {
           killProcess(child, signal);
         } else {
           logger.warn("(OS) Killing child process skipped - child not started here", proc.pid);
         }
-        logger.debug("(OS) Killing child process completed", proc.pid, { child });
+        logger.debug("(OS) Killing child process completed", proc.pid, {
+          child,
+        });
       },
       unref: () => {
         logger.debug("(OS) Unref child process started", proc.pid);
@@ -889,8 +981,8 @@ export function wrap_process(proc: any, child: any) {
           logger.error("(OS) Unref child process failed", error);
         }
         logger.debug("(OS) Unref child process completed", proc.pid);
-      }
-    }
+      },
+    },
   };
 }
 
@@ -902,7 +994,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
     code: null,
     success: false,
     stdout: "",
-    stderr: ""
+    stderr: "",
   };
   const em = new EventEmitter();
   // Check
@@ -984,7 +1076,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
     const launcherOpts = {
       encoding: "utf-8",
       cwd: opts?.cwd,
-      env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined
+      env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined,
     };
     child = await wrapSpawnAsync(programPath, programArgs, launcherOpts);
     proc.pid = child.pid!;
@@ -992,7 +1084,11 @@ export async function exec_service(programPath: string, programArgs: string[], o
     if (opts?.onSpawn) {
       opts?.onSpawn(wrap_process(proc, child));
     }
-    logger.debug("Child process spawned", child.pid, { programPath, programArgs, launcherOpts });
+    logger.debug("Child process spawned", child.pid, {
+      programPath,
+      programArgs,
+      launcherOpts,
+    });
     child.on("exit", (code) => onProcessExit(child, code));
     child.on("close", (code) => onProcessClose(child, code));
     child.on("error", (error) => onProcessError(child, error));
@@ -1010,7 +1106,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
     }
   }
   return {
-    on: (event, listener, context?: any) => em.on(event, listener, context)
+    on: (event, listener, context?: any) => em.on(event, listener, context),
   };
 }
 
@@ -1049,13 +1145,15 @@ export const Command: ICommand = {
     }
     host.IdentityFile = privateKeyPath;
     const isWindows = (os.type() as OperatingSystem) === OperatingSystem.Windows;
-    const sshRelayProgramCLI = isWindows ? await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSH_RELAY) : "ssh";
+    const sshRelayProgramCLI = isWindows
+      ? await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSH_RELAY)
+      : "ssh";
     return new Promise<ISSHClient>((resolve, reject) => {
       // function Client() {}
       const connection = new SSHClient({
         osType: os.type() as OperatingSystem,
         cli: isWindows ? "ssh.exe" : "ssh",
-        relayCLI: sshRelayProgramCLI
+        relayCLI: sshRelayProgramCLI,
       });
       connection.on("connection.established", () => {
         logger.debug("Connection established", connection);
@@ -1064,7 +1162,12 @@ export const Command: ICommand = {
           isConnected: () => connection.isConnected(),
           connect: async (params: SSHClientConnection) => await connection.connect(params),
           execute: async (command: string[]) => await connection.execute(command),
-          startTunnel: async (params: { localAddress: string; remoteAddress: string; onStatusCheck: (status: any) => void; onStopTunnel: () => void }) =>
+          startTunnel: async (params: {
+            localAddress: string;
+            remoteAddress: string;
+            onStatusCheck: (status: any) => void;
+            onStopTunnel: () => void;
+          }) =>
             await connection.startTunnel({
               ...params,
               onStatusCheck: (status) => {
@@ -1075,12 +1178,12 @@ export const Command: ICommand = {
                 if (params?.onStatusCheck) {
                   params?.onStatusCheck(status);
                 }
-              }
+              },
             }),
           stopTunnel: () => connection.stopTunnel(),
           on: (event, listener, context) => connection.on(event, listener, context),
           emit: (event, data) => connection.emit(event, data),
-          close: () => connection.close()
+          close: () => connection.close(),
         } as ISSHClient);
       });
       connection.on("error", (error: any) => {
@@ -1091,7 +1194,7 @@ export const Command: ICommand = {
         host: host.HostName,
         port: host.Port || 22,
         username: host.User,
-        privateKeyPath: privateKeyPath
+        privateKeyPath: privateKeyPath,
       };
       logger.debug("Connecting to SSH server using", credentials, "from host", host);
       connection.connect(credentials);
@@ -1115,35 +1218,67 @@ export const Command: ICommand = {
       case ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA:
       case ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA:
         {
-          const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
-          let curl: string = "";
+          const config = await getApiConfig(
+            connection.settings.api,
+            connection.settings.controller?.scope,
+            connection.host,
+          );
+          let curl = "";
           try {
             const socketPath = connection?.settings?.api?.connection?.relay || config.socketPath;
-            curl = axiosConfigToCURL({ ...config, ...request, socketPath }) as string;
+            curl = axiosConfigToCURL({
+              ...config,
+              ...request,
+              socketPath,
+            }) as string;
           } catch (error: any) {
             logger.warn("Error converting axios config to CURL", error);
           }
-          logger.debug("Proxying request to host", { connection, config, request, curl });
+          logger.debug("Proxying request to host", {
+            connection,
+            config,
+            request,
+            curl,
+          });
           const driver = await createNodeJSApiDriver(config);
           response = await driver.request(request);
-          logger.debug("Proxy response", { data: response?.data, status: response?.status, statusText: response?.statusText });
+          logger.debug("Proxy response", {
+            data: response?.data,
+            status: response?.status,
+            statusText: response?.statusText,
+          });
         }
         break;
       case ContainerEngineHost.PODMAN_VIRTUALIZED_WSL:
       case ContainerEngineHost.DOCKER_VIRTUALIZED_WSL:
         {
-          const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
+          const config = await getApiConfig(
+            connection.settings.api,
+            connection.settings.controller?.scope,
+            connection.host,
+          );
           config.socketPath = connection.settings.api.connection.relay;
-          logger.debug("Proxying request to WSL distribution", { connection, config, request });
+          logger.debug("Proxying request to WSL distribution", {
+            connection,
+            config,
+            request,
+          });
           response = await proxyRequestToWSLDistribution(connection, config, request);
         }
         break;
       case ContainerEngineHost.PODMAN_REMOTE:
       case ContainerEngineHost.DOCKER_REMOTE:
         {
-          const config = await getApiConfig(connection.settings.api, connection.settings.controller?.scope, connection.host);
+          const config = await getApiConfig(
+            connection.settings.api,
+            connection.settings.controller?.scope,
+            connection.host,
+          );
           config.socketPath = connection.settings.api.connection.uri;
-          logger.debug("Proxying request to SSH connection", { connection, config });
+          logger.debug("Proxying request to SSH connection", {
+            connection,
+            config,
+          });
           response = await proxyRequestToSSHConnection(connection, config, request, context);
         }
         break;
@@ -1152,5 +1287,5 @@ export const Command: ICommand = {
         break;
     }
     return response;
-  }
+  },
 };

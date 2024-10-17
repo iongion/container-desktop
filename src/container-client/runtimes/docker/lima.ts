@@ -1,4 +1,4 @@
-import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { ContainerEngine, ContainerEngineHost, type OperatingSystem } from "@/env/Types";
 import { DOCKER_PROGRAM, LIMA_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClientVirtualizedLIMA } from "../../runtimes/abstract";
 

@@ -5,7 +5,7 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
+import type { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -42,8 +42,16 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
   const machineRestart = useStoreActions((actions) => actions.machine.machineRestart);
   const machineConnect = useStoreActions((actions) => actions.machine.machineConnect);
   const performActionCommand = useCallback(
-    async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
-      let result = { success: false, message: `No action handler for ${action}` };
+    async (
+      action: string,
+      { confirm }: PerformActionOptions = {
+        confirm: { success: true, error: true },
+      },
+    ) => {
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -76,7 +84,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
             break;
         }
         if (confirm?.success) {
-          Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+          Notification.show({
+            message: t("Command completed"),
+            intent: Intent.SUCCESS,
+          });
         }
         if (action === "machine.remove") {
           goToScreen("/screens/machines");
@@ -86,14 +97,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [machine, machineInspect, machineRemove, machineRestart, machineStop, machineConnect, t]
+    [machine, machineInspect, machineRemove, machineRestart, machineStop, machineConnect, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -107,7 +118,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
         performActionCommand("machine.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const onStop = useCallback(() => {
     performActionCommand("machine.stop");
@@ -118,7 +129,9 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
   const onOpenTerminalConsole = useCallback(async () => {
     performActionCommand("machine.connect", { confirm: { success: false } });
   }, [performActionCommand]);
-  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
+  const startButton = withoutCreate ? null : (
+    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+  );
   const removeWidget = machine ? (
     <ConfirmMenu onConfirm={onRemove} tag={machine.Name} disabled={disabledAction === "machine.remove"}>
       {isNative ? (
@@ -159,7 +172,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
         {onReload && (
           <>
             {startButton ? <Divider /> : null}
-            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+            <Button
+              small
+              minimal
+              intent={Intent.NONE}
+              title={t("Reload current list")}
+              icon={IconNames.REFRESH}
+              onClick={onReload}
+            />
           </>
         )}
         {removeWidget}

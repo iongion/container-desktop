@@ -1,10 +1,11 @@
-import { Action, Thunk, action, thunk } from "easy-peasy";
+import { type Action, type Thunk, action, thunk } from "easy-peasy";
 
 import { Application } from "@/container-client/Application";
-import { Connection, ContainerEngineHost, SystemInfo } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { Connection, ContainerEngineHost, SystemInfo } from "@/env/Types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface SettingsModelState {
+  version?: string;
   connections: Connection[];
   host?: ContainerEngineHost;
   systemInfo?: SystemInfo;
@@ -41,7 +42,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
         const info = await client.getSystemInfo();
         actions.setSystemInfo(info);
         return info;
-      })
+      }),
     ),
     createConnection: thunk(async (actions, connection) =>
       registry.withPending(async () => {
@@ -50,7 +51,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
         const items = await actions.getConnections();
         actions.setConnections(items);
         return info;
-      })
+      }),
     ),
     updateConnection: thunk(async (actions, { id, connection }) =>
       registry.withPending(async () => {
@@ -59,7 +60,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
         const items = await actions.getConnections();
         actions.setConnections(items);
         return info;
-      })
+      }),
     ),
     removeConnection: thunk(async (actions, id) =>
       registry.withPending(async () => {
@@ -68,7 +69,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
         const items = await actions.getConnections();
         actions.setConnections(items);
         return info;
-      })
+      }),
     ),
     getConnections: thunk(async (actions) =>
       registry.withPending(async () => {
@@ -78,7 +79,7 @@ export const createModel = async (registry: AppRegistry): Promise<SettingsModel>
         const items = [...systemItems, ...userItems];
         actions.setConnections(items);
         return items;
-      })
-    )
+      }),
+    ),
   };
 };

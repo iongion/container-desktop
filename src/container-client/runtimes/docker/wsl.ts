@@ -1,4 +1,11 @@
-import { ApiConnection, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import {
+  type ApiConnection,
+  type Connection,
+  ContainerEngine,
+  ContainerEngineHost,
+  type EngineConnectorSettings,
+  type OperatingSystem,
+} from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { DOCKER_PROGRAM, WSL_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClientVirtualizedWSL } from "../abstract/wsl";
@@ -25,7 +32,7 @@ export class DockerContainerEngineHostClientVirtualizedWSL extends AbstractConta
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: "",
-        relay: ""
+        relay: "",
       };
     }
     const uri = scope.startsWith("podman-machine") ? getWindowsPipePath(scope) : "";
@@ -40,7 +47,7 @@ export class DockerContainerEngineHostClientVirtualizedWSL extends AbstractConta
     }
     return {
       uri,
-      relay
+      relay,
     };
   }
 

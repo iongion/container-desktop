@@ -5,12 +5,12 @@ import { isObject } from "lodash-es";
 // project
 import { Application } from "@/container-client/Application";
 import { systemNotifier } from "@/container-client/notifier";
-import { Connector, OperatingSystem } from "@/env/Types";
+import { type Connector, OperatingSystem } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { registry } from "@/web-app/domain/registry";
 import { Notification } from "@/web-app/Notification";
-import { AppBootstrapPhase, AppModel, AppModelState, AppRegistry } from "./types";
+import { AppBootstrapPhase, type AppModel, type AppModelState, type AppRegistry } from "./types";
 
 function delayCheckUpdate(osType: OperatingSystem) {
   setTimeout(async () => {
@@ -20,7 +20,7 @@ function delayCheckUpdate(osType: OperatingSystem) {
       if (check.hasUpdate) {
         Notification.show({
           message: t("A newer version {{latest}} has been found", check),
-          intent: Intent.PRIMARY
+          intent: Intent.PRIMARY,
         });
       }
     } catch (error: any) {
@@ -123,7 +123,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       let nextPhase = AppBootstrapPhase.STOPPING;
       return registry.withPending(async () => {
         systemNotifier.transmit("startup.phase", {
-          trace: "Startup entering setup"
+          trace: "Startup entering setup",
         });
         await instance.setup();
         try {
@@ -149,7 +149,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
             connectors,
             currentConnector: undefined,
             nextConnection: undefined,
-            userSettings
+            userSettings,
           });
         } catch (error: any) {
           console.error("Error during application stopping", error);
@@ -167,11 +167,11 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
       return registry.withPending(async () => {
         const instance = Application.getInstance();
         systemNotifier.transmit("startup.phase", {
-          trace: "Starting setup"
+          trace: "Starting setup",
         });
         await instance.setup();
         systemNotifier.transmit("startup.phase", {
-          trace: "Setup ready"
+          trace: "Setup ready",
         });
         const userSettings = await instance.getGlobalUserSettings();
         await instance.notify("ready", userSettings);
@@ -181,7 +181,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           await instance.stop();
           // offload
           systemNotifier.transmit("startup.phase", {
-            trace: "Reading settings"
+            trace: "Reading settings",
           });
           const environment = import.meta.env.ENVIRONMENT;
           const version = import.meta.env.PROJECT_VERSION;
@@ -191,7 +191,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           }
           if (!connection) {
             systemNotifier.transmit("startup.phase", {
-              trace: "Listing connections"
+              trace: "Listing connections",
             });
             const userConnections = await instance.getConnections();
             const systemConnections = await instance.getSystemConnections();
@@ -206,9 +206,11 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
             }
           }
           systemNotifier.transmit("startup.phase", {
-            trace: "Establishing connection"
+            trace: "Establishing connection",
           });
-          const currentConnector = await instance.start(connection ? { startApi, connection, skipAvailabilityCheck: false } : undefined);
+          const currentConnector = await instance.start(
+            connection ? { startApi, connection, skipAvailabilityCheck: false } : undefined,
+          );
           const connectors = instance.getConnectors();
           const running = currentConnector?.availability?.api || false;
           const osType = instance.getOsType();
@@ -234,7 +236,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               connectors,
               currentConnector,
               userSettings,
-              systemNotifications: []
+              systemNotifications: [],
             });
             // check for new version if enabled
             if (nextPhase === AppBootstrapPhase.READY || nextPhase === AppBootstrapPhase.FAILED) {
@@ -250,12 +252,12 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               console.debug("Api started - connection is available");
               Notification.show({
                 message: t("You are now connected to {{name}}", currentConnector),
-                intent: Intent.SUCCESS
+                intent: Intent.SUCCESS,
               });
             } else {
               Notification.show({
                 message: t("Connection skipped - please check the settings or install the requirements"),
-                intent: Intent.WARNING
+                intent: Intent.WARNING,
               });
             }
           } else {
@@ -269,18 +271,18 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
               running,
               connectors,
               currentConnector,
-              userSettings
+              userSettings,
             });
           }
         } catch (error: any) {
           console.error("Error during application startup", error);
           nextPhase = AppBootstrapPhase.FAILED;
           await actions.domainUpdate({
-            phase: nextPhase
+            phase: nextPhase,
           });
         } finally {
           systemNotifier.transmit("startup.phase", {
-            trace: "Startup finished"
+            trace: "Startup finished",
           });
         }
         return nextPhase === AppBootstrapPhase.READY;
@@ -369,7 +371,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           console.error("Error during connection string test", error);
         }
       });
-    })
+    }),
   };
   console.debug("Domain model created");
   return model;

@@ -41,8 +41,6 @@
   display: flex;
   text-align: center;
   justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
   padding: 5px;
   flex-direction: column;
 }

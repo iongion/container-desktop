@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { Pod, PodProcessReport } from "@/env/Types";
+import type { Pod, PodProcessReport } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
 import { usePoller } from "@/web-app/Hooks";
 import { Notification } from "@/web-app/Notification";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./ProcessesScreen.css";
@@ -31,9 +31,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     async (e) => {
       const code = e.currentTarget.parentNode.querySelector("code");
       await navigator.clipboard.writeText(code.innerText);
-      Notification.show({ message: t("The command was copied to clipboard"), intent: Intent.SUCCESS });
+      Notification.show({
+        message: t("The command was copied to clipboard"),
+        intent: Intent.SUCCESS,
+      });
     },
-    [t]
+    [t],
   );
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const pod = await podFetch({
-          Id: id as any
+          Id: id as any,
         });
         setPod(pod);
       } catch (error: any) {
@@ -111,7 +114,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       title === "COMMAND" ? (
                         <div className="CommandColumn">
                           <code title={text}>{text}</code>
-                          <Button small minimal icon={IconNames.CLIPBOARD} data-action="copy.to.clipboard" title={t("Copy to clipboard")} onClick={onCopyToClipboardClick} />
+                          <Button
+                            small
+                            minimal
+                            icon={IconNames.CLIPBOARD}
+                            data-action="copy.to.clipboard"
+                            title={t("Copy to clipboard")}
+                            onClick={onCopyToClipboardClick}
+                          />
                         </div>
                       ) : (
                         text
@@ -142,9 +152,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Pod processes";
 Screen.Route = {
-  Path: `/screens/pod/:id/processes`
+  Path: "/screens/pod/:id/processes",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.LIST_COLUMNS,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

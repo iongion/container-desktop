@@ -1,5 +1,10 @@
 {
-  "biome.enabled": false,
+  "biome.enabled": true,
+  "prettier.enable": false,
+  "eslint.enable": false,
+  "biome.lsp.trace.server": "verbose",
+  "biome.lsp.bin": "./node_modules/.bin/biome",
+  "biome.requireConfigFile": true,
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
   "[html]": {
@@ -7,34 +12,37 @@
   },
   "[javascript]": {
     "editor.codeActionsOnSave": {
+      "quickfix.biome": "always",
       "source.fixAll": "always",
-      "source.fixAll.eslint": "always",
-      "source.organizeImports": "always"
+      "source.organizeImports": "always",
+      "source.organizeImports.biome": "always"
     },
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome"
   },
   "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome"
   },
   "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome"
   },
   "[typescript]": {
     "editor.codeActionsOnSave": {
+      "quickfix.biome": "always",
       "source.fixAll": "always",
-      "source.fixAll.eslint": "always",
-      "source.organizeImports": "always"
+      "source.organizeImports": "always",
+      "source.organizeImports.biome": "always"
     },
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "vscode.typescript-language-features",
     "editor.tabSize": 2
   },
   "[typescriptreact]": {
     "editor.codeActionsOnSave": {
+      "quickfix.biome": "always",
       "source.fixAll": "always",
-      "source.fixAll.eslint": "always",
-      "source.organizeImports": "always"
+      "source.organizeImports": "always",
+      "source.organizeImports.biome": "always"
     },
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome"
   },
   "[xml]": {
     "editor.formatOnSave": true
@@ -47,6 +55,7 @@
     "aquasec",
     "aquasecurity",
     "asar",
+    "biomejs",
     "blkio",
     "blueprintjs",
     "browserslistrc",
@@ -156,6 +165,7 @@
     "pubkey",
     "pulseaudio",
     "pyenv",
+    "quickfix",
     "Resetable",
     "resty",
     "resvg",
@@ -215,21 +225,18 @@
     "xattr",
     "xstate"
   ],
+  "editor.defaultFormatter": "biomejs.biome",
   "editor.codeActionsOnSave": {
+    "quickfix.biome": "always",
     "source.fixAll": "always",
-    "source.fixAll.eslint": "always",
     "source.fixAll.stylelint": "always",
     "source.fixAll.tslint": "always"
   },
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "editor.insertSpaces": true,
   "editor.renderWhitespace": "all",
   "editor.suggestSelection": "first",
   "editor.tabSize": 2,
-  "eslint.enable": true,
-  "eslint.options": {},
-  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
   "files.associations": {
     "*.env": "ini",
     "*.env.**": "ini",
@@ -251,15 +258,13 @@
   },
   "i18n-ally.keystyle": "nested",
   "i18n-ally.localesPaths": ["./src/web-app/translations"],
-  "prettier.documentSelectors": ["*.{tsx,ts}", "*.{jsx,js}"],
   "search.exclude": {
     "**/.DS_Store": true,
     "**/.git/**": true,
     "**/build/**": true,
     "**/release/**": true,
     "**/dist/**": true,
-    "**/node_modules/**": true,
-    ".eslintcache": true
+    "**/node_modules/**": true
   },
   "typescript.preferences.importModuleSpecifier": "non-relative",
   "[csharp]": {

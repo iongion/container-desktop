@@ -1,37 +1,47 @@
 import * as async from "async";
 import { v4 } from "uuid";
 
-import { AbstractContainerEngineHostClient, createConnectorBy, Docker, getDefaultConnectors, Podman, RUNTIMES } from "@/container-client";
+import {
+  type AbstractContainerEngineHostClient,
+  createConnectorBy,
+  Docker,
+  getDefaultConnectors,
+  Podman,
+  RUNTIMES,
+} from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
 import { systemNotifier } from "@/container-client/notifier";
-import { AbstractEngine, ContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
-import { PodmanAbstractContainerEngineHostClient, PodmanContainerEngineHostClientCommon } from "@/container-client/runtimes/podman/base";
+import type { AbstractEngine, ContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
+import type {
+  PodmanAbstractContainerEngineHostClient,
+  PodmanContainerEngineHostClientCommon,
+} from "@/container-client/runtimes/podman/base";
 import {
-  ApplicationEnvironment,
-  CommandExecutionResult,
-  Connection,
-  ConnectOptions,
-  Connector,
-  ContainerConnectOptions,
+  type ApplicationEnvironment,
+  type CommandExecutionResult,
+  type Connection,
+  type ConnectOptions,
+  type Connector,
+  type ContainerConnectOptions,
   ContainerEngine,
   ContainerEngineHost,
-  ControllerScope,
-  CreateMachineOptions,
-  DisconnectOptions,
-  EngineConnectorAvailability,
-  EngineConnectorSettings,
-  GlobalUserSettings,
-  ILogger,
-  OpenFileSelectorOptions,
-  OpenTerminalOptions,
+  type ControllerScope,
+  type CreateMachineOptions,
+  type DisconnectOptions,
+  type EngineConnectorAvailability,
+  type EngineConnectorSettings,
+  type GlobalUserSettings,
+  type ILogger,
+  type OpenFileSelectorOptions,
+  type OpenTerminalOptions,
   OperatingSystem,
-  Program,
-  RegistriesMap,
-  Registry,
-  RegistryPullOptions,
-  RegistrySearchOptions,
+  type Program,
+  type RegistriesMap,
+  type Registry,
+  type RegistryPullOptions,
+  type RegistrySearchOptions,
   StartupStatus,
-  SubscriptionOptions
+  type SubscriptionOptions,
 } from "@/env/Types";
 import { createLogger, getLevel, setLevel } from "@/logger";
 import { getWindowsPipePath } from "@/platform";
@@ -46,8 +56,8 @@ const AUTOMATIC_REGISTRIES: Registry[] = [
     isRemovable: false,
     isSystem: true,
     enabled: true,
-    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE]
-  }
+    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE],
+  },
 ];
 const PROPOSED_REGISTRIES = [
   {
@@ -58,7 +68,7 @@ const PROPOSED_REGISTRIES = [
     isRemovable: true,
     isSystem: false,
     enabled: true,
-    engine: [Podman.Engine.ENGINE]
+    engine: [Podman.Engine.ENGINE],
   },
   {
     id: "docker.io",
@@ -68,12 +78,12 @@ const PROPOSED_REGISTRIES = [
     isRemovable: true,
     isSystem: false,
     enabled: true,
-    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE]
-  }
+    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE],
+  },
 ];
 
-export const coerceAndSortSearchResults = (items) => {
-  items = items.map((it) => {
+export const coerceAndSortSearchResults = (items: any[]) => {
+  let output = items.map((it) => {
     if (typeof it.Stars === "undefined") {
       it.Stars = 0;
       if (typeof it.StarCount !== "undefined") {
@@ -83,22 +93,22 @@ export const coerceAndSortSearchResults = (items) => {
     return it;
   });
   // 1st sort by name
-  items = items.sort((a, b) => {
+  output = output.sort((a, b) => {
     return a.Name.localeCompare(b.Name, "en", { numeric: true });
   });
   // 2nd sort by stars
-  items = items.sort((a, b) => {
+  output = output.sort((a, b) => {
     return b.Stars - a.Stars;
   });
-  return items;
+  return output;
 };
 
 export function detectOperatingSystem() {
   let OSName = "Unknown OS";
-  if (navigator.userAgent.indexOf("Win") != -1) OSName = "Windows";
-  if (navigator.userAgent.indexOf("Mac") != -1) OSName = "MacOS";
-  if (navigator.userAgent.indexOf("X11") != -1) OSName = "UNIX";
-  if (navigator.userAgent.indexOf("Linux") != -1) OSName = "Linux";
+  if (navigator.userAgent.indexOf("Win") !== -1) OSName = "Windows";
+  if (navigator.userAgent.indexOf("Mac") !== -1) OSName = "MacOS";
+  if (navigator.userAgent.indexOf("X11") !== -1) OSName = "UNIX";
+  if (navigator.userAgent.indexOf("Linux") !== -1) OSName = "Linux";
   switch (OSName) {
     case "Windows":
       return OperatingSystem.Windows;
@@ -115,15 +125,17 @@ export function detectOperatingSystem() {
 export class Application {
   private static instance: Application;
 
-  protected logLevel: string = "debug";
+  protected logLevel = "debug";
   protected logger!: ILogger;
   protected messageBus!: IMessageBus;
   protected userConfiguration!: UserConfiguration;
   protected osType: OperatingSystem;
   protected version: string;
   protected environment: string;
-  protected connectionApis: { [key: string]: AbstractContainerEngineHostClient } = {};
-  protected inited: boolean = false;
+  protected connectionApis: {
+    [key: string]: AbstractContainerEngineHostClient;
+  } = {};
+  protected inited = false;
   protected runtimes: AbstractEngine[] = [];
   protected connectors: Connector[] = [];
 
@@ -143,7 +155,7 @@ export class Application {
         osType: detectOperatingSystem(),
         version: import.meta.env.PROJECT_VERSION,
         environment: import.meta.env.ENVIRONMENT,
-        messageBus: (window as any).MessageBus
+        messageBus: (window as any).MessageBus,
       });
     }
     return Application.instance;
@@ -263,7 +275,7 @@ export class Application {
   // settings
 
   async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
-    if (settings && settings?.logging?.level) {
+    if (settings?.logging?.level) {
       this.logger.info("Setting preferences log level", settings?.logging?.level);
       this.logLevel = settings?.logging?.level;
       await setLevel(settings?.logging?.level);
@@ -282,10 +294,10 @@ export class Application {
       checkLatestVersion: await this.userConfiguration.getKey("checkLatestVersion", false),
       path: await await this.userConfiguration.getStoragePath(),
       logging: {
-        level: await getLevel()
+        level: await getLevel(),
       },
       connector: await this.userConfiguration.getKey("connector"),
-      connections: await this.getConnectionsFromConfiguration()
+      connections: await this.getConnectionsFromConfiguration(),
     } as GlobalUserSettings;
     return settings;
   }
@@ -314,7 +326,7 @@ export class Application {
     subscribe();
     return {
       subscribe,
-      unsubscribe: () => {}
+      unsubscribe: () => {},
     };
   }
 
@@ -398,8 +410,13 @@ export class Application {
     const containerArgs: string[] = [];
     if (currentApi.isScoped()) {
       const scope = controller?.scope || "";
-      const isLIMA = [ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA, ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA].includes(currentApi.HOST);
-      const isWSL = [ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(currentApi.HOST);
+      const isLIMA = [
+        ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+        ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
+      ].includes(currentApi.HOST);
+      const isWSL = [ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(
+        currentApi.HOST,
+      );
       const isVendor = [ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR].includes(currentApi.HOST);
       if (isLIMA) {
         containerArgs.push("shell");
@@ -422,7 +439,7 @@ export class Application {
     }
     containerArgs.push(...["exec", "-it", id, shell || "/bin/sh"]);
     const output = await Platform.launchTerminal(launcherPath, containerArgs, {
-      title: title || `${currentApi.ENGINE} container`
+      title: title || `${currentApi.ENGINE} container`,
     });
     if (!output.success) {
       this.logger.error("Unable to connect to container", id, output);
@@ -434,9 +451,12 @@ export class Application {
     const api = await this.getConnectionApi(connection, false);
     let outputProgram: Program = {
       ...program,
-      path: ""
+      path: "",
     };
-    this.logger.debug(connection.id, ">> Find program", insideScope ? "inside" : "outside", "scope", { connector: deepMerge({}, connection), program: outputProgram });
+    this.logger.debug(connection.id, ">> Find program", insideScope ? "inside" : "outside", "scope", {
+      connector: deepMerge({}, connection),
+      program: outputProgram,
+    });
     if (insideScope) {
       outputProgram = await api.findScopeProgram(outputProgram);
     } else {
@@ -449,13 +469,19 @@ export class Application {
   async findProgramVersion(connection: Connection, program: Program, insideScope?: boolean) {
     const api = await this.getConnectionApi(connection, false);
     let version = "";
-    this.logger.debug(connection.id, ">> Find program version", insideScope ? "inside" : "outside", "scope", { connector: deepMerge({}, connection), program });
+    this.logger.debug(connection.id, ">> Find program version", insideScope ? "inside" : "outside", "scope", {
+      connector: deepMerge({}, connection),
+      program,
+    });
     if (insideScope) {
       version = await api.findScopeProgramVersion(program);
     } else {
       version = await api.findHostProgramVersion(program);
     }
-    this.logger.debug(connection.id, "<< Find program version", insideScope ? "inside" : "outside", "scope", version, { connector: deepMerge({}, connection), program });
+    this.logger.debug(connection.id, "<< Find program version", insideScope ? "inside" : "outside", "scope", version, {
+      connector: deepMerge({}, connection),
+      program,
+    });
     return version;
   }
 
@@ -472,6 +498,7 @@ export class Application {
           const engine = it.runtime;
           it.engine = engine;
           it.host = host;
+          it.runtime = undefined;
           delete it.runtime;
           return it;
         });
@@ -495,7 +522,7 @@ export class Application {
       label: connection.label,
       host: connection.host,
       engine: connection.engine,
-      settings: connection.settings
+      settings: connection.settings,
     });
     await this.userConfiguration.setKey("connections", connections);
     return connection;
@@ -532,7 +559,9 @@ export class Application {
   async getSystemConnections() {
     const connections: Connection[] = [];
     // Add system podman as default
-    const firstPodman: Connection = getDefaultConnectors(this.osType).find((it) => it.engine === ContainerEngine.PODMAN && it.availability.enabled) as Connection;
+    const firstPodman: Connection = getDefaultConnectors(this.osType).find(
+      (it) => it.engine === ContainerEngine.PODMAN && it.availability.enabled,
+    ) as Connection;
     if (firstPodman) {
       firstPodman.id = "system-default.podman";
       firstPodman.description = "Uses the available system podman installation";
@@ -543,7 +572,9 @@ export class Application {
       connections.push(firstPodman);
     }
     // Add system docker as default
-    const firstDocker: Connection = getDefaultConnectors(this.osType).find((it) => it.engine === ContainerEngine.DOCKER && it.availability.enabled) as Connection;
+    const firstDocker: Connection = getDefaultConnectors(this.osType).find(
+      (it) => it.engine === ContainerEngine.DOCKER && it.availability.enabled,
+    ) as Connection;
     if (firstDocker) {
       firstDocker.id = "system-default.docker";
       firstDocker.description = "Uses the available system docker installation";
@@ -581,7 +612,11 @@ export class Application {
     return await currentApi.resetSystem();
   }
 
-  async checkSecurity(options: { scanner: string; subject: string; target: string }) {
+  async checkSecurity(options: {
+    scanner: string;
+    subject: string;
+    target: string;
+  }) {
     const currentApi = this.getCurrentEngineConnectionApi();
     const report: any = {
       status: "failure",
@@ -589,27 +624,37 @@ export class Application {
         name: options.scanner,
         path: "",
         version: undefined,
-        database: undefined
+        database: undefined,
       },
       counts: {
         CRITICAL: 0,
         HIGH: 0,
         MEDIUM: 0,
-        LOW: 0
+        LOW: 0,
       },
       result: undefined,
-      fault: undefined
+      fault: undefined,
     };
     try {
       let program: Program;
       const scanner = options?.scanner || "trivy";
       const settings = await currentApi.getSettings();
       const scope = settings.controller?.scope || "";
-      const useScope = currentApi.isScoped() && ![ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR].includes(currentApi.HOST);
+      const useScope =
+        currentApi.isScoped() &&
+        ![ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR].includes(
+          currentApi.HOST,
+        );
       if (useScope) {
-        program = await currentApi.findScopeProgram({ name: options.scanner, path: "" });
+        program = await currentApi.findScopeProgram({
+          name: options.scanner,
+          path: "",
+        });
       } else {
-        program = await currentApi.findHostProgram({ name: options.scanner, path: "" });
+        program = await currentApi.findHostProgram({
+          name: options.scanner,
+          path: "",
+        });
       }
       const programPath = program?.path || program?.name || scanner;
       // support only trivy for now
@@ -619,7 +664,7 @@ export class Application {
         report.scanner.version = program?.version || "";
         report.scanner.database = {}; // TODO: get database info
 
-        let result;
+        let result: CommandExecutionResult;
         if (useScope) {
           result = await currentApi.runScopeCommand(programPath, ["--version", "--format", "json"], scope);
         } else {
@@ -638,11 +683,21 @@ export class Application {
         if (result.success) {
           // Scanner analysis
           try {
-            let analysis;
+            let analysis: CommandExecutionResult;
             if (useScope) {
-              analysis = await currentApi.runScopeCommand(programPath, ["--quiet", options.subject, "--format", "json", options.target], scope);
+              analysis = await currentApi.runScopeCommand(
+                programPath,
+                ["--quiet", options.subject, "--format", "json", options.target],
+                scope,
+              );
             } else {
-              analysis = await currentApi.runHostCommand(programPath, ["--quiet", options.subject, "--format", "json", options.target]);
+              analysis = await currentApi.runHostCommand(programPath, [
+                "--quiet",
+                options.subject,
+                "--format",
+                "json",
+                options.target,
+              ]);
             }
             if (analysis?.success && analysis.stdout !== "null") {
               const priorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
@@ -650,7 +705,7 @@ export class Application {
                 return priorities.indexOf(b.Severity) - priorities.indexOf(a.Severity);
               };
               try {
-                const data = JSON.parse(analysis.stdout);
+                const data = JSON.parse(analysis.stdout || JSON.stringify({ Results: [] }));
                 data.Results = (data.Results || []).map((it) => {
                   it.guid = v4();
                   it.Vulnerabilities = (it.Vulnerabilities || [])
@@ -671,21 +726,21 @@ export class Application {
                 this.logger.error("Error during output parsing", error.message, analysis);
                 report.fault = {
                   detail: "Error during output parsing",
-                  message: error.message
+                  message: error.message,
                 };
               }
             } else {
               this.logger.error("Analysis failed", analysis);
               report.fault = {
                 detail: "Analysis failed",
-                message: report.stderr
+                message: report.stderr,
               };
             }
           } catch (error: any) {
             this.logger.error("Error during scanning process", error.message);
             report.fault = {
               detail: "Error during scanning process",
-              message: error.message
+              message: error.message,
             };
           }
         }
@@ -694,7 +749,7 @@ export class Application {
       this.logger.error("Error during scanner detection", error.message);
       report.fault = {
         detail: "Error during scanner detection",
-        message: error.message
+        message: error.message,
       };
     }
     return report;
@@ -707,7 +762,7 @@ export class Application {
     const customRegistriesPath = await Path.join(await this.userConfiguration.getStoragePath(), "registries.json");
     const registriesMap = {
       default: AUTOMATIC_REGISTRIES.map((it) => (it.id === "system" && !isPodman ? { ...it, enabled: false } : it)),
-      custom: PROPOSED_REGISTRIES
+      custom: PROPOSED_REGISTRIES,
     };
     if (await FS.isFilePresent(customRegistriesPath)) {
       const custom = JSON.parse(await FS.readTextFile(customRegistriesPath));
@@ -750,7 +805,7 @@ export class Application {
         }
         const request = {
           method: "GET",
-          url: `/images/search?${searchParams.toString()}`
+          url: `/images/search?${searchParams.toString()}`,
         };
         this.logger.debug("Proxying request", request);
         const response = await driver.request(request);
@@ -776,7 +831,7 @@ export class Application {
       programArgs.push(...[term]);
     }
     const currentApi = this.getCurrentEngineConnectionApi();
-    let result;
+    let result: CommandExecutionResult;
     if (currentApi.isScoped()) {
       const { controller } = await currentApi.getSettings();
       result = await currentApi.runScopeCommand(program.path || program.name, programArgs, controller?.scope || "");
@@ -808,7 +863,11 @@ export class Application {
     const { program, controller } = await host.getSettings();
     let result: CommandExecutionResult;
     if (host.isScoped()) {
-      result = await host.runScopeCommand(program.path || program.name, ["image", "pull", image], controller?.scope || "");
+      result = await host.runScopeCommand(
+        program.path || program.name,
+        ["image", "pull", image],
+        controller?.scope || "",
+      );
     } else {
       result = await host.runHostCommand(program.path || program.name, ["image", "pull", image]);
     }
@@ -816,15 +875,26 @@ export class Application {
   }
 
   // Main
-  async getConnectionApi<T extends AbstractContainerEngineHostClient = AbstractContainerEngineHostClient>(connection: Connection, skipAvailabilityCheck: boolean) {
+  async getConnectionApi<T extends AbstractContainerEngineHostClient = AbstractContainerEngineHostClient>(
+    connection: Connection,
+    skipAvailabilityCheck: boolean,
+  ) {
     if (this.connectionApis[connection.id]) {
       this.logger.debug("Using connection api - found", connection.id);
       this.connectionApis[connection.id].setSettings(connection.settings);
     } else {
       this.logger.debug("Using connection api - creating", connection.id);
-      const connector = deepMerge<Connector>({}, createConnectorBy(this.osType, connection.engine, connection.host), connection);
+      const connector = deepMerge<Connector>(
+        {},
+        createConnectorBy(this.osType, connection.engine, connection.host),
+        connection,
+      );
       try {
-        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, { connection: connector, startApi: false, skipAvailabilityCheck });
+        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, {
+          connection: connector,
+          startApi: false,
+          skipAvailabilityCheck,
+        });
         connector.availability = availability;
         if (host) {
           this.connectionApis[connection.id] = host;
@@ -846,8 +916,11 @@ export class Application {
 
   async createConnectorContainerEngineHostClient(
     connector: Connector,
-    opts?: ConnectOptions
-  ): Promise<{ host: AbstractContainerEngineHostClient | undefined; availability: EngineConnectorAvailability }> {
+    opts?: ConnectOptions,
+  ): Promise<{
+    host: AbstractContainerEngineHostClient | undefined;
+    availability: EngineConnectorAvailability;
+  }> {
     this.logger.debug(connector.id, ">> Creating connector host api", opts);
     const startApi = opts?.startApi ?? false;
     let host: AbstractContainerEngineHostClient | undefined = undefined;
@@ -860,7 +933,7 @@ export class Application {
       }
       host = await Engine.createEngineHostClientByName(connector.host, connector.id);
       systemNotifier.transmit("startup.phase", {
-        trace: "Engine host created"
+        trace: "Engine host created",
       });
       if (!host) {
         this.logger.error(connector.id, "Connector host not found", connector.host);
@@ -868,7 +941,10 @@ export class Application {
       }
       if (host) {
         const settings = opts?.connection?.settings || connector.settings;
-        this.logger.debug(connector.id, "Using custom host - settings", { user: opts?.connection?.settings, defaults: connector.settings });
+        this.logger.debug(connector.id, "Using custom host - settings", {
+          user: opts?.connection?.settings,
+          defaults: connector.settings,
+        });
         host.setLogLevel(this.logLevel);
         await host.setSettings(settings);
         if (settings.mode === "mode.automatic") {
@@ -877,17 +953,17 @@ export class Application {
             this.logger.warn(connector.id, "Skipping automatic settings - availability check disabled");
           } else {
             systemNotifier.transmit("startup.phase", {
-              trace: "Performing automatic connection detection"
+              trace: "Performing automatic connection detection",
             });
             if (host.isScoped()) {
               if (this.startupStatus === StartupStatus.STARTED) {
                 systemNotifier.transmit("startup.phase", {
-                  trace: `Stopping ${scope}`
+                  trace: `Stopping ${scope}`,
                 });
                 await host.stopScopeByName(scope);
               }
               systemNotifier.transmit("startup.phase", {
-                trace: `Starting ${scope}`
+                trace: `Starting ${scope}`,
               });
               this.startupStatus = await host.startScopeByName(scope);
             }
@@ -898,7 +974,7 @@ export class Application {
         }
         if (startApi) {
           systemNotifier.transmit("startup.phase", {
-            trace: "Starting connection api"
+            trace: "Starting connection api",
           });
           try {
             await host.startApi(undefined, { logLevel: this.logLevel });
@@ -915,11 +991,11 @@ export class Application {
             this.logger.warn(connector.id, "Skipping availability check");
           } else {
             systemNotifier.transmit("startup.phase", {
-              trace: "Performing availability checks"
+              trace: "Performing availability checks",
             });
             availability = await host.getAvailability(connector.settings);
             systemNotifier.transmit("startup.phase", {
-              trace: "Availability checks completed"
+              trace: "Availability checks completed",
             });
             if (!availability.api) {
               this.logger.warn(connector.id, "Connector host api is not available - cleaning up");
@@ -938,7 +1014,10 @@ export class Application {
     } catch (error: any) {
       this.logger.error(connector.id, "Connector host api creation error", error);
     }
-    this.logger.debug(connector.id, "<< Creating connector host api", { host, availability });
+    this.logger.debug(connector.id, "<< Creating connector host api", {
+      host,
+      availability,
+    });
     return { host, availability };
   }
 
@@ -958,8 +1037,8 @@ export class Application {
                 engine.setLogLevel(this.logLevel);
                 cb(null, engine);
               })
-              .catch(cb)
-        )
+              .catch(cb),
+        ),
       );
       // console.debug(">> INIT", { osType: this.osType });
       this.connectors = getDefaultConnectors(this.osType);
@@ -993,9 +1072,14 @@ export class Application {
       const currentOpts = deepMerge({}, opts || {});
       if (opts?.connection) {
         systemNotifier.transmit("startup.phase", {
-          trace: "Creating connectors"
+          trace: "Creating connectors",
         });
-        connector = await createConnectorBy(this.osType, opts.connection.engine, opts.connection.host, opts.connection.id);
+        connector = await createConnectorBy(
+          this.osType,
+          opts.connection.engine,
+          opts.connection.host,
+          opts.connection.id,
+        );
         connector.connectionId = opts.connection.id;
         connector.name = opts.connection.name;
         connector.label = opts.connection.label;
@@ -1011,7 +1095,10 @@ export class Application {
                 connector.settings.api.connection.uri = getWindowsPipePath(connector.id);
               } else {
                 const userData = await Platform.getUserDataPath();
-                connector.settings.api.connection.uri = await Path.join(userData, `container-desktop-ssh-relay-${connector.id}`);
+                connector.settings.api.connection.uri = await Path.join(
+                  userData,
+                  `container-desktop-ssh-relay-${connector.id}`,
+                );
               }
               break;
             default:
@@ -1023,16 +1110,19 @@ export class Application {
           throw new Error("No connector found");
         }
         systemNotifier.transmit("startup.phase", {
-          trace: "Creating connector host starting"
+          trace: "Creating connector host starting",
         });
-        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, { ...currentOpts, origin: "start" });
+        const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, {
+          ...currentOpts,
+          origin: "start",
+        });
         if (host) {
           const engineSettings = await host.getSettings();
           connector.settings = deepMerge(connector.settings, engineSettings);
           connector.availability = availability;
           this._currentContainerEngineHostClient = host;
           systemNotifier.transmit("startup.phase", {
-            trace: "Creating connector host completed"
+            trace: "Creating connector host completed",
           });
         } else {
           throw new Error("Unable to create current host connection");

@@ -2,11 +2,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { Network } from "@/env/Types";
+import type { Network } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
@@ -50,9 +50,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/network/:name/inspect`
+  Path: "/screens/network/:name/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.GRAPH,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

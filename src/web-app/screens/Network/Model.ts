@@ -1,11 +1,12 @@
-import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
+import { type Action, type Computed, type Thunk, action, computed, thunk } from "easy-peasy";
 
-import { CreateNetworkOptions } from "@/container-client/Api.clients";
-import { Network } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { CreateNetworkOptions } from "@/container-client/Api.clients";
+import type { Network } from "@/env/Types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 
 export interface NetworksModelState {
+  version?: string;
   networks: Network[];
   networksMap: { [key: string]: Network };
 }
@@ -88,7 +89,7 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
       const network = await client.getNetwork(name);
       actions.networkUpdate(network);
       return network;
-    })
+    }),
   ),
   networkRemove: thunk(async (actions, name) =>
     registry.withPending(async () => {
@@ -98,7 +99,7 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
         actions.networkDelete(name);
       }
       return removed;
-    })
+    }),
   ),
   networkCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
@@ -108,6 +109,6 @@ export const createModel = async (registry: AppRegistry): Promise<NetworksModel>
         actions.networkAdd(item);
       }
       return item;
-    })
-  )
+    }),
+  ),
 });

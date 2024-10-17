@@ -1,4 +1,16 @@
-import { Alignment, Button, ButtonGroup, Intent, Navbar, NavbarGroup, NavbarHeading, Popover, PopoverInteractionKind, Spinner, SpinnerSize } from "@blueprintjs/core";
+import {
+  Alignment,
+  Button,
+  ButtonGroup,
+  Intent,
+  Navbar,
+  NavbarGroup,
+  NavbarHeading,
+  Popover,
+  PopoverInteractionKind,
+  Spinner,
+  SpinnerSize,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,21 +30,23 @@ export function AppSidebarFooter() {
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const onThemeToggleClick = useCallback(
     (e) => {
-      setGlobalUserSettings({ theme: theme === AppTheme.DARK ? AppTheme.LIGHT : AppTheme.DARK });
+      setGlobalUserSettings({
+        theme: theme === AppTheme.DARK ? AppTheme.LIGHT : AppTheme.DARK,
+      });
     },
-    [theme, setGlobalUserSettings]
+    [theme, setGlobalUserSettings],
   );
   const onExpandCollapseSidebarClick = useCallback(
     (e) => {
       setGlobalUserSettings({ expandSidebar: !expandSidebar });
     },
-    [expandSidebar, setGlobalUserSettings]
+    [expandSidebar, setGlobalUserSettings],
   );
   const controller = currentConnector?.settings?.controller;
   const program = currentConnector?.settings?.program;
   const programInfo = {
     name: program?.name || "",
-    version: ""
+    version: "",
   };
   let programTitle = "";
   if (currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
@@ -84,12 +98,16 @@ export function AppSidebarFooter() {
           <Button
             icon={theme === AppTheme.DARK ? IconNames.MOON : IconNames.FLASH}
             onClick={onThemeToggleClick}
-            title={t("Toggle {{mode}} mode", { mode: theme === AppTheme.DARK ? t("light") : t("dark") })}
+            title={t("Toggle {{mode}} mode", {
+              mode: theme === AppTheme.DARK ? t("light") : t("dark"),
+            })}
           />
           <Button
             icon={expandSidebar ? IconNames.DOUBLE_CHEVRON_LEFT : IconNames.DOUBLE_CHEVRON_RIGHT}
             onClick={onExpandCollapseSidebarClick}
-            title={t("{{action}} the sidebar", { action: expandSidebar ? t("Collapse") : t("Expand") })}
+            title={t("{{action}} the sidebar", {
+              action: expandSidebar ? t("Collapse") : t("Expand"),
+            })}
           />
         </ButtonGroup>
       </div>

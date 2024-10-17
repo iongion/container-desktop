@@ -1,8 +1,6 @@
 {
   "recommendations": [
-    "rvest.vs-code-prettier-eslint",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
+    "biomejs.biome",
     "csstools.postcss",
     "orta.vscode-jest",
     "editorconfig.editorconfig",

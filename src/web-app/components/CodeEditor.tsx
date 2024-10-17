@@ -16,7 +16,13 @@ export interface CodeEditorProps {
   withoutLineNumbers?: boolean;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ withoutLineNumbers, value, mode, theme, headerTitle }: CodeEditorProps) => {
+export const CodeEditor: React.FC<CodeEditorProps> = ({
+  withoutLineNumbers,
+  value,
+  mode,
+  theme,
+  headerTitle,
+}: CodeEditorProps) => {
   const userTheme = useStoreState((state) => state.userSettings.theme);
   const [currentTheme, setCurrentTheme] = useState(theme || DEFAULT_THEME);
   const monaco = useMonaco();
@@ -45,13 +51,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ withoutLineNumbers, valu
           readOnly: true,
           automaticLayout: true,
           minimap: {
-            enabled: false
+            enabled: false,
           },
           fontSize: 11,
           cursorStyle: "block",
           wordWrap: "on",
           theme: currentTheme,
-          lineNumbers: withoutLineNumbers ? "off" : "on"
+          lineNumbers: withoutLineNumbers ? "off" : "on",
         }}
       />
     </div>

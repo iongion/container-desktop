@@ -1,7 +1,10 @@
-import { EngineConnectorSettings, PodmanMachineInspect } from "@/env/Types";
-import { AbstractContainerEngineHostClient } from "../abstract";
+import type { EngineConnectorSettings, PodmanMachineInspect } from "@/env/Types";
+import type { AbstractContainerEngineHostClient } from "../abstract";
 
-export async function getPodmanMachineInspect(client: AbstractContainerEngineHostClient, customSettings?: EngineConnectorSettings) {
+export async function getPodmanMachineInspect(
+  client: AbstractContainerEngineHostClient,
+  customSettings?: EngineConnectorSettings,
+) {
   const settings = customSettings || (await client.getSettings());
   let inspect: PodmanMachineInspect | undefined;
   const controllerPath = settings.controller?.path || settings.controller?.name;

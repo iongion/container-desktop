@@ -1,5 +1,15 @@
-/* eslint-disable jsx-a11y/no-autofocus */
-import { Button, ButtonGroup, Classes, Drawer, DrawerSize, FormGroup, InputGroup, Intent, ProgressBar, TextArea } from "@blueprintjs/core";
+import {
+  Button,
+  ButtonGroup,
+  Classes,
+  Drawer,
+  DrawerSize,
+  FormGroup,
+  InputGroup,
+  Intent,
+  ProgressBar,
+  TextArea,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { memo, useState } from "react";
 import isEqual from "react-fast-compare";
@@ -26,7 +36,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
         setPending(true);
         await secretCreate({
           name: data.secretName,
-          Secret: data.secretBody
+          Secret: data.secretBody,
         });
         onClose();
       } catch (error: any) {
@@ -35,13 +45,31 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
         setPending(false);
       }
     });
-    const pendingIndicator = <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>;
+    const pendingIndicator = (
+      <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
+    );
     return (
-      <Drawer className="AppDrawer" icon={IconNames.PLUS} title={t("Create new secret")} usePortal size={DrawerSize.SMALL} onClose={onClose} isOpen hasBackdrop={false}>
+      <Drawer
+        className="AppDrawer"
+        icon={IconNames.PLUS}
+        title={t("Create new secret")}
+        usePortal
+        size={DrawerSize.SMALL}
+        onClose={onClose}
+        isOpen
+        hasBackdrop={false}
+      >
         <div className={Classes.DRAWER_BODY}>
           <form className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
             <ButtonGroup fill>
-              <Button disabled={pending} intent={Intent.PRIMARY} icon={IconNames.KEY} title={t("Click to launch creation")} text={t("Create")} type="submit" />
+              <Button
+                disabled={pending}
+                intent={Intent.PRIMARY}
+                icon={IconNames.KEY}
+                title={t("Click to launch creation")}
+                text={t("Create")}
+                type="submit"
+              />
             </ButtonGroup>
             {pendingIndicator}
             <div className="AppDataForm" data-form="secret.create">
@@ -107,6 +135,6 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
   },
   (prev, next) => {
     return isEqual(prev, next);
-  }
+  },
 );
 CreateDrawer.displayName = "CreateDrawer";

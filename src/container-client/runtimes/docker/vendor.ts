@@ -1,4 +1,12 @@
-import { ApiConnection, Connection, ContainerEngine, ContainerEngineHost, ControllerScope, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import {
+  type ApiConnection,
+  type Connection,
+  ContainerEngine,
+  ContainerEngineHost,
+  type ControllerScope,
+  type EngineConnectorSettings,
+  OperatingSystem,
+} from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { isEmpty } from "lodash-es";
 import { DOCKER_PROGRAM } from "../../connection";
@@ -31,7 +39,7 @@ export class DockerContainerEngineHostClientVirtualizedVendor extends DockerCont
 
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
     const settings = customSettings || (await this.getSettings());
-    let relay: string = "";
+    let relay = "";
     let uri = "";
     if (this.osType === OperatingSystem.Windows) {
       const host = await Platform.getEnvironmentVariable("DOCKER_HOST");
@@ -65,7 +73,7 @@ export class DockerContainerEngineHostClientVirtualizedVendor extends DockerCont
     }
     return {
       uri,
-      relay
+      relay,
     };
   }
 

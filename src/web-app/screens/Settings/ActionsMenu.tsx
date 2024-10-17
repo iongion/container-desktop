@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Connection } from "@/env/Types";
+import type { Connection } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
@@ -32,8 +32,16 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   const removeConnection = useStoreActions((actions) => actions.settings.removeConnection);
   const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
   const performActionCommand = useCallback(
-    async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
-      let result = { success: false, message: `No action handler for ${action}` };
+    async (
+      action: string,
+      { confirm }: PerformActionOptions = {
+        confirm: { success: true, error: true },
+      },
+    ) => {
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -46,21 +54,24 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
             break;
         }
         if (confirm?.success) {
-          Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+          Notification.show({
+            message: t("Command completed"),
+            intent: Intent.SUCCESS,
+          });
         }
       } catch (error: any) {
         console.error("Command execution failed", error);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [connection, removeConnection, t]
+    [connection, removeConnection, t],
   );
   const onEditClick = useCallback(() => {
     onEdit?.(connection);
@@ -68,7 +79,11 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   const onConnectClick = useCallback(async () => {
     setIsStarting(true);
     try {
-      await startApplication({ startApi: connection.settings.api.autoStart ?? false, connection, skipAvailabilityCheck: false });
+      await startApplication({
+        startApi: connection.settings.api.autoStart ?? false,
+        connection,
+        skipAvailabilityCheck: false,
+      });
     } catch (error: any) {
       console.error("Unable to start the application", error);
     } finally {
@@ -85,14 +100,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
         performActionCommand("connection.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const onMakeDefault = useCallback(() => {
     console.debug("Make default connection", connection.id);
     setGlobalUserSettings({
       connector: {
-        default: connection.id
-      }
+        default: connection.id,
+      },
     });
   }, [setGlobalUserSettings, connection]);
   const isCurrent = currentConnector?.connectionId === connection?.id;

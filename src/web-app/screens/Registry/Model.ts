@@ -1,10 +1,12 @@
-import { Action, Thunk, action, thunk } from "easy-peasy";
+import { type Action, type Thunk, action, thunk } from "easy-peasy";
 
-import { RegistriesMap, Registry, RegistrySearchOptions, RegistrySearchResult } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { RegistriesMap, Registry, RegistrySearchOptions, RegistrySearchResult } from "@/env/Types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
-export interface CreateRegistryOptions {}
+export type CreateRegistryOptions = any;
+
 export interface RegistriesModelState {
+  version?: string;
   term: string;
   official: boolean;
   automated: boolean;
@@ -36,14 +38,14 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
   automated: false,
   registriesMap: {
     default: [],
-    custom: []
+    custom: [],
   },
   searchResults: [],
   // Actions
   reset: action((state) => {
     state.registriesMap = {
       default: [],
-      custom: []
+      custom: [],
     };
   }),
   setTerm: action((state, term) => {
@@ -95,7 +97,7 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
       const it = await client.getRegistry(name);
       actions.registryUpdate(it);
       return registry;
-    })
+    }),
   ),
   registryRemove: thunk(async (actions, name) =>
     registry.withPending(async () => {
@@ -105,7 +107,7 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
         actions.registryDelete(name);
       }
       return removed;
-    })
+    }),
   ),
   registryCreate: thunk(async (actions, it, { getState }) =>
     registry.withPending(async () => {
@@ -116,7 +118,7 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
         actions.registryAdd(item);
       }
       return item;
-    })
+    }),
   ),
   registrySearch: thunk(async (actions, options) =>
     registry.withPending(async () => {
@@ -127,6 +129,6 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
       const items = await client.searchRegistry(options);
       actions.setSearchResults(items);
       return items;
-    })
-  )
+    }),
+  ),
 });

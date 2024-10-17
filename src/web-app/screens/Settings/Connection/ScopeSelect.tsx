@@ -1,11 +1,28 @@
-import { Alignment, Button, ButtonGroup, Classes, Divider, InputGroupProps, Intent, MenuItem } from "@blueprintjs/core";
+import {
+  Alignment,
+  Button,
+  ButtonGroup,
+  Classes,
+  Divider,
+  type InputGroupProps,
+  Intent,
+  MenuItem,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { ItemRenderer, Select } from "@blueprintjs/select";
+import { type ItemRenderer, Select } from "@blueprintjs/select";
 import classNames from "classnames";
-import React, { useCallback, useMemo } from "react";
+import type React from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ControllerScope, ControllerScopeType, LIMAInstance, PodmanMachine, SSHHost, WSLDistribution } from "@/env/Types";
+import {
+  type ControllerScope,
+  ControllerScopeType,
+  type LIMAInstance,
+  type PodmanMachine,
+  type SSHHost,
+  type WSLDistribution,
+} from "@/env/Types";
 import i18n from "@/web-app/App.i18n";
 
 import "./ScopeSelect.css";
@@ -30,7 +47,7 @@ function isScopeStarted(scope?: ControllerScope): boolean {
 
 const ScopeLabel: React.FC<{ scope: ControllerScope }> = ({ scope }) => {
   const { label, intent } = useMemo(() => {
-    let label: string = "";
+    let label = "";
     let intent: Intent = Intent.NONE;
     switch (scope.Type) {
       case ControllerScopeType.PodmanMachine:
@@ -54,7 +71,7 @@ const ScopeLabel: React.FC<{ scope: ControllerScope }> = ({ scope }) => {
     }
     return {
       label,
-      intent
+      intent,
     };
   }, [scope]);
   return (
@@ -108,7 +125,7 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
   onChange,
   onDetect,
   onStart,
-  onStop
+  onStop,
 }: ScopeSelectProps) => {
   const { t } = useTranslation();
   const activeItem = scope ? items.find((it) => it.Name === scope) : undefined;
@@ -116,7 +133,7 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
   const labels = useMemo(() => {
     const values = {
       scopeStop: t("Stop"),
-      scopeStart: t("Start")
+      scopeStart: t("Start"),
     };
     if (activeItem?.Type === ControllerScopeType.SSHConnection) {
       values.scopeStart = t("Connect");
@@ -128,7 +145,7 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
     (scope: ControllerScope, event?: React.SyntheticEvent<HTMLElement, Event>) => {
       onChange?.(scope, event);
     },
-    [onChange]
+    [onChange],
   );
   const onScopeStartStop = useCallback(() => {
     if (!activeItem) {
@@ -168,7 +185,7 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
             </>
           }
           textClassName={classNames({
-            [Classes.TEXT_MUTED]: activeItem === undefined
+            [Classes.TEXT_MUTED]: activeItem === undefined,
           })}
         />
       </Select>
@@ -183,7 +200,14 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
               onClick={onScopeStartStop}
             />
             <Divider />
-            <Button icon={IconNames.REFRESH} disabled={disabled || pending} small text={detectLabel} intent={Intent.SUCCESS} onClick={onDetect} />
+            <Button
+              icon={IconNames.REFRESH}
+              disabled={disabled || pending}
+              small
+              text={detectLabel}
+              intent={Intent.SUCCESS}
+              onClick={onDetect}
+            />
           </ButtonGroup>
         </>
       )}

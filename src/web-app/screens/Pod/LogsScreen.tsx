@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
-import { Pod } from "@/env/Types";
+import type { Pod } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
@@ -29,7 +29,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setPending(true);
         const pod = await podFetch({
           Id: id as any,
-          withLogs: { Tail: 100 }
+          withLogs: { Tail: 100 },
         });
         setPod(pod);
       } catch (error: any) {
@@ -58,9 +58,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Pod Logs";
 Screen.Route = {
-  Path: `/screens/pod/:id/logs`
+  Path: "/screens/pod/:id/logs",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

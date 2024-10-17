@@ -13,6 +13,6 @@ systemNotifier.transmit = (event: string, data: any) => {
     guid: v4(),
     date: new Date(),
     type: event,
-    data: data
+    data: data,
   });
 };

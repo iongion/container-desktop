@@ -1,11 +1,12 @@
-import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
+import { type Action, type Computed, type Thunk, action, computed, thunk } from "easy-peasy";
 
-import { CreateVolumeOptions, FetchVolumeOptions } from "@/container-client/Api.clients";
-import { Volume } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { CreateVolumeOptions, FetchVolumeOptions } from "@/container-client/Api.clients";
+import type { Volume } from "@/env/Types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 
 export interface VolumesModelState {
+  version?: string;
   volumes: Volume[];
 }
 
@@ -69,21 +70,21 @@ export const createModel = async (registry: AppRegistry): Promise<VolumesModel> 
       const volumes = await client.getVolumes();
       actions.setVolumes(volumes);
       return volumes;
-    })
+    }),
   ),
   volumeFetch: thunk(async (actions, opts) =>
     registry.withPending(async () => {
       const client = await registry.getContainerClient();
       const volume = await client.getVolume(opts.Id);
       return volume;
-    })
+    }),
   ),
   volumeCreate: thunk(async (actions, options) =>
     registry.withPending(async () => {
       const client = await registry.getContainerClient();
       const created = await client.createVolume(options);
       return created;
-    })
+    }),
   ),
   volumeRemove: thunk(async (actions, volume) =>
     registry.withPending(async () => {
@@ -93,6 +94,6 @@ export const createModel = async (registry: AppRegistry): Promise<VolumesModel> 
         removed = await client.removeVolume(volume.Name);
       }
       return removed;
-    })
-  )
+    }),
+  ),
 });

@@ -1,4 +1,4 @@
-export async function waitForPreload(retries: number = 10): Promise<boolean> {
+export async function waitForPreload(retries = 10): Promise<boolean> {
   return new Promise((resolve, reject) => {
     if (retries <= 0) {
       reject(new Error("Preload script not loaded"));

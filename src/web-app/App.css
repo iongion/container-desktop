@@ -23,7 +23,6 @@ pre,
 
 .App {
   font-family: sans-serif;
-  font-smoothing: subpixel-antialiased;
   display: flex;
   flex-direction: column;
   width: 100vw;

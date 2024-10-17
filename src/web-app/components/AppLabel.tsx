@@ -1,5 +1,5 @@
 import { Icon } from "@blueprintjs/core";
-import { IconName } from "@blueprintjs/icons";
+import type { IconName } from "@blueprintjs/icons";
 import * as ReactIcon from "@mdi/react";
 
 import "./AppLabel.css";
@@ -11,7 +11,7 @@ export interface AppLabelProps {
 }
 
 export const AppLabel: React.FC<AppLabelProps> = ({ iconPath, iconName, text }: AppLabelProps) => {
-  let content;
+  let content: React.ReactNode | null = null;
   if (iconPath) {
     content = <ReactIcon.Icon path={iconPath} size={0.75} />;
   } else if (iconName) {

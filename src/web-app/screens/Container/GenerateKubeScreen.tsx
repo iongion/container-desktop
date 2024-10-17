@@ -3,11 +3,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { Container } from "@/env/Types";
+import type { Container } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./GenerateKubeScreen.css";
@@ -27,7 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       setPending(true);
       const container = await containerFetch({
         Id: decodeURIComponent(id as any),
-        withKube: true
+        withKube: true,
       });
       setContainer(container);
     } catch (error: any) {
@@ -67,9 +67,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container kube";
 Screen.Route = {
-  Path: `/screens/container/:id/kube`
+  Path: "/screens/container/:id/kube",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.TEXT_HIGHLIGHT,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

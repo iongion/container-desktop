@@ -11,7 +11,7 @@ import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { usePoller } from "@/web-app/Hooks";
 import { pathTo } from "@/web-app/Navigator";
-import { AppScreen, AppScreenProps, ContainerGroup } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps, ContainerGroup } from "@/web-app/Types";
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
 
@@ -21,7 +21,9 @@ export const ID = "containers";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const [containerOverlay, setContainerOverlay] = useState<string | undefined>();
-  const [collapse, setCollapse] = useState<{ [key: string]: boolean | undefined }>({});
+  const [collapse, setCollapse] = useState<{
+    [key: string]: boolean | undefined;
+  }>({});
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const pending = useStoreState((state) => state.pending);
@@ -42,7 +44,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         setContainerOverlay(container);
       }
     },
-    [containerOverlay]
+    [containerOverlay],
   );
 
   // Change hydration
@@ -50,10 +52,18 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} rightContent={<ActionsMenu onReload={containersFetch} />} />
+      <AppScreenHeader
+        searchTerm={searchTerm}
+        onSearch={onSearchChange}
+        rightContent={<ActionsMenu onReload={containersFetch} />}
+      />
       <div className="AppScreenContent">
         {groups.length === 0 ? (
-          <NonIdealState icon={IconNames.GEOSEARCH} title={t("No results")} description={<p>{t("There are no containers")}</p>} />
+          <NonIdealState
+            icon={IconNames.GEOSEARCH}
+            title={t("No results")}
+            description={<p>{t("There are no containers")}</p>}
+          />
         ) : (
           <HTMLTable compact striped interactive className="AppDataTable" data-table="containers">
             <thead>
@@ -84,9 +94,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     {containers.map((container, index) => {
                       const groupName = container.Computed.Group;
                       const isCollapsed = groupName && !!collapse[groupName];
+                      const containerGroupItemKey = `containerGroupKey-${group.Name || group.Id}-${container.Id}`;
                       const containerGroupRow =
                         isPartOfGroup && index === 0 ? (
-                          <tr className="AppDataTableGroupRow" onFocus={onContainerFocus} onMouseOver={onGroupMouseOver}>
+                          <tr
+                            key={containerGroupItemKey}
+                            className="AppDataTableGroupRow"
+                            onFocus={onContainerFocus}
+                            onMouseOver={onGroupMouseOver}
+                          >
                             <td className="AppDataTableGroupName">
                               <Button
                                 minimal
@@ -101,7 +117,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                                     <span className="buttonTextLabel">{groupName}</span>
                                   </>
                                 }
-                                title={t("{{name}} containers group", { name: groupName })}
+                                title={t("{{name}} containers group", {
+                                  name: groupName,
+                                })}
                                 onClick={onGroupToggleClick}
                                 data-prefix-group={groupName}
                               />
@@ -127,12 +145,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             </td>
                           </tr>
                         ) : undefined;
-                      let containerGroupData;
+                      let containerGroupData: React.ReactNode | null = null;
                       if (!isCollapsed) {
                         // ui
-                        const creationDate = typeof container.Created === "string" ? dayjs(container.Created) : dayjs(Number(container.Created) * 1000);
+                        const creationDate =
+                          typeof container.Created === "string"
+                            ? dayjs(container.Created)
+                            : dayjs(Number(container.Created) * 1000);
                         const image = container.Image;
-                        const nameText = (isPartOfGroup ? container.Computed.NameInGroup : container.Computed.Name) || t("- n/a -");
+                        const nameText =
+                          (isPartOfGroup ? container.Computed.NameInGroup : container.Computed.Name) || t("- n/a -");
                         const containerLogsButton = (
                           <AnchorButton
                             className="ContainerLogsButton"
@@ -222,8 +244,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Containers";
 Screen.Route = {
-  Path: `/screens/${ID}`
+  Path: `/screens/${ID}`,
 };
 Screen.Metadata = {
-  LeftIcon: IconNames.CUBE
+  LeftIcon: IconNames.CUBE,
 };

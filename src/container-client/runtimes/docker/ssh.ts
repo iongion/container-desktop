@@ -1,5 +1,12 @@
 import { AbstractContainerEngineHostClientSSH } from "@/container-client/runtimes/abstract/ssh";
-import { ApiConnection, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import {
+  type ApiConnection,
+  type Connection,
+  ContainerEngine,
+  ContainerEngineHost,
+  type EngineConnectorSettings,
+  OperatingSystem,
+} from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { DOCKER_PROGRAM, SSH_PROGRAM } from "../../connection";
 import { getContextInspect } from "./shared";
@@ -30,7 +37,7 @@ export class DockerContainerEngineHostClientSSH extends AbstractContainerEngineH
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: uri || settings?.api?.connection?.uri || "",
-        relay: relay || settings?.api?.connection?.relay || ""
+        relay: relay || settings?.api?.connection?.relay || "",
       };
     }
     // Get environment variable inside the scope
@@ -42,7 +49,7 @@ export class DockerContainerEngineHostClientSSH extends AbstractContainerEngineH
     }
     return {
       uri: uri || settings?.api?.connection?.uri || "",
-      relay: relay || settings?.api?.connection?.relay || ""
+      relay: relay || settings?.api?.connection?.relay || "",
     };
   }
 

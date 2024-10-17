@@ -5,13 +5,13 @@ import * as ReactIcon from "@mdi/react";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
-import { Network } from "@/env/Types";
+import type { Network } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { usePoller } from "@/web-app/Hooks";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
@@ -33,10 +33,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} titleIcon={IconNames.HEAT_GRID} rightContent={<ActionsMenu onReload={networksFetch} />} />
+      <AppScreenHeader
+        searchTerm={searchTerm}
+        onSearch={onSearchChange}
+        titleIcon={IconNames.HEAT_GRID}
+        rightContent={<ActionsMenu onReload={networksFetch} />}
+      />
       <div className="AppScreenContent">
         {networks.length === 0 ? (
-          <NonIdealState icon={IconNames.GEOSEARCH} title={t("No results")} description={<p>{t("There are no networks")}</p>} />
+          <NonIdealState
+            icon={IconNames.GEOSEARCH}
+            title={t("No results")}
+            description={<p>{t("There are no networks")}</p>}
+          />
         ) : (
           <HTMLTable interactive compact striped className="AppDataTable" data-table="networks">
             <thead>
@@ -67,11 +76,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
             </thead>
             <tbody>
               {(networks || []).map((network) => {
-                const creationDate = typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
+                const creationDate =
+                  typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
                 return (
                   <tr key={network.id} data-network={network.id}>
                     <td>
-                      <AnchorButton className="InspectNetworkButton" minimal small href={getNetworkUrl(network.id, "inspect")} intent={Intent.PRIMARY} icon={IconNames.EYE_OPEN}>
+                      <AnchorButton
+                        className="InspectNetworkButton"
+                        minimal
+                        small
+                        href={getNetworkUrl(network.id, "inspect")}
+                        intent={Intent.PRIMARY}
+                        icon={IconNames.EYE_OPEN}
+                      >
                         <span>{network.name}</span>
                       </AnchorButton>
                     </td>
@@ -102,8 +119,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Networks";
 Screen.Route = {
-  Path: `/screens/${ID}`
+  Path: `/screens/${ID}`,
 };
 Screen.Metadata = {
-  LeftIcon: <ReactIcon.Icon className="ReactIcon" path={mdiNetwork} size={0.75} />
+  LeftIcon: <ReactIcon.Icon className="ReactIcon" path={mdiNetwork} size={0.75} />,
 };

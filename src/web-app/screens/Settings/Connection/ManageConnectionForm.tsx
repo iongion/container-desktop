@@ -1,14 +1,36 @@
-/* eslint-disable jsx-a11y/no-autofocus */
-import { Button, ButtonGroup, Classes, Divider, FormGroup, InputGroup, Intent, Spinner, SpinnerSize, Switch, Tab, Tabs, UL } from "@blueprintjs/core";
+import {
+  Button,
+  ButtonGroup,
+  Classes,
+  Divider,
+  FormGroup,
+  InputGroup,
+  Intent,
+  Spinner,
+  SpinnerSize,
+  Switch,
+  Tab,
+  Tabs,
+  UL,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { isEmpty } from "lodash-es";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import { AbstractContainerEngineHostClient, ContainerEngineOptions, createConnectorBy } from "@/container-client";
+import { type AbstractContainerEngineHostClient, ContainerEngineOptions, createConnectorBy } from "@/container-client";
 import { Application } from "@/container-client/Application";
-import { Connection, Connector, ContainerEngine, ContainerEngineHost, ControllerScope, OperatingSystem, Program } from "@/env/Types";
+import {
+  type Connection,
+  type Connector,
+  ContainerEngine,
+  ContainerEngineHost,
+  type ControllerScope,
+  OperatingSystem,
+  type Program,
+} from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
@@ -30,7 +52,11 @@ export interface ManageConnectionFormProps {
   onClose: () => void;
 }
 
-export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode, connection, onClose }: ManageConnectionFormProps) => {
+export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
+  mode,
+  connection,
+  onClose,
+}: ManageConnectionFormProps) => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(false);
   const [isCustomProgramPathEditable, setCustomProgramPathEditable] = useState(false);
@@ -48,12 +74,17 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   const scopes = useWatch({ control, name: "scopes" });
   const program = useWatch({ control, name: "settings.program" });
   const controller = useWatch({ control, name: "settings.controller" });
-  const controllerScopeName = useWatch({ control, name: "settings.controller.scope" });
+  const controllerScopeName = useWatch({
+    control,
+    name: "settings.controller.scope",
+  });
   const controllerScope: ControllerScope | undefined = useMemo(() => {
     if (!controllerScopeName) return undefined;
     return (scopes || []).find((it) => it.Name === controllerScopeName);
   }, [scopes, controllerScopeName]);
-  const [containerEngineHostOptions, setContainerEngineHostOptions] = useState(connectors.filter((it) => it.engine === engine));
+  const [containerEngineHostOptions, setContainerEngineHostOptions] = useState(
+    connectors.filter((it) => it.engine === engine),
+  );
 
   const labels = useMemo(() => {
     const controllerPath = t("Path to {{name}} executable", controller);
@@ -90,7 +121,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       apiConnectionUri,
       controllerPath,
       controllerScope,
-      programPath
+      programPath,
     };
   }, [t, osType, host, controller, program]);
   const controllerScopeLabel = labels.controllerScope;
@@ -105,9 +136,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       // ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR, // No scopes exist for Docker - such as Podman machines
       ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
       ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
-      ContainerEngineHost.DOCKER_REMOTE
+      ContainerEngineHost.DOCKER_REMOTE,
     ].includes(host);
-    const withCustomControllerPath = withController && ![ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(host);
+    const withCustomControllerPath =
+      withController &&
+      ![ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(host);
     const withCustomControllerScope = withController;
     const withCustomProgramPath = host !== ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
     const withCustomApiConnectionUri = host !== ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
@@ -116,10 +149,14 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
     const withApiRelay = ![ContainerEngineHost.DOCKER_NATIVE, ContainerEngineHost.PODMAN_NATIVE].includes(host);
     const programWidgetPosition = withController ? "after-scope" : "before-controller";
     // Flags
-    const isWSL = osType === OperatingSystem.Windows && [ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(host);
+    const isWSL =
+      osType === OperatingSystem.Windows &&
+      [ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.DOCKER_VIRTUALIZED_WSL].includes(host);
     const isProgramBrowseEnabled = isNativeApplication && !withController;
     const isCustomApiConnectionUriReadonly = isCustomApiConnectionUriEditable ? false : !withCustomApiConnectionUri;
-    const isCustomApiConnectionRelayReadonly = isCustomApiConnectionRelayEditable ? false : !withCustomApiConnectionRelay;
+    const isCustomApiConnectionRelayReadonly = isCustomApiConnectionRelayEditable
+      ? false
+      : !withCustomApiConnectionRelay;
     const isCustomProgramPathReadonly = isCustomProgramPathEditable ? false : !withCustomProgramPath;
     let isCustomApiConnectionUriDetectDisabled = false;
     let isCustomApiConnectionRelayDetectDisabled = false;
@@ -132,14 +169,18 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         isCustomApiConnectionUriDetectDisabled = !controllerScope?.Usable;
         isCustomApiConnectionRelayDetectDisabled = !controllerScope?.Usable;
       } else {
-        executableDetectButtonTitle = t("{{label}} must first be selected", { label: controllerScopeLabel });
+        executableDetectButtonTitle = t("{{label}} must first be selected", {
+          label: controllerScopeLabel,
+        });
         isProgramPathDetectDisabled = true;
         isCustomApiConnectionUriDetectDisabled = true;
         isCustomApiConnectionRelayDetectDisabled = true;
       }
     }
     if (!isCustomProgramPathEditable) {
-      executableDetectButtonTitle = t("Program path is provided by {{scope}}", { scope: controllerScopeLabel });
+      executableDetectButtonTitle = t("Program path is provided by {{scope}}", {
+        scope: controllerScopeLabel,
+      });
     }
     return {
       withOSTypeSelect,
@@ -159,7 +200,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       isCustomApiConnectionRelayReadonly,
       isCustomProgramPathReadonly,
       isProgramPathDetectDisabled,
-      executableDetectButtonTitle
+      executableDetectButtonTitle,
     };
   }, [
     t,
@@ -171,7 +212,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
     isCustomApiConnectionUriEditable,
     isCustomApiConnectionRelayEditable,
     controllerScopeName,
-    controllerScopeLabel
+    controllerScopeLabel,
   ]);
 
   // Helpers
@@ -180,10 +221,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       const values = getValues();
       reset({
         ...userValues,
-        name: values.name
+        name: values.name,
       });
     },
-    [reset, getValues]
+    [reset, getValues],
   );
 
   const fetchControllerScopes = useCallback(
@@ -209,7 +250,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         }
       } catch (error: any) {
         console.error("Unable to detect controller scope", error);
-        Notification.show({ message: t("Error during controller scope detection"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Error during controller scope detection"),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
@@ -219,7 +263,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       }
       return updated;
     },
-    [t, resetFormData]
+    [t, resetFormData],
   );
   const startControllerScope = useCallback(
     async (scope: ControllerScope) => {
@@ -235,7 +279,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       }
       return flag;
     },
-    [getValues, fetchControllerScopes]
+    [getValues, fetchControllerScopes],
   );
   const stopControllerScope = useCallback(
     async (scope: ControllerScope) => {
@@ -247,7 +291,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       }
       return flag;
     },
-    [getValues, fetchControllerScopes]
+    [getValues, fetchControllerScopes],
   );
 
   // Handlers
@@ -263,7 +307,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       onClose();
     } catch (error: any) {
       console.error("Unable to create connection", error);
-      Notification.show({ message: t("Error during connection creation"), intent: Intent.DANGER });
+      Notification.show({
+        message: t("Error during connection creation"),
+        intent: Intent.DANGER,
+      });
     } finally {
       setPending(false);
     }
@@ -281,12 +328,15 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         console.debug("Detecting container engine", engine);
       } catch (error: any) {
         console.error("Error during container engine detection", error);
-        Notification.show({ message: t("Error during engine detection"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Error during engine detection"),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t, connectors]
+    [t, connectors],
   );
   const onContainerEngineChange = useCallback(
     async (engine: ContainerEngine) => {
@@ -302,7 +352,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         setPending(false);
       }
     },
-    [connectors, resetFormData, osType]
+    [connectors, resetFormData, osType],
   );
   const onContainerEngineHostDetectClick = useCallback(
     async (host: ContainerEngineHost) => {
@@ -311,12 +361,15 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         console.debug("Detecting container host", host);
       } catch (error: any) {
         console.error("Unable to detect host", error);
-        Notification.show({ message: t("Error during engine host detection"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Error during engine host detection"),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t]
+    [t],
   );
   const onContainerEngineHostChange = useCallback(
     async (host: ContainerEngineHost) => {
@@ -327,7 +380,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         const updated = await fetchControllerScopes(connector, true);
         if (engine === ContainerEngine.PODMAN) {
           // These should default to auto-start
-          const autoStartHosts = [ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.PODMAN_VIRTUALIZED_WSL, ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA];
+          const autoStartHosts = [
+            ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
+            ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+            ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+          ];
           if (autoStartHosts.includes(host)) {
             updated.settings.api.autoStart = true;
           }
@@ -335,12 +392,15 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         resetFormData(updated);
       } catch (error: any) {
         console.error("Unable to create connection", error);
-        Notification.show({ message: t("Error during connector creation"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Error during connector creation"),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t, resetFormData, osType, engine, fetchControllerScopes]
+    [t, resetFormData, osType, engine, fetchControllerScopes],
   );
   const onControllerScopeStartClick = useCallback(
     async (scope: ControllerScope) => {
@@ -349,18 +409,27 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         console.debug(">> Starting", scope);
         const performed = await startControllerScope(scope);
         if (performed) {
-          Notification.show({ message: t("{{Name}} has been started", scope), intent: Intent.SUCCESS });
+          Notification.show({
+            message: t("{{Name}} has been started", scope),
+            intent: Intent.SUCCESS,
+          });
         } else {
-          Notification.show({ message: t("{{Name}} could not be started", scope), intent: Intent.DANGER });
+          Notification.show({
+            message: t("{{Name}} could not be started", scope),
+            intent: Intent.DANGER,
+          });
         }
       } catch (error: any) {
         console.error("<< Starting", error);
-        Notification.show({ message: t("{{Name}} could not be started", scope), intent: Intent.DANGER });
+        Notification.show({
+          message: t("{{Name}} could not be started", scope),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t, startControllerScope]
+    [t, startControllerScope],
   );
   const onControllerScopeStopClick = useCallback(
     async (scope: ControllerScope) => {
@@ -369,24 +438,36 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         console.debug(">> Stopping", scope);
         const performed = await stopControllerScope(scope);
         if (performed) {
-          Notification.show({ message: t("{{Name}} has been stopped", scope), intent: Intent.SUCCESS });
+          Notification.show({
+            message: t("{{Name}} has been stopped", scope),
+            intent: Intent.SUCCESS,
+          });
         } else {
-          Notification.show({ message: t("{{Name}} could not be stopped", scope), intent: Intent.DANGER });
+          Notification.show({
+            message: t("{{Name}} could not be stopped", scope),
+            intent: Intent.DANGER,
+          });
         }
       } catch (error: any) {
         console.error("<< Stopping", error);
-        Notification.show({ message: t("{{Name}} could not be stopped", scope), intent: Intent.DANGER });
+        Notification.show({
+          message: t("{{Name}} could not be stopped", scope),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t, stopControllerScope]
+    [t, stopControllerScope],
   );
   const onControllerScopesDetectClick = useCallback(async () => {
     const connector = getValues();
     const updated = await fetchControllerScopes(connector);
     if (!updated?.scopes?.length) {
-      Notification.show({ message: t("No {{controllerScope}} detected - setup required", labels), intent: Intent.WARNING });
+      Notification.show({
+        message: t("No {{controllerScope}} detected - setup required", labels),
+        intent: Intent.WARNING,
+      });
     }
   }, [getValues, fetchControllerScopes, labels, t]);
   const onControllerScopeChange = useCallback(
@@ -405,12 +486,15 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         resetFormData(updated);
       } catch (error: any) {
         console.error("Error during controller scope change", error);
-        Notification.show({ message: t("Error during controller scope change"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Error during controller scope change"),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t, getValues, resetFormData]
+    [t, getValues, resetFormData],
   );
   const onApiConnectionUriDetectClick = useCallback(async () => {
     const connection = getValues();
@@ -425,7 +509,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       console.debug("<< Detecting API connection URI", connection);
     } catch (error: any) {
       console.error("<< Detecting API connection URI", error);
-      Notification.show({ message: t("Error during API connection URI detection"), intent: Intent.DANGER });
+      Notification.show({
+        message: t("Error during API connection URI detection"),
+        intent: Intent.DANGER,
+      });
     } finally {
       setPending(false);
     }
@@ -443,7 +530,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
       console.debug("<< Detecting API connection relay", connection);
     } catch (error: any) {
       console.error("<< Detecting API connection relay", error);
-      Notification.show({ message: t("Error during API connection relay detection"), intent: Intent.DANGER });
+      Notification.show({
+        message: t("Error during API connection relay detection"),
+        intent: Intent.DANGER,
+      });
     } finally {
       setPending(false);
     }
@@ -460,7 +550,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
   const onExecutableSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const detectTarget = (e.currentTarget.getAttribute("data-target") || "program") as DetectTarget;
-      console.debug("Select executable", { target: detectTarget, values: getValues() });
+      console.debug("Select executable", {
+        target: detectTarget,
+        values: getValues(),
+      });
       try {
         setPending(true);
         const instance = Application.getInstance();
@@ -468,8 +561,8 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
           directory: false,
           multiple: false,
           filters: {
-            extensions: ["exe"]
-          }
+            extensions: ["exe"],
+          },
         });
         if (result.filePaths.length === 0) {
           console.debug("No executable selected");
@@ -480,9 +573,9 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         let inspected = deepMerge<Connector>({}, connector, {
           settings: {
             [detectTarget]: {
-              path: filePath
-            }
-          }
+              path: filePath,
+            },
+          },
         });
         let insideScope = false;
         if (
@@ -492,7 +585,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
             // Docker
             ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
-            ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA
+            ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
           ].includes(connector.host)
         ) {
           insideScope = true;
@@ -509,12 +602,15 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         resetFormData(inspected);
       } catch (error: any) {
         console.error("Error during executable selection", error);
-        Notification.show({ message: t("Error during executable selection"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Error during executable selection"),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t, getValues, resetFormData, fetchControllerScopes]
+    [t, getValues, resetFormData, fetchControllerScopes],
   );
   const onExecutableDetectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
@@ -534,7 +630,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             // Docker
             ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
             ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
-            ContainerEngineHost.DOCKER_REMOTE
+            ContainerEngineHost.DOCKER_REMOTE,
           ].includes(connector.host)
         ) {
           insideScope = true;
@@ -542,7 +638,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         if (detectTarget === "program" && !insideScope) {
           insideScope = [
             // Podman - supports Podman machines
-            ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR
+            ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
           ].includes(connector.host);
         }
         if (detectTarget === "controller") {
@@ -562,12 +658,15 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         resetFormData(inspected);
       } catch (error: any) {
         console.error("Error during executable detection", error);
-        Notification.show({ message: t("Error during executable selection"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Error during executable selection"),
+          intent: Intent.DANGER,
+        });
       } finally {
         setPending(false);
       }
     },
-    [t, getValues, resetFormData, fetchControllerScopes]
+    [t, getValues, resetFormData, fetchControllerScopes],
   );
 
   // Widgets
@@ -612,7 +711,14 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                       />
                     )}
                     {flags.isProgramBrowseEnabled ? (
-                      <Button disabled={pending} small text={t("Browse")} intent={Intent.PRIMARY} data-target="program" onClick={onExecutableSelectClick} />
+                      <Button
+                        disabled={pending}
+                        small
+                        text={t("Browse")}
+                        intent={Intent.PRIMARY}
+                        data-target="program"
+                        onClick={onExecutableSelectClick}
+                      />
                     ) : null}
                   </ButtonGroup>
                 }
@@ -663,7 +769,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
         </div>
       )}
       <div className="AppDataForm" data-form="connection.create">
-        <FormGroup disabled={pending} label={t("Connection name")} labelFor="name" helperText={t("Human friendly name to help identify this connection")}>
+        <FormGroup
+          disabled={pending}
+          label={t("Connection name")}
+          labelFor="name"
+          helperText={t("Human friendly name to help identify this connection")}
+        >
           <Controller
             control={control}
             name="name"
@@ -690,7 +801,13 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
 
         {flags.withOSTypeSelect ? (
           <FormGroup disabled={pending} label={t("Host OS")} labelFor="osType">
-            <OSTypeSelect withoutDetect inputProps={{ disabled: pending }} osType={osType} onChange={onHostOSTypeChange} onDetect={onHostOSTypeChange} />
+            <OSTypeSelect
+              withoutDetect
+              inputProps={{ disabled: pending }}
+              osType={osType}
+              onChange={onHostOSTypeChange}
+              onDetect={onHostOSTypeChange}
+            />
           </FormGroup>
         ) : null}
 
@@ -706,7 +823,13 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                   withoutDetect
                   items={ContainerEngineOptions}
                   engine={value}
-                  inputProps={{ disabled: pending, id: name, name, onBlur, inputRef: ref }}
+                  inputProps={{
+                    disabled: pending,
+                    id: name,
+                    name,
+                    onBlur,
+                    inputRef: ref,
+                  }}
                   onChange={async (item) => {
                     await onChange(item);
                     await onContainerEngineChange(item);
@@ -730,7 +853,13 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                   withoutDetect
                   items={containerEngineHostOptions}
                   host={value}
-                  inputProps={{ disabled: pending, id: name, name, onBlur, inputRef: ref }}
+                  inputProps={{
+                    disabled: pending,
+                    id: name,
+                    name,
+                    onBlur,
+                    inputRef: ref,
+                  }}
                   onChange={async (item) => {
                     await onChange(item);
                     await onContainerEngineHostChange(item);
@@ -774,14 +903,28 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                       rightElement={
                         isNativeApplication ? (
                           <ButtonGroup minimal>
-                            <Button disabled={pending} small text={t("Browse")} intent={Intent.PRIMARY} data-target="controller" onClick={onExecutableSelectClick} />
+                            <Button
+                              disabled={pending}
+                              small
+                              text={t("Browse")}
+                              intent={Intent.PRIMARY}
+                              data-target="controller"
+                              onClick={onExecutableSelectClick}
+                            />
                           </ButtonGroup>
                         ) : undefined
                       }
                     />
                     <Divider />
                     <ButtonGroup minimal>
-                      <Button disabled={pending} small text={t("Detect")} intent={Intent.SUCCESS} data-target="controller" onClick={onExecutableDetectClick} />
+                      <Button
+                        disabled={pending}
+                        small
+                        text={t("Detect")}
+                        intent={Intent.SUCCESS}
+                        data-target="controller"
+                        onClick={onExecutableDetectClick}
+                      />
                     </ButtonGroup>
                   </div>
                 );
@@ -805,7 +948,13 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                     detectLabel={null}
                     items={connection.scopes || []}
                     scope={value}
-                    inputProps={{ disabled: pending, id: name, name, onBlur, inputRef: ref }}
+                    inputProps={{
+                      disabled: pending,
+                      id: name,
+                      name,
+                      onBlur,
+                      inputRef: ref,
+                    }}
                     onChange={async (scope) => {
                       await onChange(scope);
                       await onControllerScopeChange(scope);
@@ -822,7 +971,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
 
         {/* Connection api start */}
         {host ? (
-          <FormGroup className="ContainerStartupFormGroup" disabled={pending} labelFor="settings.api.autoStart" label={t("Container startup")}>
+          <FormGroup
+            className="ContainerStartupFormGroup"
+            disabled={pending}
+            labelFor="settings.api.autoStart"
+            label={t("Container startup")}
+          >
             <Controller
               control={control}
               name="settings.api.autoStart"
@@ -852,22 +1006,26 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
             name="settings.mode"
             render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
               return (
-                <Tabs id="ConnectionSettingsMode" className="ConnectionSettingsMode" fill selectedTabId={value} onChange={onChange}>
+                <Tabs
+                  id="ConnectionSettingsMode"
+                  className="ConnectionSettingsMode"
+                  fill
+                  selectedTabId={value}
+                  onChange={onChange}
+                >
                   <Tab
                     id="mode.automatic"
                     title={t("Automatic")}
                     disabled={pending}
                     panel={
-                      <>
-                        <UL>
-                          <li>
-                            <p>{t("Connection settings are automatically detected")}</p>
-                          </li>
-                          <li>
-                            <p>{t("Go to Manual mode to set-up advanced connection details")}</p>
-                          </li>
-                        </UL>
-                      </>
+                      <UL>
+                        <li>
+                          <p>{t("Connection settings are automatically detected")}</p>
+                        </li>
+                        <li>
+                          <p>{t("Go to Manual mode to set-up advanced connection details")}</p>
+                        </li>
+                      </UL>
                     }
                     panelClassName="AutomaticSettingsPanel"
                   />
@@ -880,7 +1038,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                         {flags.programWidgetPosition === "after-scope" ? programPathWidget : null}
 
                         {/* Connection api */}
-                        <FormGroup disabled={pending} label={labels.apiConnectionUri} labelFor="settings.api.connection.uri" helperText={t("Used as API connection URI")}>
+                        <FormGroup
+                          disabled={pending}
+                          label={labels.apiConnectionUri}
+                          labelFor="settings.api.connection.uri"
+                          helperText={t("Used as API connection URI")}
+                        >
                           <Controller
                             control={control}
                             name="settings.api.connection.uri"
@@ -934,7 +1097,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
 
                         {/* Connection api relay */}
                         {flags.withApiRelay ? (
-                          <FormGroup disabled={pending} label={t("API connection relay")} labelFor="settings.api.connection.relay">
+                          <FormGroup
+                            disabled={pending}
+                            label={t("API connection relay")}
+                            labelFor="settings.api.connection.relay"
+                          >
                             <Controller
                               control={control}
                               name="settings.api.connection.relay"
@@ -961,7 +1128,9 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({ mode
                                               disabled={pending}
                                               small
                                               title={t("Managed by {{name}} - click to override", program)}
-                                              icon={isCustomApiConnectionRelayEditable ? IconNames.UNLOCK : IconNames.LOCK}
+                                              icon={
+                                                isCustomApiConnectionRelayEditable ? IconNames.UNLOCK : IconNames.LOCK
+                                              }
                                               intent={Intent.NONE}
                                               data-target="program"
                                               onClick={onToggleCustomApiConnectionRelayEditability}

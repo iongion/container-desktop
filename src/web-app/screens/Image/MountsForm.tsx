@@ -1,11 +1,11 @@
 import { Button, FormGroup, H5, Icon, InputGroup } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
 
-import { ContainerImageMount } from "@/env/Types";
+import type { ContainerImageMount } from "@/env/Types";
 import { useStoreState } from "@/web-app/domain/types";
 
 import { Application } from "@/container-client/Application";
@@ -19,7 +19,7 @@ export const createMount = (): MountFormContainerImageMount => {
     access: "ro",
     size: 512,
     source: "",
-    destination: ""
+    destination: "",
   };
 };
 export interface MountFormContainerImageMount extends ContainerImageMount {
@@ -56,7 +56,7 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
         setValue(`mounts.${mountIndex}.source`, filePath);
       }
     },
-    [setValue, mountIndex]
+    [setValue, mountIndex],
   );
 
   const onActionClick = useCallback(() => {
@@ -73,7 +73,9 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
           name={`mounts.${mountIndex}.source`}
           defaultValue={mount.source}
           render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-            const pathSelectButton = isNative ? <Button minimal icon={IconNames.LOCATE} onClick={onVolumeHostPathSelectClick} /> : undefined;
+            const pathSelectButton = isNative ? (
+              <Button minimal icon={IconNames.LOCATE} onClick={onVolumeHostPathSelectClick} />
+            ) : undefined;
             return (
               <FormGroup inline disabled={disabled} label={t("Source")} labelFor={name}>
                 <InputGroup
@@ -99,7 +101,17 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
           render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
             return (
               <FormGroup inline disabled={disabled} label={t("Destination")} labelFor={name}>
-                <InputGroup id={name} name={name} inputRef={ref} disabled={disabled} value={value} onChange={onChange} onBlur={onBlur} fill placeholder={t("Path in container")} />
+                <InputGroup
+                  id={name}
+                  name={name}
+                  inputRef={ref}
+                  disabled={disabled}
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  fill
+                  placeholder={t("Path in container")}
+                />
               </FormGroup>
             );
           }}
@@ -127,7 +139,7 @@ export const MountsForm: React.FC<MountsFormProps> = ({ disabled, mounts }: Moun
 
   const { fields, remove, prepend } = useFieldArray({
     control,
-    name: "mounts"
+    name: "mounts",
   });
 
   const onMountFormAction = useCallback<MountFormActionHandler>(
@@ -139,7 +151,7 @@ export const MountsForm: React.FC<MountsFormProps> = ({ disabled, mounts }: Moun
         remove(mountIndex);
       }
     },
-    [prepend, remove, mounts]
+    [prepend, remove, mounts],
   );
 
   return (
@@ -160,7 +172,7 @@ export const MountsForm: React.FC<MountsFormProps> = ({ disabled, mounts }: Moun
               action={{
                 icon: isLast ? IconNames.PLUS : IconNames.MINUS,
                 data: isLast ? "add" : "remove",
-                handler: onMountFormAction
+                handler: onMountFormAction,
               }}
             />
           );

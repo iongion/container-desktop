@@ -6,10 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import { OperatingSystem, Program, WindowAction } from "@/env/Types";
+import { OperatingSystem, type Program, WindowAction } from "@/env/Types";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
-import { AppScreen } from "../Types";
+import type { AppScreen } from "../Types";
 
 import "./AppHeader.css";
 interface AppHeaderProps {
@@ -37,10 +37,16 @@ const WINDOW_ACTIONS_MAP = {
   "window.close": async () => {
     const instance = Application.getInstance();
     await instance.close();
-  }
+  },
 };
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ osType, currentScreen, program, running, provisioned }: AppHeaderProps) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({
+  osType,
+  currentScreen,
+  program,
+  running,
+  provisioned,
+}: AppHeaderProps) => {
   const { t } = useTranslation();
   const [withControls, setWithControls] = useState(true);
   const onWindowControlClick = useCallback((e) => {
@@ -52,7 +58,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ osType, currentScreen, pro
       console.error("No handler for window action", action);
     }
   }, []);
-  let rightSideControls;
+
+  let rightSideControls: React.ReactNode | null = null;
   if (withControls) {
     const WINDOW_ACTIONS: {
       action: WindowAction;
@@ -62,33 +69,41 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ osType, currentScreen, pro
       {
         action: WindowAction.Minimize,
         icon: <ReactIcon.Icon path={mdiWindowMinimize} size={0.75} />,
-        title: t("Minimize")
+        title: t("Minimize"),
       },
       {
         action: WindowAction.Maximize,
         icon: <ReactIcon.Icon path={mdiWindowMaximize} size={0.75} />,
-        title: t("Maximize")
+        title: t("Maximize"),
       },
       {
         action: WindowAction.Close,
         icon: <ReactIcon.Icon path={mdiWindowClose} size={0.75} />,
-        title: t("Close")
-      }
+        title: t("Close"),
+      },
     ];
-    rightSideControls = (
-      <>
-        {WINDOW_ACTIONS.map((it) => {
-          return <Button title={it.title} key={it.action} data-action={it.action} minimal icon={it.icon as any} onClick={onWindowControlClick} />;
-        })}
-      </>
-    );
+    rightSideControls = WINDOW_ACTIONS.map((it) => {
+      return (
+        <Button
+          title={it.title}
+          key={it.action}
+          data-action={it.action}
+          minimal
+          icon={it.icon as any}
+          onClick={onWindowControlClick}
+        />
+      );
+    });
   }
 
   const rightSideActions =
     provisioned && running ? (
       <>
         <AnchorButton href={pathTo("/screens/settings/user-settings")} icon={IconNames.COG} />
-        <AnchorButton href={pathTo("/screens/troubleshoot")} icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />} />
+        <AnchorButton
+          href={pathTo("/screens/troubleshoot")}
+          icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />}
+        />
         {osType === OperatingSystem.MacOS ? null : <Divider />}
       </>
     ) : null;
@@ -113,7 +128,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ osType, currentScreen, pro
           title={t("{{project}} {{version}} - Using {{env}} environment", {
             env: CURRENT_ENVIRONMENT,
             project: PROJECT_NAME,
-            version: PROJECT_VERSION
+            version: PROJECT_VERSION,
           })}
         >
           <span>{screenTitle}</span>

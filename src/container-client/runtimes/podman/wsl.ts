@@ -1,12 +1,24 @@
 import { isEmpty } from "lodash-es";
 
-import { ApiConnection, ApiStartOptions, Connection, ContainerEngine, ContainerEngineHost, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import {
+  type ApiConnection,
+  type ApiStartOptions,
+  type CommandExecutionResult,
+  type Connection,
+  ContainerEngine,
+  ContainerEngineHost,
+  type EngineConnectorSettings,
+  type OperatingSystem,
+} from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { PODMAN_PROGRAM, WSL_PROGRAM } from "../../connection";
 import { AbstractContainerEngineHostClientVirtualizedWSL } from "../abstract/wsl";
-import { PodmanContainerEngineHostClientCommon } from "./base";
+import type { PodmanContainerEngineHostClientCommon } from "./base";
 
-export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractContainerEngineHostClientVirtualizedWSL implements PodmanContainerEngineHostClientCommon {
+export class PodmanContainerEngineHostClientVirtualizedWSL
+  extends AbstractContainerEngineHostClientVirtualizedWSL
+  implements PodmanContainerEngineHostClientCommon
+{
   static HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   PROGRAM = PODMAN_PROGRAM;
@@ -27,7 +39,7 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: "",
-        relay: ""
+        relay: "",
       };
     }
     const uri = scope.startsWith("podman-machine") ? getWindowsPipePath(scope) : "";
@@ -42,7 +54,7 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
     // Inspect machine system info for relay path
     return {
       uri,
-      relay
+      relay,
     };
   }
 
@@ -76,7 +88,9 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
           if (created.success) {
             this.logger.debug(this.id, "Base directory created", baseDir);
           } else {
-            this.logger.warn("Base directory not created", baseDir, { result: created });
+            this.logger.warn("Base directory not created", baseDir, {
+              result: created,
+            });
           }
         } else {
           this.logger.warn("No relay path - base dir not ensured");
@@ -87,11 +101,14 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
     } else {
       launcherPath = program.path || program.name;
     }
-    this.logger.debug(this.id, ">> Starting API", settings, opts, { launcherPath, launcherArgs });
+    this.logger.debug(this.id, ">> Starting API", settings, opts, {
+      launcherPath,
+      launcherArgs,
+    });
     const started: any = await this.runner.startApi(opts, {
       path: launcherPath,
       args: ["--distribution", scope, "--exec"].concat(launcherArgs),
-      logLevel: opts?.logLevel
+      logLevel: opts?.logLevel,
     });
     this.apiStarted = started;
     this.logger.debug(this.id, "<< Starting API completed", started);
@@ -114,7 +131,7 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
       args.push(`--tail=${tail}`);
     }
     args.push("-f", id);
-    let result;
+    let result: CommandExecutionResult;
     if (this.isScoped()) {
       result = await this.runScopeCommand(program.path || "", args, controller?.scope || "");
     } else {
@@ -129,7 +146,7 @@ export class PodmanContainerEngineHostClientVirtualizedWSL extends AbstractConta
       this.logger.error("Unable to generate kube - program path is empty", program);
       throw new Error("Unable to generate kube - program path is empty");
     }
-    let result;
+    let result: CommandExecutionResult;
     if (this.isScoped()) {
       result = await this.runScopeCommand(program.path || "", ["generate", "kube", entityId], controller?.scope || "");
     } else {

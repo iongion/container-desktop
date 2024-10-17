@@ -12,7 +12,10 @@ export interface RegistryPropertiesFormProps {
   pending?: boolean;
 }
 
-export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({ disabled, pending }: RegistryPropertiesFormProps) => {
+export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({
+  disabled,
+  pending,
+}: RegistryPropertiesFormProps) => {
   const { t } = useTranslation();
 
   const { control } = useFormContext<{
@@ -27,7 +30,13 @@ export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({ 
   return (
     <div className="AppDataForm" data-form="registry.properties.manage">
       <div className="AppDataFormFields">
-        <FormGroup inline disabled={pending} label={<strong>{t("Registry")}</strong>} labelFor="registryName" labelInfo="*">
+        <FormGroup
+          inline
+          disabled={pending}
+          label={<strong>{t("Registry")}</strong>}
+          labelFor="registryName"
+          labelInfo="*"
+        >
           <Controller
             control={control}
             name="registryName"
@@ -36,7 +45,6 @@ export const RegistryPropertiesForm: React.FC<RegistryPropertiesFormProps> = ({ 
               return (
                 <InputGroup
                   fill
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                   disabled={pending}
                   id={name}

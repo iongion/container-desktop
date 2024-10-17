@@ -1,4 +1,4 @@
-import { AnchorButton, Button, ButtonGroup, ButtonProps, H6, HTMLTable, Intent } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, type ButtonProps, H6, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,7 +6,7 @@ import { useTimeout } from "usehooks-ts";
 
 import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import "./Troubleshoot.css";
 
@@ -48,7 +48,7 @@ export const ConfirmButton: React.FC<ConfirmButtonProps> = ({ onConfirm, onCance
         }
       }
     },
-    [onConfirm, onCancel]
+    [onConfirm, onCancel],
   );
   const action: string = (props as any)["data-action"];
   return withConfirm ? (
@@ -93,7 +93,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       title: t("Podman"),
       description: t("Get help with podman"),
       href: "https://podman.io/get-started",
-      icon: IconNames.HELP
+      icon: IconNames.HELP,
     },
     {
       name: "troubleshoot.support.podman-composer",
@@ -101,7 +101,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       title: t("Podman composer"),
       description: t("Get help with podman composer"),
       href: "https://github.com/containers/podman-compose",
-      icon: IconNames.HELP
+      icon: IconNames.HELP,
     },
     {
       name: "troubleshoot.prune",
@@ -110,7 +110,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       description: t("Clean-up the system"),
       intent: Intent.WARNING,
       icon: IconNames.TRASH,
-      confirm: true
+      confirm: true,
     },
     {
       name: "troubleshoot.reset",
@@ -119,14 +119,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
       description: t("Reset to factory settings"),
       intent: Intent.WARNING,
       icon: IconNames.RESET,
-      confirm: true
-    }
+      confirm: true,
+    },
   ];
   const onActionClick = useCallback(
     async (e) => {
       const sender = e.currentTarget;
       const action = sender.getAttribute("data-action");
-      let result = { success: false, message: `No action handler for ${action}` };
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -139,20 +142,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
           default:
             break;
         }
-        Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+        Notification.show({
+          message: t("Command completed"),
+          intent: Intent.SUCCESS,
+        });
       } catch (error: any) {
         console.error("Command execution failed", error.message);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [troubleShootPrune, troubleShootReset, t]
+    [troubleShootPrune, troubleShootReset, t],
   );
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -216,9 +222,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/${ID}`
+  Path: `/screens/${ID}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

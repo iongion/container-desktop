@@ -2,11 +2,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { Pod } from "@/env/Types";
+import type { Pod } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
@@ -25,7 +25,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         setPending(true);
         const pod = await podFetch({
-          Id: id as any
+          Id: id as any,
         });
         setPod(pod);
       } catch (error: any) {
@@ -53,9 +53,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Pod Inspect";
 Screen.Route = {
-  Path: `/screens/pod/:id/inspect`
+  Path: "/screens/pod/:id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.EYE_OPEN,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

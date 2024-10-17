@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from "./ScreenHeader";
 
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -22,7 +22,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const running = useStoreState((state) => state.running);
   const pending = useStoreState((state) => state.pending);
   const systemInfo = useStoreState((state) => state.settings.systemInfo);
-  const systemDetailsViewer = provisioned && running ? <CodeEditor value={JSON.stringify(systemInfo, null, 2)} /> : null;
+  const systemDetailsViewer =
+    provisioned && running ? <CodeEditor value={JSON.stringify(systemInfo, null, 2)} /> : null;
 
   const getSystemInfo = useStoreActions((actions) => actions.settings.getSystemInfo);
 
@@ -47,9 +48,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/settings/${View}`
+  Path: `/screens/settings/${View}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,
-  ExcludeFromSidebar: true
+  ExcludeFromSidebar: true,
 };

@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Secret } from "@/env/Types";
+import type { Secret } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -20,7 +20,11 @@ export interface SecretActionsMenuProps {
   onReload?: () => void;
 }
 
-export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, withoutCreate, onReload }: SecretActionsMenuProps) => {
+export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
+  secret,
+  withoutCreate,
+  onReload,
+}: SecretActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
@@ -28,7 +32,10 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
   const secretFetch = useStoreActions((actions) => actions.secret.secretFetch);
   const performActionCommand = useCallback(
     async (action: string) => {
-      let result = { success: false, message: `No action handler for ${action}` };
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -45,7 +52,10 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
           default:
             break;
         }
-        Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+        Notification.show({
+          message: t("Command completed"),
+          intent: Intent.SUCCESS,
+        });
         if (action === "secret.remove") {
           goToScreen("/screens/secrets");
         }
@@ -54,14 +64,14 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [secret, secretRemove, secretFetch, t]
+    [secret, secretRemove, secretFetch, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -75,9 +85,11 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
         performActionCommand("secret.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
-  const startButton = withoutCreate ? null : <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />;
+  const startButton = withoutCreate ? null : (
+    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+  );
   const removeWidget = secret ? (
     <ConfirmMenu onConfirm={onRemove} tag={secret.ID} disabled={disabledAction === "secret.remove"}>
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getSecretUrl(secret.ID, "inspect")} />
@@ -90,7 +102,14 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({ secret, wi
         {onReload && (
           <>
             {startButton ? <Divider /> : null}
-            <Button small minimal intent={Intent.NONE} title={t("Reload current list")} icon={IconNames.REFRESH} onClick={onReload} />
+            <Button
+              small
+              minimal
+              intent={Intent.NONE}
+              title={t("Reload current list")}
+              icon={IconNames.REFRESH}
+              onClick={onReload}
+            />
           </>
         )}
         {removeWidget}

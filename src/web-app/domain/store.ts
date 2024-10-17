@@ -1,7 +1,7 @@
 // vendors
 import { createStore, StoreProvider as StoreProviderBase } from "easy-peasy";
 // project
-import { Environments } from "@/env/Types";
+import type { Environments } from "@/env/Types";
 import { waitForPreload } from "@/web-app/Native";
 import { createModel as createContainerModel } from "@/web-app/screens/Container/Model";
 import { createModel as createDashboardModel } from "@/web-app/screens/Dashboard/Model";
@@ -16,11 +16,11 @@ import { createModel as createTroubleshootModel } from "@/web-app/screens/Troubl
 import { createModel as createVolumesModel } from "@/web-app/screens/Volume/Model";
 import { createModel as createAppModel } from "./model";
 import { registry } from "./registry";
-import { AppModel, AppStore, AppStorePendingOperation } from "./types";
+import type { AppModel, AppStore, AppStorePendingOperation } from "./types";
 
 // TODO: Improve typings
 export const withPending = async (store: AppStore, operation: AppStorePendingOperation) => {
-  let result;
+  let result: any;
   store.getActions().setPending(true);
   try {
     result = await operation(store);
@@ -35,12 +35,10 @@ export const withPending = async (store: AppStore, operation: AppStorePendingOpe
 };
 
 export const createAppStore = async (env: Environments) => {
-  // eslint-disable-next-line prefer-const
-  let store: AppStore;
   await waitForPreload();
+  const store = createStore<AppModel>(await createAppModel(registry));
   registry.getStore = () => store;
   registry.withPending = (operation: AppStorePendingOperation) => withPending(store, operation);
-  store = createStore<AppModel>(await createAppModel(registry));
   store.addModel("container", await createContainerModel(registry));
   store.addModel("dashboard", await createDashboardModel(registry));
   store.addModel("image", await createImageModel(registry));

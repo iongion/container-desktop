@@ -1,17 +1,17 @@
 import { isEmpty } from "lodash-es";
 
 import {
-  ApiConnection,
-  ApiStartOptions,
-  CommandExecutionResult,
-  Connection,
+  type ApiConnection,
+  type ApiStartOptions,
+  type CommandExecutionResult,
+  type Connection,
   ContainerEngine,
   ContainerEngineHost,
-  ControllerScope,
-  EngineConnectorSettings,
+  type ControllerScope,
+  type EngineConnectorSettings,
   OperatingSystem,
-  RunnerStopperOptions,
-  StartupStatus
+  type RunnerStopperOptions,
+  StartupStatus,
 } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { userConfiguration } from "../../config";
@@ -28,10 +28,6 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
   CONTROLLER = PODMAN_PROGRAM;
   ENGINE = ContainerEngine.PODMAN;
 
-  constructor(osType: OperatingSystem) {
-    super(osType);
-  }
-
   static async create(id: string, osType: OperatingSystem) {
     const instance = new PodmanContainerEngineHostClientVirtualizedVendor(osType);
     instance.id = id;
@@ -44,14 +40,14 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
   }
 
   async getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
-    let relay: string = "";
+    let relay = "";
     const settings = customSettings || (await this.getSettings());
     const scope = settings.controller?.scope;
     if (isEmpty(scope)) {
       this.logger.error(this.id, "Unable to get api connection - no machine");
       return {
         uri: "",
-        relay: ""
+        relay: "",
       };
     }
     let uri = await Path.join(await userConfiguration.getStoragePath(), PODMAN_API_SOCKET);
@@ -61,7 +57,12 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
       const homeDir = await Platform.getHomeDir();
       uri = await Path.join(homeDir, ".local/share/containers/podman/machine/podman.sock");
       if (scope) {
-        const machineSockPath = await Path.join(homeDir, ".local/share/containers/podman/machine", scope, "podman.sock");
+        const machineSockPath = await Path.join(
+          homeDir,
+          ".local/share/containers/podman/machine",
+          scope,
+          "podman.sock",
+        );
         if (await FS.isFilePresent(machineSockPath)) {
           uri = machineSockPath;
         }
@@ -88,7 +89,7 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
     }
     return {
       uri,
-      relay
+      relay,
     };
   }
   async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
@@ -120,7 +121,9 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
       }
       const machines = await this.getPodmanMachines(undefined, customSettings);
       if (machines.length) {
-        defaultScope = machines.find((it) => it.Name?.trim().toLowerCase() === defaultConnection.Name?.trim().toLowerCase());
+        defaultScope = machines.find(
+          (it) => it.Name?.trim().toLowerCase() === defaultConnection.Name?.trim().toLowerCase(),
+        );
       } else {
         this.logger.error(this.id, "Unable to get default scope - no machines");
       }
@@ -146,7 +149,7 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
     const controllerPath = settings.controller?.path || settings.controller?.name;
     const started = await this.runner.startApi(opts, {
       path: controllerPath,
-      args: ["machine", "start", settings.controller.scope]
+      args: ["machine", "start", settings.controller.scope],
     });
     this.apiStarted = started;
     this.logger.debug(this.id, "Start API complete", started);
@@ -171,15 +174,14 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
         if (!settings.controller?.scope) {
           this.logger.error(this.id, "Stopping API - scope is not set (no custom stop args)");
           return false;
-        } else {
-          args = ["machine", "stop", settings.controller?.scope];
         }
+        args = ["machine", "stop", settings.controller?.scope];
       }
       this.logger.warn(this.id, "Stopping API - request stop from runner");
       const controllerPath = settings.controller?.path || settings.controller?.name;
       return await this.runner.stopApi(customSettings, {
         path: controllerPath,
-        args
+        args,
       });
     }
     return false;
@@ -212,7 +214,12 @@ export class PodmanContainerEngineHostClientVirtualizedVendor extends PodmanAbst
   isScoped() {
     return true;
   }
-  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+  async runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult> {
     const { controller } = settings || (await this.getSettings());
     let command: string[] = [];
     if (!scope) {

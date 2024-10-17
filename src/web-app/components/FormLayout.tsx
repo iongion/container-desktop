@@ -1,10 +1,10 @@
-import React from "react";
+import type React from "react";
 
 import "./FormLayout.css";
 
 export enum FormLayoutDirection {
   HORIZONTAL = "horizontal",
-  VERTICAL = "vertical"
+  VERTICAL = "vertical",
 }
 
 export interface FormLayoutProps {

@@ -1,4 +1,4 @@
-import { CommandExecutionResult, OperatingSystem, SpawnedProcess } from "@/env/Types";
+import { type CommandExecutionResult, OperatingSystem, type SpawnedProcess } from "@/env/Types";
 import EventEmitter from "eventemitter3";
 
 export interface SSHClientConnection {
@@ -14,7 +14,12 @@ export interface ISSHClient {
   emit: (event: string, ...args: any[]) => boolean;
   connect: (params: SSHClientConnection) => Promise<void>;
   execute: (command: string[]) => Promise<CommandExecutionResult>;
-  startTunnel: (config: { localAddress: string; remoteAddress: string; onStatusCheck: (status: any) => void; onStopTunnel: () => void }) => Promise<EventEmitter>;
+  startTunnel: (config: {
+    localAddress: string;
+    remoteAddress: string;
+    onStatusCheck: (status: any) => void;
+    onStopTunnel: () => void;
+  }) => Promise<EventEmitter>;
   stopTunnel: () => void;
   close: () => void;
 }
@@ -22,13 +27,13 @@ export interface ISSHClient {
 export class SSHClient implements ISSHClient {
   protected em: EventEmitter;
   protected params!: SSHClientConnection;
-  protected connected: boolean = false;
-  protected cli: string = "";
-  protected relayCLI: string = "";
+  protected connected = false;
+  protected cli = "";
+  protected relayCLI = "";
   protected osType: OperatingSystem = OperatingSystem.Unknown;
   protected nativeApiStarterProcess: CommandExecutionResult | null = null;
   protected nativeApiStarterProcessChild: SpawnedProcess | null = null;
-  protected onStopTunnel?: () => void | null;
+  protected onStopTunnel?: () => void;
   constructor({ cli, relayCLI, osType }: { cli: string; relayCLI: string; osType: OperatingSystem }) {
     this.em = new EventEmitter();
     this.cli = cli;
@@ -55,7 +60,7 @@ export class SSHClient implements ISSHClient {
       `${params.username}@${params.host}`,
       "--",
       "echo",
-      "SSH connection established"
+      "SSH connection established",
     ]);
     if (output.success) {
       if (output.stdout.trim() === "SSH connection established") {
@@ -79,11 +84,16 @@ export class SSHClient implements ISSHClient {
       this.params.privateKeyPath,
       `${this.params.username}@${this.params.host}`,
       "--",
-      ...command
+      ...command,
     ]);
     return output;
   }
-  async startTunnel(config: { localAddress: string; remoteAddress: string; onStatusCheck: (status: any) => void; onStopTunnel: () => void }): Promise<EventEmitter> {
+  async startTunnel(config: {
+    localAddress: string;
+    remoteAddress: string;
+    onStatusCheck: (status: any) => void;
+    onStopTunnel: () => void;
+  }): Promise<EventEmitter> {
     const remoteAddress = config.remoteAddress.replace("unix://", "").replace("UNIX://", "");
     const sshConnection = `${this.params.username}@${this.params.host}:${this.params.port || 22}`;
     let spawnCLI = this.cli;
@@ -95,7 +105,7 @@ export class SSHClient implements ISSHClient {
       "-NL",
       //"-L",
       `${config.localAddress}:${remoteAddress}`,
-      `${sshConnection}`
+      `${sshConnection}`,
     ];
     if (this.osType === OperatingSystem.Windows) {
       // Relay using custom ssh client that tunnels unix socket over a named pipe
@@ -109,14 +119,22 @@ export class SSHClient implements ISSHClient {
         "--ssh-timeout",
         "15",
         "--identity-path",
-        this.params.privateKeyPath
+        this.params.privateKeyPath,
       ];
     }
-    console.debug("Starting SSH tunnel", { osType: this.osType, spawnCLI, relayCLI: this.relayCLI, spawnArgs });
+    console.debug("Starting SSH tunnel", {
+      osType: this.osType,
+      spawnCLI,
+      relayCLI: this.relayCLI,
+      spawnArgs,
+    });
     if (!config.localAddress) {
       throw new Error("Local address not provided");
     }
-    const driver = await Command.CreateNodeJSApiDriver({ socketPath: config.localAddress, baseURL: "http://d" });
+    const driver = await Command.CreateNodeJSApiDriver({
+      socketPath: config.localAddress,
+      baseURL: "http://d",
+    });
     return new Promise((resolve, reject) => {
       let resolved = false;
       console.debug("Starting SSH tunnel background service", config);
@@ -138,13 +156,13 @@ export class SSHClient implements ISSHClient {
             const response = await driver.request({
               method: "GET",
               url: "/_ping",
-              socketPath: config.localAddress
+              socketPath: config.localAddress,
             });
             return response.status === 200;
           } catch (error) {
             return false;
           }
-        }
+        },
       })
         .then((client) => {
           client.on("error", (error: any) => {
@@ -179,7 +197,10 @@ export class SSHClient implements ISSHClient {
       try {
         child.kill();
         this.nativeApiStarterProcessChild = null;
-        console.warn("SSH client tunnel stopped", { process: this.nativeApiStarterProcess, child });
+        console.warn("SSH client tunnel stopped", {
+          process: this.nativeApiStarterProcess,
+          child,
+        });
       } catch (error: any) {
         console.warn("SSH client tunnel stop - failed", error.message);
       }

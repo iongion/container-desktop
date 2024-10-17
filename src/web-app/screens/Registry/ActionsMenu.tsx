@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine, Registry } from "@/env/Types";
+import { ContainerEngine, type Registry } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
@@ -33,8 +33,16 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
   const registryFetch = useStoreActions((actions) => actions.registry.registryFetch);
   const registryRemove = useStoreActions((actions) => actions.registry.registryRemove);
   const performActionCommand = useCallback(
-    async (action: string, { confirm }: PerformActionOptions = { confirm: { success: true, error: true } }) => {
-      let result = { success: false, message: `No action handler for ${action}` };
+    async (
+      action: string,
+      { confirm }: PerformActionOptions = {
+        confirm: { success: true, error: true },
+      },
+    ) => {
+      let result = {
+        success: false,
+        message: `No action handler for ${action}`,
+      };
       setDisabledAction(action);
       try {
         switch (action) {
@@ -52,7 +60,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
             break;
         }
         if (confirm?.success) {
-          Notification.show({ message: t("Command completed"), intent: Intent.SUCCESS });
+          Notification.show({
+            message: t("Command completed"),
+            intent: Intent.SUCCESS,
+          });
         }
         if (action === "registry.remove") {
           goToScreen("/screens/registries");
@@ -62,14 +73,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
-            data: error.data
+            data: error.data,
           }),
-          intent: Intent.DANGER
+          intent: Intent.DANGER,
         });
       }
       setDisabledAction(undefined);
     },
-    [registry, registryFetch, registryRemove, t]
+    [registry, registryFetch, registryRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -83,7 +94,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
         performActionCommand("registry.remove");
       }
     },
-    [performActionCommand]
+    [performActionCommand],
   );
   const canCreateRegistry = currentConnector?.engine === ContainerEngine.PODMAN;
   const createButton = withoutCreate ? null : (
@@ -91,14 +102,22 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
       small
       intent={Intent.SUCCESS}
       disabled={!canCreateRegistry}
-      title={canCreateRegistry ? t("Click to configure a new registry") : t("This feature is not available with current connection host")}
+      title={
+        canCreateRegistry
+          ? t("Click to configure a new registry")
+          : t("This feature is not available with current connection host")
+      }
       text={t("Configure")}
       icon={IconNames.PLUS}
       onClick={onCreateClick}
     />
   );
   const removeWidget = registry ? (
-    <ConfirmMenu onConfirm={onRemove} tag={registry.name} disabled={disabledAction === "registry.remove" || !registry.isRemovable}></ConfirmMenu>
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={registry.name}
+      disabled={disabledAction === "registry.remove" || !registry.isRemovable}
+    ></ConfirmMenu>
   ) : undefined;
   return (
     <>

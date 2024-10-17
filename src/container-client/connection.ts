@@ -1,6 +1,14 @@
 import { v4 } from "uuid";
 
-import { Connector, ContainerEngine, ContainerEngineHost, ContainerEngineOption, EngineConnectorSettings, OperatingSystem, Presence } from "@/env/Types";
+import {
+  type Connector,
+  ContainerEngine,
+  ContainerEngineHost,
+  type ContainerEngineOption,
+  type EngineConnectorSettings,
+  OperatingSystem,
+  Presence,
+} from "@/env/Types";
 import { deepMerge } from "@/utils";
 
 // Podman - common
@@ -23,8 +31,16 @@ export const SSH_VERSION = "current";
 export const DEFAULT_CONTAINER_RUNTIME = ContainerEngine.PODMAN;
 
 export const ContainerEngineOptions: ContainerEngineOption[] = [
-  { engine: ContainerEngine.PODMAN, label: "Podman", present: Presence.UNKNOWN },
-  { engine: ContainerEngine.DOCKER, label: "Docker", present: Presence.UNKNOWN }
+  {
+    engine: ContainerEngine.PODMAN,
+    label: "Podman",
+    present: Presence.UNKNOWN,
+  },
+  {
+    engine: ContainerEngine.DOCKER,
+    label: "Docker",
+    present: Presence.UNKNOWN,
+  },
 ];
 
 export const createConnectorId = (instance: string, host: ContainerEngineHost) => `host.${instance}.${host}`;
@@ -34,7 +50,7 @@ export function createConnectorSettings({
   host,
   programName,
   controllerName,
-  overrides
+  overrides,
 }: {
   osType: OperatingSystem;
   host: ContainerEngineHost;
@@ -47,16 +63,16 @@ export function createConnectorSettings({
       baseURL: "",
       connection: {
         uri: "",
-        relay: ""
-      }
+        relay: "",
+      },
     },
     program: {
       name: programName,
       path: "",
-      version: ""
+      version: "",
     },
     rootfull: false,
-    mode: "mode.automatic"
+    mode: "mode.automatic",
   };
   if (programName.startsWith(PODMAN_PROGRAM)) {
     settings.api.baseURL = "http://d";
@@ -68,7 +84,7 @@ export function createConnectorSettings({
       name: controllerName,
       path: "",
       version: "",
-      scope: ""
+      scope: "",
     };
     if (overrides?.controller) {
       settings.controller.name = overrides.controller.name || settings.controller.name;
@@ -80,7 +96,7 @@ export function createConnectorSettings({
       name: controllerName,
       path: "",
       version: "",
-      scope: ""
+      scope: "",
     };
   }
   return settings;
@@ -106,10 +122,14 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         report: {
           host: "Not checked",
           program: "Not checked",
-          api: "Not checked"
-        }
+          api: "Not checked",
+        },
       },
-      settings: createConnectorSettings({ osType, host: ContainerEngineHost.PODMAN_NATIVE, programName: PODMAN_PROGRAM })
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.PODMAN_NATIVE,
+        programName: PODMAN_PROGRAM,
+      }),
     },
     {
       name: "",
@@ -129,8 +149,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
           host: "Not checked",
           program: "Not checked",
           api: "Not checked",
-          controller: "Not checked"
-        }
+          controller: "Not checked",
+        },
       },
       settings: createConnectorSettings({
         osType,
@@ -138,9 +158,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         programName: PODMAN_PROGRAM,
         controllerName: PODMAN_PROGRAM,
         overrides: {
-          controller: { name: PODMAN_PROGRAM, path: "", version: "" }
-        }
-      })
+          controller: { name: PODMAN_PROGRAM, path: "", version: "" },
+        },
+      }),
     },
     {
       name: "",
@@ -161,8 +181,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
           host: "Not checked",
           program: "Not checked",
           api: "Not checked",
-          controller: "Not checked"
-        }
+          controller: "Not checked",
+        },
       },
       settings: createConnectorSettings({
         osType,
@@ -170,9 +190,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         programName: PODMAN_PROGRAM,
         controllerName: WSL_PROGRAM,
         overrides: {
-          controller: { name: WSL_PROGRAM, path: "", version: WSL_VERSION }
-        }
-      })
+          controller: { name: WSL_PROGRAM, path: "", version: WSL_VERSION },
+        },
+      }),
     },
     {
       name: "",
@@ -193,8 +213,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
           host: "Not checked",
           program: "Not checked",
           api: "Not checked",
-          controller: "Not checked"
-        }
+          controller: "Not checked",
+        },
       },
       settings: createConnectorSettings({
         osType,
@@ -202,9 +222,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         programName: PODMAN_PROGRAM,
         controllerName: LIMA_PROGRAM,
         overrides: {
-          controller: { name: LIMA_PROGRAM, path: "", version: LIMA_VERSION }
-        }
-      })
+          controller: { name: LIMA_PROGRAM, path: "", version: LIMA_VERSION },
+        },
+      }),
     },
     {
       name: "",
@@ -225,8 +245,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
           host: "Not checked",
           program: "Not checked",
           api: "Not checked",
-          controller: "Not checked"
-        }
+          controller: "Not checked",
+        },
       },
       settings: createConnectorSettings({
         osType,
@@ -234,9 +254,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         programName: PODMAN_PROGRAM,
         controllerName: SSH_PROGRAM,
         overrides: {
-          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION }
-        }
-      })
+          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION },
+        },
+      }),
     },
     // Docker
     {
@@ -256,10 +276,14 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         report: {
           host: "Not checked",
           program: "Not checked",
-          api: "Not checked"
-        }
+          api: "Not checked",
+        },
       },
-      settings: createConnectorSettings({ osType, host: ContainerEngineHost.DOCKER_NATIVE, programName: DOCKER_PROGRAM })
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.DOCKER_NATIVE,
+        programName: DOCKER_PROGRAM,
+      }),
     },
     {
       name: "",
@@ -277,10 +301,14 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         report: {
           host: "Not checked",
           program: "Not checked",
-          api: "Not checked"
-        }
+          api: "Not checked",
+        },
       },
-      settings: createConnectorSettings({ osType, host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR, programName: DOCKER_PROGRAM })
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
+        programName: DOCKER_PROGRAM,
+      }),
     },
     {
       name: "",
@@ -301,8 +329,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
           host: "Not checked",
           program: "Not checked",
           api: "Not checked",
-          controller: "Not checked"
-        }
+          controller: "Not checked",
+        },
       },
       settings: createConnectorSettings({
         osType,
@@ -310,9 +338,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         programName: DOCKER_PROGRAM,
         controllerName: WSL_PROGRAM,
         overrides: {
-          controller: { name: WSL_PROGRAM, path: "", version: WSL_VERSION }
-        }
-      })
+          controller: { name: WSL_PROGRAM, path: "", version: WSL_VERSION },
+        },
+      }),
     },
     {
       name: "",
@@ -333,8 +361,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
           host: "Not checked",
           program: "Not checked",
           api: "Not checked",
-          controller: "Not checked"
-        }
+          controller: "Not checked",
+        },
       },
       settings: createConnectorSettings({
         osType,
@@ -342,9 +370,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         programName: DOCKER_PROGRAM,
         controllerName: LIMA_PROGRAM,
         overrides: {
-          controller: { name: LIMA_PROGRAM, path: "", version: LIMA_VERSION }
-        }
-      })
+          controller: { name: LIMA_PROGRAM, path: "", version: LIMA_VERSION },
+        },
+      }),
     },
     {
       name: "",
@@ -365,8 +393,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
           host: "Not checked",
           program: "Not checked",
           api: "Not checked",
-          controller: "Not checked"
-        }
+          controller: "Not checked",
+        },
       },
       settings: createConnectorSettings({
         osType,
@@ -374,25 +402,34 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         programName: DOCKER_PROGRAM,
         controllerName: SSH_PROGRAM,
         overrides: {
-          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION }
-        }
-      })
-    }
+          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION },
+        },
+      }),
+    },
   ];
   // console.debug(">> connectors", { osType }, connectors);
   return connectors;
 }
 
-export async function createConnectorBy(osType: OperatingSystem, engine: ContainerEngine = DEFAULT_CONTAINER_RUNTIME, host?: ContainerEngineHost, id?: string) {
+export async function createConnectorBy(
+  osType: OperatingSystem,
+  engine: ContainerEngine = DEFAULT_CONTAINER_RUNTIME,
+  host?: ContainerEngineHost,
+  id?: string,
+) {
   const canUseNativeEngine = osType === OperatingSystem.Linux;
   let currentEngineHost: ContainerEngineHost = host!;
   if (currentEngineHost) {
     console.debug("Using custom host", { host });
   } else {
     if (engine === ContainerEngine.PODMAN) {
-      currentEngineHost = canUseNativeEngine ? ContainerEngineHost.PODMAN_NATIVE : ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
+      currentEngineHost = canUseNativeEngine
+        ? ContainerEngineHost.PODMAN_NATIVE
+        : ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
     } else if (engine === ContainerEngine.DOCKER) {
-      currentEngineHost = canUseNativeEngine ? ContainerEngineHost.DOCKER_NATIVE : ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;
+      currentEngineHost = canUseNativeEngine
+        ? ContainerEngineHost.DOCKER_NATIVE
+        : ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;
     }
   }
   const connectors = getDefaultConnectors(osType);

@@ -1,16 +1,16 @@
 import { isEmpty } from "lodash-es";
 
 import {
-  ApiConnection,
-  ApiStartOptions,
-  AvailabilityCheck,
-  CommandExecutionResult,
-  Connection,
-  ControllerScope,
-  EngineConnectorSettings,
+  type ApiConnection,
+  type ApiStartOptions,
+  type AvailabilityCheck,
+  type CommandExecutionResult,
+  type Connection,
+  type ControllerScope,
+  type EngineConnectorSettings,
   OperatingSystem,
-  RunnerStopperOptions,
-  StartupStatus
+  type RunnerStopperOptions,
+  StartupStatus,
 } from "@/env/Types";
 import { LIMA_PROGRAM } from "../../connection";
 import { getAvailableLIMAInstances } from "../../shared";
@@ -30,14 +30,14 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
       this.logger.error(this.id, "getApiConnection requires a scope");
       return {
         uri: "",
-        relay: ""
+        relay: "",
       };
     }
     const homeDir = await Platform.getHomeDir();
     const uri = await Path.join(homeDir, ".lima", scope, "sock", `${scope}.sock`);
     return {
       uri,
-      relay: ""
+      relay: "",
     };
   }
   // Engine
@@ -56,7 +56,7 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
     // TODO: Safe to stop first before starting ?
     const started = await this.runner.startApi(opts, {
       path: controllerPath,
-      args: ["start", settings.controller.scope]
+      args: ["start", settings.controller.scope],
     });
     this.apiStarted = started;
     this.logger.debug("Start API complete", started);
@@ -75,14 +75,13 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
       if (!settings.controller?.scope) {
         this.logger.error("Stopping API - scope is not set (no custom stop args)");
         return false;
-      } else {
-        args = ["stop", settings.controller?.scope];
       }
+      args = ["stop", settings.controller?.scope];
     }
     const controllerPath = settings.controller?.path || settings.controller?.name || "";
     return await this.runner.stopApi(settings, {
       path: opts?.path || controllerPath,
-      args
+      args,
     });
   }
   async startScope(scope: ControllerScope): Promise<StartupStatus> {
@@ -128,9 +127,8 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
       if (customSettings?.controller?.scope) {
         const matchingScope = scopes.find((s) => s.Name === customSettings?.controller?.scope);
         return matchingScope;
-      } else {
-        this.logger.error(this.id, "Controller scope is not set", customSettings);
       }
+      this.logger.error(this.id, "Controller scope is not set", customSettings);
     } else {
       this.logger.error(this.id, "No controller scopes available - no LIMA instances present", customSettings);
     }
@@ -142,7 +140,12 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
   }
 
   // Executes command inside controller scope
-  async runScopeCommand(program: string, args: string[], scope: string, settings?: EngineConnectorSettings): Promise<CommandExecutionResult> {
+  async runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult> {
     const { controller } = settings || (await this.getSettings());
     const hostLauncher = controller?.path || controller?.name || "";
     const hostArgs = ["shell", scope, program, ...args];
@@ -156,27 +159,17 @@ export abstract class AbstractContainerEngineHostClientVirtualizedLIMA extends A
       if (matchingScope.Usable) {
         this.logger.warn(this.id, `LIMA instance ${name} is already running`);
         return StartupStatus.RUNNING;
-      } else {
-        const { controller } = await this.getSettings();
-        const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
-        const check = await this.runHostCommand(programLauncher, ["start", name]);
-        return check.success ? StartupStatus.STARTED : StartupStatus.ERROR;
       }
-    } else {
-      this.logger.error(this.id, `LIMA instance ${name} not found`);
+      const { controller } = await this.getSettings();
+      const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
+      const check = await this.runHostCommand(programLauncher, ["start", name]);
+      return check.success ? StartupStatus.STARTED : StartupStatus.ERROR;
     }
+    this.logger.error(this.id, `LIMA instance ${name} not found`);
     return StartupStatus.ERROR;
   }
 
   async stopLIMAInstance(name: string): Promise<boolean> {
-    if (this.startedScopesMap.has(name)) {
-      const { controller } = await this.getSettings();
-      const programLauncher = controller?.path || controller?.name || LIMA_PROGRAM;
-      const check = await this.runHostCommand(programLauncher, ["stop", name]);
-      return check.success;
-    } else {
-      this.logger.warn(this.id, `LIMA instance ${name} is not started here - stop skipped`);
-    }
     return true;
   }
 }

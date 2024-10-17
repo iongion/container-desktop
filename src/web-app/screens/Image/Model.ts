@@ -1,11 +1,12 @@
-import { Action, Computed, Thunk, action, computed, thunk } from "easy-peasy";
+import { type Action, type Computed, type Thunk, action, computed, thunk } from "easy-peasy";
 
-import { FetchImageOptions } from "@/container-client/Api.clients";
+import type { FetchImageOptions } from "@/container-client/Api.clients";
 import { Application } from "@/container-client/Application";
-import { ContainerImage } from "@/env/Types";
-import { AppRegistry, ResetableModel } from "@/web-app/domain/types";
+import type { ContainerImage } from "@/env/Types";
+import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 
 export interface ImagesModelState {
+  version?: string;
   native: boolean;
   images: ContainerImage[];
 }
@@ -75,7 +76,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
         const images = await client.getImages();
         actions.setImages(images);
         return images;
-      })
+      }),
     ),
     imageFetch: thunk(async (actions, options) =>
       registry.withPending(async () => {
@@ -85,7 +86,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
           actions.update(image);
         }
         return image;
-      })
+      }),
     ),
     fetchHistory: thunk(async (actions, options) =>
       registry.withPending(async () => {
@@ -93,7 +94,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
         const history = await client.getImageHistory(options.Id);
         actions.update({ Id: options.Id, History: history });
         return history;
-      })
+      }),
     ),
     imagePull: thunk(async (actions, image) =>
       registry.withPending(async () => {
@@ -106,7 +107,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
           actions.update(image);
         }
         return pulled;
-      })
+      }),
     ),
     imagePush: thunk(async (actions, image) =>
       registry.withPending(async () => {
@@ -116,7 +117,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
           pushed = await client.pushImage(image.Id);
         }
         return pushed;
-      })
+      }),
     ),
     imageRemove: thunk(async (actions, image) =>
       registry.withPending(async () => {
@@ -129,7 +130,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
           actions.delete(image);
         }
         return removed;
-      })
+      }),
     ),
     containerCreate: thunk(async (actions, image) =>
       registry.withPending(async () => {
@@ -142,7 +143,7 @@ export const createModel = async (registry: AppRegistry): Promise<ImagesModel> =
           actions.delete(image);
         }
         return removed;
-      })
-    )
+      }),
+    ),
   };
 };

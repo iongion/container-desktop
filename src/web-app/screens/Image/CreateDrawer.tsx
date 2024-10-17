@@ -1,4 +1,17 @@
-import { Button, ButtonGroup, Classes, Divider, Drawer, DrawerSize, FormGroup, HTMLTable, InputGroup, Intent, NumericInput, ProgressBar } from "@blueprintjs/core";
+import {
+  Button,
+  ButtonGroup,
+  Classes,
+  Divider,
+  Drawer,
+  DrawerSize,
+  FormGroup,
+  HTMLTable,
+  InputGroup,
+  Intent,
+  NumericInput,
+  ProgressBar,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
@@ -9,8 +22,8 @@ import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
 
 // module
-import { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
-import { MountFormContainerImageMount, MountsForm, createMount } from "./MountsForm";
+import type { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
+import { type MountFormContainerImageMount, MountsForm, createMount } from "./MountsForm";
 import { PortMappingsForm, toPortMappings } from "./PortMappingsForm";
 
 import "./CreateDrawer.css";
@@ -30,9 +43,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
   const containerCreate = useStoreActions((actions) => actions.container.containerCreate);
   const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
 
-  const [state, setState] = useState<{ template?: ContainerImage; pending: boolean }>({
+  const [state, setState] = useState<{
+    template?: ContainerImage;
+    pending: boolean;
+  }>({
     template: undefined,
-    pending: true
+    pending: true,
   });
 
   const { pending, template } = state;
@@ -50,8 +66,8 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
     defaultValues: {
       amount: 1,
       mounts,
-      mappings
-    }
+      mappings,
+    },
   });
   const { reset, control, handleSubmit } = methods;
   const onSubmit = handleSubmit(async (data) => {
@@ -62,24 +78,36 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
         Name: data.imageContainerName,
         Start: true,
         Mounts: data.mounts.filter((it) => it.source && it.destination),
-        PortMappings: data.mappings
+        PortMappings: data.mappings,
       };
       setState((prev) => ({ ...prev, pending: true }));
       const create = await containerCreate(creator);
       if (create.created) {
         if (create.started) {
-          Notification.show({ message: t("Container(s) created and started"), intent: Intent.SUCCESS });
+          Notification.show({
+            message: t("Container(s) created and started"),
+            intent: Intent.SUCCESS,
+          });
         } else {
-          Notification.show({ message: t("Container(s) created but could not start"), intent: Intent.WARNING });
+          Notification.show({
+            message: t("Container(s) created but could not start"),
+            intent: Intent.WARNING,
+          });
         }
         setState((prev) => ({ ...prev, pending: false }));
         onClose();
       } else {
-        Notification.show({ message: t("Unable to start container(s) from image"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Unable to start container(s) from image"),
+          intent: Intent.DANGER,
+        });
       }
     } catch (error: any) {
       console.error("Unable to start container(s) from image", error);
-      Notification.show({ message: t("Unable to start container(s) from image"), intent: Intent.DANGER });
+      Notification.show({
+        message: t("Unable to start container(s) from image"),
+        intent: Intent.DANGER,
+      });
       setState((prev) => ({ ...prev, pending: false }));
     }
   });
@@ -94,7 +122,10 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
         setState({ template, pending: false });
       } catch (error: any) {
         console.error("Unable to load container image", error);
-        Notification.show({ message: t("Unable to load container image"), intent: Intent.DANGER });
+        Notification.show({
+          message: t("Unable to load container image"),
+          intent: Intent.DANGER,
+        });
       }
     })();
   }, [t, imageFetch, Id]);
@@ -135,7 +166,14 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
             </tbody>
           </HTMLTable>
           <ButtonGroup fill>
-            <Button type="submit" disabled={pending} intent={Intent.PRIMARY} icon={IconNames.CUBE_ADD} title={t("Click to launch creation")} text={t("Create and start")} />
+            <Button
+              type="submit"
+              disabled={pending}
+              intent={Intent.PRIMARY}
+              icon={IconNames.CUBE_ADD}
+              title={t("Click to launch creation")}
+              text={t("Create and start")}
+            />
             <Divider />
 
             <Controller
@@ -153,7 +191,9 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
                     onValueChange={onChange}
                     onBlur={onBlur}
                     className="AmountOfContainers"
-                    title={t("Amount of containers to be launched. If launching more than one, port mappings will be adjusted by incrementing the host port.")}
+                    title={t(
+                      "Amount of containers to be launched. If launching more than one, port mappings will be adjusted by incrementing the host port.",
+                    )}
                     allowNumericCharactersOnly
                     min={1}
                     max={65535}

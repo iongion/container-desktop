@@ -1,6 +1,13 @@
 import { systemNotifier } from "@/container-client/notifier";
-import { AbstractContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
-import { ApiStartOptions, EngineConnectorSettings, ILogger, RunnerStarterOptions, RunnerStopperOptions, ServiceOpts } from "@/env/Types";
+import type { AbstractContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
+import type {
+  ApiStartOptions,
+  EngineConnectorSettings,
+  ILogger,
+  RunnerStarterOptions,
+  RunnerStopperOptions,
+  ServiceOpts,
+} from "@/env/Types";
 import { createLogger } from "@/logger";
 
 export class Runner {
@@ -8,7 +15,7 @@ export class Runner {
   protected nativeApiStarterProcess: any;
   protected nativeApiStarterProcessChild: any;
   protected logger!: ILogger;
-  protected started: boolean = false;
+  protected started = false;
 
   constructor(client: AbstractContainerEngineHostClient) {
     this.client = client;
@@ -27,13 +34,13 @@ export class Runner {
     if (this.started) {
       this.logger.debug("<< Starting API - already started");
       systemNotifier.transmit("startup.phase", {
-        trace: "Api started"
+        trace: "Api started",
       });
       return true;
     }
     this.started = true;
     systemNotifier.transmit("startup.phase", {
-      trace: "Staring the api"
+      trace: "Staring the api",
     });
     this.logger.debug(">> Starting API - guard configuration", { starter });
     if (!starter || !starter?.path) {
@@ -53,7 +60,7 @@ export class Runner {
         this.logger.debug(">> Starting API - Checking API status - checking if running");
         const result = await this.client.isApiRunning();
         return result.success;
-      }
+      },
     };
     try {
       this.logger.debug(">> Starting API - System service start requested", clientOpts);
@@ -103,7 +110,7 @@ export class Runner {
     }
     this.logger.debug(">> Stopping API - begin");
     let flag = false;
-    if (stopper && stopper.path) {
+    if (stopper?.path) {
       const result: any = await Command.Execute(stopper.path, stopper.args || []);
       flag = result.success;
     } else {
