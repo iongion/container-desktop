@@ -1,9 +1,9 @@
-import { Intent, ProgressBar } from "@blueprintjs/core";
-import dayjs from "dayjs";
-import { useEffect, useRef } from "react";
 // project
 import i18n from "@/web-app/App.i18n";
 import { useStoreState } from "@/web-app/domain/types";
+import { Intent, ProgressBar } from "@blueprintjs/core";
+import dayjs from "dayjs";
+import { useEffect, useRef } from "react";
 // module
 import "./AppLoading.css";
 
@@ -14,8 +14,10 @@ export const AppLoading: React.FC<AppLoadingProps> = () => {
   const systemNotifications = useStoreState((state) => state.systemNotifications);
   const phasesRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    phasesRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
+    if (systemNotifications.length > 0) {
+      phasesRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [systemNotifications]);
   return (
     <div className="AppLoading" data-pending={pending ? "yes" : "no"}>
       <div className="AppLoadingSplashContainer">

@@ -63,6 +63,7 @@
     "lodash-es": "^4.17.21",
     "magic-string": "^0.30.12",
     "monaco-editor": "^0.52.0",
+    "portfinder": "^1.0.32",
     "pretty-bytes": "^6.1.1",
     "private-ip": "^3.0.2",
     "react": "^18.3.1",
@@ -109,7 +110,8 @@
     "vite-plugin-static-copy": "^2.0.0",
     "vite-plugin-svgr": "^4.2.0",
     "vite-plugin-top-level-await": "^1.4.4",
-    "vite-tsconfig-paths": "^5.0.1"
+    "vite-tsconfig-paths": "^5.0.1",
+    "xml2js": "^0.6.2"
   },
   "optionalDependencies": {
     "dmg-license": "^1.0.11"

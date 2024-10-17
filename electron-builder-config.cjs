@@ -1,16 +1,21 @@
 const path = require("node:path");
 const os = require("node:os");
+const fs = require("node:fs");
 // vendors
 const dayjs = require("dayjs");
 const dotenv = require("dotenv");
 const semver = require("semver");
+const xml2js = require("xml2js");
 // pkg
 const pkg = require("./package.json");
+const { Name } = require("ajv");
 // module
 const version = pkg.version;
 const semverVersion = semver.parse(version);
 // MAJOR.MIN.REV.BUILD for Windows Store compatibility
-const buildNumber = Number(process.env.BUILD_NUMBER || semverVersion.build?.[0] || semverVersion.prerelease?.[0]?.[0] || 0);
+const buildNumber = Number(
+  process.env.BUILD_NUMBER || semverVersion.build?.[0] || semverVersion.prerelease?.[0]?.[0] || 0,
+);
 const buildVersion = `${semverVersion.major}.${semverVersion.minor}.${semverVersion.patch}.${buildNumber}`;
 const artifactName = [pkg.name, "${arch}", version].join("-");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
@@ -37,11 +42,11 @@ const config = {
   productName: process.platform === "linux" ? pkg.name : displayName,
   buildNumber,
   buildVersion,
-  artifactName: artifactName + ".${ext}",
+  artifactName: `${artifactName}.\${ext}`,
   copyright: `Copyright (c) ${year} ${pkg.author}`,
   releaseInfo: {
     releaseName,
-    releaseDate: dayjs().format("MMM DD, YYYY")
+    releaseDate: dayjs().format("MMM DD, YYYY"),
   },
   asar: true,
   files: [
@@ -49,7 +54,7 @@ const config = {
     "!**/*",
     // What to copy
     "build",
-    "LICENSE"
+    "LICENSE",
   ],
   electronLanguages: ["en-US"],
   // includeSubNodeModule: false,
@@ -57,13 +62,13 @@ const config = {
     version: buildVersion,
     buildVersion,
     buildNumber,
-    main: pkg.main
+    main: pkg.main,
   },
   extraFiles: os.type() === "Windows_NT" ? ["bin/*"] : [],
   directories: {
     app: ".",
     output: "release",
-    buildResources: "src/resources"
+    buildResources: "src/resources",
   },
   publish: null,
   flatpak: {
@@ -100,8 +105,8 @@ const config = {
       "--filesystem=xdg-config",
       "--filesystem=xdg-run/podman",
       "--filesystem=xdg-run/docker",
-      "--talk-name=org.freedesktop.Notifications"
-    ]
+      "--talk-name=org.freedesktop.Notifications",
+    ],
   },
   mac: {
     category: "public.app-category.developer-tools",
@@ -115,20 +120,58 @@ const config = {
     gatekeeperAssess: false,
     extendInfo: {
       NSCameraUsageDescription: "~",
-      NSMicrophoneUsageDescription: "~"
-    }
+      NSMicrophoneUsageDescription: "~",
+    },
   },
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
-    shortcutName: displayName
+    shortcutName: displayName,
   },
   win: {
     target: ["appx", "nsis"],
     // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
-    icon: "icons/icon.ico"
+    icon: "icons/icon.ico",
+  },
+  appxManifestCreated: async (appxPath) => {
+    const manifest = await xml2js.parseStringPromise(fs.readFileSync(appxPath, "utf8").toString());
+    manifest.Package.$["xmlns:uap"] = "http://schemas.microsoft.com/appx/manifest/uap/windows10";
+    manifest.Package.$["xmlns:desktop"] = "http://schemas.microsoft.com/appx/manifest/desktop/windows10";
+    manifest.Package.$["xmlns:desktop2"] = "http://schemas.microsoft.com/appx/manifest/desktop/windows10/2";
+    manifest.Package.Capabilities = [
+      [
+        { Capability: { $: { Name: "internetClient" } } },
+        { Capability: { $: { Name: "privateNetworkClientServer" } } },
+        { "rescap:Capability": { $: { Name: "runFullTrust" } } },
+      ],
+    ];
+    manifest.Package.Extensions = manifest.Package.Extensions || [];
+    manifest.Package.Extensions.push({
+      "desktop2:Extension": {
+        $: {
+          Category: "windows.firewallRules",
+        },
+        "desktop2:FirewallRules": {
+          $: {
+            Executable: "app\\bin\\container-desktop-ssh-relay.exe",
+          },
+          "desktop2:Rule": {
+            $: {
+              Direction: "in",
+              Profile: "private",
+              IPProtocol: "TCP",
+              LocalPortMin: "22022",
+              LocalPortMax: "24044",
+            },
+          },
+        },
+      },
+    });
+    const builder = new xml2js.Builder();
+    const manifestDocument = builder.buildObject(manifest);
+    fs.writeFileSync(appxPath, manifestDocument);
   },
   appx: {
     identityName,
@@ -136,7 +179,9 @@ const config = {
     publisherDisplayName: publisherDisplayName,
     applicationId,
     setBuildNumber: false, // Always false otherwise rejected by Windows Store
-    displayName
+    displayName,
+    minVersion: "10.0.18362.0",
+    maxVersionTested: "10.0.18362.0",
   },
   linux: {
     executableName: "container-desktop",
@@ -146,14 +191,14 @@ const config = {
     category: "Development;System;Utility",
     extraResources: ["support/templates"],
     desktop: {
-      Name: displayName
+      Name: displayName,
     },
-    executableArgs: ["--no-sandbox"]
+    executableArgs: ["--no-sandbox"],
   },
   deb: {
     afterInstall: "support/templates/after-install.sh",
-    afterRemove: "support/templates/after-remove.sh"
-  }
+    afterRemove: "support/templates/after-remove.sh",
+  },
 };
 
 module.exports = config;

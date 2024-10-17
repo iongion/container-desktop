@@ -3,13 +3,14 @@ import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
 import {
   type ChildProcessWithoutNullStreams,
-  spawn,
   type SpawnOptionsWithoutStdio,
+  spawn,
   spawnSync,
 } from "node:child_process";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
+import portfinder from "portfinder";
 
 import { getApiConfig } from "@/container-client/Api.clients";
 import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/container-client/services";
@@ -654,17 +655,14 @@ export interface WrapperOpts extends SpawnOptionsWithoutStdio {
 
 // locals
 export async function getFreeTCPPort() {
-  return new Promise<number>((resolve, reject) => {
-    const srv = net.createServer();
-    srv.on("error", reject);
-    srv.listen(0, () => {
-      const address = srv.address() as any;
-      srv.close();
-      setTimeout(() => {
-        resolve(address.port || 31313);
-      }, 500);
-    });
-  });
+  const minPort = 22022;
+  try {
+    const port = await portfinder.getPortPromise({ port: minPort, startPort: minPort, stopPort: 24044 });
+    return port;
+  } catch (error: any) {
+    logger.error("Error getting free TCP port", error);
+  }
+  return minPort;
 }
 
 export function createNodeJSApiDriver(config: AxiosRequestConfig) {
@@ -788,7 +786,9 @@ export async function proxyRequestToSSHConnection(
     if (!remoteAddress) {
       throw new Error("Remote address must be set");
     }
-    const em = await sshConnection.startTunnel({
+    // biome-ignore lint/style/useConst: <explanation>
+    let em: EventEmitter | undefined;
+    em = await sshConnection.startTunnel({
       localAddress,
       remoteAddress,
       onStatusCheck: (status) => {
