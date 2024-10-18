@@ -627,6 +627,7 @@ ul.footerMenu {
 }
 
 .installationSection {
+  padding-top: 10px;
   margin: 0 auto;
   color: #fff;
   display: flex;
@@ -637,9 +638,13 @@ ul.footerMenu {
 .installationSection a {
   font-weight: normal;
   text-decoration: underline;
+  text-align: center;
 }
 .installationSection a {
   margin-right: 40px;
+}
+.installationSection a:hover {
+  color: #13abff;
 }
 .installationSection a:last-child {
   margin-right: 0;
