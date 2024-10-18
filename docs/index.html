@@ -1,21 +1,53 @@
 <!DOCTYPE html>
 <html lang="en" data-version="5.2.4">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="./favicon.ico" type="image/x-icon" />
   <link rel="icon" href="./favicon-32x32.png" type="image/png" />
-  <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.15.0/css/all.css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="preconnect" href="//fonts.googleapis.com" />
   <link rel="preconnect" href="//fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="//fonts.googleapis.com/css2?family=Montserrat:wght@100;300;500;700&display=swap" />
-  <link rel="stylesheet" href="./css/common.css?v=5.2.11" />
-  <link rel="stylesheet" href="./css/dark-theme.css?v=5.2.11" id="themelink" />
+  <link rel="stylesheet" href="./css/common.css?v=5.2.13" />
+  <link rel="stylesheet" href="./css/dark-theme.css?v=5.2.13" id="themelink" />
   <title>Container Desktop</title>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/UAParser.js/0.7.20/ua-parser.min.js" integrity="sha512-70OZ+iUuudMmd7ikkUWcEogIw/+MIE17z17bboHhj56voxuy+OPB71GWef47xDEt5+MxFdrigC1tRDmuvIVrCA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script type="text/javascript">
+  <script type="module">
+    import {
+      UAParser
+    } from '//cdn.jsdelivr.net/npm/ua-parser-js@1.0.39/+esm'
+    import {
+      render
+    } from "//esm.sh/solid-js@1.9.1/web";
+    import html from "//esm.sh/solid-js@1.9.1/html";
+    const getOperatingSystem = () => {
+      let OSName = "Unknown OS";
+      if (navigator.appVersion.indexOf("Win") != -1) OSName = "Windows";
+      if (navigator.appVersion.indexOf("Mac") != -1) OSName = "MacOS";
+      if (navigator.appVersion.indexOf("X11") != -1) OSName = "Linux";
+      if (navigator.appVersion.indexOf("Linux") != -1) OSName = "Linux";
+      return OSName;
+    }
+    const performDetections = () => {
+      const parser = new UAParser(navigator.userAgent);
+      const cpu = parser.getCPU();
+      const currentOS = getOperatingSystem();
+      const cpuArch = (cpu?.architecture || '') || (currentOS === 'MacOS' ? 'arm' : 'x86');
+      const isArm = `${cpuArch || ''}`.toLocaleLowerCase().includes('arm');
+      const currentArch = isArm ? 'arm' : 'x86';
+      return {
+        currentOS,
+        currentArch
+      };
+    }
+    const {
+      currentOS,
+      currentArch
+    } = performDetections();
+    const archs = currentOS === "MacOS" ? ["arm", "x86"] : ["x86", "arm"];
+    const operatingSystems = ["Linux", "Windows", "MacOS"];
     const version = document.querySelector('html').getAttribute('data-version');
+    const downloadBaseUrl = `https://github.com/iongion/container-desktop/releases/download/${version}`;
     const downloads = {
       Linux: {
         x86: {
@@ -23,23 +55,23 @@
           default: 0,
           links: [{
               label: 'AppImage',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x86_64-${version}.AppImage`
+              url: `${downloadBaseUrl}/container-desktop-x86_64-${version}.AppImage`
             },
             {
               label: 'flatpak',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x86_64-${version}.flatpak`
+              url: `${downloadBaseUrl}/container-desktop-x86_64-${version}.flatpak`
             },
             {
               label: 'rpm',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x86_64-${version}.rpm`
+              url: `${downloadBaseUrl}/container-desktop-x86_64-${version}.rpm`
             },
             {
               label: 'deb',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-amd64-${version}.deb`
+              url: `${downloadBaseUrl}/container-desktop-amd64-${version}.deb`
             },
             {
               label: 'pacman',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x64-${version}.pacman`
+              url: `${downloadBaseUrl}/container-desktop-x64-${version}.pacman`
             },
           ]
         },
@@ -48,23 +80,23 @@
           default: 0,
           links: [{
               label: 'AppImage',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-arm64-${version}.AppImage`
+              url: `${downloadBaseUrl}/container-desktop-arm64-${version}.AppImage`
             },
             {
               label: 'flatpak',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-aarch64-${version}.flatpak`
+              url: `${downloadBaseUrl}/container-desktop-aarch64-${version}.flatpak`
             },
             {
               label: 'rpm',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-aarch64-${version}.rpm`
+              url: `${downloadBaseUrl}/container-desktop-aarch64-${version}.rpm`
             },
             {
               label: 'deb',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-arm64-${version}.deb`
+              url: `${downloadBaseUrl}/container-desktop-arm64-${version}.deb`
             },
             {
               label: 'pacman',
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-aarch64-${version}.pacman`
+              url: `${downloadBaseUrl}/container-desktop-aarch64-${version}.pacman`
             },
           ]
         }
@@ -76,10 +108,11 @@
           links: [{
               url: 'https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct',
               label: 'Windows Store',
+              title: "Download from Windows Store",
               skipFromList: true
             },
             {
-              url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-installer.exe`,
+              url: `${downloadBaseUrl}/container-desktop-installer.exe`,
               label: 'Installer - exe'
             }
           ],
@@ -89,98 +122,121 @@
         x86: {
           default: 0,
           links: [{
-            url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-arm64-${version}.dmg`,
-            label: "Apple"
+            url: `${downloadBaseUrl}/container-desktop-x64-${version}.dmg`,
+            label: "Intel"
           }]
         },
         arm: {
           default: 0,
           links: [{
-            url: `https://github.com/iongion/container-desktop/releases/download/${version}/container-desktop-x64-${version}.dmg`,
-            label: "Intel"
+            url: `${downloadBaseUrl}/container-desktop-arm64-${version}.dmg`,
+            label: "Apple"
           }]
-        }
+        },
       }
     }
-    document.addEventListener("DOMContentLoaded", async (event) => {
-      try {
-        const getOperatingSystem = () => {
-          let OSName = "Unknown OS";
-          if (navigator.appVersion.indexOf("Win") != -1) OSName = "Windows";
-          if (navigator.appVersion.indexOf("Mac") != -1) OSName = "MacOS";
-          if (navigator.appVersion.indexOf("X11") != -1) OSName = "Linux";
-          if (navigator.appVersion.indexOf("Linux") != -1) OSName = "Linux";
-          return OSName;
-        }
-        const parser = new UAParser(navigator.userAgent);
-        const cpu = parser.getCPU();
-        const os = getOperatingSystem();
-        const cpuArch = (cpu?.architecture || '') || (os === 'MacOS' ? 'arm' : 'x86');
-        const isArm = `${cpuArch || ''}`.toLocaleLowerCase().includes('arm');
-        const currentArch = isArm ? 'arm' : 'x86';
-        if (os) {
-          console.debug("Adjusting content to detection", os, currentArch);
-          const sections = document.querySelectorAll('.download[data-operating-system]');
-          sections.forEach(section => {
-            const osName = section.getAttribute('data-operating-system');
-            const downloadButton = section.querySelector('.downloadButton');
-            const downloadBundles = section.querySelector('.downloadBundles');
-            const architectures = Object.keys(downloads[osName] || {});
-            downloadBundles.innerHTML = '';
-            architectures.forEach(arch => {
-              const downloadUrls = downloads[osName]?.[arch]?.links || [];
-              const defaultDownload = downloadUrls[downloads[osName]?.[arch]?.default];
-              console.debug("Setting download links for", osName, arch, downloadUrls);
-              if (defaultDownload) {
-                if (arch === currentArch) {
-                  downloadButton.setAttribute('href', defaultDownload.url);
-                } else {
-                  downloadButton.setAttribute('href', downloadUrls[0].url);
-                }
-              }
-              const injectURLs = (links) => {
-                links.forEach((link) => {
-                  if (link.skipFromList) {
-                    return;
-                  }
-                  const li = document.createElement('li');
-                  const a = document.createElement('a');
-                  a.setAttribute('href', link.url);
-                  a.innerText = link.label;
-                  li.appendChild(a);
-                  downloadBundles.appendChild(li);
-                });
-              }
-              if (osName === "MacOS") {
-                const x86DownloadUrls = downloads[osName]?.[arch]?.links || [];
-                injectURLs(x86DownloadUrls);
-              } else {
-                injectURLs(downloadUrls);
-              }
-            });
-          });
-          // Set documentation active tab
-          const hash = window.location.hash;
-          const tab = document.querySelector(hash || `#guide-${(os?.name || "linux").toLocaleLowerCase()}`);
-          if (tab) {
-            tab.checked = true;
-          }
-          // Handle history
-          const tabs = document.querySelectorAll(`input[name="tabs"]`);
-          tabs.forEach(tab => {
-            tab.addEventListener('click', (event) => {
-              window.location.hash = tab.getAttribute('id');
-            });
-          });
-        } else {
-          console.warn("Not able to detect operating system and CPU", {
-            cpu,
-            os
-          });
-        }
-      } catch (error) {
-        console.warn("Unable to detect operating system and CPU", error);
+    // Rendering
+    const linuxFormats = ["AppImage", "flatpak", "rpm", "deb", "pacman"];
+    const DownloadBundles = ({
+      osName
+    }) => {
+      const osDownloads = downloads[osName];
+      if (osName === 'Linux') {
+        return html`
+          <ul class="downloadBundles">
+          ${linuxFormats.map((format) => {
+            return html`
+              <li>
+                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">${format}</a>
+                <ul class="downloadBundlesArchs">
+                  ${archs.map((arch) => {
+                    const links = (osDownloads?.[arch]?.links || []).filter(link => !link.skipFromList && link.url.endsWith(format));
+                    if (links.length === 0) {
+                      return null;
+                    }
+                    return links.map((link) => {
+                      return html`
+                        <li>
+                          <a target="_blank" rel="noopener noreferrer" href=${link.url}>${arch}</a>
+                        </li>
+                      `;
+                    });
+                  })}
+                </ul>
+              </li>
+            `;
+          })}
+          </ul>
+        `;
       }
+      return html`
+        <ul class="downloadBundles">
+          ${archs.map((arch) => {
+            const links = (osDownloads?.[arch]?.links || []).filter(link => !link.skipFromList);
+            if (links.length === 0) {
+              return null;
+            }
+            return links.map((link) => {
+              return html`
+                <li>
+                  <a target="_blank" rel="noopener noreferrer" href=${link.url}>${link.label}</a>
+                </li>
+              `;
+            });
+          })}
+        </ul>
+      `;
+    }
+    const DownloadButton = ({
+      osName
+    }) => {
+      const osDownloads = downloads[osName];
+      const archDownloads = osDownloads?.[currentArch];
+      const defaultDownload = archDownloads?.links[archDownloads.default];
+      const downloadUrl = defaultDownload?.url || '';
+      return html`
+        <div class="downloadButton">
+          <div class="downloadButtonLabel">
+            <a class="downloadButtonLink" href=${defaultDownload?.url || ''} title=${defaultDownload?.title || ''}>
+              <i class=${`fab fa-${osName.toLocaleLowerCase()}`}></i>
+              &nbsp;
+              <span>Download for ${osName}</span>
+            </a>
+          </div>
+        </div>
+      `;
+    }
+    const Download = ({
+      osName
+    }) => {
+      return html`
+        <div class="download" data-operating-system=${osName}>
+          <${DownloadButton} osName=${osName}/>
+          <${DownloadBundles} osName=${osName}/>
+        </div>
+      `;
+    }
+    const App = () => {
+      return html`<div class="downloadSection">${operatingSystems.map(osName => {
+        return html`<${Download} osName=${osName}><//>`;
+      })}</div>`;
+    };
+    document.addEventListener("DOMContentLoaded", async (event) => {
+      const hash = window.location.hash;
+      const tab = document.querySelector(hash || `#guide-${currentOS.toLocaleLowerCase()}`);
+      if (tab) {
+        tab.checked = true;
+      }
+      // Handle history
+      const tabs = document.querySelectorAll(`input[name="tabs"]`);
+      tabs.forEach(tab => {
+        tab.addEventListener('click', (event) => {
+          window.location.hash = tab.getAttribute('id');
+        });
+      });
+      const entryPoint = document.querySelector(".downloadsSection");
+      entryPoint.innerHTML = '';
+      render(App, entryPoint);
     });
   </script>
 </head>
@@ -216,62 +272,102 @@
       &nbsp;
       <a href="https://github.com/containers/podman/releases" target="_blank" rel="noopener noreferrer">Podman releases and downloads</a>
     </div>
-    <div class="downloadSection">
-      <div class="download" data-operating-system="Linux">
-        <a class="downloadButton" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">
-          <i class="fab fa-linux"></i>
-          &nbsp;Download for Linux
-        </a>
-        <ul class="downloadBundles">
-          <noscript>
+
+    <div class="downloadsSection">
+      <div class="downloadSection">
+        <div class="download" data-operating-system="Linux">
+          <div class="downloadButton">
+            <div class="downloadButtonLabel">
+              <a class="downloadButtonLink" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">
+                <i class="fab fa-linux"></i>
+                &nbsp;
+                <span>Download for Linux</span>
+              </a>
+            </div>
+          </div>
+          <ul class="downloadBundles">
             <li>
               <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">AppImage</a>
+              <ul class="downloadBundlesArchs">
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.AppImage">x86</a></li>
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.AppImage">arm</a></li>
+              </ul>
             </li>
             <li>
               <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.flatpak">flatpak</a>
+              <ul class="downloadBundlesArchs">
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.flatpak">x86</a></li>
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-aarch64-5.2.4.flatpak">arm</a></li>
+              </ul>
             </li>
             <li>
               <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.rpm">rpm</a>
+              <ul class="downloadBundlesArchs">
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x86_64-5.2.4.rpm">x86</a></li>
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-aarch64-5.2.4.rpm">arm</a></li>
+              </ul>
             </li>
             <li>
               <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-amd64-5.2.4.deb">deb</a>
+              <ul class="downloadBundlesArchs">
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-amd64-5.2.4.deb">x86</a></li>
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.deb">arm</a></li>
+              </ul>
             </li>
             <li>
               <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.pacman">pacman</a>
+              <ul class="downloadBundlesArchs">
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.pacman">x86</a></li>
+                <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-aarch64-5.2.4.pacman">arm</a></li>
+              </ul>
             </li>
-          </noscript>
-        </ul>
-      </div>
-      <div class="download" data-operating-system="Windows">
-        <a class="downloadButton" href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct">
-          <i class="fab fa-windows"></i>
-          &nbsp;Download for Windows
-        </a>
-        <ul class="downloadBundles">
-          <noscript>
-            <li>
-              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-installer.exe" target="_blank" rel="noopener noreferrer">Installer - exe</a>
-            </li>
-          </noscript>
-        </ul>
-      </div>
-      <div class="download" data-operating-system="MacOS">
-        <a class="downloadButton" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.dmg">
-          <i class="fab fa-apple"></i>
-          &nbsp;Download for Mac
-        </a>
-        <ul class="downloadBundles">
-          <noscript>
-            <li class="alternative">
-              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.dmg">Apple</a>
-            </li>
-            <li>
-              <a href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.dmg">Intel</a>
-            </li>
-          </noscript>
-        </ul>
+          </ul>
+        </div>
+        <div class="download" data-operating-system="Windows">
+          <div class="downloadButton">
+            <div class="downloadButtonLabel">
+              <a class="downloadButtonLink" target="_blank" rel="noopener noreferrer" href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct">
+                <i class="fab fa-windows"></i>
+                &nbsp;
+                <span>Download for Windows</span>
+              </a>
+            </div>
+          </div>
+
+          <ul class="downloadBundles">
+            <noscript>
+              <li>
+                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-installer.exe">Installer - exe</a>
+              </li>
+            </noscript>
+          </ul>
+        </div>
+        <div class="download" data-operating-system="MacOS">
+
+          <div class="downloadButton">
+            <div class="downloadButtonLabel">
+              <a class="downloadButtonLink" target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.dmg">
+                <i class="fab fa-apple"></i>
+                &nbsp;
+                <span>Download for MacOS</span>
+              </a>
+            </div>
+          </div>
+
+          <ul class="downloadBundles">
+            <noscript>
+              <li>
+                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-arm64-5.2.4.dmg">Apple</a>
+              </li>
+              <li>
+                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.4/container-desktop-x64-5.2.4.dmg">Intel</a>
+              </li>
+            </noscript>
+          </ul>
+        </div>
       </div>
     </div>
+
   </div>
 
   <p class="publications">Publications</p>
@@ -292,7 +388,6 @@
     </ul>
   </div>
 
-  <br />
   <br />
 
   <h3 class="guides">Guides &amp; tutorials</h3>

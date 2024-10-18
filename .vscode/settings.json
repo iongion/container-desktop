@@ -8,7 +8,7 @@
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
   "[html]": {
-    "editor.defaultFormatter": "j69.ejs-beautify"
+    "editor.defaultFormatter": "biomejs.biome"
   },
   "[javascript]": {
     "editor.codeActionsOnSave": {
@@ -50,10 +50,12 @@
   "cSpell.ignorePaths": ["src/web-app/assets/languages.json"],
   "cSpell.words": [
     "Aalvistack",
+    "aarch",
     "ALLUSERS",
     "Alvistack",
     "aquasec",
     "aquasecurity",
+    "Archs",
     "asar",
     "biomejs",
     "blkio",
@@ -115,6 +117,7 @@
     "ipvlan",
     "ISSH",
     "Japonic",
+    "jsdelivr",
     "jsign",
     "kernelmode",
     "keyrings",

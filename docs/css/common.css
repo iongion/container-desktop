@@ -82,13 +82,15 @@ h1 {
   color: #e7ff00;
   text-align: center;
 }
-
 .callout a.pd {
   font-size: 14px;
   font-weight: bold;
   padding-top: 4px;
   padding-bottom: 4px;
   display: inline-block;
+}
+.callout a.pd:hover {
+  color: #fff;
 }
 .callout p.cp1 {
   font-size: 14px !important;
@@ -120,23 +122,76 @@ h1 {
 .downloadBundles {
   text-align: center;
 }
-.download a.downloadButton {
-  padding: 14px 10px 14px 10px;
+.download .downloadButton {
   border-radius: 5px;
   text-decoration: none;
   font-family: "Montserrat", sans-serif;
   font-weight: 500;
-  font-size: 16px;
+  font-size: 15px;
   text-align: center;
-  min-width: 235px;
+  width: 265px;
+  display: flex;
+  vertical-align: middle;
+  align-items: center;
+  background-color: #892ca0;
+  color: #ffffff;
+  overflow: hidden;
 }
-[data-operating-system="MacOS"] .downloadBundles li {
+.download .downloadButton .downloadButtonLabel {
+  flex: 1;
+}
+.download .downloadButton .downloadButtonLabel .downloadButtonLink {
+  display: block;
+  padding: 14px 10px 14px 10px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+.download .downloadButton .downloadButtonLabel .downloadButtonLink:hover {
+  background-color: #a01986;
+  color: #fefefe;
+}
+.download .downloadButton .downloadButtonDropdown {
+  background: #2e1640;
+  height: 100%;
+}
+.download .downloadButton .downloadButtonDropdown .downloadButtonLink {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-left: 7px;
+  padding-right: 7px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  border-radius: 5px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.download .downloadButton .downloadButtonDropdown .downloadButtonLink:hover {
+  background-color: #140111;
+  color: #fefefe;
+}
+.downloadBundlesArchs {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.downloadBundlesArchs li {
   display: inline;
 }
-[data-operating-system="MacOS"] .downloadBundles li:last-child {
-  margin-left: 5px;
-  margin-right: 0;
-  padding-left: 10px;
+[data-operating-system="Linux"] .downloadBundles > li > a {
+  display: inline-block;
+  min-width: 130px;
+}
+
+[data-operating-system="MacOS"] .downloadBundles > li {
+  display: inline;
+}
+[data-operating-system="Linux"] .downloadBundlesArchs > li:last-child,
+[data-operating-system="MacOS"] .downloadBundles > li:last-child {
+  margin-left: 5px !important;
+  margin-right: 0  !important;
+  padding-left: 10px !important;
   border-left: 2px solid white;
 }
 
@@ -154,9 +209,16 @@ ul.downloadBundles li {
 ul.downloadBundles li {
   padding-left: 5px;
   padding-right: 5px;
+  margin-bottom: 5px;
 }
-ul.downloadBundles li a {
+ul.downloadBundles li:last-child {
+  margin-bottom: 0;
+}
+ul.downloadBundles > li a {
   text-decoration: underline;
+}
+ul.downloadBundles > li a:hover {
+  color: #13abff;
 }
 ul.downloadBundles {
   padding: 10px;

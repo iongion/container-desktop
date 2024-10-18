@@ -28,9 +28,7 @@ h1 {
   color: #e7ff00;
 }
 
-.callout a {
-  color: #13abff;
-}
+
 .callout a .cp1 {
   color: #e7ff00;
 }
@@ -44,15 +42,6 @@ h1 {
   color: white;
 }
 
-.download a.downloadButton {
-  background-color: #892ca0;
-  border: 1px solid #892ca0;
-  color: #ffffff;
-}
-.download a.downloadButton:hover {
-  background-color: rgba(0, 0, 0, 0);
-  color: #892ca0;
-}
 
 .content h2,
 p,
