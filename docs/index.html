@@ -114,41 +114,50 @@
         }
         const parser = new UAParser(navigator.userAgent);
         const cpu = parser.getCPU();
-        const os = parser.getOS();
-        if (os?.name && cpu?.architecture) {
-          const isArm = `${cpu.architecture || ''}`.toLocaleLowerCase().includes('arm');
-          const arch = isArm ? 'arm' : 'x86';
-          console.debug("Adjusting content to detection", os, cpu, arch);
+        const os = getOperatingSystem();
+        const cpuArch = (cpu?.architecture || '') || (os === 'MacOS' ? 'arm' : 'x86');
+        const isArm = `${cpuArch || ''}`.toLocaleLowerCase().includes('arm');
+        const currentArch = isArm ? 'arm' : 'x86';
+        if (os) {
+          console.debug("Adjusting content to detection", os, currentArch);
           const sections = document.querySelectorAll('.download[data-operating-system]');
           sections.forEach(section => {
             const osName = section.getAttribute('data-operating-system');
             const downloadButton = section.querySelector('.downloadButton');
-            const downloadUrls = downloads[osName]?.[arch]?.links || [];
-            const defaultDownload = downloadUrls[downloads[osName]?.[arch]?.default];
-            downloadButton.setAttribute('href', defaultDownload.url);
             const downloadBundles = section.querySelector('.downloadBundles');
+            const architectures = Object.keys(downloads[osName] || {});
             downloadBundles.innerHTML = '';
-            const injectURLs = (links) => {
-              links.forEach((link) => {
-                if (link.skipFromList) {
-                  return;
+            architectures.forEach(arch => {
+              const downloadUrls = downloads[osName]?.[arch]?.links || [];
+              const defaultDownload = downloadUrls[downloads[osName]?.[arch]?.default];
+              console.debug("Setting download links for", osName, arch, downloadUrls);
+              if (defaultDownload) {
+                if (arch === currentArch) {
+                  downloadButton.setAttribute('href', defaultDownload.url);
+                } else {
+                  downloadButton.setAttribute('href', downloadUrls[0].url);
                 }
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.setAttribute('href', link.url);
-                a.innerText = link.label;
-                li.appendChild(a);
-                downloadBundles.appendChild(li);
-              });
-            }
-            if (osName === "MacOS") {
-              const x86DownloadUrls = downloads[osName]?.x86.links || [];
-              const armDownloadUrls = downloads[osName]?.arm.links || [];
-              injectURLs(x86DownloadUrls);
-              injectURLs(armDownloadUrls);
-            } else {
-              injectURLs(downloadUrls);
-            }
+              }
+              const injectURLs = (links) => {
+                links.forEach((link) => {
+                  if (link.skipFromList) {
+                    return;
+                  }
+                  const li = document.createElement('li');
+                  const a = document.createElement('a');
+                  a.setAttribute('href', link.url);
+                  a.innerText = link.label;
+                  li.appendChild(a);
+                  downloadBundles.appendChild(li);
+                });
+              }
+              if (osName === "MacOS") {
+                const x86DownloadUrls = downloads[osName]?.[arch]?.links || [];
+                injectURLs(x86DownloadUrls);
+              } else {
+                injectURLs(downloadUrls);
+              }
+            });
           });
           // Set documentation active tab
           const hash = window.location.hash;
