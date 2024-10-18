@@ -90,10 +90,10 @@ h1 {
   display: inline-block;
 }
 .callout a.pd:hover {
-  color: #fff;
+  color: #13abff;
 }
 .callout p.cp1 {
-  font-size: 14px !important;
+  font-size: 14px;
   margin: 0;
 }
 .callout p.cp2 {
@@ -102,6 +102,15 @@ h1 {
 .callout p.cp3 {
   font-size: 13px !important;
 }
+.callout-help-podman-desktop {
+  padding: 0 !important;
+}
+.callout-help-podman-desktop,
+.callout-help-podman-desktop .cp1,
+.callout-help-podman-desktop .cp1 p {
+  font-size : 13px;
+}
+
 
 .downloadSection {
   display: flex;
@@ -194,7 +203,9 @@ h1 {
   padding-left: 10px !important;
   border-left: 2px solid white;
 }
-
+.setup-guide {
+  filter: drop-shadow(0 15px 15px black);
+}
 .content-setup-guide {
   padding-top: 20px;
   text-align: center;
@@ -258,6 +269,17 @@ ul.downloadBundles {
 }
 .books ul li:last-child {
   margin-right: 0;
+}
+.books ul li a {
+  text-decoration: none;
+  color: #ffffff;
+}
+.books ul li a:hover {
+  text-decoration: underline;
+  color: #13abff;
+}
+.books ul li a:hover p {
+  color: #13abff;
 }
 
 .content {
@@ -644,7 +666,7 @@ ul.footerMenu {
   margin-right: 40px;
 }
 .installationSection a:hover {
-  color: #13abff;
+  color: #13abff !important;
 }
 .installationSection a:last-child {
   margin-right: 0;
@@ -718,8 +740,11 @@ ul.footerMenu {
   background: #fff;
   text-align: left;
   color: #d588ea;
-  background: #2e1640;
   width: calc(100% - 60px);
+
+  background: #2e1640;
+
+  background: linear-gradient(160deg, rgba(26, 6, 28, 1) 0%, rgb(76, 25, 82, 1) 50%, rgba(7, 15, 41, 1) 100%);
 }
 .tabs .input:checked + .label + .panel {
   display: block;
@@ -782,7 +807,7 @@ ul.footerMenu {
   text-decoration: underline;
 }
 .panel a:hover {
-  color: #fff;
+  color: #13abff;
   text-decoration: underline;
 }
 .panel dl dd code {

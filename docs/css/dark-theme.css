@@ -1,7 +1,11 @@
 html,
 body {
+  width: 100%;
+  height: 100%;
   background: rgb(26, 6, 28);
   background: linear-gradient(160deg, rgba(26, 6, 28, 1) 0%, rgb(76, 25, 82, 1) 50%, rgba(7, 15, 41, 1) 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 h1 {
@@ -27,7 +31,6 @@ h1 {
 .callout p {
   color: #e7ff00;
 }
-
 
 .callout a .cp1 {
   color: #e7ff00;
