@@ -194,11 +194,12 @@
       const archDownloads = osDownloads?.[currentArch];
       const defaultDownload = archDownloads?.links[archDownloads.default];
       const downloadUrl = defaultDownload?.url || '';
+      const icon = osName === 'MacOS' ? 'apple' : osName.toLocaleLowerCase();
       return html`
         <div class="downloadButton">
           <div class="downloadButtonLabel">
             <a class="downloadButtonLink" href=${defaultDownload?.url || ''} title=${defaultDownload?.title || ''}>
-              <i class=${`fab fa-${osName.toLocaleLowerCase()}`}></i>
+              <i class=${`fab fa-${icon}`}></i>
               &nbsp;
               <span>Download for ${osName}</span>
             </a>
