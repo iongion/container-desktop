@@ -714,6 +714,10 @@ ul.footerMenu {
   position: absolute;
   opacity: 0;
 }
+.tabs input[type="radio"] {
+  padding-top: 20px;
+  margin-top: -20px;
+}
 .tabs .label {
   padding: 20px 30px;
   background: #e5e5e5;
