@@ -6,9 +6,9 @@ import { v4 } from "uuid";
 import type { CreateContainerOptions, FetchContainerOptions } from "@/container-client/Api.clients";
 import { type Container, ContainerStateList, type ContainerStats } from "@/env/Types";
 import { deepMerge } from "@/utils";
+import type { ContainerGroup } from "@/web-app/Types";
 import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
-import type { ContainerGroup } from "@/web-app/Types";
 
 const createContainerSearchFilter = (searchTerm: string) => {
   return (it: Container) => {

@@ -111,6 +111,7 @@ export const coerceContainer = (container: Container) => {
   if (container.ImageName) {
     container.Image = container.ImageName;
   }
+
   // container.Logs = container.Logs;
   container.Ports = container.Ports || [];
 
@@ -548,10 +549,17 @@ export class ContainerClient {
           };
         }),
         portmappings: opts.PortMappings?.map((mapping) => {
+          let host_ip = "0.0.0.0";
+          if (mapping.host_ip) {
+            host_ip = mapping.host_ip;
+            if (mapping.host_ip === "localhost") {
+              host_ip = "127.0.0.1";
+            }
+          }
           return {
             protocol: mapping.protocol,
             container_port: mapping.container_port,
-            host_ip: mapping.host_ip === "localhost" ? "127.0.0.1" : mapping.host_ip,
+            host_ip: host_ip,
             host_port: mapping.host_port,
           };
         }),
@@ -572,12 +580,12 @@ export class ContainerClient {
                 ReadOnly: false,
               };
             }),
+            PortBindings: opts.PortMappings?.reduce((acc, mapping) => {
+              const key = `${mapping.container_port}/${mapping.protocol}`;
+              acc[key] = [{ HostPort: `${mapping.host_port}`, HostIp: mapping.host_ip }];
+              return acc;
+            }, {} as any),
           },
-          PortBindings: opts.PortMappings?.reduce((acc, mapping) => {
-            const key = `${mapping.container_port}/${mapping.protocol}`;
-            acc[key] = [{ HostPort: `${mapping.host_port}` }];
-            return acc;
-          }, {} as any),
         };
       }
       let url = "/containers/create";

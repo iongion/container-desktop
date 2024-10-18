@@ -18,13 +18,14 @@ import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 // project
-import { useStoreActions } from "@/web-app/domain/types";
+import { toPortMappings } from "@/utils";
 import { Notification } from "@/web-app/Notification";
+import { useStoreActions } from "@/web-app/domain/types";
 
 // module
 import type { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
 import { type MountFormContainerImageMount, MountsForm, createMount } from "./MountsForm";
-import { PortMappingsForm, toPortMappings } from "./PortMappingsForm";
+import { PortMappingsForm } from "./PortMappingsForm";
 
 import "./CreateDrawer.css";
 

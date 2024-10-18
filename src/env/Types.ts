@@ -516,7 +516,13 @@ export interface ContainerStats {
 }
 
 export interface ContainerInspect {
+  Cmd: string[];
   Env: string[];
+  ExposedPorts: {
+    [key: string]: any;
+  };
+  StopSignal: string;
+  WorkDir: string;
 }
 
 // See libpod/define/podstate.go
@@ -599,6 +605,11 @@ export interface ContainerConnectOptions {
   shell?: string | null;
 }
 
+export interface ContainerHostConfig {
+  Runtime: string;
+  PortBindings: { [key: string]: ContainerPort[] };
+}
+
 export interface Container {
   AutoRemove: boolean;
   Command: string[];
@@ -631,6 +642,7 @@ export interface Container {
   State: ContainerStateList | ContainerState;
   Status: string;
   //
+  HostConfig?: ContainerHostConfig;
   NetworkSettings?: ContainerNetworkSettings;
   Kube?: string;
   // Computed
@@ -674,15 +686,7 @@ export interface ContainerImage {
   Registry: string;
   FullName: string;
   // from detail
-  Config: {
-    Cmd: string[];
-    Env: string[];
-    ExposedPorts: {
-      [key: string]: number;
-    };
-    StopSignal: string;
-    WorkDir: string;
-  };
+  Config: ContainerInspect;
   // Docker specific
   RepoDigests?: string[];
 }

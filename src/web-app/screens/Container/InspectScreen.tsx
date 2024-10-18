@@ -5,11 +5,11 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 import type { Container } from "@/env/Types";
+import { Notification } from "@/web-app/Notification";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
-import { Notification } from "@/web-app/Notification";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
 
@@ -67,6 +67,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
+
   const config = container.Config || { Env: [] };
   const environmentVariables = (config.Env || []).sort(sortAlphaNum).map<InspectGroupValues>((env) => {
     const [key, value] = env.split("=");
@@ -82,17 +83,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
     };
   });
   const containerPorts: InspectGroupValues[] = [];
-  const ports = container.NetworkSettings?.Ports;
-  if (ports) {
-    Object.keys(ports).forEach((portProtocol) => {
-      const info = Array.isArray(ports[portProtocol]) ? ports[portProtocol] : [];
-      info.forEach((info) => {
+  const portBindings = container.HostConfig?.PortBindings || {};
+  if (portBindings) {
+    Object.keys(portBindings).forEach((portBinding) => {
+      const portMappings = portBindings[portBinding];
+      portMappings.forEach((portMapping: any) => {
+        const host = portMapping.hostIp || portMapping.HostIp || "0.0.0.0";
+        const port = portMapping.hostPort || portMapping.HostPort || 0;
         const item = {
-          key: `${portProtocol}`,
-          value:
-            `${info.HostIp}`.indexOf("::") !== -1
-              ? `${info.HostIp || "0.0.0.0"}${info.HostPort}`
-              : `${info.HostIp || "0.0.0.0"}:${info.HostPort}`,
+          key: `${portBinding}`,
+          value: `${host}`.indexOf("::") !== -1 ? `${host}${port}` : `${host}:${port}`,
         };
         containerPorts.push(item);
       });

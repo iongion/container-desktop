@@ -6,10 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type Container, ContainerEngine, ContainerStateList } from "@/env/Types";
-import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { getContainerServiceUrl, getContainerUrl } from "./Navigation";
 
 import { v4 } from "uuid";
@@ -270,6 +270,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   let containerServiceUrl = "";
   let expandAsOverlay: React.ReactNode | null = null;
   let withInlinePlayerActionsWidget: React.ReactNode | undefined;
+
   if (container) {
     containerServiceUrl = getContainerServiceUrl(container);
     if (withOverlay) {
