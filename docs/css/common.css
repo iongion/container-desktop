@@ -38,6 +38,9 @@ body {
   margin-left: 10%;
   margin-right: 10%;
   padding-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 h1,
@@ -98,6 +101,9 @@ h1 {
 .callout p.cp1 {
   font-size: 14px;
   margin: 0;
+  text-align: center;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 .callout p.cp2 {
   font-size: 14px !important;
@@ -106,7 +112,9 @@ h1 {
   font-size: 13px !important;
 }
 .callout-help-podman-desktop {
-  padding: 0 !important;
+  margin-top: 0;
+  display: flex;
+  justify-content: center;
 }
 .callout-help-podman-desktop,
 .callout-help-podman-desktop .cp1,
@@ -208,6 +216,9 @@ h1 {
 }
 .setup-guide {
   filter: drop-shadow(0 15px 15px black);
+  border-radius: 10px !important;
+  overflow: hidden;
+  border-bottom: 1px solid #74027f;
 }
 .content-setup-guide {
   padding-top: 20px;
@@ -277,12 +288,19 @@ ul.downloadBundles {
   text-decoration: none;
   color: #ffffff;
 }
+.books ul li a div {
+  margin-top: 8px;
+}
 .books ul li a:hover {
   text-decoration: underline;
   color: #13abff;
 }
-.books ul li a:hover p {
+.books ul li a:hover div {
   color: #13abff;
+}
+.books ul li a img {
+  filter: drop-shadow(0px 0px 2px black);
+  border-radius: 10px;
 }
 
 .content {
@@ -756,7 +774,9 @@ ul.footerMenu {
 .tabs .input:checked + .label + .panel {
   display: block;
 }
-
+.panel dl {
+  margin-top: 0;
+}
 .panel span {
   animation: 0.5s ease-out 0s 1 slideInFromTop;
 }
@@ -768,15 +788,20 @@ ul.footerMenu {
 .panel h6 {
   text-align: left;
 }
+.panel h3 {
+  margin-top: 25px;
+  margin-bottom: 5px;
+}
 .panel p {
   margin: 0;
   padding: 0;
   font-size: 14px;
   color: #333;
 }
-.panel dl dt {
-  padding-top: 10px;
-  padding-bottom: 10px;
+.panel dl > dt {
+  font-weight: normal;
+  padding-top: 15px;
+  padding-bottom: 5px;
   color: #ffffff;
 }
 .panel dl dd {
@@ -786,6 +811,13 @@ ul.footerMenu {
   line-height: 28px;
   color: #c3c3c3;
   font-size: 14px;
+}
+.panel dl dd h4 {
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+.panel dl dd h4 span {
+  font-weight: normal;
 }
 .panel dl dd ul {
   margin: 0;
