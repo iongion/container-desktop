@@ -223,21 +223,25 @@
       })}</div>`;
     };
     document.addEventListener("DOMContentLoaded", async (event) => {
-      const hash = window.location.hash;
-      const tab = document.querySelector(hash || `#guide-${currentOS.toLocaleLowerCase()}`);
-      if (tab) {
-        tab.checked = true;
-      }
-      // Handle history
-      const tabs = document.querySelectorAll(`input[name="tabs"]`);
-      tabs.forEach(tab => {
-        tab.addEventListener('click', (event) => {
-          window.location.hash = tab.getAttribute('id');
+      try {
+        const hash = window.location.hash;
+        const tab = document.querySelector(hash || `#guide-${currentOS.toLocaleLowerCase()}`);
+        if (tab) {
+          tab.checked = true;
+        }
+        // Handle history
+        const tabs = document.querySelectorAll(`input[name="tabs"]`);
+        tabs.forEach(tab => {
+          tab.addEventListener('click', (event) => {
+            window.location.hash = tab.getAttribute('id');
+          });
         });
-      });
-      const entryPoint = document.querySelector(".downloadsSection");
-      entryPoint.innerHTML = '';
-      render(App, entryPoint);
+        const entryPoint = document.querySelector(".downloadsSection");
+        entryPoint.innerHTML = '';
+        render(App, entryPoint);
+      } catch (error) {
+        console.warn("Unable to render the app", error);
+      }
     });
   </script>
 </head>
