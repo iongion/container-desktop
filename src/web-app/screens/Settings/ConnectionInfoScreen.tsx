@@ -20,22 +20,24 @@ export const View = "connection-info";
 export const Title = "Connection info";
 
 const scopedCodeExample = `
-// 1. From a %OPERATING_SYSTEM% terminal console:
-//
-// %ENV_EXPORT%="%HOST_DOCKER_HOST%"
-// node example.mjs
-// %CLI% ps
+/*
+Save the content above in a file named example.mjs, then:
 
-// 2. From a %LABEL% terminal console inside %SCOPE%:
-//
-// export DOCKER_HOST="%SCOPE_DOCKER_HOST%"
-// node example.mjs
-// %CLI% ps
+1. From a %OPERATING_SYSTEM% terminal console:
+
+%ENV_EXPORT%="%HOST_DOCKER_HOST%"
+node example.mjs
+%CLI% ps
+
+2. From a %LABEL% terminal console inside %SCOPE%:
+
+export DOCKER_HOST="%SCOPE_DOCKER_HOST%"
+node example.mjs
+%CLI% ps
+*/
 `;
 
 const codeExample = `// This code example demonstrates how to connect to the container engine from nodejs
-// Save it in a file named example.mjs and run it with the following command
-
 import axios from "axios"; // npm install axios
 import httpAdapter from "axios/lib/adapters/http.js";
 import http from "node:http";
