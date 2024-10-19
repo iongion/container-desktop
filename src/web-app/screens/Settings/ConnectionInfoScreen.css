@@ -1,6 +1,9 @@
 .AppScreen[data-screen="settings.connection-info"] .ConnectionCodeEditor {
   border: 1px solid #000;
 }
+.AppScreen[data-screen="settings.connection-info"] .AppScreenContent {
+  overflow: hidden;
+}
 .AppScreen[data-screen="settings.connection-info"] h5 {
   margin: 0;
   padding: 5px;
@@ -59,8 +62,8 @@
 }
 
 [data-theme="bp5-dark"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
-  background: #04153b;
-  color: #a6b5ce;
+  background: #2f4e94;
+  color: #c4daff;
 }
 [data-theme="bp5-light"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
   background: #cbc8cb;

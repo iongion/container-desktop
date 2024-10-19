@@ -14,6 +14,7 @@
 [data-table="container.inspect"] tr td:nth-child(2) {
   width: 100%;
   text-align: left;
+  white-space: break-spaces;
 }
 [data-table="container.inspect"] tr td code:first-child {
   border: 1px solid transparent;
@@ -113,8 +114,8 @@ body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr:nth-chil
   color: #ccc;
 }
 body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr td code:first-child {
-  background: #04153b;
-  color: #a6b5ce;
+  background: #2f4e94;
+  color: #c4daff;
 }
 body.bp5-light[data-engine="docker"] [data-table="container.inspect"] [data-table-row="group.name"] td {
   background: #96a2b3 !important;
