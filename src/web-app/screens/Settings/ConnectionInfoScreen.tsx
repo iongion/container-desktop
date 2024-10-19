@@ -38,7 +38,7 @@ const codeExample = `// This code example demonstrates how to connect to the con
 
 import axios from "axios"; // npm install axios
 import httpAdapter from "axios/lib/adapters/http.js";
-import http from "http";
+import http from "node:http";
 
 const driver = axios.create({
   adapter: httpAdapter,
