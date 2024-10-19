@@ -17,8 +17,7 @@ import type { PodmanContainerEngineHostClientCommon } from "./base";
 
 export class PodmanContainerEngineHostClientVirtualizedWSL
   extends AbstractContainerEngineHostClientVirtualizedWSL
-  implements PodmanContainerEngineHostClientCommon
-{
+  implements PodmanContainerEngineHostClientCommon {
   static HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   PROGRAM = PODMAN_PROGRAM;
@@ -42,7 +41,7 @@ export class PodmanContainerEngineHostClientVirtualizedWSL
         relay: "",
       };
     }
-    const uri = scope.startsWith("podman-machine") ? getWindowsPipePath(scope) : "";
+    const uri = scope.startsWith("podman-machine") ? getWindowsPipePath(scope) : getWindowsPipePath(this.id);
     let relay = "";
     // Get environment variable inside the scope
     try {

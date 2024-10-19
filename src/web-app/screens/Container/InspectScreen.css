@@ -77,7 +77,6 @@
 [data-theme="bp5-dark"] .ContainerVolumeMapping li code {
   color: #ccc;
 }
-
 [data-theme="bp5-light"] .ContainerVolumeMapping li strong {
   color: #333;
   background-color: #b5c8d6;
@@ -85,4 +84,48 @@
 [data-theme="bp5-light"] .ContainerVolumeIndex,
 [data-theme="bp5-light"] .ContainerVolumeMapping li code {
   color: #333;
+}
+
+body.bp5-dark[data-engine="podman"] [data-table="container.inspect"] tr td code:first-child {
+  background: #110411;
+  color: #f6c0fe;
+}
+body.bp5-light[data-engine="podman"] [data-table="container.inspect"] [data-table-row="group.name"] td {
+  background: #96a2b3 !important;
+}
+body.bp5-light[data-engine="podman"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
+  background-color: #cfd3d7;
+}
+body.bp5-light[data-engine="podman"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
+  background-color: #e1e1e1;
+}
+body.bp5-light[data-engine="podman"] [data-table="container.inspect"] tr td code:first-child {
+  background: #cbc8cb;
+  border: 1px solid #412d4b;
+}
+
+body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
+  background-color: #273553;
+  color: #ccc;
+}
+body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
+  background-color: #202a3f;
+  color: #ccc;
+}
+body.bp5-dark[data-engine="docker"] [data-table="container.inspect"] tr td code:first-child {
+  background: #04153b;
+  color: #a6b5ce;
+}
+body.bp5-light[data-engine="docker"] [data-table="container.inspect"] [data-table-row="group.name"] td {
+  background: #96a2b3 !important;
+}
+body.bp5-light[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
+  background-color: #cfd3d7;
+}
+body.bp5-light[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
+  background-color: #e1e1e1;
+}
+body.bp5-light[data-engine="docker"] [data-table="container.inspect"] tr td code:first-child {
+  background: #cbc8cb;
+  border: 1px solid #412d4b;
 }

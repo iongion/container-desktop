@@ -30,6 +30,15 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
       <AnchorButton
         minimal
         disabled={!isRunning}
+        active={isActive ? isActive("settings.connection-info") : false}
+        icon={IconNames.POWER}
+        text={t("Connection info")}
+        href={getSettingsUrl("connection-info")}
+        title={isRunning ? t("") : t("Access to this screen requires connection")}
+      />
+      <AnchorButton
+        minimal
+        disabled={!isRunning}
         active={isActive ? isActive("settings.system-info") : false}
         icon={IconNames.EYE_OPEN}
         text={t("System info")}

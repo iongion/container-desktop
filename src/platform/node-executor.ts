@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
+import { isEmpty } from "lodash-es";
 import {
   type ChildProcessWithoutNullStreams,
   type SpawnOptionsWithoutStdio,
@@ -11,6 +12,7 @@ import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 import portfinder from "portfinder";
+import { v4 } from "uuid";
 
 import { getApiConfig } from "@/container-client/Api.clients";
 import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/container-client/services";
@@ -26,9 +28,7 @@ import {
   type Wrapper,
 } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { getWindowsPipePath } from "@/platform";
 import { axiosConfigToCURL, deepMerge } from "@/utils";
-import { v4 } from "uuid";
 import { Platform } from "./node";
 
 const logger = createLogger("shared");
@@ -695,7 +695,12 @@ export async function proxyRequestToWSLDistribution(
       let resolved = false;
       try {
         const abort = new AbortController();
-        const pipePath = getWindowsPipePath(connection.id);
+        console.error("WSL Relay server starting", connection);
+        const pipePath = connection?.settings?.api?.connection?.uri || "";
+        if (isEmpty(pipePath)) {
+          console.error("Named pipe path not set for current connection", connection);
+          throw new Error("Named pipe path not set for current connection");
+        }
         const { started, socketPath, tcpAddress } = await server.start(
           {
             pipePath,
@@ -758,16 +763,6 @@ export async function proxyRequestToWSLDistribution(
       }
     });
   });
-}
-
-export async function getSSHRelayLocalAddress(connection: Connection, socketPath?: string | null) {
-  if (os.type() === OperatingSystem.Windows) {
-    const namedPipe = getWindowsPipePath(connection.id);
-    return namedPipe;
-  }
-  const userData = await Platform.getUserDataPath();
-  const localAddress = await Path.join(userData, `container-desktop-ssh-relay-${connection.id}`);
-  return localAddress;
 }
 
 export async function proxyRequestToSSHConnection(

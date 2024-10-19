@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 
 - WSL: Relay method using custom ssh client + custom ssh server and windows named pipes
+- Connection info screen - exemplify how to connect from code and with cli tools
 
 ## Changed
 

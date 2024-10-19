@@ -3,11 +3,11 @@ import { v4 } from "uuid";
 
 import {
   type AbstractContainerEngineHostClient,
-  createConnectorBy,
   Docker,
-  getDefaultConnectors,
   Podman,
   RUNTIMES,
+  createConnectorBy,
+  getDefaultConnectors,
 } from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
 import { systemNotifier } from "@/container-client/notifier";
@@ -19,8 +19,8 @@ import type {
 import {
   type ApplicationEnvironment,
   type CommandExecutionResult,
-  type Connection,
   type ConnectOptions,
+  type Connection,
   type Connector,
   type ContainerConnectOptions,
   ContainerEngine,
@@ -326,7 +326,7 @@ export class Application {
     subscribe();
     return {
       subscribe,
-      unsubscribe: () => {},
+      unsubscribe: () => { },
     };
   }
 
@@ -944,6 +944,7 @@ export class Application {
         this.logger.debug(connector.id, "Using custom host - settings", {
           user: opts?.connection?.settings,
           defaults: connector.settings,
+          settings: settings
         });
         host.setLogLevel(this.logLevel);
         await host.setSettings(settings);
@@ -1121,6 +1122,7 @@ export class Application {
           connector.settings = deepMerge(connector.settings, engineSettings);
           connector.availability = availability;
           this._currentContainerEngineHostClient = host;
+          console.debug("> Host settings are", { host: engineSettings, connector: connector.settings });
           systemNotifier.transmit("startup.phase", {
             trace: "Creating connector host completed",
           });

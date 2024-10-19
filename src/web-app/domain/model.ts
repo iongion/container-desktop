@@ -1,15 +1,15 @@
-import { Intent } from "@blueprintjs/core";
-import { action, thunk } from "easy-peasy";
-import produce from "immer";
-import { isObject } from "lodash-es";
 // project
 import { Application } from "@/container-client/Application";
 import { systemNotifier } from "@/container-client/notifier";
 import { type Connector, OperatingSystem } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { t } from "@/web-app/App.i18n";
-import { registry } from "@/web-app/domain/registry";
 import { Notification } from "@/web-app/Notification";
+import { registry } from "@/web-app/domain/registry";
+import { Intent } from "@blueprintjs/core";
+import { action, thunk } from "easy-peasy";
+import produce from "immer";
+import { isObject } from "lodash-es";
 import { AppBootstrapPhase, type AppModel, type AppModelState, type AppRegistry } from "./types";
 
 function delayCheckUpdate(osType: OperatingSystem) {
@@ -211,6 +211,7 @@ export const createModel = async (registry: AppRegistry): Promise<AppModel> => {
           const currentConnector = await instance.start(
             connection ? { startApi, connection, skipAvailabilityCheck: false } : undefined,
           );
+          console.debug("> Started with current connector", currentConnector);
           const connectors = instance.getConnectors();
           const running = currentConnector?.availability?.api || false;
           const osType = instance.getOsType();
