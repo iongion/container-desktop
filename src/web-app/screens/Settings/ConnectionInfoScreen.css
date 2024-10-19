@@ -7,9 +7,6 @@
   font-size: 12px;
 }
 
-[data-table="settings.connection-info"] thead tr th {
-  background: #000;
-}
 [data-table="settings.connection-info"] tr td {
   text-align: left;
   font-family: var(--monospace-font);
@@ -40,13 +37,18 @@
   border-radius: 5px;
 }
 
+[data-theme="bp5-dark"] [data-table="settings.connection-info"] thead tr th {
+  background: #000;
+}
 [data-theme="bp5-dark"] .AppScreen[data-screen="settings.connection-info"] h5 {
   background: #000000;
 }
 [data-theme="bp5-light"] .AppScreen[data-screen="settings.connection-info"] h5 {
   background: #bcbcbc;
 }
-
+[data-theme="bp5-light"] [data-table="settings.connection-info"] thead tr th {
+  background: #bcbcbc;
+}
 [data-theme="bp5-dark"][data-engine="podman"] [data-table="settings.connection-info"] tr td code:first-child {
   background: #110411;
   color: #f6c0fe;
