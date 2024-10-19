@@ -36,7 +36,7 @@ const displayName = pkg.title;
 const releaseName = `${displayName} ${version}`;
 const author = (pkg.author || "").replace(/\s+/g, ".");
 const publisher = process.env.PUBLISHER || `CN=${author}`;
-const publisherDisplayName = (process.env.PUBLISHER_DISPLAY_NAME || pkg.author).replace(/\s+/g, ".");
+const publisherDisplayName = process.env.PUBLISHER_DISPLAY_NAME || pkg.author;
 const config = {
   appId: "container-desktop.iongion.github.io",
   productName: process.platform === "linux" ? pkg.name : displayName,
