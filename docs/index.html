@@ -405,10 +405,10 @@
         <input type="radio" class="input" name="tabs" id="guide-linux" checked />
         <label class="label" for="guide-linux"><i class="fab fa-linux"></i> &nbsp; Linux</label>
         <div class="panel">
-          <h3>Guides</h3>
+          <h3 id="guide-linux-table-of-contents">Guides</h3>
           <ol>
             <li><a href="#guide-linux-quick-guide">Quick guide</a></li>
-            <li><a href="#guide-linux-podman-as-docker">Podman &amp; Podman acting as Docker</a></li>
+            <li><a href="#guide-linux-podman-as-docker">Podman acting as Docker</a></li>
             <li><a href="#guide-linux-docker-desktop-alternative">Docker Desktop alternative</a></li>
             <li><a href="#guide-linux-sharing-connection">Sharing connection with Container Desktop</a></li>
           </ol>
@@ -417,7 +417,7 @@
           <dl>
             <dt>Examples are following Ubuntu distribution but can easily be adapted to any distribution.</dt>
           </dl>
-          <h3 id="guide-linux-quick-guide">1. Quick guide</h3>
+          <h3 id="guide-linux-quick-guide"><a href="#guide-linux-table-of-contents"><i class="fa fa-angles-up"></i></a> 1. Quick guide</h3>
           <dl>
             <dt>Install requirements</dt>
             <dd>
@@ -442,28 +442,31 @@ docker run hello-world # This to test the installation - docker cli must be able
             </dd>
             <dt>Open Container Desktop</dt>
             <dd>
-              Connect to <code>System Docker</code> or <code>System Podman</code> default connections and all should work, choose and make the one you prefer, default if you want.
+              Connect to <strong>System Podman</strong> or <strong>System Docker</strong> default connection and all should work.
             </dd>
           </dl>
-          <h3 id="guide-linux-podman-as-docker">2. Podman &amp; Podman acting as Docker</h3>
+          <h3 id="guide-linux-podman-as-docker"><a href="#guide-linux-table-of-contents"><i class="fa fa-angles-up"></i></a> 2. Podman acting as Docker</h3>
           <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
           <dl>
-            <dt>Start podman api listening to <code>/var/run/docker.sock</code></dt>
+            <dt>Start podman api listening to <code class="EnvironmentPath">/var/run/docker.sock</code></dt>
             <dd>
               <pre>export DOCKER_HOST=/var/run/docker.sock
 podman system service --time=0 unix://${DOCKER_HOST} --log-level=debug</pre>
+              <p>After this point, one can use <code class="EnvironmentCommand">podman</code> or <code class="EnvironmentCommand">docker</code> or any other tool that uses the socket.</p>
             </dd>
           </dl>
-          <h3 id="guide-linux-docker-desktop-alternative">3. Docker Desktop alternative</h3>
+          <h3 id="guide-linux-docker-desktop-alternative"><a href="#guide-linux-table-of-contents"><i class="fa fa-angles-up"></i></a> 3. Docker Desktop alternative</h3>
           <dl>
             <dt>This is so easy</dt>
             <dd>Follow the <a href="#guide-linux-quick-guide">Quick guide</a> to support both docker and/or podman, or just skip the podman part and focus on docker only.</dd>
           </dl>
           <h3 id="guide-linux-sharing-connection">4. Sharing connection with Container Desktop</h3>
           <dl>
-            <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
+            <dt>Allowing podman and docker CLIs to use the same connection that Container Desktop is using</dt>
             <dd>
-              The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+              The <code class="EnvironmentVariable">DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+              <br/>
+              The exact value can be found under <i class="fa fa-power-off"></i> <strong>Connection info</strong> screen of the <i class="fa fa-cog"></i> <strong>Settings</strong> section.
             </dd>
           </dl>
         </div>
@@ -471,11 +474,11 @@ podman system service --time=0 unix://${DOCKER_HOST} --log-level=debug</pre>
         <input type="radio" class="input" name="tabs" id="guide-macos" />
         <label class="label" for="guide-macos"><i class="fab fa-apple"></i> &nbsp; Mac</label>
         <div class="panel">
-          <h3>Guides</h3>
+          <h3 id="guide-macos-table-of-contents">Guides</h3>
           <ol>
             <li><a href="#guide-macos-quick-guide">Quick guide</a></li>
-            <li><a href="#guide-macos-best-experience">Podman &amp; Docker - best experience</a></li>
-            <li><a href="#guide-macos-podman-as-docker">Podman &amp; Podman acting as Docker</a></li>
+            <li><a href="#guide-macos-best-experience">Podman and Docker - best experience</a></li>
+            <li><a href="#guide-macos-podman-as-docker">Podman acting as Docker</a></li>
             <li><a href="#guide-macos-docker-desktop-alternative">Docker Desktop alternative</a></li>
             <li><a href="#guide-macos-sharing-connection">Sharing connection with Container Desktop</a></li>
           </ol>
@@ -490,7 +493,7 @@ brew update
 brew upgrade</pre>
             </dd>
           </dl>
-          <h3 id="guide-macos-quick-guide">1. Quick guide</h3>
+          <h3 id="guide-macos-quick-guide"><a href="#guide-macos-table-of-contents"><i class="fa fa-angles-up"></i></a> 1. Quick guide</h3>
           <dl>
             <dt>Install <a href="https://github.com/abiosoft/colima" target="_blank" rel="noopener noreferrer">colima</a></dt>
             <dd>
@@ -510,10 +513,10 @@ brew upgrade</pre>
             </dd>
             <dt>Open Container Desktop</dt>
             <dd>
-              Connect to <code>System Docker</code> default connection and all should work, make it default if you want.
+              Connect to <strong>System Docker</strong> default connection and all should work.
             </dd>
           </dl>
-          <h3 id="guide-macos-best-experience">2. Podman &amp; Docker - best experience</h3>
+          <h3 id="guide-macos-best-experience"><a href="#guide-macos-table-of-contents"><i class="fa fa-angles-up"></i></a> 2. Podman and Docker - best experience</h3>
           <dl>
             <dt>Install lima from <a href="https://lima-vm.io/" target="_blank" rel="noopener noreferrer">https://lima-vm.io/</a> - LIMA uses MacOS native virtualization to provide linux environments, it is like WSL, but for MacOS.</dt>
             <dd>
@@ -536,7 +539,7 @@ brew upgrade</pre>
               <code>limactl shell docker</code>
             </dd>
           </dl>
-          <h3 id="guide-macos-podman-as-docker">3. Podman &amp; Podman acting as Docker</h3>
+          <h3 id="guide-macos-podman-as-docker"><a href="#guide-macos-table-of-contents"><i class="fa fa-angles-up"></i></a> 3. Podman acting as Docker</h3>
           <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
           <dl>
             <dt>Latest and greatest</dt>
@@ -546,7 +549,7 @@ brew upgrade</pre>
               Please consider the following
               <ul>
                 <li>Upon installation, podman will create its own VM also know as Podman Machine</li>
-                <li>Aside from this, it will also set the <code>DOCKER_HOST</code> environment variable to point to the podman unix socket. This makes it easy for the docker cli to just use it.</li>
+                <li>Aside from this, it will also set the <code class="EnvironmentVariable">DOCKER_HOST</code> environment variable to point to the podman unix socket. This makes it easy for the docker cli to just use it.</li>
               </ul>
             </dd>
             <dt>Easiest (skip if using latest and greatest)</dt>
@@ -554,7 +557,7 @@ brew upgrade</pre>
               <code>brew install podman</code>
             </dd>
           </dl>
-          <h3 id="guide-macos-docker-desktop-alternative">4. Docker Desktop alternative</h3>
+          <h3 id="guide-macos-docker-desktop-alternative"><a href="#guide-macos-table-of-contents"><i class="fa fa-angles-up"></i></a> 4. Docker Desktop alternative</h3>
           <dl>
             <dt>Using <strong>colima</strong>, prepare a Linux VM with backed-in docker support</dt>
             <dd>
@@ -577,11 +580,13 @@ brew upgrade</pre>
               </ul>
             </dd>
           </dl>
-          <h3 id="guide-macos-sharing-connection">5. Sharing connection with Container Desktop</h3>
+          <h3 id="guide-macos-sharing-connection"><a href="#guide-macos-table-of-contents"><i class="fa fa-angles-up"></i></a> 5. Sharing connection with Container Desktop</h3>
           <dl>
-            <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
+            <dt>Allowing podman and docker CLIs to use the same connection that Container Desktop is using</dt>
             <dd>
-              The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+              The <code class="EnvironmentVariable">DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+              <br/>
+              The exact value can be found under <i class="fa fa-power-off"></i> <strong>Connection info</strong> screen of the <i class="fa fa-cog"></i> <strong>Settings</strong> section.
             </dd>
           </dl>
         </div>
@@ -589,18 +594,18 @@ brew upgrade</pre>
         <input type="radio" class="input" name="tabs" id="guide-windows" />
         <label class="label" for="guide-windows"><i class="fab fa-windows"></i> &nbsp; Windows</label>
         <div class="panel">
-          <h3>Guides</h3>
+          <h3 id="guide-windows-table-of-contents">Guides</h3>
           <ol>
             <li><a href="#guide-windows-quick-guide">Quick guide</a></li>
-            <li><a href="#guide-windows-podman-custom">Podman - custom installation</a></li>
-            <li><a href="#guide-windows-podman-as-docker">Podman &amp; Podman acting as Docker</a></li>
+            <li><a href="#guide-windows-best-experience">Podman and Docker - best experience</a></li>
+            <li><a href="#guide-windows-podman-as-docker">Podman acting as Docker</a></li>
             <li><a href="#guide-windows-docker-desktop-alternative">Docker Desktop alternative</a></li>
-            <li><a href="#guide-windows-best-experience">Podman &amp; Docker best experience</a></li>
+            <li><a href="#guide-windows-podman-custom">Podman - custom installation</a></li>
             <li><a href="#guide-windows-sharing-connection">Sharing connection with Container Desktop</a></li>
             <li><a href="#guide-windows-tips">Tips &amp; tricks</a></li>
           </ol>
           <h3 id="guide-windows-requirements">Requirements</h3>
-          <p class="important-note important-note-requirements">On Windows, virtualization is required to support both podman and docker container engines. With the introduction of WSL, the development experience has evolved. It is highly recommended to move away from msys/cygwin and just use WSL. Most of the times we deploy on Linux anyway, so it is appropriate to have an experience closer to reality. It also gives one a good opportunity to learn Linux, just embrace it.</p>
+          <p class="important-note important-note-requirements">On Windows, virtualization is required to support both podman and docker container engines. With the introduction of WSL, the development experience has evolved. It is highly recommended to move away from msys/cygwin and just use WSL. Most of the times we deploy on Linux anyway, so it is appropriate to have an experience closer to reality. It also gives one a good opportunity to learn Linux.</p>
           <dl>
             <dt>As non-administrator user</dt>
             <dd>
@@ -615,16 +620,23 @@ winget install -e --id=Microsoft.WSL</pre>
             </dd>
             <p class="important-note">Restart the computer and then set-up the WSL distribution user account by starting <code>wsl.exe</code> in a Windows Terminal</p>
           </dl>
-          <h3 id="guide-windows-quick-guide">1. Quick guide</h3>
+          <h3 id="guide-windows-quick-guide"><a href="#guide-windows-table-of-contents"><i class="fa fa-angles-up"></i></a> 1. Quick guide</h3>
           <dl>
             <dt>Enable and install <strong>Windows Subsystem for Linux (WSL)</strong> as administrator</dt>
             <dd>
               <pre>winget install -e --id=Microsoft.WSL</pre>
-              This will install the default Ubuntu distribution, which is fine for most users - Ubuntu-24.04 is the latest at the time of writing.
-              <br />
-              It will also install a profile to it inside Windows Terminal, which is a great terminal emulator for Windows.
-              <br />
-              After you set-up your linux user, using a Windows Terminal inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install docker and/or podman container engines.
+              <ul>
+                <li>This will install the default Ubuntu distribution, which is fine for most users - Ubuntu-24.04 is the latest at the time of writing.</li>
+                <li>It will also install a profile to it inside Windows Terminal, which is a great terminal emulator for Windows.</li>
+                <li>After you set-up your linux user, using a Windows Terminal inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install docker and/or podman container engines.</li>
+              </ul>
+            </dd>
+            <dt>
+              If WSL is already installed, make sure it is up to date and set to version 2
+            </dt>
+            <dd>
+              <pre>wsl --update
+wsl --set-default-version 2</pre>
             </dd>
             <dt>As non-administrator user</dt>
             <dd>
@@ -638,18 +650,22 @@ winget install "Container Desktop"</pre>
               Create an automatic connection to your WSL distribution, using either docker or podman engines. If you want, choose and make the one you prefer, default and click <strong>Connect</strong> button.
             </dd>
           </dl>
-          <h3 id="guide-windows-podman-custom">2. Podman - custom installation</h3>
+          <h3 id="guide-windows-best-experience"><a href="#guide-windows-table-of-contents"><i class="fa fa-angles-up"></i></a> 2. Podman and Docker best experience</h3>
           <dl>
-            <dt>Podman engine setup inside WSL</dt>
+            <dt>Requirements</dt>
             <dd>
-              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install podman container engine.
+              Ensure all requirements are installed as per the <a href="#guide-windows-requirements">requirements guide</a>
             </dd>
-            <dt>Container Desktop</dt>
+            <dt>Custom WSL</dt>
             <dd>
-              Open Container Desktop UI and create a new Podman engine connection using the WSL host and select your distribution of choice.
+              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install both podman and docker container engines.
+            </dd>
+            <dt>Best developer experience</dt>
+            <dd>
+              Perform all container operations inside the WSL distribution directly, it is just Linux in the end. WSL is the best way to run Linux on Windows.
             </dd>
           </dl>
-          <h3 id="guide-windows-podman-as-docker">3. Podman &amp; Podman acting as Docker</h3>
+          <h3 id="guide-windows-podman-as-docker"><a href="#guide-windows-table-of-contents"><i class="fa fa-angles-up"></i></a> 3. Podman acting as Docker</h3>
           <p class="important-note">This is referred to as Compatibility Mode - it should support all docker features, except the docker cli, in this case podman should be used instead. You can alias that if you want.</p>
           <dl>
             <dt>Latest and greatest</dt>
@@ -659,7 +675,7 @@ winget install "Container Desktop"</pre>
               Please consider the following
               <ul>
                 <li>Upon installation, podman will create its own WSL distribution also known as Podman Machine</li>
-                <li>Aside from this, it will also set the <code>DOCKER_HOST</code> environment variable to point to the podman named pipe</li>
+                <li>Aside from this, it will also set the <code class="EnvironmentVariable">DOCKER_HOST</code> environment variable to point to the podman named pipe</li>
               </ul>
             </dd>
             <dt>Easiest (skip if using latest and greatest)</dt>
@@ -667,7 +683,7 @@ winget install "Container Desktop"</pre>
               <code>winget install -e --id=RedHat.Podman</code>
             </dd>
           </dl>
-          <h3 id="guide-windows-docker-desktop-alternative">4. Docker Desktop alternative</h3>
+          <h3 id="guide-windows-docker-desktop-alternative"><a href="#guide-windows-table-of-contents"><i class="fa fa-angles-up"></i></a> 4. Docker Desktop alternative</h3>
           <dl>
             <dt>Requirements</dt>
             <dd>
@@ -689,36 +705,34 @@ winget install "Container Desktop"</pre>
               </ul>
             </dd>
           </dl>
-          <h3 id="guide-windows-best-experience">5. Podman &amp; Docker best experience</h3>
+          <h3 id="guide-windows-podman-custom"><a href="#guide-windows-table-of-contents"><i class="fa fa-angles-up"></i></a> 5. Podman - custom installation</h3>
           <dl>
-            <dt>Requirements</dt>
+            <dt>Podman engine setup inside WSL</dt>
             <dd>
-              Ensure all requirements are installed as per the <a href="#guide-windows-requirements">requirements guide</a>
+              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install podman container engine.
             </dd>
-            <dt>Custom WSL</dt>
+            <dt>Container Desktop</dt>
             <dd>
-              Inside the WSL distribution, follow the <a href="#guide-linux-quick-guide" target="_blank">Linux installation guide</a> to install both podman and docker container engines.
-            </dd>
-            <dt>Best developer experience</dt>
-            <dd>
-              Perform all container operations inside the WSL distribution directly, it is just Linux in the end. WSL is the best way to run Linux on Windows.
+              Open Container Desktop UI and create a new Podman engine connection using the WSL host and select your distribution of choice.
             </dd>
           </dl>
-          <h3 id="guide-windows-sharing-connection">6. Sharing connection with Container Desktop</h3>
+          <h3 id="guide-windows-sharing-connection"><a href="#guide-windows-table-of-contents"><i class="fa fa-angles-up"></i></a> 6. Sharing connection with Container Desktop</h3>
           <dl>
-            <dt>Allowing docker and podman CLIs to use the same connection that Container Desktop is using</dt>
+            <dt>Allowing podman and docker CLIs to use the same connection that Container Desktop is using</dt>
             <dd>
-              The <code>DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+              The <code class="EnvironmentVariable">DOCKER_HOST</code> environment variable must be set and it has to have the same value that Container Desktop is using, when connected.
+              <br/>
+              The exact value can be found under <i class="fa fa-power-off"></i> <strong>Connection info</strong> screen of the <i class="fa fa-cog"></i> <strong>Settings</strong> section.
             </dd>
           </dl>
-          <h3 id="guide-windows-tips">7. Tips &amp; tricks</h3>
+          <h3 id="guide-windows-tips"><a href="#guide-windows-table-of-contents"><i class="fa fa-angles-up"></i></a> 7. Tips &amp; tricks</h3>
           <dl>
             <dt>Tips</dt>
             <dd>
               <ol>
                 <li>To ensure WSL version 2 is set <code>wsl --set-default-version 2</code></li>
                 <li>To ensure the recommended cgroups v2 - modify or create
-                  <code>.wslconfig</code> file in <code>%USERPROFILE%</code> directory, with the following: <br />
+                  <code class="EnvironmentCommand">.wslconfig</code> file in <code class="EnvironmentVariable">%USERPROFILE%</code> directory, with the following: <br />
                   <pre class="text-file">[wsl2]
 # ...
 kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all</pre>
@@ -729,7 +743,7 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all</pre>
               </ol>
             </dd>
           </dl>
-          <p class="important-note">After modify/create, stop WSL engine using <code>wsl.exe --shutdown</code> and then restart with <code>wsl.exe</code></p>
+          <p class="important-note">After modify/create, stop WSL engine using <code class="EnvironmentCommand">wsl.exe --shutdown</code> and then restart with <code class="EnvironmentCommand">wsl.exe</code></p>
         </div>
       </div>
     </div>

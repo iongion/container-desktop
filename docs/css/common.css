@@ -802,8 +802,14 @@ ul.footerMenu {
 .panel dl > dt {
   font-weight: normal;
   padding-top: 15px;
-  padding-bottom: 5px;
+  padding-bottom: 7px;
   color: #ffffff;
+}
+.panel dl p {
+  font-weight: normal;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  color: #fff;
 }
 .panel dl dd {
   margin: 0;
@@ -827,7 +833,8 @@ ul.footerMenu {
   font-size: 14px;
 }
 .panel dl dd ul li {
-  padding-bottom: 0;
+  padding: 5px;
+  font-size: 13px;
 }
 .panel ol {
   margin: 0;
@@ -877,13 +884,13 @@ p.tip-note {
 p.important-note {
   margin: 0;
   margin-top: 10px;
-  background: #b39ab9;
+  background: #302633;
   padding: 10px;
   padding-top: 5px;
   padding-bottom: 5px;
   font-weight: normal;
   font-size: 14px;
-  color: #000;
+  color: #fff;
   border-radius: 5px;
 }
 p.important-note code {
@@ -900,6 +907,7 @@ p.important-note-requirements {
   font-weight: normal;
   font-style: italic;
   background: #d8a8ff;
+  color: #333;
 }
 pre.text-file {
   background: #222;
@@ -908,4 +916,10 @@ pre.text-file {
   padding: 5px;
   display: inline-block;
   white-space: pre-wrap;
+}
+.EnvironmentVariable,
+.EnvironmentPath,
+.EnvironmentCommand {
+  font-size: 12px;
+  border: none !important;
 }

@@ -22,37 +22,32 @@ export const Title = "Connection info";
 const scopedCodeExample = `
 // 1. From a %OPERATING_SYSTEM% terminal console:
 //
-// export DOCKER_HOST="%HOST_DOCKER_HOST%"
-// node example.js
+// %ENV_EXPORT%="%HOST_DOCKER_HOST%"
+// node example.mjs
 // %CLI% ps
-//
+
 // 2. From a %LABEL% terminal console inside %SCOPE%:
 //
 // export DOCKER_HOST="%SCOPE_DOCKER_HOST%"
-// node example.js
+// node example.mjs
 // %CLI% ps
 `;
 
-const codeExample = `// This code example demonstrates how to connect to the container engine
+const codeExample = `// This code example demonstrates how to connect to the container engine from nodejs
+// Save it in a file named example.mjs and run it with the following command
 
-import axios from "axios";
+import axios from "axios"; // npm install axios
 import httpAdapter from "axios/lib/adapters/http.js";
 import http from "http";
 
-export function createApiDriver() {
-  const driver = axios.create({
-    adapter: httpAdapter,
-    httpAgent: new http.Agent(),
-    baseURL: %BASE_URL%,
-    socketPath: process.env.DOCKER_HOST
-  });
-  return driver;
-}
-
-const driver = createApiDriver();
-console.debug(">> Requesting PING");
+const driver = axios.create({
+  adapter: httpAdapter,
+  httpAgent: new http.Agent(),
+  baseURL: "http://localhost",
+  socketPath: process.env.DOCKER_HOST
+});
 const response = await driver.get("/_ping");
-console.debug("<< Response received", response.data);
+console.debug(response.data);
 `;
 
 function normalizeConnectionString(host: string) {
@@ -76,6 +71,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     .replaceAll("%SCOPE_DOCKER_HOST%", currentConnector?.settings?.api?.connection?.relay || "")
     // Scope
     .replaceAll("%BASE_URL%", JSON.stringify(currentConnector?.settings?.api?.baseURL || "http://localhost"))
+    // Environment
+    .replaceAll("%ENV_EXPORT%", osType === OperatingSystem.Windows ? "$env:DOCKER_HOST" : "export DOCKER_HOST")
     // Extras
     .replaceAll("%OPERATING_SYSTEM%", osType === OperatingSystem.Windows ? "Windows" : osType)
     .replaceAll("%CLI%", currentConnector?.settings.program?.name || "")
