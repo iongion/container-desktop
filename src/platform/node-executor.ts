@@ -677,7 +677,9 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
     adapter: httpAdapter,
     httpAgent: httpAgent,
     httpsAgent: httpAgent,
+    baseURL: config.baseURL || "http://d",
   };
+  logger.debug("Creating NodeJS API driver", configuration);
   const driver = axios.create(configuration);
   logger.debug("Created NodeJS API driver", configuration);
   return driver;
@@ -695,7 +697,7 @@ export async function proxyRequestToWSLDistribution(
       let resolved = false;
       try {
         const abort = new AbortController();
-        console.error("WSL Relay server starting", connection);
+        console.warn("WSL Relay server starting", connection);
         const pipePath = connection?.settings?.api?.connection?.uri || "";
         if (isEmpty(pipePath)) {
           console.error("Named pipe path not set for current connection", connection);

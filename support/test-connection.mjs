@@ -11,10 +11,11 @@ export function createApiDriver(config) {
 }
 
 const driver = createApiDriver({
-  // socketPath: "\\\\.\\pipe\\container-desktop-wsl-relay",
-  socketPath: "\\\\.\\pipe\\container-desktop-test",
+  socketPath:
+    "\\\\.\\pipe\\container-desktop-ssh-relay-host.87a47402-2c35-4522-9508-98bf9e6f3053.docker.virtualized.wsl",
+  // socketPath: "\\\\.\\pipe\\container-desktop-test",
   // socketPath: "\\\\wsl.localhost\\Ubuntu-24.04\\run\\docker.sock",
-  // baseURL: "http://localhost:8080"
+  baseURL: "http://d",
 });
 let response = await driver.get("/_ping");
 console.log(response.data);
