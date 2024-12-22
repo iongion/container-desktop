@@ -77,7 +77,7 @@
     "semver": "^7.6.3",
     "ssh-config": "^5.0.1",
     "usehooks-ts": "^3.1.0",
-    "uuid": "10.0.0"
+    "uuid": "11.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
@@ -104,7 +104,7 @@
     "svgo": "^3.3.2",
     "tslib": "^2.8.1",
     "typescript": "^5.7.2",
-    "vite": "^5.4.9",
+    "vite": "^6.0.5",
     "vite-plugin-checker": "^0.8.0",
     "vite-plugin-ejs": "^1.7.0",
     "vite-plugin-static-copy": "^2.2.0",
