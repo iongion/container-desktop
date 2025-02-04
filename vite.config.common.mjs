@@ -36,7 +36,7 @@ export function createSingleFile(patch) {
             sourceMap: false,
             quiet: false,
             target: "es2020",
-            debugLog: true
+            debugLog: true,
           })
             .then(({ code, map, assets }) => {
               // ssh2 issues
@@ -69,8 +69,8 @@ export function createSingleFile(patch) {
             .catch(reject);
         });
         console.debug("<<< BUNDLE CLOSED >>>", outFile);
-      }
-    }
+      },
+    },
   ];
 }
 
@@ -105,7 +105,7 @@ export function createEJSContext() {
     PROJECT_VERSION: pkg.version,
     PROJECT_TITLE: pkg.title,
     PROJECT_DESCRIPTION: pkg.description,
-    ENVIRONMENT
+    ENVIRONMENT,
   };
 }
 export const sourcemap = ENVIRONMENT === "development";
@@ -121,7 +121,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     // Define user overridden environment variables
     ...define,
     // Fix
-    __dirname: "import.meta.dirname"
+    __dirname: "import.meta.dirname",
   };
   const minify = false; // mode === "production";
   const outputExtension = outputFormat == "umd" ? "js" : "mjs";
@@ -131,10 +131,10 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
       // viteCommonjs(),
       topLevelAwait(),
       checker({
-        typescript: true
+        typescript: true,
       }),
       tsconfigPaths(),
-      ...(plugins ?? [])
+      ...(plugins ?? []),
     ],
     define: userDefine,
     build: {
@@ -150,23 +150,23 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
         output: {
           manualChunks: (filename) => outputName,
           preserveModules: false,
-          format: outputFormat == "umd" ? "umd" : "es",
+          format: outputFormat === "umd" ? "umd" : "es",
           inlineDynamicImports: false,
           assetFileNames: `assets/${outputName}-${pkg.version}.[ext]`,
           entryFileNames: `${outputName}-${pkg.version}.${outputExtension}`,
-          chunkFileNames: `${outputName}-${pkg.version}.[hash].${outputExtension}`
-        }
-      })
+          chunkFileNames: `${outputName}-${pkg.version}.[hash].${outputExtension}`,
+        },
+      }),
     },
     resolve: merge(
       {},
       {
         alias: {
-          "@": path.resolve(__dirname, "src")
-        }
+          "@": path.resolve(__dirname, "src"),
+        },
       },
-      resolve ?? {}
-    )
+      resolve ?? {},
+    ),
   };
   return config;
 }
@@ -187,7 +187,7 @@ export const createDefine = (mode) => {
     // Features
     "import.meta.env.FEATURE_WSL_RELAY_METHOD": JSON.stringify(process.env.FEATURE_WSL_RELAY_METHOD),
     // Bugs
-    "process.env.NODE_DEBUG": JSON.stringify(false)
+    "process.env.NODE_DEBUG": JSON.stringify(false),
   };
   return define;
 };
