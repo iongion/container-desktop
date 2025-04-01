@@ -101,4 +101,3 @@ export const toPortMappings = (exposed: { [key: string]: number }) => {
   });
   return mappings;
 };
-

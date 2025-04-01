@@ -17,7 +17,8 @@ import type { PodmanContainerEngineHostClientCommon } from "./base";
 
 export class PodmanContainerEngineHostClientVirtualizedWSL
   extends AbstractContainerEngineHostClientVirtualizedWSL
-  implements PodmanContainerEngineHostClientCommon {
+  implements PodmanContainerEngineHostClientCommon
+{
   static HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   HOST = ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
   PROGRAM = PODMAN_PROGRAM;

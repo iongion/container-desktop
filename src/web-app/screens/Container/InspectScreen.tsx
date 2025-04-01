@@ -2,7 +2,7 @@ import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { Container } from "@/env/Types";
 import { Notification } from "@/web-app/Notification";

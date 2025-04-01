@@ -2,7 +2,6 @@ import { Alignment, AnchorButton, Button, Icon, InputGroup, Navbar } from "@blue
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useHistory } from "react-router-dom";
 
 import "./AppScreenHeader.css";
 
@@ -41,7 +40,6 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   children,
 }: AppScreenHeaderProps) => {
   const { t } = useTranslation();
-  const history = useHistory();
   const onSearchKeyPress = useCallback(
     (e) => {
       if (e.key === "Enter") {
@@ -53,8 +51,8 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
     [onSearchTrigger],
   );
   const onGoBackClick = useCallback(() => {
-    history.go(-1);
-  }, [history]);
+    history.back();
+  }, []);
   const withList = !!listRoutePath;
   const backButton = withBack ? (
     <Navbar.Group align={Alignment.LEFT}>

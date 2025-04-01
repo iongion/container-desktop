@@ -124,7 +124,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     __dirname: "import.meta.dirname",
   };
   const minify = false; // mode === "production";
-  const outputExtension = outputFormat == "umd" ? "js" : "mjs";
+  const outputExtension = outputFormat === "umd" ? "js" : "mjs";
   const config = {
     clearScreen: false,
     plugins: [

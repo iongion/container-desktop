@@ -100,7 +100,6 @@ body.bp5-dark[data-engine="docker"] .AppDataFormHeader {
   background: #02091f;
 }
 
-
 /* Light */
 :root {
   --docker-light-bg-color: #c1d2da;
@@ -176,7 +175,6 @@ body.bp5-light[data-engine="docker"] [data-screen="settings-settings"] .AppScree
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
 }
-
 
 /* Security */
 body.bp5-light[data-engine="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {

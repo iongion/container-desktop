@@ -3,12 +3,12 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { ContainerImage, SecurityReport, SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { Application } from "@/container-client/Application";
 import { ScreenHeader } from ".";

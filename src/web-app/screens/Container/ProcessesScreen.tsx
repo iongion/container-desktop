@@ -2,14 +2,14 @@ import { Button, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/cor
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { Container } from "@/env/Types";
+import { Notification } from "@/web-app/Notification";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import { Notification } from "@/web-app/Notification";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./ProcessesScreen.css";

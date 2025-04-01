@@ -1,10 +1,11 @@
-import type { ExtractRouteParams } from "react-router";
-import { generatePath } from "react-router-dom";
+import { compile } from "path-to-regexp";
 
-export function pathTo<S extends string>(
-  path: S,
-  params?: ExtractRouteParams<S, string | number | boolean> | undefined,
-): string {
+function generatePath(pattern: string, params: Record<string, string | number>) {
+  const toPath = compile(pattern);
+  return toPath(params as any);
+}
+
+export function pathTo<S extends string>(path: S, params?: any): string {
   let clean = generatePath(path, params);
   if (window.location.protocol === "file:") {
     clean = `file://${window.location.pathname}#${clean}`;

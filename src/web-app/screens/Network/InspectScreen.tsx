@@ -1,12 +1,12 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { Network } from "@/env/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
@@ -25,7 +25,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     (async () => {
       try {
         setPending(true);
-        const network = await networkFetch(name);
+        const network = await networkFetch(name ?? "");
         setNetwork(network);
       } catch (error: any) {
         console.error("Unable to fetch at this moment", error);

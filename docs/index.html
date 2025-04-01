@@ -11,14 +11,14 @@
   <link rel="stylesheet" href="./css/dark-theme.css?v=5.2.13.3" id="themelink" />
   <title>Container Desktop</title>
   <script async defer src="https://buttons.github.io/buttons.js"></script>
-  <script type="module">
+  <script type="module" crossorigin>
     import {
       UAParser
     } from '//cdn.jsdelivr.net/npm/ua-parser-js@1.0.39/+esm'
     import {
       render
-    } from "//esm.sh/solid-js@1.9.1/web";
-    import html from "//esm.sh/solid-js@1.9.1/html";
+    } from "//cdn.skypack.dev/solid-js/web";
+    import html from "//cdn.skypack.dev/solid-js/html";
     const getOperatingSystem = () => {
       let OSName = "Unknown OS";
       if (navigator.appVersion.indexOf("Win") != -1) OSName = "Windows";
@@ -144,16 +144,19 @@
         return html`
           <ul class="downloadBundles">
           ${linuxFormats.map((format) => {
+            const links = archs.reduce((acc, arch) => {
+              const urls = (osDownloads?.[arch]?.links || []).filter(link => !link.skipFromList && link.url.endsWith(format));
+              if (urls.length > 0) {
+                acc.push({ urls, arch });
+              }
+              return acc;
+            }, []);
             return html`
               <li>
-                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.AppImage">${format}</a>
+                <a href=${links[0].urls[0].url}>${format}</a>
                 <ul class="downloadBundlesArchs">
-                  ${archs.map((arch) => {
-                    const links = (osDownloads?.[arch]?.links || []).filter(link => !link.skipFromList && link.url.endsWith(format));
-                    if (links.length === 0) {
-                      return null;
-                    }
-                    return links.map((link) => {
+                  ${links.map(({ urls, arch }) => {
+                    return urls.map((link) => {
                       return html`
                         <li>
                           <a target="_blank" rel="noopener noreferrer" href=${link.url}>${arch}</a>

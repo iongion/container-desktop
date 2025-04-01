@@ -1,11 +1,11 @@
 import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { match } from "path-to-regexp";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { Helmet } from "react-helmet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
-import { matchPath } from "react-router";
-import { Route, HashRouter as Router, Switch, useLocation } from "react-router-dom";
+import { Route, Router, Switch, useLocation } from "wouter";
 
 import { ContainerEngine, type OperatingSystem, type Program } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
@@ -51,6 +51,27 @@ import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Tro
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 
+function matchPath(pattern: string, path: string) {
+  const matcher = match(pattern, { decode: decodeURIComponent });
+  return matcher(path);
+}
+
+import type { BaseLocationHook } from "wouter";
+
+export function useHashLocation(): ReturnType<BaseLocationHook> {
+  const getLocation = useCallback(() => window.location.hash.replace(/^#/, "") || "/", []);
+  const [location, setLocation] = useState(getLocation);
+  useEffect(() => {
+    const onHashChange = () => setLocation(getLocation);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [getLocation]);
+  const navigate = useCallback((to: string) => {
+    window.location.hash = to;
+  }, []);
+  return [location, navigate];
+}
+
 const Screens = [
   DashboardScreen,
   ContainersScreen,
@@ -84,20 +105,24 @@ const Screens = [
   TroubleshootScreen,
 ];
 
+export function useCurrentScreen() {
+  const [location, _] = useLocation();
+  const currentScreen = Screens.find((screen) => {
+    const matcher = matchPath(screen.Route.Path, location);
+    console.debug("Checking screen", screen.Route, matcher);
+    return matcher;
+  });
+  return currentScreen;
+}
+
 interface AppContentProps {
   phase: AppBootstrapPhase;
 }
 export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
   const { t } = useTranslation();
-  const location = useLocation();
+  const [location, _] = useLocation();
   const ready = phase === AppBootstrapPhase.READY;
-  const currentScreen = Screens.find((screen) =>
-    matchPath(location.pathname, {
-      path: screen.Route.Path,
-      exact: true,
-      strict: true,
-    }),
-  );
+  const currentScreen = useCurrentScreen();
   const content = useMemo(() => {
     let content: React.ReactNode;
     if (ready) {
@@ -105,7 +130,7 @@ export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
         <Switch>
           {Screens.map((Screen) => {
             return (
-              <Route path={Screen.Route.Path} key={Screen.ID} exact>
+              <Route path={Screen.Route.Path} key={Screen.ID}>
                 <div className="AppScreenViewport">
                   <Screen navigator={navigator} />
                   <AppFooter />
@@ -169,19 +194,12 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({
 }) => {
   const startApplication = useStoreActions((actions) => actions.startApplication);
   const { t } = useTranslation();
-  const location = useLocation();
 
   const onReconnect = useCallback(() => {
     startApplication();
   }, [startApplication]);
 
-  const currentScreen = Screens.find((screen) =>
-    matchPath(location.pathname, {
-      path: screen.Route.Path,
-      exact: true,
-      strict: true,
-    }),
-  );
+  const currentScreen = useCurrentScreen();
 
   return (
     <>
@@ -248,7 +266,7 @@ export function AppMainScreen() {
         />
         <body className={theme === "dark" ? `bp5-${theme}` : theme} data-engine={engine} />
       </Helmet>
-      <Router>
+      <Router hook={useHashLocation}>
         <AppMainScreenContent
           osType={osType}
           phase={phase}

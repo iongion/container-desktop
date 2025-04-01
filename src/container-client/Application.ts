@@ -326,7 +326,7 @@ export class Application {
     subscribe();
     return {
       subscribe,
-      unsubscribe: () => { },
+      unsubscribe: () => {},
     };
   }
 
@@ -944,7 +944,7 @@ export class Application {
         this.logger.debug(connector.id, "Using custom host - settings", {
           user: opts?.connection?.settings,
           defaults: connector.settings,
-          settings: settings
+          settings: settings,
         });
         host.setLogLevel(this.logLevel);
         await host.setSettings(settings);

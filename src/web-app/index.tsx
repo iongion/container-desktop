@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { createRoot } from "react-dom/client";
-import { Helmet } from "react-helmet";
+import { Helmet, HelmetProvider } from "react-helmet-async";
 
 import "./index.css";
 
@@ -24,10 +24,12 @@ export async function renderApplication() {
   root.render(
     // <StrictMode>
     <I18nContextProvider>
-      <Helmet>
-        <body className="bp5-dark" data-engine={ContainerEngine.PODMAN} />
-      </Helmet>
-      <App store={store} />
+      <HelmetProvider>
+        <Helmet>
+          <body className="bp5-dark" data-engine={ContainerEngine.PODMAN} />
+        </Helmet>
+        <App store={store} />
+      </HelmetProvider>
     </I18nContextProvider>,
     //</StrictMode>
   );

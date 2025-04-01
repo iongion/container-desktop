@@ -13,6 +13,7 @@ interface ImportMetaEnv {
   readonly PORT: string;
   // Features
   readonly FEATURE_WSL_RELAY_METHOD: string;
+  readonly VITE_DEV_SERVER_URL: string;
 }
 
 interface ImportMeta {

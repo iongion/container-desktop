@@ -1,12 +1,12 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { PodmanMachine } from "@/env/Types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 

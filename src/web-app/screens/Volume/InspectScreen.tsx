@@ -1,6 +1,6 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { Volume } from "@/env/Types";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";

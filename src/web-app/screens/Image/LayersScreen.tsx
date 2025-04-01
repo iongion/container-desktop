@@ -3,13 +3,13 @@ import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { ContainerImage } from "@/env/Types";
-import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
 
 import { ScreenHeader } from ".";
 import "./LayersScreen.css";

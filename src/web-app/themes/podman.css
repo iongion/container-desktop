@@ -204,7 +204,6 @@ body.bp5-light[data-engine="podman"] [data-screen="settings-settings"] .AppScree
   color: #fff;
 }
 
-
 /* Security */
 body.bp5-light[data-engine="podman"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: #d5d6df;

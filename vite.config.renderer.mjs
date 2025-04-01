@@ -7,7 +7,15 @@ import path from "node:path";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import svgrPlugin from "vite-plugin-svgr";
 
-import { createEJSContext, ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, PROJECT_HOME, sourceEnv, sourcemap } from "./vite.config.common.mjs";
+import {
+  ENVIRONMENT,
+  PROJECT_HOME,
+  createEJSContext,
+  getCommonViteConfig,
+  getElectronVendorsCache,
+  sourceEnv,
+  sourcemap,
+} from "./vite.config.common.mjs";
 
 import pkg from "./package.json";
 
@@ -47,7 +55,7 @@ export function docsServer() {
         });
       };
     },
-    name: "docs-server"
+    name: "docs-server",
   };
 }
 
@@ -75,25 +83,25 @@ export const createConfig = ({ mode, command, host, port }) => {
       // Frontend specific
       react(),
       svgrPlugin(),
-      ViteEjsPlugin(ejsContext)
+      ViteEjsPlugin(ejsContext),
     ],
     publicDir: "./public",
     build: {
       target: `chrome${cache.chrome}`,
       sourcemap: sourcemap,
-      emptyOutDir: false
+      emptyOutDir: false,
     },
     rollupOptions: {
-      input: path.join(PROJECT_HOME, "index.html")
+      input: path.join(PROJECT_HOME, "index.html"),
     },
     optimizeDeps: {
       esbuildOptions: {
         define: {
-          global: "globalThis"
-        }
-      }
+          global: "globalThis",
+        },
+      },
     },
-    outputName: "renderer"
+    outputName: "renderer",
   });
   return viteConfig;
 };
@@ -103,7 +111,7 @@ export const createConfig = ({ mode, command, host, port }) => {
  * @see https://vitejs.dev/config/
  */
 export default ({ mode, command }) => {
-  let host = process.env.HOST || "0.0.0.0";
+  const host = process.env.HOST || "0.0.0.0";
   const port = Number(process.env.PORT) || 3000;
   const baseConfig = createConfig({ mode, command, host, port });
   baseConfig.plugins.push(docsServer());
@@ -118,9 +126,9 @@ export default ({ mode, command }) => {
       cors: true,
       watch: {},
       fs: {
-        strict: true
-      }
-    }
+        strict: true,
+      },
+    },
   });
   config.base = "";
   config.build.rollupOptions.external = ["electron"];

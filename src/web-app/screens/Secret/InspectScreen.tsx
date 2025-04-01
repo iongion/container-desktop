@@ -2,7 +2,7 @@ import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 
 import type { Secret } from "@/env/Types";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
