@@ -191,7 +191,7 @@ const config = {
     category: "Development;System;Utility",
     extraResources: ["support/templates"],
     desktop: {
-      Name: displayName,
+      entry: displayName,
     },
     executableArgs: ["--no-sandbox"],
   },

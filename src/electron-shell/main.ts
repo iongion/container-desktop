@@ -1,18 +1,18 @@
+import { execFileSync } from "node:child_process";
 // node
 import path from "node:path";
 import * as url from "node:url";
-// vendors
-import * as Electron from "electron";
-import contextMenu from "electron-context-menu";
-import { debounce } from "lodash-es";
-import is_ip_private from "private-ip";
 // project
 import { userConfiguration } from "@/container-client/config";
 import { OperatingSystem } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
-import { execFileSync } from "node:child_process";
+// vendors
+import * as Electron from "electron";
+import contextMenu from "electron-context-menu";
+import { debounce } from "lodash-es";
+import is_ip_private from "private-ip";
 import { MessageBus } from "./shared";
 
 const APP_PATH = Electron.app.isPackaged ? path.dirname(Electron.app.getPath("exe")) : Electron.app.getAppPath();
@@ -206,7 +206,7 @@ async function createApplicationWindow() {
         event.returnValue = false;
       }
       if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
-        app.dock.hide();
+        app.dock?.hide();
       }
       return true;
     }
@@ -329,7 +329,7 @@ function createSystemTray() {
         applicationWindow.show();
         applicationWindow.setSkipTaskbar(false);
         if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
-          app.dock.show();
+          app.dock?.show();
         }
       },
     },
