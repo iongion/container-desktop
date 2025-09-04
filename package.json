@@ -96,7 +96,7 @@
     "autoprefixer": "^10.4.21",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",
-    "electron": "35.1.2",
+    "electron": "35.7.5",
     "electron-builder": "^26.0.12",
     "lodash.merge": "^4.6.2",
     "mime-types": "^3.0.1",
