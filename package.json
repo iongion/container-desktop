@@ -107,7 +107,7 @@
     "vite": "^6.2.7",
     "vite-plugin-checker": "^0.9.1",
     "vite-plugin-ejs": "^1.7.0",
-    "vite-plugin-static-copy": "^2.3.0",
+    "vite-plugin-static-copy": "^2.3.2",
     "vite-plugin-svgr": "^4.3.0",
     "vite-plugin-top-level-await": "^1.5.0",
     "vite-tsconfig-paths": "^5.1.4",
