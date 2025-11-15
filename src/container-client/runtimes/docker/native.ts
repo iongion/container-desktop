@@ -96,6 +96,7 @@ export class DockerContainerEngineHostClientNative extends AbstractContainerEngi
   }
   async getControllerScopes(customSettings?: EngineConnectorSettings, skipAvailabilityCheck?: boolean) {
     const settings = customSettings || (await this.getSettings());
+    console.debug("NOT IMPLEMENTED: Getting controller scopes with settings", settings);
     return await Promise.resolve([] as ControllerScope[]);
   }
 

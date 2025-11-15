@@ -22,7 +22,6 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
   const machinesFetch = useStoreActions((actions) => actions.machine.machinesFetch);
   const machines: PodmanMachine[] = useStoreState((state) => state.machine.machinesSearchByTerm(searchTerm));
 

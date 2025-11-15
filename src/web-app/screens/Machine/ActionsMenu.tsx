@@ -83,6 +83,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
           default:
             break;
         }
+        console.debug("Command executed", action, result);
         if (confirm?.success) {
           Notification.show({
             message: t("Command completed"),

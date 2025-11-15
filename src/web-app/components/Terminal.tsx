@@ -58,7 +58,7 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
       try {
         terminal.loadAddon(webglAddon);
       } catch (error: any) {
-        console.error("Unable to activate web gl");
+        console.error("Unable to activate web gl", error);
       }
       fitAddon.fit();
       terminal.focus();

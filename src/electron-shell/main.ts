@@ -2,17 +2,17 @@ import { execFileSync } from "node:child_process";
 // node
 import path from "node:path";
 import * as url from "node:url";
+// vendors
+import * as Electron from "electron";
+import contextMenu from "electron-context-menu";
+import { debounce } from "lodash-es";
+import is_ip_private from "private-ip";
 // project
 import { userConfiguration } from "@/container-client/config";
 import { OperatingSystem } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
-// vendors
-import * as Electron from "electron";
-import contextMenu from "electron-context-menu";
-import { debounce } from "lodash-es";
-import is_ip_private from "private-ip";
 import { MessageBus } from "./shared";
 
 const APP_PATH = Electron.app.isPackaged ? path.dirname(Electron.app.getPath("exe")) : Electron.app.getAppPath();
@@ -51,7 +51,7 @@ const logger = createLogger("shell.main");
 const quitRegistry: any[] = [];
 let tray: any = null;
 let applicationWindow: Electron.BrowserWindow;
-let notified = false;
+let _notified = false;
 const isHideToTrayOnClose = async () => {
   return await userConfiguration.getKey("minimizeToSystemTray", false);
 };
@@ -118,7 +118,7 @@ ipcMain.on("openDevTools", () => {
 });
 ipcMain.on("notify", async (event, arg) => {
   if (arg && arg.message === "ready") {
-    notified = true;
+    _notified = true;
     logger.debug("Settings received", arg.payload);
     applicationWindow.show();
   }
@@ -372,7 +372,7 @@ async function main() {
       logger.debug("Set tray icon from", trayIconPath);
       tray.setImage(trayIconPath);
     } catch (e: any) {
-      logger.error("Unable to set sys-tray icon");
+      logger.error("Unable to set sys-tray icon", e);
     }
     sendToRenderer("theme:change", Electron.nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });

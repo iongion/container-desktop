@@ -180,38 +180,36 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   const canRestart = !isPaused;
 
   return (
-    <>
-      <ButtonGroup>
-        {expandAsButtons}
-        <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"}>
-          {expandAsMenuItems}
-          <MenuItem
-            data-pod={pod.Id}
-            data-action={isPaused ? "pod.unpause" : "pod.pause"}
-            disabled={!canPauseUnpause}
-            icon={IconNames.PAUSE}
-            text={isPaused ? t("Resume") : t("Pause")}
-            onClick={onActionClick}
-          />
-          <MenuItem
-            data-pod={pod.Id}
-            data-action="pod.stop"
-            disabled={!canStop}
-            icon={IconNames.STOP}
-            text={t("Stop")}
-            onClick={onActionClick}
-          />
-          <MenuItem
-            data-pod={pod.Id}
-            data-action="pod.restart"
-            disabled={!canRestart}
-            icon={IconNames.RESET}
-            text={t("Restart")}
-            onClick={onActionClick}
-          />
-        </ConfirmMenu>
-      </ButtonGroup>
-    </>
+    <ButtonGroup>
+      {expandAsButtons}
+      <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"}>
+        {expandAsMenuItems}
+        <MenuItem
+          data-pod={pod.Id}
+          data-action={isPaused ? "pod.unpause" : "pod.pause"}
+          disabled={!canPauseUnpause}
+          icon={IconNames.PAUSE}
+          text={isPaused ? t("Resume") : t("Pause")}
+          onClick={onActionClick}
+        />
+        <MenuItem
+          data-pod={pod.Id}
+          data-action="pod.stop"
+          disabled={!canStop}
+          icon={IconNames.STOP}
+          text={t("Stop")}
+          onClick={onActionClick}
+        />
+        <MenuItem
+          data-pod={pod.Id}
+          data-action="pod.restart"
+          disabled={!canRestart}
+          icon={IconNames.RESET}
+          text={t("Restart")}
+          onClick={onActionClick}
+        />
+      </ConfirmMenu>
+    </ButtonGroup>
   );
 };
 

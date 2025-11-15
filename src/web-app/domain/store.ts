@@ -1,4 +1,7 @@
 // project
+
+// vendors
+import { createStore, StoreProvider as StoreProviderBase } from "easy-peasy";
 import type { Environments } from "@/env/Types";
 import { waitForPreload } from "@/web-app/Native";
 import { createModel as createContainerModel } from "@/web-app/screens/Container/Model";
@@ -12,8 +15,6 @@ import { createModel as createSecretModel } from "@/web-app/screens/Secret/Model
 import { createModel as createSettingsModel } from "@/web-app/screens/Settings/Model";
 import { createModel as createTroubleshootModel } from "@/web-app/screens/Troubleshoot/Model";
 import { createModel as createVolumesModel } from "@/web-app/screens/Volume/Model";
-// vendors
-import { StoreProvider as StoreProviderBase, createStore } from "easy-peasy";
 import { createModel as createAppModel } from "./model";
 import { registry } from "./registry";
 import type { AppModel, AppStore, AppStorePendingOperation } from "./types";
@@ -38,7 +39,6 @@ export const createAppStore = async (env: Environments) => {
   await waitForPreload();
   registry.getStore = () => store;
   registry.withPending = (operation: AppStorePendingOperation) => withPending(store, operation);
-  // biome-ignore lint/style/useConst: <explanation>
   let store: AppStore;
   store = createStore<AppModel>(await createAppModel(registry));
   store.addModel("container", await createContainerModel(registry));

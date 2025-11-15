@@ -28,7 +28,7 @@
 
 3. Install the PM tool [invoke](https://www.pyinvoke.org/) - this is to support automation and fast REPL development environment.
 
-   - `pip install -r support/requirements.txt`
+   - `make prepare`
 
 #### Prepare project infrastructure
 

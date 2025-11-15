@@ -190,26 +190,24 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
         />
       </Select>
       {withoutDetect ? null : (
-        <>
-          <ButtonGroup minimal>
-            <Divider />
-            <Button
-              icon={isScopeStarted(activeItem) ? IconNames.STOP : IconNames.PLAY}
-              disabled={disabled || pending || !canControlScope}
-              text={isScopeStarted(activeItem) ? labels.scopeStop : labels.scopeStart}
-              onClick={onScopeStartStop}
-            />
-            <Divider />
-            <Button
-              icon={IconNames.REFRESH}
-              disabled={disabled || pending}
-              small
-              text={detectLabel}
-              intent={Intent.SUCCESS}
-              onClick={onDetect}
-            />
-          </ButtonGroup>
-        </>
+        <ButtonGroup minimal>
+          <Divider />
+          <Button
+            icon={isScopeStarted(activeItem) ? IconNames.STOP : IconNames.PLAY}
+            disabled={disabled || pending || !canControlScope}
+            text={isScopeStarted(activeItem) ? labels.scopeStop : labels.scopeStart}
+            onClick={onScopeStartStop}
+          />
+          <Divider />
+          <Button
+            icon={IconNames.REFRESH}
+            disabled={disabled || pending}
+            small
+            text={detectLabel}
+            intent={Intent.SUCCESS}
+            onClick={onDetect}
+          />
+        </ButtonGroup>
       )}
     </div>
   );

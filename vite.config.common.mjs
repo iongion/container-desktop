@@ -84,7 +84,7 @@ export function getElectronVendorsCache() {
     const cache = JSON.parse(fs.readFileSync(ELECTRON_VENDORS_CACHE_PATH, "utf8"));
     return cache;
   }
-  return { chrome: "128", node: "20" };
+  return { chrome: "128", node: "24" };
 }
 export function sourceEnv(env) {
   // template

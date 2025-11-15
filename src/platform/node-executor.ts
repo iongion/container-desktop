@@ -1,7 +1,3 @@
-import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
-import httpAdapter from "axios/unsafe/adapters/http.js";
-import { EventEmitter } from "eventemitter3";
-import { isEmpty } from "lodash-es";
 import {
   type ChildProcessWithoutNullStreams,
   type SpawnOptionsWithoutStdio,
@@ -11,6 +7,10 @@ import {
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
+import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
+import httpAdapter from "axios/unsafe/adapters/http.js";
+import { EventEmitter } from "eventemitter3";
+import { isEmpty } from "lodash-es";
 import portfinder from "portfinder";
 import { v4 } from "uuid";
 
@@ -59,7 +59,7 @@ async function getWSLDistributionUsername(distribution: string) {
   return wslUser;
 }
 
-async function getWSLDistributionApplicationConfigDir(distribution: string) {
+async function _getWSLDistributionApplicationConfigDir(distribution: string) {
   const appName = import.meta.env.PROJECT_NAME || "container-desktop";
   const XDG_CONFIG_HOME = await getWSLDistributionEnvironmentVariable(distribution, "XDG_CONFIG_HOME");
   if (XDG_CONFIG_HOME) {
@@ -783,7 +783,6 @@ export async function proxyRequestToSSHConnection(
     if (!remoteAddress) {
       throw new Error("Remote address must be set");
     }
-    // biome-ignore lint/style/useConst: <explanation>
     let em: EventEmitter | undefined;
     em = await sshConnection.startTunnel({
       localAddress,

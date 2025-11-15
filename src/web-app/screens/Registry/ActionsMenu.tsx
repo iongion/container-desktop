@@ -65,6 +65,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
             intent: Intent.SUCCESS,
           });
         }
+        console.debug("Command executed", action, result);
         if (action === "registry.remove") {
           goToScreen("/screens/registries");
         }

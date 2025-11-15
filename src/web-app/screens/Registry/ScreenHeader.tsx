@@ -1,13 +1,10 @@
 import { Switch } from "@blueprintjs/core";
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
-
 import { ContainerEngine, type Registry, type RegistrySearchFilters } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useStoreState } from "@/web-app/domain/types";
 import { pathTo } from "@/web-app/Navigator";
-
-import { useTranslation } from "react-i18next";
 import "./ScreenHeader.css";
 
 // Screen header
@@ -32,7 +29,6 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   listRouteIcon,
   rightContent,
 }: ScreenHeaderProps) => {
-  const { t } = useTranslation();
   const currentConnector = useStoreState((state) => state.currentConnector);
   const isOfficial = useStoreState((actions) => actions.registry.official);
   const isAutomated = useStoreState((actions) => actions.registry.automated);

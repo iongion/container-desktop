@@ -1,8 +1,15 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.3/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "files": {
-    "ignore": [],
-    "ignoreUnknown": true
+    "ignoreUnknown": true,
+    "includes": ["**"]
   },
   "formatter": {
     "enabled": true,
@@ -19,25 +26,33 @@
     "enabled": true,
     "rules": {
       "complexity": {
-        "noForEach": "off"
+        "noForEach": "off",
+        "noImportantStyles": "off"
+      },
+      "correctness": {
+        "noUnusedFunctionParameters": "off"
       },
       "performance": {
         "noDelete": "off"
       },
       "recommended": true,
       "style": {
+        "noDescendingSpecificity": "off",
         "noNonNullAssertion": "off",
         "useSelfClosingElements": "off"
       },
       "suspicious": {
-        "noConsoleLog": "off",
+        "noConsole": {
+          "level": "off",
+          "options": {
+            "allow": ["log"]
+          }
+        },
         "noDebugger": "off",
+        "noDuplicateProperties": "off",
         "noExplicitAny": "off"
       }
     }
-  },
-  "organizeImports": {
-    "enabled": true
   },
   "vcs": {
     "clientKind": "git",

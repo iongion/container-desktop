@@ -19,16 +19,14 @@ import { saveAs } from "file-saver";
 import { isEmpty } from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { getDefaultConnectors } from "@/container-client";
+import { Application } from "@/container-client/Application";
 import { type Connection, type Connector, type GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
+import { registry } from "@/web-app/domain/registry";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { LOGGING_LEVELS, PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { registry } from "@/web-app/domain/registry";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-
-import { getDefaultConnectors } from "@/container-client";
-import { Application } from "@/container-client/Application";
 import { ActionsMenu } from "./ActionsMenu";
 import { ManageConnectionDrawer } from "./Connection";
 import { ScreenHeader } from "./ScreenHeader";
@@ -132,7 +130,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   intent: Intent.SUCCESS,
                 });
               }
-            } catch (error: any) {
+            } catch (_error: any) {
               Notification.show({
                 message: t("Unable to import connections - invalid format"),
                 intent: Intent.DANGER,
@@ -203,6 +201,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         });
       }
     } catch (error: any) {
+      console.error("Unable to check latest version", error);
       Notification.show({
         message: t("Unable to check latest version"),
         intent: Intent.DANGER,
@@ -213,7 +212,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   let title = "";
   let errorMessage = "";
-  let icon: any = undefined;
+  let icon: any;
 
   if (connections.length === 0) {
     title = t("No connections defined");

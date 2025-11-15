@@ -833,14 +833,6 @@ export interface FetchMachineOptions {
   Name: string; // name or id
 }
 
-export interface ContainerClientResponse<T = unknown, D = unknown> {
-  ok: boolean;
-  status: number;
-  statusText: string;
-  data: T;
-  headers: { [key: string]: string };
-}
-
 export interface ProxyRequest {
   request: any;
   baseURL: string;

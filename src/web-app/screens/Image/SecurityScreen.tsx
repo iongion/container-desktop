@@ -4,13 +4,11 @@ import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "wouter";
-
+import { Application } from "@/container-client/Application";
 import type { ContainerImage, SecurityReport, SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
-
-import { Application } from "@/container-client/Application";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./SecurityScreen.css";
 
@@ -255,9 +253,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   report?.scanner?.path ? (
                     <p>{t("An internal error occurred, please report the issue.")}</p>
                   ) : (
-                    <>
-                      <p>{t("Please install trivy and then revisit this screen")}</p>
-                    </>
+                    <p>{t("Please install trivy and then revisit this screen")}</p>
                   )
                 }
               />

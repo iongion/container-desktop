@@ -26,7 +26,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }>({});
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
+  const _pending = useStoreState((state) => state.pending);
   const containersFetch = useStoreActions((actions) => actions.container.containersFetch);
   const groups: ContainerGroup[] = useStoreState((state) => state.container.containersGroupedByStrategy(searchTerm));
   const onGroupToggleClick = useCallback((e) => {
@@ -92,6 +92,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 return (
                   <React.Fragment key={group.Name || group.Id}>
                     {containers.map((container, index) => {
+                      const renderKey = `containerRowKey-${group.Name || group.Id}-${container.Id}`;
                       const groupName = container.Computed.Group;
                       const isCollapsed = groupName && !!collapse[groupName];
                       const containerGroupItemKey = `containerGroupKey-${group.Name || group.Id}-${container.Id}`;
@@ -157,6 +158,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           (isPartOfGroup ? container.Computed.NameInGroup : container.Computed.Name) || t("- n/a -");
                         const containerLogsButton = (
                           <AnchorButton
+                            key={`${renderKey}-logs`}
                             className="ContainerLogsButton"
                             minimal
                             small
@@ -169,6 +171,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         );
                         const containerLayersButton = (
                           <AnchorButton
+                            key={`${renderKey}-layers`}
                             className="ContainerLayersButton"
                             minimal
                             small
@@ -185,7 +188,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           linkLocation = "last";
                         }
                         const groupLink = isPartOfGroup ? (
-                          <div className="AppDataTableGroupLink" data-link-location={linkLocation}>
+                          <div
+                            key={`${renderKey}-group-link`}
+                            className="AppDataTableGroupLink"
+                            data-link-location={linkLocation}
+                          >
                             <div className="AppDataTableGroupLinkVertical"></div>
                             <div className="AppDataTableGroupLinkHorizontal"></div>
                           </div>

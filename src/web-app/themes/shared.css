@@ -1,7 +1,8 @@
 :root {
   --app-data-table-items-padding: 10px;
-  --monospace-font: Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono",
-    "Fira Code", monospace, "Powerline Extra Symbols";
+  --monospace-font:
+    Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono", "Fira Code", monospace,
+    "Powerline Extra Symbols";
 }
 
 body.bp5-dark .bp5-menu {
@@ -23,7 +24,10 @@ body.bp5-dark .bp5-input {
   color: #f6f7f9;
 }
 body.bp5-dark .bp5-navbar {
-  box-shadow: 0 0 0 1px rgb(17 20 24 / 20%), 0 0 0 rgb(17 20 24 / 0%), 0 1px 1px rgb(17 20 24 / 40%);
+  box-shadow:
+    0 0 0 1px rgb(17 20 24 / 20%),
+    0 0 0 rgb(17 20 24 / 0%),
+    0 1px 1px rgb(17 20 24 / 40%);
 }
 
 /* Status colors */

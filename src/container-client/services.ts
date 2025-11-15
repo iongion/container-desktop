@@ -1,5 +1,5 @@
-import { type CommandExecutionResult, OperatingSystem, type SpawnedProcess } from "@/env/Types";
 import EventEmitter from "eventemitter3";
+import { type CommandExecutionResult, OperatingSystem, type SpawnedProcess } from "@/env/Types";
 
 export interface SSHClientConnection {
   host: string;
@@ -160,6 +160,7 @@ export class SSHClient implements ISSHClient {
             });
             return response.status === 200;
           } catch (error) {
+            console.debug("SSH tunnel status check failed", error);
             return false;
           }
         },

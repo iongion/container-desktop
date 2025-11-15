@@ -251,7 +251,7 @@ export async function getApiConfig(
 }
 
 export function createApplicationApiDriver(connection: Connection, context?: any): AxiosInstance {
-  const request = async <T = any, D = any>(request, config?: AxiosRequestConfig<any> | undefined) => {
+  async function request<_T = any, _DD = any>(request, config?: AxiosRequestConfig<any> | undefined) {
     const req = (config ? merge({}, request, config) : request) || {
       headers: {},
     };
@@ -262,7 +262,7 @@ export function createApplicationApiDriver(connection: Connection, context?: any
     }, {} as any);
     req.headers = headersFlat as any;
     return await Command.ProxyRequest(req, connection, context);
-  };
+  }
   const driver: AxiosInstance = {
     request,
     get: async <T = any, D = any>(url: string, config?: AxiosRequestConfig<any> | undefined) => {

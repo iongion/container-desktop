@@ -5,15 +5,14 @@ import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
 import type { Volume } from "@/env/Types";
-import { usePoller } from "@/web-app/Hooks";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { getVolumeUrl } from "./Navigation";
-
+import { usePoller } from "@/web-app/Hooks";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { VolumeActionsMenu } from ".";
+import { getVolumeUrl } from "./Navigation";
 import "./ManageScreen.css";
 
 export const ID = "volumes";
@@ -23,7 +22,6 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const { searchTerm, onSearchChange } = useAppScreenSearch();
-  const pending = useStoreState((state) => state.pending);
   const volumesFetch = useStoreActions((actions) => actions.volume.volumesFetch);
   const volumes: Volume[] = useStoreState((state) => state.volume.volumesSearchByTerm(searchTerm));
 

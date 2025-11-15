@@ -51,6 +51,7 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
           default:
             break;
         }
+        console.debug("Command executed", action, result);
         Notification.show({
           message: t("Command completed"),
           intent: Intent.SUCCESS,

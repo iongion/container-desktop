@@ -16,15 +16,13 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
-// project
-import { toPortMappings } from "@/utils";
-import { Notification } from "@/web-app/Notification";
-import { useStoreActions } from "@/web-app/domain/types";
-
 // module
 import type { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
-import { type MountFormContainerImageMount, MountsForm, createMount } from "./MountsForm";
+// project
+import { toPortMappings } from "@/utils";
+import { useStoreActions } from "@/web-app/domain/types";
+import { Notification } from "@/web-app/Notification";
+import { createMount, type MountFormContainerImageMount, MountsForm } from "./MountsForm";
 import { PortMappingsForm } from "./PortMappingsForm";
 
 import "./CreateDrawer.css";
@@ -211,6 +209,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
           <div className="AppDataForm">
             <FormGroup
               disabled={pending}
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: Example string
               helperText={t("If not set, it will be automatically generated. Use ${index} to insert a counter.")}
               label={t("Container name")}
               labelFor="imageContainerName"

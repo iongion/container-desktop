@@ -7,8 +7,10 @@ release
 squashfs-root
 temp
 .DS_Store
+.egg-info
 PodmanDesktopCompanion.pfx
 ContainerDesktop.pfx
+src/container_desktop_tools.egg-info
 
 # Logs
 logs

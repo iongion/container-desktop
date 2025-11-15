@@ -3,11 +3,11 @@ import { v4 } from "uuid";
 
 import {
   type AbstractContainerEngineHostClient,
+  createConnectorBy,
   Docker,
+  getDefaultConnectors,
   Podman,
   RUNTIMES,
-  createConnectorBy,
-  getDefaultConnectors,
 } from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
 import { systemNotifier } from "@/container-client/notifier";
@@ -19,8 +19,8 @@ import type {
 import {
   type ApplicationEnvironment,
   type CommandExecutionResult,
-  type ConnectOptions,
   type Connection,
+  type ConnectOptions,
   type Connector,
   type ContainerConnectOptions,
   ContainerEngine,
@@ -326,7 +326,7 @@ export class Application {
     subscribe();
     return {
       subscribe,
-      unsubscribe: () => {},
+      unsubscribe: () => { },
     };
   }
 
@@ -612,11 +612,7 @@ export class Application {
     return await currentApi.resetSystem();
   }
 
-  async checkSecurity(options: {
-    scanner: string;
-    subject: string;
-    target: string;
-  }) {
+  async checkSecurity(options: { scanner: string; subject: string; target: string }) {
     const currentApi = this.getCurrentEngineConnectionApi();
     const report: any = {
       status: "failure",
@@ -857,6 +853,7 @@ export class Application {
   }
 
   async pullFromRegistry(opts: RegistryPullOptions) {
+    // biome-ignore lint/correctness/noUnusedVariables: Available for future use
     const { image, onProgress } = opts;
     this.logger.debug("pull from registry", image);
     const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
@@ -923,7 +920,7 @@ export class Application {
   }> {
     this.logger.debug(connector.id, ">> Creating connector host api", opts);
     const startApi = opts?.startApi ?? false;
-    let host: AbstractContainerEngineHostClient | undefined = undefined;
+    let host: AbstractContainerEngineHostClient | undefined;
     let availability = connector.availability;
     try {
       const Engine = this.runtimes.find((it) => it.ENGINE === connector.engine);

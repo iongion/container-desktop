@@ -24,7 +24,6 @@ export const ID = "networks";
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
   const networksFetch = useStoreActions((actions) => actions.network.networksFetch);
   const networks: Network[] = useStoreState((state) => state.network.networksSearchByTerm(searchTerm));
 

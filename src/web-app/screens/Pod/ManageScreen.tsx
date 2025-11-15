@@ -22,7 +22,6 @@ export const ID = "pods";
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
   const podsFetch = useStoreActions((actions) => actions.pod.podsFetch);
   const pods: Pod[] = useStoreState((state) => state.pod.podsSearchByTerm(searchTerm));
 

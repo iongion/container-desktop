@@ -1,6 +1,6 @@
-import type { ContainerImagePortMapping } from "@/env/Types";
 import merge from "deepmerge";
 import { v4 } from "uuid";
+import type { ContainerImagePortMapping } from "@/env/Types";
 
 const DEFAULT_HOST_IP = "0.0.0.0";
 
@@ -28,7 +28,9 @@ export function axiosConfigToCURL(
   let requestUrl = `${config.baseURL}${config.url}`;
   if (Object.keys(config.params || {}).length) {
     const searchParams = new URLSearchParams();
-    Object.entries(config.params).forEach(([key, value]) => searchParams.set(key, `${value}`));
+    Object.entries(config.params).forEach(([key, value]) => {
+      searchParams.set(key, `${value}`);
+    });
     requestUrl = `${requestUrl}?${searchParams}`;
   }
   const socketPath = `"${config.socketPath.replace("unix://", "").replace("npipe://", "")}"`;

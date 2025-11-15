@@ -1,0 +1,156 @@
+[project]
+name = "container_desktop_tools"
+description = "Container Desktop Tools"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Ionut Stoica" }
+]
+dependencies = [
+    "invoke",
+    "python-dotenv",
+    "semver"
+]
+dynamic = ["version"]
+
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff"
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--tb=short",
+]
+markers = [
+    "read_only: tests that do not modify the state",
+    "read_write: tests that modify the state and require a reset",
+]
+env = [
+    "ENVIRONMENT=testing",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/venv/*",
+    "*/.venv/*",
+    "*/tests/*",
+    "main.py",
+    "*/__pycache__/*",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ >= .__main__.:",
+]
+
+# -----------------
+# Ruff configuration
+# -----------------
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Which rules to enable
+select = [
+    "E",   # pycodestyle (errors)
+    "W",   # pycodestyle (warnings)
+    "F",   # Pyflakes
+    "I",   # isort / import conventions
+    "C9",  # mccabe complexity
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtins
+    "C4",  # flake8-comprehensions
+    "DTZ", # flake8-datetimez
+    "EM",  # flake8-errmsg
+    "EXE", # flake8-executable
+    "FA",  # flake8-future-annotations
+    "FBT", # flake8-boolean-trap
+    "ICN", # flake8-import-conventions
+    "ISC", # flake8-implicit-str-concat
+    "PGH", # pygrep-hooks
+    "PIE", # flake8-pie
+    "PL",  # pylint (includes PLR/PLW/etc.)
+    "PT",  # flake8-pytest-style
+    "PYI", # flake8-pyi
+    "RUF", # Ruff-specific rules
+    "S",   # flake8-bandit (security)
+    "SIM", # flake8-simplify
+    "UP",  # pyupgrade
+    "YTT", # flake8-2020
+]
+
+# Rules we want to tone down / ignore
+extend-ignore = [
+    "B005",      # Strip is misleading
+    "B008",      # Depends
+    "B017",      # Do not assert base exceptions
+    "C901",      # Too complex
+    "E203",      # whitespace before ':' (Black-compatible formatting)
+    "E501",      # line too long (we already enforce line-length=120)
+    "E722",      # bare except (we may allow it in a few places)
+    "PLR",       # Pylint design complaints (too-many-branches, etc.)
+    "PLW0603",   # Using the 'global' statement
+    "PLW0602",   # Global variable not assigned before use
+    "PT028",     # Depends default argument
+    "PT011",     # Exception is too broad
+    "S506",      # Allows instantiation of arbitrary objects
+    "SIM105",    # Consider using contextlib instead of try except pass
+    "EM101",     # Allow string literals in exceptions
+    "EM102",     # Exceptions must not use f-strings
+    "FBT002",    # Boolean positional default value
+    "FBT003",    # Boolean positional default value,
+    "RUF012",    # Typing @ClassVar
+    "RUF013",    # PEP 484 prohibits implicit
+]
+
+[tool.ruff.lint.isort]
+# Removed `profile = "black"` because Ruff's isort settings no longer accept it.
+# The options below are all supported by Ruff.
+force-wrap-aliases = true
+combine-as-imports = true
+lines-after-imports = 2
+
+[tool.ruff.lint.mccabe]
+# This controls C901 ("too complex"); pick something close to what you had.
+max-complexity = 11
+
+[tool.ruff.lint.pylint]
+max-branches = 12
+max-statements = 50
+max-args = 10
+max-public-methods = 20
+
+[tool.ruff.lint.flake8-import-conventions.aliases]
+"fastapi" = "fa"
+"numpy" = "np"
+"pandas" = "pd"
+"matplotlib.pyplot" = "plt"
+"tensorflow" = "tf"
+"seaborn" = "sns"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401"]  # allow late imports / unused exports in package initializers
+"test_*.py" = ["S101"]            # allow assert in tests
+"tests/**/*.py" = ["S101"]        # same for nested tests

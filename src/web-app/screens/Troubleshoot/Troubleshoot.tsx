@@ -142,6 +142,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           default:
             break;
         }
+        console.debug("Command executed", action, result);
         Notification.show({
           message: t("Command completed"),
           intent: Intent.SUCCESS,

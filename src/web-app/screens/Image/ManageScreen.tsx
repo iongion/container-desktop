@@ -23,7 +23,6 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
   const fetchAll = useStoreActions((actions) => actions.image.fetchAll);
   const images: ContainerImage[] = useStoreState((state) => state.image.searchByTerm(searchTerm));
 
