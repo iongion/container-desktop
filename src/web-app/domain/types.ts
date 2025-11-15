@@ -40,8 +40,8 @@ export enum AppBootstrapPhase {
   FAILED = "failed",
 }
 export enum AppTheme {
-  DARK = "bp5-dark",
-  LIGHT = "bp5-light",
+  DARK = "bp6-dark",
+  LIGHT = "bp6-light",
 }
 
 export interface AppModelState {

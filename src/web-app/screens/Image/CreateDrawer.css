@@ -1,18 +1,18 @@
-.AppCreateImageDrawer .bp5-drawer-body {
+.AppCreateImageDrawer .bp6-drawer-body {
   padding: 4px;
 }
-.AppCreateImageDrawer .bp5-drawer-body .AppDataTable tr td:first-child {
+.AppCreateImageDrawer .bp6-drawer-body .AppDataTable tr td:first-child {
   width: 1px !important;
   font-weight: bold;
   font-size: 12px;
 }
-.AppCreateImageDrawer .bp5-drawer-body .AppDataTable tr td:last-child {
+.AppCreateImageDrawer .bp6-drawer-body .AppDataTable tr td:last-child {
   width: 100% !important;
   white-space: nowrap;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.AmountOfContainers .bp5-input-group {
+.AmountOfContainers .bp6-input-group {
   width: 80px;
 }

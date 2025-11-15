@@ -287,7 +287,7 @@ export class Application {
   async getGlobalUserSettings() {
     // const version = await this.userConfiguration.getKey<string>("version", "");
     const settings = {
-      theme: await this.userConfiguration.getKey("theme", "bp5-dark"),
+      theme: await this.userConfiguration.getKey("theme", "bp6-dark"),
       expandSidebar: await this.userConfiguration.getKey("expandSidebar", true),
       startApi: await this.userConfiguration.getKey("startApi", false),
       minimizeToSystemTray: await this.userConfiguration.getKey("minimizeToSystemTray", false),

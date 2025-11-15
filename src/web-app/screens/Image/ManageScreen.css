@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
 }
-.AppDataTable[data-table="images"] td:first-child .bp5-button-text {
+.AppDataTable[data-table="images"] td:first-child .bp6-button-text {
   white-space: nowrap;
   text-align: left;
 }

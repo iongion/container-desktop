@@ -13,7 +13,7 @@
 [data-table="pods"] .PodDetailsButton {
   max-width: 240px;
 }
-[data-table="pods"] .PodDetailsButton .bp5-button-text {
+[data-table="pods"] .PodDetailsButton .bp6-button-text {
   max-width: 100%;
   text-overflow: ellipsis;
   overflow: hidden;

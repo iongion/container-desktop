@@ -1,13 +1,13 @@
-.AppDrawerRegistrySearchResults .bp5-drawer-body {
+.AppDrawerRegistrySearchResults .bp6-drawer-body {
   padding: 4px;
   overflow: hidden;
 }
-.AppDrawerRegistrySearchResults .bp5-drawer-body .AppDataTable[data-table="registry.search.result"] tr td:first-child {
+.AppDrawerRegistrySearchResults .bp6-drawer-body .AppDataTable[data-table="registry.search.result"] tr td:first-child {
   width: 1px !important;
   font-weight: bold;
   font-size: 12px;
 }
-.AppDrawerRegistrySearchResults .bp5-drawer-body .AppDataTable[data-table="registry.search.result"] tr td:last-child {
+.AppDrawerRegistrySearchResults .bp6-drawer-body .AppDataTable[data-table="registry.search.result"] tr td:last-child {
   width: 100% !important;
   white-space: nowrap;
   text-align: left;

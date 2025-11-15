@@ -2,14 +2,14 @@
 [data-form="connection.create"] .ApiConnectionUriInput {
   display: flex;
 }
-[data-form="connection.create"] .bp5-input-group input[type="text"] {
+[data-form="connection.create"] .bp6-input-group input[type="text"] {
   font-size: 12px;
 }
-.ConnectionSettingsMode .bp5-tab-list {
+.ConnectionSettingsMode .bp6-tab-list {
   margin: 0;
   padding: 0;
 }
-.ConnectionSettingsMode .bp5-tab-panel {
+.ConnectionSettingsMode .bp6-tab-panel {
   margin: 0;
   margin-top: 5px;
   padding-top: 5px;

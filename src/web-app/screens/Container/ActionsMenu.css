@@ -17,15 +17,15 @@
 [data-actions-menu="container"] .InlinePlayerActions {
   border-radius: 5px;
 }
-[data-theme="bp5-dark"][data-engine="podman"] [data-actions-menu="container"] .InlinePlayerActions {
+[data-theme="bp6-dark"][data-engine="podman"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #7114ce;
 }
-[data-theme="bp5-light"][data-engine="podman"] [data-actions-menu="container"] .InlinePlayerActions {
+[data-theme="bp6-light"][data-engine="podman"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #c6bbd0;
 }
-[data-theme="bp5-dark"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
+[data-theme="bp6-dark"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #1463ce;
 }
-[data-theme="bp5-light"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
+[data-theme="bp6-light"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #9eb0c8;
 }

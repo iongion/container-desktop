@@ -6,18 +6,18 @@
 .ContainerPortMappingPort:first-child {
   margin-right: 3px;
 }
-.ContainerPortMappingPort .bp5-input {
+.ContainerPortMappingPort .bp6-input {
   width: 55px;
   margin-left: 3px;
 }
-.ContainerPortMappings .bp5-label {
+.ContainerPortMappings .bp6-label {
   text-transform: uppercase;
   margin-right: 7px !important;
 }
-.ContainerPortMappings .bp5-label:first-child {
+.ContainerPortMappings .bp6-label:first-child {
   margin-right: 0px !important;
 }
-.ContainerPortMappings .bp5-form-content {
+.ContainerPortMappings .bp6-form-content {
   display: flex;
 }
 .ContainerImagePortMapping {
@@ -33,6 +33,6 @@
   display: flex;
   vertical-align: middle;
 }
-.ContainerImagePortMappingProperties .bp5-form-group {
+.ContainerImagePortMappingProperties .bp6-form-group {
   margin-bottom: 0;
 }

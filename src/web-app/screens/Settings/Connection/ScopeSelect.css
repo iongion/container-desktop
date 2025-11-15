@@ -7,10 +7,10 @@
   vertical-align: middle;
   font-size: 12px;
 }
-.ScopeSelectMenuItem.bp5-menu-item-is-selectable {
+.ScopeSelectMenuItem.bp6-menu-item-is-selectable {
   padding-left: 5px;
 }
-.ScopeSelectButton .bp5-button-text {
+.ScopeSelectButton .bp6-button-text {
   display: flex;
   align-items: center;
   vertical-align: middle;
@@ -19,7 +19,7 @@
   text-overflow: ellipsis;
   font-size: 12px;
 }
-.ScopeSelectButton .bp5-button-text .ScopeSelectButtonText {
+.ScopeSelectButton .bp6-button-text .ScopeSelectButtonText {
   flex: 1;
   align-items: center;
   vertical-align: middle;
@@ -37,13 +37,13 @@
   overflow: hidden;
   height: 18px;
 }
-.ScopeSelectButton .bp5-button-text {
+.ScopeSelectButton .bp6-button-text {
   display: flex;
   flex: 1;
   align-items: center;
   vertical-align: middle;
 }
-.ScopeSelectButton .bp5-button-text .ScopeLabel {
+.ScopeSelectButton .bp6-button-text .ScopeLabel {
   height: 18px;
 }
 .ScopeLabel[data-intent="danger"] {

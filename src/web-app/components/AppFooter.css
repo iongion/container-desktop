@@ -13,10 +13,10 @@
   height: 32px;
   align-items: center;
 }
-.AppFooter .bp5-navbar-group {
+.AppFooter .bp6-navbar-group {
   height: 32px;
 }
-.AppFooter .bp5-navbar-heading {
+.AppFooter .bp6-navbar-heading {
   font-size: 12px;
   padding: 0;
   margin: 0;
@@ -37,20 +37,20 @@
   background-color: #f00;
 }
 
-[data-theme="bp5-dark"] [data-engine="podman"] .AppFooter,
-[data-theme="bp5-dark"] [data-engine="podman"] .AppFooterNavbar {
+[data-theme="bp6-dark"] [data-engine="podman"] .AppFooter,
+[data-theme="bp6-dark"] [data-engine="podman"] .AppFooterNavbar {
   background-color: #4f175b;
 }
-[data-theme="bp5-light"] [data-engine="podman"] .AppFooter,
-[data-theme="bp5-light"] [data-engine="podman"] .AppFooterNavbar {
+[data-theme="bp6-light"] [data-engine="podman"] .AppFooter,
+[data-theme="bp6-light"] [data-engine="podman"] .AppFooterNavbar {
   background-color: #cfcfcf;
 }
 
-[data-theme="bp5-dark"] [data-engine="docker"] .AppFooter,
-[data-theme="bp5-dark"] [data-engine="docker"] .AppFooterNavbar {
+[data-theme="bp6-dark"] [data-engine="docker"] .AppFooter,
+[data-theme="bp6-dark"] [data-engine="docker"] .AppFooterNavbar {
   background-color: #02091f;
 }
-[data-theme="bp5-light"] [data-engine="docker"] .AppFooter,
-[data-theme="bp5-light"] [data-engine="docker"] .AppFooterNavbar {
+[data-theme="bp6-light"] [data-engine="docker"] .AppFooter,
+[data-theme="bp6-light"] [data-engine="docker"] .AppFooterNavbar {
   background-color: #7397a8;
 }

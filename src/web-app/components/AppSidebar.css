@@ -9,16 +9,16 @@
   width: 100%;
   padding: 10px;
 }
-.AppSidebarActions > .bp5-button-group {
+.AppSidebarActions > .bp6-button-group {
   width: 100%;
   color: #60605b;
 }
-.AppSidebarActions .bp5-button-group .bp5-vertical {
+.AppSidebarActions .bp6-button-group .bp6-vertical {
   align-items: flex-start;
   justify-content: flex-start;
   text-align: left;
 }
-.AppSidebarActions .bp5-button {
+.AppSidebarActions .bp6-button {
   text-align: left;
   justify-content: flex-start;
   padding: 5px;
@@ -37,22 +37,22 @@
   padding: 2px;
   padding-top: 0;
 }
-.AppSidebar[data-expanded="no"] .AppSidebarActions .bp5-button {
+.AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button {
   display: flex;
   text-align: center;
   justify-content: center;
   padding: 5px;
   flex-direction: column;
 }
-.AppSidebar[data-expanded="no"] .AppSidebarActions .bp5-button .bp5-icon,
-.AppSidebar[data-expanded="no"] .AppSidebarActions .bp5-button svg {
+.AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button .bp6-icon,
+.AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button svg {
   margin-right: 0;
   outline: none;
 }
-.AppSidebar[data-expanded="no"] .AppSidebarActions .bp5-button svg {
+.AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button svg {
   margin: 5px;
 }
-.AppSidebar[data-expanded="no"] .AppSidebarActions .bp5-button-text {
+.AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button-text {
   display: block;
   font-size: 11px;
 }

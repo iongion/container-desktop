@@ -6,7 +6,7 @@
   font-size: 10px;
   white-space: nowrap;
 }
-.AppSidebarFooter .bp5-navbar {
+.AppSidebarFooter .bp6-navbar {
   margin: 0;
   padding: 0;
   background-repeat: no-repeat;
@@ -16,16 +16,16 @@
   background-size: 26px;
   height: 32px;
 }
-[data-engine="podman"] .AppSidebarFooter .bp5-navbar {
+[data-engine="podman"] .AppSidebarFooter .bp6-navbar {
   background-image: url("../images/podman-engine.svg");
 }
-[data-engine="docker"] .AppSidebarFooter .bp5-navbar {
+[data-engine="docker"] .AppSidebarFooter .bp6-navbar {
   background-image: url("../images/docker-engine.svg");
 }
-[data-theme="bp5-light"] [data-engine="docker"] .AppSidebarFooter .bp5-navbar {
+[data-theme="bp6-light"] [data-engine="docker"] .AppSidebarFooter .bp6-navbar {
   background-blend-mode: difference;
 }
-.AppSidebarFooter .bp5-navbar-group {
+.AppSidebarFooter .bp6-navbar-group {
   height: 32px;
   padding-left: 32px;
   padding-right: 0;
@@ -37,7 +37,7 @@
   justify-content: center;
   min-width: 32px;
 }
-.AppSidebarFooter .bp5-navbar-heading {
+.AppSidebarFooter .bp6-navbar-heading {
   font-size: 12px;
 }
 .AppSidebarVersionString {
@@ -64,7 +64,7 @@
   width: calc(100% - 30px);
   outline: none;
 }
-.AppSidebarFooterVersions > .bp5-navbar-heading {
+.AppSidebarFooterVersions > .bp6-navbar-heading {
   display: flex;
   align-items: center;
   margin: 0;
@@ -96,7 +96,7 @@
 .AppSidebarFooterVersionsMenu .AppSidebarProgramString {
   font-size: 14px;
 }
-.AppSidebarFooterNavbar .bp5-popover-content {
+.AppSidebarFooterNavbar .bp6-popover-content {
   padding: 5px !important;
 }
 .AppSidebarInfoPopover {

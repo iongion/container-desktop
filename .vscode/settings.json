@@ -9,9 +9,7 @@
   },
   "[javascript]": {
     "editor.codeActionsOnSave": {
-      "quickfix.biome": "always",
-      "source.fixAll": "always",
-      "source.organizeImports.biome": "always"
+      "source.fixAll.biome": "explicit"
     },
     "editor.defaultFormatter": "biomejs.biome"
   },
@@ -23,18 +21,14 @@
   },
   "[typescript]": {
     "editor.codeActionsOnSave": {
-      "quickfix.biome": "always",
-      "source.fixAll": "always",
-      "source.organizeImports.biome": "always"
+      "source.fixAll.biome": "explicit"
     },
     "editor.defaultFormatter": "vscode.typescript-language-features",
     "editor.tabSize": 2
   },
   "[typescriptreact]": {
     "editor.codeActionsOnSave": {
-      "quickfix.biome": "always",
-      "source.fixAll": "always",
-      "source.organizeImports.biome": "always"
+      "source.fixAll.biome": "explicit"
     },
     "editor.defaultFormatter": "biomejs.biome"
   },
@@ -189,6 +183,7 @@
     "Resetable",
     "resty",
     "resvg",
+    "rgba",
     "rimraf",
     "Roboto",
     "rootfull",
@@ -250,10 +245,7 @@
   ],
   "editor.defaultFormatter": "biomejs.biome",
   "editor.codeActionsOnSave": {
-    "quickfix.biome": "always",
-    "source.fixAll": "always",
-    "source.fixAll.stylelint": "always",
-    "source.fixAll.tslint": "always"
+    "source.fixAll.biome": "explicit"
   },
   "editor.formatOnSave": true,
   "editor.insertSpaces": true,

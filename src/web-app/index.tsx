@@ -5,11 +5,10 @@ import { Helmet, HelmetProvider } from "react-helmet-async";
 
 import "./index.css";
 
+import { ContainerEngine } from "@/env/Types";
 import { App } from "./App";
 import { I18nContextProvider } from "./App.i18n";
 import { store } from "./App.store";
-
-import { ContainerEngine } from "@/env/Types";
 import "./themes/docker.css";
 import "./themes/podman.css";
 import "./themes/shared.css";
@@ -26,7 +25,7 @@ export async function renderApplication() {
     <I18nContextProvider>
       <HelmetProvider>
         <Helmet>
-          <body className="bp5-dark" data-engine={ContainerEngine.PODMAN} />
+          <body className="bp6-dark" data-engine={ContainerEngine.PODMAN} />
         </Helmet>
         <App store={store} />
       </HelmetProvider>

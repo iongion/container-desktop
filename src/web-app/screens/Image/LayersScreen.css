@@ -64,15 +64,15 @@ table[data-table="image.layers"] {
   font-weight: bold;
   vertical-align: middle;
 }
-[data-theme="bp5-dark"] [data-table="image.layers.history"] .LayerIndex {
+[data-theme="bp6-dark"] [data-table="image.layers.history"] .LayerIndex {
   color: #ccc;
 }
-[data-theme="bp5-dark"] [data-table="image.layers.history"] .LayerHistory {
+[data-theme="bp6-dark"] [data-table="image.layers.history"] .LayerHistory {
   background-color: #333;
 }
-[data-theme="bp5-light"] [data-table="image.layers.history"] .LayerIndex {
+[data-theme="bp6-light"] [data-table="image.layers.history"] .LayerIndex {
   color: #333;
 }
-[data-theme="bp5-light"] [data-table="image.layers.history"] .LayerHistory {
+[data-theme="bp6-light"] [data-table="image.layers.history"] .LayerHistory {
   background-color: #ccc;
 }

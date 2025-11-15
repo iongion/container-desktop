@@ -27,7 +27,7 @@
   font-size: 12px;
 }
 [data-table="containers"] .ContainerLogsButton,
-[data-table="containers"] .ContainerLayersButton .bp5-button-text {
+[data-table="containers"] .ContainerLayersButton .bp6-button-text {
   max-width: 100%;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -40,7 +40,7 @@
   min-width: 140px;
   text-align: left;
 }
-[data-table="containers"] .ContainerLogsButton .bp5-button-text {
+[data-table="containers"] .ContainerLogsButton .bp6-button-text {
   text-align: left;
 }
 [data-table="containers"] .ContainerState {

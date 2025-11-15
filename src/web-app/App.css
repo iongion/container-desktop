@@ -1,22 +1,22 @@
-.bp5-navbar {
+.bp6-navbar {
   box-shadow: none !important;
 }
 
-.bp5-toast {
+.bp6-toast {
   max-width: 50%;
 }
 
-.bp5-drawer-header {
+.bp6-drawer-header {
   padding-left: 5px;
 }
 
-.bp5-button-text {
+.bp6-button-text {
   font-size: 12px;
 }
 
 code,
 pre,
-.bp5-code {
+.bp6-code {
   font-family: var(--monospace-font);
   font-size: 10px;
 }
@@ -75,7 +75,7 @@ pre,
   align-items: center;
   justify-content: center;
 }
-.AppScreenHeader > .bp5-navbar {
+.AppScreenHeader > .bp6-navbar {
   display: flex;
 }
 .AppScreenHeader .NavbarCenter,
@@ -100,26 +100,26 @@ pre,
   font-size: 12px;
   overflow: auto;
 }
-.AppToaster .bp5-toast {
+.AppToaster .bp6-toast {
   top: 40px;
 }
-[data-os="Darwin"] .bp5-drawer.bp5-position-left.AppDrawer .bp5-drawer-header h4.bp5-heading {
+[data-os="Darwin"] .bp6-drawer.bp6-position-left.AppDrawer .bp6-drawer-header h4.bp6-heading {
   text-align: right;
 }
-[data-os="Darwin"] .bp5-drawer.bp5-position-left.AppDrawer .bp5-drawer-header > .bp5-icon {
+[data-os="Darwin"] .bp6-drawer.bp6-position-left.AppDrawer .bp6-drawer-header > .bp6-icon {
   display: none;
 }
 .AppDrawer {
   min-width: 420px;
   box-shadow: none;
 }
-.AppDrawer .bp5-drawer-header {
+.AppDrawer .bp6-drawer-header {
   -webkit-app-region: none;
 }
-.AppDrawer .bp5-drawer-header button {
+.AppDrawer .bp6-drawer-header button {
   -webkit-app-region: none !important;
 }
-.AppDrawer .bp5-drawer-body .bp5-dialog-body {
+.AppDrawer .bp6-drawer-body .bp6-dialog-body {
   padding: 5px;
   margin: 0;
 }
@@ -174,12 +174,12 @@ pre,
 .AppDataTableGroupName {
   padding-left: 4px !important;
 }
-.AppDataTableGroupName .bp5-button {
+.AppDataTableGroupName .bp6-button {
   padding-left: 4px;
   min-width: 160px;
   justify-content: flex-start;
 }
-.AppDataTableGroupName .bp5-button .bp5-button-text .buttonTextLabel {
+.AppDataTableGroupName .bp6-button .bp6-button-text .buttonTextLabel {
   font-weight: bold;
 }
 .AppDataTableGroupDetails {
@@ -264,7 +264,7 @@ pre,
   border-radius: 15px;
 }
 
-.bp5-disabled .AppFormFieldMeasureUnit {
+.bp6-disabled .AppFormFieldMeasureUnit {
   color: #798192;
   background-color: #36334d;
 }

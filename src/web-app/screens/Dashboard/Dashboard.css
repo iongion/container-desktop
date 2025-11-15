@@ -5,7 +5,7 @@
   justify-content: center;
   flex-direction: column;
 }
-.AppScreen[data-screen="dashboard"] .bp5-non-ideal-state > * {
+.AppScreen[data-screen="dashboard"] .bp6-non-ideal-state > * {
   max-width: 100%;
 }
 .AppScreen[data-screen="dashboard"] .AppScreenContent p {

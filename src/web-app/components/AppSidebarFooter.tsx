@@ -69,7 +69,7 @@ export function AppSidebarFooter() {
         inheritDarkTheme
         transitionDuration={0}
         interactionKind={PopoverInteractionKind.CLICK}
-        popoverClassName="bp5-popover-content-sizing AppSidebarInfoPopover"
+        popoverClassName="bp6-popover-content-sizing AppSidebarInfoPopover"
         position="top-left"
         content={
           <div className="AppSidebarFooterVersionsMenu">

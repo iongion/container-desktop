@@ -3,21 +3,21 @@
   padding: 0;
   -webkit-app-region: drag;
 }
-.AppHeader .bp5-navbar {
+.AppHeader .bp6-navbar {
   display: flex;
   background: url("../images/container-desktop.svg") no-repeat 0 center;
   background-size: contain;
   background-position-x: 7px;
 }
-.AppHeader .bp5-navbar-heading {
+.AppHeader .bp6-navbar-heading {
   height: 100%;
 }
 .App-companyLogoBrand {
   width: 200px;
   height: 100%;
 }
-[data-os="MacOS"] .AppHeader .bp5-navbar,
-[data-os="Darwin"] .AppHeader .bp5-navbar {
+[data-os="MacOS"] .AppHeader .bp6-navbar,
+[data-os="Darwin"] .AppHeader .bp6-navbar {
   background-position-x: center;
 }
 .AppHeaderActions {

@@ -5,13 +5,13 @@
     "Powerline Extra Symbols";
 }
 
-body.bp5-dark .bp5-menu {
+body.bp6-dark .bp6-menu {
   background: #300734 !important;
 }
-body.bp5-dark .bp5-popover-arrow-fill {
+body.bp6-dark .bp6-popover-arrow-fill {
   fill: #300734 !important;
 }
-body.bp5-dark .bp5-input {
+body.bp6-dark .bp6-input {
   background: rgba(17, 20, 24, 0.3);
   box-shadow:
     0 0 0 0 rgb(76 144 240 / 0%),
@@ -23,7 +23,7 @@ body.bp5-dark .bp5-input {
     inset 0 -1px 0 0 #8f99a8;
   color: #f6f7f9;
 }
-body.bp5-dark .bp5-navbar {
+body.bp6-dark .bp6-navbar {
   box-shadow:
     0 0 0 1px rgb(17 20 24 / 20%),
     0 0 0 rgb(17 20 24 / 0%),
@@ -31,93 +31,93 @@ body.bp5-dark .bp5-navbar {
 }
 
 /* Status colors */
-body.bp5-light [data-table="containers"] .ContainerState[data-state="exited"] {
+body.bp6-light [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #a45f80;
   color: #fff;
 }
-body.bp5-light [data-table="containers"] .ContainerState[data-state="running"] {
+body.bp6-light [data-table="containers"] .ContainerState[data-state="running"] {
   background-color: #b5ddae;
   color: #333;
 }
-body.bp5-light [data-table="containers"] .ContainerState[data-state="created"] {
+body.bp6-light [data-table="containers"] .ContainerState[data-state="created"] {
   color: #1ea0e6;
 }
-body.bp5-light [data-table="containers"] .ContainerState[data-state="stopped"] {
+body.bp6-light [data-table="containers"] .ContainerState[data-state="stopped"] {
   color: #333;
 }
-body.bp5-light [data-table="containers"] .ContainerReportStateCounts li {
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li {
   background: #efefef;
 }
-body.bp5-light [data-table="containers"] .ContainerReportStateCounts li span {
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li span {
   background-color: #efefef;
   color: #333;
 }
-body.bp5-light [data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
   color: #333;
   background-color: #b5ddae;
 }
-body.bp5-light [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
   background-color: #a45f80;
   color: #fff;
 }
-body.bp5-light [data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
-body.bp5-light [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
   background-color: #efefef;
   color: #333;
 }
 
 /* Pod state */
-body.bp5-light table tr td {
+body.bp6-light table tr td {
   color: #242b31;
 }
-body.bp5-light [data-table="pods"] .PodState[data-state="Degraded"] {
+body.bp6-light [data-table="pods"] .PodState[data-state="Degraded"] {
   background-color: #611f69;
   color: #eee;
 }
-body.bp5-light [data-table="pods"] .PodState[data-state="Exited"] {
+body.bp6-light [data-table="pods"] .PodState[data-state="Exited"] {
   background-color: #a45f80;
   color: #eee;
 }
-body.bp5-light [data-table="pods"] .PodState[data-state="Running"] {
+body.bp6-light [data-table="pods"] .PodState[data-state="Running"] {
   background-color: #b5ddae;
 }
-body.bp5-light [data-table="pods"] .PodState[data-state="Created"] {
+body.bp6-light [data-table="pods"] .PodState[data-state="Created"] {
   background-color: #00a6ff;
 }
-body.bp5-light [data-table="pods"] .PodState[data-state="Stopped"] {
+body.bp6-light [data-table="pods"] .PodState[data-state="Stopped"] {
   color: #888a83;
 }
-body.bp5-light [data-table="pods"] .PodState[data-state="Paused"] {
+body.bp6-light [data-table="pods"] .PodState[data-state="Paused"] {
   background-color: orange;
 }
 
 /* Pod state */
-body.bp5-dark [data-table="pods"] .PodState[data-state="Degraded"] {
+body.bp6-dark [data-table="pods"] .PodState[data-state="Degraded"] {
   background-color: #611f69;
 }
-body.bp5-dark [data-table="pods"] .PodState[data-state="Exited"] {
+body.bp6-dark [data-table="pods"] .PodState[data-state="Exited"] {
   background-color: #8b104c;
 }
-body.bp5-dark [data-table="pods"] .PodState[data-state="Running"] {
+body.bp6-dark [data-table="pods"] .PodState[data-state="Running"] {
   color: #60ff45;
 }
-body.bp5-dark [data-table="pods"] .PodState[data-state="Created"] {
+body.bp6-dark [data-table="pods"] .PodState[data-state="Created"] {
   color: #00a6ff;
 }
-body.bp5-dark [data-table="pods"] .PodState[data-state="Stopped"] {
+body.bp6-dark [data-table="pods"] .PodState[data-state="Stopped"] {
   color: #888a83;
 }
-body.bp5-dark [data-table="pods"] .PodState[data-state="Paused"] {
+body.bp6-dark [data-table="pods"] .PodState[data-state="Paused"] {
   color: orange;
 }
 
-body.bp5-dark .ReactIcon,
-body.bp5-dark .AppLabelIcon {
+body.bp6-dark .ReactIcon,
+body.bp6-dark .AppLabelIcon {
   color: #abb3bf;
 }
 
-body.bp5-light .ReactIcon,
-body.bp5-light .AppLabelIcon {
+body.bp6-light .ReactIcon,
+body.bp6-light .AppLabelIcon {
   color: #5f6b7c;
 }
 
@@ -125,11 +125,11 @@ body.bp5-light .AppLabelIcon {
   width: auto !important;
 }
 
-body.bp5-dark .AppErrorBoundaryCallout .bp5-heading,
-body.bp5-dark .AppErrorBoundaryCallout p {
+body.bp6-dark .AppErrorBoundaryCallout .bp6-heading,
+body.bp6-dark .AppErrorBoundaryCallout p {
   color: #fff !important;
 }
 
-body.bp5-dark .AppDataTable[data-table="image.scanning.report"] tr td p {
+body.bp6-dark .AppDataTable[data-table="image.scanning.report"] tr td p {
   color: #fff;
 }

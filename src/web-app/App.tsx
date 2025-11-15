@@ -11,8 +11,6 @@ import { ContainerEngine, type OperatingSystem, type Program } from "@/env/Types
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
-import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
-import { pathTo } from "@/web-app/Navigator";
 import AppErrorBoundary from "@/web-app/components/AppErrorBoundary";
 import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
@@ -20,6 +18,8 @@ import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
 import { StoreProvider } from "@/web-app/domain/store";
 import { AppBootstrapPhase, type AppStore, useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
+import { pathTo } from "@/web-app/Navigator";
 import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Container/GenerateKubeScreen";
 import { Screen as ContainerInspectScreen } from "@/web-app/screens/Container/InspectScreen";
 import { Screen as ContainerLogsScreen } from "@/web-app/screens/Container/LogsScreen";
@@ -264,7 +264,7 @@ export function AppMainScreen() {
           data-provisioned={provisioned ? "yes" : "no"}
           lang="en"
         />
-        <body className={theme === "dark" ? `bp5-${theme}` : theme} data-engine={engine} />
+        <body className={theme === "dark" ? `bp6-${theme}` : theme} data-engine={engine} />
       </Helmet>
       <Router hook={useHashLocation}>
         <AppMainScreenContent

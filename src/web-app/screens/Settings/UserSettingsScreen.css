@@ -1,7 +1,7 @@
 .AppSettingsEngineManager {
   margin-top: 10px;
 }
-.AppSettingsForm .bp5-form-group {
+.AppSettingsForm .bp6-form-group {
   margin: 0;
 }
 .AppSettingsCallout {
@@ -24,7 +24,7 @@
   display: flex;
   width: 215px;
 }
-.AppSettingsFormVersionCheck .bp5-form-group {
+.AppSettingsFormVersionCheck .bp6-form-group {
   display: flex;
   flex: 1;
 }
@@ -91,8 +91,8 @@
   padding-right: 4px;
   padding-left: 4px;
 }
-.AppSettingsForm[data-form="flags"] .bp5-form-group:first-child,
-.AppSettingsForm[data-form="logging"] .bp5-form-group:first-child {
+.AppSettingsForm[data-form="flags"] .bp6-form-group:first-child,
+.AppSettingsForm[data-form="logging"] .bp6-form-group:first-child {
   flex: 1;
 }
 [data-screen="settings-settings"] .NavbarLeft {
@@ -185,10 +185,10 @@
   text-decoration: underline;
 }
 
-[data-theme="bp5-dark"] [data-engine="docker"] .AppSettingsEngineManagerConnections {
+[data-theme="bp6-dark"] [data-engine="docker"] .AppSettingsEngineManagerConnections {
   background-color: var(--docker-dark-bg-color);
 }
-[data-theme="bp5-dark"]
+[data-theme="bp6-dark"]
   [data-engine="docker"]
   .AppSettingsEngineManagerConnections
   [data-table="host.connections"]
@@ -197,7 +197,7 @@
   strong {
   background-color: #00395a;
 }
-[data-theme="bp5-dark"]
+[data-theme="bp6-dark"]
   [data-engine="docker"]
   .AppSettingsEngineManagerConnections
   [data-table="host.connections"]
@@ -205,10 +205,10 @@
   background-color: #0b4e0b;
 }
 
-[data-theme="bp5-light"] .AppSettingsEngineManagerConnections {
+[data-theme="bp6-light"] .AppSettingsEngineManagerConnections {
   background-color: var(--docker-light-bg-color);
 }
-[data-theme="bp5-light"]
+[data-theme="bp6-light"]
   .AppSettingsEngineManagerConnections
   [data-table="host.connections"]
   tr[data-connection-is-default="yes"]
@@ -216,15 +216,15 @@
   strong {
   background-color: #ffffff;
 }
-[data-theme="bp5-light"]
+[data-theme="bp6-light"]
   .AppSettingsEngineManagerConnections
   [data-table="host.connections"]
   tr[data-connection-is-connected="yes"] {
   background-color: #baffba;
 }
-[data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformScopeLabel {
+[data-theme="bp6-light"] .AppSettingsEngineManagerConnections .PlatformScopeLabel {
   color: #333;
 }
-[data-theme="bp5-light"] .AppSettingsEngineManagerConnections .PlatformConnectionDescription {
+[data-theme="bp6-light"] .AppSettingsEngineManagerConnections .PlatformConnectionDescription {
   color: #777;
 }

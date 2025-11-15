@@ -17,9 +17,9 @@ export interface TerminalProps {
 
 export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<HTMLDivElement>();
-  const term = useRef<XTermTerminal>();
-  const fit = useRef<FitAddon>();
+  const viewRef = useRef<HTMLDivElement | null>(null);
+  const term = useRef<XTermTerminal | null>(null);
+  const fit = useRef<FitAddon | null>(null);
   const handleResize = (entries: ResizeEntry[]) => {
     const [entry] = entries;
     if (entry && fit.current) {
@@ -31,7 +31,7 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
       return;
     }
     if (!viewRef.current) {
-      viewRef.current = wrapRef.current.querySelector<HTMLDivElement>(".TerminalViewContent") ?? undefined;
+      viewRef.current = wrapRef.current?.querySelector<HTMLDivElement>(".TerminalViewContent") ?? null;
     }
     if (!term.current) {
       const fitAddon = new FitAddon();
@@ -50,7 +50,9 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
         allowProposedApi: true,
         fontWeight: "normal",
       });
-      terminal.open(viewRef.current!);
+      if (viewRef.current) {
+        terminal.open(viewRef.current);
+      }
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(unicode11Addon);
       terminal.loadAddon(new WebLinksAddon());
@@ -75,7 +77,7 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
     return () => {
       if (term.current) {
         term.current.dispose();
-        term.current = undefined;
+        term.current = null;
       }
     };
   }, [value]);

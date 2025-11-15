@@ -11,8 +11,8 @@ interface UsePollerProps<T> {
 }
 
 export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
-  const pollerCallback = useRef<Poller<T>>();
-  const pollerID = useRef<any>();
+  const pollerCallback = useRef<Poller<T>>(undefined);
+  const pollerID = useRef<any>(undefined);
   const isPending = useRef<boolean>(false);
   // Allows interval to continue if poller changes over time
   useEffect(() => {
@@ -27,7 +27,9 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
   useEffect(() => {
     const frequency = rate === undefined ? Environment.settings.poll.rate : null;
     // Guard against previous interval
-    clearInterval(pollerID.current);
+    if (pollerID.current) {
+      clearInterval(pollerID.current);
+    }
     if (frequency === null) {
       console.warn("Stopped on rate cleanup");
       return;
@@ -54,7 +56,9 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         }
       } catch (error: any) {
         console.error("Polling cycle error, stopping - error must be handled", error);
-        clearInterval(pollerID.current);
+        if (pollerID.current) {
+          clearInterval(pollerID.current);
+        }
       } finally {
         isPending.current = false;
         // console.debug("Poller cycle complete");
@@ -62,22 +66,30 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
     };
     if (isPollingEnabled) {
       console.debug("Polling enabled - creating interval");
-      clearInterval(pollerID.current);
+      if (pollerID.current) {
+        clearInterval(pollerID.current);
+      }
       pollerID.current = setInterval(poller, frequency);
     } else {
       console.debug("Polling disabled - fetching once");
-      clearInterval(pollerID.current);
+      if (pollerID.current) {
+        clearInterval(pollerID.current);
+      }
       pollerID.current = setInterval(() => {
         isPollingEnabled = Environment.features.polling?.enabled;
         // console.debug("Polling flag monitoring", isPollingEnabled);
         if (isPollingEnabled) {
-          clearInterval(pollerID.current);
+          if (pollerID.current) {
+            clearInterval(pollerID.current);
+          }
           pollerID.current = setInterval(poller, frequency);
         }
       }, 5000);
     }
     return () => {
-      clearInterval(pollerID.current);
+      if (pollerID.current) {
+        clearInterval(pollerID.current);
+      }
       isPending.current = false;
       pollerCallback.current = undefined;
     };
@@ -92,7 +104,9 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
       });
     }
     return () => {
-      clearInterval(pollerID.current);
+      if (pollerID.current) {
+        clearInterval(pollerID.current);
+      }
       isPending.current = false;
       pollerCallback.current = undefined;
     };

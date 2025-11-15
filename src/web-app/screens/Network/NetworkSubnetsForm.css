@@ -2,12 +2,12 @@
   margin: 0 !important;
 }
 
-.NetworkSubnets .bp5-label {
+.NetworkSubnets .bp6-label {
   text-transform: uppercase;
   margin-right: 7px !important;
 }
 
-.NetworkSubnets .bp5-form-content {
+.NetworkSubnets .bp6-form-content {
   display: flex;
 }
 
@@ -24,7 +24,7 @@
   display: flex;
   vertical-align: middle;
 }
-.NetworkSubnetProperties .bp5-form-group {
+.NetworkSubnetProperties .bp6-form-group {
   margin-bottom: 0;
 }
 .ContainerNetworkSubnetField {
