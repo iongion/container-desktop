@@ -4,9 +4,7 @@ import shutil
 
 PROJECT_HOME = os.path.dirname(os.path.dirname(__file__))
 SOURCE_PATH = os.path.join(PROJECT_HOME, "support/resources/appIcon-source.svg")
-SOURCE_MONOCHROME_PATH = os.path.join(
-    PROJECT_HOME, "support/resources/appIcon-monochrome.svg"
-)
+SOURCE_MONOCHROME_PATH = os.path.join(PROJECT_HOME, "support/resources/appIcon-monochrome.svg")
 SIZES = [16, 32, 48, 64, 71, 96, 128, 150, 300, 180, 192, 256, 512, 1024]
 SQUARE_SIZES = [30, 44, 71, 89, 107, 142, 150, 284, 300, 310]
 ICO_SIZES = [16, 32, 48, 128, 256]
@@ -16,11 +14,7 @@ OUTPUT_PATH = os.path.join(PROJECT_HOME, "temp/icons")
 
 def generate_icon(size=16):
     export_path = os.path.join(OUTPUT_PATH, f"{size}x{size}.png")
-    export_2x_path = (
-        os.path.join(OUTPUT_PATH, f"{int(size/2)}x{int(size/2)}@2x.png")
-        if size > 16
-        else None
-    )
+    export_2x_path = os.path.join(OUTPUT_PATH, f"{int(size / 2)}x{int(size / 2)}@2x.png") if size > 16 else None
     args = [
         "resvg",
         "--width",
@@ -135,9 +129,7 @@ def generate_icons():
     generate_icns()
     generate_ico()
     return
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "96x96.png"), os.path.join(OUTPUT_PATH, "icon.png")
-    )
+    shutil.copyfile(os.path.join(OUTPUT_PATH, "96x96.png"), os.path.join(OUTPUT_PATH, "icon.png"))
     # Generate resources
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "icon.icns"),

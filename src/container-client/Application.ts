@@ -326,7 +326,7 @@ export class Application {
     subscribe();
     return {
       subscribe,
-      unsubscribe: () => { },
+      unsubscribe: () => {},
     };
   }
 

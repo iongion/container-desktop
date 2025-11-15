@@ -1,8 +1,8 @@
-import React from "react";
 import { Button, Callout, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import * as ReactIcon from "@mdi/react";
 import { mdiEmoticonSad } from "@mdi/js";
+import * as ReactIcon from "@mdi/react";
+import React from "react";
 
 export default class AppErrorBoundary extends React.Component<
   {

@@ -4,7 +4,7 @@ import { createLogger } from "@/logger";
 const logger = createLogger("container-client.Detector");
 
 export const parseProgramVersion = (input: string | undefined) => {
-  let parsed: any ;
+  let parsed: any;
   if (!input) {
     return parsed;
   }
@@ -47,7 +47,7 @@ export const findProgramPath = async (
   executor?: (path: string, args: string[], opts?: ProgramOptions) => Promise<CommandExecutionResult>,
 ) => {
   let result: CommandExecutionResult;
-  let programPath: string | undefined ;
+  let programPath: string | undefined;
   logger.debug("Finding program path for", programName);
   const osType = opts.osType || CURRENT_OS_TYPE;
   const windowsLookup = osType === OperatingSystem.Windows;

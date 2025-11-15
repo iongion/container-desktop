@@ -17,6 +17,7 @@ const buildNumber = Number(
   process.env.BUILD_NUMBER || semverVersion.build?.[0] || semverVersion.prerelease?.[0]?.[0] || 0,
 );
 const buildVersion = `${semverVersion.major}.${semverVersion.minor}.${semverVersion.patch}.${buildNumber}`;
+// biome-ignore lint/suspicious/noTemplateCurlyInString: Need to be like this for electron-builder
 const artifactName = [pkg.name, "${arch}", version].join("-");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
