@@ -2,13 +2,12 @@
 
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "url";
-
+import { fileURLToPath } from "node:url";
 import electronPath from "electron";
 import { build, createServer } from "vite";
 
 /** @type 'production' | 'development'' */
-const mode = (process.env.MODE = process.env.MODE || "development");
+const mode = process.env.MODE || "development";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);
@@ -37,7 +36,7 @@ function setupMainPackageWatcher({ resolvedUrls }) {
        * Set to {} to enable rollup watcher
        * @see https://vitejs.dev/config/build-options.html#build-watch
        */
-      watch: {}
+      watch: {},
     },
     plugins: [
       {
@@ -52,14 +51,29 @@ function setupMainPackageWatcher({ resolvedUrls }) {
 
           /** Spawn new electron process */
           electronApp = spawn(String(electronPath), ["--inspect", "."], {
-            stdio: "inherit"
+            stdio: "inherit",
           });
 
           /** Stops the watch script when the application has been quit */
           electronApp.addListener("exit", process.exit);
-        }
-      }
-    ]
+
+          /** Handle SIGINT (Ctrl+C) to properly kill electron app */
+          process.on("SIGINT", () => {
+            if (electronApp && !electronApp.killed) {
+              electronApp.kill("SIGINT");
+            }
+            process.exit(0);
+          });
+          /** Handle SIGTERM to properly kill electron app */
+          process.on("SIGTERM", () => {
+            if (electronApp && !electronApp.killed) {
+              electronApp.kill("SIGTERM");
+            }
+            process.exit(0);
+          });
+        },
+      },
+    ],
   });
 }
 
@@ -79,18 +93,18 @@ function setupPreloadPackageWatcher({ ws }) {
        * Set to {} to enable rollup watcher
        * @see https://vitejs.dev/config/build-options.html#build-watch
        */
-      watch: {}
+      watch: {},
     },
     plugins: [
       {
         name: "reload-page-on-preload-package-change",
         writeBundle() {
           ws.send({
-            type: "full-reload"
+            type: "full-reload",
           });
-        }
-      }
-    ]
+        },
+      },
+    ],
   });
 }
 
@@ -103,7 +117,7 @@ function setupPreloadPackageWatcher({ ws }) {
 const rendererWatchServer = await createServer({
   mode,
   logLevel,
-  configFile: path.join(PROJECT_HOME, "vite.config.renderer.mjs")
+  configFile: path.join(PROJECT_HOME, "vite.config.renderer.mjs"),
 }).then((s) => s.listen());
 
 await setupPreloadPackageWatcher(rendererWatchServer);
