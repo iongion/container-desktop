@@ -91,17 +91,21 @@ func handleRequests(reqs <-chan *ssh.Request) {
 }
 
 func cleanupSockAndChannel(sock net.Conn, channel ssh.Channel) {
-	err := sock.Close()
-	if err != nil {
-		log.Debugf("Error closing sock: %v\n", err)
+	if sock != nil {
+		err := sock.Close()
+		if err != nil {
+			log.Debugf("Error closing sock: %v\n", err)
+		}
 	}
-	channel.CloseWrite()
-	if err != nil {
-		log.Debugf("Error closing channel write: %v\n", err)
-	}
-	err = channel.Close()
-	if err != nil {
-		log.Debugf("Error closing channel: %v\n", err)
+	if channel != nil {
+		err := channel.CloseWrite()
+		if err != nil {
+			log.Debugf("Error closing channel write: %v\n", err)
+		}
+		err = channel.Close()
+		if err != nil {
+			log.Debugf("Error closing channel: %v\n", err)
+		}
 	}
 }
 
@@ -128,20 +132,21 @@ func handleChannels(chans <-chan ssh.NewChannel) {
 		if len(socketPath) == 0 {
 			log.Debugln("Channel socket path must be provided")
 			newChannel.Reject(ssh.Prohibited, "Channel socket path must be provided")
-			return
+			channel.Close()
+			continue
 		}
 		log.Tracef("Connecting to socket: <%s>\n", socketPath)
 		sock, err := net.Dial("unix", socketPath)
 		if err != nil {
 			log.Debugf("Could not dial unix socket %s: %v\n", socketPath, err)
+			channel.Close()
+			continue
 		}
 
 		defer func() {
 			log.Debugln("Completion - closing sock and channel")
 			cleanupSockAndChannel(sock, channel)
 		}()
-
-		sock.SetReadDeadline(time.Now().Add(time.Duration(maxRequestWaitTime) * time.Second))
 
 		// I/O operations are done in separate goroutines
 		var wg sync.WaitGroup

@@ -18,7 +18,7 @@ export default ({ mode, command }) => {
     formats: [outputFormat]
   };
   // config.build.manifest = true;
-  config.build.rollupOptions.external = ["electron"];
+  config.build.rollupOptions.external = ["electron", "electron-dl", "electron-context-menu"];
   config.build.rollupOptions.preserveEntrySignatures = "exports-only";
   config.build.rollupOptions.output.exports = "auto";
   config.build.rollupOptions.output.format = outputFormat;

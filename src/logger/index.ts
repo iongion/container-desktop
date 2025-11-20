@@ -7,7 +7,7 @@ export function createLogger(name): ILogger {
   return console as ILogger;
 }
 
-function setLoggerInstanceLevel(instance, level) {}
+function setLoggerInstanceLevel(instance, level) { }
 
 export async function getLevel() {
   const logging = await userConfiguration.getKey<any>("logging");

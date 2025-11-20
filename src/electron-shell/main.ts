@@ -1,9 +1,8 @@
 import { execFileSync } from "node:child_process";
-// node
 import path from "node:path";
 import * as url from "node:url";
 // vendors
-import * as Electron from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, Tray } from "electron";
 import contextMenu from "electron-context-menu";
 import { debounce } from "lodash-es";
 import is_ip_private from "private-ip";
@@ -15,7 +14,7 @@ import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { MessageBus } from "./shared";
 
-const APP_PATH = Electron.app.isPackaged ? path.dirname(Electron.app.getPath("exe")) : Electron.app.getAppPath();
+const APP_PATH = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
 
 // patch global like in preload
 (global as any).Command = Command;
@@ -26,8 +25,6 @@ const APP_PATH = Electron.app.isPackaged ? path.dirname(Electron.app.getPath("ex
 (global as any).CURRENT_OS_TYPE = CURRENT_OS_TYPE;
 (global as any).MessageBus = MessageBus;
 process.env.APP_PATH = APP_PATH;
-// locals
-const { BrowserWindow, Menu, Tray, app, dialog, ipcMain, shell } = Electron;
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);
@@ -302,7 +299,7 @@ async function createApplicationWindow() {
   return applicationWindow;
 }
 
-function getTrayIcon(isDark = Electron.nativeTheme.shouldUseDarkColors): string {
+function getTrayIcon(isDark = nativeTheme.shouldUseDarkColors): string {
   const theme = isDark ? "dark" : "light";
   const trayIconFile =
     CURRENT_OS_TYPE === OperatingSystem.MacOS ? `trayIcon-${theme}-mac.png` : `trayIcon-${theme}.png`;
@@ -365,7 +362,7 @@ async function main() {
   });
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   app.commandLine.appendSwitch("ignore-certificate-errors");
-  Electron.nativeTheme.on("updated", () => {
+  nativeTheme.on("updated", () => {
     try {
       const tray = createSystemTray();
       const trayIconPath = getTrayIcon();
@@ -374,7 +371,7 @@ async function main() {
     } catch (e: any) {
       logger.error("Unable to set sys-tray icon", e);
     }
-    sendToRenderer("theme:change", Electron.nativeTheme.shouldUseDarkColors ? "dark" : "light");
+    sendToRenderer("theme:change", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   await app.whenReady();
   await createApplicationWindow();

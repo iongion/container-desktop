@@ -50,7 +50,7 @@ function setupMainPackageWatcher({ resolvedUrls }) {
           }
 
           /** Spawn new electron process */
-          electronApp = spawn(String(electronPath), ["--inspect", "."], {
+          electronApp = spawn(String(electronPath), [".", "--no-sandbox", "--disable-web-security", "--disable-gpu-sandbox", "--no-zygote", "--disable-features=VizDisplayCompositor", "--in-process-gpu", "--disable-dev-shm-usage"], {
             stdio: "inherit",
           });
 

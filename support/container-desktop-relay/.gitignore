@@ -1,3 +1,60 @@
-bin
-temp
-vendors
+# Binaries
+bin/
+container-desktop-relay
+container-desktop-relay-linux
+container-desktop-relay.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+
+# Dependency directories
+vendor/
+vendors/
+
+# Go workspace file
+go.work
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Config files (keep examples)
+config.json
+*.local.json
+
+# SSH keys
+*.pem
+id_rsa
+id_rsa.pub
+authorized_keys
+known_hosts
+
+# Logs
+*.log
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Build artifacts
+dist/
+build/
+
+# Test cache
+.cache/
