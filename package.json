@@ -86,7 +86,7 @@
     "@biomejs/biome": "2.5.0",
     "@electron/packager": "20.0.1",
     "@hookform/devtools": "4.4.0",
-    "@types/node": "24.13.2",
+    "@types/node": "25.9.3",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vercel/ncc": "0.44.0",
