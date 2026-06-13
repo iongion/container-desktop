@@ -1,11 +1,11 @@
 cask "container-desktop" do
   arch arm: "arm64", intel: "x64"
 
-  version "5.2.15"
-  sha256 arm:   "766e95f921ec223ade4ba06e82558a77cd890962f2a4e25d41a047d88c1b10bf",
-         intel: "1b8431448986e6b110c68166ba09dacc1f7e632ed21e398e2f94ab24d5328daf"
+  version "5.2.13"
+  sha256 arm:   "4e14f9b0b0f936aea1ca3433ba58fe963bbcaad331880586062e8d37c7b9df51",
+         intel: "43a4cbe20b06d439006a8c9c6cf826400be859f7b66fc42aa777466edef8d017"
 
-  url "https://github.com/iongion/container-desktop/releases/container-desktop-#{arch}-#{version}.dmg",
+  url "https://github.com/iongion/container-desktop/releases/download/#{version}/container-desktop-#{arch}-#{version}.dmg",
       verified: "github.com/iongion/container-desktop/"
   name "Container Desktop"
   desc "General purpose container operations"
@@ -23,7 +23,7 @@ cask "container-desktop" do
 
   uninstall quit:   "io.github.iongion.ContainerDesktop",
             delete: "/Applications/Container Desktop.app",
-            trash:  "~/Library/LaunchAgents/io.podman_desktop.ContainerDesktop.plist"
+            trash:  "~/Library/LaunchAgents/io.github.iongion.ContainerDesktop.plist"
 
   zap trash: [
     "~/.local/share/container-desktop",

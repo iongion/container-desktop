@@ -1,4 +1,6 @@
 **/__pycache__/**
+.pytest_cache/
+.ruff_cache/
 .venv
 bin
 build
@@ -8,7 +10,6 @@ squashfs-root
 temp/
 .DS_Store
 .egg-info
-PodmanDesktopCompanion.pfx
 ContainerDesktop.pfx
 src/container_desktop_tools.egg-info
 
