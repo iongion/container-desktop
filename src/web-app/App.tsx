@@ -107,11 +107,7 @@ const Screens = [
 
 export function useCurrentScreen() {
   const [location, _] = useLocation();
-  const currentScreen = Screens.find((screen) => {
-    const matcher = matchPath(screen.Route.Path, location);
-    console.debug("Checking screen", screen.Route, matcher);
-    return matcher;
-  });
+  const currentScreen = Screens.find((screen) => matchPath(screen.Route.Path, location));
   return currentScreen;
 }
 

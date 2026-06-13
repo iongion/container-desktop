@@ -1,6 +1,6 @@
-import { Button, ButtonGroup, Intent, Menu, MenuItem, Popover, Position } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, Menu, MenuItem, PopoverNext } from "@blueprintjs/core";
 import { type IconName, IconNames } from "@blueprintjs/icons";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export type ConfirmMenuRemoveHandler = (tag: any, confirmed: boolean) => void;
@@ -92,21 +92,19 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   children,
   onConfirm,
 }: ConfirmMenuProps) => {
-  const popoverRef = useRef<any>(null);
+  // Controlled open state: PopoverNext (React 19 compatible) has no imperative
+  // handleOverlayClose, so we close it explicitly when an action is taken.
+  const [isOpen, setIsOpen] = useState(false);
   const onActionConfirm = useCallback(
-    (e) => {
-      if (popoverRef.current) {
-        popoverRef.current.handleOverlayClose(e);
-      }
+    (_e) => {
+      setIsOpen(false);
       onConfirm(tag, true);
     },
     [onConfirm, tag],
   );
   const onActionCancel = useCallback(
-    (e) => {
-      if (popoverRef.current) {
-        popoverRef.current.handleOverlayClose(e);
-      }
+    (_e) => {
+      setIsOpen(false);
       onConfirm(tag, false);
     },
     [onConfirm, tag],
@@ -124,8 +122,15 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
     </Menu>
   );
   return (
-    <Popover ref={popoverRef} usePortal hasBackdrop={false} content={menuContent} position={Position.BOTTOM_LEFT}>
+    <PopoverNext
+      isOpen={isOpen}
+      onInteraction={(nextOpenState) => setIsOpen(nextOpenState)}
+      usePortal
+      hasBackdrop={false}
+      content={menuContent}
+      placement="bottom-start"
+    >
       <Button minimal small icon={IconNames.MORE} />
-    </Popover>
+    </PopoverNext>
   );
 };

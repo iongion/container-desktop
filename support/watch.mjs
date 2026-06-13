@@ -15,6 +15,87 @@ const PROJECT_HOME = path.dirname(__dirname);
 /** @type {import('vite').LogLevel} */
 const logLevel = "warn";
 
+// Aggressive GPU/sandbox flags are only safe for headless/CI. On a real desktop
+// `--in-process-gpu` + a disabled compositor cause a GPU "context lost" crash/restart
+// spin-loop that pegs CPU and can freeze the whole machine. Gate them behind an env var.
+const isHeadless = ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTOP_HEADLESS || ""}`.toLowerCase());
+const remoteDebuggingPort = process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT || "9222";
+
+function buildElectronArgs() {
+  // Expose the renderer over the Chrome DevTools Protocol so tools such as the
+  // Playwright MCP can attach to the running app in dev.
+  const args = [".", `--remote-debugging-port=${remoteDebuggingPort}`, "--no-sandbox"];
+  if (isHeadless) {
+    args.push("--disable-gpu", "--disable-gpu-sandbox", "--in-process-gpu", "--no-zygote", "--disable-features=VizDisplayCompositor", "--disable-dev-shm-usage", "--disable-web-security");
+  }
+  return args;
+}
+
+/** @type {import('node:child_process').ChildProcess | null} */
+let electronApp = null;
+let relaunching = false;
+
+/** Stops the watch script when the application has been quit. */
+function onElectronExit() {
+  process.exit(0);
+}
+
+/** Kill the running electron process and wait for it to actually exit (SIGKILL fallback). */
+function killElectron() {
+  return new Promise((resolve) => {
+    const proc = electronApp;
+    electronApp = null;
+    if (!proc || proc.killed || proc.exitCode !== null) {
+      resolve();
+      return;
+    }
+    proc.removeListener("exit", onElectronExit);
+    const forceKill = setTimeout(() => {
+      if (proc.exitCode === null) {
+        try {
+          proc.kill("SIGKILL");
+        } catch {
+          /* already gone */
+        }
+      }
+    }, 2000);
+    proc.once("exit", () => {
+      clearTimeout(forceKill);
+      resolve();
+    });
+    proc.kill("SIGTERM");
+  });
+}
+
+/** Relaunch electron, ensuring the previous instance is gone first (no process pile-up). */
+async function relaunchElectron() {
+  if (relaunching) {
+    return;
+  }
+  relaunching = true;
+  try {
+    await killElectron();
+    electronApp = spawn(String(electronPath), buildElectronArgs(), { stdio: "inherit" });
+    electronApp.addListener("exit", onElectronExit);
+  } finally {
+    relaunching = false;
+  }
+}
+
+// Register signal handlers ONCE (registering them per-rebuild leaks listeners).
+const shutdown = (signal) => {
+  if (electronApp && !electronApp.killed) {
+    try {
+      electronApp.kill(signal);
+    } catch {
+      /* already gone */
+    }
+  }
+  process.exit(0);
+};
+process.once("SIGINT", () => shutdown("SIGINT"));
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+
 /**
  * Setup watcher for `main` package
  * On file changed it totally re-launch electron app.
@@ -23,9 +104,6 @@ const logLevel = "warn";
  */
 function setupMainPackageWatcher({ resolvedUrls }) {
   process.env.VITE_DEV_SERVER_URL = resolvedUrls.local[0];
-
-  /** @type {ChildProcess | null} */
-  let electronApp = null;
 
   return build({
     mode,
@@ -42,35 +120,7 @@ function setupMainPackageWatcher({ resolvedUrls }) {
       {
         name: "reload-app-on-main-package-change",
         writeBundle() {
-          /** Kill electron if process already exist */
-          if (electronApp !== null) {
-            electronApp.removeListener("exit", process.exit);
-            electronApp.kill("SIGINT");
-            electronApp = null;
-          }
-
-          /** Spawn new electron process */
-          electronApp = spawn(String(electronPath), [".", "--no-sandbox", "--disable-web-security", "--disable-gpu-sandbox", "--no-zygote", "--disable-features=VizDisplayCompositor", "--in-process-gpu", "--disable-dev-shm-usage"], {
-            stdio: "inherit",
-          });
-
-          /** Stops the watch script when the application has been quit */
-          electronApp.addListener("exit", process.exit);
-
-          /** Handle SIGINT (Ctrl+C) to properly kill electron app */
-          process.on("SIGINT", () => {
-            if (electronApp && !electronApp.killed) {
-              electronApp.kill("SIGINT");
-            }
-            process.exit(0);
-          });
-          /** Handle SIGTERM to properly kill electron app */
-          process.on("SIGTERM", () => {
-            if (electronApp && !electronApp.killed) {
-              electronApp.kill("SIGTERM");
-            }
-            process.exit(0);
-          });
+          void relaunchElectron();
         },
       },
     ],

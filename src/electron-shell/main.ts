@@ -248,6 +248,13 @@ function sendToRenderer(event: string, data?: any) {
 async function createApplicationWindow() {
   if (applicationWindow) {
     logger.debug("Window already created - destroying it");
+    // Remove our listeners before destroying so re-creation never accumulates duplicates.
+    try {
+      applicationWindow.webContents?.removeAllListeners();
+      applicationWindow.removeAllListeners();
+    } catch (error: any) {
+      logger.error("Unable to detach previous window listeners", error);
+    }
     applicationWindow.destroy();
   }
   logger.debug("Creating application window");
