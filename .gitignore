@@ -119,3 +119,6 @@ dist
 
 # Extras
 .electron-vendors.cache.json
+
+# Agent local overrides (personal, not shared)
+.claude/settings.local.json

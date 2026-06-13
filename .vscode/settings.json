@@ -2,7 +2,6 @@
   "eslint.enable": false,
   "prettier.enable": false,
   "biome.enabled": true,
-  "biome.lsp.trace.server": "verbose",
   "biome.lsp.bin": "./node_modules/.bin/biome",
   "[html]": {
     "editor.defaultFormatter": "biomejs.biome"
@@ -23,7 +22,7 @@
     "editor.codeActionsOnSave": {
       "source.fixAll.biome": "explicit"
     },
-    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.defaultFormatter": "biomejs.biome",
     "editor.tabSize": 2
   },
   "[typescriptreact]": {
@@ -291,18 +290,12 @@
   },
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
-  "[csharp]": {
-    "editor.defaultFormatter": "ms-dotnettools.csharp"
-  },
-  "[rust]": {
-    "editor.defaultFormatter": "rust-lang.rust-analyzer"
-  },
   "[go]": {
     "editor.defaultFormatter": "golang.go"
   },
-  "typescript.preferences.importModuleSpecifier": "non-relative",
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "js/ts.preferences.importModuleSpecifier": "non-relative",
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "git.ignoreLimitWarning": true,
   "notebook.formatOnSave.enabled": true,
   "notebook.codeActionsOnSave": {
