@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+A large internal modernization of how the app talks to engines and manages state, plus user-facing list improvements.
+
+## Added
+
+- Sortable columns across every resource list.
+- Live, event-driven lists: containers, images, pods, volumes and networks now update as the engine reports changes, with automatic reconnect and a polling fallback when events aren't available.
+- Folder-style grouping for containers (groups first, cleaner names).
+
+## Changed
+
+- Re-architected the Podman/Docker runtime into small composable pieces (transport/dialect/profile) behind a single symmetric engine facade, so both engines share one consistent surface and connection/relay logic is no longer duplicated.
+- Replaced the monolithic API client with typed per-resource adapters and per-engine normalizers.
+- Overhauled state management: dropped Easy-Peasy and the hand-rolled refresh poller; live lists now come from event-backed stores while detail and mutation flows use TanStack Query re-entering a screen is instant from cache.
+- Migrated routing from Wouter to TanStack Router.
+- New libraries adopted: TanStack Query (request/mutation support), Zustand (app, UI and resource state), TanStack Router (routing), and Vitest (unit tests).
+
+## Fixed
+
+- Linux terminal launch no longer hangs.
+- More honest connection handling: failed SSH connections are reported as failures, podman-machine startup no longer falsely reports success and lists no longer briefly flash another connection's data.
+
 ## 5.2.15 - 2025-04-01
 
 ## Changed
