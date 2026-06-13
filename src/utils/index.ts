@@ -21,7 +21,7 @@ export function axiosConfigToCURL(
     without_buffer?: boolean;
   },
 ) {
-  if (!config || !config.baseURL || !config.socketPath) {
+  if (!config?.baseURL || !config.socketPath) {
     console.error("Request config is not valid", config);
     throw new Error("Unable to construct curl from config");
   }
