@@ -18,7 +18,7 @@ from support.versioning import (
     parse_version,
     promote_changelog,
     render_homebrew_rb,
-    set_docs_version,
+    set_website_version,
     set_manifest_version,
     set_package_json_version,
     set_plain_version,
@@ -119,26 +119,26 @@ def test_promote_changelog_is_noop_without_unreleased():
     assert promote_changelog(text, "5.2.16", "2026-06-13") == text
 
 
-# --- set_docs_version ------------------------------------------------------
+# --- set_website_version ------------------------------------------------------
 
 
-def test_set_docs_version_updates_data_version_cachebuster_and_urls():
+def test_set_website_version_updates_data_version_cachebuster_and_urls():
     text = (
         '<html lang="en" data-version="5.2.13">\n'
         '<link rel="stylesheet" href="./css/common.css?v=5.2.13.3" />\n'
         '<a href="https://github.com/iongion/container-desktop/releases/download/'
         '5.2.13/container-desktop-x86_64-5.2.13.AppImage">AppImage</a>\n'
     )
-    out = set_docs_version(text, "5.2.16")
+    out = set_website_version(text, "5.2.16")
     assert 'data-version="5.2.16"' in out
     assert "common.css?v=5.2.16.3" in out
     assert "releases/download/5.2.16/container-desktop-x86_64-5.2.16.AppImage" in out
     assert "5.2.13" not in out
 
 
-def test_set_docs_version_is_noop_when_already_current():
+def test_set_website_version_is_noop_when_already_current():
     text = '<html lang="en" data-version="5.2.16">\n'
-    assert set_docs_version(text, "5.2.16") == text
+    assert set_website_version(text, "5.2.16") == text
 
 
 # --- render_homebrew_rb ----------------------------------------------------

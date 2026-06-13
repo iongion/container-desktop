@@ -75,8 +75,8 @@ def promote_changelog(text: str, version: str, today: str) -> str:
     return text.replace(marker, f"{marker}\n\n## [{version}] - {today}", 1)
 
 
-def set_docs_version(text: str, version: str) -> str:
-    """Point the docs download page at ``version``.
+def set_website_version(text: str, version: str) -> str:
+    """Point the website download page at ``version``.
 
     The current version is read from the ``data-version`` attribute and every
     literal occurrence is rewritten -- this covers ``data-version``, the

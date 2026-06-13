@@ -14,10 +14,10 @@ from support.versioning import (
     bump_version,
     promote_changelog,
     render_homebrew_rb,
-    set_docs_version,
     set_manifest_version,
     set_package_json_version,
     set_plain_version,
+    set_website_version,
 )
 
 PROJECT_HOME = os.path.dirname(__file__)
@@ -381,18 +381,18 @@ def _artifact_sha256(version, arch):
 
 @task(name="publish-meta")
 def publish_meta(ctx, version=None, perform=False):
-    """Render docs + homebrew cask for a PUBLISHED release (defaults to latest).
+    """Render website + homebrew cask for a PUBLISHED release (defaults to latest).
 
-    Points the docs download page and homebrew cask at a real, downloadable
+    Points the website download page and homebrew cask at a real, downloadable
     release. Homebrew sha256 values come from release/ if present, else from the
     published GitHub release. Prints the plan unless --perform is given.
     """
     version = version or _latest_release_version(ctx)
     print(f"Render published metadata for {version}" + ("" if perform else "  (dry-run; pass --perform)"))
     targets = [
-        ("docs/index.html", set_docs_version(_read_text("docs/index.html"), version)),
-        ("docs/VERSION", set_plain_version(_read_text("docs/VERSION"), version)),
-        ("docs/VERSION-Windows_NT", set_plain_version(_read_text("docs/VERSION-Windows_NT"), version)),
+        ("website/index.html", set_website_version(_read_text("website/index.html"), version)),
+        ("website/VERSION", set_plain_version(_read_text("website/VERSION"), version)),
+        ("website/VERSION-Windows_NT", set_plain_version(_read_text("website/VERSION-Windows_NT"), version)),
     ]
     _apply(targets, perform)
     rb = "support/homebrew-cask/container-desktop.rb"
