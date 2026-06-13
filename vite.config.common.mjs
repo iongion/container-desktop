@@ -7,7 +7,6 @@ import * as dotenv from "dotenv";
 import merge from "lodash.merge";
 import MagicString from "magic-string";
 import { checker } from "vite-plugin-checker";
-import topLevelAwait from "vite-plugin-top-level-await";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 // pkg
@@ -35,7 +34,7 @@ export function createSingleFile(patch) {
             minify: true,
             sourceMap: false,
             quiet: false,
-            target: "es2020",
+            target: "es2022",
             debugLog: true,
           })
             .then(({ code, map, assets }) => {
@@ -129,7 +128,6 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     clearScreen: false,
     plugins: [
       // viteCommonjs(),
-      topLevelAwait(),
       checker({
         typescript: true,
       }),
@@ -138,7 +136,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     ],
     define: userDefine,
     build: {
-      target: "es2020",
+      target: "es2022",
       outDir: path.join(__dirname, "build"),
       emptyOutDir: false,
       sourcemap: sourcemap,
