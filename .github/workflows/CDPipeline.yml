@@ -30,15 +30,15 @@ jobs:
 
     steps:
       - name: Clone Repository (latest)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == 'latest'
       - name: Clone Repository (custom ref)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != 'latest'
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v6
         with:
           node-version: "24.16.0"
           registry-url: "https://npm.pkg.github.com"
@@ -53,6 +53,6 @@ jobs:
         env:
           TARGET: ${{github.event.inputs.target}}
       - name: Publish ${{github.event.inputs.stage}} ${{github.event.inputs.target}} artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v7
         with:
           path: release/container-desktop*
