@@ -1,6 +1,7 @@
 import os
-import subprocess
 import shutil
+import subprocess
+
 
 PROJECT_HOME = os.path.dirname(os.path.dirname(__file__))
 SOURCE_PATH = os.path.join(PROJECT_HOME, "support/resources/appIcon-source.svg")
@@ -34,10 +35,10 @@ def generate_icon(size=16):
         export_2x_path,
     ]
     print(f"Executing: {' '.join(args)}")
-    subprocess.run(args)
+    subprocess.run(args, check=True)
     if export_2x_path is not None:
         print(f"Executing: {' '.join(args_2x)}")
-        subprocess.run(args_2x)
+        subprocess.run(args_2x, check=True)
 
 
 def generate_square(size, output_name=None):
@@ -55,14 +56,14 @@ def generate_square(size, output_name=None):
         export_path,
     ]
     print(f"Executing: {' '.join(args)}")
-    subprocess.run(args)
+    subprocess.run(args, check=True)
 
 
 def generate_plain():
     export_path = os.path.join(OUTPUT_PATH, "icon.svg")
     args = ["svgo.cmd" if os.name == "nt" else "svgo", SOURCE_PATH, "-o", export_path]
     print(f"Optimizing: {' '.join(args)}")
-    subprocess.run(args)
+    subprocess.run(args, check=True)
 
 
 def generate_tray(size=64, monochrome=False):
@@ -80,7 +81,7 @@ def generate_tray(size=64, monochrome=False):
         print(f"Executing: {' '.join(args)} - skip")
     else:
         print(f"Executing: {' '.join(args)}")
-        subprocess.run(args)
+        subprocess.run(args, check=True)
 
 
 def generate_icns():
@@ -101,7 +102,7 @@ def generate_icns():
     #     import_path = os.path.join(OUTPUT_PATH, f"{size}x{size}.png")
     #     args.append(import_path)
     print(f"Executing: {' '.join(args)}")
-    subprocess.run(args)
+    subprocess.run(args, check=True)
 
 
 def generate_ico():
@@ -112,7 +113,7 @@ def generate_ico():
         args.append(import_path)
     args += ["-colors", "512", export_path]
     print(f"Executing: {' '.join(args)}")
-    subprocess.run(args)
+    subprocess.run(args, check=True)
 
 
 def generate_icons():
