@@ -11,10 +11,17 @@ import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsC
 export default ({ mode, command }) => {
   sourceEnv(ENVIRONMENT);
   const cache = getElectronVendorsCache();
-  const outputFormat = "es";
+  // Main process is bundled as CommonJS (electron exposes its API via the CJS
+  // require hook, not as ESM named exports). Source stays ESM/TS; only the output
+  // is CJS. This mirrors the industry-standard electron + vite setup.
+  const outputFormat = "cjs";
   const config = getCommonViteConfig({ mode: mode || process.env.MODE || "development", command, outputName: "main", outputFormat });
   config.build.emptyOutDir = false;
   config.build.ssr = true;
+  // build.ssr auto-externalizes node_modules, which breaks ESM-only deps when
+  // require()'d from the CJS bundle. Bundle everything except electron (provided by
+  // the runtime) so the bundler resolves all interop at build time.
+  config.ssr = { ...(config.ssr || {}), noExternal: true };
   config.build.target = `node${cache.node}`;
   config.build.lib = {
     name: "main",
@@ -22,7 +29,10 @@ export default ({ mode, command }) => {
     formats: [outputFormat]
   };
   // config.build.manifest = true;
-  config.build.rollupOptions.external = ["electron", "electron-dl", "electron-context-menu"];
+  // Only electron itself is provided by the runtime and must stay external. The
+  // electron helper libs are bundled so the bundler applies CJS interop to their
+  // `import { ... } from "electron"` (they ship raw ESM that cannot link otherwise).
+  config.build.rollupOptions.external = ["electron"];
   config.build.rollupOptions.preserveEntrySignatures = "exports-only";
   config.build.rollupOptions.output.exports = "auto";
   config.build.rollupOptions.output.format = outputFormat;

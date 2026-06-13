@@ -4,7 +4,7 @@
   "version": "5.2.15",
   "author": "Ionut Stoica",
   "description": "Container Desktop",
-  "main": "build/main-5.2.15.mjs",
+  "main": "build/main-5.2.15.cjs",
   "homepage": "./",
   "type": "module",
   "scripts": {

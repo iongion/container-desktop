@@ -7,10 +7,14 @@ import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsC
 export default ({ mode, command }) => {
   sourceEnv(ENVIRONMENT);
   const cache = getElectronVendorsCache();
-  const outputFormat = "es";
+  // Preload is bundled as CommonJS for the same reason as the main process
+  // (electron's API is a CJS require-hook built-in). Source stays ESM/TS.
+  const outputFormat = "cjs";
   const config = getCommonViteConfig({ mode: mode || process.env.MODE || "development", command, outputName: "preload", outputFormat: outputFormat });
   config.build.emptyOutDir = false;
   config.build.ssr = true;
+  // Bundle all deps except electron (see main config) so CJS output handles interop.
+  config.ssr = { ...(config.ssr || {}), noExternal: true };
   config.build.target = `node${cache.node}`;
   config.build.lib = {
     name: "preload",
@@ -18,7 +22,7 @@ export default ({ mode, command }) => {
     formats: [outputFormat]
   };
   // config.build.manifest = true;
-  config.build.rollupOptions.external = ["electron", "electron-dl", "electron-context-menu"];
+  config.build.rollupOptions.external = ["electron"];
   config.build.rollupOptions.preserveEntrySignatures = "exports-only";
   config.build.rollupOptions.output.exports = "auto";
   config.build.rollupOptions.output.format = outputFormat;

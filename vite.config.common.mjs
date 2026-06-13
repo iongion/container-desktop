@@ -119,11 +119,12 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     ...createDefine(mode),
     // Define user overridden environment variables
     ...define,
-    // Fix
-    __dirname: "import.meta.dirname",
+    // In ESM output `__dirname` is unavailable, so map it to import.meta.dirname.
+    // In CJS output (main/preload) `__dirname` is native — leave it untouched.
+    ...(outputFormat === "cjs" ? {} : { __dirname: "import.meta.dirname" }),
   };
   const minify = false; // mode === "production";
-  const outputExtension = outputFormat === "umd" ? "js" : "mjs";
+  const outputExtension = outputFormat === "umd" ? "js" : outputFormat === "cjs" ? "cjs" : "mjs";
   const config = {
     clearScreen: false,
     plugins: [
@@ -148,7 +149,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
         output: {
           manualChunks: (filename) => outputName,
           preserveModules: false,
-          format: outputFormat === "umd" ? "umd" : "es",
+          format: outputFormat === "umd" ? "umd" : outputFormat === "cjs" ? "cjs" : "es",
           codeSplitting: true,
           assetFileNames: `assets/${outputName}-${pkg.version}.[ext]`,
           entryFileNames: `${outputName}-${pkg.version}.${outputExtension}`,

@@ -180,7 +180,7 @@ async function createApplicationWindow() {
     applicationWindow.destroy();
   }
   logger.debug("Creating application window");
-  const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`);
+  const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.cjs`);
   const appDevURL = import.meta.env.VITE_DEV_SERVER_URL;
   const appProdURL = url.format({
     pathname: path.join(__dirname, "index.html"),
