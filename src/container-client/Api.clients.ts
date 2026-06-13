@@ -643,17 +643,6 @@ export class ContainerClient {
       return result.data;
     });
   }
-  async inspectVolume(nameOrId: string) {
-    return this.withResult<Volume>(async () => {
-      let baseURL = "http://d/v4.0.0/libpod";
-      const host = this.connection?.host || "";
-      if (host.startsWith("docker")) {
-        baseURL = "http://localhost";
-      }
-      const result = await this.driver.get<Volume>(`/volumes/${encodeURIComponent(nameOrId)}/json`, { baseURL });
-      return result.data;
-    });
-  }
   async createVolume(opts: CreateVolumeOptions) {
     return this.withResult<Volume>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
@@ -682,19 +671,6 @@ export class ContainerClient {
       return isOk(result);
     });
   }
-  async pruneVolumes(filters: any) {
-    return this.withResult<boolean>(async () => {
-      let baseURL = "http://d/v4.0.0/libpod";
-      const host = this.connection?.host || "";
-      if (host.startsWith("docker")) {
-        baseURL = "http://localhost";
-      }
-      const result = await this.driver.post("/volumes/prune", filters, {
-        baseURL,
-      });
-      return isOk(result);
-    });
-  }
   // Secrets
   async getSecrets() {
     return this.withResult<Secret[]>(async () => {
@@ -709,18 +685,6 @@ export class ContainerClient {
     });
   }
   async getSecret(nameOrId: string, opts?: FetchSecretOptions) {
-    return this.withResult<Secret>(async () => {
-      let baseURL = "http://d/v4.0.0/libpod";
-      if (this.connection.engine === ContainerEngine.DOCKER) {
-        baseURL = "http://localhost";
-      }
-      const result = await this.driver.get<Secret>(`/secrets/${encodeURIComponent(nameOrId)}/json`, {
-        baseURL,
-      });
-      return result.data;
-    });
-  }
-  async inspectSecret(nameOrId: string) {
     return this.withResult<Secret>(async () => {
       let baseURL = "http://d/v4.0.0/libpod";
       if (this.connection.engine === ContainerEngine.DOCKER) {
@@ -1028,9 +992,6 @@ export class ContainerClient {
   async getRegistriesMap() {
     const instance = Application.getInstance();
     return instance.getRegistriesMap();
-  }
-  async getRegistry(name: string) {
-    return {} as Registry;
   }
   async removeRegistry(name: string) {
     const instance = Application.getInstance();

@@ -21,13 +21,11 @@ export interface RegistriesModel extends RegistriesModelState, ResetableModel<Re
   setAutomated: Action<RegistriesModel, boolean>;
   setRegistriesMap: Action<RegistriesModel, RegistriesMap>;
   registryAdd: Action<RegistriesModel, Registry>;
-  registryUpdate: Action<RegistriesModel, Partial<Registry>>;
   registryDelete: Action<RegistriesModel, string>;
   setSearchResults: Action<RegistriesModel, RegistrySearchResult[]>;
   // Thunks
   registriesFetch: Thunk<RegistriesModel>;
   registrySearch: Thunk<RegistriesModel, RegistrySearchOptions>;
-  registryFetch: Thunk<RegistriesModel, string>;
   registryRemove: Thunk<RegistriesModel, string>;
   registryCreate: Thunk<RegistriesModel, Registry>;
 }
@@ -63,15 +61,6 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
   setRegistriesMap: action((state, registriesMap) => {
     state.registriesMap = registriesMap;
   }),
-  registryUpdate: action((state, registry) => {
-    const existing = state.registriesMap.custom.find((it) => it.name === registry.id);
-    if (existing) {
-      // Transfer all keys
-      Object.entries(registry).forEach(([k, v]) => {
-        (existing as any)[k] = v;
-      });
-    }
-  }),
   registryDelete: action((state, registry) => {
     const existingPos = state.registriesMap.custom.findIndex((it) => it.name === registry);
     if (existingPos !== -1) {
@@ -91,14 +80,6 @@ export const createModel = async (registry: AppRegistry): Promise<RegistriesMode
       return registriesMap;
     });
   }),
-  registryFetch: thunk(async (actions, name) =>
-    registry.withPending(async () => {
-      const client = await registry.getContainerClient();
-      const it = await client.getRegistry(name);
-      actions.registryUpdate(it);
-      return registry;
-    }),
-  ),
   registryRemove: thunk(async (actions, name) =>
     registry.withPending(async () => {
       const client = await registry.getContainerClient();

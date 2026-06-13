@@ -30,7 +30,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
   const currentConnector = useStoreState((state) => state.currentConnector);
-  const registryFetch = useStoreActions((actions) => actions.registry.registryFetch);
   const registryRemove = useStoreActions((actions) => actions.registry.registryRemove);
   const performActionCommand = useCallback(
     async (
@@ -49,11 +48,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
           case "registry.remove":
             if (registry) {
               result = await registryRemove(registry.name);
-            }
-            break;
-          case "registry.inspect":
-            if (registry) {
-              result = await registryFetch(registry.name);
             }
             break;
           default:
@@ -81,7 +75,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
       }
       setDisabledAction(undefined);
     },
-    [registry, registryFetch, registryRemove, t],
+    [registry, registryRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
