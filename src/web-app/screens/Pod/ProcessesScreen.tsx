@@ -5,11 +5,11 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "wouter";
 
 import type { Pod, PodProcessReport } from "@/env/Types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useStoreActions } from "@/web-app/domain/types";
 import { usePoller } from "@/web-app/Hooks";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 
 import { ScreenHeader } from ".";
 import "./ProcessesScreen.css";

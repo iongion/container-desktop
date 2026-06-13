@@ -1,4 +1,4 @@
-import { Navbar, NavbarGroup, Button, Alignment, ButtonGroup } from "@blueprintjs/core";
+import { Alignment, Button, ButtonGroup, Navbar, NavbarGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 
 export const AppToolbar = () => {

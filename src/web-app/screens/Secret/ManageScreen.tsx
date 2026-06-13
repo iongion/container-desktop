@@ -4,12 +4,12 @@ import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
 import type { Connector, Secret } from "@/env/Types";
-import { usePoller } from "@/web-app/Hooks";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { usePoller } from "@/web-app/Hooks";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { SecretActionsMenu } from ".";
 import "./ManageScreen.css";

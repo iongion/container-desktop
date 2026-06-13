@@ -2,12 +2,10 @@ import { Button, ButtonGroup, Classes, Drawer, DrawerSize, HTMLTable, Intent, Pr
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { Application } from "@/container-client/Application";
 import type { RegistrySearchResult } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { Notification } from "@/web-app/Notification";
-
-import { Application } from "@/container-client/Application";
 import "./SearchResultDrawer.css";
 
 export interface CreateFormData {

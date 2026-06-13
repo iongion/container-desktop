@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "wouter";
 
 import type { Network } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";

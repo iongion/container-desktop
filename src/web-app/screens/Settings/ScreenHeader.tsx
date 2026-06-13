@@ -7,6 +7,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useStoreState } from "@/web-app/domain/types";
 
 import { getSettingsUrl } from "./Navigation";
+
 interface ScreenHeaderSectionsTabBarProps {
   expand?: boolean;
   isActive?: (screen: string) => boolean;

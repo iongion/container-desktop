@@ -6,10 +6,10 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "wouter";
 
 import type { ContainerImage } from "@/env/Types";
-import { Notification } from "@/web-app/Notification";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import { Notification } from "@/web-app/Notification";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./LayersScreen.css";

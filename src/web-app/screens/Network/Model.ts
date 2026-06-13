@@ -1,4 +1,4 @@
-import { type Action, type Computed, type Thunk, action, computed, thunk } from "easy-peasy";
+import { type Action, action, type Computed, computed, type Thunk, thunk } from "easy-peasy";
 
 import type { CreateNetworkOptions } from "@/container-client/Api.clients";
 import type { Network } from "@/env/Types";

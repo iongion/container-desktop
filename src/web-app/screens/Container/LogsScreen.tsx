@@ -3,10 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "wouter";
 
 import type { Container } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
 import { useStoreActions } from "@/web-app/domain/types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
 

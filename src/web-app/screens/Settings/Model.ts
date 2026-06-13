@@ -1,4 +1,4 @@
-import { type Action, type Thunk, action, thunk } from "easy-peasy";
+import { type Action, action, type Thunk, thunk } from "easy-peasy";
 
 import { Application } from "@/container-client/Application";
 import type { Connection, ContainerEngineHost, SystemInfo } from "@/env/Types";

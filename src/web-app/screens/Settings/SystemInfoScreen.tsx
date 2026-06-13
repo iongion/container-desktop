@@ -3,10 +3,10 @@ import { IconNames } from "@blueprintjs/icons";
 import { useEffect } from "react";
 
 import { t } from "@/web-app/App.i18n";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from "./ScreenHeader";
 
 import "./SystemInfoScreen.css";

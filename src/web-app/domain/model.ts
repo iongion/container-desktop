@@ -1,15 +1,16 @@
 // project
+
+import { Intent } from "@blueprintjs/core";
+import { action, thunk } from "easy-peasy";
+import produce from "immer";
+import { isObject } from "lodash-es";
 import { Application } from "@/container-client/Application";
 import { systemNotifier } from "@/container-client/notifier";
 import { type Connector, OperatingSystem } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { t } from "@/web-app/App.i18n";
-import { Notification } from "@/web-app/Notification";
 import { registry } from "@/web-app/domain/registry";
-import { Intent } from "@blueprintjs/core";
-import { action, thunk } from "easy-peasy";
-import produce from "immer";
-import { isObject } from "lodash-es";
+import { Notification } from "@/web-app/Notification";
 import { AppBootstrapPhase, type AppModel, type AppModelState, type AppRegistry } from "./types";
 
 function delayCheckUpdate(osType: OperatingSystem) {

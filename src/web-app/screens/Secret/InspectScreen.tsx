@@ -5,10 +5,10 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "wouter";
 
 import type { Secret } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { useStoreActions } from "@/web-app/domain/types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { SecretActionsMenu } from ".";
 import "./InspectScreen.css";

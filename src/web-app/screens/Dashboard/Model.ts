@@ -1,5 +1,5 @@
 // vendors
-import { type Action, type Thunk, action, thunk } from "easy-peasy";
+import { type Action, action, type Thunk, thunk } from "easy-peasy";
 // project
 import { ContainerStateList } from "@/env/Types";
 import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";

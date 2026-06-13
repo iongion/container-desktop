@@ -1,4 +1,4 @@
-import { type Thunk, action, thunk } from "easy-peasy";
+import { action, type Thunk, thunk } from "easy-peasy";
 
 import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";
 

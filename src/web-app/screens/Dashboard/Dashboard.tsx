@@ -4,11 +4,11 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
 import { usePoller } from "@/web-app/Hooks";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 
 import "./Dashboard.css";
 

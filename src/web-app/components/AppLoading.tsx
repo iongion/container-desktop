@@ -1,9 +1,10 @@
 // project
-import i18n from "@/web-app/App.i18n";
-import { useStoreState } from "@/web-app/domain/types";
+
 import { Intent, ProgressBar } from "@blueprintjs/core";
 import dayjs from "dayjs";
 import { useEffect, useRef } from "react";
+import i18n from "@/web-app/App.i18n";
+import { useStoreState } from "@/web-app/domain/types";
 // module
 import "./AppLoading.css";
 

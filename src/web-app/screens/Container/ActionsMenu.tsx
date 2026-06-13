@@ -4,15 +4,13 @@ import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { v4 } from "uuid";
 import { type Container, ContainerEngine, ContainerStateList } from "@/env/Types";
-import { goToScreen } from "@/web-app/Navigator";
-import { Notification } from "@/web-app/Notification";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { goToScreen } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 import { getContainerServiceUrl, getContainerUrl } from "./Navigation";
-
-import { v4 } from "uuid";
 import "./ActionsMenu.css";
 
 // Actions menu

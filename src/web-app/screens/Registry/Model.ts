@@ -1,4 +1,4 @@
-import { type Action, type Thunk, action, thunk } from "easy-peasy";
+import { type Action, action, type Thunk, thunk } from "easy-peasy";
 
 import type { RegistriesMap, Registry, RegistrySearchOptions, RegistrySearchResult } from "@/env/Types";
 import type { AppRegistry, ResetableModel } from "@/web-app/domain/types";

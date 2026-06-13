@@ -1,9 +1,7 @@
 import { Navbar, NavbarDivider, NavbarHeading } from "@blueprintjs/core";
-
+import { ContainerEngineHost } from "@/env/Types";
 import i18n from "@/web-app/App.i18n";
 import { useStoreState } from "@/web-app/domain/types";
-
-import { ContainerEngineHost } from "@/env/Types";
 import "./AppFooter.css";
 
 export const AppFooter = () => {

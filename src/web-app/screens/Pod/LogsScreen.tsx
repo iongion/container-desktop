@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "wouter";
 
 import type { Pod } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
