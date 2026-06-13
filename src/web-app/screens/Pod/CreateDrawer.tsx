@@ -14,7 +14,8 @@ import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import { useStoreActions } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { useCreatePod } from "./queries";
 
 // Pod drawer
 export interface CreateDrawerProps {
@@ -23,13 +24,11 @@ export interface CreateDrawerProps {
 export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(false);
-  const podCreate = useStoreActions((actions) => actions.pod.podCreate);
-  const onDrawerClose = useCallback(
-    (e) => {
-      onClose();
-    },
-    [onClose],
-  );
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const podCreate = useCreatePod(connectionId);
+  const onDrawerClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
   const { control, handleSubmit } = useForm<{
     podName: string;
   }>();
@@ -39,7 +38,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
       const creator = {
         Name: data.podName,
       };
-      await podCreate(creator);
+      await podCreate.mutateAsync(creator);
       onClose();
     } catch (error: any) {
       console.error("Unable to create pod", error);

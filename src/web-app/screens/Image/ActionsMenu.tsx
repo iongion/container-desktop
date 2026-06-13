@@ -4,15 +4,14 @@ import { mdiPlayCircle } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import type { ContainerImage } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
-
-import type { ContainerImage } from "@/env/Types";
+import { useAppStore } from "@/web-app/stores/appStore";
 import { CreateDrawer } from "./CreateDrawer";
 import { getImageUrl } from "./Navigation";
+import { usePullImage, usePushImage, useRemoveImage } from "./queries";
 
 interface ActionsMenuProps {
   image?: ContainerImage;
@@ -32,12 +31,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const imagePull = useStoreActions((actions) => actions.image.imagePull);
-  const imagePush = useStoreActions((actions) => actions.image.imagePush);
-  const imageRemove = useStoreActions((actions) => actions.image.imageRemove);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const imagePull = usePullImage(connectionId);
+  const imagePush = usePushImage();
+  const imageRemove = useRemoveImage(connectionId);
   const performActionCommand = useCallback(
     async (action: string) => {
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -45,13 +45,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       try {
         switch (action) {
           case "image.remove":
-            result = await imageRemove(image!);
+            result.success = await imageRemove.mutateAsync(image!.Id);
             break;
           case "image.pull":
-            result = await imagePull(image!);
+            result.success = await imagePull.mutateAsync(image!.Names?.[0] || image!.FullName || image!.Name);
             break;
           case "image.push":
-            result = await imagePush(image!);
+            result.success = await imagePush.mutateAsync({ id: image!.Id });
             break;
           default:
             break;
@@ -146,7 +146,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     );
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={image ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

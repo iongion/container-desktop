@@ -4,10 +4,10 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTimeout } from "usehooks-ts";
 
-import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
+import { usePruneSystem, useResetSystem } from "./queries";
 import "./Troubleshoot.css";
 
 export const ID = "troubleshoot";
@@ -83,8 +83,8 @@ export const ConfirmButton: React.FC<ConfirmButtonProps> = ({ onConfirm, onCance
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const troubleShootPrune = useStoreActions((store) => store.troubleshoot.troubleShootPrune);
-  const troubleShootReset = useStoreActions((store) => store.troubleshoot.troubleShootReset);
+  const troubleShootPrune = usePruneSystem();
+  const troubleShootReset = useResetSystem();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const Actions = [
     {
@@ -126,7 +126,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     async (e) => {
       const sender = e.currentTarget;
       const action = sender.getAttribute("data-action");
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -134,10 +134,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
       try {
         switch (action) {
           case "troubleshoot.prune":
-            result = await troubleShootPrune();
+            result.success = !!(await troubleShootPrune.mutateAsync());
             break;
           case "troubleshoot.reset":
-            result = await troubleShootReset();
+            result.success = !!(await troubleShootReset.mutateAsync());
             break;
           default:
             break;

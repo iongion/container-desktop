@@ -60,11 +60,10 @@ export async function getAvailableLIMAInstances(limactlPath?: string) {
   } catch (error: any) {
     logger.error("Unable to detect LIMA instances - execution error", error.message, error.stack);
   }
-  console.debug(items);
   return items;
 }
 
-export function coercePodmanMachines(result: CommandExecutionResult) {
+export function normalizePodmanMachines(result: CommandExecutionResult) {
   let items: PodmanMachine[] = [];
   if (!result.success) {
     logger.error("Unable to get machines list", result);
@@ -92,7 +91,7 @@ export async function getAvailablePodmanMachines(podmanPath?: string, customForm
   try {
     const command = ["machine", "list", "--format", customFormat || "json"];
     const result = await Command.Execute(podmanPath, command, opts);
-    items = coercePodmanMachines(result);
+    items = normalizePodmanMachines(result);
   } catch (error: any) {
     logger.error("Unable to decode machines list - execution error", error.message, error.stack);
   }

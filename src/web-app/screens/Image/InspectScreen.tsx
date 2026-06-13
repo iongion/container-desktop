@@ -1,15 +1,13 @@
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
-import { useParams } from "wouter";
-
-import type { ContainerImage } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
+import { useImage } from "./queries";
 
 export const ID = "image.inspect";
 export const Title = "Image Inspect";
@@ -17,28 +15,13 @@ export const Title = "Image Inspect";
 export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [image, setImage] = useState<ContainerImage>();
-  const { id } = useParams<{ id: string }>();
-  const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const image = await imageFetch({
-          Id: decodeURIComponent(id as any),
-          withHistory: true,
-        });
-        setImage(image);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [imageFetch, id]);
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const decodedId = decodeURIComponent(id || "");
+  const imageQuery = useImage(connectionId, decodedId, { Id: decodedId, withHistory: true });
+  const image = imageQuery.data;
   if (!image) {
-    return <ScreenLoader screen={ID} pending={pending} />;
+    return <ScreenLoader screen={ID} pending={imageQuery.isLoading || imageQuery.isFetching} />;
   }
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -53,7 +36,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: "/screens/image/:id/inspect",
+  Path: "/screens/image/$id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.BOX,

@@ -1,14 +1,15 @@
 **/__pycache__/**
+.pytest_cache/
+.ruff_cache/
 .venv
 bin
 build
 dist
 release
 squashfs-root
-temp
+temp/
 .DS_Store
 .egg-info
-PodmanDesktopCompanion.pfx
 ContainerDesktop.pfx
 src/container_desktop_tools.egg-info
 
@@ -122,3 +123,7 @@ dist
 
 # Agent local overrides (personal, not shared)
 .claude/settings.local.json
+.claude/REFACTOR_HANDOVER.md
+
+# Playwright test artifacts
+.playwright-mcp/

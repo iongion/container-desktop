@@ -1,45 +1,32 @@
 import { Spinner } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "wouter";
-
-import type { Container } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { useCallback } from "react";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./GenerateKubeScreen.css";
+import { useContainer, useContainerKube } from "./queries";
 
 export const ID = "container.kube";
 
 interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [container, setContainer] = useState<Container>();
-  const { id } = useParams<{ id: string }>();
-  const screenRef = useRef<HTMLDivElement>(null);
-  const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  const onScreenReload = useCallback(async () => {
-    try {
-      setPending(true);
-      const container = await containerFetch({
-        Id: decodeURIComponent(id as any),
-        withKube: true,
-      });
-      setContainer(container);
-    } catch (error: any) {
-      console.error("Unable to generate at this moment", error);
-    } finally {
-      setPending(false);
-    }
-  }, [containerFetch, id]);
-
-  useEffect(() => {
-    onScreenReload();
-  }, [onScreenReload]);
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const decodedId = decodeURIComponent(id || "");
+  const containerQuery = useContainer(connectionId, decodedId);
+  const kubeQuery = useContainerKube(connectionId, decodedId);
+  const container = containerQuery.data;
+  const pending = containerQuery.isLoading || containerQuery.isFetching || kubeQuery.isLoading || kubeQuery.isFetching;
+  const onScreenReload = useCallback(() => {
+    containerQuery.refetch();
+    kubeQuery.refetch();
+  }, [containerQuery, kubeQuery]);
 
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -52,13 +39,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
-        <CodeEditor value={`${container?.Kube}`} mode="yaml" />
+        <CodeEditor value={kubeQuery.data ?? ""} mode="yaml" />
       </div>
     </>
   );
 
   return (
-    <div className="AppScreen" data-screen={ID} data-pending={loading ? "yes" : "no"} ref={screenRef}>
+    <div className="AppScreen" data-screen={ID} data-pending={loading ? "yes" : "no"}>
       {contents}
     </div>
   );
@@ -67,7 +54,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container kube";
 Screen.Route = {
-  Path: "/screens/container/:id/kube",
+  Path: "/screens/container/$id/kube",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.TEXT_HIGHLIGHT,

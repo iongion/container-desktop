@@ -2,31 +2,68 @@ import { AnchorButton, HTMLTable, Intent, NonIdealState } from "@blueprintjs/cor
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type Connector, ContainerEngineHost, type PodmanMachine } from "@/env/Types";
+import type { Connector, PodmanMachine } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { usePoller } from "@/web-app/Hooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
 import { getMachineUrl } from "./Navigation";
+import { useMachinesList } from "./queries";
 
 export const ID = "machines";
 
 export interface ScreenProps extends AppScreenProps {}
+
+const EMPTY_MACHINES: PodmanMachine[] = [];
+
+const createMachineSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (machine: PodmanMachine) => {
+    const haystacks = [machine.Name, machine.VMType].map((value) => value.toLowerCase());
+    return haystacks.some((value) => value.includes(query));
+  };
+};
+
+const machineSortSelectors: SortSelectors<PodmanMachine> = {
+  name: (machine) => machine.Name,
+  vmType: (machine) => machine.VMType,
+  cpus: (machine) => Number(machine.CPUs) || 0,
+  memory: (machine) => Number(machine.Memory) || 0,
+  diskSize: (machine) => Number(machine.DiskSize) || 0,
+  default: (machine) => machine.Default,
+  running: (machine) => machine.Running,
+  lastUp: (machine) => Date.parse(machine.LastUp || ""),
+  created: (machine) => Date.parse(machine.Created || ""),
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const machinesFetch = useStoreActions((actions) => actions.machine.machinesFetch);
-  const machines: PodmanMachine[] = useStoreState((state) => state.machine.machinesSearchByTerm(searchTerm));
-
-  // Change hydration
-  usePoller({ poller: machinesFetch });
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id || "";
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    currentConnector?.capabilities?.sort,
+  );
+  const machinesQuery = useMachinesList(connectionId, currentConnector?.capabilities?.extensions.machines === true);
+  const machineSnapshot = machinesQuery.data || EMPTY_MACHINES;
+  const machines = useMemo(() => {
+    const items = searchTerm ? machineSnapshot.filter(createMachineSearchFilter(searchTerm)) : machineSnapshot;
+    return sortByField(items, clientSort, machineSortSelectors);
+  }, [clientSort, machineSnapshot, searchTerm]);
+  const onReload = useCallback(() => {
+    machinesQuery.refetch();
+  }, [machinesQuery]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -34,7 +71,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.HEAT_GRID}
-        rightContent={<ActionsMenu onReload={machinesFetch} />}
+        rightContent={<ActionsMenu onReload={onReload} />}
       />
       <div className="AppScreenContent">
         {machines.length === 0 ? (
@@ -47,21 +84,61 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="machines">
             <thead>
               <tr>
-                <th data-column="Name">
+                <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.HEAT_GRID} text={t("Name")} />
-                </th>
-                <th data-column="VMType">{t("VM Type")}</th>
-                <th data-column="CPUs">{t("CPUs")}</th>
-                <th data-column="Memory">{t("Memory")}</th>
-                <th data-column="DiskSize">{t("Disk Size")}</th>
-                <th data-column="Default">{t("Default")}</th>
-                <th data-column="Running">{t("Running")}</th>
-                <th data-column="LastUp">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="vmType"
+                  direction={getColumnSortDirection("vmType")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("VM Type")}
+                </SortableColumnHeader>
+                <SortableColumnHeader field="cpus" direction={getColumnSortDirection("cpus")} onSort={toggleColumnSort}>
+                  {t("CPUs")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="memory"
+                  direction={getColumnSortDirection("memory")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Memory")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="diskSize"
+                  direction={getColumnSortDirection("diskSize")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Disk Size")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="default"
+                  direction={getColumnSortDirection("default")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Default")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="running"
+                  direction={getColumnSortDirection("running")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Running")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="lastUp"
+                  direction={getColumnSortDirection("lastUp")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Last Up")} />
-                </th>
-                <th data-column="Created">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="created"
+                  direction={getColumnSortDirection("created")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>
@@ -120,7 +197,5 @@ Screen.Metadata = {
   LeftIcon: IconNames.HEAT_GRID,
 };
 Screen.isAvailable = (currentConnector?: Connector) => {
-  const isDocker = (currentConnector?.host || "").startsWith("docker");
-  const isPodmanWSL = currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
-  return !(isDocker || isPodmanWSL);
+  return currentConnector?.capabilities?.extensions.machines === true;
 };

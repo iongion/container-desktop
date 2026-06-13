@@ -5,12 +5,13 @@ import { useTranslation } from "react-i18next";
 
 import type { Volume } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { CreateDrawer } from "./CreateDrawer";
 import { getVolumeUrl } from "./Navigation";
+import { useRemoveVolume } from "./queries";
 
 export interface VolumeActionsMenuProps {
   volume?: Volume;
@@ -26,12 +27,11 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  // const volumeCreate = useStoreActions((actions) => actions.volumeCreate);
-  const volumeRemove = useStoreActions((actions) => actions.volume.volumeRemove);
-  const volumeFetch = useStoreActions((actions) => actions.volume.volumeFetch);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const volumeRemove = useRemoveVolume(connectionId);
   const performActionCommand = useCallback(
     async (action: string) => {
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -40,12 +40,7 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
         switch (action) {
           case "volume.remove":
             if (volume) {
-              result = await volumeRemove(volume);
-            }
-            break;
-          case "volume.inspect":
-            if (volume) {
-              result = await volumeFetch({ Id: volume.Name });
+              result.success = await volumeRemove.mutateAsync(volume.Name);
             }
             break;
           default:
@@ -71,7 +66,7 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
       }
       setDisabledAction(undefined);
     },
-    [volume, volumeRemove, volumeFetch, t],
+    [volume, volumeRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -97,7 +92,7 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={volume ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

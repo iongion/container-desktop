@@ -20,12 +20,12 @@ import { isEmpty } from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getDefaultConnectors } from "@/container-client";
+import { OnlineApi } from "@/container-client/Api.clients";
 import { Application } from "@/container-client/Application";
 import { type Connection, type Connector, type GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
-import { registry } from "@/web-app/domain/registry";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { LOGGING_LEVELS, PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ActionsMenu } from "./ActionsMenu";
 import { ManageConnectionDrawer } from "./Connection";
@@ -45,17 +45,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const [isChecking, setIsChecking] = useState(false);
   const [editedConnection, setEditedConnection] = useState<Connection | undefined>();
-  const provisioned = useStoreState((state) => state.provisioned);
-  const running = useStoreState((state) => state.running);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const defaultConnector = useStoreState((state) => state.userSettings.connector?.default);
-  const userSettings = useStoreState((state) => state.userSettings);
-  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
-  const pending = useStoreState((state) => state.pending);
+  const provisioned = useAppStore((state) => state.provisioned);
+  const running = useAppStore((state) => state.running);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const defaultConnector = useAppStore((state) => state.userSettings.connector?.default);
+  const userSettings = useAppStore((state) => state.userSettings);
+  const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
+  const pending = useAppStore((state) => state.pending);
   const [withManageDrawer, setWithManagerDrawer] = useState(false);
-  const connections = useStoreState((state) => state.settings.connections);
-  const osType = useStoreState((state) => state.osType);
-  const refreshConnections = useStoreActions((actions) => actions.settings.getConnections);
+  const connections = useAppStore((state) => state.connections);
+  const osType = useAppStore((state) => state.osType);
+  const refreshConnections = useAppStore((state) => state.getConnections);
   const connectors = useMemo(() => {
     return getDefaultConnectors(osType);
   }, [osType]);
@@ -187,7 +187,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onVersionCheck = useCallback(async () => {
     setIsChecking(true);
     try {
-      const check = await registry.getOnlineApi().checkLatestVersion(osType);
+      const check = await new OnlineApi(import.meta.env.ONLINE_API).checkLatestVersion(osType);
       console.debug("Checking for new version", check);
       if (check.hasUpdate) {
         Notification.show({

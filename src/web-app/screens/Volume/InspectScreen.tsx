@@ -1,43 +1,26 @@
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
-import { useParams } from "wouter";
-
-import type { Volume } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { VolumeActionsMenu } from ".";
 import "./InspectScreen.css";
+import { useVolume } from "./queries";
 
 export const ID = "volume.inspect";
 export const Title = "Volume Inspect";
 
 export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [volume, setVolume] = useState<Volume>();
-  const { id } = useParams<{ id: string }>();
-  const [pending, setPending] = useState(true);
-  const volumeFetch = useStoreActions((actions) => actions.volume.volumeFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const volume = await volumeFetch({
-          Id: id as any,
-        });
-        setVolume(volume);
-      } catch (error: any) {
-        console.error("Unable to fetch the volume at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [volumeFetch, id]);
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const volumeQuery = useVolume(connectionId, id);
+  const volume = volumeQuery.data;
   if (!volume) {
-    return <ScreenLoader screen={ID} pending={pending} />;
+    return <ScreenLoader screen={ID} pending={volumeQuery.isLoading || volumeQuery.isFetching} />;
   }
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -58,7 +41,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: "/screens/volumes/:id/inspect",
+  Path: "/screens/volumes/$id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.DATABASE,

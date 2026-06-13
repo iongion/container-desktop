@@ -5,9 +5,20 @@ import hashlib
 import platform
 import os
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 from invoke import task, Collection
+
+from support.versioning import (
+    bump_version,
+    promote_changelog,
+    render_homebrew_rb,
+    set_manifest_version,
+    set_package_json_version,
+    set_plain_version,
+    set_website_version,
+)
 
 PROJECT_HOME = os.path.dirname(__file__)
 PROJECT_CODE = "container-desktop"
@@ -264,6 +275,136 @@ def start(ctx, docs=False):
         run_env(ctx, "yarn dev")
 
 
+# --- versioning & release metadata ----------------------------------------
+#
+# package.json `version` is the single source of truth. `version-sync` and
+# `bump` derive the other "synced" files (VERSION, public/manifest.json) from
+# it. Files coupled to published release artifacts -- the docs download page and
+# the homebrew cask -- are rendered separately by `publish-meta`, because they
+# need real per-asset sha256 hashes that a bare version string cannot produce.
+
+REPO_SLUG = "iongion/container-desktop"
+
+
+def _read_text(rel):
+    return Path(os.path.join(PROJECT_HOME, rel)).read_text(encoding="utf-8")
+
+
+def _write_text(rel, content):
+    Path(os.path.join(PROJECT_HOME, rel)).write_text(content, encoding="utf-8")
+
+
+def read_source_version():
+    """The single source of truth: package.json `version`."""
+    return json.loads(_read_text("package.json"))["version"]
+
+
+def _apply(targets, perform):
+    changed = 0
+    for rel, new_content in targets:
+        if _read_text(rel) == new_content:
+            print(f"  = {rel}")
+            continue
+        changed += 1
+        print(f"  {'updated' if perform else 'would update'}: {rel}")
+        if perform:
+            _write_text(rel, new_content)
+    print(f"{changed} file(s) {'updated' if perform else 'pending'}")
+
+
+def _synced_targets(version):
+    return [
+        ("package.json", set_package_json_version(_read_text("package.json"), version)),
+        ("VERSION", set_plain_version(_read_text("VERSION"), version)),
+        ("public/manifest.json", set_manifest_version(_read_text("public/manifest.json"), version)),
+    ]
+
+
+@task(name="version-sync")
+def version_sync(ctx, version=None, perform=False):
+    """Write the source version into all synced files (drift repair, no bump).
+
+    Uses package.json by default; pass --version X.Y.Z to force one. Prints the
+    plan unless --perform is given.
+    """
+    version = version or read_source_version()
+    print(f"Sync synced files to {version}" + ("" if perform else "  (dry-run; pass --perform)"))
+    _apply(_synced_targets(version), perform)
+
+
+@task
+def bump(ctx, part="patch", perform=False):
+    """Bump the version everywhere and (with --perform) commit, tag and push.
+
+    Increments package.json by --part (patch|minor|major), updates VERSION and
+    the web manifest, and promotes the CHANGELOG [Unreleased] section.
+    """
+    current = read_source_version()
+    version = bump_version(current, part)
+    print(f"Bump {current} -> {version} ({part})" + ("" if perform else "  (dry-run; pass --perform)"))
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    targets = _synced_targets(version)
+    targets.append(("CHANGELOG.md", promote_changelog(_read_text("CHANGELOG.md"), version, today)))
+    _apply(targets, perform)
+    if not perform:
+        print("Re-run with --perform to write files, commit, tag and push.")
+        return
+    with ctx.cd(PROJECT_HOME):
+        ctx.run("git add -A")
+        ctx.run(f'git commit -m "Release {version}"')
+        ctx.run(f'git tag -a "{version}" -m "{version}"')
+        ctx.run("git push")
+        ctx.run("git push --tags")
+
+
+def _latest_release_version(ctx):
+    result = ctx.run(
+        f"gh release view --repo {REPO_SLUG} --json tagName --jq .tagName",
+        hide=True,
+        warn=True,
+    )
+    tag = (result.stdout or "").strip()
+    if not tag:
+        raise Exception("unable to resolve latest published release; pass --version")
+    return tag.lstrip("v")
+
+
+def _artifact_sha256(version, arch):
+    name = f"container-desktop-{arch}-{version}.dmg.sha256"
+    local = os.path.join(PROJECT_HOME, "release", name)
+    if os.path.exists(local):
+        return Path(local).read_text(encoding="utf-8").strip().split()[0]
+    url = f"https://github.com/{REPO_SLUG}/releases/download/{version}/{name}"
+    with urllib.request.urlopen(url) as response:
+        return response.read().decode("utf-8").strip().split()[0]
+
+
+@task(name="publish-meta")
+def publish_meta(ctx, version=None, perform=False):
+    """Render website + homebrew cask for a PUBLISHED release (defaults to latest).
+
+    Points the website download page and homebrew cask at a real, downloadable
+    release. Homebrew sha256 values come from release/ if present, else from the
+    published GitHub release. Prints the plan unless --perform is given.
+    """
+    version = version or _latest_release_version(ctx)
+    print(f"Render published metadata for {version}" + ("" if perform else "  (dry-run; pass --perform)"))
+    targets = [
+        ("website/index.html", set_website_version(_read_text("website/index.html"), version)),
+        ("website/VERSION", set_plain_version(_read_text("website/VERSION"), version)),
+        ("website/VERSION-Windows_NT", set_plain_version(_read_text("website/VERSION-Windows_NT"), version)),
+    ]
+    _apply(targets, perform)
+    rb = "support/homebrew-cask/container-desktop.rb"
+    if perform:
+        sha_arm = _artifact_sha256(version, "arm64")
+        sha_intel = _artifact_sha256(version, "x64")
+        _write_text(rb, render_homebrew_rb(_read_text(rb), version, sha_arm, sha_intel))
+        print(f"  updated: {rb}")
+    else:
+        print(f"  would update: {rb} (fetch dmg sha256 for arm64 + x64)")
+
+
 namespace = Collection(
     clean,
     prepare,
@@ -271,6 +412,9 @@ namespace = Collection(
     build_relay,
     bundle,
     release,
+    bump,
+    version_sync,
+    publish_meta,
     start,
     checksums,
     install_self_signed_appx,

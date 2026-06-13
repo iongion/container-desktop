@@ -2,6 +2,7 @@
   "recommendations": [
     "golang.Go",
     "biomejs.biome",
+    "charliermarsh.ruff",
     "csstools.postcss",
     "orta.vscode-jest",
     "editorconfig.editorconfig",
@@ -12,5 +13,6 @@
     "timonwong.shellcheck",
     "ms-vscode.makefile-tools",
     "aaron-bond.better-comments"
-  ]
+  ],
+  "unwantedRecommendations": ["ms-python.pylint"]
 }

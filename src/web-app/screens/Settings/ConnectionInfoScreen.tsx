@@ -2,15 +2,13 @@ import { Button, H5, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { isEmpty } from "lodash-es";
 import { useCallback } from "react";
-
-import { t } from "@/web-app/App.i18n";
-import { Notification } from "@/web-app/Notification";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
-import { useStoreState } from "@/web-app/domain/types";
-import { ScreenHeader } from "./ScreenHeader";
-
 import { OperatingSystem } from "@/env/Types";
+import { t } from "@/web-app/App.i18n";
+import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { ScreenHeader } from "./ScreenHeader";
 import "./ConnectionInfoScreen.css";
 
 interface ScreenProps extends AppScreenProps {}
@@ -63,8 +61,8 @@ function normalizeConnectionString(host: string) {
 }
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const osType = useStoreState((state) => state.osType);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const osType = useAppStore((state) => state.osType);
   const isScoped = !isEmpty(currentConnector?.settings.controller?.scope || "");
   const source = (isScoped ? `${codeExample}${scopedCodeExample}` : `${codeExample}`)
     // Host

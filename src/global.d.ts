@@ -35,9 +35,18 @@ declare global {
     getOsType(): Promise<OperatingSystem>;
     getSSHConfig(): Promise<SSHHost[]>;
     launchTerminal(
-      commandLauncher: string,
+      commandLauncher:
+        | string
+        | {
+            launcher?: string;
+            commandLauncher?: string;
+            command?: string;
+            args?: string[];
+            params?: string[];
+            title?: string;
+          },
       params?: string[],
-      opts?: { title: string },
+      opts?: { title?: string },
     ): Promise<CommandExecutionResult>;
   }
 

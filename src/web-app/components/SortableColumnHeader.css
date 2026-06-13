@@ -1,0 +1,47 @@
+.SortableColumnHeaderButton {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.SortableColumnHeaderButton:hover,
+.SortableColumnHeaderButton:focus-visible {
+  color: var(--text-color, inherit);
+}
+
+.SortableColumnHeaderButton:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.SortableColumnHeaderLabel {
+  display: inline-flex;
+  min-width: 0;
+  max-width: calc(100% - 18px);
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.SortableColumnHeaderIcon {
+  margin-left: 4px;
+  opacity: 0.55;
+  vertical-align: middle;
+}
+
+.SortableColumnHeaderButton[data-sort-active="yes"] .SortableColumnHeaderIcon {
+  opacity: 1;
+}
+.SortableColumnHeaderButton:disabled {
+  cursor: default;
+}
+.SortableColumnHeaderButton:disabled .SortableColumnHeaderIcon {
+  opacity: 0.2;
+}

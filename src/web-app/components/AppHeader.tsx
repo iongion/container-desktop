@@ -12,6 +12,7 @@ import { pathTo } from "../Navigator";
 import type { AppScreen } from "../Types";
 
 import "./AppHeader.css";
+
 interface AppHeaderProps {
   osType: OperatingSystem;
   screens: AppScreen<any>[];

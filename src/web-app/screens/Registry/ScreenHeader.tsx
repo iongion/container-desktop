@@ -1,10 +1,10 @@
 import { Switch } from "@blueprintjs/core";
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
-import { ContainerEngine, type Registry, type RegistrySearchFilters } from "@/env/Types";
+import type { Registry, RegistrySearchFilters } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { useStoreState } from "@/web-app/domain/types";
 import { pathTo } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
 import "./ScreenHeader.css";
 
 // Screen header
@@ -29,12 +29,11 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   listRouteIcon,
   rightContent,
 }: ScreenHeaderProps) => {
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const isOfficial = useStoreState((actions) => actions.registry.official);
-  const isAutomated = useStoreState((actions) => actions.registry.automated);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const canUseRegistryExtensions = currentConnector?.capabilities?.extensions.registries === true;
   const [filters, setFilters] = useState<RegistrySearchFilters>({
-    isOfficial,
-    isAutomated,
+    isOfficial: false,
+    isAutomated: false,
   });
   let currentListRoutePath = listRoutePath;
   if (registry && !currentListRoutePath) {
@@ -88,10 +87,10 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         <Switch
           label="Automated"
           inline
-          checked={currentConnector?.engine === ContainerEngine.DOCKER ? false : filters.isAutomated}
+          checked={canUseRegistryExtensions ? filters.isAutomated : false}
           onChange={onFilterChange}
           data-filter="isAutomated"
-          disabled={currentConnector?.engine === ContainerEngine.DOCKER}
+          disabled={!canUseRegistryExtensions}
         />
       </div>
     </AppScreenHeader>

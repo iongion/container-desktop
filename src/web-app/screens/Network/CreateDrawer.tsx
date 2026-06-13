@@ -1,15 +1,15 @@
 import { Button, ButtonGroup, Classes, Drawer, DrawerSize, Intent, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
 import type { NetworkSubnet } from "@/env/Types";
-import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
-import dayjs from "dayjs";
+import { useAppStore } from "@/web-app/stores/appStore";
 import { NetworkPropertiesForm } from "./NetworkPropertiesForm";
 import { createNetworkSubnet, type NetworkSubnetItem, NetworkSubnetsForm } from "./NetworkSubnetsForm";
+import { useCreateNetwork } from "./queries";
 
 // Drawer
 
@@ -26,11 +26,11 @@ export interface CreateFormData {
 export function toNetworkSubnets(subnets: NetworkSubnetItem[]) {
   const items: NetworkSubnet[] = subnets
     .map((it) => {
-      const coerced = {
+      const normalized = {
         ...it,
         guid: undefined,
       };
-      return coerced;
+      return normalized;
     })
     .reduce<NetworkSubnet[]>((acc, it) => {
       if (it.gateway && it.subnet) {
@@ -92,11 +92,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
   const { handleSubmit } = methods;
   const [pending, setPending] = useState(false); // Form initial data
 
-  const networkCreate = useStoreActions((actions) => actions.network.networkCreate);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const networkCreate = useCreateNetwork(connectionId);
   const onSubmit = handleSubmit(async (data) => {
     setPending(true);
     try {
-      await networkCreate({
+      await networkCreate.mutateAsync({
         created: dayjs().toISOString(),
         dns_enabled: data.dnsEnabled,
         driver: data.driver,
@@ -136,7 +137,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
       <div className={Classes.DRAWER_BODY}>
         <FormProvider {...methods}>
           <form name="CreateNetworkForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
-            <FormActions />
+            <FormActions pending={pending} />
             <div className="AppDataForm" data-form="network.create">
               <NetworkPropertiesForm disabled={pending} />
               <NetworkSubnetsForm subnets={subnets} disabled={pending} />

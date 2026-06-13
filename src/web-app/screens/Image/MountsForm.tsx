@@ -4,11 +4,9 @@ import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { v4 } from "uuid";
-
-import type { ContainerImageMount } from "@/env/Types";
-import { useStoreState } from "@/web-app/domain/types";
-
 import { Application } from "@/container-client/Application";
+import type { ContainerImageMount } from "@/env/Types";
+import { useAppStore } from "@/web-app/stores/appStore";
 import "./MountsForm.css";
 
 export const createMount = (): MountFormContainerImageMount => {
@@ -41,7 +39,7 @@ export interface MountFormProps {
 
 export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountIndex, action }: MountFormProps) => {
   const { t } = useTranslation();
-  const isNative = useStoreState((state) => state.native);
+  const isNative = useAppStore((state) => state.native);
 
   const { control, setValue } = useFormContext<{
     mounts: MountFormContainerImageMount[];

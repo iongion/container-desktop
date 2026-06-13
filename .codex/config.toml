@@ -1,0 +1,3 @@
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest", "--cdp-endpoint", "http://localhost:9222"]

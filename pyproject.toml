@@ -17,15 +17,20 @@ dynamic = ["version"]
 [dependency-groups]
 dev = [
     "pytest",
-    "ruff"
+    "pytest-env>=1.6.0",
+    "ruff",
 ]
 
 [tool.uv]
+# This project is build tooling, not a library: never build/install it as a
+# package (otherwise uv generates src/container_desktop_tools.egg-info).
+package = false
 default-groups = ["dev"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
+pythonpath = ["."]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

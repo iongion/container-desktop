@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next";
 
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 
-import { useStoreState } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { getSettingsUrl } from "./Navigation";
+
 interface ScreenHeaderSectionsTabBarProps {
   expand?: boolean;
   isActive?: (screen: string) => boolean;
@@ -17,7 +18,7 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
   isActive,
 }: ScreenHeaderSectionsTabBarProps) => {
   const { t } = useTranslation();
-  const isRunning = useStoreState((state) => state.running);
+  const isRunning = useAppStore((state) => state.running);
   const expandAsButtons = expand ? (
     <>
       <AnchorButton

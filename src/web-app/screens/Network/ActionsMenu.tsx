@@ -5,11 +5,12 @@ import { useTranslation } from "react-i18next";
 
 import type { Network } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { CreateDrawer } from "./CreateDrawer";
+import { useRemoveNetwork } from "./queries";
 
 // Network actions menu
 
@@ -30,8 +31,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const networkFetch = useStoreActions((actions) => actions.network.networkFetch);
-  const networkRemove = useStoreActions((actions) => actions.network.networkRemove);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const networkRemove = useRemoveNetwork(connectionId);
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -39,7 +40,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
         confirm: { success: true, error: true },
       },
     ) => {
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -48,12 +49,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
         switch (action) {
           case "network.remove":
             if (network) {
-              result = await networkRemove(network.name);
-            }
-            break;
-          case "network.inspect":
-            if (network) {
-              result = await networkFetch(network.name);
+              result.success = await networkRemove.mutateAsync(network.name);
             }
             break;
           default:
@@ -81,7 +77,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
       }
       setDisabledAction(undefined);
     },
-    [network, networkFetch, networkRemove, t],
+    [network, networkRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -105,7 +101,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={network ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

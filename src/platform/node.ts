@@ -8,6 +8,135 @@ import { type CommandExecutionResult, ControllerScopeType, OperatingSystem, type
 
 export const CURRENT_OS_TYPE = os.type();
 
+export interface TerminalLaunchOptions {
+  launcher?: string;
+  commandLauncher?: string;
+  command?: string;
+  args?: string[];
+  params?: string[];
+  title?: string;
+}
+
+export interface LinuxTerminalLaunch {
+  launcher: string;
+  args: string[];
+}
+
+const LINUX_TERMINAL_COMMANDS = [
+  "ptyxis",
+  "gnome-terminal",
+  "kgx",
+  "konsole",
+  "kitty",
+  "alacritty",
+  "wezterm",
+  "x-terminal-emulator",
+  "xterm",
+];
+
+function uniqueItems(items: string[]): string[] {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function isExecutable(filePath: string): boolean {
+  try {
+    const stat = fs.statSync(filePath);
+    fs.accessSync(filePath, fs.constants.X_OK);
+    return stat.isFile() || stat.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+export function resolveExecutable(command: string, pathEnv = process.env.PATH || ""): string | undefined {
+  if (!command) {
+    return undefined;
+  }
+  if (path.isAbsolute(command) || command.includes(path.sep)) {
+    return isExecutable(command) ? command : undefined;
+  }
+  for (const dir of pathEnv.split(path.delimiter)) {
+    const candidate = path.join(dir, command);
+    if (isExecutable(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+function realExecutablePath(executable: string): string {
+  try {
+    return fs.realpathSync.native(executable);
+  } catch {
+    return executable;
+  }
+}
+
+function linuxTerminalArgs(terminalName: string, title: string, commandLauncher: string, params: string[]): string[] {
+  switch (terminalName) {
+    case "ptyxis":
+      return ["--new-window", "-T", title, "--", commandLauncher, ...params];
+    case "gnome-terminal":
+    case "kgx":
+      return ["--title", title, "--", commandLauncher, ...params];
+    case "konsole":
+      return ["--new-tab", "--title", title, "-e", commandLauncher, ...params];
+    case "kitty":
+      return ["--title", title, commandLauncher, ...params];
+    case "alacritty":
+      return ["--title", title, "-e", commandLauncher, ...params];
+    case "wezterm":
+      return ["start", "--", commandLauncher, ...params];
+    case "xterm":
+      return ["-T", title, "-e", commandLauncher, ...params];
+    default:
+      return ["-e", commandLauncher, ...params];
+  }
+}
+
+export function resolveLinuxTerminalLaunch(
+  commandLauncher: string,
+  params: string[] = [],
+  title = "",
+  pathEnv = process.env.PATH || "",
+  preferredTerminal = process.env.TERMINAL || "",
+): LinuxTerminalLaunch | undefined {
+  const candidates = uniqueItems([preferredTerminal, ...LINUX_TERMINAL_COMMANDS]);
+  for (const command of candidates) {
+    const executable = resolveExecutable(command, pathEnv);
+    if (!executable) {
+      continue;
+    }
+    const resolvedExecutable = realExecutablePath(executable);
+    const terminalName = path.basename(resolvedExecutable);
+    return {
+      launcher: resolvedExecutable,
+      args: linuxTerminalArgs(terminalName, title, commandLauncher, params),
+    };
+  }
+  return undefined;
+}
+
+function normalizeTerminalLaunch(
+  commandLauncherOrOptions: string | TerminalLaunchOptions,
+  params?: string[],
+  opts?: { title?: string },
+) {
+  if (typeof commandLauncherOrOptions === "object") {
+    const options = commandLauncherOrOptions;
+    return {
+      commandLauncher: options.commandLauncher || options.launcher || options.command || "",
+      params: options.params || options.args || [],
+      title: options.title || import.meta.env.PROJECT_NAME || "",
+    };
+  }
+  return {
+    commandLauncher: commandLauncherOrOptions,
+    params: params || [],
+    title: opts?.title || import.meta.env.PROJECT_NAME || "",
+  };
+}
+
 export const Platform: IPlatform = {
   OPERATING_SYSTEM: os.type() as OperatingSystem,
 
@@ -99,11 +228,19 @@ export const Platform: IPlatform = {
     return config;
   },
 
-  async launchTerminal(commandLauncher: string, params?: string[], opts?: { title: string }) {
-    console.debug("Launching terminal", commandLauncher, params);
-    const args = [commandLauncher].concat(params || []).join(" ");
+  async launchTerminal(
+    commandLauncherOrOptions: string | TerminalLaunchOptions,
+    params?: string[],
+    opts?: { title?: string },
+  ) {
+    const {
+      commandLauncher,
+      params: commandParams,
+      title,
+    } = normalizeTerminalLaunch(commandLauncherOrOptions, params, opts);
+    console.debug("Launching terminal", commandLauncher, commandParams);
+    const args = [commandLauncher].concat(commandParams || []).join(" ");
     let status: CommandExecutionResult;
-    const title = opts?.title || import.meta.env.PROJECT_NAME || "";
     if (os.type() === OperatingSystem.MacOS) {
       status = await Command.Execute("osascript", ["-e", `tell app "Terminal" to do script "${args}"`]);
     } else if (os.type() === OperatingSystem.Windows) {
@@ -119,10 +256,21 @@ export const Platform: IPlatform = {
         "cmd",
         "/k",
         commandLauncher,
-        ...(params || []),
+        ...(commandParams || []),
       ]);
     } else {
-      status = await Command.Execute("gnome-terminal", ["--title", title, "-e", args]);
+      const terminal = resolveLinuxTerminalLaunch(commandLauncher, commandParams, title);
+      if (!terminal) {
+        return {
+          pid: undefined,
+          code: -2,
+          success: false,
+          stdout: "",
+          stderr: "No supported terminal emulator found on PATH",
+          command: "",
+        };
+      }
+      status = await Command.Execute(terminal.launcher, terminal.args, { detached: true });
     }
     return status;
   },

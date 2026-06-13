@@ -3,13 +3,14 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine, type Registry } from "@/env/Types";
+import type { Registry } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { CreateDrawer } from "./CreateDrawer";
+import { useRemoveRegistry } from "./queries";
 
 // Registry actions menu
 
@@ -29,9 +30,9 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const registryFetch = useStoreActions((actions) => actions.registry.registryFetch);
-  const registryRemove = useStoreActions((actions) => actions.registry.registryRemove);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id || "";
+  const registryRemove = useRemoveRegistry(connectionId);
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -39,7 +40,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
         confirm: { success: true, error: true },
       },
     ) => {
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -48,12 +49,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
         switch (action) {
           case "registry.remove":
             if (registry) {
-              result = await registryRemove(registry.name);
-            }
-            break;
-          case "registry.inspect":
-            if (registry) {
-              result = await registryFetch(registry.name);
+              result.success = !!(await registryRemove.mutateAsync(registry.name));
             }
             break;
           default:
@@ -81,7 +77,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
       }
       setDisabledAction(undefined);
     },
-    [registry, registryFetch, registryRemove, t],
+    [registry, registryRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -97,7 +93,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
     },
     [performActionCommand],
   );
-  const canCreateRegistry = currentConnector?.engine === ContainerEngine.PODMAN;
+  const canCreateRegistry = currentConnector?.capabilities?.extensions.registries === true;
   const createButton = withoutCreate ? null : (
     <Button
       small
@@ -122,7 +118,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={registry ? "ResourceItemInlineActionsMenu" : undefined}>
         {createButton}
         {removeWidget}
       </ButtonGroup>

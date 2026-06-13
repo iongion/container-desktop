@@ -20,11 +20,18 @@ const logLevel = "warn";
 // spin-loop that pegs CPU and can freeze the whole machine. Gate them behind an env var.
 const isHeadless = ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTOP_HEADLESS || ""}`.toLowerCase());
 const remoteDebuggingPort = process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT || "9222";
+const remoteDebuggingOrigin =
+  process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN || `http://localhost:${remoteDebuggingPort}`;
 
 function buildElectronArgs() {
   // Expose the renderer over the Chrome DevTools Protocol so tools such as the
   // Playwright MCP can attach to the running app in dev.
-  const args = [".", `--remote-debugging-port=${remoteDebuggingPort}`, "--no-sandbox"];
+  const args = [
+    ".",
+    `--remote-debugging-port=${remoteDebuggingPort}`,
+    `--remote-allow-origins=${remoteDebuggingOrigin}`,
+    "--no-sandbox",
+  ];
   if (isHeadless) {
     args.push("--disable-gpu", "--disable-gpu-sandbox", "--in-process-gpu", "--no-zygote", "--disable-features=VizDisplayCompositor", "--disable-dev-shm-usage", "--disable-web-security");
   }
@@ -67,6 +74,17 @@ function killElectron() {
   });
 }
 
+/**
+ * Electron must NOT inherit `ELECTRON_RUN_AS_NODE`: with it set, the Electron binary boots as a plain
+ * Node runtime and the app dies immediately with "Not running in an Electron environment!". Some shells,
+ * IDE-integrated terminals and CI runners export it globally, so strip it from the child env here.
+ */
+function electronEnv() {
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  return env;
+}
+
 /** Relaunch electron, ensuring the previous instance is gone first (no process pile-up). */
 async function relaunchElectron() {
   if (relaunching) {
@@ -75,7 +93,7 @@ async function relaunchElectron() {
   relaunching = true;
   try {
     await killElectron();
-    electronApp = spawn(String(electronPath), buildElectronArgs(), { stdio: "inherit" });
+    electronApp = spawn(String(electronPath), buildElectronArgs(), { stdio: "inherit", env: electronEnv() });
     electronApp.addListener("exit", onElectronExit);
   } finally {
     relaunching = false;

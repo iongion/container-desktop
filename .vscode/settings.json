@@ -1,6 +1,7 @@
 {
   "eslint.enable": false,
   "prettier.enable": false,
+  "pylint.enabled": false,
   "biome.enabled": true,
   "biome.lsp.bin": "./node_modules/.bin/biome",
   "[html]": {
@@ -71,6 +72,7 @@
     "CGROUPSV",
     "chans",
     "charliermarsh",
+    "codegen",
     "Consolas",
     "containerd",
     "cppvsdbg",
@@ -266,7 +268,10 @@
   "files.eol": "\n",
   "files.exclude": {
     "**/.DS_Store": true,
-    "**/.git/**": true
+    "**/.git/**": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true
   },
   "files.watcherExclude": {
     "**/.DS_Store": true,
@@ -276,7 +281,10 @@
     "**/build/**": true,
     "**/release/**": true,
     "**/dist/**": true,
-    "**/node_modules/**": true
+    "**/node_modules/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/.ruff_cache/**": true
   },
   "search.exclude": {
     "**/.DS_Store": true,
@@ -286,7 +294,10 @@
     "**/build/**": true,
     "**/release/**": true,
     "**/dist/**": true,
-    "**/node_modules/**": true
+    "**/node_modules/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/.ruff_cache/**": true
   },
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
@@ -309,5 +320,6 @@
       "source.fixAll": "always",
       "source.organizeImports": "always"
     }
-  }
+  },
+  "makefile.configureOnOpen": false
 }

@@ -28,6 +28,9 @@
     "check-types": "tsc",
     "lint": "biome lint --write ./src",
     "format": "biome format --write ./src",
+    "lint:check": "biome check ./src",
+    "test": "vitest",
+    "test:run": "vitest run",
     "watch": "node support/watch.mjs",
     "postinstall": "cross-env ELECTRON_RUN_AS_NODE=1 yarn electron support/update-electron-vendors.mjs"
   },
@@ -41,6 +44,8 @@
     "@mdi/js": "7.4.47",
     "@mdi/react": "1.6.1",
     "@monaco-editor/react": "4.7.0",
+    "@tanstack/react-query": "5.101.0",
+    "@tanstack/react-router": "1.170.15",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-search": "0.16.0",
     "@xterm/addon-unicode11": "0.9.0",
@@ -53,7 +58,6 @@
     "clipboard": "2.0.11",
     "dayjs": "1.11.21",
     "deepmerge": "4.3.1",
-    "easy-peasy": "6.1.1",
     "electron-context-menu": "4.1.2",
     "electron-dl": "4.0.0",
     "eventemitter3": "5.0.4",
@@ -79,13 +83,16 @@
     "ssh-config": "5.1.0",
     "usehooks-ts": "3.1.1",
     "uuid": "14.0.0",
-    "wouter": "3.10.0"
+    "zustand": "5.0.14"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@biomejs/biome": "2.5.0",
     "@electron/packager": "20.0.1",
     "@hookform/devtools": "4.4.0",
+    "@tanstack/react-query-devtools": "5.101.0",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.2",
     "@types/node": "24.13.2",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
@@ -96,6 +103,7 @@
     "dotenv": "17.4.2",
     "electron": "42.4.0",
     "electron-builder": "26.15.3",
+    "jsdom": "26.1.0",
     "lodash.merge": "4.6.2",
     "mime-types": "3.0.2",
     "postcss": "8.5.15",
@@ -107,6 +115,7 @@
     "vite-plugin-ejs": "1.7.0",
     "vite-plugin-static-copy": "4.1.1",
     "vite-plugin-svgr": "5.2.0",
+    "vitest": "4.1.8",
     "xml2js": "0.6.2"
   },
   "optionalDependencies": {

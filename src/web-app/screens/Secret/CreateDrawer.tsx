@@ -16,7 +16,8 @@ import isEqual from "react-fast-compare";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import { useStoreActions } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { useCreateSecret } from "./queries";
 
 // Secret drawer
 export interface CreateDrawerProps {
@@ -30,11 +31,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
       secretBody: string;
     }>();
     const [pending, setPending] = useState(false);
-    const secretCreate = useStoreActions((actions) => actions.secret.secretCreate);
+    const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+    const secretCreate = useCreateSecret(connectionId);
     const onSubmit = handleSubmit(async (data) => {
       try {
         setPending(true);
-        await secretCreate({
+        await secretCreate.mutateAsync({
           name: data.secretName,
           Secret: data.secretBody,
         });

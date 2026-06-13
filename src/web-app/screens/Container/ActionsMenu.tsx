@@ -4,15 +4,21 @@ import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import { type Container, ContainerEngine, ContainerStateList } from "@/env/Types";
+import { v4 } from "uuid";
+import { type Container, ContainerStateList } from "@/env/Types";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
-import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
 import { getContainerServiceUrl, getContainerUrl } from "./Navigation";
-
-import { v4 } from "uuid";
+import {
+  useConnectContainer,
+  usePauseContainer,
+  useRemoveContainer,
+  useRestartContainer,
+  useStopContainer,
+  useUnpauseContainer,
+} from "./queries";
 import "./ActionsMenu.css";
 
 // Actions menu
@@ -44,14 +50,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
   const [container, setContainer] = useState<Container | undefined>(userContainer);
-  const currentEngine = useStoreState((state) => state.currentConnector?.engine);
-  const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  const containerPause = useStoreActions((actions) => actions.container.containerPause);
-  const containerUnpause = useStoreActions((actions) => actions.container.containerUnpause);
-  const containerStop = useStoreActions((actions) => actions.container.containerStop);
-  const containerRestart = useStoreActions((actions) => actions.container.containerRestart);
-  const containerRemove = useStoreActions((actions) => actions.container.containerRemove);
-  const containerConnect = useStoreActions((actions) => actions.container.containerConnect);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id || "";
+  const pauseContainer = usePauseContainer(connectionId);
+  const unpauseContainer = useUnpauseContainer(connectionId);
+  const stopContainer = useStopContainer(connectionId);
+  const restartContainer = useRestartContainer(connectionId);
+  const removeContainer = useRemoveContainer(connectionId);
+  const connectContainer = useConnectContainer();
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -63,6 +69,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         console.error("No container to perform action on");
         return;
       }
+      if (!connectionId) {
+        console.error("No connection to perform container action on");
+        return;
+      }
       setDisabledAction(action);
       setPending(true);
       try {
@@ -71,44 +81,37 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         const notifyFailure = true;
         const name = container.Name || container.Names?.[0] || "";
         const title = name.startsWith("/") ? name.substring(1) : name;
-        let nextContainer = container;
+        const nextContainer = container;
         let successMessage = "";
         switch (action) {
           case "container.logs":
-            nextContainer = await containerFetch(container);
             break;
           case "container.inspect":
-            nextContainer = await containerFetch(container);
             break;
           case "container.stats":
-            nextContainer = await containerFetch(container);
             break;
           case "container.stop":
-            success = await containerStop(container);
-            nextContainer = await containerFetch(container);
+            success = await stopContainer.mutateAsync(container.Id);
             successMessage = t("The container has been stopped");
             break;
           case "container.pause":
-            success = await containerPause(container);
-            nextContainer = await containerFetch(container);
+            success = await pauseContainer.mutateAsync(container.Id);
             successMessage = t("The container has been paused");
             break;
           case "container.unpause":
-            success = await containerUnpause(container);
-            nextContainer = await containerFetch(container);
+            success = await unpauseContainer.mutateAsync(container.Id);
             successMessage = t("The container has been unpaused");
             break;
           case "container.restart":
-            success = await containerRestart(container);
-            nextContainer = await containerFetch(container);
+            success = await restartContainer.mutateAsync(container.Id);
             successMessage = t("The container has been restared");
             break;
           case "container.remove":
-            success = await containerRemove(container);
+            success = await removeContainer.mutateAsync(container.Id);
             successMessage = t("The container has been removed");
             break;
           case "container.connect":
-            success = await containerConnect({
+            success = await connectContainer.mutateAsync({
               ...container,
               Name: t("Terminal console for {{title}} container", { title }),
             });
@@ -168,13 +171,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     },
     [
       container,
-      containerFetch,
-      containerPause,
-      containerUnpause,
-      containerStop,
-      containerRestart,
-      containerRemove,
-      containerConnect,
+      connectionId,
+      pauseContainer,
+      unpauseContainer,
+      stopContainer,
+      restartContainer,
+      removeContainer,
+      connectContainer,
       onReload,
       t,
     ],
@@ -199,10 +202,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     performActionCommand("container.connect", { confirm: { success: false } });
   }, [performActionCommand]);
 
-  const isKubeAvailable = currentEngine === ContainerEngine.PODMAN;
-  const kubeDisabledTitle = isKubeAvailable
-    ? ""
-    : t("Not available when using {{currentEngine}} host", { currentEngine });
+  const isKubeAvailable = currentConnector?.capabilities?.extensions.kube === true;
+  const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available for current host");
   const expandAsButtons =
     expand && container ? (
       <>
@@ -358,7 +359,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   }, [userContainer]);
 
   return (
-    <ButtonGroup className="ItemActionsMenu" data-actions-menu="container">
+    <ButtonGroup
+      className={container ? "ItemActionsMenu ResourceItemInlineActionsMenu" : "ItemActionsMenu"}
+      data-actions-menu="container"
+    >
       {expandAsOverlay}
       {withInlinePlayerActions ? (
         <>

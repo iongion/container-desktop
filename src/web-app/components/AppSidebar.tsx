@@ -1,9 +1,8 @@
 import { Alignment, AnchorButton, ButtonGroup } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
-
 import { pathTo } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen } from "@/web-app/Types";
-import { useStoreState } from "@/web-app/domain/types";
 import { AppSidebarFooter } from "./AppSidebarFooter";
 
 // locals
@@ -17,8 +16,8 @@ interface AppSidebarProps {
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, currentScreen }: AppSidebarProps) => {
   const { t } = useTranslation();
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const expandSidebar = useStoreState((state) => state.userSettings.expandSidebar);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
   const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
   return (
     <div

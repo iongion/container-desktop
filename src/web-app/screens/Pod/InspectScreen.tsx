@@ -1,43 +1,26 @@
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
-import { useParams } from "wouter";
-
-import type { Pod } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
+import { usePod } from "./queries";
 
 export const ID = "pod.inspect";
 
 interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [pod, setPod] = useState<Pod>();
-  const { id } = useParams<{ id: string }>();
-  const podFetch = useStoreActions((actions) => actions.pod.podFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const pod = await podFetch({
-          Id: id as any,
-        });
-        setPod(pod);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [podFetch, id]);
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const podQuery = usePod(connectionId, id);
+  const pod = podQuery.data;
 
   if (!pod) {
-    return <ScreenLoader screen={ID} pending={pending} />;
+    return <ScreenLoader screen={ID} pending={podQuery.isLoading || podQuery.isFetching} />;
   }
 
   return (
@@ -53,7 +36,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Pod Inspect";
 Screen.Route = {
-  Path: "/screens/pod/:id/inspect",
+  Path: "/screens/pod/$id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.EYE_OPEN,

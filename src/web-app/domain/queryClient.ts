@@ -1,0 +1,57 @@
+// web-app/domain/queryClient.ts — the single app-wide TanStack Query client (cache-first).
+//
+// Server data is treated as fresh indefinitely (staleTime: Infinity), so it is NEVER refetched on plain
+// navigation/remount/focus — re-entering a screen serves the cached list/detail instantly. Freshness is
+// explicit: mutation invalidation, the per-screen reload button (refetch), and reconnect. Live resources
+// override this via liveQueryOptions(). The QueryCache.onError toast replaces the scattered per-screen
+// catch+notify boilerplate (fires once per failed query — react-query dedups).
+
+import { Intent } from "@blueprintjs/core";
+import { QueryCache, QueryClient } from "@tanstack/react-query";
+
+import i18n from "@/web-app/App.i18n";
+import CurrentEnvironment, { POLL_RATE_DEFAULT } from "@/web-app/Environment";
+import { Notification } from "@/web-app/Notification";
+
+const queryCache = new QueryCache({
+  onError: (error) => {
+    console.error("Query error", error);
+    Notification.show({ intent: Intent.DANGER, message: i18n.t("Error fetching data") });
+  },
+});
+
+export const queryClient = new QueryClient({
+  queryCache,
+  defaultOptions: {
+    queries: {
+      staleTime: Number.POSITIVE_INFINITY,
+      gcTime: 30 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: (count, error: any) => {
+        const status = error?.response?.status;
+        if (status === 401 || status === 403 || status === 404) return false;
+        return count < 2;
+      },
+    },
+    mutations: { retry: 0 },
+  },
+});
+
+// Per-query override for LIVE resources (containers/pods/images/volumes/networks/stats/processes/logs/
+// events) — they reflect real-time state, so refetch on mount/focus and poll. The interval is gated by
+// the existing env polling flag (off in development), matching the previous screen poller behaviour. Spread into
+// the relevant useQuery options: useQuery({ queryKey, queryFn, ...liveQueryOptions() }).
+export const liveQueryOptions = (refetchIntervalMs: number = POLL_RATE_DEFAULT) => {
+  // Annotated so the disabled case stays the `false` literal (not widened to `boolean`, which
+  // react-query's refetchInterval rejects); the rest are primitives assignable to any useQuery<T>.
+  const refetchInterval: number | false = CurrentEnvironment.features.polling?.enabled ? refetchIntervalMs : false;
+  return {
+    staleTime: 0,
+    refetchInterval,
+    refetchIntervalInBackground: true,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  };
+};

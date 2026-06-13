@@ -7,11 +7,12 @@ import { useTranslation } from "react-i18next";
 
 import type { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { CreateDrawer } from "./CreateDrawer";
+import { useConnectMachine, useRemoveMachine, useRestartMachine, useStopMachine } from "./queries";
 
 // Machine actions menu
 
@@ -34,13 +35,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const isNative = useStoreState((state) => state.native);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const isNative = useAppStore((state) => state.native);
+  const connectionId = currentConnector?.id || "";
   const isRunning = ((machine as any)?.State || "").toLowerCase() === "running" || (machine as any)?.Running;
-  const machineInspect = useStoreActions((actions) => actions.machine.machineInspect);
-  const machineRemove = useStoreActions((actions) => actions.machine.machineRemove);
-  const machineStop = useStoreActions((actions) => actions.machine.machineStop);
-  const machineRestart = useStoreActions((actions) => actions.machine.machineRestart);
-  const machineConnect = useStoreActions((actions) => actions.machine.machineConnect);
+  const machineRemove = useRemoveMachine(connectionId);
+  const machineStop = useStopMachine(connectionId);
+  const machineRestart = useRestartMachine(connectionId);
+  const machineConnect = useConnectMachine();
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -48,7 +50,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
         confirm: { success: true, error: true },
       },
     ) => {
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -57,27 +59,22 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
         switch (action) {
           case "machine.remove":
             if (machine) {
-              result = await machineRemove(machine);
-            }
-            break;
-          case "machine.inspect":
-            if (machine) {
-              result = await machineInspect(machine);
+              result.success = await machineRemove.mutateAsync(machine.Name);
             }
             break;
           case "machine.stop":
             if (machine) {
-              result = await machineStop(machine);
+              result.success = await machineStop.mutateAsync(machine.Name);
             }
             break;
           case "machine.restart":
             if (machine) {
-              result = await machineRestart(machine);
+              result.success = await machineRestart.mutateAsync(machine.Name);
             }
             break;
           case "machine.connect":
             if (machine) {
-              result = await machineConnect(machine);
+              result.success = await machineConnect.mutateAsync(machine.Name);
             }
             break;
           default:
@@ -105,7 +102,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
       }
       setDisabledAction(undefined);
     },
-    [machine, machineInspect, machineRemove, machineRestart, machineStop, machineConnect, t],
+    [machine, machineRemove, machineRestart, machineStop, machineConnect, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);
@@ -168,7 +165,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={machine ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

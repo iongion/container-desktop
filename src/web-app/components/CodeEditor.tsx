@@ -1,7 +1,8 @@
 import Editor, { useMonaco } from "@monaco-editor/react";
 import { useEffect, useState } from "react";
 
-import { AppTheme, useStoreState } from "@/web-app/domain/types";
+import { AppTheme } from "@/web-app/App.types";
+import { useAppStore } from "@/web-app/stores/appStore";
 import "./CodeEditor.css";
 
 export const DARK_THEME = "vs-dark";
@@ -23,7 +24,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   theme,
   headerTitle,
 }: CodeEditorProps) => {
-  const userTheme = useStoreState((state) => state.userSettings.theme);
+  const userTheme = useAppStore((state) => state.userSettings.theme);
   const [currentTheme, setCurrentTheme] = useState(theme || DEFAULT_THEME);
   const monaco = useMonaco();
   useEffect(() => {

@@ -5,12 +5,13 @@ import { useTranslation } from "react-i18next";
 
 import { type Pod, PodStatusList } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { CreateDrawer } from "./CreateDrawer";
 import { getPodUrl } from "./Navigation";
+import { usePausePod, useRemovePod, useRestartPod, useStopPod, useUnpausePod } from "./queries";
 
 // Actions menu
 interface ListActionsMenuProps {
@@ -24,13 +25,6 @@ interface ItemActionsMenuProps {
   onReload?: () => void;
 }
 
-interface PerformActionOptions {
-  confirm?: {
-    success?: boolean;
-    error?: boolean;
-  };
-}
-
 export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   pod,
   expand,
@@ -39,42 +33,35 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
 }: ItemActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
-  const podFetch = useStoreActions((actions) => actions.pod.podFetch);
-  const podPause = useStoreActions((actions) => actions.pod.podPause);
-  const podUnpause = useStoreActions((actions) => actions.pod.podUnpause);
-  const podStop = useStoreActions((actions) => actions.pod.podStop);
-  const podRestart = useStoreActions((actions) => actions.pod.podRestart);
-  const podRemove = useStoreActions((actions) => actions.pod.podRemove);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id || "";
+  const podPause = usePausePod(connectionId);
+  const podUnpause = useUnpausePod(connectionId);
+  const podStop = useStopPod(connectionId);
+  const podRestart = useRestartPod(connectionId);
+  const podRemove = useRemovePod(connectionId);
   const performActionCommand = useCallback(
-    async (
-      action: string,
-      { confirm }: PerformActionOptions = {
-        confirm: { success: true, error: true },
-      },
-    ) => {
+    async (action: string) => {
       setDisabledAction(action);
       try {
         // TODO: Improve notifications
         let success = false;
         const notifyFailure = true;
         switch (action) {
-          case "pod.inspect":
-            await podFetch(pod);
-            break;
           case "pod.stop":
-            success = await podStop(pod);
+            success = await podStop.mutateAsync(pod.Id);
             break;
           case "pod.pause":
-            success = await podPause(pod);
+            success = await podPause.mutateAsync(pod.Id);
             break;
           case "pod.unpause":
-            success = await podUnpause(pod);
+            success = await podUnpause.mutateAsync(pod.Id);
             break;
           case "pod.restart":
-            success = await podRestart(pod);
+            success = await podRestart.mutateAsync(pod.Id);
             break;
           case "pod.remove":
-            success = await podRemove(pod);
+            success = await podRemove.mutateAsync(pod.Id);
             break;
           default:
             break;
@@ -100,7 +87,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
       }
       setDisabledAction(undefined);
     },
-    [pod, podFetch, podPause, podUnpause, podStop, podRestart, podRemove, t],
+    [pod, podPause, podUnpause, podStop, podRestart, podRemove, t],
   );
   const onRemove = useCallback(
     (tag, confirmed) => {
@@ -114,13 +101,18 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     async (e) => {
       const sender = e.currentTarget;
       const action = sender.getAttribute("data-action");
-      performActionCommand(action);
+      performActionCommand(action || "");
     },
     [performActionCommand],
   );
 
-  const isKubeDisabled = pod.Containers.length <= 1;
-  const kubeTitle = isKubeDisabled ? t("Unable to generate kube - pod only has an infra container") : "";
+  const isKubeAvailable = currentConnector?.capabilities?.extensions.kube === true;
+  const isKubeDisabled = !isKubeAvailable || pod.Containers.length <= 1;
+  const kubeTitle = !isKubeAvailable
+    ? t("Kube generation is not available for this connection")
+    : isKubeDisabled
+      ? t("Unable to generate kube - pod only has an infra container")
+      : "";
 
   const expandAsButtons = expand ? (
     <>
@@ -180,7 +172,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   const canRestart = !isPaused;
 
   return (
-    <ButtonGroup>
+    <ButtonGroup className="ResourceItemInlineActionsMenu">
       {expandAsButtons}
       <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"}>
         {expandAsMenuItems}

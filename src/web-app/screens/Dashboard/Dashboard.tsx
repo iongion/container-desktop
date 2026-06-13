@@ -3,12 +3,12 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { type Container, ContainerEngineHost, ContainerStateList, OperatingSystem } from "@/env/Types";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
-import { usePoller } from "@/web-app/Hooks";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 
 import "./Dashboard.css";
 
@@ -17,15 +17,49 @@ export const Title = "Dashboard";
 
 export interface ScreenProps extends AppScreenProps {}
 
+const EMPTY_CONTAINERS: Container[] = [];
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const osType = useStoreState((state) => state.osType);
-  const containersFetchStats = useStoreActions((actions) => actions.dashboard.containersFetchStats);
-  const containerStats = useStoreState((state) => state.dashboard.containerStats);
-  const currentConnector = useStoreState((state) => state.currentConnector);
+  const osType = useAppStore((state) => state.osType);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id;
+  const containers = useResourceStore((state) =>
+    connectionId ? state.byConnection[connectionId]?.containers.items || EMPTY_CONTAINERS : EMPTY_CONTAINERS,
+  );
   const host = currentConnector?.host;
   const program = currentConnector?.settings.program;
   const scope = currentConnector?.settings.controller?.scope || "";
+
+  const containerStats = useMemo(() => {
+    return containers.reduce(
+      (acc, container) => {
+        switch (container.Computed.DecodedState) {
+          case ContainerStateList.PAUSED:
+            acc.paused += 1;
+            break;
+          case ContainerStateList.RUNNING:
+            acc.running += 1;
+            break;
+          case ContainerStateList.EXITED:
+            acc.exited += 1;
+            break;
+          case ContainerStateList.CREATED:
+            acc.created += 1;
+            break;
+          default:
+            break;
+        }
+        return acc;
+      },
+      {
+        paused: 0,
+        running: 0,
+        exited: 0,
+        created: 0,
+      },
+    );
+  }, [containers]);
 
   const { exampleCode, commandPrefix, commandTitle } = useMemo(() => {
     const programName = program?.name || "podman";
@@ -67,9 +101,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [t, exampleCode],
   );
-
-  // Change hydration
-  usePoller({ poller: containersFetchStats });
 
   return (
     <div className="AppScreen" data-screen={ID}>

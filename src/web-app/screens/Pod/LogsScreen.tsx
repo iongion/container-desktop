@@ -1,16 +1,14 @@
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
-import type { Pod } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
+import { usePod, usePodLogs } from "./queries";
 
 interface ScreenProps extends AppScreenProps {}
 
@@ -18,27 +16,12 @@ export const ID = "pod.logs";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const [pending, setPending] = useState(true);
-  const [pod, setPod] = useState<Pod>();
-  const { id } = useParams<{ id: string }>();
-  const podFetch = useStoreActions((actions) => actions.pod.podFetch);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const pod = await podFetch({
-          Id: id as any,
-          withLogs: { Tail: 100 },
-        });
-        setPod(pod);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [podFetch, id]);
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const podQuery = usePod(connectionId, id);
+  const logsQuery = usePodLogs(connectionId, id, 100);
+  const pod = podQuery.data;
+  const pending = podQuery.isLoading || podQuery.isFetching || logsQuery.isLoading || logsQuery.isFetching;
 
   if (!pod) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -48,8 +31,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader pod={pod} currentScreen={ID} />
       <div className="AppScreenContent">
-        <CodeEditor value={`${pod.Logs?.stderr}`} mode="text" headerTitle={t("stderr")} />
-        <CodeEditor value={`${pod.Logs?.stdout}`} mode="text" headerTitle={t("stdout")} />
+        <CodeEditor value={`${logsQuery.data?.stderr ?? ""}`} mode="text" headerTitle={t("stderr")} />
+        <CodeEditor value={`${logsQuery.data?.stdout ?? ""}`} mode="text" headerTitle={t("stdout")} />
       </div>
     </div>
   );
@@ -58,7 +41,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Pod Logs";
 Screen.Route = {
-  Path: "/screens/pod/:id/logs",
+  Path: "/screens/pod/$id/logs",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,

@@ -1,50 +1,40 @@
 import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
-import type { Container } from "@/env/Types";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
+import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./StatsScreen.css";
+import { useContainer, useContainerStats } from "./queries";
 
 interface ScreenProps extends AppScreenProps {}
 
 export const ID = "container.stats";
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
-  const cpu_usage = container?.Stats?.cpu_stats?.cpu || 0;
-  const mem_usage = container?.Stats?.memory_stats?.usage || 0;
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const decodedId = decodeURIComponent(id || "");
+  const containerQuery = useContainer(connectionId, decodedId);
+  const statsQuery = useContainerStats(connectionId, decodedId);
+  const container = containerQuery.data;
+  const stats = statsQuery.data || container?.Stats;
+  const pending =
+    containerQuery.isLoading || containerQuery.isFetching || statsQuery.isLoading || statsQuery.isFetching;
+  const cpu_usage = stats?.cpu_stats?.cpu || 0;
+  const mem_usage = stats?.memory_stats?.usage || 0;
   const disk_io = 0;
   const net_io = 0;
-  const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  const onScreenReload = useCallback(async () => {
-    try {
-      setPending(true);
-      const container = await containerFetch({
-        Id: decodeURIComponent(id as any),
-        withStats: true,
-      });
-      setContainer(container);
-    } catch (error: any) {
-      console.error("Unable to fetch at this moment", error);
-    } finally {
-      setPending(false);
-    }
-  }, [containerFetch, id]);
-
-  useEffect(() => {
-    onScreenReload();
-  }, [onScreenReload]);
+  const onScreenReload = useCallback(() => {
+    containerQuery.refetch();
+    statsQuery.refetch();
+  }, [containerQuery, statsQuery]);
 
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -86,7 +76,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Stats";
 Screen.Route = {
-  Path: "/screens/container/:id/stats",
+  Path: "/screens/container/$id/stats",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,
