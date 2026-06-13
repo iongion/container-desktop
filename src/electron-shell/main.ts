@@ -4,8 +4,8 @@ import * as url from "node:url";
 // vendors
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, Tray } from "electron";
 import contextMenu from "electron-context-menu";
+import ipaddr from "ipaddr.js";
 import { debounce } from "lodash-es";
-import is_ip_private from "private-ip";
 // project
 import { userConfiguration } from "@/container-client/config";
 import { OperatingSystem } from "@/env/Types";
@@ -15,6 +15,30 @@ import { Command } from "@/platform/node-executor";
 import { MessageBus } from "./shared";
 
 const APP_PATH = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
+
+// Private/internal address ranges that are trusted to open without the domain allow-list check.
+// Replaces the unmaintained `private-ip` package (GHSA-9h3q-32c7-r533, SSRF). Uses ipaddr.js so
+// that IPv4, IPv6 and IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1) are classified correctly.
+const PRIVATE_IP_RANGES = new Set([
+  "private",
+  "loopback",
+  "linkLocal",
+  "uniqueLocal",
+  "carrierGradeNat",
+  "unspecified",
+]);
+function is_ip_private(hostname: string): boolean {
+  // URL hostnames wrap IPv6 literals in brackets, e.g. "[::1]"
+  const candidate = hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+  if (!ipaddr.isValid(candidate)) {
+    return false; // not an IP literal (e.g. a domain name) -> enforce the allow-list
+  }
+  let addr = ipaddr.parse(candidate);
+  if (addr.kind() === "ipv6" && (addr as ipaddr.IPv6).isIPv4MappedAddress()) {
+    addr = (addr as ipaddr.IPv6).toIPv4Address();
+  }
+  return PRIVATE_IP_RANGES.has(addr.range());
+}
 
 // patch global like in preload
 (global as any).Command = Command;
