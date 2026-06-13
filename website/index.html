@@ -79,8 +79,8 @@
               skipFromList: true
             },
             {
-              url: `${downloadBaseUrl}/container-desktop-installer.exe`,
-              label: 'Installer - exe'
+              url: `${downloadBaseUrl}/container-desktop-x64-${version}.tar.gz`,
+              label: 'tar.gz'
             }
           ],
         }
@@ -89,7 +89,7 @@
         arm: {
           default: 0,
           links: [{
-            url: `${downloadBaseUrl}/container-desktop-arm64-${version}.dmg`,
+            url: `${downloadBaseUrl}/container-desktop-arm64-${version}.tar.gz`,
             label: "Apple"
           }]
         },
@@ -279,7 +279,7 @@
           <ul class="downloadBundles">
             <noscript>
               <li>
-                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-installer.exe">Installer - exe</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x64-5.2.13.tar.gz">tar.gz</a>
               </li>
             </noscript>
           </ul>
@@ -288,7 +288,7 @@
 
           <div class="downloadButton">
             <div class="downloadButtonLabel">
-              <a class="downloadButtonLink" target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.dmg">
+              <a class="downloadButtonLink" target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.tar.gz">
                 <i class="fab fa-apple"></i>
                 &nbsp;
                 <span>Download for MacOS</span>
@@ -299,7 +299,7 @@
           <ul class="downloadBundles">
             <noscript>
               <li>
-                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.dmg">Apple</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.tar.gz">Apple</a>
               </li>
             </noscript>
           </ul>

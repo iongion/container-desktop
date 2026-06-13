@@ -22,6 +22,13 @@ const artifactName = [pkg.name, "${arch}", version].join("-");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 
+// Package formats to emit. Default builds ONLY .tgz (tar.gz) tarballs on every
+// platform. Set PACKAGE_FORMATS=native to restore the installer formats kept
+// below (mac: dmg, win: appx + nsis). Nothing is removed — it's open source, so
+// the full recipes stay in the repo for anyone who wants to build their own way;
+// this flag only gates which targets electron-builder actually outputs.
+const tgzOnly = (process.env.PACKAGE_FORMATS || "tgz") === "tgz";
+
 // template
 dotenv.config({ path: path.join(PROJECT_HOME, ".env") });
 dotenv.config({ path: path.join(PROJECT_HOME, ".env.local"), override: true });
@@ -75,7 +82,7 @@ const config = {
   mac: {
     category: "public.app-category.developer-tools",
     icon: "icons/appIcon.icns",
-    target: "dmg",
+    target: tgzOnly ? "tar.gz" : "dmg",
     type: "development",
     entitlements: "entitlements.mac.plist",
     entitlementsInherit: "entitlements.mac.inherit.plist",
@@ -94,7 +101,7 @@ const config = {
     shortcutName: displayName,
   },
   win: {
-    target: ["appx", "nsis"],
+    target: tgzOnly ? ["tar.gz"] : ["appx", "nsis"],
     // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico",

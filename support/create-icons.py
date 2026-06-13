@@ -171,39 +171,39 @@ def generate_icons():
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "icon.svg"),
-        os.path.join(PROJECT_HOME, "docs/img/logo.svg"),
+        os.path.join(PROJECT_HOME, "website/img/logo.svg"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "icon.ico"),
-        os.path.join(PROJECT_HOME, "docs/favicon.ico"),
+        os.path.join(PROJECT_HOME, "website/favicon.ico"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "16x16.png"),
-        os.path.join(PROJECT_HOME, "docs/favicon-16x16.png"),
+        os.path.join(PROJECT_HOME, "website/favicon-16x16.png"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "32x32.png"),
-        os.path.join(PROJECT_HOME, "docs/favicon-32x32.png"),
+        os.path.join(PROJECT_HOME, "website/favicon-32x32.png"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "150x150.png"),
-        os.path.join(PROJECT_HOME, "docs/mstile-150x150.png"),
+        os.path.join(PROJECT_HOME, "website/mstile-150x150.png"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "180x180.png"),
-        os.path.join(PROJECT_HOME, "docs/apple-touch-icon.png"),
+        os.path.join(PROJECT_HOME, "website/apple-touch-icon.png"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "192x192.png"),
-        os.path.join(PROJECT_HOME, "docs/android-chrome-192x192.png"),
+        os.path.join(PROJECT_HOME, "website/android-chrome-192x192.png"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "512x512.png"),
-        os.path.join(PROJECT_HOME, "docs/android-chrome-512x512.png"),
+        os.path.join(PROJECT_HOME, "website/android-chrome-512x512.png"),
     )
     shutil.copyfile(
         os.path.join(OUTPUT_PATH, "icon.svg"),
-        os.path.join(PROJECT_HOME, "docs/safari-pinned-tab.svg"),
+        os.path.join(PROJECT_HOME, "website/safari-pinned-tab.svg"),
     )
 
 

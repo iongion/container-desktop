@@ -30,12 +30,12 @@ export function docsServer() {
             res.writeHead(200);
             res.write(pkg.version);
             res.end();
-          } else if (req.originalUrl?.includes("/docs")) {
+          } else if (req.originalUrl?.includes("/website")) {
             let resource = path.join(__dirname, `${req.originalUrl}`);
             if (fs.lstatSync(resource).isDirectory()) {
               resource = path.join(resource, "index.html");
               res.setHeader("Content-Type", mimeTypes.lookup(resource) || "application/octet-stream");
-              res.setHeader("Location", "/docs/index.html");
+              res.setHeader("Location", "/website/index.html");
               res.writeHead(301);
             } else {
               if (fs.existsSync(resource)) {
@@ -68,7 +68,7 @@ export const createConfig = ({ mode, command, host, port }) => {
   sourceEnv(ENVIRONMENT);
   const cache = getElectronVendorsCache();
   console.debug({ PROJECT_HOME, command, host, port });
-  console.debug(`Website running at http://${host === "0.0.0.0" ? "localhost" : host}:${port}/docs/index.html`);
+  console.debug(`Website running at http://${host === "0.0.0.0" ? "localhost" : host}:${port}/website/index.html`);
   // Bootstrap
   // Build context
   const ejsContext = createEJSContext();

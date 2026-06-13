@@ -2,6 +2,8 @@
   "eslint.enable": false,
   "prettier.enable": false,
   "pylint.enabled": false,
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.ignore": ["**"],
   "biome.enabled": true,
   "biome.lsp.bin": "./node_modules/.bin/biome",
   "[html]": {
