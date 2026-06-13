@@ -44,14 +44,14 @@ If one wants to add support for docker container engine, the easiest is to insta
 
 ## Podman is the driving engine
 
-![Container Desktop Dashboard](docs/img/001-Dashboard.png?raw=true)
+![Container Desktop Dashboard](website/img/001-Dashboard.png?raw=true)
 
 ## Multiple engines supported, familiar ones too
 
-![Connection Manager](docs/img/ConnectionManager.png?raw=true)
+![Connection Manager](website/img/ConnectionManager.png?raw=true)
 
 ## Comprehensive actions
 
-![Container Actions](docs/img/003-ContainerActions.png?raw=true)
+![Container Actions](website/img/003-ContainerActions.png?raw=true)
 
-![Image Actions](docs/img/006-ImageActions.png?raw=true)
+![Image Actions](website/img/006-ImageActions.png?raw=true)
