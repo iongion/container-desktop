@@ -434,10 +434,11 @@ export class HostClient implements HostContext {
 
   async getEventsStream(opts?: SubscriptionOptions) {
     try {
-      this.logger.warn(this.id, "Subscribing to connection events - creating api client", opts);
+      this.logger.debug(this.id, "Subscribing to connection events - creating api client", opts);
       const driver = await this.getApiDriver();
-      this.logger.warn(this.id, "Subscribing to connection events - issuing request");
+      this.logger.debug(this.id, "Subscribing to connection events - issuing request");
       const response = await driver.get("/events", {
+        params: opts,
         timeout: 0,
         responseType: "stream",
       });

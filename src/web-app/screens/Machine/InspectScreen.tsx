@@ -1,13 +1,12 @@
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
-import type { PodmanMachine } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
+import { useMachine } from "./queries";
 
 import "./InspectScreen.css";
 
@@ -17,27 +16,12 @@ export const Title = "Machine Inspect";
 export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [machine, setMachine] = useState<PodmanMachine>();
   const { name } = useRouteParams<{ name: string }>();
-  const machineInspect = useStoreActions((actions) => actions.machine.machineInspect);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const machine = await machineInspect({
-          Name: name as string,
-        });
-        setMachine(machine);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [machineInspect, name]);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const machineQuery = useMachine(connectionId, name);
+  const machine = machineQuery.data;
   if (!machine) {
-    return <ScreenLoader screen={ID} pending={pending} />;
+    return <ScreenLoader screen={ID} pending={machineQuery.isLoading || machineQuery.isFetching} />;
   }
   return (
     <div className="AppScreen" data-screen={ID}>

@@ -7,6 +7,7 @@ import { type CreatePodOptions, PodsAdapter } from "@/container-client/adapters/
 import { getActiveHostClient } from "@/container-client/adapters/shared";
 import type { Pod } from "@/env/Types";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export type PodSubKey = "processes" | "logs" | "kube";
 
@@ -60,16 +61,30 @@ export const usePodLogs = (connId: string, id?: string, tail?: number) =>
     ...liveQueryOptions(),
   });
 
-const invalidatePod = (qc: ReturnType<typeof useQueryClient>, connId: string, id: string) => {
+export const usePodKube = (connId: string, id?: string) =>
+  useQuery({
+    queryKey: podKeys.sub(connId, id ?? "", "kube"),
+    queryFn: async () => {
+      const result = await getActiveHostClient().generateKube(id!);
+      return result.success ? result.stdout : "";
+    },
+    enabled: !!connId && !!id,
+  });
+
+const invalidatePod = async (qc: ReturnType<typeof useQueryClient>, connId: string, id: string) => {
   qc.invalidateQueries({ queryKey: podKeys.detail(connId, id) });
-  qc.invalidateQueries({ queryKey: podKeys.lists() });
+  qc.invalidateQueries({ queryKey: podKeys.list(connId) });
+  await resourceEvents.refreshMany(connId, ["pods", "containers"]);
 };
 
-export const useCreatePod = () => {
+export const useCreatePod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (opts: CreatePodOptions) => new PodsAdapter().create(opts),
-    onSuccess: () => qc.invalidateQueries({ queryKey: podKeys.lists() }),
+    onSuccess: async () => {
+      await resourceEvents.refreshMany(connId, ["pods", "containers"]);
+      qc.invalidateQueries({ queryKey: podKeys.list(connId) });
+    },
   });
 };
 
@@ -77,9 +92,10 @@ export const useRemovePod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new PodsAdapter().remove(id),
-    onSuccess: (_result, id) => {
+    onSuccess: async (_result, id) => {
       qc.removeQueries({ queryKey: podKeys.detail(connId, id) });
-      qc.invalidateQueries({ queryKey: podKeys.lists() });
+      await resourceEvents.refreshMany(connId, ["pods", "containers"]);
+      qc.invalidateQueries({ queryKey: podKeys.list(connId) });
     },
   });
 };
@@ -88,7 +104,7 @@ export const useStopPod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new PodsAdapter().stop(id),
-    onSuccess: (_result, id) => invalidatePod(qc, connId, id),
+    onSuccess: async (_result, id) => invalidatePod(qc, connId, id),
   });
 };
 
@@ -96,7 +112,7 @@ export const useRestartPod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new PodsAdapter().restart(id),
-    onSuccess: (_result, id) => invalidatePod(qc, connId, id),
+    onSuccess: async (_result, id) => invalidatePod(qc, connId, id),
   });
 };
 
@@ -104,7 +120,7 @@ export const usePausePod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new PodsAdapter().pause(id),
-    onSuccess: (_result, id) => invalidatePod(qc, connId, id),
+    onSuccess: async (_result, id) => invalidatePod(qc, connId, id),
   });
 };
 
@@ -112,7 +128,7 @@ export const useUnpausePod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new PodsAdapter().unpause(id),
-    onSuccess: (_result, id) => invalidatePod(qc, connId, id),
+    onSuccess: async (_result, id) => invalidatePod(qc, connId, id),
   });
 };
 
@@ -120,6 +136,6 @@ export const useKillPod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new PodsAdapter().kill(id),
-    onSuccess: (_result, id) => invalidatePod(qc, connId, id),
+    onSuccess: async (_result, id) => invalidatePod(qc, connId, id),
   });
 };

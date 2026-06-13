@@ -1,13 +1,13 @@
 import { type IconName, IconNames } from "@blueprintjs/icons";
 
-import type { PodmanMachine } from "@/env/Types";
+import type { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
 
 interface ScreenHeaderProps {
-  machine: PodmanMachine;
+  machine: PodmanMachine | PodmanMachineInspect;
   currentScreen: string;
   listRoutePath?: string;
   listRouteIcon?: IconName;

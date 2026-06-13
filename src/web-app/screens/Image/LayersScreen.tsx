@@ -1,29 +1,31 @@
 import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { ContainerImage } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./LayersScreen.css";
+import { useImage, useImageHistory } from "./queries";
 
 export const ID = "image.layers";
 
 export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [image, setImage] = useState<ContainerImage>();
   const { t } = useTranslation();
   const { id } = useRouteParams<{ id: string }>();
-  const screenRef = useRef<HTMLDivElement>(null);
-  const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const decodedId = decodeURIComponent(id || "");
+  const imageQuery = useImage(connectionId, decodedId);
+  const historyQuery = useImageHistory(connectionId, decodedId);
+  const image = imageQuery.data;
+  const pending = imageQuery.isLoading || imageQuery.isFetching || historyQuery.isLoading || historyQuery.isFetching;
   const onCopyToClipboardClick = useCallback(
     async (e) => {
       const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("td:nth-child(2)");
@@ -35,36 +37,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [t],
   );
-  const layers = image?.History || [];
-
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const image = await imageFetch({
-          Id: decodeURIComponent(id as any),
-          withHistory: true,
-        });
-        setImage(image);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-        Notification.show({
-          message: t("Unable to load image - {{message}}", error),
-          intent: Intent.DANGER,
-        });
-        history.back();
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [imageFetch, id, t]);
+  const layers = historyQuery.data || image?.History || [];
 
   if (!image) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
 
   return (
-    <div className="AppScreen" data-screen={ID} ref={screenRef}>
+    <div className="AppScreen" data-screen={ID}>
       <ScreenHeader image={image} currentScreen={ID} />
       <div className="AppScreenContent">
         <HTMLTable compact striped className="AppDataTable" data-table="image.layers.history">

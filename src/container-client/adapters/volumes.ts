@@ -1,5 +1,5 @@
 // adapters/volumes.ts — volume REST operations over the active HostClient driver.
-// Endpoints/params lifted byte-for-byte from Api.clients.ts ContainerClient (615-683). libpod lists at
+// Endpoints/params lifted byte-for-byte from the legacy API client (615-683). libpod lists at
 // `/volumes/json` returning `[...]`; Docker lists at `/volumes` returning `{ Volumes: [...] }` (unwrapped
 // here — a list-envelope concern). Dropped the dead `inspectVolume` (646) and `pruneVolumes` (685).
 

@@ -1,49 +1,40 @@
 import { Button, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { Container } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./ProcessesScreen.css";
+import { useContainer, useContainerProcesses } from "./queries";
 
 interface ScreenProps extends AppScreenProps {}
 
 export const ID = "container.processes";
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
   const { id } = useRouteParams<{ id: string }>();
-  const processesMap: any = container?.Processes || {
-    Processes: [],
-    Titles: [],
-  };
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const decodedId = decodeURIComponent(id || "");
+  const containerQuery = useContainer(connectionId, decodedId);
+  const container = containerQuery.data;
+  const isRunning = container?.State === "running" || (container as any)?.State?.Status === "running";
+  const processesQuery = useContainerProcesses(connectionId, decodedId, !!isRunning);
+  const processesMap: any = processesQuery.data || { Processes: [], Titles: [] };
   const processesList = processesMap.Processes || [];
   const processesTitles = processesMap.Titles || [];
-  const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  const onScreenReload = useCallback(async () => {
-    try {
-      setPending(true);
-      const container = await containerFetch({
-        Id: decodeURIComponent(id as any),
-        withStats: false,
-        withProcesses: true,
-      });
-      setContainer(container);
-    } catch (error: any) {
-      console.error("Unable to fetch at this moment", error);
-    } finally {
-      setPending(false);
-    }
-  }, [containerFetch, id]);
+  const pending =
+    containerQuery.isLoading || containerQuery.isFetching || processesQuery.isLoading || processesQuery.isFetching;
+  const onScreenReload = useCallback(() => {
+    containerQuery.refetch();
+    processesQuery.refetch();
+  }, [containerQuery, processesQuery]);
   const onCopyToClipboardClick = useCallback(
     async (e) => {
       const contentNode = e.currentTarget?.parentNode.closest("td");
@@ -56,15 +47,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [t],
   );
 
-  useEffect(() => {
-    onScreenReload();
-  }, [onScreenReload]);
-
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
-
-  const isRunning = container?.State === "running" || (container as any).State.Status === "running";
 
   return (
     <div className="AppScreen" data-screen={ID}>

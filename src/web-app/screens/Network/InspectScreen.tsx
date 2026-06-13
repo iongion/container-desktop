@@ -1,14 +1,13 @@
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
-import type { Network } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
+import { useNetwork } from "./queries";
 
 export const ID = "network.inspect";
 export const Title = "Network Inspect";
@@ -16,25 +15,12 @@ export const Title = "Network Inspect";
 export interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [network, setNetwork] = useState<Network>();
   const { name } = useRouteParams<{ name: string }>();
-  const networkFetch = useStoreActions((actions) => actions.network.networkFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const network = await networkFetch(name ?? "");
-        setNetwork(network);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [networkFetch, name]);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const networkQuery = useNetwork(connectionId, name);
+  const network = networkQuery.data;
   if (!network) {
-    return <ScreenLoader screen={ID} pending={pending} />;
+    return <ScreenLoader screen={ID} pending={networkQuery.isLoading || networkQuery.isFetching} />;
   }
   return (
     <div className="AppScreen" data-screen={ID}>

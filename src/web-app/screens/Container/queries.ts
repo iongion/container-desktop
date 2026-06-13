@@ -9,8 +9,10 @@ import {
   type CreateContainerOptions,
   type FetchContainerOptions,
 } from "@/container-client/adapters/containers";
+import { getActiveHostClient } from "@/container-client/adapters/shared";
 import type { Container } from "@/env/Types";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export type ContainerSubKey = "logs" | "stats" | "processes" | "kube";
 
@@ -58,11 +60,11 @@ export const useContainerStats = (connId: string, id?: string) =>
     ...liveQueryOptions(),
   });
 
-export const useContainerProcesses = (connId: string, id?: string) =>
+export const useContainerProcesses = (connId: string, id?: string, enabled = true) =>
   useQuery({
     queryKey: containerKeys.sub(connId, id ?? "", "processes"),
     queryFn: () => new ContainersAdapter().processes(id!),
-    enabled: !!connId && !!id,
+    enabled: enabled && !!connId && !!id,
     ...liveQueryOptions(),
   });
 
@@ -74,18 +76,29 @@ export const useContainerLogs = (connId: string, id?: string) =>
     ...liveQueryOptions(),
   });
 
+export const useContainerKube = (connId: string, id?: string) =>
+  useQuery({
+    queryKey: containerKeys.sub(connId, id ?? "", "kube"),
+    queryFn: async () => {
+      const result = await getActiveHostClient().generateKube(id!);
+      return result.success ? result.stdout : "";
+    },
+    enabled: !!connId && !!id,
+  });
+
 // ── Mutations (invalidate-only) ──
 
-const invalidateContainer = (qc: ReturnType<typeof useQueryClient>, connId: string, id: string) => {
+const refreshContainer = async (qc: ReturnType<typeof useQueryClient>, connId: string, id: string) => {
+  await resourceEvents.refresh(connId, "containers");
   qc.invalidateQueries({ queryKey: containerKeys.detail(connId, id) });
-  qc.invalidateQueries({ queryKey: containerKeys.lists() });
+  qc.invalidateQueries({ queryKey: containerKeys.list(connId) });
 };
 
 export const usePauseContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new ContainersAdapter().pause(id),
-    onSuccess: (_result, id) => invalidateContainer(qc, connId, id),
+    onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
 
@@ -93,7 +106,7 @@ export const useUnpauseContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new ContainersAdapter().unpause(id),
-    onSuccess: (_result, id) => invalidateContainer(qc, connId, id),
+    onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
 
@@ -101,7 +114,7 @@ export const useStopContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new ContainersAdapter().stop(id),
-    onSuccess: (_result, id) => invalidateContainer(qc, connId, id),
+    onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
 
@@ -109,7 +122,7 @@ export const useRestartContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new ContainersAdapter().restart(id),
-    onSuccess: (_result, id) => invalidateContainer(qc, connId, id),
+    onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
 
@@ -117,17 +130,27 @@ export const useRemoveContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new ContainersAdapter().remove(id),
-    onSuccess: (_result, id) => {
+    onSuccess: async (_result, id) => {
+      await resourceEvents.refresh(connId, "containers");
       qc.removeQueries({ queryKey: containerKeys.detail(connId, id) });
-      qc.invalidateQueries({ queryKey: containerKeys.lists() });
+      qc.invalidateQueries({ queryKey: containerKeys.list(connId) });
     },
   });
 };
 
-export const useCreateContainer = () => {
+export const useCreateContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (opts: CreateContainerOptions) => new ContainersAdapter().create(opts),
-    onSuccess: () => qc.invalidateQueries({ queryKey: containerKeys.lists() }),
+    onSuccess: async () => {
+      await resourceEvents.refresh(connId, "containers");
+      qc.invalidateQueries({ queryKey: containerKeys.list(connId) });
+    },
+  });
+};
+
+export const useConnectContainer = () => {
+  return useMutation({
+    mutationFn: (container: Container) => new ContainersAdapter().connectToContainer(container),
   });
 };

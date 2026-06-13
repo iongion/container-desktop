@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CreateNetworkOptions, NetworksAdapter } from "@/container-client/adapters/networks";
 import type { Network } from "@/env/Types";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const networkKeys = {
   all: ["networks"] as const,
@@ -39,11 +40,14 @@ export const useNetwork = (connId: string, name?: string) => {
   });
 };
 
-export const useCreateNetwork = () => {
+export const useCreateNetwork = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (opts: CreateNetworkOptions) => new NetworksAdapter().create(opts),
-    onSuccess: () => qc.invalidateQueries({ queryKey: networkKeys.lists() }),
+    onSuccess: async () => {
+      await resourceEvents.refresh(connId, "networks");
+      qc.invalidateQueries({ queryKey: networkKeys.list(connId) });
+    },
   });
 };
 
@@ -51,9 +55,10 @@ export const useRemoveNetwork = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => new NetworksAdapter().remove(name),
-    onSuccess: (_result, name) => {
+    onSuccess: async (_result, name) => {
       qc.removeQueries({ queryKey: networkKeys.detail(connId, name) });
-      qc.invalidateQueries({ queryKey: networkKeys.lists() });
+      await resourceEvents.refresh(connId, "networks");
+      qc.invalidateQueries({ queryKey: networkKeys.list(connId) });
     },
   });
 };

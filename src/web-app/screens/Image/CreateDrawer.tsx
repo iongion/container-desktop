@@ -13,17 +13,19 @@ import {
   ProgressBar,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 // module
 import type { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
 // project
 import { toPortMappings } from "@/utils";
-import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { useCreateContainer } from "@/web-app/screens/Container/queries";
 import { createMount, type MountFormContainerImageMount, MountsForm } from "./MountsForm";
 import { PortMappingsForm } from "./PortMappingsForm";
+import { useImage } from "./queries";
 
 import "./CreateDrawer.css";
 
@@ -39,18 +41,11 @@ export interface CreateDrawerProps {
 }
 export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
-  const containerCreate = useStoreActions((actions) => actions.container.containerCreate);
-  const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
-
-  const [state, setState] = useState<{
-    template?: ContainerImage;
-    pending: boolean;
-  }>({
-    template: undefined,
-    pending: true,
-  });
-
-  const { pending, template } = state;
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const containerCreate = useCreateContainer(connectionId);
+  const imageDetails = useImage(connectionId, image.Id, { Id: image.Id });
+  const template = imageDetails.data || image;
+  const pending = imageDetails.isLoading || containerCreate.isPending;
 
   // Form initial data
   const mounts = useMemo(() => {
@@ -71,6 +66,9 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
   const { reset, control, handleSubmit } = methods;
   const onSubmit = handleSubmit(async (data) => {
     try {
+      if (!connectionId) {
+        throw new Error("No active connection");
+      }
       const creator = {
         Amount: data.amount,
         ImageId: image.Id,
@@ -79,8 +77,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
         Mounts: data.mounts.filter((it) => it.source && it.destination),
         PortMappings: data.mappings,
       };
-      setState((prev) => ({ ...prev, pending: true }));
-      const create = await containerCreate(creator);
+      const create = await containerCreate.mutateAsync(creator);
       if (create.created) {
         if (create.started) {
           Notification.show({
@@ -93,7 +90,6 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
             intent: Intent.WARNING,
           });
         }
-        setState((prev) => ({ ...prev, pending: false }));
         onClose();
       } else {
         Notification.show({
@@ -107,27 +103,8 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
         message: t("Unable to start container(s) from image"),
         intent: Intent.DANGER,
       });
-      setState((prev) => ({ ...prev, pending: false }));
     }
   });
-
-  const { Id } = image;
-
-  // Initial load
-  useEffect(() => {
-    (async () => {
-      try {
-        const template = await imageFetch({ Id });
-        setState({ template, pending: false });
-      } catch (error: any) {
-        console.error("Unable to load container image", error);
-        Notification.show({
-          message: t("Unable to load container image"),
-          intent: Intent.DANGER,
-        });
-      }
-    })();
-  }, [t, imageFetch, Id]);
 
   // Change over time - form fields
   useEffect(() => {

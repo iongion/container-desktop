@@ -2,31 +2,48 @@ import { AnchorButton, HTMLTable, Intent, NonIdealState } from "@blueprintjs/cor
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type Connector, ContainerEngineHost, type PodmanMachine } from "@/env/Types";
+import type { Connector, PodmanMachine } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { usePoller } from "@/web-app/Hooks";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
 import { getMachineUrl } from "./Navigation";
+import { useMachinesList } from "./queries";
 
 export const ID = "machines";
 
 export interface ScreenProps extends AppScreenProps {}
+
+const EMPTY_MACHINES: PodmanMachine[] = [];
+
+const createMachineSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (machine: PodmanMachine) => {
+    const haystacks = [machine.Name, machine.VMType].map((value) => value.toLowerCase());
+    return haystacks.some((value) => value.includes(query));
+  };
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const machinesFetch = useStoreActions((actions) => actions.machine.machinesFetch);
-  const machines: PodmanMachine[] = useStoreState((state) => state.machine.machinesSearchByTerm(searchTerm));
-
-  // Change hydration
-  usePoller({ poller: machinesFetch });
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id || "";
+  const machinesQuery = useMachinesList(connectionId, currentConnector?.capabilities?.extensions.machines === true);
+  const machineSnapshot = machinesQuery.data || EMPTY_MACHINES;
+  const machines = useMemo(() => {
+    return searchTerm ? machineSnapshot.filter(createMachineSearchFilter(searchTerm)) : machineSnapshot;
+  }, [machineSnapshot, searchTerm]);
+  const onReload = useCallback(() => {
+    machinesQuery.refetch();
+  }, [machinesQuery]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -34,7 +51,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.HEAT_GRID}
-        rightContent={<ActionsMenu onReload={machinesFetch} />}
+        rightContent={<ActionsMenu onReload={onReload} />}
       />
       <div className="AppScreenContent">
         {machines.length === 0 ? (
@@ -120,7 +137,5 @@ Screen.Metadata = {
   LeftIcon: IconNames.HEAT_GRID,
 };
 Screen.isAvailable = (currentConnector?: Connector) => {
-  const isDocker = (currentConnector?.host || "").startsWith("docker");
-  const isPodmanWSL = currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_WSL;
-  return !(isDocker || isPodmanWSL);
+  return currentConnector?.capabilities?.extensions.machines === true;
 };

@@ -1,11 +1,11 @@
 // adapters/networks.ts — network REST operations over the active HostClient driver.
-// Endpoints/params lifted byte-for-byte from Api.clients.ts ContainerClient (949-1024). Docker lists at
-// `/networks` (PascalCase, coerced by normalizeNetwork); libpod lists at `/networks/json` (already
+// Endpoints/params lifted byte-for-byte from the legacy API client (949-1024). Docker lists at
+// `/networks` (PascalCase, normalized by normalizeNetwork); libpod lists at `/networks/json` (already
 // canonical, passthrough). The `remove` path is identical across engines — only the baseURL differs.
 //
-// FIX (surfaced): the monolith's single `getNetwork` returned a RAW (uncoerced) Docker network while the
-// list coerced — an asymmetry. The adapter normalizes single-get too, so the model is canonical
-// everywhere; `create`'s Docker re-fetch consequently drops the monolith's redundant second coerce
+// FIX (surfaced): the monolith's single `getNetwork` returned a RAW Docker network while the list normalized
+// it — an asymmetry. The adapter normalizes single-get too, so the model is canonical
+// everywhere; `create`'s Docker re-fetch consequently drops the monolith's redundant second normalization
 // (get() already normalizes). Endpoints/params are unchanged.
 
 import type { Network } from "@/env/Types";

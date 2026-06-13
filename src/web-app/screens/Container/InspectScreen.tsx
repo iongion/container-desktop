@@ -1,16 +1,16 @@
 import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { Container } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
+import { useContainer } from "./queries";
 
 interface InspectGroupValues {
   key: string;
@@ -27,29 +27,16 @@ export const ID = "container.inspect";
 interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
   const { id } = useRouteParams<{ id: string }>();
-  const screenRef = useRef<HTMLDivElement>(null);
-  const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
-  const onScreenReload = useCallback(async () => {
-    try {
-      setPending(true);
-      const container = await containerFetch({
-        Id: decodeURIComponent(id as any),
-      });
-      setContainer(container);
-    } catch (error: any) {
-      console.error("Unable to fetch at this moment", error);
-    } finally {
-      setPending(false);
-    }
-  }, [containerFetch, id]);
-
-  useEffect(() => {
-    onScreenReload();
-  }, [onScreenReload]);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const decodedId = decodeURIComponent(id || "");
+  const containerQuery = useContainer(connectionId, decodedId);
+  const { data: container, refetch } = containerQuery;
+  const pending = containerQuery.isLoading || containerQuery.isFetching;
+  const onScreenReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const onCopyToClipboardClick = useCallback(
     async (e) => {
@@ -107,7 +94,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     { name: "ports", title: t("Ports"), items: containerPorts },
   ];
   return (
-    <div className="AppScreen" data-screen={ID} ref={screenRef}>
+    <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
         <HTMLTable compact striped className="AppDataTable" data-table="container.inspect">

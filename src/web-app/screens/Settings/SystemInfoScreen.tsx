@@ -1,12 +1,12 @@
 import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect } from "react";
 
 import { t } from "@/web-app/App.i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { useSystemInfo } from "./queries";
 import { ScreenHeader } from "./ScreenHeader";
 
 import "./SystemInfoScreen.css";
@@ -18,18 +18,12 @@ export const View = "system-info";
 export const Title = "System info";
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const provisioned = useStoreState((state) => state.provisioned);
-  const running = useStoreState((state) => state.running);
-  const pending = useStoreState((state) => state.pending);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const systemInfo = useStoreState((state) => state.settings.systemInfo);
-  const getSystemInfo = useStoreActions((actions) => actions.settings.getSystemInfo);
-
-  useEffect(() => {
-    (async () => {
-      await getSystemInfo();
-    })();
-  }, [getSystemInfo]);
+  const provisioned = useAppStore((state) => state.provisioned);
+  const running = useAppStore((state) => state.running);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const systemInfoQuery = useSystemInfo(currentConnector?.id || "", provisioned && running);
+  const systemInfo = systemInfoQuery.data;
+  const pending = systemInfoQuery.isLoading || systemInfoQuery.isFetching;
 
   let contentWidget: React.ReactNode | null = null;
   if (pending) {
@@ -49,8 +43,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
       );
     }
   }
-
-  console.debug(currentConnector);
 
   return (
     <div className="AppScreen" data-screen={ID}>

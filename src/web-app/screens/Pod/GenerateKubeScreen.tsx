@@ -1,40 +1,25 @@
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
-import type { Pod } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./GenerateKubeScreen.css";
+import { usePod, usePodKube } from "./queries";
 
 export const ID = "pod.kube";
 
 interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [pending, setPending] = useState(true);
-  const [pod, setPod] = useState<Pod>();
   const { id } = useRouteParams<{ id: string }>();
-  const podFetch = useStoreActions((actions) => actions.pod.podFetch);
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const pod = await podFetch({
-          Id: id as any,
-          withKube: true,
-        });
-        setPod(pod);
-      } catch (error: any) {
-        console.error("Unable to generate at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [podFetch, id]);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const podQuery = usePod(connectionId, id);
+  const kubeQuery = usePodKube(connectionId, id);
+  const pod = podQuery.data;
+  const pending = podQuery.isLoading || podQuery.isFetching || kubeQuery.isLoading || kubeQuery.isFetching;
 
   if (!pod) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -44,7 +29,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader pod={pod} currentScreen={ID} />
       <div className="AppScreenContent">
-        <CodeEditor value={`${pod?.Kube}`} mode="yaml" />
+        <CodeEditor value={kubeQuery.data ?? ""} mode="yaml" />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 // adapters/images.ts — image REST operations over the active HostClient driver.
-// Endpoints/params lifted byte-for-byte from Api.clients.ts ContainerClient (348-419). Images use the
+// Endpoints/params lifted byte-for-byte from the legacy API client (348-419). Images use the
 // driver's default (per-connection) baseURL — no per-call libpod/docker override, matching the source.
 
 import type { ContainerImage, ContainerImageHistory } from "@/env/Types";

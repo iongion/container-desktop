@@ -40,10 +40,18 @@ import type {
 // ── Capabilities (host-adjusted: computed in the HostClient from dialect defaults × transport/host) ──
 
 export type SortMode = "client" | "server";
-export type EngineExtension = "machines" | "kube" | "contexts" | "swarm" | "builders" | "compose";
+export type EngineExtension =
+  | "machines"
+  | "kube"
+  | "contexts"
+  | "swarm"
+  | "builders"
+  | "compose"
+  | "registries"
+  | "controllerVersion";
 
 export interface CapabilityDescriptor {
-  resources: { pods: boolean };
+  resources: { pods: boolean; secrets: boolean };
   events: boolean;
   /** Per-field sort capability; "client" for every REST table today (consumed in the sorting phase). */
   sort: Record<string, SortMode>;

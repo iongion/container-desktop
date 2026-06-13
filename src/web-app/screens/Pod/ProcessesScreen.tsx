@@ -1,17 +1,17 @@
 import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { Pod, PodProcessReport } from "@/env/Types";
+import type { PodProcessReport } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
-import { usePoller } from "@/web-app/Hooks";
 import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./ProcessesScreen.css";
+import { usePod, usePodProcesses } from "./queries";
 
 export const ID = "pod.processes";
 
@@ -19,12 +19,12 @@ interface ScreenProps extends AppScreenProps {}
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const [pending, setPending] = useState(true);
-  const [pod, setPod] = useState<Pod>();
   const { id } = useRouteParams<{ id: string }>();
-  const screenRef = useRef<HTMLDivElement>(null);
-  const podFetch = useStoreActions((actions) => actions.pod.podFetch);
-  const podFetchProcesses = useStoreActions((actions) => actions.pod.podFetchProcesses);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const podQuery = usePod(connectionId, id);
+  const processesQuery = usePodProcesses(connectionId, id);
+  const pod = podQuery.data;
+  const pending = podQuery.isLoading || podQuery.isFetching || processesQuery.isLoading || processesQuery.isFetching;
 
   const onCopyToClipboardClick = useCallback(
     async (e) => {
@@ -38,48 +38,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [t],
   );
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setPending(true);
-        const pod = await podFetch({
-          Id: id as any,
-        });
-        setPod(pod);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    })();
-  }, [id, podFetch]);
-
-  const screenUpdater = useMemo(() => {
-    return async () => {
-      if (!pod) {
-        return;
-      }
-      try {
-        setPending(true);
-        await podFetchProcesses(pod);
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-      } finally {
-        setPending(false);
-      }
-    };
-  }, [pod, podFetchProcesses]);
-
-  // Change hydration
-  usePoller({ poller: screenUpdater });
-
   const processes = useMemo(() => {
     let report: PodProcessReport = { Processes: [], Titles: [] };
-    if (pod) {
+    if (processesQuery.data) {
+      report = processesQuery.data;
+    } else if (pod) {
       report = pod.Processes;
     }
     return report;
-  }, [pod]);
+  }, [pod, processesQuery.data]);
 
   if (!pod) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -142,7 +109,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   );
 
   return (
-    <div className="AppScreen" data-screen={ID} data-pending={pending ? "yes" : "no"} ref={screenRef}>
+    <div className="AppScreen" data-screen={ID} data-pending={pending ? "yes" : "no"}>
       {contents}
     </div>
   );

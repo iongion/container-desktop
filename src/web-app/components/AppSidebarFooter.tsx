@@ -15,19 +15,19 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngineHost } from "@/env/Types";
-import { AppTheme, useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { AppTheme } from "@/web-app/App.types";
 import { PROJECT_VERSION } from "@/web-app/Environment";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import "./AppSidebarFooter.css";
 
 export function AppSidebarFooter() {
   const { t } = useTranslation();
-  const pending = useStoreState((state) => state.pending);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const theme = useStoreState((state) => state.userSettings.theme);
-  const expandSidebar = useStoreState((state) => state.userSettings.expandSidebar);
-  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
+  const pending = useAppStore((state) => state.pending);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const theme = useAppStore((state) => state.userSettings.theme);
+  const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
+  const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
   const onThemeToggleClick = useCallback(
     (e) => {
       setGlobalUserSettings({
@@ -49,7 +49,7 @@ export function AppSidebarFooter() {
     version: "",
   };
   let programTitle = "";
-  if (currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
+  if (currentConnector?.capabilities?.extensions.controllerVersion) {
     programInfo.version = controller?.version || "";
     programTitle = t("Machine program version: {{version}}", program);
   } else {

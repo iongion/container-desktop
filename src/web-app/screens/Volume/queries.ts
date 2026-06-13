@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CreateVolumeOptions, VolumesAdapter } from "@/container-client/adapters/volumes";
 import type { Volume } from "@/env/Types";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const volumeKeys = {
   all: ["volumes"] as const,
@@ -39,11 +40,14 @@ export const useVolume = (connId: string, nameOrId?: string) => {
   });
 };
 
-export const useCreateVolume = () => {
+export const useCreateVolume = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (opts: CreateVolumeOptions) => new VolumesAdapter().create(opts),
-    onSuccess: () => qc.invalidateQueries({ queryKey: volumeKeys.lists() }),
+    onSuccess: async () => {
+      await resourceEvents.refresh(connId, "volumes");
+      qc.invalidateQueries({ queryKey: volumeKeys.list(connId) });
+    },
   });
 };
 
@@ -51,9 +55,10 @@ export const useRemoveVolume = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (nameOrId: string) => new VolumesAdapter().remove(nameOrId),
-    onSuccess: (_result, nameOrId) => {
+    onSuccess: async (_result, nameOrId) => {
       qc.removeQueries({ queryKey: volumeKeys.detail(connId, nameOrId) });
-      qc.invalidateQueries({ queryKey: volumeKeys.lists() });
+      await resourceEvents.refresh(connId, "volumes");
+      qc.invalidateQueries({ queryKey: volumeKeys.list(connId) });
     },
   });
 };

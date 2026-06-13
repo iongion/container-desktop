@@ -16,7 +16,8 @@ import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import { FormLayout } from "@/web-app/components/FormLayout";
-import { useStoreActions } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { useCreateMachine } from "./queries";
 
 // Machine drawer
 export interface CreateDrawerProps {
@@ -25,9 +26,10 @@ export interface CreateDrawerProps {
 export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(false);
-  const machineCreate = useStoreActions((actions) => actions.machine.machineCreate);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const machineCreate = useCreateMachine(connectionId);
   const onDrawerClose = useCallback(
-    (e) => {
+    () => {
       onClose();
     },
     [onClose],
@@ -47,7 +49,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
         ramSize: data.machineRAMSize,
         diskSize: data.machineDiskSize,
       };
-      await machineCreate(creator);
+      await machineCreate.mutateAsync(creator);
       onClose();
     } catch (error: any) {
       console.error("Unable to create machine", error);

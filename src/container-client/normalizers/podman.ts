@@ -1,7 +1,7 @@
 // normalizers/podman.ts — Podman (libpod) raw responses → canonical env/Types model.
 //
 // libpod returns the canonical lowercase Network shape already, so `normalizeNetwork` is a passthrough;
-// every other resource shares the engine-agnostic transforms in ./shared. "Podman ≈ the current coerce*".
+// every other resource shares the engine-agnostic transforms in ./shared.
 
 import type { Network } from "@/env/Types";
 

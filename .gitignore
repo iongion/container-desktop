@@ -122,3 +122,6 @@ dist
 
 # Agent local overrides (personal, not shared)
 .claude/settings.local.json
+
+# Playwright test artifacts
+.playwright-mcp/

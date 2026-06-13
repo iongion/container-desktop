@@ -14,6 +14,7 @@ import {
   defaultGetAutomaticSettings,
   limaApiConnection,
   sshApiConnection,
+  withControllerVersion,
   withMachines,
 } from "./shared";
 
@@ -69,7 +70,7 @@ export const podmanVendorProfile: HostProfile = {
     return defaultGetAutomaticSettings(host, settings);
   },
   adjustCapabilities(base) {
-    return base; // machines:true stays (vendor)
+    return withControllerVersion(base, true); // machines:true stays (vendor)
   },
 };
 

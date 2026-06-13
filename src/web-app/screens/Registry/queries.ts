@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RegistriesAdapter } from "@/container-client/adapters/registries";
 import type { Registry, RegistryPullOptions, RegistrySearchOptions } from "@/env/Types";
 import { imageKeys } from "@/web-app/screens/Image/queries";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const registryKeys = {
   all: ["registries"] as const,
@@ -42,10 +43,13 @@ export const useSearchRegistry = () =>
     mutationFn: (opts: RegistrySearchOptions) => new RegistriesAdapter().searchRegistry(opts),
   });
 
-export const usePullFromRegistry = () => {
+export const usePullFromRegistry = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (opts: RegistryPullOptions) => new RegistriesAdapter().pullFromRegistry(opts),
-    onSuccess: () => qc.invalidateQueries({ queryKey: imageKeys.lists() }),
+    onSuccess: async () => {
+      await resourceEvents.refresh(connId, "images");
+      qc.invalidateQueries({ queryKey: imageKeys.list(connId) });
+    },
   });
 };

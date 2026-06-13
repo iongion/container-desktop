@@ -1,6 +1,6 @@
 // normalizers/docker.ts — Docker raw responses → canonical env/Types model.
 //
-// Only networks need coercion (Docker returns PascalCase Driver/Id/Internal/IPAM/EnabledIPv6/...); every
+// Only networks need per-engine normalization (Docker returns PascalCase Driver/Id/Internal/IPAM/EnabledIPv6/...); every
 // other resource shares the engine-agnostic transforms in ./shared. The Docker `{ Volumes: [...] }` list
 // envelope is unwrapped in the volumes adapter (it is a list-shape concern, not a per-item transform).
 
@@ -16,7 +16,7 @@ import {
   normalizeVolume,
 } from "./shared";
 
-/** Docker network (PascalCase) → canonical lowercase Network. Lifted from coerceNetwork (182). */
+/** Docker network (PascalCase) → canonical lowercase Network. */
 export const normalizeNetwork = (it: any): Network => {
   return {
     dns_enabled: false,

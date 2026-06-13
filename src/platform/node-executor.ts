@@ -685,6 +685,49 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
   return driver;
 }
 
+function createProxyStreamBridge(stream: any) {
+  const emitter = new EventEmitter();
+  let closed = false;
+  const api = {
+    on: (event: string, listener: (...args: any[]) => void) => {
+      emitter.on(event, listener);
+      return api;
+    },
+    off: (event: string, listener: (...args: any[]) => void) => {
+      emitter.off(event, listener);
+      return api;
+    },
+    removeListener: (event: string, listener: (...args: any[]) => void) => {
+      emitter.removeListener(event, listener);
+      return api;
+    },
+    destroy: () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      stream.destroy?.();
+      emitter.removeAllListeners();
+    },
+    close: () => {
+      api.destroy();
+    },
+  };
+  stream.on?.("data", (chunk: any) => {
+    emitter.emit("data", typeof chunk === "string" ? chunk : (chunk?.toString?.("utf8") ?? chunk));
+  });
+  stream.on?.("error", (error: any) => {
+    emitter.emit("error", error);
+  });
+  stream.on?.("end", () => {
+    emitter.emit("end");
+  });
+  stream.on?.("close", () => {
+    emitter.emit("close");
+  });
+  return api;
+}
+
 export async function proxyRequestToWSLDistribution(
   connection: Connection,
   config: ApiDriverConfig,
@@ -1281,6 +1324,9 @@ export const Command: ICommand = {
       default:
         logger.error("Unsupported host", connection.host);
         break;
+    }
+    if (request.responseType === "stream" && response?.data?.on) {
+      response.data = createProxyStreamBridge(response.data);
     }
     return response;
   },

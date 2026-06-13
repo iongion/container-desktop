@@ -1,11 +1,12 @@
 import { Button, ButtonGroup, Classes, Drawer, DrawerSize, HTMLTable, Intent, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Application } from "@/container-client/Application";
 import type { RegistrySearchResult } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { usePullFromRegistry } from "./queries";
 import "./SearchResultDrawer.css";
 
 export interface CreateFormData {
@@ -17,16 +18,15 @@ export interface FormActionsProps {
   searchResult: RegistrySearchResult;
 }
 export const FormActions: React.FC<FormActionsProps> = ({ searchResult, onClose }: FormActionsProps) => {
-  const [pending, setPending] = useState(false);
   const { t } = useTranslation();
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const pullFromRegistry = usePullFromRegistry(connectionId);
+  const pending = pullFromRegistry.isPending;
   const onPullClick = useCallback(async () => {
-    setPending(true);
     try {
-      const instance = Application.getInstance();
-      const result = await instance.pullFromRegistry({
+      const result = await pullFromRegistry.mutateAsync({
         image: searchResult.Name,
       });
-      setPending(false);
       if (result.success) {
         Notification.show({
           message: t("Pull completed successfully"),
@@ -45,9 +45,8 @@ export const FormActions: React.FC<FormActionsProps> = ({ searchResult, onClose 
         message: t("Pull failed - check the logs"),
         intent: Intent.DANGER,
       });
-      setPending(false);
     }
-  }, [onClose, searchResult, t]);
+  }, [onClose, pullFromRegistry, searchResult, t]);
   const pendingIndicator = (
     <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
   );

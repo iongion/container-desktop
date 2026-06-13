@@ -2,17 +2,18 @@ import { Button, HTMLTable, Intent, NonIdealState, Radio, Spinner } from "@bluep
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
-import { type FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type MouseEvent, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { RegistrySearchFilters, RegistrySearchResult } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ActionsMenu, ScreenHeader } from ".";
 import "./ManageScreen.css";
+import { useRegistriesMap, useSearchRegistry } from "./queries";
 import { SearchResultDrawer } from "./SearchResultDrawer";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -20,14 +21,14 @@ export interface ScreenProps extends AppScreenProps {}
 export const ID = "registries";
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const term = useStoreState((actions) => actions.registry.term);
-  const { searchTerm, onSearchChange } = useAppScreenSearch(term);
+  const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const registriesMap = useStoreState((state) => state.registry.registriesMap);
-  const searchResults = useStoreState((state) => state.registry.searchResults);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const registriesFetch = useStoreActions((actions) => actions.registry.registriesFetch);
-  const registrySearch = useStoreActions((actions) => actions.registry.registrySearch);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id || "";
+  const registriesQuery = useRegistriesMap(connectionId);
+  const registrySearch = useSearchRegistry();
+  const registriesMap = registriesQuery.data || { default: [], custom: [] };
+  const searchResults = registrySearch.data || [];
   const registries = useMemo(
     () => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])],
     [registriesMap],
@@ -49,7 +50,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       const registry = registries.find((it) => it.name === selectedRegistry);
       try {
         if (registry) {
-          await registrySearch({ term: searchTerm, registry, filters });
+          await registrySearch.mutateAsync({ term: searchTerm, registry, filters });
         } else {
           console.warn("No registry", selectedRegistry);
         }
@@ -73,10 +74,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [registries],
   );
-
-  useEffect(() => {
-    registriesFetch();
-  }, [registriesFetch]);
 
   let content: React.ReactNode | null = null;
   switch (state) {

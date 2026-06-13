@@ -5,12 +5,13 @@ import { useTranslation } from "react-i18next";
 
 import type { Secret } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions } from "@/web-app/domain/types";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { CreateDrawer } from "./CreateDrawer";
 import { getSecretUrl } from "./Navigation";
+import { useRemoveSecret } from "./queries";
 
 // Secret actions menu
 
@@ -28,11 +29,11 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const secretRemove = useStoreActions((actions) => actions.secret.secretRemove);
-  const secretFetch = useStoreActions((actions) => actions.secret.secretFetch);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const secretRemove = useRemoveSecret(connectionId);
   const performActionCommand = useCallback(
     async (action: string) => {
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -41,12 +42,7 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
         switch (action) {
           case "secret.remove":
             if (secret) {
-              result = await secretRemove(secret);
-            }
-            break;
-          case "secret.inspect":
-            if (secret) {
-              result = await secretFetch({ Id: secret.ID });
+              result.success = await secretRemove.mutateAsync(secret.ID);
             }
             break;
           default:
@@ -71,7 +67,7 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
       }
       setDisabledAction(undefined);
     },
-    [secret, secretRemove, secretFetch, t],
+    [secret, secretRemove, t],
   );
   const onCreateClick = useCallback(() => {
     setWithCreate(true);

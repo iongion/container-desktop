@@ -362,12 +362,26 @@ export interface Connection {
   settings: EngineConnectorSettings;
 }
 
+export interface ConnectorCapabilities {
+  resources: {
+    pods: boolean;
+    secrets: boolean;
+  };
+  events: boolean;
+  sort: Record<string, "client" | "server">;
+  extensions: Record<
+    "machines" | "kube" | "contexts" | "swarm" | "builders" | "compose" | "registries" | "controllerVersion",
+    boolean
+  >;
+}
+
 export interface Connector extends Connection {
   connectionId: string;
   description: string;
   notes?: string;
   scopes?: ControllerScope[];
   availability: EngineConnectorAvailability;
+  capabilities?: ConnectorCapabilities;
 }
 
 export interface ConnectOptions {
@@ -380,12 +394,6 @@ export interface ConnectOptions {
 export interface DisconnectOptions {
   stopApi: boolean;
   connection: Connection;
-}
-
-export interface ContainerClientResult<T = unknown> {
-  success: boolean;
-  result: T;
-  warnings: any[];
 }
 
 export interface Distribution {

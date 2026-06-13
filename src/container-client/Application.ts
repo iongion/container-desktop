@@ -74,7 +74,7 @@ const PROPOSED_REGISTRIES = [
   },
 ];
 
-export const coerceAndSortSearchResults = (items: any[]) => {
+export const normalizeAndSortSearchResults = (items: any[]) => {
   let output = items.map((it) => {
     if (typeof it.Stars === "undefined") {
       it.Stars = 0;
@@ -300,25 +300,6 @@ export class Application {
 
   async getConnectorSettings(id: string) {
     return await this.userConfiguration.getKey<EngineConnectorSettings>(id);
-  }
-
-  // Shared
-  subscribeToEvents(opts?: SubscriptionOptions) {
-    const currentApi = this.getCurrentEngineConnectionApi();
-    const subscribe = async () => {
-      console.debug(">>>>>>>> EVENTS STREAM REQUESTED");
-      const stream = await currentApi.getEventsStream(opts);
-      if (stream) {
-        console.debug(">>>>>>>> EVENTS STREAM RECEIVED", stream);
-      } else {
-        console.error(">>>>>>>> EVENTS STREAM FAILED");
-      }
-    };
-    subscribe();
-    return {
-      subscribe,
-      unsubscribe: () => {},
-    };
   }
 
   // Podman specific
@@ -797,7 +778,7 @@ export class Application {
         const response = await driver.request(request);
         items = response.data || [];
         // logger.debug("Results are", output);
-        return coerceAndSortSearchResults(items);
+        return normalizeAndSortSearchResults(items);
       }
       if (filters?.isOfficial) {
         filtersList.push("--filter=is-official");
@@ -839,7 +820,7 @@ export class Application {
         this.logger.error("Search results parsing error", error.message, error.stack);
       }
     }
-    return coerceAndSortSearchResults(items);
+    return normalizeAndSortSearchResults(items);
   }
 
   async pullFromRegistry(opts: RegistryPullOptions) {
@@ -1091,6 +1072,7 @@ export class Application {
           const engineSettings = await host.getSettings();
           connector.settings = deepMerge(connector.settings, engineSettings);
           connector.availability = availability;
+          connector.capabilities = host.capabilities;
           this._currentContainerEngineHostClient = host;
           console.debug("> Host settings are", { host: engineSettings, connector: connector.settings });
           systemNotifier.transmit("startup.phase", {

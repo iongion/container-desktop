@@ -23,8 +23,7 @@ import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
 import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
-import { StoreProvider } from "@/web-app/domain/store";
-import { AppBootstrapPhase, type AppStore, useStoreActions, useStoreState } from "@/web-app/domain/types";
+import { AppBootstrapPhase } from "@/web-app/App.types";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Container/GenerateKubeScreen";
@@ -57,6 +56,7 @@ import { Screen as UserSettingsScreen } from "@/web-app/screens/Settings/UserSet
 import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Troubleshoot";
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 const Screens = [
   DashboardScreen,
@@ -154,12 +154,12 @@ function NotFoundScreen() {
 // The bootstrap phase gates what the document area shows — the routed screen only when READY.
 function AppLayout() {
   const { t } = useTranslation();
-  const phase = useStoreState((state) => state.phase);
-  const running = useStoreState((state) => state.running);
-  const provisioned = useStoreState((state) => state.provisioned);
-  const osType = useStoreState((state) => state.osType);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const startApplication = useStoreActions((actions) => actions.startApplication);
+  const phase = useAppStore((state) => state.phase);
+  const running = useAppStore((state) => state.running);
+  const provisioned = useAppStore((state) => state.provisioned);
+  const osType = useAppStore((state) => state.osType);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const startApplication = useAppStore((state) => state.startApplication);
   const program = currentConnector?.settings?.program;
   const currentScreen = useCurrentScreen();
   const ready = phase === AppBootstrapPhase.READY;
@@ -211,15 +211,16 @@ function AppLayout() {
 
 export function AppMainScreen() {
   const startRef = useRef(false);
-  const phase = useStoreState((state) => state.phase);
-  const native = useStoreState((state) => state.native);
-  const running = useStoreState((state) => state.running);
-  const provisioned = useStoreState((state) => state.provisioned);
-  const osType = useStoreState((state) => state.osType);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const nextConnection = useStoreState((state) => state.nextConnection);
-  const theme = useStoreState((state) => state.userSettings.theme || DEFAULT_THEME);
-  const startApplication = useStoreActions((actions) => actions.startApplication);
+  const phase = useAppStore((state) => state.phase);
+  const native = useAppStore((state) => state.native);
+  const running = useAppStore((state) => state.running);
+  const provisioned = useAppStore((state) => state.provisioned);
+  const osType = useAppStore((state) => state.osType);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const nextConnection = useAppStore((state) => state.nextConnection);
+  const theme = useAppStore((state) => state.userSettings.theme || DEFAULT_THEME);
+  const initialize = useAppStore((state) => state.initialize);
+  const startApplication = useAppStore((state) => state.startApplication);
 
   const engine = nextConnection?.engine || currentConnector?.engine || ContainerEngine.PODMAN;
   const host = nextConnection?.host || currentConnector?.host || undefined;
@@ -230,9 +231,9 @@ export function AppMainScreen() {
     } else {
       console.debug("Initial start has been triggered");
       startRef.current = true;
-      startApplication();
+      initialize().then(() => startApplication());
     }
-  }, [startApplication]);
+  }, [initialize, startApplication]);
 
   return (
     <div className="App">
@@ -256,16 +257,10 @@ export function AppMainScreen() {
   );
 }
 
-export interface AppProps {
-  store: AppStore;
-}
-
-export const App: React.FC<AppProps> = ({ store }) => {
+export const App: React.FC = () => {
   return (
-    <StoreProvider store={store}>
-      <HotkeysProvider>
-        <AppMainScreen />
-      </HotkeysProvider>
-    </StoreProvider>
+    <HotkeysProvider>
+      <AppMainScreen />
+    </HotkeysProvider>
   );
 };

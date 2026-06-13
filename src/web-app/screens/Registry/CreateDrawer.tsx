@@ -8,9 +8,10 @@ import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngine } from "@/env/Types";
-import { useStoreActions } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 import { RegistryPropertiesForm } from "./RegistryPropertiesForm";
+import { useCreateRegistry } from "./queries";
 
 // Drawer
 
@@ -60,11 +61,12 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
   const { handleSubmit } = methods;
   const [pending, setPending] = useState(false); // Form initial data
 
-  const registryCreate = useStoreActions((actions) => actions.registry.registryCreate);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const registryCreate = useCreateRegistry(currentConnector?.id || "");
   const onSubmit = handleSubmit(async (data) => {
     setPending(true);
     try {
-      await registryCreate({
+      await registryCreate.mutateAsync({
         created: dayjs().toISOString(),
         name: data.registryName,
         id: data.registryName,
@@ -72,7 +74,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
         enabled: true,
         isRemovable: true,
         isSystem: false,
-        engine: [ContainerEngine.PODMAN],
+        engine: currentConnector?.engine ? [currentConnector.engine] : [ContainerEngine.PODMAN],
       });
       onClose();
       Notification.show({
@@ -105,7 +107,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
       <div className={Classes.DRAWER_BODY}>
         <FormProvider {...methods}>
           <form name="CreateRegistryForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
-            <FormActions />
+            <FormActions pending={pending} />
             <div className="AppDataForm" data-form="registry.create">
               <RegistryPropertiesForm disabled={pending} />
             </div>

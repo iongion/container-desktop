@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 
 import type { Connection } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import "./ActionsMenu.css";
 
@@ -25,12 +25,12 @@ interface PerformActionOptions {
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
-  const currentConnector = useStoreState((state) => state.currentConnector);
+  const currentConnector = useAppStore((state) => state.currentConnector);
   const [isStarting, setIsStarting] = useState(false);
-  const startApplication = useStoreActions((actions) => actions.startApplication);
-  const stopApplication = useStoreActions((actions) => actions.stopApplication);
-  const removeConnection = useStoreActions((actions) => actions.settings.removeConnection);
-  const setGlobalUserSettings = useStoreActions((actions) => actions.setGlobalUserSettings);
+  const startApplication = useAppStore((state) => state.startApplication);
+  const stopApplication = useAppStore((state) => state.stopApplication);
+  const removeConnection = useAppStore((state) => state.removeConnection);
+  const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -38,7 +38,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
         confirm: { success: true, error: true },
       },
     ) => {
-      let result = {
+      const result = {
         success: false,
         message: `No action handler for ${action}`,
       };
@@ -47,7 +47,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
         switch (action) {
           case "connection.remove":
             if (connection) {
-              result = await removeConnection(connection.id);
+              result.success = await removeConnection(connection.id);
             }
             break;
           default:

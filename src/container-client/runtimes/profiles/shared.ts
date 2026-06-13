@@ -40,6 +40,10 @@ export function withMachines(base: CapabilityDescriptor, machines: boolean): Cap
   return { ...base, extensions: { ...base.extensions, machines } };
 }
 
+export function withControllerVersion(base: CapabilityDescriptor, controllerVersion: boolean): CapabilityDescriptor {
+  return { ...base, extensions: { ...base.extensions, controllerVersion } };
+}
+
 // ── shared getApiConnection bodies (engine-agnostic; the socket read is the dialect's) ──
 
 /** LIMA: the API socket is ~/.lima/<scope>/sock/<scope>.sock (podman-lima + docker-lima are identical). */

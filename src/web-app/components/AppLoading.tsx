@@ -4,15 +4,15 @@ import { Intent, ProgressBar } from "@blueprintjs/core";
 import dayjs from "dayjs";
 import { useEffect, useRef } from "react";
 import i18n from "@/web-app/App.i18n";
-import { useStoreState } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
 // module
 import "./AppLoading.css";
 
 export type AppLoadingProps = any;
 
 export const AppLoading: React.FC<AppLoadingProps> = () => {
-  const pending = useStoreState((state) => state.pending);
-  const systemNotifications = useStoreState((state) => state.systemNotifications);
+  const pending = useAppStore((state) => state.pending);
+  const systemNotifications = useAppStore((state) => state.systemNotifications);
   const phasesRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (systemNotifications.length > 0) {

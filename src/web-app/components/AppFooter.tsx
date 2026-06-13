@@ -1,21 +1,20 @@
 import { Navbar, NavbarDivider, NavbarHeading } from "@blueprintjs/core";
-import { ContainerEngineHost } from "@/env/Types";
 import i18n from "@/web-app/App.i18n";
-import { useStoreState } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
 import "./AppFooter.css";
 
 export const AppFooter = () => {
   const { t } = i18n;
-  const running = useStoreState((state) => state.running);
-  const currentConnector = useStoreState((state) => state.currentConnector);
-  const expandSidebar = useStoreState((state) => state.userSettings.expandSidebar);
+  const running = useAppStore((state) => state.running);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
   const controller = currentConnector?.settings?.controller;
   const program = currentConnector?.settings?.program;
   const programInfo = {
     name: program?.name || "",
     version: "",
   };
-  if (currentConnector?.host === ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR) {
+  if (currentConnector?.capabilities?.extensions.controllerVersion) {
     programInfo.version = controller?.version || "";
   } else {
     programInfo.version = program?.version || "";

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CreateSecretOptions, SecretsAdapter } from "@/container-client/adapters/secrets";
 import type { Secret } from "@/env/Types";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const secretKeys = {
   all: ["secrets"] as const,
@@ -39,11 +40,14 @@ export const useSecret = (connId: string, nameOrId?: string) => {
   });
 };
 
-export const useCreateSecret = () => {
+export const useCreateSecret = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (opts: CreateSecretOptions) => new SecretsAdapter().create(opts),
-    onSuccess: () => qc.invalidateQueries({ queryKey: secretKeys.lists() }),
+    onSuccess: async () => {
+      await resourceEvents.refresh(connId, "secrets");
+      qc.invalidateQueries({ queryKey: secretKeys.list(connId) });
+    },
   });
 };
 
@@ -51,9 +55,10 @@ export const useRemoveSecret = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new SecretsAdapter().remove(id),
-    onSuccess: (_result, id) => {
+    onSuccess: async (_result, id) => {
       qc.removeQueries({ queryKey: secretKeys.detail(connId, id) });
-      qc.invalidateQueries({ queryKey: secretKeys.lists() });
+      await resourceEvents.refresh(connId, "secrets");
+      qc.invalidateQueries({ queryKey: secretKeys.list(connId) });
     },
   });
 };

@@ -3,14 +3,16 @@ import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ContainerImage } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { usePoller } from "@/web-app/Hooks";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ActionsMenu, getImageUrl } from ".";
@@ -20,21 +22,41 @@ export const ID = "images";
 
 export interface ScreenProps extends AppScreenProps {}
 
+const EMPTY_IMAGES: ContainerImage[] = [];
+
+const createImageSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (image: ContainerImage) => {
+    const haystacks = [image.Name, image.Id].map((value) => value.toLowerCase());
+    return haystacks.some((value) => value.includes(query));
+  };
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const fetchAll = useStoreActions((actions) => actions.image.fetchAll);
-  const images: ContainerImage[] = useStoreState((state) => state.image.searchByTerm(searchTerm));
-
-  // Change hydration
-  usePoller({ poller: fetchAll });
+  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const imageSnapshot = useResourceStore((state) =>
+    connectionId ? state.byConnection[connectionId]?.images.items || EMPTY_IMAGES : EMPTY_IMAGES,
+  );
+  const images = useMemo(() => {
+    if (!searchTerm) {
+      return imageSnapshot;
+    }
+    return imageSnapshot.filter(createImageSearchFilter(searchTerm));
+  }, [imageSnapshot, searchTerm]);
+  const onReload = useCallback(() => {
+    if (connectionId) {
+      resourceEvents.refresh(connectionId, "images");
+    }
+  }, [connectionId]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
       <AppScreenHeader
         searchTerm={searchTerm}
         onSearch={onSearchChange}
-        rightContent={<ActionsMenu withoutStart onReload={fetchAll} />}
+        rightContent={<ActionsMenu withoutStart onReload={onReload} />}
       />
       <div className="AppScreenContent">
         {images.length === 0 ? (

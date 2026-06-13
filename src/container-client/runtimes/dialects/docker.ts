@@ -67,10 +67,19 @@ export const dockerDialect: EngineDialect = {
   ENGINE: ContainerEngine.DOCKER,
 
   capabilitiesBase: {
-    resources: { pods: false },
+    resources: { pods: false, secrets: false },
     events: true,
     sort: {},
-    extensions: { machines: false, kube: false, contexts: false, swarm: false, builders: false, compose: false },
+    extensions: {
+      machines: false,
+      kube: false,
+      contexts: false,
+      swarm: false,
+      builders: false,
+      compose: false,
+      registries: false,
+      controllerVersion: false,
+    },
   } satisfies CapabilityDescriptor,
 
   async readEngineSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {

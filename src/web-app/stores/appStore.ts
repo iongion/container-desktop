@@ -1,6 +1,5 @@
-// web-app/stores/appStore.ts — bootstrap / lifecycle / connections / settings (Zustand port of the
-// Easy-Peasy root AppModel in web-app/domain/model.ts). Folds in `connections` + the connection-CRUD
-// thunks from the old Settings sub-model (§B); `connections` (configured list) is distinct from
+// web-app/stores/appStore.ts — bootstrap / lifecycle / connections / settings. Folds in `connections`
+// + the connection-CRUD thunks from the old Settings sub-model (§B); `connections` (configured list) is distinct from
 // `connectors` (the derived availability matrix). `reset` is redefined for the post-EP world.
 //
 // Preload guard: the bootstrap actions (initialize/startApplication) await waitForPreload() before the
@@ -9,7 +8,6 @@
 import { Intent } from "@blueprintjs/core";
 import { isObject } from "lodash-es";
 import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
 
 import { OnlineApi } from "@/container-client/Api.clients";
 import { Application } from "@/container-client/Application";
@@ -31,10 +29,12 @@ import {
 } from "@/env/Types";
 import { deepMerge } from "@/utils";
 import { t } from "@/web-app/App.i18n";
+import { AppBootstrapPhase } from "@/web-app/App.types";
 import { queryClient } from "@/web-app/domain/queryClient";
-import { AppBootstrapPhase } from "@/web-app/domain/types";
 import { waitForPreload } from "@/web-app/Native";
 import { Notification } from "@/web-app/Notification";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
 
 export const DEFAULT_SYSTEM_CONNECTION_ID = "system-default.podman";
@@ -108,17 +108,13 @@ interface AppActions {
 type AppStore = AppState & AppActions;
 
 export const useAppStore = create<AppStore>()(
-  immer((set, get) => {
+  (set, get) => {
     const runPending = async <T>(fn: () => Promise<T>): Promise<T> => {
-      set((state) => {
-        state.pending = true;
-      });
+      set({ pending: true });
       try {
         return await fn();
       } finally {
-        set((state) => {
-          state.pending = false;
-        });
+        set({ pending: false });
       }
     };
 
@@ -140,69 +136,52 @@ export const useAppStore = create<AppStore>()(
 
       // ── sync ──
       setPhase: (phase) =>
-        set((state) => {
-          if (phase === AppBootstrapPhase.CONNECTING) {
-            state.provisioned = false;
-            state.running = false;
-          }
-          state.phase = phase;
-        }),
-      setPending: (flag) =>
-        set((state) => {
-          state.pending = flag;
-        }),
-      setNextConnection: (conn) =>
-        set((state) => {
-          state.nextConnection = conn;
-        }),
+        set((state) => ({
+          phase,
+          provisioned: phase === AppBootstrapPhase.CONNECTING ? false : state.provisioned,
+          running: phase === AppBootstrapPhase.CONNECTING ? false : state.running,
+        })),
+      setPending: (flag) => set({ pending: flag }),
+      setNextConnection: (conn) => set({ nextConnection: conn }),
       insertBootstrapPhase: (phase) =>
-        set((state) => {
-          state.systemNotifications.push(phase);
-        }),
-      resetBootstrapPhases: () =>
-        set((state) => {
-          state.systemNotifications = [];
-        }),
-      syncGlobalUserSettings: (values) =>
-        set((state) => {
-          state.userSettings = values;
-        }),
+        set((state) => ({
+          systemNotifications: [...state.systemNotifications, phase],
+        })),
+      resetBootstrapPhases: () => set({ systemNotifications: [] }),
+      syncGlobalUserSettings: (values) => set({ userSettings: values }),
       syncEngineUserSettings: (values) =>
-        set((state) => {
-          if (state.currentConnector) {
-            state.currentConnector.settings = deepMerge(state.currentConnector.settings, values.settings);
-          }
-          const index = state.connectors.findIndex((it) => it.id === values.id);
-          if (index !== -1) {
-            state.connectors[index].settings = deepMerge(state.connectors[index].settings, values.settings);
-          }
-        }),
+        set((state) => ({
+          currentConnector: state.currentConnector
+            ? deepMerge<Connector>(state.currentConnector, {
+                settings: deepMerge(state.currentConnector.settings, values.settings),
+              })
+            : state.currentConnector,
+          connectors: state.connectors.map((connector) =>
+            connector.id === values.id
+              ? deepMerge<Connector>(connector, { settings: deepMerge(connector.settings, values.settings) })
+              : connector,
+          ),
+        })),
       domainUpdate: (opts) =>
         set((state) => {
+          const next: Partial<AppState> = {};
           Object.keys(opts).forEach((key) => {
-            (state as any)[key] = isObject((opts as any)[key])
-              ? deepMerge({}, (state as any)[key] || {}, (opts as any)[key])
-              : (opts as any)[key];
+            const value = (opts as any)[key];
+            (next as any)[key] = isObject(value) ? deepMerge({}, (state as any)[key] || {}, value) : value;
           });
+          return next;
         }),
       connectorUpdate: (connector) =>
-        set((state) => {
-          const index = state.connectors.findIndex((it) => it.id === connector.id);
-          if (index !== -1) {
-            state.connectors[index] = deepMerge(state.connectors[index], connector);
-          }
-        }),
+        set((state) => ({
+          connectors: state.connectors.map((it) => (it.id === connector.id ? deepMerge(it, connector) : it)),
+        })),
       connectorUpdateSettingsById: ({ id, settings }) =>
-        set((state) => {
-          const index = state.connectors.findIndex((it) => it.id === id);
-          if (index !== -1) {
-            state.connectors[index] = deepMerge<Connector>(state.connectors[index], { settings });
-          }
-        }),
-      setConnections: (items) =>
-        set((state) => {
-          state.connections = items;
-        }),
+        set((state) => ({
+          connectors: state.connectors.map((connector) =>
+            connector.id === id ? deepMerge<Connector>(connector, { settings }) : connector,
+          ),
+        })),
+      setConnections: (items) => set({ connections: items }),
 
       // ── async: bootstrap / settings ──
       initialize: async () => {
@@ -214,8 +193,10 @@ export const useAppStore = create<AppStore>()(
       },
       reset: async () => {
         // Post-migration there are no screen sub-models to wipe (§B): drop the server cache and UI state.
+        await resourceEvents.stopAll();
         get().resetBootstrapPhases();
         queryClient.clear();
+        useResourceStore.getState().resetAll();
         useUIStore.getState().reset();
       },
       startApplication: async (options) => {
@@ -249,6 +230,7 @@ export const useAppStore = create<AppStore>()(
               const userConnections = await instance.getConnections();
               const systemConnections = await instance.getSystemConnections();
               const connections = [...systemConnections, ...userConnections];
+              get().setConnections(connections);
               const defaultConnector = connections.find((it) => it.id === userSettings?.connector?.default);
               if (defaultConnector) {
                 connection = defaultConnector;
@@ -290,6 +272,7 @@ export const useAppStore = create<AppStore>()(
                 }
               }
               if (currentConnector.availability.api) {
+                await resourceEvents.start(currentConnector.id);
                 Notification.show({
                   message: t("You are now connected to {{name}}", currentConnector),
                   intent: Intent.SUCCESS,
@@ -452,7 +435,7 @@ export const useAppStore = create<AppStore>()(
           return info;
         }),
     };
-  }),
+  },
 );
 
 // Bootstrap-phase listeners (ported from createModel) — append phases to the startup screen while STARTING.

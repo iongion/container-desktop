@@ -6,6 +6,7 @@ import { Application } from "@/container-client/Application";
 import { type FetchImageOptions, ImagesAdapter, type PushImageOptions } from "@/container-client/adapters/images";
 import type { ContainerImage } from "@/env/Types";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export type ImageSubKey = "history" | "security";
 
@@ -62,18 +63,22 @@ export const useRemoveImage = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => new ImagesAdapter().remove(id),
-    onSuccess: (_result, id) => {
+    onSuccess: async (_result, id) => {
+      await resourceEvents.refresh(connId, "images");
       qc.removeQueries({ queryKey: imageKeys.detail(connId, id) });
-      qc.invalidateQueries({ queryKey: imageKeys.lists() });
+      qc.invalidateQueries({ queryKey: imageKeys.list(connId) });
     },
   });
 };
 
-export const usePullImage = () => {
+export const usePullImage = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => new ImagesAdapter().pull(name),
-    onSuccess: () => qc.invalidateQueries({ queryKey: imageKeys.lists() }),
+    onSuccess: async () => {
+      await resourceEvents.refresh(connId, "images");
+      qc.invalidateQueries({ queryKey: imageKeys.list(connId) });
+    },
   });
 };
 

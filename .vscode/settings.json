@@ -309,5 +309,6 @@
       "source.fixAll": "always",
       "source.organizeImports": "always"
     }
-  }
+  },
+  "makefile.configureOnOpen": false
 }

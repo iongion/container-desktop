@@ -1,5 +1,5 @@
 // adapters/containers.ts — container REST operations over the active HostClient driver.
-// Endpoints/params lifted byte-for-byte from Api.clients.ts ContainerClient (422-613, 785).
+// Endpoints/params lifted byte-for-byte from the legacy API client (422-613, 785).
 
 import { Application } from "@/container-client/Application";
 import type { Container, ContainerImageMount, ContainerImagePortMapping, ContainerStats } from "@/env/Types";

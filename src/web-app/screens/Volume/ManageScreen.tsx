@@ -2,14 +2,17 @@ import { AnchorButton, HTMLTable, Intent, NonIdealState } from "@blueprintjs/cor
 import { IconNames } from "@blueprintjs/icons";
 import { mdiScrewdriver } from "@mdi/js";
 import dayjs from "dayjs";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Volume } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { usePoller } from "@/web-app/Hooks";
+import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { VolumeActionsMenu } from ".";
 import { getVolumeUrl } from "./Navigation";
@@ -19,13 +22,32 @@ export const ID = "volumes";
 
 export interface ScreenProps extends AppScreenProps {}
 
+const EMPTY_VOLUMES: Volume[] = [];
+
+const createVolumeSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (volume: Volume) => {
+    const haystacks = [volume.Name, volume.Scope || ""].map((value) => value.toLowerCase());
+    return haystacks.some((value) => value.includes(query));
+  };
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const { searchTerm, onSearchChange } = useAppScreenSearch();
-  const volumesFetch = useStoreActions((actions) => actions.volume.volumesFetch);
-  const volumes: Volume[] = useStoreState((state) => state.volume.volumesSearchByTerm(searchTerm));
-
-  usePoller({ poller: volumesFetch });
+  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const volumeSnapshot = useResourceStore((state) =>
+    connectionId ? state.byConnection[connectionId]?.volumes.items || EMPTY_VOLUMES : EMPTY_VOLUMES,
+  );
+  const volumes = useMemo(() => {
+    const items = searchTerm ? volumeSnapshot.filter(createVolumeSearchFilter(searchTerm)) : volumeSnapshot;
+    return [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
+  }, [volumeSnapshot, searchTerm]);
+  const onReload = useCallback(() => {
+    if (connectionId) {
+      resourceEvents.refresh(connectionId, "volumes");
+    }
+  }, [connectionId]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -33,7 +55,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.DATABASE}
-        rightContent={<VolumeActionsMenu onReload={volumesFetch} />}
+        rightContent={<VolumeActionsMenu onReload={onReload} />}
       />
       <div className="AppScreenContent">
         {volumes.length === 0 ? (

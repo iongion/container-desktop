@@ -1,6 +1,6 @@
 // adapters/registries.ts — registries are config-backed via Application (NOT REST), except `searchRegistry`
 // which routes through Application's raw `/images/search` driver. Lifted byte-for-byte from Api.clients.ts
-// ContainerClient (1028-1066). The dead `getRegistry` (1032) `{}` stub is dropped (and its caller removed).
+// the legacy API client (1028-1066). The dead `getRegistry` (1032) `{}` stub is dropped.
 // No HostClient driver is involved, so this is a plain class (not a ResourceAdapter).
 
 import { Application } from "@/container-client/Application";
@@ -26,15 +26,14 @@ export class RegistriesAdapter {
     if (pos !== -1) {
       items.custom.splice(pos, 1);
     }
-    instance.setRegistriesMap(items);
-    return items;
+    return await instance.setRegistriesMap(items);
   }
 
   async createRegistry(it: Registry): Promise<Registry> {
     const instance = Application.getInstance();
     const items = await instance.getRegistriesMap();
     items.custom.push(it);
-    instance.setRegistriesMap(items);
+    await instance.setRegistriesMap(items);
     return it;
   }
 

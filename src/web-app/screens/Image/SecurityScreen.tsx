@@ -1,82 +1,33 @@
 import { AnchorButton, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import { Application } from "@/container-client/Application";
-import type { ContainerImage, SecurityReport, SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
+import type { SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useStoreActions } from "@/web-app/domain/types";
 import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./SecurityScreen.css";
+import { useImage, useImageSecurity } from "./queries";
 
 export const ID = "image.security";
 export const Title = "Image Security";
 
 export interface ScreenProps extends AppScreenProps {}
 
-interface AppScreenState {
-  pending: boolean;
-  scanning: boolean;
-  image?: ContainerImage;
-  report?: SecurityReport;
-}
-
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-
-  const [state, setState] = useState<AppScreenState>({
-    pending: true,
-    scanning: false,
-    image: undefined,
-  });
-
-  const { pending, scanning, image, report } = state;
-
   const { id } = useRouteParams<{ id: string }>();
-  const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const image = await imageFetch({
-          Id: decodeURIComponent(id as any),
-        });
-        setState((prev) => ({
-          ...prev,
-          pending: false,
-          scanning: true,
-          image,
-          report: undefined,
-        }));
-        try {
-          // check security
-          const instance = Application.getInstance();
-          const report = await instance.checkSecurity({
-            scanner: "trivy",
-            subject: "image",
-            target: image.FullName,
-          });
-          console.debug(">> report", report);
-          setState((prev) => ({
-            ...prev,
-            pending: false,
-            image,
-            scanning: false,
-            report,
-          })); // go to scanning
-        } catch (error: any) {
-          console.error("Unable to fetch at this moment", error);
-          setState((prev) => ({ ...prev, scanning: false }));
-        }
-      } catch (error: any) {
-        console.error("Unable to fetch at this moment", error);
-        setState((prev) => ({ ...prev, pending: false, scanning: false }));
-      }
-    })();
-  }, [imageFetch, id]);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const decodedId = decodeURIComponent(id || "");
+  const imageQuery = useImage(connectionId, decodedId);
+  const image = imageQuery.data;
+  const securityQuery = useImageSecurity(connectionId, decodedId, image?.FullName);
+  const report = securityQuery.data;
+  const pending = imageQuery.isLoading || imageQuery.isFetching;
+  const scanning = securityQuery.isLoading || securityQuery.isFetching;
 
   if (!image) {
     return <ScreenLoader screen={ID} pending={pending} />;

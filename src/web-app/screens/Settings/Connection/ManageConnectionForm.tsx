@@ -32,8 +32,8 @@ import {
   type Program,
 } from "@/env/Types";
 import { deepMerge } from "@/utils";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 import { EngineHostSelect } from "./EngineHostSelect";
 import { EngineSelect } from "./EngineSelect";
 import { OSTypeSelect } from "./OSTypeSelect";
@@ -60,11 +60,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   const [isCustomProgramPathEditable, setCustomProgramPathEditable] = useState(false);
   const [isCustomApiConnectionUriEditable, setCustomApiConnectionUriEditable] = useState(false);
   const [isCustomApiConnectionRelayEditable, setCustomApiConnectionRelayEditable] = useState(false);
-  const isNativeApplication = useStoreState((state) => state.native);
-  const detectedOsType = useStoreState((state) => state.osType);
-  const connectors = useStoreState((state) => state.connectors);
-  const createConnection = useStoreActions((actions) => actions.settings.createConnection);
-  const updateConnection = useStoreActions((actions) => actions.settings.updateConnection);
+  const isNativeApplication = useAppStore((state) => state.native);
+  const detectedOsType = useAppStore((state) => state.osType);
+  const connectors = useAppStore((state) => state.connectors);
+  const createConnection = useAppStore((state) => state.createConnection);
+  const updateConnection = useAppStore((state) => state.updateConnection);
   const { control, handleSubmit, reset, setValue, getValues } = useForm<Connector>({ defaultValues: connection });
   const [osType, setHostOSType] = useState(detectedOsType);
   const engine = useWatch({ control, name: "engine" });

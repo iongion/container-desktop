@@ -40,7 +40,7 @@ export const queryClient = new QueryClient({
 
 // Per-query override for LIVE resources (containers/pods/images/volumes/networks/stats/processes/logs/
 // events) — they reflect real-time state, so refetch on mount/focus and poll. The interval is gated by
-// the existing env polling flag (off in development), matching today's usePoller behaviour. Spread into
+// the existing env polling flag (off in development), matching the previous screen poller behaviour. Spread into
 // the relevant useQuery options: useQuery({ queryKey, queryFn, ...liveQueryOptions() }).
 export const liveQueryOptions = (refetchIntervalMs: number = POLL_RATE_DEFAULT) => {
   // Annotated so the disabled case stays the `false` literal (not widened to `boolean`, which

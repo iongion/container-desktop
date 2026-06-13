@@ -1,14 +1,17 @@
 import { AnchorButton, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Connector, Secret } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { usePoller } from "@/web-app/Hooks";
+import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { SecretActionsMenu } from ".";
@@ -19,14 +22,34 @@ export const ID = "secrets";
 
 export interface ScreenProps extends AppScreenProps {}
 
+const EMPTY_SECRETS: Secret[] = [];
+
+const createSecretSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (secret: Secret) => {
+    const haystacks = [secret.ID, secret.Spec?.Name || "", secret.Spec?.Driver?.Name || ""].map((value) =>
+      value.toLowerCase(),
+    );
+    return haystacks.some((value) => value.includes(query));
+  };
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const secretsFetch = useStoreActions((actions) => actions.secret.secretsFetch);
-  const secrets: Secret[] = useStoreState((state) => state.secret.secretsSearchByTerm(searchTerm));
-
-  // Change hydration
-  usePoller({ poller: secretsFetch });
+  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const secretSnapshot = useResourceStore((state) =>
+    connectionId ? state.byConnection[connectionId]?.secrets.items || EMPTY_SECRETS : EMPTY_SECRETS,
+  );
+  const secrets = useMemo(() => {
+    const items = searchTerm ? secretSnapshot.filter(createSecretSearchFilter(searchTerm)) : secretSnapshot;
+    return [...items].sort((a, b) => sortAlphaNum(a.Spec?.Name || "", b.Spec?.Name || ""));
+  }, [secretSnapshot, searchTerm]);
+  const onReload = useCallback(() => {
+    if (connectionId) {
+      resourceEvents.refresh(connectionId, "secrets");
+    }
+  }, [connectionId]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -34,7 +57,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.KEY}
-        rightContent={<SecretActionsMenu onReload={secretsFetch} />}
+        rightContent={<SecretActionsMenu onReload={onReload} />}
       />
       <div className="AppScreenContent">
         {secrets.length === 0 ? (
@@ -105,5 +128,5 @@ Screen.Metadata = {
   LeftIcon: IconNames.KEY,
 };
 Screen.isAvailable = (currentConnector?: Connector) => {
-  return !(currentConnector?.host || "").startsWith("docker");
+  return currentConnector?.capabilities?.resources.secrets === true;
 };

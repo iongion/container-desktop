@@ -3,14 +3,17 @@ import { IconNames } from "@blueprintjs/icons";
 import { mdiDns, mdiEthernet, mdiInfinity, mdiNetwork, mdiScrewdriver } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import dayjs from "dayjs";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Network } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
-import { useStoreActions, useStoreState } from "@/web-app/domain/types";
-import { usePoller } from "@/web-app/Hooks";
+import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { resourceEvents } from "@/web-app/stores/resourceEvents";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ActionsMenu } from ".";
@@ -21,14 +24,32 @@ export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "networks";
 
+const EMPTY_NETWORKS: Network[] = [];
+
+const createNetworkSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (network: Network) => {
+    const haystacks = [network.name || "", network.id || ""].map((value) => value.toLowerCase());
+    return haystacks.some((value) => value.includes(query));
+  };
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const networksFetch = useStoreActions((actions) => actions.network.networksFetch);
-  const networks: Network[] = useStoreState((state) => state.network.networksSearchByTerm(searchTerm));
-
-  // Change hydration
-  usePoller({ poller: networksFetch });
+  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const networkSnapshot = useResourceStore((state) =>
+    connectionId ? state.byConnection[connectionId]?.networks.items || EMPTY_NETWORKS : EMPTY_NETWORKS,
+  );
+  const networks = useMemo(() => {
+    const items = searchTerm ? networkSnapshot.filter(createNetworkSearchFilter(searchTerm)) : networkSnapshot;
+    return [...items].sort((a, b) => sortAlphaNum(a.name, b.name));
+  }, [networkSnapshot, searchTerm]);
+  const onReload = useCallback(() => {
+    if (connectionId) {
+      resourceEvents.refresh(connectionId, "networks");
+    }
+  }, [connectionId]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -36,7 +57,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.HEAT_GRID}
-        rightContent={<ActionsMenu onReload={networksFetch} />}
+        rightContent={<ActionsMenu onReload={onReload} />}
       />
       <div className="AppScreenContent">
         {networks.length === 0 ? (

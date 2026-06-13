@@ -1,5 +1,5 @@
 // adapters/secrets.ts — secret REST operations over the active HostClient driver.
-// Endpoints/params lifted byte-for-byte from Api.clients.ts ContainerClient (699-768). Same paths for
+// Endpoints/params lifted byte-for-byte from the legacy API client (699-768). Same paths for
 // both engines (`/secrets/json`), only the baseURL differs. Dropped the dead `inspectSecret` (723).
 
 import type { Secret } from "@/env/Types";

@@ -15,7 +15,8 @@ import isEqual from "react-fast-compare";
 import { useTranslation } from "react-i18next";
 
 // project
-import { useStoreActions } from "@/web-app/domain/types";
+import { useAppStore } from "@/web-app/stores/appStore";
+import { useCreateVolume } from "./queries";
 
 // Volume drawer
 export interface CreateDrawerProps {
@@ -28,19 +29,32 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
     const [type, setType] = useState("");
     const [driver, setDriver] = useState("");
     const [pending, setPending] = useState(false);
-    const volumeCreate = useStoreActions((actions) => actions.volume.volumeCreate);
+    const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+    const volumeCreate = useCreateVolume(connectionId);
     const onCreateClick = useCallback(async () => {
       setPending(true);
       try {
-        const creator = {};
-        await volumeCreate(creator as any);
+        const options: Record<string, string> = {};
+        if (type) {
+          options.type = type;
+        }
+        if (driver) {
+          options.device = driver;
+        }
+        await volumeCreate.mutateAsync({
+          Driver: "",
+          Label: {},
+          Labels: {},
+          Name: name,
+          Options: options,
+        });
         setPending(false);
         onClose();
       } catch (error: any) {
         setPending(false);
         console.error("Unable to create volume", error);
       }
-    }, [volumeCreate, onClose]);
+    }, [driver, name, onClose, type, volumeCreate]);
     const onNameChange = useCallback((e) => {
       setName(e.currentTarget.value);
     }, []);

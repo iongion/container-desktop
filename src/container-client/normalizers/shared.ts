@@ -1,8 +1,8 @@
 // normalizers/shared.ts — engine-agnostic canonical transforms shared by both engine normalizers.
 //
-// Lifted byte-for-byte from Api.clients.ts coerce* (110-204). Of the resource shapes, only networks
-// genuinely differ between engines (Docker is PascalCase, libpod is already canonical) — every other
-// coerce* already handled both engines (e.g. State as object-vs-string is list-vs-inspect, not
+// Lifted byte-for-byte from the legacy Api.clients.ts transforms (110-204). Of the resource shapes, only
+// networks genuinely differ between engines (Docker is PascalCase, libpod is already canonical) — every other
+// transform already handled both engines (e.g. State as object-vs-string is list-vs-inspect, not
 // Podman-vs-Docker), so it stays shared here. The per-engine modules (podman.ts, docker.ts) compose
 // these and override only `normalizeNetwork`.
 
@@ -21,7 +21,7 @@ import type {
 /** New home for the container group separator (Api.clients.ts keeps its copy until the Phase 5 cutover). */
 export const CONTAINER_GROUP_SEPARATOR = "_";
 
-/** raw container (list = State string, inspect = State object) → canonical. Lifted from coerceContainer (110). */
+/** raw container (list = State string, inspect = State object) → canonical. */
 export const normalizeContainer = (container: Container): Container => {
   if (container.ImageName) {
     container.Image = container.ImageName;
@@ -58,7 +58,7 @@ export const normalizeContainer = (container: Container): Container => {
   return container;
 };
 
-/** raw image → canonical (Name/Tag/Registry/FullName from Names|NamesHistory|RepoTags). Lifted from coerceImage (146). */
+/** raw image → canonical (Name/Tag/Registry/FullName from Names|NamesHistory|RepoTags). */
 export const normalizeImage = (image: ContainerImage): ContainerImage => {
   let info = "";
   let tag = "";
@@ -85,7 +85,7 @@ export const normalizeImage = (image: ContainerImage): ContainerImage => {
   return image;
 };
 
-/** raw pod → canonical (init Processes/Containers). Lifted from coercePod (172). */
+/** raw pod → canonical (init Processes/Containers). */
 export const normalizePod = (pod: Pod): Pod => {
   pod.Processes = {
     Processes: [],
@@ -99,10 +99,10 @@ export const normalizePod = (pod: Pod): Pod => {
 /** Volume shape is identical across engines (the Docker `{ Volumes: [...] }` list-envelope is unwrapped in the adapter). */
 export const normalizeVolume = (volume: Volume): Volume => volume;
 
-/** Secret shape is identical across engines (no coercion in the monolith — getSecrets returned raw data). */
+/** Secret shape is identical across engines (the legacy client returned raw data). */
 export const normalizeSecret = (secret: Secret): Secret => secret;
 
-/** registry search result → canonical (seed Index from the searched registry). Lifted from coerceRegistrySearchResult (199). */
+/** registry search result → canonical (seed Index from the searched registry). */
 export const normalizeRegistrySearchResult = (
   it: RegistrySearchResult,
   opts: RegistrySearchOptions,

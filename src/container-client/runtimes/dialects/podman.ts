@@ -20,7 +20,7 @@ import {
   StartupStatus,
   type SystemInfo,
 } from "@/env/Types";
-import { coercePodmanMachines, getAvailablePodmanMachines } from "../../shared";
+import { getAvailablePodmanMachines, normalizePodmanMachines } from "../../shared";
 import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 
@@ -62,10 +62,19 @@ export const podmanDialect: EngineDialect = {
   ENGINE: ContainerEngine.PODMAN,
 
   capabilitiesBase: {
-    resources: { pods: true },
+    resources: { pods: true, secrets: true },
     events: true,
     sort: {},
-    extensions: { machines: true, kube: true, contexts: false, swarm: false, builders: false, compose: false },
+    extensions: {
+      machines: true,
+      kube: true,
+      contexts: false,
+      swarm: false,
+      builders: false,
+      compose: false,
+      registries: true,
+      controllerVersion: false,
+    },
   } satisfies CapabilityDescriptor,
 
   async readEngineSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
@@ -173,7 +182,7 @@ export const podmanDialect: EngineDialect = {
           const commandLauncher = settings.program?.path || settings.program?.name || "";
           const commandArgs = ["machine", "list", "--format", customFormat || "json"];
           const result = await host.runScopeCommand(commandLauncher, commandArgs, settings?.controller?.scope || "");
-          return coercePodmanMachines(result);
+          return normalizePodmanMachines(result);
         }
         host.logger.debug(host.id, "getMachines with program");
         const settings = customSettings || (await host.getSettings());

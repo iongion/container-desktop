@@ -20,11 +20,18 @@ const logLevel = "warn";
 // spin-loop that pegs CPU and can freeze the whole machine. Gate them behind an env var.
 const isHeadless = ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTOP_HEADLESS || ""}`.toLowerCase());
 const remoteDebuggingPort = process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT || "9222";
+const remoteDebuggingOrigin =
+  process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN || `http://localhost:${remoteDebuggingPort}`;
 
 function buildElectronArgs() {
   // Expose the renderer over the Chrome DevTools Protocol so tools such as the
   // Playwright MCP can attach to the running app in dev.
-  const args = [".", `--remote-debugging-port=${remoteDebuggingPort}`, "--no-sandbox"];
+  const args = [
+    ".",
+    `--remote-debugging-port=${remoteDebuggingPort}`,
+    `--remote-allow-origins=${remoteDebuggingOrigin}`,
+    "--no-sandbox",
+  ];
   if (isHeadless) {
     args.push("--disable-gpu", "--disable-gpu-sandbox", "--in-process-gpu", "--no-zygote", "--disable-features=VizDisplayCompositor", "--disable-dev-shm-usage", "--disable-web-security");
   }

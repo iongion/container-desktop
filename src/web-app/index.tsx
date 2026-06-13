@@ -10,7 +10,6 @@ import "./index.css";
 import { ContainerEngine, Environments } from "@/env/Types";
 import { App } from "./App";
 import { I18nContextProvider } from "./App.i18n";
-import { store } from "./App.store";
 import { queryClient } from "./domain/queryClient";
 import { CURRENT_ENVIRONMENT } from "./Environment";
 import "./themes/docker.css";
@@ -32,7 +31,7 @@ export async function renderApplication() {
           <Helmet>
             <body className="bp6-dark" data-engine={ContainerEngine.PODMAN} />
           </Helmet>
-          <App store={store} />
+          <App />
           {CURRENT_ENVIRONMENT === Environments.DEVELOPMENT && <ReactQueryDevtools initialIsOpen={false} />}
         </HelmetProvider>
       </I18nContextProvider>

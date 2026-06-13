@@ -1,16 +1,16 @@
 import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Secret } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
-import { useStoreActions } from "@/web-app/domain/types";
+import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams } from "@/web-app/Navigator";
+import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { SecretActionsMenu } from ".";
 import "./InspectScreen.css";
+import { useSecret } from "./queries";
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -18,21 +18,16 @@ export const ID = "secret.inspect";
 export const Title = "Secret Inspect";
 
 export const Screen: AppScreen<ScreenProps> = () => {
-  const [secret, setSecret] = useState<Secret>();
   const { t } = useTranslation();
   const { id } = useRouteParams<{ id: string }>();
-  const secretFetch = useStoreActions((actions) => actions.secret.secretFetch);
-
-  useEffect(() => {
-    (async () => {
-      const secret = await secretFetch({
-        Id: id as any,
-      });
-      setSecret(secret);
-    })();
-  }, [secretFetch, id]);
+  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const secretQuery = useSecret(connectionId, id);
+  const secret = secretQuery.data;
 
   if (!secret) {
+    if (secretQuery.isLoading || secretQuery.isFetching) {
+      return <ScreenLoader screen={ID} pending />;
+    }
     return (
       <div className="AppScreen" data-screen={ID}>
         <NonIdealState
