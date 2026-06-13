@@ -16,6 +16,12 @@ updates:
           - "minor"
           - "patch"
     ignore:
+      # Keep @types/node aligned with the runtime Node major (24 — see .nvmrc;
+      # Electron 42 also bundles Node 24). A major bump (25.x) would type against
+      # an API surface the runtime doesn't have. Patch/minor 24.x bumps still flow.
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
       # Build/dev-tooling-only transitive ReDoS advisories (minimatch via
       # glob/@electron/asar/electron-builder; picomatch via chokidar/anymatch).
       # They are NOT shipped in the app bundle and run on developer-controlled
