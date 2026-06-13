@@ -9,7 +9,6 @@
     "checkJs": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "downlevelIteration": true,
     "sourceMap": false,
 
     /* Bundler mode */
@@ -28,27 +27,26 @@
     "strictNullChecks": true,
     "noImplicitAny": false,
 
-    /* Paths */
-    "baseUrl": "src",
+    /* Paths (baseUrl removed in TS 6; paths resolve relative to this file) */
     "paths": {
-      "@/container-client": ["container-client"],
-      "@/container-client/*": ["container-client/*"],
-      "@/electron-shell": ["electron-shell"],
-      "@/electron-shell/*": ["electron-shell/*"],
-      "@/env": ["env"],
-      "@/env/*": ["env/*"],
-      "@/logger": ["logger"],
-      "@/logger/*": ["logger/*"],
-      "@/platform": ["platform"],
-      "@/platform/*": ["platform/*"],
-      "@/resources": ["resources"],
-      "@/resources/*": ["resources/*"],
-      "@/rpc": ["rpc"],
-      "@/rpc/*": ["rpc/*"],
-      "@/utils": ["utils"],
-      "@/utils/*": ["utils/*"],
-      "@/web-app": ["web-app"],
-      "@/web-app/*": ["web-app/*"]
+      "@/container-client": ["./src/container-client"],
+      "@/container-client/*": ["./src/container-client/*"],
+      "@/electron-shell": ["./src/electron-shell"],
+      "@/electron-shell/*": ["./src/electron-shell/*"],
+      "@/env": ["./src/env"],
+      "@/env/*": ["./src/env/*"],
+      "@/logger": ["./src/logger"],
+      "@/logger/*": ["./src/logger/*"],
+      "@/platform": ["./src/platform"],
+      "@/platform/*": ["./src/platform/*"],
+      "@/resources": ["./src/resources"],
+      "@/resources/*": ["./src/resources/*"],
+      "@/rpc": ["./src/rpc"],
+      "@/rpc/*": ["./src/rpc/*"],
+      "@/utils": ["./src/utils"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/web-app": ["./src/web-app"],
+      "@/web-app/*": ["./src/web-app/*"]
     }
   },
   "include": ["src"]
