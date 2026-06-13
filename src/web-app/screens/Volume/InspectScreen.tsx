@@ -1,12 +1,11 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
-import { useParams } from "wouter";
-
 import type { Volume } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { VolumeActionsMenu } from ".";
@@ -18,7 +17,7 @@ export const Title = "Volume Inspect";
 export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const [volume, setVolume] = useState<Volume>();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const [pending, setPending] = useState(true);
   const volumeFetch = useStoreActions((actions) => actions.volume.volumeFetch);
   useEffect(() => {
@@ -58,7 +57,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: "/screens/volumes/:id/inspect",
+  Path: "/screens/volumes/$id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.DATABASE,

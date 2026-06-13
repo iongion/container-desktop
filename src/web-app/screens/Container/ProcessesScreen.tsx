@@ -2,12 +2,11 @@ import { Button, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/cor
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
 import type { Container } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
@@ -22,7 +21,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const processesMap: any = container?.Processes || {
     Processes: [],
     Titles: [],
@@ -131,7 +130,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Processes";
 Screen.Route = {
-  Path: "/screens/container/:id/processes",
+  Path: "/screens/container/$id/processes",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.PANEL_TABLE,

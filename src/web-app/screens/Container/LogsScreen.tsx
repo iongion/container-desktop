@@ -1,11 +1,10 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "wouter";
-
 import type { Container } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
@@ -17,7 +16,7 @@ export const ID = "container.logs";
 export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [container, setContainer] = useState<Container>();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
   const onScreenReload = useCallback(async () => {
     try {
@@ -55,7 +54,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Logs";
 Screen.Route = {
-  Path: "/screens/container/:id/logs",
+  Path: "/screens/container/$id/logs",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,

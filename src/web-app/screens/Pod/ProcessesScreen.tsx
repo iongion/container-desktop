@@ -2,12 +2,11 @@ import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
 import type { Pod, PodProcessReport } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
 import { usePoller } from "@/web-app/Hooks";
+import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
@@ -22,7 +21,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(true);
   const [pod, setPod] = useState<Pod>();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const screenRef = useRef<HTMLDivElement>(null);
   const podFetch = useStoreActions((actions) => actions.pod.podFetch);
   const podFetchProcesses = useStoreActions((actions) => actions.pod.podFetchProcesses);
@@ -152,7 +151,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Pod processes";
 Screen.Route = {
-  Path: "/screens/pod/:id/processes",
+  Path: "/screens/pod/$id/processes",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.LIST_COLUMNS,

@@ -1,11 +1,10 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
-import { useParams } from "wouter";
-
 import type { Container } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
@@ -18,7 +17,7 @@ export const ID = "container.terminal";
 export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [container, setContainer] = useState<Container>();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
   useEffect(() => {
     (async () => {
@@ -52,7 +51,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Terminal";
 Screen.Route = {
-  Path: "/screens/container/:id/terminal",
+  Path: "/screens/container/$id/terminal",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CALCULATOR,

@@ -1,11 +1,10 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
-import { useParams } from "wouter";
-
 import type { Network } from "@/env/Types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
@@ -19,7 +18,7 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [network, setNetwork] = useState<Network>();
-  const { name } = useParams<{ name: string }>();
+  const { name } = useRouteParams<{ name: string }>();
   const networkFetch = useStoreActions((actions) => actions.network.networkFetch);
   useEffect(() => {
     (async () => {
@@ -50,7 +49,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: "/screens/network/:name/inspect",
+  Path: "/screens/network/$name/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.GRAPH,

@@ -2,12 +2,11 @@ import { Button, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
 import type { Container } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
 import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
@@ -31,7 +30,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const screenRef = useRef<HTMLDivElement>(null);
   const containerFetch = useStoreActions((actions) => actions.container.containerFetch);
   const onScreenReload = useCallback(async () => {
@@ -171,7 +170,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Inspect";
 Screen.Route = {
-  Path: "/screens/container/:id/inspect",
+  Path: "/screens/container/$id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,

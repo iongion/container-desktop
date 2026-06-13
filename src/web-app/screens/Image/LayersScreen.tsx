@@ -3,11 +3,10 @@ import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
 import type { ContainerImage } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
@@ -22,7 +21,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [image, setImage] = useState<ContainerImage>();
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const screenRef = useRef<HTMLDivElement>(null);
   const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
   const onCopyToClipboardClick = useCallback(
@@ -111,7 +110,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Image Layers";
 Screen.Route = {
-  Path: "/screens/image/:id/layers",
+  Path: "/screens/image/$id/layers",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.BOX,

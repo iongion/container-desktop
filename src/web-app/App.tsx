@@ -1,13 +1,20 @@
 import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { match } from "path-to-regexp";
+import {
+  createHashHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+  useRouterState,
+} from "@tanstack/react-router";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
-import { Route, Router, Switch, useLocation } from "wouter";
 
-import { ContainerEngine, type OperatingSystem, type Program } from "@/env/Types";
+import { ContainerEngine } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
@@ -51,27 +58,6 @@ import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Tro
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 
-function matchPath(pattern: string, path: string) {
-  const matcher = match(pattern, { decode: decodeURIComponent });
-  return matcher(path);
-}
-
-import type { BaseLocationHook } from "wouter";
-
-export function useHashLocation(): ReturnType<BaseLocationHook> {
-  const getLocation = useCallback(() => window.location.hash.replace(/^#/, "") || "/", []);
-  const [location, setLocation] = useState(getLocation);
-  useEffect(() => {
-    const onHashChange = () => setLocation(getLocation);
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, [getLocation]);
-  const navigate = useCallback((to: string) => {
-    window.location.hash = to;
-  }, []);
-  return [location, navigate];
-}
-
 const Screens = [
   DashboardScreen,
   ContainersScreen,
@@ -105,97 +91,96 @@ const Screens = [
   TroubleshootScreen,
 ];
 
-export function useCurrentScreen() {
-  const [location, _] = useLocation();
-  const currentScreen = Screens.find((screen) => matchPath(screen.Route.Path, location));
-  return currentScreen;
-}
+// ── TanStack Router (hash history, explicit/manual route tree — no plugin/codegen, no data-loaders) ──
+// Each Screen contributes one route under the shared chrome layout (rootRoute). Screens load their own
+// data via their §3 query hooks on mount — routes are pure navigation.
 
-interface AppContentProps {
-  phase: AppBootstrapPhase;
-}
-export const AppContent: React.FC<AppContentProps> = ({ phase }) => {
-  const { t } = useTranslation();
-  const [location, _] = useLocation();
-  const ready = phase === AppBootstrapPhase.READY;
-  const currentScreen = useCurrentScreen();
-  const content = useMemo(() => {
-    let content: React.ReactNode;
-    if (ready) {
-      content = (
-        <Switch>
-          {Screens.map((Screen) => {
-            return (
-              <Route path={Screen.Route.Path} key={Screen.ID}>
-                <div className="AppScreenViewport">
-                  <Screen navigator={navigator} />
-                  <AppFooter />
-                </div>
-              </Route>
-            );
-          })}
-        </Switch>
-      );
-    } else if (phase === AppBootstrapPhase.FAILED) {
-      content = (
-        <div className="AppScreenViewport">
-          <UserSettingsScreen navigator={navigator} />
-          <AppFooter />
-        </div>
-      );
-    } else {
-      content = <AppLoading />;
-    }
-    return content;
-  }, [ready, phase]);
+const rootRoute = createRootRoute({
+  component: AppLayout,
+  notFoundComponent: NotFoundScreen,
+});
 
-  // console.debug({ phase, ready });
+const screenRoutes = Screens.map((Screen) =>
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: Screen.Route.Path,
+    component: () => (
+      <div className="AppScreenViewport">
+        <Screen navigator={window.navigator} />
+        <AppFooter />
+      </div>
+    ),
+  }),
+);
 
-  if (!currentScreen) {
-    return (
-      <NonIdealState
-        icon={IconNames.WARNING_SIGN}
-        title={t("There is no such screen {{pathname}}", location)}
-        description={
-          <>
-            <p>{t("The screen was not found")}</p>
-            <a href={pathTo("/")}>{t("Go to dashboard")}</a>
-          </>
-        }
-      />
-    );
+rootRoute.addChildren(screenRoutes);
+
+const router = createRouter({
+  routeTree: rootRoute,
+  history: createHashHistory(),
+  defaultPreload: "intent",
+});
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
   }
-
-  return (
-    <div className="AppContent">
-      {phase === "starting" ? null : <AppSidebar disabled={!ready} screens={Screens} currentScreen={currentScreen} />}
-      <div className="AppContentDocument">{content}</div>
-    </div>
-  );
-};
-
-interface AppMainScreenContentProps {
-  osType: OperatingSystem;
-  phase: AppBootstrapPhase;
-  program?: Program;
-  running?: boolean;
-  provisioned?: boolean;
 }
-export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({
-  osType,
-  program,
-  phase,
-  provisioned,
-  running,
-}) => {
-  const startApplication = useStoreActions((actions) => actions.startApplication);
+
+// Resolve the active Screen by matching the matched route's path pattern back to its Screen declaration.
+function useCurrentScreen() {
+  const fullPath = useRouterState({ select: (state) => state.matches.at(-1)?.fullPath });
+  return Screens.find((screen) => screen.Route.Path === fullPath);
+}
+
+function NotFoundScreen() {
   const { t } = useTranslation();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  return (
+    <NonIdealState
+      icon={IconNames.WARNING_SIGN}
+      title={t("There is no such screen {{pathname}}", { pathname })}
+      description={
+        <>
+          <p>{t("The screen was not found")}</p>
+          <a href={pathTo("/")}>{t("Go to dashboard")}</a>
+        </>
+      }
+    />
+  );
+}
+
+// Root layout route: the persistent chrome (header + sidebar + footer) around the routed <Outlet />.
+// The bootstrap phase gates what the document area shows — the routed screen only when READY.
+function AppLayout() {
+  const { t } = useTranslation();
+  const phase = useStoreState((state) => state.phase);
+  const running = useStoreState((state) => state.running);
+  const provisioned = useStoreState((state) => state.provisioned);
+  const osType = useStoreState((state) => state.osType);
+  const currentConnector = useStoreState((state) => state.currentConnector);
+  const startApplication = useStoreActions((actions) => actions.startApplication);
+  const program = currentConnector?.settings?.program;
+  const currentScreen = useCurrentScreen();
+  const ready = phase === AppBootstrapPhase.READY;
 
   const onReconnect = useCallback(() => {
     startApplication();
   }, [startApplication]);
 
-  const currentScreen = useCurrentScreen();
+  let content: React.ReactNode;
+  if (ready) {
+    content = <Outlet />;
+  } else if (phase === AppBootstrapPhase.FAILED) {
+    content = (
+      <div className="AppScreenViewport">
+        <UserSettingsScreen navigator={window.navigator} />
+        <AppFooter />
+      </div>
+    );
+  } else {
+    content = <AppLoading />;
+  }
 
   return (
     <>
@@ -213,11 +198,16 @@ export const AppMainScreenContent: React.FC<AppMainScreenContentProps> = ({
         title={t("An uncaught error showed up")}
         suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
       >
-        <AppContent phase={phase} />
+        <div className="AppContent">
+          {phase === AppBootstrapPhase.STARTING || !currentScreen ? null : (
+            <AppSidebar disabled={!ready} screens={Screens} currentScreen={currentScreen} />
+          )}
+          <div className="AppContentDocument">{content}</div>
+        </div>
       </AppErrorBoundary>
     </>
   );
-};
+}
 
 export function AppMainScreen() {
   const startRef = useRef(false);
@@ -230,7 +220,6 @@ export function AppMainScreen() {
   const nextConnection = useStoreState((state) => state.nextConnection);
   const theme = useStoreState((state) => state.userSettings.theme || DEFAULT_THEME);
   const startApplication = useStoreActions((actions) => actions.startApplication);
-  const program = currentConnector?.settings?.program;
 
   const engine = nextConnection?.engine || currentConnector?.engine || ContainerEngine.PODMAN;
   const host = nextConnection?.host || currentConnector?.host || undefined;
@@ -262,15 +251,7 @@ export function AppMainScreen() {
         />
         <body className={theme === "dark" ? `bp6-${theme}` : theme} data-engine={engine} />
       </Helmet>
-      <Router hook={useHashLocation}>
-        <AppMainScreenContent
-          osType={osType}
-          phase={phase}
-          provisioned={provisioned}
-          running={running}
-          program={program}
-        />
-      </Router>
+      <RouterProvider router={router} />
     </div>
   );
 }

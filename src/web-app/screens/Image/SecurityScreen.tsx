@@ -3,11 +3,11 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
 import { Application } from "@/container-client/Application";
 import type { ContainerImage, SecurityReport, SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./SecurityScreen.css";
@@ -35,7 +35,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const { pending, scanning, image, report } = state;
 
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const imageFetch = useStoreActions((actions) => actions.image.imageFetch);
 
   useEffect(() => {
@@ -268,7 +268,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: "/screens/image/:id/security",
+  Path: "/screens/image/$id/security",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CONFIRM,

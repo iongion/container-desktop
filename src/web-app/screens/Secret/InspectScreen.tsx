@@ -2,12 +2,11 @@ import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
 import type { Secret } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { SecretActionsMenu } from ".";
@@ -21,7 +20,7 @@ export const Title = "Secret Inspect";
 export const Screen: AppScreen<ScreenProps> = () => {
   const [secret, setSecret] = useState<Secret>();
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const secretFetch = useStoreActions((actions) => actions.secret.secretFetch);
 
   useEffect(() => {
@@ -63,7 +62,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: "/screens/secrets/:id/inspect",
+  Path: "/screens/secrets/$id/inspect",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.KEY,

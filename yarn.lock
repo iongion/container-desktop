@@ -1123,6 +1123,11 @@
   dependencies:
     defer-to-connect "^2.0.0"
 
+"@tanstack/history@1.162.0":
+  version "1.162.0"
+  resolved "https://registry.yarnpkg.com/@tanstack/history/-/history-1.162.0.tgz#5e12a52edd82a5d6d3b081255ec899ccca335443"
+  integrity sha512-79pf/RkhteYZTRgcR4F9kbk84P2N8rugQJswxfIqovlbRiT3yI7eBE+5QorIrZaOKktsgzRlXh1l/du/xpl4iA==
+
 "@tanstack/query-core@5.101.0":
   version "5.101.0"
   resolved "https://registry.yarnpkg.com/@tanstack/query-core/-/query-core-5.101.0.tgz#45391ce143c270b7e7a55bd1a6696918f20782d1"
@@ -1146,6 +1151,39 @@
   integrity sha512-rLlJXSpkqfizLWgkR5+eLeIk0MvTx/meEIR7LRjxic+qxiQP8zVjq7BqQkiCMNLQBlLfuOLqqr6KO5GtrDlmSg==
   dependencies:
     "@tanstack/query-core" "5.101.0"
+
+"@tanstack/react-router@1.170.15":
+  version "1.170.15"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-router/-/react-router-1.170.15.tgz#8f6ae4699bffab765dd8636249146dc95e19810d"
+  integrity sha512-GawYz7HEjj8rTUUDoT/SemDEVm63pZUO+2mOcXHY9Jl3EwMS5gFBnPu/2UvcrwRm1jN1k79fokc0d4aFmrLatg==
+  dependencies:
+    "@tanstack/history" "1.162.0"
+    "@tanstack/react-store" "^0.9.3"
+    "@tanstack/router-core" "1.171.13"
+    isbot "^5.1.22"
+
+"@tanstack/react-store@^0.9.3":
+  version "0.9.3"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-store/-/react-store-0.9.3.tgz#4d19d982a4612cc21cedf5ab25a62617323509c9"
+  integrity sha512-y2iHd/N9OkoQbFJLUX1T9vbc2O9tjH0pQRgTcx1/Nz4IlwLvkgpuglXUx+mXt0g5ZDFrEeDnONPqkbfxXJKwRg==
+  dependencies:
+    "@tanstack/store" "0.9.3"
+    use-sync-external-store "^1.6.0"
+
+"@tanstack/router-core@1.171.13":
+  version "1.171.13"
+  resolved "https://registry.yarnpkg.com/@tanstack/router-core/-/router-core-1.171.13.tgz#49bee672c8401693d7bf902389b3dcb799de1429"
+  integrity sha512-+NOwEj1kO/6IGmpHRIZHasYxYWpyBQGNIZAST9aNrk9Q3YlU9SgqVnl1pbLa9qAKfeNdXQIRve0RQb/0kyDeDA==
+  dependencies:
+    "@tanstack/history" "1.162.0"
+    cookie-es "^3.0.0"
+    seroval "^1.5.4"
+    seroval-plugins "^1.5.4"
+
+"@tanstack/store@0.9.3":
+  version "0.9.3"
+  resolved "https://registry.yarnpkg.com/@tanstack/store/-/store-0.9.3.tgz#0f9ebca34d194442fe559afce1e8a7327f6d3eb4"
+  integrity sha512-8reSzl/qGWGGVKhBoxXPMWzATSbZLZFWhwBAFO9NAyp0TxzfBP0mIrGb8CP8KrQTmvzXlR/vFPPUrHTLBGyFyw==
 
 "@testing-library/jest-dom@6.6.3":
   version "6.6.3"
@@ -1978,6 +2016,11 @@ convert-source-map@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/convert-source-map/-/convert-source-map-2.0.0.tgz#4b560f649fc4e918dd0ab75cf4961e8bc882d82a"
   integrity sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==
+
+cookie-es@^3.0.0:
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/cookie-es/-/cookie-es-3.1.1.tgz#c4a8a16cf88cb5a185b23f4a61d6e9a85eb53287"
+  integrity sha512-UaXxwISYJPTr9hwQxMFYZ7kNhSXboMXP+Z3TRX6f1/NyaGPfuNUZOWP1pUEb75B2HjfklIYLVRfWiFZJyC6Npg==
 
 core-util-is@1.0.2:
   version "1.0.2"
@@ -3141,6 +3184,11 @@ isbinaryfile@^5.0.0:
   resolved "https://registry.yarnpkg.com/isbinaryfile/-/isbinaryfile-5.0.7.tgz#19a73f2281b7368dca9d3b3ac8a0434074670979"
   integrity sha512-gnWD14Jh3FzS3CPhF0AxNOJ8CxqeblPTADzI38r0wt8ZyQl5edpy75myt08EG2oKvpyiqSqsx+Wkz9vtkbTqYQ==
 
+isbot@^5.1.22:
+  version "5.1.42"
+  resolved "https://registry.yarnpkg.com/isbot/-/isbot-5.1.42.tgz#35efb5724cb7de3f4b56460638525c426b9994f7"
+  integrity sha512-/SXsVh7KpPRISrD4ffrGSxnTLlUBzEQUfWIusaJPrpJ93FW1P0YEZri5vAUkFsA0m2HRUhQRQadk2wJ+EeKowQ==
+
 isexe@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/isexe/-/isexe-2.0.0.tgz#e8fbf374dc556ff8947a10dcb0572d633f2cfa10"
@@ -3567,11 +3615,6 @@ minizlib@^3.1.0:
   integrity sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==
   dependencies:
     minipass "^7.1.2"
-
-mitt@^3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/mitt/-/mitt-3.0.1.tgz#ea36cf0cc30403601ae074c8f77b7092cdab36d1"
-  integrity sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==
 
 monaco-editor@0.55.1:
   version "0.55.1"
@@ -4131,11 +4174,6 @@ redux@^5.0.1:
   resolved "https://registry.yarnpkg.com/redux/-/redux-5.0.1.tgz#97fa26881ce5746500125585d5642c77b6e9447b"
   integrity sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==
 
-regexparam@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/regexparam/-/regexparam-3.0.0.tgz#1673e09d41cb7fd41eaafd4040a6aa90daa0a21a"
-  integrity sha512-RSYAtP31mvYLkAHrOlh25pCNQ5hWnT106VukGaaFfuJrZFkGRX5GhUAdPqpSDXxOhA2c4akmRuplv1mRqnBn6Q==
-
 require-directory@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/require-directory/-/require-directory-2.1.1.tgz#8c64ad5fd30dab1c976e2344ffe7f792a6a6df42"
@@ -4321,6 +4359,16 @@ serialize-error@^7.0.1:
   integrity sha512-8I8TjW5KMOKsZQTvoxjuSIa7foAwPWGOts+6o7sgjz41/qMD9VQHEDxi6PBvK2l0MXUmqZyNpUK+T2tQaaElvw==
   dependencies:
     type-fest "^0.13.1"
+
+seroval-plugins@^1.5.4:
+  version "1.5.4"
+  resolved "https://registry.yarnpkg.com/seroval-plugins/-/seroval-plugins-1.5.4.tgz#3e7d1910b5a516684046770d201b993c81b1b95a"
+  integrity sha512-S0xQPhUTefAhNvNWFg0c1J8qJArHt5KdtJ/cFAofo06KD1MVSeFWyl4iiu+ApDIuw0WhjpOfCdgConOfAnLgkw==
+
+seroval@^1.5.4:
+  version "1.5.4"
+  resolved "https://registry.yarnpkg.com/seroval/-/seroval-1.5.4.tgz#9d0cedae244f8213bbbbbcc99c497eb7c945d961"
+  integrity sha512-46uFvgrXTVxZcUorgSSRZ4y+ieqLLQRMlG4bnCZKW3qI6BZm7Rg4ntMW4p1mILEEBZWrFlcpp0AyIIlM6jD9iw==
 
 shallow-equal@^3.1.0:
   version "3.1.0"
@@ -4812,7 +4860,7 @@ use-deep-compare-effect@^1.8.1:
     "@babel/runtime" "^7.12.5"
     dequal "^2.0.2"
 
-use-sync-external-store@^1.0.0, use-sync-external-store@^1.4.0, use-sync-external-store@^1.6.0:
+use-sync-external-store@^1.4.0, use-sync-external-store@^1.6.0:
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/use-sync-external-store/-/use-sync-external-store-1.6.0.tgz#b174bfa65cb2b526732d9f2ac0a408027876f32d"
   integrity sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==
@@ -5009,15 +5057,6 @@ why-is-node-running@^2.3.0:
   dependencies:
     siginfo "^2.0.0"
     stackback "0.0.2"
-
-wouter@3.10.0:
-  version "3.10.0"
-  resolved "https://registry.yarnpkg.com/wouter/-/wouter-3.10.0.tgz#d0bc6dd3751108b998e7fefd6fa01241160ca351"
-  integrity sha512-zTfddD80zc2/J5l8JKcdvzOK6AwP0kpyHEI3DxRN2bn8U1oJPnrSVm8v+X3WwDamvLAOxTO7ZvkxkpRWlyeJ1Q==
-  dependencies:
-    mitt "^3.0.1"
-    regexparam "^3.0.0"
-    use-sync-external-store "^1.0.0"
 
 wrap-ansi@^7.0.0:
   version "7.0.0"

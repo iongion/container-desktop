@@ -3,11 +3,10 @@ import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "wouter";
-
 import type { Container } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useStoreActions } from "@/web-app/domain/types";
+import { useRouteParams } from "@/web-app/Navigator";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
@@ -21,7 +20,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [pending, setPending] = useState(true);
   const [container, setContainer] = useState<Container>();
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const cpu_usage = container?.Stats?.cpu_stats?.cpu || 0;
   const mem_usage = container?.Stats?.memory_stats?.usage || 0;
   const disk_io = 0;
@@ -86,7 +85,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = "Container Stats";
 Screen.Route = {
-  Path: "/screens/container/:id/stats",
+  Path: "/screens/container/$id/stats",
 };
 Screen.Metadata = {
   LeftIcon: IconNames.CUBE,
