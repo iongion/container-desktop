@@ -149,7 +149,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
           manualChunks: (filename) => outputName,
           preserveModules: false,
           format: outputFormat === "umd" ? "umd" : "es",
-          inlineDynamicImports: false,
+          codeSplitting: true,
           assetFileNames: `assets/${outputName}-${pkg.version}.[ext]`,
           entryFileNames: `${outputName}-${pkg.version}.${outputExtension}`,
           chunkFileNames: `${outputName}-${pkg.version}.[hash].${outputExtension}`,
