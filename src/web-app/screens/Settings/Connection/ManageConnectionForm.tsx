@@ -14,13 +14,13 @@ import {
   UL,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import classNames from "classnames";
 import { isEmpty } from "lodash-es";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
-import { type AbstractContainerEngineHostClient, ContainerEngineOptions, createConnectorBy } from "@/container-client";
+import { ContainerEngineOptions, createConnectorBy, type HostClientFacade } from "@/container-client";
 import { Application } from "@/container-client/Application";
 import {
   type Connection,
@@ -38,8 +38,6 @@ import { EngineHostSelect } from "./EngineHostSelect";
 import { EngineSelect } from "./EngineSelect";
 import { OSTypeSelect } from "./OSTypeSelect";
 import { ScopeSelect } from "./ScopeSelect";
-
-import classNames from "classnames";
 import "./ManageConnectionForm.css";
 
 type DetectTarget = "program" | "controller";
@@ -502,7 +500,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       console.debug(">> Detecting API connection URI", connection);
       setPending(true);
       const instance = Application.getInstance();
-      const connectionApi = await instance.getConnectionApi<AbstractContainerEngineHostClient>(connection, false);
+      const connectionApi = await instance.getConnectionApi<HostClientFacade>(connection, false);
       const apiConnection = await connectionApi.getApiConnection();
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);
@@ -523,7 +521,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       console.debug(">> Detecting API connection relay", connection);
       setPending(true);
       const instance = Application.getInstance();
-      const connectionApi = await instance.getConnectionApi<AbstractContainerEngineHostClient>(connection, false);
+      const connectionApi = await instance.getConnectionApi<HostClientFacade>(connection, false);
       const apiConnection = await connectionApi.getApiConnection();
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);

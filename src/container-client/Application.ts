@@ -1,21 +1,13 @@
-import * as async from "async";
 import { v4 } from "uuid";
 
 import {
-  type AbstractContainerEngineHostClient,
+  createComposedHostClient,
   createConnectorBy,
-  Docker,
   getDefaultConnectors,
-  Podman,
-  RUNTIMES,
+  type HostClientFacade,
 } from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
 import { systemNotifier } from "@/container-client/notifier";
-import type { AbstractEngine, ContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
-import type {
-  PodmanAbstractContainerEngineHostClient,
-  PodmanContainerEngineHostClientCommon,
-} from "@/container-client/runtimes/podman/base";
 import {
   type ApplicationEnvironment,
   type CommandExecutionResult,
@@ -56,7 +48,7 @@ const AUTOMATIC_REGISTRIES: Registry[] = [
     isRemovable: false,
     isSystem: true,
     enabled: true,
-    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE],
+    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER],
   },
 ];
 const PROPOSED_REGISTRIES = [
@@ -68,7 +60,7 @@ const PROPOSED_REGISTRIES = [
     isRemovable: true,
     isSystem: false,
     enabled: true,
-    engine: [Podman.Engine.ENGINE],
+    engine: [ContainerEngine.PODMAN],
   },
   {
     id: "docker.io",
@@ -78,7 +70,7 @@ const PROPOSED_REGISTRIES = [
     isRemovable: true,
     isSystem: false,
     enabled: true,
-    engine: [Podman.Engine.ENGINE, Docker.Engine.ENGINE],
+    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER],
   },
 ];
 
@@ -133,13 +125,12 @@ export class Application {
   protected version: string;
   protected environment: string;
   protected connectionApis: {
-    [key: string]: AbstractContainerEngineHostClient;
+    [key: string]: HostClientFacade;
   } = {};
   protected inited = false;
-  protected runtimes: AbstractEngine[] = [];
   protected connectors: Connector[] = [];
 
-  protected _currentContainerEngineHostClient!: ContainerEngineHostClient;
+  protected _currentContainerEngineHostClient!: HostClientFacade;
 
   constructor(opts: ApplicationEnvironment) {
     this.osType = opts.osType;
@@ -164,7 +155,7 @@ export class Application {
   setLogLevel(level: string) {
     console.debug("Setting application log level", level);
     try {
-      const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
+      const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
       if (currentApi) {
         currentApi.setLogLevel(level);
       }
@@ -332,43 +323,43 @@ export class Application {
 
   // Podman specific
   async getPodLogs(id?: any, tail?: any) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.getPodLogs(id, tail);
   }
   async generateKube(entityId?: any) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanContainerEngineHostClientCommon>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.generateKube(entityId);
   }
   async getEvents(opts?: SubscriptionOptions) {
-    const currentApi = this.getCurrentEngineConnectionApi<ContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.getEvents(opts);
   }
   async getPodmanMachineInspect(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.getPodmanMachineInspect(name);
   }
   async getPodmanMachines(customFormat?: string, customSettings?: EngineConnectorSettings) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.getPodmanMachines(customFormat, customSettings);
   }
   async createPodmanMachine(opts: CreateMachineOptions) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.createPodmanMachine(opts);
   }
   async removePodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.removePodmanMachine(name);
   }
   async stopPodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.stopPodmanMachine(name);
   }
   async restartPodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.restartPodmanMachine(name);
   }
   async connectToPodmanMachine(name: string) {
-    const currentApi = this.getCurrentEngineConnectionApi<PodmanAbstractContainerEngineHostClient>();
+    const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
     return await currentApi.connectToPodmanMachine(name);
   }
 
@@ -753,8 +744,8 @@ export class Application {
 
   // registry
   async getRegistriesMap() {
-    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
-    const isPodman = host.ENGINE === Podman.Engine.ENGINE;
+    const host = this._currentContainerEngineHostClient as HostClientFacade;
+    const isPodman = host.ENGINE === ContainerEngine.PODMAN;
     const customRegistriesPath = await Path.join(await this.userConfiguration.getStoragePath(), "registries.json");
     const registriesMap = {
       default: AUTOMATIC_REGISTRIES.map((it) => (it.id === "system" && !isPodman ? { ...it, enabled: false } : it)),
@@ -779,17 +770,16 @@ export class Application {
     const { filters, term, registry } = opts || {};
     this.logger.debug("searchRegistry", { filters, term, registry });
     let items = [];
-    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
+    const host = this._currentContainerEngineHostClient as HostClientFacade;
     const { program } = await host.getSettings();
     const filtersList: any[] = [];
     const programArgs = ["search"];
-    const isPodman = host.ENGINE === Podman.Engine.ENGINE;
-    const isDocker = host.ENGINE === Docker.Engine.ENGINE;
+    const isPodman = host.ENGINE === ContainerEngine.PODMAN;
+    const isDocker = host.ENGINE === ContainerEngine.DOCKER;
     if (isPodman) {
       // Search using API
       if (registry?.id === "system") {
-        const client = await host.getContainerApiClient();
-        const driver = await client.getDriver();
+        const driver = await host.getApiDriver();
         const searchParams = new URLSearchParams();
         searchParams.set("term", term || "");
         // searchParams.set("listTags", "true");
@@ -856,7 +846,7 @@ export class Application {
     // biome-ignore lint/correctness/noUnusedVariables: Available for future use
     const { image, onProgress } = opts;
     this.logger.debug("pull from registry", image);
-    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
+    const host = this._currentContainerEngineHostClient as HostClientFacade;
     const { program, controller } = await host.getSettings();
     let result: CommandExecutionResult;
     if (host.isScoped()) {
@@ -872,7 +862,7 @@ export class Application {
   }
 
   // Main
-  async getConnectionApi<T extends AbstractContainerEngineHostClient = AbstractContainerEngineHostClient>(
+  async getConnectionApi<T extends HostClientFacade = HostClientFacade>(
     connection: Connection,
     skipAvailabilityCheck: boolean,
   ) {
@@ -905,7 +895,7 @@ export class Application {
     return this.connectionApis[connection.id] as T;
   }
 
-  getCurrentEngineConnectionApi<T extends ContainerEngineHostClient = AbstractContainerEngineHostClient>() {
+  getCurrentEngineConnectionApi<T extends HostClientFacade = HostClientFacade>() {
     return this._currentContainerEngineHostClient as T;
   }
 
@@ -915,20 +905,15 @@ export class Application {
     connector: Connector,
     opts?: ConnectOptions,
   ): Promise<{
-    host: AbstractContainerEngineHostClient | undefined;
+    host: HostClientFacade | undefined;
     availability: EngineConnectorAvailability;
   }> {
     this.logger.debug(connector.id, ">> Creating connector host api", opts);
     const startApi = opts?.startApi ?? false;
-    let host: AbstractContainerEngineHostClient | undefined;
+    let host: HostClientFacade | undefined;
     let availability = connector.availability;
     try {
-      const Engine = this.runtimes.find((it) => it.ENGINE === connector.engine);
-      if (!Engine) {
-        this.logger.error(connector.id, "Connector engine not found", connector.engine);
-        throw new Error("Connector engine not found");
-      }
-      host = await Engine.createEngineHostClientByName(connector.host, connector.id);
+      host = await createComposedHostClient(connector, this.osType);
       systemNotifier.transmit("startup.phase", {
         trace: "Engine host created",
       });
@@ -1027,18 +1012,6 @@ export class Application {
     }
     this.logger.debug("Creating application bridge");
     try {
-      this.runtimes = await async.parallel(
-        RUNTIMES.map(
-          (Engine) => (cb: any) =>
-            Engine.create(this.osType)
-              .then((engine) => {
-                engine.setLogLevel(this.logLevel);
-                cb(null, engine);
-              })
-              .catch(cb),
-        ),
-      );
-      // console.debug(">> INIT", { osType: this.osType });
       this.connectors = getDefaultConnectors(this.osType);
       this.connectors.forEach((connector) => {
         connector.logLevel = this.logLevel;
@@ -1051,7 +1024,7 @@ export class Application {
   }
 
   async stop(opts?: DisconnectOptions): Promise<boolean> {
-    const host = this._currentContainerEngineHostClient as AbstractContainerEngineHostClient;
+    const host = this._currentContainerEngineHostClient as HostClientFacade;
     if (host) {
       this.logger.debug(">> Bridge stop start", opts, host.id);
       const stopped = await host.stopApi();

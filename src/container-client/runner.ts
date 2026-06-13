@@ -1,7 +1,7 @@
 import { systemNotifier } from "@/container-client/notifier";
-import type { AbstractContainerEngineHostClient } from "@/container-client/runtimes/abstract/base";
 import type {
   ApiStartOptions,
+  AvailabilityCheck,
   EngineConnectorSettings,
   ILogger,
   RunnerStarterOptions,
@@ -10,18 +10,32 @@ import type {
 } from "@/env/Types";
 import { createLogger } from "@/logger";
 
+/**
+ * Minimal host surface the Runner depends on — only the API health check. Both the legacy
+ * AbstractContainerEngineHostClient and the new composed HostClient satisfy it, so the Runner no longer
+ * couples to (and circularly imports) the concrete host class.
+ */
+export interface RunnerHost {
+  isApiRunning(): Promise<AvailabilityCheck>;
+}
+
 export class Runner {
-  protected client: AbstractContainerEngineHostClient;
+  protected client: RunnerHost;
   protected nativeApiStarterProcess: any;
   protected nativeApiStarterProcessChild: any;
   protected logger!: ILogger;
   protected started = false;
 
-  constructor(client: AbstractContainerEngineHostClient) {
+  constructor(client: RunnerHost) {
     this.client = client;
     this.nativeApiStarterProcess = undefined;
     this.nativeApiStarterProcessChild = undefined;
     this.logger = createLogger("container-client.api.Runner");
+  }
+
+  /** Single source of truth: was the API service started by us in this process (folds the former host.apiStarted). */
+  isStarted() {
+    return this.started;
   }
 
   setApiStarted(flag: boolean) {
@@ -38,13 +52,14 @@ export class Runner {
       });
       return true;
     }
-    this.started = true;
+    this.started = true; // guard against concurrent starts - reset to false below if the start does not succeed
     systemNotifier.transmit("startup.phase", {
       trace: "Staring the api",
     });
     this.logger.debug(">> Starting API - guard configuration", { starter });
     if (!starter?.path) {
       this.logger.error("<< Starting API - Starter program not configured");
+      this.started = false;
       return false;
     }
     const clientOpts: ServiceOpts = {
@@ -94,12 +109,14 @@ export class Runner {
           .catch(reject);
       });
       this.logger.debug("<< Starting API - System service start completed", started);
+      this.started = started; // single source of truth reflects the real start result (was host.apiStarted = started)
       return started;
     } catch (error: any) {
       this.logger.error("<< Starting API - System service start failed", error.message);
     } finally {
       this.logger.debug("<< Starting API - System service start request completed");
     }
+    this.started = false;
     return false;
   }
 
@@ -124,6 +141,9 @@ export class Runner {
     } else {
       this.logger.debug("No native starter process child found - nothing to stop");
       flag = true;
+    }
+    if (flag) {
+      this.started = false; // single source of truth reset on successful stop (was previously only reset on the host)
     }
     this.logger.debug("<< Stopping API - complete", { stopped: flag });
     return flag;

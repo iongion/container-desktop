@@ -1,3 +1,16 @@
+// runtimes/host-client.ts — the composed HostClient that implements the symmetric HostClientFacade by
+// delegating to exactly one Transport (scope mechanics) × one EngineDialect (engine commands + extensions)
+// × one HostProfile (per-(engine,host) glue). It IS the HostContext passed to those units.
+//
+// The byte-for-byte sources (commands / sockets / endpoints) live in the units; this file holds only the
+// cross-cutting host state + the generic helpers lifted verbatim from the old runtimes/abstract/base.ts.
+//
+// State model (consolidated): settings + runner + cached raw driver + identity + capabilities. The former
+// dual "api started" state (the old host.apiStarted vs Runner.started) is folded into a single source of
+// truth on the Runner (runner.isStarted()); see runner.ts.
+
+import type { AxiosInstance } from "axios";
+import type EventEmitter from "eventemitter3";
 import { isEmpty } from "lodash-es";
 
 import { systemNotifier } from "@/container-client/notifier";
@@ -25,251 +38,237 @@ import {
 } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { deepMerge } from "@/utils";
-import type EventEmitter from "eventemitter3";
-import { ContainerClient, createApplicationApiDriver } from "../../Api.clients";
-import { findProgramPath, findProgramVersion } from "../../detector";
+import { findProgramPath, findProgramVersion } from "../detector";
+import type { EngineDialect, HostContext, HostProfile, Transport } from "./composition";
+import type { CapabilityDescriptor, HostClientFacade } from "./facade";
 
-export abstract class AbstractEngine {
-  protected logLevel = "debug";
-
-  public static ENGINE: ContainerEngine;
-  public ENGINE!: ContainerEngine;
-  public ENGINE_HOST_CLIENTS: (typeof AbstractContainerEngineHostClient)[] = [];
-
-  public osType: OperatingSystem;
-
-  public logger!: ILogger;
-
-  static create(a, b?: any): Promise<AbstractEngine> {
-    throw new Error("Must implement");
-  }
-
-  constructor(osType: OperatingSystem) {
-    this.osType = osType || CURRENT_OS_TYPE;
-  }
-
-  setLogLevel(level: string): void {
-    console.debug("Setting engine log level", level);
-    this.logLevel = level;
-  }
-
-  async setup() {
-    this.logger = createLogger(`${this.ENGINE}.host`);
-    this.logger.debug(this.ENGINE, "Created adapter");
-  }
-
-  async createEngineHostClient(
-    host: typeof AbstractContainerEngineHostClient,
-    id: string,
-  ): Promise<AbstractContainerEngineHostClient> {
-    return await host.create(id, this.osType);
-  }
-
-  async createEngineHostClientByName(host: ContainerEngineHost, id: string) {
-    const EngineHostClient = this.ENGINE_HOST_CLIENTS.find((it) => it.HOST === host);
-    if (!EngineHostClient) {
-      this.logger.error("Unable to find specified host", host, "within known engines", this.ENGINE_HOST_CLIENTS);
-      throw new Error("Unable to find specified host");
-    }
-    return await this.createEngineHostClient(EngineHostClient, id);
-  }
+/**
+ * The per-(engine,host) composition the registry resolves: the three units plus the identity constants that
+ * no single unit carries (PROGRAM = engine binary, CONTROLLER = controller binary). ENGINE comes from the
+ * dialect, HOST/LABEL from the profile.
+ */
+export interface HostClientComposition {
+  readonly transport: Transport;
+  readonly dialect: EngineDialect;
+  readonly profile: HostProfile;
+  readonly PROGRAM: string;
+  readonly CONTROLLER: string;
 }
 
-export interface ContainerEngineHostClient {
-  startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions);
-  isEngineAvailable();
-  getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
-  getSettings(): Promise<EngineConnectorSettings>;
-  getAutomaticSettings(): Promise<EngineConnectorSettings>;
-  // Controller behavior
-  isScoped(): boolean;
-  getControllerScopes(
-    customSettings?: EngineConnectorSettings,
-    skipAvailabilityCheck?: boolean,
-  ): Promise<ControllerScope[]>;
-  startScope(scope: ControllerScope): Promise<StartupStatus>;
-  stopScope(scope: ControllerScope): Promise<boolean>;
-  startScopeByName(name: string): Promise<StartupStatus>;
-  stopScopeByName(name: string): Promise<boolean>;
-
-  isApiRunning(): Promise<AvailabilityCheck>;
-  getSystemInfo(
-    connection?: Connection,
-    customFormat?: string,
-    customSettings?: EngineConnectorSettings,
-  ): Promise<SystemInfo>;
-
-  setLogLevel(level: string): void;
-  getEvents(opts?: SubscriptionOptions): Promise<any[]>;
-}
-
-export abstract class AbstractContainerEngineHostClient implements ContainerEngineHostClient {
-  public static HOST: ContainerEngineHost;
-
-  public LABEL = "Abstract";
-  public PROGRAM!: string;
-  public CONTROLLER!: string;
-  public ENGINE!: ContainerEngine;
-  public HOST!: ContainerEngineHost;
+export class HostClient implements HostContext {
+  // identity (was base.ts:109-114,138 + the leaf overrides)
+  public LABEL: string;
+  public PROGRAM: string;
+  public CONTROLLER: string;
+  public ENGINE: ContainerEngine;
+  public HOST: ContainerEngineHost;
   public id!: string;
-
-  protected osType: OperatingSystem;
-  protected apiStarted: boolean;
-  protected logLevel = "debug";
-
-  protected runner!: Runner;
-  protected settings: EngineConnectorSettings = {
-    api: {
-      baseURL: "",
-      connection: {
-        uri: "",
-        relay: "",
-      },
-    },
-    program: {
-      name: this.PROGRAM,
-      path: this.PROGRAM,
-      version: "",
-    },
-    rootfull: false,
-    mode: "mode.automatic",
-  };
-
   public logger!: ILogger;
-  protected containerApiClient?: ContainerClient;
 
-  abstract startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions);
-  abstract isEngineAvailable(): Promise<AvailabilityCheck>;
-  abstract getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
-  // Controller behavior
-  abstract isScoped(): boolean;
-  abstract getControllerScopes(
-    customSettings?: EngineConnectorSettings,
-    skipAvailabilityCheck?: boolean,
-  ): Promise<ControllerScope[]>;
-  abstract getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined>;
-  abstract startScope(scope: ControllerScope): Promise<StartupStatus>;
-  abstract stopScope(scope: ControllerScope): Promise<boolean>;
-  abstract startScopeByName(name: string): Promise<StartupStatus>;
-  abstract stopScopeByName(name: string): Promise<boolean>;
+  // capability matrix (host-adjusted): dialect.capabilitiesBase -> profile.adjustCapabilities (Finding B)
+  public capabilities: CapabilityDescriptor;
 
-  abstract shouldKeepStartedScopeRunning(): boolean;
+  // composition units + collaborators (the HostContext surface)
+  public readonly osType: OperatingSystem;
+  public readonly transport: Transport;
+  public readonly dialect: EngineDialect;
+  public readonly profile: HostProfile;
+  public runner!: Runner;
 
-  constructor(osType: OperatingSystem) {
+  // state
+  protected logLevel = "debug";
+  protected settings: EngineConnectorSettings;
+  protected cachedDriver?: AxiosInstance;
+
+  // Engine-extension methods (the 23 symmetric facade members) — bound from dialect.bindExtensions(this) in
+  // setup(); real on this dialect's engine, no-op on the other. Declared here so `implements HostContext`
+  // proves completeness at compile time even though the bodies are spread on at runtime.
+  getPodmanMachineInspect!: HostClientFacade["getPodmanMachineInspect"];
+  getPodmanMachines!: HostClientFacade["getPodmanMachines"];
+  createPodmanMachine!: HostClientFacade["createPodmanMachine"];
+  removePodmanMachine!: HostClientFacade["removePodmanMachine"];
+  startPodmanMachine!: HostClientFacade["startPodmanMachine"];
+  stopPodmanMachine!: HostClientFacade["stopPodmanMachine"];
+  restartPodmanMachine!: HostClientFacade["restartPodmanMachine"];
+  connectToPodmanMachine!: HostClientFacade["connectToPodmanMachine"];
+  generateKube!: HostClientFacade["generateKube"];
+  getPodLogs!: HostClientFacade["getPodLogs"];
+  getDockerContexts!: HostClientFacade["getDockerContexts"];
+  inspectDockerContext!: HostClientFacade["inspectDockerContext"];
+  useDockerContext!: HostClientFacade["useDockerContext"];
+  getSwarmServices!: HostClientFacade["getSwarmServices"];
+  getSwarmNodes!: HostClientFacade["getSwarmNodes"];
+  getSwarmStacks!: HostClientFacade["getSwarmStacks"];
+  swarmInit!: HostClientFacade["swarmInit"];
+  swarmLeave!: HostClientFacade["swarmLeave"];
+  getBuilders!: HostClientFacade["getBuilders"];
+  useBuilder!: HostClientFacade["useBuilder"];
+  getComposeProjects!: HostClientFacade["getComposeProjects"];
+  composeUp!: HostClientFacade["composeUp"];
+  composeDown!: HostClientFacade["composeDown"];
+
+  constructor(composition: HostClientComposition, osType: OperatingSystem) {
     this.osType = osType || CURRENT_OS_TYPE;
-    this.apiStarted = false;
-  }
-  getEvents(opts?: SubscriptionOptions): Promise<any[]> {
-    throw new Error("Method not implemented.");
-  }
-
-  setLogLevel(level: string): void {
-    console.debug("Setting container engine host client log level", level);
-    this.logLevel = level;
-    if (this.containerApiClient) {
-      this.containerApiClient.setLogLevel(level);
-    }
-  }
-
-  async getContainerApiClient() {
-    if (!this.containerApiClient) {
-      const connection: Connection = {
-        name: "Current",
-        label: "Current",
-        settings: this.settings,
-        engine: this.ENGINE,
-        host: this.HOST,
-        id: this.id,
-      };
-      this.containerApiClient = new ContainerClient(connection, createApplicationApiDriver(connection));
-      this.containerApiClient.setLogLevel(this.logLevel);
-    }
-    return this.containerApiClient;
+    this.transport = composition.transport;
+    this.dialect = composition.dialect;
+    this.profile = composition.profile;
+    this.ENGINE = composition.dialect.ENGINE;
+    this.HOST = composition.profile.HOST;
+    this.LABEL = composition.profile.LABEL;
+    this.PROGRAM = composition.PROGRAM;
+    this.CONTROLLER = composition.CONTROLLER;
+    this.capabilities = composition.profile.adjustCapabilities(composition.dialect.capabilitiesBase);
+    this.settings = {
+      api: {
+        baseURL: "",
+        connection: {
+          uri: "",
+          relay: "",
+        },
+      },
+      program: {
+        name: this.PROGRAM,
+        path: this.PROGRAM,
+        version: "",
+      },
+      rootfull: false,
+      mode: "mode.automatic",
+    };
   }
 
-  static create(id: string, osType: OperatingSystem): Promise<AbstractContainerEngineHostClient> {
-    throw new Error("Must implement");
+  static async create(composition: HostClientComposition, id: string, osType: OperatingSystem) {
+    const instance = new HostClient(composition, osType);
+    instance.id = id;
+    await instance.setup();
+    return instance;
   }
 
   async setup() {
     this.runner = new Runner(this);
     this.logger = createLogger("host.client");
+    // Spread the dialect's host-bound extension methods (real on its engine, no-op on the other).
+    Object.assign(this, this.dialect.bindExtensions(this));
     this.logger.debug(this.id, "Client host created", this.settings);
+  }
+
+  // ── identity / logging ──
+
+  setLogLevel(level: string): void {
+    console.debug("Setting container engine host client log level", level);
+    this.logLevel = level;
+  }
+
+  // ── settings ──
+
+  async getSettings(): Promise<EngineConnectorSettings> {
+    return this.settings;
   }
 
   async setSettings(settings: EngineConnectorSettings) {
     this.settings = settings;
   }
 
-  async getAutomaticSettings(): Promise<EngineConnectorSettings> {
-    this.logger.warn(this.id, "Settings are in automatic mode - fetching");
-    const settings = await this.getSettings();
-    try {
-      // 1.0 - detect program
-      if (this.isScoped()) {
-        const existingScope = settings.controller?.scope || "";
-        const controllerProgram = await this.findHostProgram({ name: this.CONTROLLER, path: "" }, settings);
-        settings.controller = controllerProgram;
-        settings.controller.scope = existingScope;
-        if (isEmpty(existingScope)) {
-          const defaultScope = await this.getControllerDefaultScope(settings);
-          this.logger.warn(this.id, "Default scope is", defaultScope);
-          if (defaultScope) {
-            settings.controller.scope = defaultScope.Name;
-            if (defaultScope.Usable) {
-              const scopeProgram = await this.findScopeProgram({ name: this.PROGRAM, path: "" }, settings);
-              settings.program = scopeProgram;
-            } else {
-              this.logger.warn(this.id, "Default scope is not usable - program will not be detected");
-            }
-            // API connection
-          } else {
-            this.logger.error(this.id, "No default scope found - program will not be detected");
-          }
-        } else {
-          try {
-            const scopeProgram = await this.findScopeProgram({ name: this.PROGRAM, path: "" }, settings);
-            settings.program = scopeProgram;
-          } catch (error: any) {
-            this.logger.error(this.id, "Unable to get scope program", error);
-          }
-        }
-      } else {
-        const hostProgram = await this.findHostProgram({ name: this.PROGRAM, path: "" }, settings);
-        settings.program = hostProgram;
-      }
-      // 2.0 - detect API connection
-      const api = await this.getApiConnection(undefined, settings);
-      settings.api.connection.uri = api.uri;
-      settings.api.connection.relay = api.relay;
-    } catch (error: any) {
-      this.logger.error(this.id, "Unable to get automatic settings", error);
-    }
-    return settings;
+  getAutomaticSettings(): Promise<EngineConnectorSettings> {
+    return this.profile.getAutomaticSettings(this, this.settings);
   }
 
-  async getSettings(): Promise<EngineConnectorSettings> {
-    return this.settings;
+  // ── raw API driver (replaces getContainerApiClient(); SSH injects its establishment hook in the transport) ──
+
+  async getApiDriver(): Promise<AxiosInstance> {
+    if (!this.cachedDriver) {
+      this.cachedDriver = await this.transport.getApiDriver(this, this.settings);
+    }
+    return this.cachedDriver;
   }
 
-  async stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions) {
-    this.logger.debug("Stopping API - begin");
-    const settings = customSettings || (await this.getSettings());
-    await Command.StopConnectionServices(this.id, settings);
-    if (!this.runner) {
-      this.logger.warn("Stopping API - skip(no runner)");
-      return true;
-    }
-    if (!this.apiStarted) {
-      this.logger.debug("Stopping API - skip(not started here)");
-      return false;
-    }
-    const stopped = await this.runner.stopApi(settings, opts);
-    this.logger.debug("Stopping API - complete", { stopped });
-    if (stopped) {
-      this.apiStarted = false;
-    }
-    return stopped;
+  // ── lifecycle / API (scope + start/stop delegated to the transport, availability to the profile) ──
+
+  startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions): Promise<boolean> {
+    return this.transport.startApi(this, customSettings, opts);
+  }
+
+  stopApi(customSettings?: EngineConnectorSettings, opts?: RunnerStopperOptions): Promise<boolean> {
+    return this.transport.stopApi(this, customSettings, opts);
+  }
+
+  isEngineAvailable(): Promise<AvailabilityCheck> {
+    return this.profile.isEngineAvailable(this);
+  }
+
+  getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection> {
+    return this.profile.getApiConnection(this, connection, customSettings);
+  }
+
+  // ── scope (controller) — delegated to the transport ──
+
+  isScoped(): boolean {
+    return this.transport.isScoped;
+  }
+
+  getControllerScopes(
+    customSettings?: EngineConnectorSettings,
+    skipAvailabilityCheck?: boolean,
+  ): Promise<ControllerScope[]> {
+    return this.transport.listScopes(this, customSettings, skipAvailabilityCheck);
+  }
+
+  getControllerDefaultScope(customSettings?: EngineConnectorSettings): Promise<ControllerScope | undefined> {
+    return this.transport.getControllerDefaultScope(this, customSettings);
+  }
+
+  startScope(scope: ControllerScope): Promise<StartupStatus> {
+    return this.transport.startScope(this, scope);
+  }
+
+  stopScope(scope: ControllerScope): Promise<boolean> {
+    return this.transport.stopScope(this, scope);
+  }
+
+  startScopeByName(name: string): Promise<StartupStatus> {
+    return this.transport.startScopeByName(this, name);
+  }
+
+  stopScopeByName(name: string): Promise<boolean> {
+    return this.transport.stopScopeByName(this, name);
+  }
+
+  runScopeCommand(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<CommandExecutionResult> {
+    return this.transport.runScopeCommand(this, program, args, scope, settings);
+  }
+
+  // ── system / events (system info delegated to the dialect; events stream uses the raw driver) ──
+
+  getSystemInfo(
+    connection?: Connection,
+    customFormat?: string,
+    customSettings?: EngineConnectorSettings,
+  ): Promise<SystemInfo> {
+    return this.dialect.getSystemInfo(this, connection, customFormat, customSettings);
+  }
+
+  getEvents(opts?: SubscriptionOptions): Promise<any[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  // ===== generic helpers lifted verbatim from runtimes/abstract/base.ts =====
+
+  async runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings) {
+    const commandLauncher =
+      this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
+    const commandLine = [commandLauncher].concat(args || []).join(" ");
+    this.logger.debug(this.id, ">> Running host command", commandLine);
+    const result = await Command.Execute(commandLauncher, args || []);
+    this.logger.debug(this.id, "<< Running host command", commandLine, {
+      success: result.success,
+      code: result.code,
+      stderr: result.stderr || "",
+    });
+    return result;
   }
 
   async isProgramAvailable(settings: EngineConnectorSettings): Promise<AvailabilityCheck> {
@@ -333,8 +332,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       success: false,
       details: undefined,
     };
-    const client = await this.getContainerApiClient();
-    const driver = client.getDriver();
+    const driver = await this.getApiDriver();
     systemNotifier.transmit("engine.availability", {
       trace: "Performing api health check - start",
     });
@@ -358,51 +356,6 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     });
     this.logger.debug(this.id, "<< Checking if API is running", result);
     return result;
-  }
-
-  // Executes command inside controller scope
-
-  async runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings) {
-    const commandLauncher =
-      this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
-    const commandLine = [commandLauncher].concat(args || []).join(" ");
-    this.logger.debug(this.id, ">> Running host command", commandLine);
-    const result = await Command.Execute(commandLauncher, args || []);
-    this.logger.debug(this.id, "<< Running host command", commandLine, {
-      success: result.success,
-      code: result.code,
-      stderr: result.stderr || "",
-    });
-    return result;
-  }
-
-  // System commands
-
-  async getSystemInfo(connection?: Connection, customFormat?: string, customSettings?: EngineConnectorSettings) {
-    let info: SystemInfo = {} as SystemInfo;
-    let result: CommandExecutionResult;
-    const settings = customSettings || (await this.getSettings());
-    const programPath = settings.program.path || settings.program.name || "";
-    if (this.isScoped()) {
-      result = await this.runScopeCommand(
-        programPath,
-        ["system", "info", "--format", customFormat || "json"],
-        settings.controller?.scope || "",
-        settings,
-      );
-    } else {
-      result = await this.runHostCommand(programPath, ["system", "info", "--format", customFormat || "json"], settings);
-    }
-    if (!result.success) {
-      this.logger.error(this.id, "Unable to get system info", result);
-      return info;
-    }
-    try {
-      info = result.stdout ? JSON.parse(result.stdout) : info;
-    } catch (error: any) {
-      this.logger.error(this.id, "Unable to decode system info", error, result);
-    }
-    return info;
   }
 
   async pruneSystem(opts?: any) {
@@ -477,13 +430,10 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     throw new Error("Unable to reset system");
   }
 
-  // System events
-
   async getEventsStream(opts?: SubscriptionOptions) {
     try {
       this.logger.warn(this.id, "Subscribing to connection events - creating api client", opts);
-      const client = await this.getContainerApiClient();
-      const driver = client.getDriver();
+      const driver = await this.getApiDriver();
       this.logger.warn(this.id, "Subscribing to connection events - issuing request");
       const response = await driver.get("/events", {
         timeout: 0,
@@ -504,14 +454,6 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
       );
     }
   }
-
-  // Controller behavior
-  abstract runScopeCommand(
-    program: string,
-    args: string[],
-    scope: string,
-    settings?: EngineConnectorSettings,
-  ): Promise<CommandExecutionResult>;
 
   async isControllerAvailable(settings: EngineConnectorSettings) {
     let success = false;
@@ -608,7 +550,7 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
     return availability;
   }
 
-  async getScopeEnvironmentVariable(scope: string, variable: string) {
+  async getScopeEnvironmentVariable(scope: string, variable: string): Promise<string> {
     let value = "";
     if (this.isScoped()) {
       const settings = await this.getSettings();
@@ -627,7 +569,8 @@ export abstract class AbstractContainerEngineHostClient implements ContainerEngi
         }
       } else {
         this.logger.debug(this.id, "Get scoped environment variable", scope, variable);
-        return await Platform.getEnvironmentVariable(variable);
+        // NOTE: tightened to "" (was string | undefined) to satisfy the HostContext contract; callers isEmpty()-check.
+        return (await Platform.getEnvironmentVariable(variable)) || "";
       }
     }
     return value;
