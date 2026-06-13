@@ -1,0 +1,48 @@
+# Dependabot configuration — https://docs.github.com/code-security/dependabot
+# Goal: keep dependencies current with minimal PR noise. Minor/patch bumps are
+# grouped into a single PR per ecosystem; majors still arrive as individual PRs
+# so they can be reviewed deliberately.
+version: 2
+updates:
+  # JavaScript / TypeScript (root package.json, yarn)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      js-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Build/dev-tooling-only transitive ReDoS advisories (minimatch via
+      # glob/@electron/asar/electron-builder; picomatch via chokidar/anymatch).
+      # They are NOT shipped in the app bundle and run on developer-controlled
+      # inputs. There is no patched in-major release — the only fix is a major
+      # bump that breaks glob@7 / chokidar@3 (packaging + vite dev watch).
+      # Remove these entries once the upstream tooling updates its matchers.
+      - dependency-name: "minimatch"
+      - dependency-name: "picomatch"
+
+  # Go SSH relay
+  - package-ecosystem: "gomod"
+    directory: "/support/container-desktop-relay"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      go-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-all:
+        patterns:
+          - "*"
