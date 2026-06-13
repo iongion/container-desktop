@@ -7,7 +7,6 @@ import * as dotenv from "dotenv";
 import merge from "lodash.merge";
 import MagicString from "magic-string";
 import { checker } from "vite-plugin-checker";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 // pkg
 import pkg from "./package.json";
@@ -132,7 +131,8 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
       checker({
         typescript: true,
       }),
-      tsconfigPaths(),
+      // tsconfig path mappings are resolved by the explicit `resolve.alias` block below
+      // (Vite 8 also supports them natively); the vite-tsconfig-paths plugin is redundant.
       ...(plugins ?? []),
     ],
     define: userDefine,
