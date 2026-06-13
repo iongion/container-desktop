@@ -15,7 +15,7 @@ import {
   type EngineConnectorSettings,
   OperatingSystem,
   type RunnerStopperOptions,
-  StartupStatus,
+  type StartupStatus,
 } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import type { HostContext, Transport } from "../composition";
@@ -102,9 +102,10 @@ export class PodmanMachineTransport implements Transport {
 
   async startScope(host: HostContext, scope: ControllerScope): Promise<StartupStatus> {
     host.logger.debug(host.id, "Starting scope", scope);
-    const status = await host.startPodmanMachine(scope.Name);
-    host.runner.setApiStarted(status === StartupStatus.RUNNING || status === StartupStatus.STARTED);
-    return status;
+    // Fixed (review): starting the machine (a scope op) must NOT set runner.started — that flag means "the API
+    // service was started by us this process" and is owned by runner.startApi. Conflating them let a later
+    // startApi short-circuit (runner.ts) and report success without spawning `podman machine start`.
+    return await host.startPodmanMachine(scope.Name);
   }
 
   async stopScope(host: HostContext, scope: ControllerScope): Promise<boolean> {
@@ -114,9 +115,8 @@ export class PodmanMachineTransport implements Transport {
 
   async startScopeByName(host: HostContext, name: string): Promise<StartupStatus> {
     host.logger.debug(host.id, "Starting scope by name", name);
-    const status = await host.startPodmanMachine(name);
-    host.runner.setApiStarted(status === StartupStatus.RUNNING || status === StartupStatus.STARTED);
-    return status;
+    // See startScope: machine/scope start must not set runner.started (owned by runner.startApi).
+    return await host.startPodmanMachine(name);
   }
 
   async stopScopeByName(host: HostContext, name: string): Promise<boolean> {

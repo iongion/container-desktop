@@ -33,7 +33,7 @@ export const useImage = (connId: string, id?: string, opts?: FetchImageOptions) 
     queryFn: () => new ImagesAdapter().get(id!, opts),
     enabled: !!connId && !!id,
     placeholderData: () => {
-      for (const [, data] of qc.getQueriesData<ContainerImage[]>({ queryKey: imageKeys.lists() })) {
+      for (const [, data] of qc.getQueriesData<ContainerImage[]>({ queryKey: imageKeys.list(connId) })) {
         const found = data?.find((it) => it.Id === id);
         if (found) return found;
       }

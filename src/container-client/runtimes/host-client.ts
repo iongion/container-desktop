@@ -251,8 +251,10 @@ export class HostClient implements HostContext {
     return this.dialect.getSystemInfo(this, connection, customFormat, customSettings);
   }
 
-  getEvents(opts?: SubscriptionOptions): Promise<any[]> {
-    throw new Error("Method not implemented.");
+  // No-op one-shot events fetch (symmetric facade): the live path is getEventsStream(); there is no
+  // one-shot consumer today. Return empty rather than throwing so the facade contract holds for every host.
+  getEvents(_opts?: SubscriptionOptions): Promise<any[]> {
+    return Promise.resolve([]);
   }
 
   // ===== generic helpers lifted verbatim from runtimes/abstract/base.ts =====

@@ -29,7 +29,7 @@ export const useSecret = (connId: string, nameOrId?: string) => {
     queryFn: () => new SecretsAdapter().get(nameOrId!),
     enabled: !!connId && !!nameOrId,
     placeholderData: () => {
-      for (const [, data] of qc.getQueriesData<Secret[]>({ queryKey: secretKeys.lists() })) {
+      for (const [, data] of qc.getQueriesData<Secret[]>({ queryKey: secretKeys.list(connId) })) {
         const found = data?.find((it) => it.ID === nameOrId || it.Spec?.Name === nameOrId);
         if (found) return found;
       }

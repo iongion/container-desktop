@@ -34,7 +34,7 @@ export const usePod = (connId: string, id?: string) => {
     queryFn: () => new PodsAdapter().get(id!),
     enabled: !!connId && !!id,
     placeholderData: () => {
-      for (const [, data] of qc.getQueriesData<Pod[]>({ queryKey: podKeys.lists() })) {
+      for (const [, data] of qc.getQueriesData<Pod[]>({ queryKey: podKeys.list(connId) })) {
         const found = data?.find((it) => it.Id === id);
         if (found) return found;
       }

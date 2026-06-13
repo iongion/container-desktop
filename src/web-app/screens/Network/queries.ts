@@ -29,7 +29,7 @@ export const useNetwork = (connId: string, name?: string) => {
     queryFn: () => new NetworksAdapter().get(name!),
     enabled: !!connId && !!name,
     placeholderData: () => {
-      for (const [, data] of qc.getQueriesData<Network[]>({ queryKey: networkKeys.lists() })) {
+      for (const [, data] of qc.getQueriesData<Network[]>({ queryKey: networkKeys.list(connId) })) {
         const found = data?.find((it) => it.name === name || it.id === name);
         if (found) return found;
       }

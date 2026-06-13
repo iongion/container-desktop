@@ -40,7 +40,7 @@ export const useContainer = (connId: string, id?: string, opts?: FetchContainerO
     queryFn: () => new ContainersAdapter().get(id!, opts),
     enabled: !!connId && !!id,
     placeholderData: () => {
-      for (const [, data] of qc.getQueriesData<Container[]>({ queryKey: containerKeys.lists() })) {
+      for (const [, data] of qc.getQueriesData<Container[]>({ queryKey: containerKeys.list(connId) })) {
         const found = data?.find((it) => it.Id === id);
         if (found) return found;
       }

@@ -29,7 +29,7 @@ export const useVolume = (connId: string, nameOrId?: string) => {
     queryFn: () => new VolumesAdapter().get(nameOrId!),
     enabled: !!connId && !!nameOrId,
     placeholderData: () => {
-      for (const [, data] of qc.getQueriesData<Volume[]>({ queryKey: volumeKeys.lists() })) {
+      for (const [, data] of qc.getQueriesData<Volume[]>({ queryKey: volumeKeys.list(connId) })) {
         const found = data?.find((it) => it.Name === nameOrId);
         if (found) return found;
       }

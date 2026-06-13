@@ -139,16 +139,16 @@ export class SSHTransport implements Transport {
         const scopes = await host.getControllerScopes();
         const currentSettings = await host.getSettings();
         const scope = scopes.find((s) => s.Name === currentSettings.controller?.scope);
-        // NOTE: preserved verbatim from abstract/ssh.ts — StartupStatus is always a non-empty string, so this
-        // branch is taken on RUNNING/STARTED/ERROR alike (a latent quirk in the original, kept byte-for-byte).
-        const connected = await this.startSSHConnection(scope as SSHHost, {
+        // Fixed (review): startSSHConnection returns a StartupStatus string; the old `if (connected)` treated
+        // ERROR ("error", a truthy non-empty string) as success. Only RUNNING/STARTED is an established connection.
+        const status = await this.startSSHConnection(scope as SSHHost, {
           onStatusCheck: (info) => {
             systemNotifier.transmit("engine.availability", {
               trace: `API status checking - retry ${info.retries + 1} of ${info.maxRetries}`,
             });
           },
         });
-        if (connected) {
+        if (status === StartupStatus.RUNNING || status === StartupStatus.STARTED) {
           console.debug("Returning connection", host, scope);
           systemNotifier.transmit("engine.availability", {
             trace: "SSH connection has been established",
@@ -158,7 +158,7 @@ export class SSHTransport implements Transport {
         systemNotifier.transmit("engine.availability", {
           trace: "SSH connection has failed",
         });
-        console.error("SSH connection is not established", host, scope, connected);
+        console.error("SSH connection is not established", host, scope, status);
         throw new Error("SSH connection is not established");
       },
     });
