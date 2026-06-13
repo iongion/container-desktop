@@ -10,7 +10,11 @@
   justify-content: flex-end;
   overflow: hidden;
 }
-[data-table="containers"] tbody tr:not(:hover):not(:focus-within) [data-actions-menu="container"] .ItemActionsOverlayMenu {
+[data-table="containers"]
+  tbody
+  tr:not(:hover):not(:focus-within)
+  [data-actions-menu="container"]
+  .ItemActionsOverlayMenu {
   display: none;
 }
 [data-actions-menu="container"] .ItemActionsOverlayMenuActions {

@@ -10,8 +10,8 @@ import { useTranslation } from "react-i18next";
 import { ContainerEngine } from "@/env/Types";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { RegistryPropertiesForm } from "./RegistryPropertiesForm";
 import { useCreateRegistry } from "./queries";
+import { RegistryPropertiesForm } from "./RegistryPropertiesForm";
 
 // Drawer
 

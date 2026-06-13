@@ -22,10 +22,7 @@ export function getSortMode(
   return sortCapabilities?.[`${scope}.${field}`] ?? sortCapabilities?.[`${scope}.*`];
 }
 
-export function useColumnSort(
-  scope: string,
-  sortCapabilities?: ConnectorCapabilities["sort"],
-): ColumnSortState {
+export function useColumnSort(scope: string, sortCapabilities?: ConnectorCapabilities["sort"]): ColumnSortState {
   const sort = useSortStore((state) => state.sorts[scope]);
   const setSort = useSortStore((state) => state.setSort);
   const getColumnSortMode = useCallback(

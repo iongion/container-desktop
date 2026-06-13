@@ -12,7 +12,7 @@ import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader"
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
+import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu, ScreenHeader } from ".";
 import "./ManageScreen.css";

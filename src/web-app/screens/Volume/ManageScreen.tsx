@@ -16,7 +16,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
+import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 import { VolumeActionsMenu } from ".";
 import { getVolumeUrl } from "./Navigation";
 import "./ManageScreen.css";
@@ -84,11 +84,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="volumes">
             <thead>
               <tr>
-                <SortableColumnHeader
-                  field="name"
-                  direction={getColumnSortDirection("name")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.DATABASE} text={t("Name")} />
                 </SortableColumnHeader>
                 <SortableColumnHeader

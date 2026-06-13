@@ -8,9 +8,9 @@ import { VolumesAdapter } from "@/container-client/adapters/volumes";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
 import {
+  RESOURCE_DOMAINS,
   type ResourceDomain,
   type ResourceItemsByDomain,
-  RESOURCE_DOMAINS,
   useResourceStore,
 } from "@/web-app/stores/resourceStore";
 
@@ -134,6 +134,11 @@ export class ResourceEventManager {
     useResourceStore.getState().ensureConnection(connectionId);
     this.initializeUnsupportedDomains(session);
     await this.refreshMany(connectionId, Array.from(session.supportedDomains));
+    // A stop()/re-start() (connection switch) can interleave during the await above; bail so we don't
+    // attach an event stream or a fallback interval to an already-stopped, out-of-map session (leak).
+    if (session.stopped) {
+      return;
+    }
     if (host.capabilities.events) {
       await this.connectEvents(session);
     } else {
@@ -250,7 +255,12 @@ export class ResourceEventManager {
     addStreamListener(stream, "event", (event) => this.handleStreamPayload(session, event), cleanup);
     addStreamListener(stream, "error", (error) => this.handleEventFailure(session, error), cleanup);
     addStreamListener(stream, "end", () => this.handleEventFailure(session, new Error("Event stream ended")), cleanup);
-    addStreamListener(stream, "close", () => this.handleEventFailure(session, new Error("Event stream closed")), cleanup);
+    addStreamListener(
+      stream,
+      "close",
+      () => this.handleEventFailure(session, new Error("Event stream closed")),
+      cleanup,
+    );
     return () => {
       cleanup.forEach((fn) => {
         fn();
@@ -334,7 +344,10 @@ export class ResourceEventManager {
     if (session.stopped || session.reconnectTimer) {
       return;
     }
-    const delay = Math.min(EVENT_RECONNECT_BASE_MS * 2 ** Math.max(0, session.eventFailures - 1), EVENT_RECONNECT_MAX_MS);
+    const delay = Math.min(
+      EVENT_RECONNECT_BASE_MS * 2 ** Math.max(0, session.eventFailures - 1),
+      EVENT_RECONNECT_MAX_MS,
+    );
     session.reconnectTimer = setTimeout(() => {
       session.reconnectTimer = undefined;
       this.connectEvents(session);

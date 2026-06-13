@@ -15,7 +15,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
+import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { SecretActionsMenu } from ".";
 import "./ManageScreen.css";
@@ -87,11 +87,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="secrets">
             <thead>
               <tr>
-                <SortableColumnHeader
-                  field="name"
-                  direction={getColumnSortDirection("name")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.KEY} text={t("Name")} />
                 </SortableColumnHeader>
                 <SortableColumnHeader field="id" direction={getColumnSortDirection("id")} onSort={toggleColumnSort}>

@@ -26,12 +26,9 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
   const [pending, setPending] = useState(false);
   const connectionId = useAppStore((state) => state.currentConnector?.id || "");
   const podCreate = useCreatePod(connectionId);
-  const onDrawerClose = useCallback(
-    () => {
-      onClose();
-    },
-    [onClose],
-  );
+  const onDrawerClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
   const { control, handleSubmit } = useForm<{
     podName: string;
   }>();

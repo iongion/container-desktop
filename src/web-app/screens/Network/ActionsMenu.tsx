@@ -97,11 +97,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate
     <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = network ? (
-    <ConfirmMenu
-      onConfirm={onRemove}
-      tag={network.name}
-      disabled={disabledAction === "network.remove"}
-    ></ConfirmMenu>
+    <ConfirmMenu onConfirm={onRemove} tag={network.name} disabled={disabledAction === "network.remove"}></ConfirmMenu>
   ) : undefined;
   return (
     <>

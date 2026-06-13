@@ -34,11 +34,7 @@ interface ResourceStoreState {
 
 interface ResourceStoreActions {
   ensureConnection: (connectionId: string) => void;
-  setSnapshot: <D extends ResourceDomain>(
-    connectionId: string,
-    domain: D,
-    items: ResourceItemsByDomain[D][],
-  ) => void;
+  setSnapshot: <D extends ResourceDomain>(connectionId: string, domain: D, items: ResourceItemsByDomain[D][]) => void;
   setStatus: <D extends ResourceDomain>(
     connectionId: string,
     domain: D,
@@ -70,64 +66,62 @@ export function createConnectionSnapshot(): ResourceConnectionSnapshot {
   };
 }
 
-export const useResourceStore = create<ResourceStore>()(
-  (set) => ({
-    byConnection: {},
+export const useResourceStore = create<ResourceStore>()((set) => ({
+  byConnection: {},
 
-    ensureConnection: (connectionId) =>
-      set((state) =>
-        state.byConnection[connectionId]
-          ? {}
-          : { byConnection: { ...state.byConnection, [connectionId]: createConnectionSnapshot() } },
-      ),
+  ensureConnection: (connectionId) =>
+    set((state) =>
+      state.byConnection[connectionId]
+        ? {}
+        : { byConnection: { ...state.byConnection, [connectionId]: createConnectionSnapshot() } },
+    ),
 
-    setSnapshot: (connectionId, domain, items) =>
-      set((state) => {
-        const snapshot = state.byConnection[connectionId] ?? createConnectionSnapshot();
-        const slice = snapshot[domain] as ResourceSlice;
-        return {
-          byConnection: {
-            ...state.byConnection,
-            [connectionId]: {
-              ...snapshot,
-              [domain]: {
-                ...slice,
-                items,
-                loading: false,
-                lastUpdated: Date.now(),
-                lastError: undefined,
-              },
+  setSnapshot: (connectionId, domain, items) =>
+    set((state) => {
+      const snapshot = state.byConnection[connectionId] ?? createConnectionSnapshot();
+      const slice = snapshot[domain] as ResourceSlice;
+      return {
+        byConnection: {
+          ...state.byConnection,
+          [connectionId]: {
+            ...snapshot,
+            [domain]: {
+              ...slice,
+              items,
+              loading: false,
+              lastUpdated: Date.now(),
+              lastError: undefined,
             },
           },
-        };
-      }),
+        },
+      };
+    }),
 
-    setStatus: (connectionId, domain, status) =>
-      set((state) => {
-        const snapshot = state.byConnection[connectionId] ?? createConnectionSnapshot();
-        return {
-          byConnection: {
-            ...state.byConnection,
-            [connectionId]: {
-              ...snapshot,
-              [domain]: {
-                ...snapshot[domain],
-                ...status,
-              },
+  setStatus: (connectionId, domain, status) =>
+    set((state) => {
+      const snapshot = state.byConnection[connectionId] ?? createConnectionSnapshot();
+      return {
+        byConnection: {
+          ...state.byConnection,
+          [connectionId]: {
+            ...snapshot,
+            [domain]: {
+              ...snapshot[domain],
+              ...status,
             },
           },
-        };
-      }),
+        },
+      };
+    }),
 
-    resetConnection: (connectionId) =>
-      set((state) => {
-        const { [connectionId]: _removed, ...byConnection } = state.byConnection;
-        return { byConnection };
-      }),
+  resetConnection: (connectionId) =>
+    set((state) => {
+      const { [connectionId]: _removed, ...byConnection } = state.byConnection;
+      return { byConnection };
+    }),
 
-    resetAll: () => set({ byConnection: {} }),
-  }),
-);
+  resetAll: () => set({ byConnection: {} }),
+}));
 
 export function getResourceSlice<D extends ResourceDomain>(
   connectionId: string | undefined,
@@ -136,5 +130,7 @@ export function getResourceSlice<D extends ResourceDomain>(
   if (!connectionId) {
     return createResourceSlice<ResourceItemsByDomain[D]>();
   }
-  return useResourceStore.getState().byConnection[connectionId]?.[domain] ?? createResourceSlice<ResourceItemsByDomain[D]>();
+  return (
+    useResourceStore.getState().byConnection[connectionId]?.[domain] ?? createResourceSlice<ResourceItemsByDomain[D]>()
+  );
 }

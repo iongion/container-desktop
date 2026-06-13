@@ -15,33 +15,23 @@
 }
 
 .ResourceItemInlineActionsMenu
-  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not(
-    [class*="bp6-intent-"]
-  )
+  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   .bp6-icon,
 .ResourceItemInlineActionsMenu
-  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not(
-    [class*="bp6-intent-"]
-  )
+  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   > svg {
   color: #fff;
 }
 
 .ResourceItemInlineActionsMenu
-  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not(
-    [class*="bp6-intent-"]
-  )
+  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   .bp6-icon
   svg,
 .ResourceItemInlineActionsMenu
-  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not(
-    [class*="bp6-intent-"]
-  )
+  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   > svg,
 .ResourceItemInlineActionsMenu
-  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not(
-    [class*="bp6-intent-"]
-  )
+  .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   svg
   path {
   fill: #fff;

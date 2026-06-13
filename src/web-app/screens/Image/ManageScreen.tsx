@@ -16,7 +16,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
+import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu, getImageUrl } from ".";
 import "./ManageScreen.css";
@@ -85,11 +85,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive striped compact className="AppDataTable" data-table="images">
             <thead>
               <tr>
-                <SortableColumnHeader
-                  field="name"
-                  direction={getColumnSortDirection("name")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.BOX} text={t("Name")} />
                 </SortableColumnHeader>
                 <SortableColumnHeader
@@ -110,11 +106,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 >
                   <AppLabel iconName={IconNames.BARCODE} text={t("Id")} />
                 </SortableColumnHeader>
-                <SortableColumnHeader
-                  field="size"
-                  direction={getColumnSortDirection("size")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="size" direction={getColumnSortDirection("size")} onSort={toggleColumnSort}>
                   {t("Size")}
                 </SortableColumnHeader>
                 <SortableColumnHeader

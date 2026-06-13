@@ -25,7 +25,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const statsQuery = useContainerStats(connectionId, decodedId);
   const container = containerQuery.data;
   const stats = statsQuery.data || container?.Stats;
-  const pending = containerQuery.isLoading || containerQuery.isFetching || statsQuery.isLoading || statsQuery.isFetching;
+  const pending =
+    containerQuery.isLoading || containerQuery.isFetching || statsQuery.isLoading || statsQuery.isFetching;
   const cpu_usage = stats?.cpu_stats?.cpu || 0;
   const mem_usage = stats?.memory_stats?.usage || 0;
   const disk_io = 0;

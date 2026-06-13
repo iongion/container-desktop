@@ -13,7 +13,7 @@ import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader"
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
+import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
@@ -84,11 +84,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="machines">
             <thead>
               <tr>
-                <SortableColumnHeader
-                  field="name"
-                  direction={getColumnSortDirection("name")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.HEAT_GRID} text={t("Name")} />
                 </SortableColumnHeader>
                 <SortableColumnHeader
@@ -98,11 +94,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 >
                   {t("VM Type")}
                 </SortableColumnHeader>
-                <SortableColumnHeader
-                  field="cpus"
-                  direction={getColumnSortDirection("cpus")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="cpus" direction={getColumnSortDirection("cpus")} onSort={toggleColumnSort}>
                   {t("CPUs")}
                 </SortableColumnHeader>
                 <SortableColumnHeader

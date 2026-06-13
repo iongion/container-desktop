@@ -18,7 +18,7 @@ import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { SortSpec } from "@/web-app/stores/sortStore";
 import type { AppScreen, AppScreenProps, ContainerGroup } from "@/web-app/Types";
-import { compareSortValues, sortByField, type SortSelectors } from "@/web-app/utils/comparators";
+import { compareSortValues, type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
 
@@ -207,11 +207,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable compact striped interactive className="AppDataTable" data-table="containers">
             <thead>
               <tr>
-                <SortableColumnHeader
-                  field="name"
-                  direction={getColumnSortDirection("name")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.CUBE} text={t("Name")} />
                 </SortableColumnHeader>
                 <SortableColumnHeader

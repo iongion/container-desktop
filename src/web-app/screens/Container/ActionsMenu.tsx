@@ -203,9 +203,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   }, [performActionCommand]);
 
   const isKubeAvailable = currentConnector?.capabilities?.extensions.kube === true;
-  const kubeDisabledTitle = isKubeAvailable
-    ? ""
-    : t("Not available for current host");
+  const kubeDisabledTitle = isKubeAvailable ? "" : t("Not available for current host");
   const expandAsButtons =
     expand && container ? (
       <>

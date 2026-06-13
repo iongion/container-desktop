@@ -17,7 +17,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
+import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
@@ -91,11 +91,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="networks">
             <thead>
               <tr>
-                <SortableColumnHeader
-                  field="name"
-                  direction={getColumnSortDirection("name")}
-                  onSort={toggleColumnSort}
-                >
+                <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconPath={mdiNetwork} text={t("Name")} />
                 </SortableColumnHeader>
                 <SortableColumnHeader

@@ -174,11 +174,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   return (
     <ButtonGroup className="ResourceItemInlineActionsMenu">
       {expandAsButtons}
-      <ConfirmMenu
-        onConfirm={onRemove}
-        tag={pod.Id}
-        disabled={disabledAction === "pod.remove"}
-      >
+      <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"}>
         {expandAsMenuItems}
         <MenuItem
           data-pod={pod.Id}

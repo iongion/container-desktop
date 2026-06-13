@@ -26,7 +26,10 @@ export function SortableColumnHeader({
     onSort(event.currentTarget.dataset.sortField || field);
   };
   return (
-    <th data-column={field} aria-sort={direction === "asc" ? "ascending" : direction === "desc" ? "descending" : "none"}>
+    <th
+      data-column={field}
+      aria-sort={direction === "asc" ? "ascending" : direction === "desc" ? "descending" : "none"}
+    >
       <button
         type="button"
         className="SortableColumnHeaderButton"
