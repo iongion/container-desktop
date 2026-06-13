@@ -67,6 +67,17 @@ function killElectron() {
   });
 }
 
+/**
+ * Electron must NOT inherit `ELECTRON_RUN_AS_NODE`: with it set, the Electron binary boots as a plain
+ * Node runtime and the app dies immediately with "Not running in an Electron environment!". Some shells,
+ * IDE-integrated terminals and CI runners export it globally, so strip it from the child env here.
+ */
+function electronEnv() {
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  return env;
+}
+
 /** Relaunch electron, ensuring the previous instance is gone first (no process pile-up). */
 async function relaunchElectron() {
   if (relaunching) {
@@ -75,7 +86,7 @@ async function relaunchElectron() {
   relaunching = true;
   try {
     await killElectron();
-    electronApp = spawn(String(electronPath), buildElectronArgs(), { stdio: "inherit" });
+    electronApp = spawn(String(electronPath), buildElectronArgs(), { stdio: "inherit", env: electronEnv() });
     electronApp.addListener("exit", onElectronExit);
   } finally {
     relaunching = false;
