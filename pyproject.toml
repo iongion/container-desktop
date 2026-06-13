@@ -17,7 +17,8 @@ dynamic = ["version"]
 [dependency-groups]
 dev = [
     "pytest",
-    "ruff"
+    "pytest-env>=1.6.0",
+    "ruff",
 ]
 
 [tool.uv]
@@ -26,6 +27,7 @@ default-groups = ["dev"]
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
+pythonpath = ["."]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
