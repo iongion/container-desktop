@@ -64,7 +64,7 @@
     "ipaddr.js": "^2.4.0",
     "lodash-es": "^4.18.1",
     "magic-string": "^0.30.21",
-    "monaco-editor": "^0.54.0",
+    "monaco-editor": "^0.55.1",
     "path-to-regexp": "^8.4.2",
     "portfinder": "^1.0.38",
     "pretty-bytes": "^7.1.0",
@@ -115,6 +115,9 @@
   },
   "optionalDependencies": {
     "dmg-license": "^1.0.11"
+  },
+  "resolutions": {
+    "dompurify": "3.4.10"
   },
   "repository": "https://github.com/iongion/container-desktop.git"
 }
