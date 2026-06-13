@@ -118,7 +118,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={registry ? "ResourceItemInlineActionsMenu" : undefined}>
         {createButton}
         {removeWidget}
       </ButtonGroup>

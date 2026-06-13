@@ -8,11 +8,14 @@ import type { Connector, Secret } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
 
 import { SecretActionsMenu } from ".";
 import "./ManageScreen.css";
@@ -34,17 +37,31 @@ const createSecretSearchFilter = (searchTerm: string) => {
   };
 };
 
+const secretSortSelectors: SortSelectors<Secret> = {
+  name: (secret) => secret.Spec?.Name || "",
+  id: (secret) => secret.ID,
+  updated: (secret) => Date.parse(secret.UpdatedAt || secret.CreatedAt || ""),
+  created: (secret) => Date.parse(secret.CreatedAt || ""),
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id;
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    currentConnector?.capabilities?.sort,
+  );
   const secretSnapshot = useResourceStore((state) =>
     connectionId ? state.byConnection[connectionId]?.secrets.items || EMPTY_SECRETS : EMPTY_SECRETS,
   );
   const secrets = useMemo(() => {
     const items = searchTerm ? secretSnapshot.filter(createSecretSearchFilter(searchTerm)) : secretSnapshot;
-    return [...items].sort((a, b) => sortAlphaNum(a.Spec?.Name || "", b.Spec?.Name || ""));
-  }, [secretSnapshot, searchTerm]);
+    return clientSort
+      ? sortByField(items, clientSort, secretSortSelectors)
+      : [...items].sort((a, b) => sortAlphaNum(a.Spec?.Name || "", b.Spec?.Name || ""));
+  }, [clientSort, secretSnapshot, searchTerm]);
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "secrets");
@@ -70,18 +87,30 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="secrets">
             <thead>
               <tr>
-                <th data-column="Name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={getColumnSortDirection("name")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.KEY} text={t("Name")} />
-                </th>
-                <th data-column="Id">
+                </SortableColumnHeader>
+                <SortableColumnHeader field="id" direction={getColumnSortDirection("id")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.BARCODE} text={t("Id")} />
-                </th>
-                <th data-column="Updated">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="updated"
+                  direction={getColumnSortDirection("updated")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Updated")} />
-                </th>
-                <th data-column="Created">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="created"
+                  direction={getColumnSortDirection("created")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>

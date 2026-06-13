@@ -10,11 +10,14 @@ import type { Network } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
 
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
@@ -34,17 +37,35 @@ const createNetworkSearchFilter = (searchTerm: string) => {
   };
 };
 
+const networkSortSelectors: SortSelectors<Network> = {
+  name: (network) => network.name,
+  id: (network) => network.id,
+  driver: (network) => network.driver,
+  interface: (network) => network.network_interface,
+  internal: (network) => network.internal,
+  dns: (network) => network.dns_enabled,
+  created: (network) =>
+    typeof network.created === "string" ? Date.parse(network.created) : Number(network.created) * 1000,
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id;
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    currentConnector?.capabilities?.sort,
+  );
   const networkSnapshot = useResourceStore((state) =>
     connectionId ? state.byConnection[connectionId]?.networks.items || EMPTY_NETWORKS : EMPTY_NETWORKS,
   );
   const networks = useMemo(() => {
     const items = searchTerm ? networkSnapshot.filter(createNetworkSearchFilter(searchTerm)) : networkSnapshot;
-    return [...items].sort((a, b) => sortAlphaNum(a.name, b.name));
-  }, [networkSnapshot, searchTerm]);
+    return clientSort
+      ? sortByField(items, clientSort, networkSortSelectors)
+      : [...items].sort((a, b) => sortAlphaNum(a.name, b.name));
+  }, [clientSort, networkSnapshot, searchTerm]);
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "networks");
@@ -70,27 +91,52 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="networks">
             <thead>
               <tr>
-                <th data-column="name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={getColumnSortDirection("name")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconPath={mdiNetwork} text={t("Name")} />
-                </th>
-                <th data-column="Id" title={t("First 12 characters")}>
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="id"
+                  direction={getColumnSortDirection("id")}
+                  onSort={toggleColumnSort}
+                  title={t("First 12 characters")}
+                >
                   <AppLabel iconName={IconNames.BARCODE} text={t("Id")} />
-                </th>
-                <th data-column="driver">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="driver"
+                  direction={getColumnSortDirection("driver")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconPath={mdiScrewdriver} text={t("Driver")} />
-                </th>
-                <th data-column="network_interface">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="interface"
+                  direction={getColumnSortDirection("interface")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconPath={mdiEthernet} text={t("Interface")} />
-                </th>
-                <th data-column="internal">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="internal"
+                  direction={getColumnSortDirection("internal")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconPath={mdiInfinity} text={t("Internal")} />
-                </th>
-                <th data-column="dns_enabled">
+                </SortableColumnHeader>
+                <SortableColumnHeader field="dns" direction={getColumnSortDirection("dns")} onSort={toggleColumnSort}>
                   <AppLabel iconPath={mdiDns} text={t("DNS")} />
-                </th>
-                <th data-column="created">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="created"
+                  direction={getColumnSortDirection("created")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>

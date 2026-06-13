@@ -18,8 +18,28 @@ import type {
   Volume,
 } from "@/env/Types";
 
-/** New home for the container group separator (Api.clients.ts keeps its copy until the Phase 5 cutover). */
-export const CONTAINER_GROUP_SEPARATOR = "_";
+/** New home for the container group separators (Api.clients.ts keeps its copy until the Phase 5 cutover). */
+export const CONTAINER_GROUP_SEPARATORS = ["-", "_"];
+
+function normalizeContainerName(name: string): string {
+  return name.replace(/^\/+/, "");
+}
+
+function splitContainerGroupName(containerName: string) {
+  const separatorIndex = CONTAINER_GROUP_SEPARATORS.map((separator) => containerName.indexOf(separator))
+    .filter((index) => index > 0)
+    .sort((a, b) => a - b)[0];
+  if (!separatorIndex) {
+    return {
+      groupName: containerName,
+      containerNameInGroup: "",
+    };
+  }
+  return {
+    groupName: containerName.slice(0, separatorIndex),
+    containerNameInGroup: containerName.slice(separatorIndex + 1),
+  };
+}
 
 /** raw container (list = State string, inspect = State object) → canonical. */
 export const normalizeContainer = (container: Container): Container => {
@@ -40,7 +60,7 @@ export const normalizeContainer = (container: Container): Container => {
     container.Computed.DecodedState = container.State as ContainerStateList;
   }
 
-  const containerName = `${container.Names?.[0] || container.Name}`;
+  const containerName = normalizeContainerName(`${container.Names?.[0] || container.Name}`);
   if (containerName) {
     container.Computed.Name = containerName;
     // Compute group name - infra suffix
@@ -49,8 +69,7 @@ export const normalizeContainer = (container: Container): Container => {
       container.Computed.NameInGroup = containerName.replace("-infra", "");
     } else {
       // Compute group name - Name prefix
-      const [groupName, ...containerNameInGroupParts] = containerName.split(CONTAINER_GROUP_SEPARATOR);
-      const containerNameInGroup = containerNameInGroupParts.join(CONTAINER_GROUP_SEPARATOR);
+      const { groupName, containerNameInGroup } = splitContainerGroupName(containerName);
       container.Computed.Group = groupName;
       container.Computed.NameInGroup = containerNameInGroup;
     }

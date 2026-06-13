@@ -23,7 +23,7 @@ describe("normalizeContainer", () => {
     expect(out.Ports).toEqual([]);
   });
 
-  it("docker inspect item — State object → DecodedState from Status, name without separator", () => {
+  it("docker inspect item — State object → DecodedState from Status, strips Docker's leading slash", () => {
     const raw: any = {
       Id: "def",
       Names: ["/lonely"],
@@ -31,9 +31,21 @@ describe("normalizeContainer", () => {
     };
     const out = dockerNormalizers.normalizeContainer(raw);
     expect(out.Computed.DecodedState).toBe("exited");
-    expect(out.Computed.Name).toBe("/lonely");
-    expect(out.Computed.Group).toBe("/lonely");
+    expect(out.Computed.Name).toBe("lonely");
+    expect(out.Computed.Group).toBe("lonely");
     expect(out.Computed.NameInGroup).toBe("");
+  });
+
+  it("docker compose-style item — strips slash and groups on the first '-' or '_' separator", () => {
+    const raw: any = {
+      Id: "ghi",
+      Names: ["/kalshi_target_words-minio-1"],
+      State: "running",
+    };
+    const out = dockerNormalizers.normalizeContainer(raw);
+    expect(out.Computed.Name).toBe("kalshi_target_words-minio-1");
+    expect(out.Computed.Group).toBe("kalshi");
+    expect(out.Computed.NameInGroup).toBe("target_words-minio-1");
   });
 
   it("infra container → 'Pod infrastructure' group (issue grouping)", () => {

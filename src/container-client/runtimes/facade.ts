@@ -53,7 +53,7 @@ export type EngineExtension =
 export interface CapabilityDescriptor {
   resources: { pods: boolean; secrets: boolean };
   events: boolean;
-  /** Per-field sort capability; "client" for every REST table today (consumed in the sorting phase). */
+  /** Per-field sort capability; REST list endpoints are explicit "client" entries until an API exposes sorting. */
   sort: Record<string, SortMode>;
   /** Which extension groups are real (vs no-op) on this host. */
   extensions: Record<EngineExtension, boolean>;

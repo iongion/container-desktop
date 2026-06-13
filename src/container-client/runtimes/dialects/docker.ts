@@ -18,6 +18,7 @@ import {
 } from "@/env/Types";
 import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
+import { DOCKER_SORT_CAPABILITIES } from "../sort-capabilities";
 
 /** A failed command result used by the no-op Podman-domain extensions on Docker. */
 function noopCommandResult(): CommandExecutionResult {
@@ -69,7 +70,7 @@ export const dockerDialect: EngineDialect = {
   capabilitiesBase: {
     resources: { pods: false, secrets: false },
     events: true,
-    sort: {},
+    sort: DOCKER_SORT_CAPABILITIES,
     extensions: {
       machines: false,
       kube: false,

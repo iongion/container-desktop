@@ -923,11 +923,12 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
 
 export async function exec_launcher_async(launcher: string, launcherArgs: string[], opts?: WrapperOpts) {
   // const env = merge({}, { PODMAN_IGNORE_CGROUPSV1_WARNING: "true" }, opts?.env || {});
-  const spawnOpts = {
+  const spawnOpts: any = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
     env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined,
     detached: opts?.detached,
+    stdio: opts?.detached ? "ignore" : undefined,
   };
   const { commandLauncher, commandArgs } = applyWrapper(launcher, launcherArgs, opts);
   return new Promise<CommandExecutionResult>((resolve, reject) => {
@@ -949,9 +950,9 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
             logger.error(command, "spawning already resolved", { from, data });
           } else {
             result.pid = child.pid as any;
-            result.code = child.exitCode as any;
+            result.code = from === "spawn" ? 0 : (child.exitCode as any);
             result.stderr = result.stderr || "";
-            result.success = child.exitCode === 0;
+            result.success = from === "spawn" ? true : child.exitCode === 0;
             result.command = command;
             resolved = true;
             logger.debug("[SC.A][<]", {
@@ -963,19 +964,26 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
             resolve(result);
           }
         };
-        child.stdout.setEncoding("utf8");
-        child.stderr.setEncoding("utf8");
-        child.on("exit", (code) => processResolve("exit", code));
+        if (spawnOpts.detached) {
+          child.on("spawn", () => {
+            child.unref();
+            processResolve("spawn", 0);
+          });
+        } else {
+          child.on("exit", (code) => processResolve("exit", code));
+        }
+        child.stdout?.setEncoding("utf8");
+        child.stderr?.setEncoding("utf8");
         // child.on("close", (code) => processResolve("close", code));
         child.on("error", (error) => {
           logger.error(command, "spawning error", error.message);
           (result as any).error = error;
           processResolve("error", error);
         });
-        child.stdout.on("data", (data) => {
+        child.stdout?.on("data", (data) => {
           result.stdout += `${data}`;
         });
-        child.stderr.on("data", (data) => {
+        child.stderr?.on("data", (data) => {
           logger.warn(command, data);
           result.stderr += `${data}`;
         });

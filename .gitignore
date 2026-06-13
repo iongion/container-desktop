@@ -5,7 +5,7 @@ build
 dist
 release
 squashfs-root
-temp
+temp/
 .DS_Store
 .egg-info
 PodmanDesktopCompanion.pfx

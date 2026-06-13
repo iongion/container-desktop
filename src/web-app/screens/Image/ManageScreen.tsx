@@ -10,10 +10,13 @@ import type { ContainerImage } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
 
 import { ActionsMenu, getImageUrl } from ".";
 import "./ManageScreen.css";
@@ -32,19 +35,32 @@ const createImageSearchFilter = (searchTerm: string) => {
   };
 };
 
+const imageSortSelectors: SortSelectors<ContainerImage> = {
+  name: (image) => image.Name,
+  registry: (image) => image.Registry,
+  tag: (image) => image.Tag,
+  id: (image) => image.Id,
+  size: (image) => image.Size,
+  containers: (image) => image.Containers,
+  created: (image) => image.Created,
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id;
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    currentConnector?.capabilities?.sort,
+  );
   const imageSnapshot = useResourceStore((state) =>
     connectionId ? state.byConnection[connectionId]?.images.items || EMPTY_IMAGES : EMPTY_IMAGES,
   );
   const images = useMemo(() => {
-    if (!searchTerm) {
-      return imageSnapshot;
-    }
-    return imageSnapshot.filter(createImageSearchFilter(searchTerm));
-  }, [imageSnapshot, searchTerm]);
+    const items = searchTerm ? imageSnapshot.filter(createImageSearchFilter(searchTerm)) : imageSnapshot;
+    return sortByField(items, clientSort, imageSortSelectors);
+  }, [clientSort, imageSnapshot, searchTerm]);
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "images");
@@ -69,25 +85,53 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive striped compact className="AppDataTable" data-table="images">
             <thead>
               <tr>
-                <th data-column="Name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={getColumnSortDirection("name")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.BOX} text={t("Name")} />
-                </th>
-                <th data-column="Registry">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="registry"
+                  direction={getColumnSortDirection("registry")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconPath={mdiCubeUnfolded} text={t("Registry")} />
-                </th>
-                <th data-column="Tag">
+                </SortableColumnHeader>
+                <SortableColumnHeader field="tag" direction={getColumnSortDirection("tag")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.TAG} text={t("Tag")} />
-                </th>
-                <th data-column="Id" title={t("First 12 characters")}>
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="id"
+                  direction={getColumnSortDirection("id")}
+                  onSort={toggleColumnSort}
+                  title={t("First 12 characters")}
+                >
                   <AppLabel iconName={IconNames.BARCODE} text={t("Id")} />
-                </th>
-                <th data-column="Size">{t("Size")}</th>
-                <th data-column="Containers" title={t("Count of containers using the image")}>
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="size"
+                  direction={getColumnSortDirection("size")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Size")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="containers"
+                  direction={getColumnSortDirection("containers")}
+                  onSort={toggleColumnSort}
+                  title={t("Count of containers using the image")}
+                >
                   <Icon icon={IconNames.CUBE} />
-                </th>
-                <th data-column="Created">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="created"
+                  direction={getColumnSortDirection("created")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>

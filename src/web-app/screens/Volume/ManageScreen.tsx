@@ -9,11 +9,14 @@ import type { Volume } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
 import { VolumeActionsMenu } from ".";
 import { getVolumeUrl } from "./Navigation";
 import "./ManageScreen.css";
@@ -32,17 +35,30 @@ const createVolumeSearchFilter = (searchTerm: string) => {
   };
 };
 
+const volumeSortSelectors: SortSelectors<Volume> = {
+  name: (volume) => volume.Name,
+  driver: (volume) => volume.Driver,
+  created: (volume) => Date.parse(volume.CreatedAt || ""),
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const { searchTerm, onSearchChange } = useAppScreenSearch();
-  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id;
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    currentConnector?.capabilities?.sort,
+  );
   const volumeSnapshot = useResourceStore((state) =>
     connectionId ? state.byConnection[connectionId]?.volumes.items || EMPTY_VOLUMES : EMPTY_VOLUMES,
   );
   const volumes = useMemo(() => {
     const items = searchTerm ? volumeSnapshot.filter(createVolumeSearchFilter(searchTerm)) : volumeSnapshot;
-    return [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
-  }, [volumeSnapshot, searchTerm]);
+    return clientSort
+      ? sortByField(items, clientSort, volumeSortSelectors)
+      : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
+  }, [clientSort, volumeSnapshot, searchTerm]);
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "volumes");
@@ -68,15 +84,27 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="volumes">
             <thead>
               <tr>
-                <th data-column="Name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={getColumnSortDirection("name")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.DATABASE} text={t("Name")} />
-                </th>
-                <th data-column="Driver">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="driver"
+                  direction={getColumnSortDirection("driver")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconPath={mdiScrewdriver} text={t("Driver")} />
-                </th>
-                <th data-column="Created">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="created"
+                  direction={getColumnSortDirection("created")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>

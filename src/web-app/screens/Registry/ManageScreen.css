@@ -25,7 +25,7 @@
 [data-table="search.results"] tr td:last-child {
   text-align: center;
 }
-[data-table="search.results"] [data-column="Name"] {
+[data-table="search.results"] [data-column="name"] {
   text-align: left;
 }
 

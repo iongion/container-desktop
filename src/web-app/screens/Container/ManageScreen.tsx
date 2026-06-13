@@ -9,12 +9,16 @@ import { type Container, ContainerStateList } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
+import type { SortSpec } from "@/web-app/stores/sortStore";
 import type { AppScreen, AppScreenProps, ContainerGroup } from "@/web-app/Types";
+import { compareSortValues, sortByField, type SortSelectors } from "@/web-app/utils/comparators";
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
 
@@ -33,7 +37,49 @@ const createContainerSearchFilter = (searchTerm: string) => {
   };
 };
 
-function groupContainers(containers: Container[], searchTerm: string): ContainerGroup[] {
+const containerSortSelectors: SortSelectors<Container> = {
+  name: (container) => container.Computed.Name || container.Names[0] || "",
+  image: (container) => container.Image,
+  pid: (container) => container.Pid,
+  state: (container) => container.Computed.DecodedState,
+  id: (container) => container.Id,
+  created: (container) =>
+    typeof container.Created === "string" ? Date.parse(container.Created) : Number(container.Created) * 1000,
+};
+
+function isContainerGroupDirectory(group: ContainerGroup): boolean {
+  return group.Name === "Pod infrastructure" || group.Items.length > 1;
+}
+
+function compareContainerGroups(sort: SortSpec | undefined) {
+  const selector = sort ? containerSortSelectors[sort.field] : undefined;
+  const direction = sort?.dir === "desc" ? -1 : 1;
+  return (a: ContainerGroup, b: ContainerGroup) => {
+    if (a.Name === "Pod infrastructure" && b.Name !== "Pod infrastructure") {
+      return -1;
+    }
+    if (b.Name === "Pod infrastructure" && a.Name !== "Pod infrastructure") {
+      return 1;
+    }
+    const aIsDirectory = isContainerGroupDirectory(a);
+    const bIsDirectory = isContainerGroupDirectory(b);
+    if (aIsDirectory !== bIsDirectory) {
+      return aIsDirectory ? -1 : 1;
+    }
+    if (sort?.field === "name") {
+      return direction * compareSortValues(a.Name || "", b.Name || "");
+    }
+    if (!aIsDirectory && !bIsDirectory && selector) {
+      const sorted = direction * compareSortValues(selector(a.Items[0]), selector(b.Items[0]));
+      if (sorted !== 0) {
+        return sorted;
+      }
+    }
+    return sortAlphaNum(a.Name || "", b.Name || "");
+  };
+}
+
+function groupContainers(containers: Container[], searchTerm: string, sort: SortSpec | undefined): ContainerGroup[] {
   let source = [...containers].sort((a, b) => {
     if (a.Computed.Name && b.Computed.Name) {
       return sortAlphaNum(a.Computed.Name, b.Computed.Name);
@@ -79,8 +125,13 @@ function groupContainers(containers: Container[], searchTerm: string): Container
     }
     group.Items.push(it);
   });
-  groups = groups.sort((a, b) => sortAlphaNum(a.Name || "", b.Name || ""));
-  groups = groups.sort((a, b) => a.Weight - b.Weight);
+  if (sort) {
+    groups = groups.map((group) => ({
+      ...group,
+      Items: sortByField(group.Items, sort, containerSortSelectors),
+    }));
+  }
+  groups = groups.sort(compareContainerGroups(sort));
   return groups;
 }
 
@@ -91,11 +142,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }>({});
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
-  const connectionId = useAppStore((state) => state.currentConnector?.id);
+  const currentConnector = useAppStore((state) => state.currentConnector);
+  const connectionId = currentConnector?.id;
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    currentConnector?.capabilities?.sort,
+  );
   const containers = useResourceStore((state) =>
     connectionId ? state.byConnection[connectionId]?.containers.items || EMPTY_CONTAINERS : EMPTY_CONTAINERS,
   );
-  const groups = useMemo(() => groupContainers(containers, searchTerm), [containers, searchTerm]);
+  const groups = useMemo(
+    () => groupContainers(containers, searchTerm, clientSort),
+    [clientSort, containers, searchTerm],
+  );
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "containers");
@@ -105,7 +164,18 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const groupName = e.currentTarget.getAttribute("data-prefix-group");
     setCollapse((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
   }, []);
-  const onContainerFocus = useCallback((e) => {}, []);
+  const onContainerFocus = useCallback((e) => {
+    const container = e.currentTarget.getAttribute("data-container");
+    setContainerOverlay(container || undefined);
+  }, []);
+  const onContainerBlur = useCallback((e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setContainerOverlay(undefined);
+    }
+  }, []);
+  const onContainerClearOverlay = useCallback(() => {
+    setContainerOverlay(undefined);
+  }, []);
   const onGroupMouseOver = useCallback((e) => {
     setContainerOverlay(undefined);
   }, []);
@@ -137,20 +207,40 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable compact striped interactive className="AppDataTable" data-table="containers">
             <thead>
               <tr>
-                <th data-column="Name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={getColumnSortDirection("name")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CUBE} text={t("Name")} />
-                </th>
-                <th data-column="Image">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="image"
+                  direction={getColumnSortDirection("image")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.BOX} text={t("Image")} />
-                </th>
-                <th data-column="Pid">{t("Pid")}</th>
-                <th data-column="State">{t("State")}</th>
-                <th data-column="Id">
+                </SortableColumnHeader>
+                <SortableColumnHeader field="pid" direction={getColumnSortDirection("pid")} onSort={toggleColumnSort}>
+                  {t("Pid")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="state"
+                  direction={getColumnSortDirection("state")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("State")}
+                </SortableColumnHeader>
+                <SortableColumnHeader field="id" direction={getColumnSortDirection("id")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.BARCODE} text={t("Id")} />
-                </th>
-                <th data-column="Created">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="created"
+                  direction={getColumnSortDirection("created")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>
@@ -217,7 +307,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         ) : undefined;
                       let containerGroupData: React.ReactNode | null = null;
                       if (!isCollapsed) {
-                        // ui
                         const creationDate =
                           typeof container.Created === "string"
                             ? dayjs(container.Created)
@@ -272,8 +361,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             data-container={container.Id}
                             data-state={container.Computed.DecodedState}
                             onFocus={onContainerFocus}
-                            onMouseOver={onContainerRequestOverlay}
-                            onPointerDown={onContainerRequestOverlay}
+                            onBlur={onContainerBlur}
+                            onMouseEnter={onContainerRequestOverlay}
+                            onMouseLeave={onContainerClearOverlay}
                           >
                             <td>
                               {groupLink}

@@ -23,6 +23,7 @@ import {
 import { getAvailablePodmanMachines, normalizePodmanMachines } from "../../shared";
 import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
+import { PODMAN_SORT_CAPABILITIES } from "../sort-capabilities";
 
 /** Resolve the program used to drive machine commands: the controller when scoped, else the engine program. */
 async function getControllerLauncherPath(host: HostContext): Promise<string> {
@@ -64,7 +65,7 @@ export const podmanDialect: EngineDialect = {
   capabilitiesBase: {
     resources: { pods: true, secrets: true },
     events: true,
-    sort: {},
+    sort: PODMAN_SORT_CAPABILITIES,
     extensions: {
       machines: true,
       kube: true,

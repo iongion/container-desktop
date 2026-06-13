@@ -131,7 +131,11 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
     <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = machine ? (
-    <ConfirmMenu onConfirm={onRemove} tag={machine.Name} disabled={disabledAction === "machine.remove"}>
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={machine.Name}
+      disabled={disabledAction === "machine.remove"}
+    >
       {isNative ? (
         <MenuItem
           data-machine={machine.Name}
@@ -165,7 +169,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={machine ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

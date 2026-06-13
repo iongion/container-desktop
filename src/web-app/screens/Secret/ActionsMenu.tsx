@@ -87,13 +87,17 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
     <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = secret ? (
-    <ConfirmMenu onConfirm={onRemove} tag={secret.ID} disabled={disabledAction === "secret.remove"}>
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={secret.ID}
+      disabled={disabledAction === "secret.remove"}
+    >
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getSecretUrl(secret.ID, "inspect")} />
     </ConfirmMenu>
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={secret ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

@@ -86,13 +86,17 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
     <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = volume ? (
-    <ConfirmMenu onConfirm={onRemove} tag={volume.Name} disabled={disabledAction === "volume.remove"}>
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={volume.Name}
+      disabled={disabledAction === "volume.remove"}
+    >
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getVolumeUrl(volume.Name, "inspect")} />
     </ConfirmMenu>
   ) : undefined;
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={volume ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

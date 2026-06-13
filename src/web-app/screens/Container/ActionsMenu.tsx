@@ -361,7 +361,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   }, [userContainer]);
 
   return (
-    <ButtonGroup className="ItemActionsMenu" data-actions-menu="container">
+    <ButtonGroup
+      className={container ? "ItemActionsMenu ResourceItemInlineActionsMenu" : "ItemActionsMenu"}
+      data-actions-menu="container"
+    >
       {expandAsOverlay}
       {withInlinePlayerActions ? (
         <>

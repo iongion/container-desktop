@@ -5,11 +5,14 @@ import * as ReactIcon from "@mdi/react";
 import { type FormEvent, type MouseEvent, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { RegistrySearchFilters, RegistrySearchResult } from "@/env/Types";
+import type { Registry, RegistrySearchFilters, RegistrySearchResult } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
 
 import { ActionsMenu, ScreenHeader } from ".";
 import "./ManageScreen.css";
@@ -20,11 +23,23 @@ export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "registries";
 
+const registrySearchSortSelectors: SortSelectors<RegistrySearchResult> = {
+  name: (result) => result.Name,
+  registry: (result) => result.Index,
+  stars: (result) => result.Stars,
+};
+
+const registrySourceSortSelectors: SortSelectors<Registry> = {
+  name: (registry) => registry.name,
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
   const connectionId = currentConnector?.id || "";
+  const searchSort = useColumnSort(`${ID}.search`, currentConnector?.capabilities?.sort);
+  const sourceSort = useColumnSort(`${ID}.sources`, currentConnector?.capabilities?.sort);
   const registriesQuery = useRegistriesMap(connectionId);
   const registrySearch = useSearchRegistry();
   const registriesMap = registriesQuery.data || { default: [], custom: [] };
@@ -32,6 +47,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const registries = useMemo(
     () => [...(registriesMap?.default || []), ...(registriesMap?.custom || [])],
     [registriesMap],
+  );
+  const sortedSearchResults = useMemo(
+    () => sortByField(searchResults, searchSort.clientSort, registrySearchSortSelectors),
+    [searchResults, searchSort.clientSort],
+  );
+  const sortedRegistries = useMemo(
+    () => sortByField(registries, sourceSort.clientSort, registrySourceSortSelectors),
+    [registries, sourceSort.clientSort],
   );
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
   const firstEnabledRegistry = useMemo(
@@ -110,19 +133,31 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="search.results">
             <thead>
               <tr>
-                <th data-column="Name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={searchSort.getColumnSortDirection("name")}
+                  onSort={searchSort.toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.BOX} text={t("Image")} />
-                </th>
-                <th data-column="Registry">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="registry"
+                  direction={searchSort.getColumnSortDirection("registry")}
+                  onSort={searchSort.toggleColumnSort}
+                >
                   <AppLabel iconPath={mdiCubeUnfolded} text={t("Registry")} />
-                </th>
-                <th data-column="Stars">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="stars"
+                  direction={searchSort.getColumnSortDirection("stars")}
+                  onSort={searchSort.toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.STAR} />
-                </th>
+                </SortableColumnHeader>
               </tr>
             </thead>
             <tbody>
-              {searchResults.map((it) => {
+              {sortedSearchResults.map((it) => {
                 return (
                   <tr key={`${it.Index}_${it.Name}_${it.Tag}`} data-registry={it.Name}>
                     <td>
@@ -171,16 +206,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable compact striped className="AppDataTable" data-table="registries">
             <thead>
               <tr>
-                <th data-column="name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={sourceSort.getColumnSortDirection("name")}
+                  onSort={sourceSort.toggleColumnSort}
+                >
                   <div className="RegistriesTableHeader">
                     <AppLabel iconName={IconNames.SEARCH} text={t("Look-up source")} />
                   </div>
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>
             <tbody>
-              {(registries || []).map((registry) => {
+              {(sortedRegistries || []).map((registry) => {
                 let title = "";
                 if (registry.id === "system") {
                   title = registry.enabled

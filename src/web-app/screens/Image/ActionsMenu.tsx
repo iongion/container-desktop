@@ -146,7 +146,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     );
   return (
     <>
-      <ButtonGroup>
+      <ButtonGroup className={image ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
         {onReload && (
           <>

@@ -9,8 +9,11 @@ import type { Connector, PodmanMachine } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { sortByField, type SortSelectors } from "@/web-app/utils/comparators";
 
 import { ActionsMenu } from ".";
 import "./ManageScreen.css";
@@ -31,16 +34,33 @@ const createMachineSearchFilter = (searchTerm: string) => {
   };
 };
 
+const machineSortSelectors: SortSelectors<PodmanMachine> = {
+  name: (machine) => machine.Name,
+  vmType: (machine) => machine.VMType,
+  cpus: (machine) => Number(machine.CPUs) || 0,
+  memory: (machine) => Number(machine.Memory) || 0,
+  diskSize: (machine) => Number(machine.DiskSize) || 0,
+  default: (machine) => machine.Default,
+  running: (machine) => machine.Running,
+  lastUp: (machine) => Date.parse(machine.LastUp || ""),
+  created: (machine) => Date.parse(machine.Created || ""),
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
   const connectionId = currentConnector?.id || "";
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    currentConnector?.capabilities?.sort,
+  );
   const machinesQuery = useMachinesList(connectionId, currentConnector?.capabilities?.extensions.machines === true);
   const machineSnapshot = machinesQuery.data || EMPTY_MACHINES;
   const machines = useMemo(() => {
-    return searchTerm ? machineSnapshot.filter(createMachineSearchFilter(searchTerm)) : machineSnapshot;
-  }, [machineSnapshot, searchTerm]);
+    const items = searchTerm ? machineSnapshot.filter(createMachineSearchFilter(searchTerm)) : machineSnapshot;
+    return sortByField(items, clientSort, machineSortSelectors);
+  }, [clientSort, machineSnapshot, searchTerm]);
   const onReload = useCallback(() => {
     machinesQuery.refetch();
   }, [machinesQuery]);
@@ -64,21 +84,69 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <HTMLTable interactive compact striped className="AppDataTable" data-table="machines">
             <thead>
               <tr>
-                <th data-column="Name">
+                <SortableColumnHeader
+                  field="name"
+                  direction={getColumnSortDirection("name")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.HEAT_GRID} text={t("Name")} />
-                </th>
-                <th data-column="VMType">{t("VM Type")}</th>
-                <th data-column="CPUs">{t("CPUs")}</th>
-                <th data-column="Memory">{t("Memory")}</th>
-                <th data-column="DiskSize">{t("Disk Size")}</th>
-                <th data-column="Default">{t("Default")}</th>
-                <th data-column="Running">{t("Running")}</th>
-                <th data-column="LastUp">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="vmType"
+                  direction={getColumnSortDirection("vmType")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("VM Type")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="cpus"
+                  direction={getColumnSortDirection("cpus")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("CPUs")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="memory"
+                  direction={getColumnSortDirection("memory")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Memory")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="diskSize"
+                  direction={getColumnSortDirection("diskSize")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Disk Size")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="default"
+                  direction={getColumnSortDirection("default")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Default")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="running"
+                  direction={getColumnSortDirection("running")}
+                  onSort={toggleColumnSort}
+                >
+                  {t("Running")}
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="lastUp"
+                  direction={getColumnSortDirection("lastUp")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Last Up")} />
-                </th>
-                <th data-column="Created">
+                </SortableColumnHeader>
+                <SortableColumnHeader
+                  field="created"
+                  direction={getColumnSortDirection("created")}
+                  onSort={toggleColumnSort}
+                >
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
-                </th>
+                </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
               </tr>
             </thead>
