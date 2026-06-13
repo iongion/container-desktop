@@ -195,7 +195,7 @@ export abstract class AbstractContainerEngineHostClientSSH extends AbstractConta
     scope: string,
     settings?: EngineConnectorSettings,
   ): Promise<CommandExecutionResult> {
-    if (!this._connection || !this._connection.isConnected()) {
+    if (!this._connection?.isConnected()) {
       throw new Error("SSH connection is not established");
     }
     const result = await this._connection.execute([program, ...args]);

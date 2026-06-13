@@ -18,12 +18,8 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
   useEffect(() => {
     pollerCallback.current = poller;
   }, [poller]);
-  // Clears old interval if rate changes, allowing new poller to be created
-  useEffect(() => {
-    console.debug("Rate changed, clearing interval", rate);
-    clearInterval(pollerID.current);
-  }, [rate]);
-  // Poller effect
+  // Poller effect (also clears any previous interval up-front, so a separate
+  // rate-change cleanup effect is unnecessary).
   useEffect(() => {
     const frequency = rate === undefined ? Environment.settings.poll.rate : null;
     // Guard against previous interval
@@ -31,7 +27,6 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
       clearInterval(pollerID.current);
     }
     if (frequency === null) {
-      console.warn("Stopped on rate cleanup");
       return;
     }
     isPending.current = false;
@@ -45,13 +40,10 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         return pollerCallback.current();
       }
     }
-    let isPollingEnabled = Environment.features.polling?.enabled;
+    const isPollingEnabled = Environment.features.polling?.enabled;
     const poller = async () => {
       try {
-        if (isPending.current) {
-          console.debug("Polling cycle skipped");
-        } else {
-          // console.debug("Polling cycle started");
+        if (!isPending.current) {
           await poll();
         }
       } catch (error: any) {
@@ -64,27 +56,11 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
         // console.debug("Poller cycle complete");
       }
     };
+    // Only run a recurring interval when polling is enabled. When disabled (the dev
+    // default) the one-shot fetch in the effect below still runs once; avoid spinning
+    // a permanent monitor interval that churns forever.
     if (isPollingEnabled) {
-      console.debug("Polling enabled - creating interval");
-      if (pollerID.current) {
-        clearInterval(pollerID.current);
-      }
       pollerID.current = setInterval(poller, frequency);
-    } else {
-      console.debug("Polling disabled - fetching once");
-      if (pollerID.current) {
-        clearInterval(pollerID.current);
-      }
-      pollerID.current = setInterval(() => {
-        isPollingEnabled = Environment.features.polling?.enabled;
-        // console.debug("Polling flag monitoring", isPollingEnabled);
-        if (isPollingEnabled) {
-          if (pollerID.current) {
-            clearInterval(pollerID.current);
-          }
-          pollerID.current = setInterval(poller, frequency);
-        }
-      }, 5000);
     }
     return () => {
       if (pollerID.current) {
@@ -94,21 +70,15 @@ export const usePoller = <T>({ poller, rate }: UsePollerProps<T>) => {
       pollerCallback.current = undefined;
     };
   }, [rate]);
+  // Fetch once immediately whenever the poller changes (e.g. new screen / filter),
+  // independent of the recurring interval set up above (which handles the `rate`).
   useEffect(() => {
-    console.debug("Poller effect created", { rate, poller });
-    if (pollerCallback.current) {
-      isPending.current = true;
-      // console.debug("Polling initial");
-      pollerCallback.current().finally(() => {
-        isPending.current = false;
-      });
-    }
-    return () => {
-      if (pollerID.current) {
-        clearInterval(pollerID.current);
-      }
+    isPending.current = true;
+    poller().finally(() => {
       isPending.current = false;
-      pollerCallback.current = undefined;
+    });
+    return () => {
+      isPending.current = false;
     };
-  }, [rate, poller]);
+  }, [poller]);
 };

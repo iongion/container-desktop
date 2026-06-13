@@ -14,6 +14,9 @@
 
 1. Install development tools for your OS
 
+   - **Linux shortcut:** `bash support/provision-deps.sh` installs every system
+     package below plus the flatpak/rpm/pacman packaging tooling, the flathub
+     remote and the flatpak runtime/SDK/base app (auto-detects apt/dnf/pacman).
    - `sudo pacman -Sy base-devel` - Arch flavors
    - `sudo yum groupinstall "Development Tools" "Legacy Software Development"` - Fedora
    - `sudo apt-get install build-essential` - Debian / Ubuntu & friends

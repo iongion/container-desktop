@@ -43,7 +43,7 @@ export class Runner {
       trace: "Staring the api",
     });
     this.logger.debug(">> Starting API - guard configuration", { starter });
-    if (!starter || !starter?.path) {
+    if (!starter?.path) {
       this.logger.error("<< Starting API - Starter program not configured");
       return false;
     }

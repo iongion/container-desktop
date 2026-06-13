@@ -6,8 +6,8 @@ import {
   Navbar,
   NavbarGroup,
   NavbarHeading,
-  Popover,
   PopoverInteractionKind,
+  PopoverNext,
   Spinner,
   SpinnerSize,
 } from "@blueprintjs/core";
@@ -64,13 +64,13 @@ export function AppSidebarFooter() {
   ) : null;
   if (!expandSidebar) {
     rightContent = (
-      <Popover
+      <PopoverNext
         usePortal={false}
         inheritDarkTheme
         transitionDuration={0}
         interactionKind={PopoverInteractionKind.CLICK}
         popoverClassName="bp6-popover-content-sizing AppSidebarInfoPopover"
-        position="top-left"
+        placement="top-start"
         content={
           <div className="AppSidebarFooterVersionsMenu">
             <span className="AppSidebarVersionString">
@@ -88,7 +88,7 @@ export function AppSidebarFooter() {
         }
       >
         <Button className="AppSidebarInfoButton" minimal icon={IconNames.INFO_SIGN} />
-      </Popover>
+      </PopoverNext>
     );
   }
   return (

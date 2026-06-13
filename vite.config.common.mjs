@@ -7,8 +7,6 @@ import * as dotenv from "dotenv";
 import merge from "lodash.merge";
 import MagicString from "magic-string";
 import { checker } from "vite-plugin-checker";
-import topLevelAwait from "vite-plugin-top-level-await";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 // pkg
 import pkg from "./package.json";
@@ -35,7 +33,7 @@ export function createSingleFile(patch) {
             minify: true,
             sourceMap: false,
             quiet: false,
-            target: "es2020",
+            target: "es2022",
             debugLog: true,
           })
             .then(({ code, map, assets }) => {
@@ -120,25 +118,26 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     ...createDefine(mode),
     // Define user overridden environment variables
     ...define,
-    // Fix
-    __dirname: "import.meta.dirname",
+    // In ESM output `__dirname` is unavailable, so map it to import.meta.dirname.
+    // In CJS output (main/preload) `__dirname` is native — leave it untouched.
+    ...(outputFormat === "cjs" ? {} : { __dirname: "import.meta.dirname" }),
   };
   const minify = false; // mode === "production";
-  const outputExtension = outputFormat === "umd" ? "js" : "mjs";
+  const outputExtension = outputFormat === "umd" ? "js" : outputFormat === "cjs" ? "cjs" : "mjs";
   const config = {
     clearScreen: false,
     plugins: [
       // viteCommonjs(),
-      topLevelAwait(),
       checker({
         typescript: true,
       }),
-      tsconfigPaths(),
+      // tsconfig path mappings are resolved by the explicit `resolve.alias` block below
+      // (Vite 8 also supports them natively); the vite-tsconfig-paths plugin is redundant.
       ...(plugins ?? []),
     ],
     define: userDefine,
     build: {
-      target: "es2020",
+      target: "es2022",
       outDir: path.join(__dirname, "build"),
       emptyOutDir: false,
       sourcemap: sourcemap,
@@ -150,8 +149,8 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
         output: {
           manualChunks: (filename) => outputName,
           preserveModules: false,
-          format: outputFormat === "umd" ? "umd" : "es",
-          inlineDynamicImports: false,
+          format: outputFormat === "umd" ? "umd" : outputFormat === "cjs" ? "cjs" : "es",
+          codeSplitting: true,
           assetFileNames: `assets/${outputName}-${pkg.version}.[ext]`,
           entryFileNames: `${outputName}-${pkg.version}.${outputExtension}`,
           chunkFileNames: `${outputName}-${pkg.version}.[hash].${outputExtension}`,

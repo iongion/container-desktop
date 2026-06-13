@@ -3,6 +3,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useRef } from "react";
@@ -35,7 +36,7 @@ export const Terminal: React.FC<TerminalProps> = ({ value }: TerminalProps) => {
     }
     if (!term.current) {
       const fitAddon = new FitAddon();
-      const webglAddon = new FitAddon();
+      const webglAddon = new WebglAddon();
       const unicode11Addon = new Unicode11Addon();
       const terminal = new XTermTerminal({
         convertEol: true,

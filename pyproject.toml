@@ -154,3 +154,4 @@ max-public-methods = 20
 "__init__.py" = ["E402", "F401"]  # allow late imports / unused exports in package initializers
 "test_*.py" = ["S101"]            # allow assert in tests
 "tests/**/*.py" = ["S101"]        # same for nested tests
+"create-icons.py" = ["S603"]      # trusted local build tools, hardcoded args (no untrusted input)

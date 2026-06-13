@@ -4,8 +4,8 @@ import * as url from "node:url";
 // vendors
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, Tray } from "electron";
 import contextMenu from "electron-context-menu";
+import ipaddr from "ipaddr.js";
 import { debounce } from "lodash-es";
-import is_ip_private from "private-ip";
 // project
 import { userConfiguration } from "@/container-client/config";
 import { OperatingSystem } from "@/env/Types";
@@ -15,6 +15,30 @@ import { Command } from "@/platform/node-executor";
 import { MessageBus } from "./shared";
 
 const APP_PATH = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
+
+// Private/internal address ranges that are trusted to open without the domain allow-list check.
+// Replaces the unmaintained `private-ip` package (GHSA-9h3q-32c7-r533, SSRF). Uses ipaddr.js so
+// that IPv4, IPv6 and IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1) are classified correctly.
+const PRIVATE_IP_RANGES = new Set([
+  "private",
+  "loopback",
+  "linkLocal",
+  "uniqueLocal",
+  "carrierGradeNat",
+  "unspecified",
+]);
+function is_ip_private(hostname: string): boolean {
+  // URL hostnames wrap IPv6 literals in brackets, e.g. "[::1]"
+  const candidate = hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+  if (!ipaddr.isValid(candidate)) {
+    return false; // not an IP literal (e.g. a domain name) -> enforce the allow-list
+  }
+  let addr = ipaddr.parse(candidate);
+  if (addr.kind() === "ipv6" && (addr as ipaddr.IPv6).isIPv4MappedAddress()) {
+    addr = (addr as ipaddr.IPv6).toIPv4Address();
+  }
+  return PRIVATE_IP_RANGES.has(addr.range());
+}
 
 // patch global like in preload
 (global as any).Command = Command;
@@ -81,6 +105,77 @@ const activateTools = () => {
     }
   }
 };
+
+// Startup/runtime failure recovery.
+// The window is frameless on Linux/Windows (its chrome is rendered by the React app),
+// so if the renderer fails to load there are no controls to quit. A native dialog is
+// always interactive regardless of renderer/window state, guaranteeing the user can
+// always recover or quit instead of being stuck on a blank, frozen window.
+let recoveryInProgress = false;
+function showRecoveryDialog(title: string, error: unknown) {
+  const detail = (error as any)?.stack || (error as any)?.message || String(error);
+  logger.error("Recovery dialog", title, detail);
+  if (recoveryInProgress) {
+    return;
+  }
+  recoveryInProgress = true;
+  // Before the app is ready, showMessageBoxSync is unavailable — use showErrorBox then exit.
+  if (!app.isReady()) {
+    try {
+      dialog.showErrorBox(`${title}`, detail);
+    } catch (e: any) {
+      logger.error("Unable to show error box", e);
+    }
+    app.exit(1);
+    return;
+  }
+  let choice = 2;
+  try {
+    choice = dialog.showMessageBoxSync({
+      type: "error",
+      noLink: true,
+      title: "Container Desktop",
+      message: title,
+      detail,
+      buttons: ["Reload", "Open Dev Tools", "Quit"],
+      defaultId: 0,
+      cancelId: 2,
+    });
+  } catch (e: any) {
+    logger.error("Unable to show recovery dialog", e);
+    app.exit(1);
+    return;
+  }
+  if (choice === 0) {
+    app.relaunch();
+    app.exit(0);
+  } else if (choice === 1) {
+    recoveryInProgress = false;
+    try {
+      applicationWindow?.webContents?.openDevTools({ mode: "detach" });
+    } catch (e: any) {
+      logger.error("Unable to open dev tools", e);
+    }
+  } else {
+    app.exit(0);
+  }
+}
+
+// Self-contained error page (no app assets / no preload needed) shown inside the window
+// so it is never just blank. Actions are handled by the native dialog above.
+function fallbackErrorPageURL(title: string, message: string): string {
+  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c] as string);
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+    html,body{margin:0;height:100%;background:#1a051c;color:#e1d9e3;font:14px/1.5 system-ui,sans-serif;-webkit-app-region:drag}
+    .wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center}
+    h1{font-size:18px;margin:0 0 8px}p{margin:4px 0;opacity:.8;max-width:560px}code{display:block;margin-top:12px;padding:12px;background:#00000040;border-radius:6px;white-space:pre-wrap;text-align:left;max-width:560px;overflow:auto}
+  </style></head><body><div class="wrap">
+    <h1>${esc(title)}</h1>
+    <p>Container Desktop could not start its interface. Use the dialog to reload or quit.</p>
+    <code>${esc(message)}</code>
+  </div></body></html>`;
+  return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+}
 
 // ipc global setup
 ipcMain.on("window.minimize", () => {
@@ -153,10 +248,17 @@ function sendToRenderer(event: string, data?: any) {
 async function createApplicationWindow() {
   if (applicationWindow) {
     logger.debug("Window already created - destroying it");
+    // Remove our listeners before destroying so re-creation never accumulates duplicates.
+    try {
+      applicationWindow.webContents?.removeAllListeners();
+      applicationWindow.removeAllListeners();
+    } catch (error: any) {
+      logger.error("Unable to detach previous window listeners", error);
+    }
     applicationWindow.destroy();
   }
   logger.debug("Creating application window");
-  const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.mjs`);
+  const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.cjs`);
   const appDevURL = import.meta.env.VITE_DEV_SERVER_URL;
   const appProdURL = url.format({
     pathname: path.join(__dirname, "index.html"),
@@ -251,12 +353,62 @@ async function createApplicationWindow() {
     sendToRenderer("window:maximize", { isMaximized });
   });
   applicationWindow.on("close", onWindowClose);
-  applicationWindow.once("ready-to-show", () => {
-    logger.debug("Application is ready to show");
+  let windowShown = false;
+  const revealWindow = () => {
+    if (windowShown || applicationWindow.isDestroyed()) {
+      return;
+    }
+    windowShown = true;
     applicationWindow.show();
     if ((windowConfigOptions as any).isMaximized) {
       applicationWindow.maximize();
     }
+  };
+  applicationWindow.once("ready-to-show", () => {
+    logger.debug("Application is ready to show");
+    revealWindow();
+  });
+  // Watchdog: if the renderer never reaches "ready-to-show" (e.g. it hangs waiting on a
+  // never-resolving preload), force the window visible so it is never an invisible, frozen
+  // process the user cannot interact with, and surface a recoverable error.
+  const readyWatchdog = setTimeout(() => {
+    if (!windowShown && !applicationWindow.isDestroyed()) {
+      logger.error("Window did not become ready in time - forcing show");
+      revealWindow();
+      showRecoveryDialog(
+        "Container Desktop is taking too long to start",
+        new Error("The interface did not finish loading within 20s."),
+      );
+    }
+  }, 20000);
+  applicationWindow.webContents.once("did-finish-load", () => clearTimeout(readyWatchdog));
+  applicationWindow.on("closed", () => clearTimeout(readyWatchdog));
+  // Renderer failed to load (network/file error). Ignore user-initiated aborts (-3).
+  applicationWindow.webContents.on("did-fail-load", (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isMainFrame || errorCode === -3) {
+      return;
+    }
+    logger.error("Renderer failed to load", { errorCode, errorDescription, validatedURL });
+    revealWindow();
+    applicationWindow
+      .loadURL(
+        fallbackErrorPageURL("Failed to load the application", `${errorDescription} (${errorCode})\n${validatedURL}`),
+      )
+      .catch(() => undefined);
+    showRecoveryDialog("Failed to load the application", new Error(`${errorDescription} (${errorCode})`));
+  });
+  // Renderer process crashed.
+  applicationWindow.webContents.on("render-process-gone", (_e, details) => {
+    logger.error("Renderer process gone", details);
+    if (details.reason === "clean-exit") {
+      return;
+    }
+    revealWindow();
+    showRecoveryDialog("The application window crashed", new Error(`Renderer process gone: ${details.reason}`));
+  });
+  applicationWindow.webContents.on("unresponsive", () => {
+    logger.error("Renderer became unresponsive");
+    showRecoveryDialog("The application is not responding", new Error("The interface became unresponsive."));
   });
   // Application URL handler
   applicationWindow.webContents.setWindowOpenHandler((event: any) => {
@@ -287,10 +439,26 @@ async function createApplicationWindow() {
     current: __dirname,
     path: APP_PATH,
   });
-  try {
-    await applicationWindow.loadURL(appURL);
-  } catch (error: any) {
-    console.error("Unable to load the application", error);
+  if (!appURL) {
+    // Guard against an undefined dev-server URL (e.g. VITE_DEV_SERVER_URL not set), which
+    // would otherwise throw deep inside loadURL and leave a blank window.
+    logger.error("No application URL resolved", { appDevURL, appProdURL, isDev: isDevelopment() });
+    revealWindow();
+    await applicationWindow
+      .loadURL(fallbackErrorPageURL("No application URL", "The application URL could not be resolved."))
+      .catch(() => undefined);
+    showRecoveryDialog("Container Desktop could not start", new Error("No application URL resolved."));
+  } else {
+    try {
+      await applicationWindow.loadURL(appURL);
+    } catch (error: any) {
+      logger.error("Unable to load the application", error);
+      revealWindow();
+      await applicationWindow
+        .loadURL(fallbackErrorPageURL("Unable to load the application", error?.message || String(error)))
+        .catch(() => undefined);
+      showRecoveryDialog("Unable to load the application", error);
+    }
   }
   if (isDevelopment() || isDebug) {
     logger.debug("Showing dev tools");
@@ -313,7 +481,7 @@ function getTrayIcon(isDark = nativeTheme.shouldUseDarkColors): string {
 function createSystemTray() {
   if (tray) {
     logger.debug("Creating system tray menu - skipped - already present");
-    return;
+    return tray;
   }
   const trayIconPath = getTrayIcon();
   logger.debug("Creating system tray menu", trayIconPath);
@@ -363,13 +531,15 @@ async function main() {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   app.commandLine.appendSwitch("ignore-certificate-errors");
   nativeTheme.on("updated", () => {
-    try {
-      const tray = createSystemTray();
-      const trayIconPath = getTrayIcon();
-      logger.debug("Set tray icon from", trayIconPath);
-      tray.setImage(trayIconPath);
-    } catch (e: any) {
-      logger.error("Unable to set sys-tray icon", e);
+    // Only refresh the icon if a tray already exists; do not create one on theme change.
+    if (tray) {
+      try {
+        const trayIconPath = getTrayIcon();
+        logger.debug("Set tray icon from", trayIconPath);
+        tray.setImage(trayIconPath);
+      } catch (e: any) {
+        logger.error("Unable to set sys-tray icon", e);
+      }
     }
     sendToRenderer("theme:change", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
@@ -377,4 +547,19 @@ async function main() {
   await createApplicationWindow();
 }
 
-main();
+// Last-resort guards: a throw anywhere in the main process must surface a recoverable
+// native dialog rather than silently leaving a blank/frozen window.
+process.on("uncaughtException", (error) => {
+  showRecoveryDialog("Container Desktop encountered an unexpected error", error);
+});
+process.on("unhandledRejection", (reason) => {
+  // Log all; only interrupt the user with a dialog before the window is up (i.e. startup).
+  logger.error("Unhandled promise rejection", reason);
+  if (!applicationWindow || applicationWindow.isDestroyed()) {
+    showRecoveryDialog("Container Desktop failed during startup", reason);
+  }
+});
+
+main().catch((error) => {
+  showRecoveryDialog("Container Desktop failed to start", error);
+});
