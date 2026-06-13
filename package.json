@@ -113,7 +113,8 @@
     "dmg-license": "1.0.11"
   },
   "resolutions": {
-    "dompurify": "3.4.10"
+    "dompurify": "3.4.10",
+    "lodash": "4.18.1"
   },
   "repository": "https://github.com/iongion/container-desktop.git"
 }
