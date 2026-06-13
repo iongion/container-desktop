@@ -1,7 +1,10 @@
 # Dependabot configuration — https://docs.github.com/code-security/dependabot
-# Goal: keep dependencies current with minimal PR noise. Minor/patch bumps are
-# grouped into a single PR per ecosystem; majors still arrive as individual PRs
-# so they can be reviewed deliberately.
+# Goal: keep dependencies current with minimal PR noise.
+#   * Minor/patch bumps are grouped into a single PR per ecosystem.
+#   * MAJOR version bumps are never auto-proposed — they are ignored across
+#     every ecosystem and adopted deliberately by hand. In-range minor/patch
+#     security fixes still flow (e.g. the minimatch/picomatch ReDoS patches,
+#     which now exist within each major and keep glob@7 / chokidar@3 working).
 version: 2
 updates:
   # JavaScript / TypeScript (root package.json, yarn)
@@ -16,20 +19,11 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # Keep @types/node aligned with the runtime Node major (24 — see .nvmrc;
-      # Electron 42 also bundles Node 24). A major bump (25.x) would type against
-      # an API surface the runtime doesn't have. Patch/minor 24.x bumps still flow.
-      - dependency-name: "@types/node"
+      # No automated major upgrades (e.g. @types/node stays on the Node-24 line;
+      # minimatch/picomatch majors would break glob@7 / chokidar@3).
+      - dependency-name: "*"
         update-types:
           - "version-update:semver-major"
-      # Build/dev-tooling-only transitive ReDoS advisories (minimatch via
-      # glob/@electron/asar/electron-builder; picomatch via chokidar/anymatch).
-      # They are NOT shipped in the app bundle and run on developer-controlled
-      # inputs. There is no patched in-major release — the only fix is a major
-      # bump that breaks glob@7 / chokidar@3 (packaging + vite dev watch).
-      # Remove these entries once the upstream tooling updates its matchers.
-      - dependency-name: "minimatch"
-      - dependency-name: "picomatch"
 
   # Go SSH relay
   - package-ecosystem: "gomod"
@@ -42,6 +36,10 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
 
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -52,3 +50,7 @@ updates:
       actions-all:
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"

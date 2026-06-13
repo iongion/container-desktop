@@ -90,8 +90,9 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - **`npm audit` is unreliable here** — it mis-evaluates yarn `resolutions` (reports
   already-patched versions as vulnerable). Verify by the **installed** version
   (`node -p "require('<pkg>/package.json').version"`), not by `npm audit`.
-  `minimatch`/`picomatch` advisories are build-tooling-only with no safe fix and are
-  ignored in `.github/dependabot.yml`.
+  `minimatch`/`picomatch` ReDoS advisories are build-tooling-only (not shipped) and
+  now have in-range patches — pulled in by refreshing the lockfile entry, not a
+  `resolution`. Only their breaking majors are blocked (see dependabot, below).
 - **No JS/TS test suite** — verify via type-check + lint + build + manual/CDP smoke.
   Python tests use `pytest` (`support/` only).
 - Avoid `console.debug` in render/poll hot paths (floods DevTools, grows memory).
@@ -105,4 +106,5 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   claim success unverified.
 - Long-running steps (packaging, dev run) → run in the background; don't block.
 - `.github/dependabot.yml` groups minor/patch bumps weekly per ecosystem
-  (npm / gomod / github-actions); majors arrive individually.
+  (npm / gomod / github-actions); **major bumps are never auto-proposed** (ignored
+  globally) — adopt majors deliberately by hand.
