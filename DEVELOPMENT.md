@@ -14,9 +14,9 @@
 
 1. Install development tools for your OS
 
-   - **Linux shortcut:** `bash support/provision-deps.sh` installs every system
-     package below plus the flatpak/rpm/pacman packaging tooling, the flathub
-     remote and the flatpak runtime/SDK/base app (auto-detects apt/dnf/pacman).
+   - **Linux shortcut:** `bash support/provision-deps.sh` installs the build
+     toolchain below (auto-detects apt/dnf/pacman). Linux ships a tar.gz, so no
+     distro-specific packaging tooling is needed.
    - `sudo pacman -Sy base-devel` - Arch flavors
    - `sudo yum groupinstall "Development Tools" "Legacy Software Development"` - Fedora
    - `sudo apt-get install build-essential` - Debian / Ubuntu & friends
@@ -52,32 +52,6 @@
 #### Release the project binaries
 
 `inv release` - Compiles assets and creates application bundles with production settings
-
-- Ensure flatpak builder is installed:
-
-  ```bash
-  sudo apt-get install -y flatpak flatpak-builder elfutils
-  flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
-  git config --global --add protocol.file.allow always
-  ```
-
-- Ensure `flatpak` user repos exist:
-
-  ```bash
-  flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-  ```
-
-- Ensure `rpm` tooling is available:
-
-  ```bash
-  sudo apt-get install rpm
-  ```
-
-- Ensure `libarchive-tools` is installed to be able to create `pacman` packages
-
-  ```bash
-  sudo apt-get install -y libarchive-tools
-  ```
 
 ### Other useful info
 

@@ -20,7 +20,6 @@
     "build:renderer": "vite build --mode=production --config vite.config.renderer.mjs",
     "bundle": "cross-env DEBUG=electron-builder electron-builder --config electron-builder-config.cjs",
     "release": "yarn build && yarn bundle",
-    "package:mac_x86": "cross-env DEBUG=electron-builder electron-builder --publish never --macos --x64 --config electron-builder-config.cjs",
     "package:mac_arm": "cross-env DEBUG=electron-builder electron-builder --publish never --macos --arm64 --config electron-builder-config.cjs",
     "package:win_x86": "cross-env DEBUG=electron-builder electron-builder --publish never --windows --x64 --config electron-builder-config.cjs",
     "package:linux_x86": "cross-env DEBUG=electron-builder electron-builder --publish never --linux --x64 --config electron-builder-config.cjs",

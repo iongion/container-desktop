@@ -210,7 +210,6 @@ def bundle(ctx, env=None):
     with ctx.cd(path):
         env["DEBUG"] = "*"
         if system == "Darwin":
-            run_env(ctx, "yarn package:mac_x86", env)
             run_env(ctx, "yarn package:mac_arm", env)
         elif system == "Linux":
             run_env(ctx, "yarn package:linux_x86", env)
@@ -369,8 +368,9 @@ def _latest_release_version(ctx):
     return tag.lstrip("v")
 
 
-def _artifact_sha256(version, arch):
-    name = f"container-desktop-{arch}-{version}.dmg.sha256"
+def _artifact_sha256(version):
+    # macOS ships arm64 only.
+    name = f"container-desktop-arm64-{version}.dmg.sha256"
     local = os.path.join(PROJECT_HOME, "release", name)
     if os.path.exists(local):
         return Path(local).read_text(encoding="utf-8").strip().split()[0]
@@ -397,12 +397,11 @@ def publish_meta(ctx, version=None, perform=False):
     _apply(targets, perform)
     rb = "support/homebrew-cask/container-desktop.rb"
     if perform:
-        sha_arm = _artifact_sha256(version, "arm64")
-        sha_intel = _artifact_sha256(version, "x64")
-        _write_text(rb, render_homebrew_rb(_read_text(rb), version, sha_arm, sha_intel))
+        sha_arm = _artifact_sha256(version)
+        _write_text(rb, render_homebrew_rb(_read_text(rb), version, sha_arm))
         print(f"  updated: {rb}")
     else:
-        print(f"  would update: {rb} (fetch dmg sha256 for arm64 + x64)")
+        print(f"  would update: {rb} (fetch dmg sha256 for arm64)")
 
 
 namespace = Collection(

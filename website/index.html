@@ -43,7 +43,7 @@
       currentOS,
       currentArch
     } = performDetections();
-    const archs = currentOS === "MacOS" ? ["arm", "x86"] : ["x86", "arm"];
+    const archs = currentOS === "MacOS" ? ["arm"] : ["x86", "arm"];
     const operatingSystems = ["Linux", "Windows", "MacOS"];
     const version = document.querySelector('html').getAttribute('data-version');
     const downloadBaseUrl = `https://github.com/iongion/container-desktop/releases/download/${version}`;
@@ -53,24 +53,8 @@
           label: "x86",
           default: 0,
           links: [{
-              label: 'AppImage',
-              url: `${downloadBaseUrl}/container-desktop-x86_64-${version}.AppImage`
-            },
-            {
-              label: 'flatpak',
-              url: `${downloadBaseUrl}/container-desktop-x86_64-${version}.flatpak`
-            },
-            {
-              label: 'rpm',
-              url: `${downloadBaseUrl}/container-desktop-x86_64-${version}.rpm`
-            },
-            {
-              label: 'deb',
-              url: `${downloadBaseUrl}/container-desktop-amd64-${version}.deb`
-            },
-            {
-              label: 'pacman',
-              url: `${downloadBaseUrl}/container-desktop-x64-${version}.pacman`
+              label: 'tar.gz',
+              url: `${downloadBaseUrl}/container-desktop-x64-${version}.tar.gz`
             },
           ]
         },
@@ -78,24 +62,8 @@
           label: "arm",
           default: 0,
           links: [{
-              label: 'AppImage',
-              url: `${downloadBaseUrl}/container-desktop-arm64-${version}.AppImage`
-            },
-            {
-              label: 'flatpak',
-              url: `${downloadBaseUrl}/container-desktop-aarch64-${version}.flatpak`
-            },
-            {
-              label: 'rpm',
-              url: `${downloadBaseUrl}/container-desktop-aarch64-${version}.rpm`
-            },
-            {
-              label: 'deb',
-              url: `${downloadBaseUrl}/container-desktop-arm64-${version}.deb`
-            },
-            {
-              label: 'pacman',
-              url: `${downloadBaseUrl}/container-desktop-aarch64-${version}.pacman`
+              label: 'tar.gz',
+              url: `${downloadBaseUrl}/container-desktop-arm64-${version}.tar.gz`
             },
           ]
         }
@@ -118,13 +86,6 @@
         }
       },
       MacOS: {
-        x86: {
-          default: 0,
-          links: [{
-            url: `${downloadBaseUrl}/container-desktop-x64-${version}.dmg`,
-            label: "Intel"
-          }]
-        },
         arm: {
           default: 0,
           links: [{
@@ -135,7 +96,7 @@
       }
     }
     // Rendering
-    const linuxFormats = ["AppImage", "flatpak", "rpm", "deb", "pacman"];
+    const linuxFormats = ["tar.gz"];
     const DownloadBundles = ({
       osName
     }) => {
@@ -285,7 +246,7 @@
         <div class="download" data-operating-system="Linux">
           <div class="downloadButton">
             <div class="downloadButtonLabel">
-              <a class="downloadButtonLink" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.AppImage">
+              <a class="downloadButtonLink" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x64-5.2.13.tar.gz">
                 <i class="fab fa-linux"></i>
                 &nbsp;
                 <span>Download for Linux</span>
@@ -295,38 +256,10 @@
           <ul class="downloadBundles">
             <noscript>
               <li>
-                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.AppImage">AppImage</a>
+                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x64-5.2.13.tar.gz">tar.gz</a>
                 <ul class="downloadBundlesArchs">
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.AppImage">x86</a></li>
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.AppImage">arm</a></li>
-                </ul>
-              </li>
-              <li>
-                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.flatpak">flatpak</a>
-                <ul class="downloadBundlesArchs">
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.flatpak">x86</a></li>
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-aarch64-5.2.13.flatpak">arm</a></li>
-                </ul>
-              </li>
-              <li>
-                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.rpm">rpm</a>
-                <ul class="downloadBundlesArchs">
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x86_64-5.2.13.rpm">x86</a></li>
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-aarch64-5.2.13.rpm">arm</a></li>
-                </ul>
-              </li>
-              <li>
-                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-amd64-5.2.13.deb">deb</a>
-                <ul class="downloadBundlesArchs">
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-amd64-5.2.13.deb">x86</a></li>
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.deb">arm</a></li>
-                </ul>
-              </li>
-              <li>
-                <a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x64-5.2.13.pacman">pacman</a>
-                <ul class="downloadBundlesArchs">
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x64-5.2.13.pacman">x86</a></li>
-                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-aarch64-5.2.13.pacman">arm</a></li>
+                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x64-5.2.13.tar.gz">x86</a></li>
+                  <li><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.tar.gz">arm</a></li>
                 </ul>
               </li>
             </noscript>
@@ -367,9 +300,6 @@
             <noscript>
               <li>
                 <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-arm64-5.2.13.dmg">Apple</a>
-              </li>
-              <li>
-                <a target="_blank" rel="noopener noreferrer" href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-x64-5.2.13.dmg">Intel</a>
               </li>
             </noscript>
           </ul>

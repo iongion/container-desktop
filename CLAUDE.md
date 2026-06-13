@@ -39,7 +39,7 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - **Verify — run all three before claiming done:**
   `yarn check-types` (tsc) · `yarn lint` (Biome) · `yarn build` (main+preload+renderer)
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
-- Package: `yarn package:linux_x86` (also `mac_x86`/`mac_arm`/`win_x86`/`linux_arm`);
+- Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `inv release`
 - Relay: `cd support/container-desktop-relay && ./relay-build.sh`; scan `govulncheck ./...`
 - Python tooling: `make check` (ruff), `make prepare` (`uv sync --dev --no-install-project`)

@@ -12,7 +12,7 @@
     NODE_ENV=production ENVIRONMENT=production inv build
     ```
 
-3. Create bundles (snap, deb, rpm, appImage, dmg, exe)
+3. Create bundles (tar.gz, dmg, exe)
 
     ```bash
     NODE_ENV=production ENVIRONMENT=production inv bundle

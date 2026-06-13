@@ -72,43 +72,6 @@ const config = {
     buildResources: "src/resources",
   },
   publish: null,
-  flatpak: {
-    // Debug using: flatpak run --command=sh --devel --filesystem=$(pwd) container_desktop.iongion.github.io
-    // flatpak run -v container_desktop.iongion.github.io
-    // flatpak info container_desktop.iongion.github.io
-    base: "org.electronjs.Electron2.BaseApp",
-    branch: "main",
-    category: "Development",
-    runtime: "org.freedesktop.Platform",
-    runtimeVersion: "24.08",
-    license: "LICENSE",
-    // collection: "org.flathub.Stable",
-    sdk: "org.freedesktop.Sdk",
-    useWaylandFlags: true,
-    finishArgs: [
-      "--share=network",
-      "--share=ipc",
-      "--socket=wayland",
-      // "--socket=x11",
-      "--socket=fallback-x11",
-      "--socket=pulseaudio", // Is this really needed ?
-      "--socket=session-bus",
-      "--socket=system-bus",
-      "--socket=ssh-auth",
-      "--device=dri",
-      "--device=kvm",
-      "--device=shm",
-      "--filesystem=host",
-      "--filesystem=host-os",
-      "--filesystem=host-etc",
-      "--filesystem=home",
-      "--filesystem=/run/user",
-      "--filesystem=xdg-config",
-      "--filesystem=xdg-run/podman",
-      "--filesystem=xdg-run/docker",
-      "--talk-name=org.freedesktop.Notifications",
-    ],
-  },
   mac: {
     category: "public.app-category.developer-tools",
     icon: "icons/appIcon.icns",
@@ -188,17 +151,12 @@ const config = {
     executableName: "container-desktop",
     maintainer: publisher,
     icon: "icons/appIcon.icns",
-    target: ["deb", "pacman", "rpm", "flatpak", "AppImage"],
+    target: ["tar.gz"],
     category: "Development;System;Utility",
-    extraResources: ["support/templates"],
     desktop: {
       entry: displayName,
     },
     executableArgs: ["--no-sandbox"],
-  },
-  deb: {
-    afterInstall: "support/templates/after-install.sh",
-    afterRemove: "support/templates/after-remove.sh",
   },
 };
 

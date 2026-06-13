@@ -22,6 +22,7 @@ A large internal modernization of how the app talks to engines and manages state
 - Overhauled state management: dropped Easy-Peasy and the hand-rolled refresh poller; live lists now come from event-backed stores while detail and mutation flows use TanStack Query re-entering a screen is instant from cache.
 - Migrated routing from Wouter to TanStack Router.
 - New libraries adopted: TanStack Query (request/mutation support), Zustand (app, UI and resource state), TanStack Router (routing), and Vitest (unit tests).
+- Simplified packaging: Linux now ships only `tar.gz` (x64 and arm64); dropped AppImage, flatpak, rpm, deb and pacman. macOS is Apple Silicon (arm64) only; dropped Intel.
 
 ## Fixed
 
