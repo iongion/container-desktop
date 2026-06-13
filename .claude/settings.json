@@ -1,0 +1,51 @@
+{
+  "permissions": {
+    "allow": ["Read(**)", "Write(**)", "Edit(**)", "Read(//tmp/**)", "WebFetch(*)", "Skill(*)", "mcp__*", "Bash(*)"],
+    "additionalDirectories": ["/tmp"]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": ["playwright", "docker"],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/code-lint.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/verify-clean.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/subagent-lint.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "context7": true,
+    "github": true,
+    "playwright": true
+  },
+  "env": {
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1",
+    "DISABLE_TELEMETRY": "1"
+  },
+  "effortLevel": "high"
+}
