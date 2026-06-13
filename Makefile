@@ -21,3 +21,4 @@ check:
 format:
 	@echo "Formatting the project"
 	uv run ruff format ./support
+	yarn format
