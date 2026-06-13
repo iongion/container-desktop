@@ -22,6 +22,9 @@ dev = [
 ]
 
 [tool.uv]
+# This project is build tooling, not a library: never build/install it as a
+# package (otherwise uv generates src/container_desktop_tools.egg-info).
+package = false
 default-groups = ["dev"]
 
 [tool.pytest.ini_options]
