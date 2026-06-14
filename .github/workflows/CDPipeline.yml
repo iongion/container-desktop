@@ -34,7 +34,7 @@ jobs:
           - target: linux
             os: ubuntu-latest
           - target: macos
-            os: macos-latest
+            os: macos-15-intel
           - target: windows
             os: windows-latest
 

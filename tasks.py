@@ -401,6 +401,12 @@ def _release_dir():
     return path
 
 
+def _release_run_ids(run_id):
+    if not run_id:
+        return []
+    return [item for item in str(run_id).replace(",", " ").split() if item]
+
+
 def _download_workflow_artifacts(ctx, run_id, release_dir):
     download_dir = release_dir / f"_workflow-{run_id}"
     shutil.rmtree(download_dir, ignore_errors=True)
@@ -467,14 +473,16 @@ def publish_release(ctx, version=None, run_id=None, title=None, perform=False, c
     release_dir = _release_dir()
 
     print(f"Publish GitHub release {version}" + ("" if perform else "  (dry-run; pass --perform)"))
-    if run_id:
-        print(f"  workflow artifacts: {run_id}")
+    run_ids = _release_run_ids(run_id)
+    if run_ids:
+        print(f"  workflow artifacts: {', '.join(run_ids)}")
     print(f"  assets dir: {release_dir}")
 
-    if perform and run_id:
-        _download_workflow_artifacts(ctx, run_id, release_dir)
-    elif run_id:
-        print(f"  would download workflow artifacts from run {run_id}")
+    if perform:
+        for artifact_run_id in run_ids:
+            _download_workflow_artifacts(ctx, artifact_run_id, release_dir)
+    elif run_ids:
+        print(f"  would download workflow artifacts from run(s): {', '.join(run_ids)}")
 
     if perform:
         _write_release_checksums(release_dir, version)
