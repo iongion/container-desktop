@@ -14,9 +14,6 @@ export default function (eleventyConfig) {
     api.getFilteredByGlob("website-src/manual/*.md").sort((a, b) => (a.data.order || 0) - (b.data.order || 0)),
   );
 
-  // ISO-8601 date helper — used by sitemap.njk for per-URL <lastmod> timestamps.
-  eleventyConfig.addFilter("isoDate", (d) => new Date(d).toISOString());
-
   return {
     dir: { input: "website-src", output: "website", includes: "_includes", data: "_data" },
     markdownTemplateEngine: "njk",

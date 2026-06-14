@@ -17,5 +17,4 @@ export default {
   author: "Ionut Stoica",
   version: pkg.version,
   year: new Date().getFullYear(),
-  buildDate: new Date(),
 };

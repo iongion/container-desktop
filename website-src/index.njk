@@ -79,12 +79,7 @@ description: "A familiar, open-source desktop interface for Podman and Docker �
       <a class="btn btn-primary get" href="{{ d.file }}">⬇ Download {{ d.ext }}</a>
       <div class="fmt">{{ d.note | safe }}</div>
 {% if d.options %}
-      <div class="dl-options">
-{% for option in d.options %}
-        <a href="{{ option.file }}">{{ option.label }}</a>
-{% if not loop.last %}<span>·</span>{% endif %}
-{% endfor %}
-      </div>
+      <div class="dl-options">{% for option in d.options %}<a href="{{ option.file }}">{{ option.label }}</a>{% if not loop.last %}<span>·</span>{% endif %}{% endfor %}</div>
 {% endif %}
     </div>
     {% endfor %}

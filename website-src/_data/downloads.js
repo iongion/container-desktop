@@ -1,8 +1,9 @@
 // Per-OS download matrix, derived from the package.json version at build time.
 // Native format per OS, plus portable archives where the installer differs:
-// Linux .tar.gz, macOS .dmg + .tar.gz, Windows installer.exe + portable .zip.
+// Linux .tar.gz, macOS .dmg + .tar.gz, Windows Store + installer.exe + portable .zip.
 import { createRequire } from "node:module";
 import pkg from "../../package.json" with { type: "json" };
+import site from "./site.js";
 
 const require = createRequire(import.meta.url);
 const { linuxArtifactName, macArtifactName, winArtifactName } = require("../../support/release-artifacts.cjs");
@@ -44,11 +45,15 @@ export default {
       id: "Windows",
       icon: "fa-windows",
       meta: "x64",
-      // This is the Microsoft Store wrapper manually uploaded to the release after packaging.
-      file: `${base}/${windowsInstallerWrapper}`,
-      ext: ".exe",
-      note: "Installer <b>.exe</b> · also on the <b>MS Store</b>",
+      file: site.microsoftStore,
+      ext: "for Windows",
+      note: "Install from the <b>Microsoft Store</b>",
       options: [
+        {
+          // This is the Microsoft Store wrapper manually uploaded to the release after packaging.
+          file: `${base}/${windowsInstallerWrapper}`,
+          label: "Installer .exe",
+        },
         {
           file: `${base}/${winArtifactName("x64", version, "zip")}`,
           label: "Portable .zip",
