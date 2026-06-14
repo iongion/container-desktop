@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # provision-deps.sh - Install the Linux *system* packages required to build and
-# bundle Container Desktop. Linux ships a tar.gz only, so this just needs a basic
-# build toolchain (git + a C toolchain for native deps).
+# bundle Container Desktop. The Linux build emits tar.gz + deb + rpm + AppImage +
+# pacman, so it needs a build toolchain (git + a C toolchain for native deps) plus
+# the packaging tooling fpm/electron-builder shell out to (bsdtar, rpmbuild, fakeroot).
 #
 # It is idempotent: re-running only installs what is missing.
 #
@@ -42,9 +43,13 @@ fi
 log "Detected package manager: $PM"
 
 # --- install system packages ---------------------------------------------------
-# Package set per family: just a build toolchain + git. A tar.gz bundle needs no
-# distro-specific packaging tooling.
-install_packages() {
+# Two tiers:
+#   1. build toolchain (git + C toolchain) - required for native deps. Hard fail.
+#   2. packaging tooling - the deb/rpm/AppImage/pacman targets need bsdtar (pacman
+#      writes .MTREE via `bsdtar --format=mtree`), rpmbuild (rpm) and fakeroot
+#      (deb/rpm staging). Best-effort: a package missing on an exotic distro warns
+#      instead of aborting the whole provisioning run.
+install_build_toolchain() {
   case "$PM" in
     apt)
       $SUDO apt-get update -y
@@ -62,8 +67,29 @@ install_packages() {
       ;;
   esac
 }
+
+install_packaging_tools() {
+  local note="some packaging tools failed to install (deb/rpm/pacman bundling may not work)."
+  case "$PM" in
+    apt)
+      # libarchive-tools provides bsdtar; rpm provides rpmbuild.
+      $SUDO apt-get install -y \
+        libarchive-tools rpm fakeroot || warn "$note"
+      ;;
+    dnf|yum)
+      $SUDO "$PM" install -y \
+        bsdtar rpm-build fakeroot dpkg || warn "$note"
+      ;;
+    pacman)
+      # base-devel already provides bsdtar (libarchive) + fakeroot; add rpmbuild.
+      $SUDO pacman -S --needed --noconfirm \
+        rpm-tools || warn "rpm-tools unavailable (rpm bundling may not work); bsdtar/fakeroot come from base-devel."
+      ;;
+  esac
+}
 log "Installing system packages..."
-install_packages
+install_build_toolchain
+install_packaging_tools
 
 # --- Go tooling for the SSH relay (support/container-desktop-relay) -------------
 # The relay's build toolchain (go1.26.x) is auto-fetched by Go itself from the
