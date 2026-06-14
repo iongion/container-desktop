@@ -3,7 +3,6 @@ import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { v4 } from "uuid";
 
 import { type Container, ContainerStateList } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
@@ -98,7 +97,7 @@ function groupContainers(containers: Container[], searchTerm: string, sort: Sort
     let group = groupsMap[it.Computed.Group];
     if (!group) {
       group = {
-        Id: v4(),
+        Id: crypto.randomUUID(),
         Name: it.Computed.Group,
         Items: [],
         Report: {

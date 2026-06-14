@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
-import merge from "lodash.merge";
+import merge from "deepmerge";
 import mimeTypes from "mime-types";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import svgrPlugin from "vite-plugin-svgr";

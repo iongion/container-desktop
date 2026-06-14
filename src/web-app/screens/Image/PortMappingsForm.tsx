@@ -2,7 +2,6 @@ import { Button, FormGroup, H5, HTMLSelect, Icon, InputGroup, NumericInput } fro
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
-// import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 
 import type { ContainerImagePortMapping } from "@/env/Types";

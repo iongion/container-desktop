@@ -1,13 +1,42 @@
 import merge from "deepmerge";
-import { v4 } from "uuid";
 import type { ContainerImagePortMapping } from "@/env/Types";
 
 const DEFAULT_HOST_IP = "0.0.0.0";
 
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+export function isEmpty(value: unknown): boolean {
+  if (value == null) {
+    return true;
+  }
+  if (typeof value === "string" || Array.isArray(value)) {
+    return value.length === 0;
+  }
+  if (value instanceof Map || value instanceof Set) {
+    return value.size === 0;
+  }
+  if (isObject(value)) {
+    return Object.keys(value).length === 0;
+  }
+  return false;
+}
+
+export function debounce<T extends (...args: any[]) => void>(fn: T, delayMs: number) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return (...args: Parameters<T>) => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => fn(...args), delayMs);
+  };
+}
+
 export function deepMerge<T = any>(x: Partial<T>, ...y: Partial<T & any>[]) {
   return merge.all<Partial<T>>([x, ...y], {
     arrayMerge: (_, source) => source,
-    isMergeableObject: (value) => value && typeof value === "object" && !Array.isArray(value),
+    isMergeableObject: isObject,
   }) as T;
 }
 
@@ -80,7 +109,7 @@ export function axiosConfigToCURL(
 
 export const createPortMapping = (): ContainerImagePortMapping => {
   return {
-    guid: v4(),
+    guid: crypto.randomUUID(),
     container_port: 80,
     host_ip: DEFAULT_HOST_IP,
     host_port: 8080,
@@ -94,7 +123,7 @@ export const toPortMappings = (exposed: { [key: string]: number }) => {
     const container_port = Number(container_port_raw);
     const host_port = container_port < 1000 ? 8000 + container_port : container_port;
     return {
-      guid: v4(),
+      guid: crypto.randomUUID(),
       container_port: Number(container_port),
       host_ip: DEFAULT_HOST_IP,
       host_port: host_port,

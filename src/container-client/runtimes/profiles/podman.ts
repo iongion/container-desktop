@@ -4,9 +4,8 @@
 // the OS availability gate, the automatic-settings detection, and the capability host-adjustment (machines is
 // real only on native/vendor — false on WSL/LIMA/SSH, Finding B).
 
-import { isEmpty } from "lodash-es";
-
 import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { isEmpty } from "@/utils";
 import type { HostProfile } from "../composition";
 import {
   availableAlways,

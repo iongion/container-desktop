@@ -2,75 +2,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 // vendors
-import ncc from "@vercel/ncc";
+import merge from "deepmerge";
 import * as dotenv from "dotenv";
-import merge from "lodash.merge";
-import MagicString from "magic-string";
 import { checker } from "vite-plugin-checker";
 
 // pkg
 import pkg from "./package.json";
-
-export function createSingleFile(patch) {
-  let currentOutputConfig = {};
-  return [
-    {
-      name: "create-single-file",
-      apply: "build",
-      async writeBundle(outputConfig) {
-        currentOutputConfig = outputConfig;
-      },
-      async closeBundle() {
-        const outFile = path.join(currentOutputConfig.dir, currentOutputConfig.entryFileNames);
-        if (!outFile.endsWith(".mjs")) {
-          console.debug("Skipped from bundling", outFile);
-          return;
-        }
-        await new Promise((resolve, reject) => {
-          ncc(outFile, {
-            externals: ["electron"],
-            cache: false,
-            minify: true,
-            sourceMap: false,
-            quiet: false,
-            target: "es2022",
-            debugLog: true,
-          })
-            .then(({ code, map, assets }) => {
-              // ssh2 issues
-              const singleFile = outFile;
-              const s = new MagicString(code);
-              s.prepend(`
-                import __path from 'path';
-                import { fileURLToPath as __fileURLToPath } from 'url';
-                import { createRequire as __createRequire } from 'module';
-                if (typeof __dirname === 'undefined') {
-                  const __getFilename = () => __fileURLToPath(import.meta.url);
-                  const __getDirname = () => __path.dirname(__getFilename());
-                  const __dirname = __getDirname();
-                  const __filename = __getFilename();
-                  const self = globalThis;
-                  const require = __createRequire(import.meta.url);
-                  self.__filename = __filename;
-                  self.__dirname = __dirname;
-                }
-               `);
-              fs.writeFileSync(singleFile, patch ? s.toString() : code, "utf8");
-              Object.keys(assets).forEach((asset) => {
-                const assetFilePath = path.join(currentOutputConfig.dir, asset);
-                fs.mkdirSync(path.dirname(assetFilePath), { recursive: true });
-                fs.writeFileSync(assetFilePath, assets[asset].source);
-              });
-              console.debug("Single file generated");
-              resolve();
-            })
-            .catch(reject);
-        });
-        console.debug("<<< BUNDLE CLOSED >>>", outFile);
-      },
-    },
-  ];
-}
 
 // module
 export const ENVIRONMENT = process.env.ENVIRONMENT || "development";
@@ -147,21 +84,20 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
       cssMinify: minify,
       // One CSS file for the renderer instead of per-component chunks.
       cssCodeSplit: false,
-      rollupOptions: merge({}, rollupOptions || {}, {
+      rollupOptions: merge.all([rollupOptions || {}, {
         output: {
           preserveModules: false,
           format: outputFormat === "umd" ? "umd" : outputFormat === "cjs" ? "cjs" : "es",
-          // Single file per target: inline every dynamic import into the entry instead of
-          // emitting hashed chunk siblings. Mutually exclusive with manualChunks.
+          // Single file per target: disable chunk splitting so dynamic imports are inlined
+          // into the entry instead of emitting hashed chunk siblings.
           codeSplitting: false,
           // Version is the output directory (build/<version>/), not a filename suffix.
           assetFileNames: `assets/${outputName}.[ext]`,
           entryFileNames: `${outputName}.${outputExtension}`,
         },
-      }),
+      }]),
     },
-    resolve: merge(
-      {},
+    resolve: merge.all([
       {
         alias: {
           "@": path.resolve(__dirname, "src"),
@@ -177,7 +113,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
         },
       },
       resolve ?? {},
-    ),
+    ]),
   };
   return config;
 }

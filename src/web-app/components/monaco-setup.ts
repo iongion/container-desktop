@@ -7,7 +7,8 @@
 //
 // This module is import-only (side effects); import it before the editor mounts.
 import { loader } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+import "monaco-editor/esm/vs/language/json/monaco.contribution.js";
 
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";

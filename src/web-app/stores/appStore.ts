@@ -6,7 +6,6 @@
 // first Application.getInstance() — Application captures window.MessageBus at construction.
 
 import { Intent } from "@blueprintjs/core";
-import { isObject } from "lodash-es";
 import { create } from "zustand";
 
 import { OnlineApi } from "@/container-client/Api.clients";
@@ -27,7 +26,7 @@ import {
   OperatingSystem,
   type SystemNotification,
 } from "@/env/Types";
-import { deepMerge } from "@/utils";
+import { deepMerge, isObject } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { AppBootstrapPhase } from "@/web-app/App.types";
 import { queryClient } from "@/web-app/domain/queryClient";

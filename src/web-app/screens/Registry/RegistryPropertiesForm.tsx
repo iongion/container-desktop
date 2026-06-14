@@ -1,6 +1,5 @@
 import { FormGroup, InputGroup, Intent } from "@blueprintjs/core";
 import { Controller, useFormContext } from "react-hook-form";
-// import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
 
 // locals

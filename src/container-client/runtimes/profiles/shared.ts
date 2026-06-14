@@ -4,9 +4,8 @@
 // getApiConnection bodies are identical across engines (the engine-specific socket read is delegated to the
 // dialect via host.dialect.readEngineSocket), so they live here once.
 
-import { isEmpty } from "lodash-es";
-
 import type { ApiConnection, AvailabilityCheck, EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import { isEmpty } from "@/utils";
 import type { HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 

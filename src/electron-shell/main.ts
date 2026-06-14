@@ -5,13 +5,13 @@ import * as url from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, Tray } from "electron";
 import contextMenu from "electron-context-menu";
 import ipaddr from "ipaddr.js";
-import { debounce } from "lodash-es";
 // project
 import { userConfiguration } from "@/container-client/config";
 import { OperatingSystem } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
+import { debounce } from "@/utils";
 import { MessageBus } from "./shared";
 
 const APP_PATH = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();

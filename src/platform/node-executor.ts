@@ -10,10 +10,7 @@ import os from "node:os";
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
-import { isEmpty } from "lodash-es";
 import portfinder from "portfinder";
-import { v4 } from "uuid";
-
 import { getApiConfig } from "@/container-client/Api.clients";
 import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/container-client/services";
 import {
@@ -28,7 +25,7 @@ import {
   type Wrapper,
 } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { axiosConfigToCURL, deepMerge } from "@/utils";
+import { axiosConfigToCURL, deepMerge, isEmpty } from "@/utils";
 import { Platform } from "./node";
 
 const logger = createLogger("shared");
@@ -398,7 +395,7 @@ export class WSLRelayServer {
     // Start the SSH relay process
     if (relayMethod === "sshd") {
       this.isListening = true;
-      const relay_guid = v4();
+      const relay_guid = crypto.randomUUID();
       const windowsIdentityPath = await Path.join(await Platform.getUserDataPath(), "id_rsa");
       let connectionString = "";
       let sshServerAddress = "";
@@ -470,7 +467,7 @@ export class WSLRelayServer {
     // Start the TCP relay process
     if (relayMethod === "socat-tcp") {
       this.isListening = true;
-      const guid = v4();
+      const guid = crypto.randomUUID();
       try {
         const relayProcess = await spawnRelayProcess("wsl.exe", args, {
           onClose: (_, code) => {
@@ -512,7 +509,7 @@ export class WSLRelayServer {
       // Handle client connections
       const server = net.createServer(async (clientSocket) => {
         let writeable = true;
-        const guid = v4();
+        const guid = crypto.randomUUID();
         logger.debug(guid, "Client connected to named pipe - allocating relay process");
         const relayProcess = await spawnRelayProcess("wsl.exe", args);
         this.relayProcesses[guid] = relayProcess;

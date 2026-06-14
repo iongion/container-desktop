@@ -1,7 +1,5 @@
 import type { AxiosInstance, AxiosRequestConfig } from "axios";
-import { merge } from "lodash-es";
 import semver from "semver";
-
 import {
   type ApiDriverConfig,
   type Connection,
@@ -9,6 +7,7 @@ import {
   type EngineConnectorApiSettings,
   OperatingSystem,
 } from "@/env/Types";
+import { deepMerge } from "@/utils";
 
 export async function getApiConfig(
   api: EngineConnectorApiSettings,
@@ -51,7 +50,7 @@ export async function getApiConfig(
 
 export function createApplicationApiDriver(connection: Connection, context?: any): AxiosInstance {
   async function request<_T = any, _DD = any>(request, config?: AxiosRequestConfig<any> | undefined) {
-    const req = (config ? merge({}, request, config) : request) || {
+    const req = (config ? deepMerge({}, request, config) : request) || {
       headers: {},
     };
     const headersFlat = Object.keys(req.headers || {}).reduce((acc, key) => {
