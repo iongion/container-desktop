@@ -6,6 +6,25 @@ Podman Desktop Companion
 ![GitHub repo size](https://img.shields.io/github/repo-size/iongion/container-desktop)
 ![Github All Releases](https://img.shields.io/github/downloads/iongion/container-desktop/total.svg)
 
+## Documentation
+
+Full project documentation lives in [`docs/`](docs/):
+
+- **[Architecture](docs/README.md)**
+  - [Overview](docs/architecture/overview.md)
+  - [Backend](docs/architecture/backend.md)
+  - [Frontend](docs/architecture/frontend.md)
+  - [Connection startup](docs/architecture/connection-startup.md)
+  - [Engine matrix](docs/architecture/engine-matrix.md)
+  - [Notes / principles](docs/architecture/notes.md)
+- **Guides**
+  - [Development](docs/development.md)
+  - [Usage](docs/usage.md)
+  - [LIMA setup](docs/lima.md)
+- **Project**
+  - [TODO / roadmap](docs/todo.md)
+  - [Changelog](CHANGELOG.md)
+
 ## **IMPORTANT**
 
 - [Podman](https://podman.io/) offers an official cross-platform desktop UI available at [Podman Desktop](https://podman-desktop.io/), give it a try.
@@ -40,7 +59,7 @@ If one wants to add support for docker container engine, the easiest is to insta
 
 ## Usage
 
-- See [USAGE.md](./USAGE.md)
+- See [docs/usage.md](docs/usage.md)
 
 ## Podman is the driving engine
 

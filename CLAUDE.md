@@ -15,21 +15,24 @@ Cross-platform **Electron desktop app** for managing container engines
 ## Stack
 
 Electron 42 · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
-easy-peasy (state) · wouter (routing) · xterm 6 · monaco · Biome (lint/format).
+Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · monaco · Biome (lint/format).
 Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Go 1.25+ (toolchain 1.26.4).
 Python ≥ 3.12 via `uv`.
 
 ## Layout
 
 - `src/electron-shell/` — `main.ts`, `preload.ts`, `shared.ts`
-- `src/web-app/` — React renderer: `App.tsx`, `domain/` (easy-peasy store/model),
-  `screens/`, `components/`, `Hooks.ts`, `Native.ts`, `Environment.ts`
+- `src/web-app/` — React renderer: `App.tsx`, `stores/` (Zustand state),
+  `domain/` (TanStack Query client), `screens/`, `components/`, `hooks/`,
+  `Native.ts`, `Environment.ts`
 - `src/container-client/` — engine API clients/adapters · `src/platform/` ·
-  `src/rpc/` · `src/logger/` · `src/utils/` · `src/env/`
+  `src/logger/` · `src/utils/` · `src/env/`
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · `tasks.py` / `Makefile`
 - **`website-src/`** — Eleventy sources for the public site (container-desktop.com),
   compiled to the **generated `website/`** (never hand-edit `website/`; see Website below).
+- **`docs/`** — architecture docs (C4 diagrams) + contributor guides;
+  start at `docs/README.md`.
 - Path alias **`@/* → src/*`** (e.g. `@/web-app/...`), defined in `tsconfig.json`
   `paths` + explicit `resolve.alias` in the common vite config.
 
