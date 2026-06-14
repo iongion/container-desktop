@@ -2,7 +2,8 @@
 // Endpoints/params lifted byte-for-byte from the legacy API client (422-613, 785).
 
 import { Application } from "@/container-client/Application";
-import type { Container, ContainerImageMount, ContainerImagePortMapping, ContainerStats } from "@/env/Types";
+import { decodeContainerLogPayload } from "@/container-client/logs";
+import type { Container, ContainerImageMount, ContainerImagePortMapping, ContainerStateList, ContainerStats } from "@/env/Types";
 
 import { DOCKER_BASE_URL, LIBPOD_BASE_URL, ResourceAdapter } from "./shared";
 
@@ -24,6 +25,34 @@ export interface CreateContainerOptions {
   PortMappings?: ContainerImagePortMapping[];
 }
 
+export interface ContainerLogsOptions {
+  follow?: boolean;
+  since?: string;
+  tail?: number | "all";
+}
+
+export interface ContainerLogsStream {
+  on: (event: "data" | "end" | "error" | "close", listener: (...args: any[]) => void) => ContainerLogsStream;
+  off?: (event: string, listener: (...args: any[]) => void) => ContainerLogsStream;
+  removeListener?: (event: string, listener: (...args: any[]) => void) => ContainerLogsStream;
+  close?: () => void;
+  destroy?: () => void;
+}
+
+export function isContainerRunning(container?: Pick<Container, "Computed" | "State">): boolean {
+  if (!container) {
+    return false;
+  }
+  const decoded = container.Computed?.DecodedState;
+  if (decoded) {
+    return decoded === "running";
+  }
+  if (typeof container.State === "object") {
+    return container.State.Running || container.State.Status === ("running" as ContainerStateList);
+  }
+  return `${container.State ?? ""}`.toLowerCase() === "running";
+}
+
 export class ContainersAdapter extends ResourceAdapter {
   async list(): Promise<Container[]> {
     const driver = await this.driver();
@@ -35,18 +64,40 @@ export class ContainersAdapter extends ResourceAdapter {
     return this.isOk(result) ? result.data.map((it) => this.normalizers.normalizeContainer(it)) : [];
   }
 
-  async logs(id: string): Promise<Uint8Array> {
+  async logs(id: string, opts?: ContainerLogsOptions): Promise<string> {
     const driver = await this.driver();
     const result = await driver.get<Uint8Array>(`/containers/${encodeURIComponent(id)}/logs`, {
       params: {
         stdout: true,
         stderr: true,
+        tail: opts?.tail ?? "all",
+        ...(opts?.since ? { since: opts.since } : {}),
       },
       headers: {
         Accept: "application/octet-stream",
         "Content-Type": "application/octet-stream",
       },
       responseType: "arraybuffer",
+    });
+    return decodeContainerLogPayload(result.data);
+  }
+
+  async logsStream(id: string, opts?: ContainerLogsOptions): Promise<ContainerLogsStream> {
+    const driver = await this.driver();
+    const result = await driver.get<ContainerLogsStream>(`/containers/${encodeURIComponent(id)}/logs`, {
+      params: {
+        follow: true,
+        stdout: true,
+        stderr: true,
+        tail: opts?.tail ?? 200,
+        ...(opts?.since ? { since: opts.since } : {}),
+      },
+      headers: {
+        Accept: "application/octet-stream",
+        "Content-Type": "application/octet-stream",
+      },
+      responseType: "stream",
+      timeout: 0,
     });
     return result.data;
   }
