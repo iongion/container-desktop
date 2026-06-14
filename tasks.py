@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import platform
+import shlex
 import shutil
 import urllib.parse
 import urllib.request
@@ -13,6 +14,7 @@ from invoke import Collection, task
 
 from support.versioning import (
     bump_version,
+    extract_changelog_section,
     promote_changelog,
     render_homebrew_rb,
     set_manifest_version,
@@ -389,6 +391,149 @@ def _artifact_sha256(version):
         return response.read().decode("utf-8").strip().split()[0]
 
 
+def _quote(value):
+    return shlex.quote(str(value))
+
+
+def _release_dir():
+    path = Path(PROJECT_HOME, "release")
+    path.mkdir(exist_ok=True)
+    return path
+
+
+def _download_workflow_artifacts(ctx, run_id, release_dir):
+    download_dir = release_dir / f"_workflow-{run_id}"
+    shutil.rmtree(download_dir, ignore_errors=True)
+    ctx.run(f"gh run download {_quote(run_id)} --repo {_quote(REPO_SLUG)} --dir {_quote(download_dir)}")
+    for src in sorted(download_dir.rglob(f"{PROJECT_CODE}*")):
+        if src.is_file():
+            shutil.copy2(src, release_dir / src.name)
+    shutil.rmtree(download_dir, ignore_errors=True)
+
+
+def _asset_belongs_to_release(name, version):
+    if name in {f"{PROJECT_CODE}-installer.exe", f"{PROJECT_CODE}-installer.exe.sha256"}:
+        return True
+    unchecksummed = name.removesuffix(".sha256")
+    return f"-{version}." in unchecksummed or f"-{version}-" in unchecksummed
+
+
+def _write_release_checksums(release_dir, version):
+    for asset in sorted(release_dir.glob(f"{PROJECT_CODE}*")):
+        if not asset.is_file() or asset.name.endswith(".sha256") or not _asset_belongs_to_release(asset.name, version):
+            continue
+        checksum = hashlib.sha256(asset.read_bytes()).hexdigest()
+        asset.with_name(f"{asset.name}.sha256").write_text(checksum, encoding="utf-8")
+
+
+def _public_release_assets(release_dir, version):
+    unsigned_windows = {
+        f"{PROJECT_CODE}-x64-{version}.exe",
+        f"{PROJECT_CODE}-x64-{version}.exe.sha256",
+        f"{PROJECT_CODE}-x64-{version}.appx",
+        f"{PROJECT_CODE}-x64-{version}.appx.sha256",
+    }
+    return sorted(
+        asset
+        for asset in release_dir.glob(f"{PROJECT_CODE}*")
+        if asset.is_file() and _asset_belongs_to_release(asset.name, version) and asset.name not in unsigned_windows
+    )
+
+
+def _write_release_notes(version, release_dir):
+    body = "# Changelog\n\n" + extract_changelog_section(_read_text("CHANGELOG.md"), version)
+    notes = release_dir / f"release-notes-{version}.md"
+    notes.write_text(body, encoding="utf-8")
+    return notes
+
+
+def _release_exists(ctx, version):
+    result = ctx.run(f"gh release view {_quote(version)} --repo {_quote(REPO_SLUG)}", hide=True, warn=True)
+    return result.ok
+
+
+@task(name="publish-release")
+def publish_release(ctx, version=None, run_id=None, title=None, perform=False, clobber=False):
+    """Local-only GitHub release publisher.
+
+    Optionally downloads artifacts from a workflow run, writes side-by-side
+    ``.sha256`` files, extracts only this version's CHANGELOG section and
+    creates/uploads the GitHub release. Windows Store uploads are manual, so the
+    release requires ``release/container-desktop-installer.exe`` and skips the
+    unsigned builder ``.exe`` / ``.appx`` outputs.
+    """
+    version = version or read_source_version()
+    title = title or version
+    release_dir = _release_dir()
+
+    print(f"Publish GitHub release {version}" + ("" if perform else "  (dry-run; pass --perform)"))
+    if run_id:
+        print(f"  workflow artifacts: {run_id}")
+    print(f"  assets dir: {release_dir}")
+
+    if perform and run_id:
+        _download_workflow_artifacts(ctx, run_id, release_dir)
+    elif run_id:
+        print(f"  would download workflow artifacts from run {run_id}")
+
+    if perform:
+        _write_release_checksums(release_dir, version)
+    else:
+        print("  would write missing/stale .sha256 files beside each asset")
+
+    missing_requirements = False
+    wrapper = release_dir / f"{PROJECT_CODE}-installer.exe"
+    if not wrapper.exists():
+        message = f"{wrapper} is missing; copy the Microsoft Store installer wrapper into release/ before publishing"
+        if perform:
+            raise Exception(message)
+        missing_requirements = True
+        print(f"  requires: {message}")
+
+    notes = _write_release_notes(version, release_dir) if perform else release_dir / f"release-notes-{version}.md"
+    assets = _public_release_assets(release_dir, version)
+    if not assets:
+        message = f"no public release assets found in {release_dir}"
+        if perform:
+            raise Exception(message)
+        missing_requirements = True
+        print(f"  requires: {message}")
+
+    skipped = sorted(asset.name for asset in release_dir.glob(f"{PROJECT_CODE}-x64-{version}.*") if asset not in assets)
+    if skipped:
+        print("  skipping non-public Windows builder assets:")
+        for name in skipped:
+            print(f"    {name}")
+
+    print("  release assets:")
+    for asset in assets:
+        print(f"    {asset.name}")
+
+    if not perform:
+        print(f"  would write release notes: {notes}")
+        if missing_requirements:
+            print(f"  would create/update GitHub release {version} after the missing requirements are present")
+        else:
+            print(f"  would create/update GitHub release {version}")
+        return
+
+    quoted_assets = " ".join(_quote(asset) for asset in assets)
+    if _release_exists(ctx, version):
+        ctx.run(
+            f"gh release edit {_quote(version)} --repo {_quote(REPO_SLUG)} "
+            f"--title {_quote(title)} --notes-file {_quote(notes)}"
+        )
+        upload_cmd = f"gh release upload {_quote(version)} --repo {_quote(REPO_SLUG)} {quoted_assets}"
+        if clobber:
+            upload_cmd += " --clobber"
+        ctx.run(upload_cmd)
+    else:
+        ctx.run(
+            f"gh release create {_quote(version)} --repo {_quote(REPO_SLUG)} --verify-tag "
+            f"--title {_quote(title)} --notes-file {_quote(notes)} {quoted_assets}"
+        )
+
+
 @task(name="publish-meta")
 def publish_meta(ctx, version=None, perform=False):
     """Render website + homebrew cask for a PUBLISHED release (defaults to latest).
@@ -421,6 +566,7 @@ namespace = Collection(
     release,
     bump,
     version_sync,
+    publish_release,
     publish_meta,
     start,
     build_website,

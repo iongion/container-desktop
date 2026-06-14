@@ -24,7 +24,7 @@ on:
 
 jobs:
   bundle:
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
@@ -45,6 +45,8 @@ jobs:
       CD: true
       NODE_ENV: ${{github.event.inputs.stage}}
       ENVIRONMENT: ${{github.event.inputs.stage}}
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
 
     steps:
       - name: Clone Repository (latest)

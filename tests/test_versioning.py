@@ -15,6 +15,7 @@ import pytest
 
 from support.versioning import (
     bump_version,
+    extract_changelog_section,
     parse_version,
     promote_changelog,
     render_homebrew_rb,
@@ -111,6 +112,32 @@ def test_promote_changelog_inserts_dated_section_after_unreleased():
 def test_promote_changelog_is_noop_without_unreleased():
     text = "# Changelog\n\n## [5.2.15] - 2026-01-01\n"
     assert promote_changelog(text, "5.2.16", "2026-06-13") == text
+
+
+# --- extract_changelog_section --------------------------------------------
+
+
+def test_extract_changelog_section_returns_only_requested_version_body():
+    text = (
+        "# Changelog\n\n"
+        "## [Unreleased]\n\n"
+        "- Later\n\n"
+        "## [5.2.16] - 2026-06-14\n\n"
+        "Intro.\n\n"
+        "## Added\n\n"
+        "- One\n\n"
+        "## 5.2.15 - 2025-04-01\n\n"
+        "- Previous\n"
+    )
+    out = extract_changelog_section(text, "5.2.16")
+    assert out == "Intro.\n\n## Added\n\n- One\n"
+    assert "Unreleased" not in out
+    assert "5.2.15" not in out
+
+
+def test_extract_changelog_section_rejects_missing_version():
+    with pytest.raises(ValueError, match="no section"):
+        extract_changelog_section("# Changelog\n\n## [5.2.15] - 2026-01-01\n", "5.2.16")
 
 
 # --- set_website_version ------------------------------------------------------

@@ -75,6 +75,27 @@ def promote_changelog(text: str, version: str, today: str) -> str:
     return text.replace(marker, f"{marker}\n\n## [{version}] - {today}", 1)
 
 
+def extract_changelog_section(text: str, version: str) -> str:
+    """Return only the changelog body for ``version``.
+
+    Accepts both ``## [1.2.3] - date`` and ``## 1.2.3 - date`` headings and
+    stops at the next level-2 heading.
+    """
+    heading = re.compile(rf"^##\s+(?:\[{re.escape(version)}\]|{re.escape(version)})(?:\s+-[^\n]*)?\s*$", re.MULTILINE)
+    match = heading.search(text)
+    if match is None:
+        raise ValueError(f"CHANGELOG.md has no section for {version}")
+
+    rest = text[match.end() :]
+    next_heading = re.search(
+        r"^##\s+(?:\[?(?:Unreleased|\d+\.\d+\.\d+(?:[-+][^\]\s]+)?)\]?)(?:\s+-[^\n]*)?\s*$", rest, re.MULTILINE
+    )
+    body = rest[: next_heading.start() if next_heading else len(rest)].strip()
+    if not body:
+        raise ValueError(f"CHANGELOG.md section for {version} is empty")
+    return f"{body}\n"
+
+
 def set_website_version(text: str, version: str) -> str:
     """Point the website download page at ``version``.
 
