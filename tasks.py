@@ -457,87 +457,29 @@ def _release_exists(ctx, version):
 
 
 @task(name="publish-release")
-def publish_release(ctx, version=None, run_id=None, title=None, perform=False, clobber=False):
-    """Local-only GitHub release publisher.
+def publish_release(ctx, version=None, run_id=None, title=None, perform=False, clobber=False, replace=False):
+    """Local-only GitHub release publisher wrapper.
 
-    Optionally downloads artifacts from a workflow run, writes side-by-side
-    ``.sha256`` files, extracts only this version's CHANGELOG section and
-    creates/uploads the GitHub release. Windows Store uploads are manual, so the
-    release requires ``release/container-desktop-installer.exe`` and skips the
-    unsigned builder ``.exe`` / ``.appx`` outputs.
+    The implementation lives in ``support/release-artifacts.cjs`` so artifact
+    names, website download links and release publishing share one source of
+    truth. Dry-run by default; pass ``--perform`` after copying the Microsoft
+    Store wrapper to ``release/container-desktop-installer.exe``.
     """
-    version = version or read_source_version()
-    title = title or version
-    release_dir = _release_dir()
-
-    print(f"Publish GitHub release {version}" + ("" if perform else "  (dry-run; pass --perform)"))
-    run_ids = _release_run_ids(run_id)
-    if run_ids:
-        print(f"  workflow artifacts: {', '.join(run_ids)}")
-    print(f"  assets dir: {release_dir}")
-
+    command = ["node", "support/release-artifacts.cjs", "publish"]
+    if version:
+        command.extend(["--version", version])
+    if run_id:
+        command.extend(["--run-id", run_id])
+    if title:
+        command.extend(["--title", title])
     if perform:
-        for artifact_run_id in run_ids:
-            _download_workflow_artifacts(ctx, artifact_run_id, release_dir)
-    elif run_ids:
-        print(f"  would download workflow artifacts from run(s): {', '.join(run_ids)}")
-
-    if perform:
-        _write_release_checksums(release_dir, version)
-    else:
-        print("  would write missing/stale .sha256 files beside each asset")
-
-    missing_requirements = False
-    wrapper = release_dir / f"{PROJECT_CODE}-installer.exe"
-    if not wrapper.exists():
-        message = f"{wrapper} is missing; copy the Microsoft Store installer wrapper into release/ before publishing"
-        if perform:
-            raise Exception(message)
-        missing_requirements = True
-        print(f"  requires: {message}")
-
-    notes = _write_release_notes(version, release_dir) if perform else release_dir / f"release-notes-{version}.md"
-    assets = _public_release_assets(release_dir, version)
-    if not assets:
-        message = f"no public release assets found in {release_dir}"
-        if perform:
-            raise Exception(message)
-        missing_requirements = True
-        print(f"  requires: {message}")
-
-    skipped = sorted(asset.name for asset in release_dir.glob(f"{PROJECT_CODE}-x64-{version}.*") if asset not in assets)
-    if skipped:
-        print("  skipping non-public Windows builder assets:")
-        for name in skipped:
-            print(f"    {name}")
-
-    print("  release assets:")
-    for asset in assets:
-        print(f"    {asset.name}")
-
-    if not perform:
-        print(f"  would write release notes: {notes}")
-        if missing_requirements:
-            print(f"  would create/update GitHub release {version} after the missing requirements are present")
-        else:
-            print(f"  would create/update GitHub release {version}")
-        return
-
-    quoted_assets = " ".join(_quote(asset) for asset in assets)
-    if _release_exists(ctx, version):
-        ctx.run(
-            f"gh release edit {_quote(version)} --repo {_quote(REPO_SLUG)} "
-            f"--title {_quote(title)} --notes-file {_quote(notes)}"
-        )
-        upload_cmd = f"gh release upload {_quote(version)} --repo {_quote(REPO_SLUG)} {quoted_assets}"
-        if clobber:
-            upload_cmd += " --clobber"
-        ctx.run(upload_cmd)
-    else:
-        ctx.run(
-            f"gh release create {_quote(version)} --repo {_quote(REPO_SLUG)} --verify-tag "
-            f"--title {_quote(title)} --notes-file {_quote(notes)} {quoted_assets}"
-        )
+        command.append("--perform")
+    if clobber:
+        command.append("--clobber")
+    if replace:
+        command.append("--replace")
+    with ctx.cd(PROJECT_HOME):
+        run_env(ctx, " ".join(_quote(part) for part in command))
 
 
 @task(name="publish-meta")

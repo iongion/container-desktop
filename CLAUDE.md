@@ -43,6 +43,12 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `inv release`
+- Publish GitHub release assets locally only:
+  `uv run --locked invoke publish-release --run-id <actions-run-id>` dry-run,
+  then add `--perform`. The Microsoft Store wrapper is optional and can be
+  copied into `release/container-desktop-installer.exe` when available.
+  `CDPipeline.yml` can also publish after all production targets build; use its
+  `replace-release` input to delete/recreate the same version cleanly.
 - Relay: `cd support/container-desktop-relay && ./relay-build.sh`; scan `govulncheck ./...`
 - Python tooling: `make check` (ruff), `make prepare` (`uv sync --locked --dev --no-install-project`)
 - Linux system deps (one-shot): `bash support/provision-deps.sh`

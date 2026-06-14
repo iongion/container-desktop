@@ -21,6 +21,20 @@ on:
           - linux
           - macos
           - windows
+      publish-release:
+        description: "Publish GitHub release after all production targets build"
+        required: true
+        type: boolean
+        default: true
+      replace-release:
+        description: "Delete and recreate the GitHub release before publishing"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   bundle:
@@ -86,3 +100,45 @@ jobs:
           name: container-desktop-${{ matrix.target }}
           path: release/container-desktop*
           if-no-files-found: error
+
+  publish-release:
+    timeout-minutes: 30
+    needs: bundle
+    if: github.event.inputs.target == 'all' && github.event.inputs.stage == 'production' && github.event.inputs.publish-release == 'true'
+
+    runs-on: ubuntu-latest
+
+    env:
+      CI: true
+      GH_TOKEN: ${{ github.token }}
+      REPLACE_RELEASE: ${{ github.event.inputs.replace-release }}
+
+    steps:
+      - name: Clone Repository (latest)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref == 'latest'
+      - name: Clone Repository (custom ref)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref != 'latest'
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Use Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: ".nvmrc"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Download build artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: container-desktop-*
+          path: release
+          merge-multiple: true
+      - name: Publish GitHub release
+        run: |
+          args=(support/release-artifacts.cjs publish --perform --allow-ci)
+          if [ "$REPLACE_RELEASE" = "true" ]; then
+            args+=(--replace)
+          else
+            args+=(--clobber)
+          fi
+          node "${args[@]}"
