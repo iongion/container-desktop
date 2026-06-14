@@ -166,10 +166,58 @@
       <div class="os"><i class="fab fa-linux"></i></div>
       <h4>Linux</h4>
       <div class="meta">x86_64 · arm64</div>
-      <a class="btn btn-primary get" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-x64-5.2.16.tar.gz">⬇ Download .tar.gz</a>
-      <div class="fmt">Portable <b>tarball</b> — unpack &amp; run</div>
+      <a class="btn btn-primary get" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-amd64-5.2.16.deb"><i class="fa-solid fa-download"></i><span class="get-label">Download .deb</span></a>
+      <div class="fmt">Debian/Ubuntu <b>.deb</b> package</div>
 
-      <div class="dl-options"><a href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-arm64-5.2.16.tar.gz">ARM64 .tar.gz</a></div>
+      <div class="dl-menu dl-package-menu">
+        <button type="button" id="download-linux" class="dl-menu-trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="download-linux-menu">
+          <span class="dl-current">Choose package</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div id="download-linux-menu" class="dl-menu-panel" aria-label="Linux packages">
+          <div class="dl-menu-head" aria-hidden="true"><span></span><span>Intel</span><span>Arm</span></div>
+
+          <div class="dl-package-row">
+            <div class="dl-package-kind"><span class="dl-option-head"><span class="dl-option-title">Debian / Ubuntu</span><span class="dl-option-badge">.deb</span></span></div>
+
+            <a class="dl-menu-option" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-amd64-5.2.16.deb" data-primary="true" data-format="deb" data-arch="x64" data-label="Download .deb" data-note="Debian/Ubuntu &lt;b&gt;.deb&lt;/b&gt; package" data-text="Debian / Ubuntu · x86_64 (.deb)">
+              <span class="dl-arch-meta">x86_64</span>
+            </a>
+
+            <a class="dl-menu-option" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-arm64-5.2.16.deb" data-primary="false" data-format="deb" data-arch="arm64" data-label="Download .deb" data-note="Debian/Ubuntu &lt;b&gt;.deb&lt;/b&gt; package" data-text="Debian / Ubuntu · arm64 (.deb)">
+              <span class="dl-arch-meta">arm64</span>
+            </a>
+
+          </div>
+
+          <div class="dl-package-row">
+            <div class="dl-package-kind"><span class="dl-option-head"><span class="dl-option-title">Fedora / RHEL</span><span class="dl-option-badge">.rpm</span></span></div>
+
+            <a class="dl-menu-option" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-x86_64-5.2.16.rpm" data-primary="false" data-format="rpm" data-arch="x64" data-label="Download .rpm" data-note="Fedora/RHEL &lt;b&gt;.rpm&lt;/b&gt; package" data-text="Fedora / RHEL · x86_64 (.rpm)">
+              <span class="dl-arch-meta">x86_64</span>
+            </a>
+
+            <a class="dl-menu-option" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-aarch64-5.2.16.rpm" data-primary="false" data-format="rpm" data-arch="arm64" data-label="Download .rpm" data-note="Fedora/RHEL &lt;b&gt;.rpm&lt;/b&gt; package" data-text="Fedora / RHEL · arm64 (.rpm)">
+              <span class="dl-arch-meta">arm64</span>
+            </a>
+
+          </div>
+
+          <div class="dl-package-row">
+            <div class="dl-package-kind"><span class="dl-option-head"><span class="dl-option-title">Portable tarball</span><span class="dl-option-badge">.tar.gz</span></span></div>
+
+            <a class="dl-menu-option" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-x64-5.2.16.tar.gz" data-primary="false" data-format="tar" data-arch="x64" data-label="Download .tar.gz" data-note="Portable &lt;b&gt;tarball&lt;/b&gt; — unpack &amp;amp; run" data-text="Portable tarball · x86_64 (.tar.gz)">
+              <span class="dl-arch-meta">x86_64</span>
+            </a>
+
+            <a class="dl-menu-option" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-linux-arm64-5.2.16.tar.gz" data-primary="false" data-format="tar" data-arch="arm64" data-label="Download .tar.gz" data-note="Portable &lt;b&gt;tarball&lt;/b&gt; — unpack &amp;amp; run" data-text="Portable tarball · arm64 (.tar.gz)">
+              <span class="dl-arch-meta">arm64</span>
+            </a>
+
+          </div>
+
+        </div>
+      </div>
 
     </div>
     
@@ -177,10 +225,10 @@
       <div class="os"><i class="fab fa-apple"></i></div>
       <h4>macOS</h4>
       <div class="meta">Apple silicon</div>
-      <a class="btn btn-primary get" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-mac-arm64-5.2.16.dmg">⬇ Download .dmg</a>
+      <a class="btn btn-primary get" href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-mac-arm64-5.2.16.dmg"><i class="fa-solid fa-download"></i><span class="get-label">Download .dmg</span></a>
       <div class="fmt">Standard <b>.dmg</b> disk image</div>
 
-      <div class="dl-options"><a href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-mac-arm64-5.2.16.tar.gz">Portable .tar.gz</a></div>
+      <div class="dl-links"><a href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-mac-arm64-5.2.16.tar.gz">Portable .tar.gz</a></div>
 
     </div>
     
@@ -188,10 +236,10 @@
       <div class="os"><i class="fab fa-windows"></i></div>
       <h4>Windows</h4>
       <div class="meta">x64</div>
-      <a class="btn btn-primary get" href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct">⬇ Download for Windows</a>
+      <a class="btn btn-primary get" href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct"><i class="fa-solid fa-download"></i><span class="get-label">Microsoft Store</span></a>
       <div class="fmt">Install from the <b>Microsoft Store</b></div>
 
-      <div class="dl-options"><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-installer.exe">Installer .exe</a><span>·</span><a href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-x64-5.2.16.zip">Portable .zip</a></div>
+      <div class="dl-links"><a href="https://github.com/iongion/container-desktop/releases/download/5.2.13/container-desktop-installer.exe">Installer .exe</a><span>·</span><a href="https://github.com/iongion/container-desktop/releases/download/5.2.16/container-desktop-x64-5.2.16.zip">Portable .zip</a></div>
 
     </div>
     

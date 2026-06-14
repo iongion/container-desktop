@@ -23,11 +23,9 @@ const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 
 // Package formats to emit. Default builds native packages plus portable archives:
-// Linux: tar.gz, macOS: dmg + tar.gz, Windows: appx + nsis (.exe) + zip.
-// Set PACKAGE_FORMATS=tgz to force portable .tgz tarballs on every platform
-// instead. Nothing is removed — it's open source, so the full recipes stay in
-// the repo for anyone to build their own way; this flag only gates which targets
-// electron-builder outputs.
+// Linux: tar.gz + deb + rpm, macOS: dmg + tar.gz, Windows: appx + nsis (.exe) + zip.
+// Set PACKAGE_FORMATS=tgz to force portable .tgz tarballs on macOS/Windows.
+// Linux always emits tar.gz + deb + rpm.
 const tgzOnly = process.env.PACKAGE_FORMATS === "tgz";
 
 // template
@@ -161,7 +159,7 @@ const config = {
     executableName: "container-desktop",
     maintainer: publisher,
     icon: "icons/appIcon.icns",
-    target: ["tar.gz"],
+    target: ["tar.gz", "deb", "rpm"],
     category: "Development;System;Utility",
     desktop: {
       entry: displayName,

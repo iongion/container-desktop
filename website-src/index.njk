@@ -76,10 +76,30 @@ description: "A familiar, open-source desktop interface for Podman and Docker �
       <div class="os"><i class="fab {{ d.icon }}"></i></div>
       <h4>{{ d.id }}</h4>
       <div class="meta">{{ d.meta }}</div>
-      <a class="btn btn-primary get" href="{{ d.file }}">⬇ Download {{ d.ext }}</a>
+      <a class="btn btn-primary get" href="{{ d.file }}"><i class="fa-solid fa-download"></i><span class="get-label">{{ d.buttonLabel }}</span></a>
       <div class="fmt">{{ d.note | safe }}</div>
-{% if d.options %}
-      <div class="dl-options">{% for option in d.options %}<a href="{{ option.file }}">{{ option.label }}</a>{% if not loop.last %}<span>·</span>{% endif %}{% endfor %}</div>
+{% if d.menu and d.options %}
+      <div class="dl-menu dl-package-menu">
+        <button type="button" id="download-{{ d.slug }}" class="dl-menu-trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="download-{{ d.slug }}-menu">
+          <span class="dl-current">Choose package</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div id="download-{{ d.slug }}-menu" class="dl-menu-panel" aria-label="{{ d.id }} packages">
+          <div class="dl-menu-head" aria-hidden="true"><span></span><span>Intel</span><span>Arm</span></div>
+{% for row in d.rows %}
+          <div class="dl-package-row">
+            <div class="dl-package-kind"><span class="dl-option-head"><span class="dl-option-title">{{ row.title }}</span><span class="dl-option-badge">{{ row.badge }}</span></span></div>
+{% for option in row.options %}
+            <a class="dl-menu-option" href="{{ option.file }}" data-primary="{% if option.id == d.options[0].id %}true{% else %}false{% endif %}" data-format="{{ option.format }}" data-arch="{{ option.arch }}" data-label="{{ option.buttonLabel }}" data-note="{{ option.note | escape }}" data-text="{{ option.label }}">
+              <span class="dl-arch-meta">{{ option.archLabel }}</span>
+            </a>
+{% endfor %}
+          </div>
+{% endfor %}
+        </div>
+      </div>
+{% elif d.links %}
+      <div class="dl-links">{% for option in d.links %}<a href="{{ option.file }}">{{ option.label }}</a>{% if not loop.last %}<span>·</span>{% endif %}{% endfor %}</div>
 {% endif %}
     </div>
     {% endfor %}

@@ -136,12 +136,36 @@ section{position:relative}
 .dlc .os i{background:linear-gradient(135deg,#ffffff,#b682ff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .dlc h4{font-size:20px;font-weight:600;margin:4px 0 4px}
 .dlc .meta{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--faint);margin-bottom:18px}
-.dlc .get{width:100%;justify-content:center}
+.dlc .get{width:100%;justify-content:center;min-height:46px}
+.dlc .get-label{overflow-wrap:anywhere}
 .dlc .fmt{margin-top:12px;font-size:12px;color:var(--muted)}
 .dlc .fmt b{color:var(--ink-soft)}
-.dlc .dl-options{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--faint)}
-.dlc .dl-options a{color:var(--cyan)}
-.dlc .dl-options a:hover{text-decoration:underline}
+.dl-menu{margin-top:10px;text-align:left}
+.dl-package-menu{position:relative;z-index:5}
+.dl-menu-trigger{width:100%;border:0;background:none;color:var(--cyan);padding:0;display:flex;align-items:center;justify-content:center;gap:6px;font:400 12px/1.35 "Montserrat",sans-serif;cursor:pointer}
+.dl-menu-trigger:focus{outline:none}
+.dl-menu-trigger:hover .dl-current,.dl-menu-trigger:focus-visible .dl-current{text-decoration:underline}
+.dl-menu-trigger i{font-size:10px;color:inherit;transition:.14s}
+.dl-current{min-width:0}
+.dl-package-menu[data-open="true"] .dl-menu-trigger i{transform:rotate(180deg)}
+.dl-menu-panel{display:none;position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:min(560px,calc(100vw - 56px));padding:10px;border:1px solid rgba(182,130,255,.34);border-radius:12px;background:linear-gradient(180deg,rgba(29,12,39,.98),rgba(16,5,24,.98));box-shadow:0 24px 54px -22px rgba(0,0,0,.9),0 0 0 1px rgba(0,0,0,.35);z-index:30}
+.dl-package-menu[data-open="true"] .dl-menu-panel{display:block}
+.dl-menu-head,.dl-package-row{display:grid;grid-template-columns:minmax(150px,1.15fr) repeat(2,minmax(92px,.72fr));gap:8px;align-items:stretch}
+.dl-menu-head{padding:0 2px 7px;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);text-align:center}
+.dl-package-row+.dl-package-row{margin-top:8px}
+.dl-package-kind{border:1px solid rgba(182,130,255,.12);border-radius:9px;background:rgba(255,255,255,.025);padding:10px 11px;display:flex;flex-direction:column;justify-content:center;text-align:left}
+.dl-menu-option{display:flex;justify-content:center;align-items:center;border:1px solid rgba(182,130,255,.14);border-radius:9px;background:rgba(255,255,255,.035);color:var(--ink-soft);padding:10px 8px;text-align:center;cursor:pointer;font:500 12.5px/1.3 "Montserrat",sans-serif}
+.dl-menu-option:hover,.dl-menu-option:focus{outline:none;border-color:rgba(19,171,255,.55);background:rgba(19,171,255,.08)}
+.dl-menu-option[data-primary="true"]{border-color:rgba(182,130,255,.65);background:rgba(182,130,255,.12);box-shadow:inset 0 0 0 1px rgba(182,130,255,.16)}
+.dl-option-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dl-option-title{color:#fff;font-weight:600;min-width:0}
+.dl-option-badge{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--cyan);border:1px solid rgba(19,171,255,.24);border-radius:999px;padding:2px 6px;background:rgba(19,171,255,.08);white-space:nowrap}
+.dl-option-meta{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--faint)}
+.dl-arch-meta{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--faint)}
+.dl-links{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--faint)}
+.dl-links a{color:var(--cyan)}
+.dl-links a:hover{text-decoration:underline}
+@media(max-width:760px){.dl-cards{grid-template-columns:1fr;max-width:420px}.dlc{padding:28px 22px}.dl-menu-panel{position:static;transform:none;width:100%;margin-top:8px}.dl-menu-head,.dl-package-row{grid-template-columns:minmax(116px,1.1fr) repeat(2,minmax(68px,.72fr));gap:6px}.dl-package-kind,.dl-menu-option{padding:9px 8px}.dl-option-badge{display:none}}
 
 /* ---- publications / books ---- */
 .pubs{padding:80px 0;border-top:1px solid var(--border)}
