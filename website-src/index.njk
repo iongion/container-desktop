@@ -1,0 +1,93 @@
+---
+layout: layouts/base.njk
+title: "Container Desktop — Podman & Docker desktop UI for Windows, macOS, Linux"
+description: "A familiar, open-source desktop interface for Podman and Docker — local, remote over SSH, and WSL, the same UI on Windows, macOS and Linux. Free, MIT licensed."
+---
+<div class="hero-glow"></div>
+<section class="hero"><div class="wrap">
+  <span class="badge"><span class="dot"></span> Free &amp; open source · MIT · Windows · macOS · Linux</span>
+  <h1><span class="sd">The super duper</span><span class="grad">Container Desktop</span></h1>
+  <p class="lead">A familiar desktop interface for the free, open container managers — <b>Podman</b> and <b>Docker</b>.<br/> Local, remote over SSH, and WSL, the same UI, everywhere.</p>
+  <div class="cta">
+    <a class="btn btn-primary" id="heroDownload" href="#download">⬇ Download for your OS</a>
+    <a class="btn btn-ghost" href="/manual/">Read the Manual</a>
+  </div>
+  <div class="pd-callout">Looking for the official one made by the Podman team? That's <a href="{{ site.podmanDesktop }}" target="_blank" rel="noopener">Podman Desktop</a> — also great.</div>
+  <div class="shot">
+    <video controls preload="none" poster="/videos/demo.png" aria-label="Container Desktop demo">
+      <source src="/videos/demo.mp4" type="video/mp4" />
+    </video>
+  </div>
+</div></section>
+
+<section class="trust"><div class="wrap">
+  <div class="t"><span class="ic"><i class="fab fa-linux"></i><i class="fab fa-apple"></i><i class="fab fa-windows"></i></span> &nbsp;Windows · macOS · Linux</div>
+  <div class="t"><span class="ic">◆</span> <b>Podman</b> &amp; <b>Docker</b></div>
+  <div class="t"><span class="ic">◆</span> Local · SSH · WSL</div>
+  <div class="t"><span class="ic">◆</span> <b>MIT</b> licensed</div>
+  <div class="t"><span class="ic">◆</span> On the Microsoft Store</div>
+</div></section>
+
+<section class="features" id="features"><div class="wrap">
+  {% for row in features.rows %}
+  <div class="row{% if row.flip %} alt{% endif %}">
+    <div class="copy">
+      <span class="eyebrow">{{ row.eyebrow }}</span>
+      <h3>{{ row.title | safe }}</h3>
+      <p>{{ row.copy }}</p>
+      {% if row.bullets %}<ul>{% for b in row.bullets %}<li>{{ b | safe }}</li>{% endfor %}</ul>{% endif %}
+      {% if row.chips %}<div class="engines">{% for c in row.chips %}<span class="chip">{{ c }}</span>{% endfor %}</div>{% endif %}
+    </div>
+    <div class="shot"><img src="{{ row.img }}" alt="{{ row.alt }}" /></div>
+  </div>
+  {% endfor %}
+</div></section>
+
+<section class="grid-sec"><div class="wrap">
+  <div class="sec-head"><h2>Everything you manage, at your fingertips</h2><p>The essentials only — so it feels right at home from the first launch.</p></div>
+  <div class="cards">
+    {% for c in features.grid %}
+    <div class="card"><div class="thumb"><img src="{{ c.img }}" alt="{{ c.title }}" /></div><div class="cc"><div class="ico">{{ c.tag }}</div><h4>{{ c.title }}</h4><p>{{ c.copy }}</p></div></div>
+    {% endfor %}
+  </div>
+</div></section>
+
+<section class="manual" id="manual"><div class="wrap">
+  <div class="sec-head"><h2>The Manual</h2><p>Your setup guides, modernized into a real handbook — every engine, every platform, with copy-paste commands. Nothing left behind.</p></div>
+  <div class="manual-cards">
+    <a class="mcard" href="/manual/#linux"><div class="k"><i class="fab fa-linux"></i></div><h4>Linux</h4>
+      <ul><li>Quick guide</li><li>Podman acting as Docker</li><li>Docker Desktop alternative</li><li>Sharing connection</li></ul>
+      <div class="arrow">Open Linux guide →</div></a>
+    <a class="mcard" href="/manual/#macos"><div class="k"><i class="fab fa-apple"></i></div><h4>macOS</h4>
+      <ul><li>colima quick start</li><li>Podman &amp; Docker via LIMA</li><li>Podman acting as Docker</li><li>Sharing connection</li></ul>
+      <div class="arrow">Open macOS guide →</div></a>
+    <a class="mcard" href="/manual/#windows"><div class="k"><i class="fab fa-windows"></i></div><h4>Windows</h4>
+      <ul><li>WSL setup &amp; requirements</li><li>Quick guide</li><li>Podman acting as Docker</li><li>Custom install · Tips &amp; tricks</li></ul>
+      <div class="arrow">Open Windows guide →</div></a>
+  </div>
+  <div class="manual-foot"><a class="btn btn-ghost" href="/manual/">Browse the full Manual →</a></div>
+</div></section>
+
+<section class="dl" id="download"><div class="wrap">
+  <div class="sec-head"><h2>Download {{ site.name }}</h2><p>Free and open source — native packages for every platform.</p></div>
+  <div class="dl-cards">
+    {% for d in downloads.os %}
+    <div class="dlc" data-os="{{ d.id }}">
+      <div class="os"><i class="fab {{ d.icon }}"></i></div>
+      <h4>{{ d.id }}</h4>
+      <div class="meta">{{ d.meta }}</div>
+      <a class="btn btn-primary get" href="{{ d.file }}">⬇ Download {{ d.ext }}</a>
+      <div class="fmt">{{ d.note | safe }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div></section>
+
+<section class="pubs"><div class="wrap">
+  <div class="sec-head"><h2>Recommended reading</h2><p>Go deeper with Podman — books worth your time.</p></div>
+  <div class="books">
+    {% for b in features.books %}
+    <a class="book" href="{{ b.url }}" target="_blank" rel="noopener"><img src="{{ b.img }}" alt="{{ b.title }}" /><span>{{ b.title }}</span></a>
+    {% endfor %}
+  </div>
+</div></section>

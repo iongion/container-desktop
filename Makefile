@@ -2,7 +2,7 @@ PROJECT_ROOT:=$(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TEMP_DIR:=$(PROJECT_ROOT)/temp
 
 
-.PHONY: clean prepare check format
+.PHONY: clean prepare check format build-website
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -22,3 +22,8 @@ format:
 	@echo "Formatting the project"
 	uv run ruff format ./support
 	yarn format
+
+build-website:
+	@echo "Building the website (website-src -> website)"
+	rm -fr website
+	yarn build:website

@@ -1,23 +1,21 @@
-import react from "@vitejs/plugin-react";
-import merge from "lodash.merge";
-import mimeTypes from "mime-types";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import react from "@vitejs/plugin-react";
+import merge from "lodash.merge";
+import mimeTypes from "mime-types";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import svgrPlugin from "vite-plugin-svgr";
-
+import pkg from "./package.json";
 import {
-  ENVIRONMENT,
-  PROJECT_HOME,
   createEJSContext,
+  ENVIRONMENT,
   getCommonViteConfig,
   getElectronVendorsCache,
+  PROJECT_HOME,
   sourceEnv,
   sourcemap,
 } from "./vite.config.common.mjs";
-
-import pkg from "./package.json";
 
 export function docsServer() {
   return {

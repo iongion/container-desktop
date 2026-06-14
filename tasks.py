@@ -17,7 +17,6 @@ from support.versioning import (
     set_manifest_version,
     set_package_json_version,
     set_plain_version,
-    set_website_version,
 )
 
 PROJECT_HOME = os.path.dirname(__file__)
@@ -274,6 +273,19 @@ def start(ctx, docs=False):
         run_env(ctx, "yarn dev")
 
 
+@task(name="build-website")
+def build_website(ctx):
+    """Compile website-src/ into website/ (Eleventy static site generator).
+
+    website/ is fully generated output: it is cleaned, then rebuilt. The version
+    and per-release download URLs are baked in from package.json at build time,
+    so no string-replacement step is needed.
+    """
+    shutil.rmtree(os.path.join(PROJECT_HOME, "website"), ignore_errors=True)
+    with ctx.cd(PROJECT_HOME):
+        run_env(ctx, "yarn build:website")
+
+
 # --- versioning & release metadata ----------------------------------------
 #
 # package.json `version` is the single source of truth. `version-sync` and
@@ -348,6 +360,7 @@ def bump(ctx, part="patch", perform=False):
     if not perform:
         print("Re-run with --perform to write files, commit, tag and push.")
         return
+    build_website(ctx)  # regenerate website/ from website-src with the new version
     with ctx.cd(PROJECT_HOME):
         ctx.run("git add -A")
         ctx.run(f'git commit -m "Release {version}"')
@@ -389,18 +402,15 @@ def publish_meta(ctx, version=None, perform=False):
     """
     version = version or _latest_release_version(ctx)
     print(f"Render published metadata for {version}" + ("" if perform else "  (dry-run; pass --perform)"))
-    targets = [
-        ("website/index.html", set_website_version(_read_text("website/index.html"), version)),
-        ("website/VERSION", set_plain_version(_read_text("website/VERSION"), version)),
-        ("website/VERSION-Windows_NT", set_plain_version(_read_text("website/VERSION-Windows_NT"), version)),
-    ]
-    _apply(targets, perform)
     rb = "support/homebrew-cask/container-desktop.rb"
     if perform:
+        build_website(ctx)  # version + download URLs baked in from package.json
+        print("  rebuilt: website/ (generated from website-src/)")
         sha_arm = _artifact_sha256(version)
         _write_text(rb, render_homebrew_rb(_read_text(rb), version, sha_arm))
         print(f"  updated: {rb}")
     else:
+        print("  would rebuild: website/ (from website-src/) via build-website")
         print(f"  would update: {rb} (fetch dmg sha256 for arm64)")
 
 
@@ -415,6 +425,7 @@ namespace = Collection(
     version_sync,
     publish_meta,
     start,
+    build_website,
     checksums,
     install_self_signed_appx,
     uninstall_self_signed_appx,

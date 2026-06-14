@@ -9,7 +9,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/*.svg"]
+    "includes": ["**", "!**/*.svg", "!website-src/assets/css/site.css"]
   },
   "formatter": {
     "enabled": true,
@@ -35,7 +35,7 @@
       "performance": {
         "noDelete": "off"
       },
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "noDescendingSpecificity": "off",
         "noNonNullAssertion": "off",

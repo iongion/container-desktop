@@ -8,7 +8,6 @@ const semver = require("semver");
 const xml2js = require("xml2js");
 // pkg
 const pkg = require("./package.json");
-const { Name } = require("ajv");
 // module
 const version = pkg.version;
 const semverVersion = semver.parse(version);
@@ -22,12 +21,12 @@ const artifactName = [pkg.name, "${arch}", version].join("-");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 
-// Package formats to emit. Default builds ONLY .tgz (tar.gz) tarballs on every
-// platform. Set PACKAGE_FORMATS=native to restore the installer formats kept
-// below (mac: dmg, win: appx + nsis). Nothing is removed — it's open source, so
-// the full recipes stay in the repo for anyone who wants to build their own way;
-// this flag only gates which targets electron-builder actually outputs.
-const tgzOnly = (process.env.PACKAGE_FORMATS || "tgz") === "tgz";
+// Package formats to emit. Default builds the native package per platform —
+// Linux: tar.gz, macOS: dmg, Windows: appx + nsis (.exe). Set PACKAGE_FORMATS=tgz
+// to force portable .tgz tarballs on every platform instead. Nothing is removed —
+// it's open source, so the full recipes stay in the repo for anyone to build
+// their own way; this flag only gates which targets electron-builder outputs.
+const tgzOnly = process.env.PACKAGE_FORMATS === "tgz";
 
 // template
 dotenv.config({ path: path.join(PROJECT_HOME, ".env") });

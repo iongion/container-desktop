@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" data-version="{{ site.version }}">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{ title or (site.name + " — " + site.tagline) }}</title>
+<meta name="description" content="{{ description or site.description }}" />
+<link rel="canonical" href="{{ site.url }}{{ page.url }}" />
+<link rel="icon" href="/favicon.ico?v={{ site.version }}" type="image/x-icon" />
+<link rel="icon" href="/favicon-32x32.png?v={{ site.version }}" type="image/png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v={{ site.version }}" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#0f0014" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="{{ site.name }}" />
+<meta property="og:title" content="{{ title or site.name }}" />
+<meta property="og:description" content="{{ description or site.description }}" />
+<meta property="og:url" content="{{ site.url }}{{ page.url }}" />
+<meta property="og:image" content="{{ site.url }}{{ ogImage or site.ogImage }}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ title or site.name }}" />
+<meta name="twitter:description" content="{{ description or site.description }}" />
+<meta name="twitter:image" content="{{ site.url }}{{ ogImage or site.ogImage }}" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="/assets/css/site.css?v={{ site.version }}" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "{{ site.name }}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Windows, macOS, Linux",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "{{ site.url }}",
+  "downloadUrl": "{{ site.repo }}/releases",
+  "screenshot": "{{ site.url }}{{ site.ogImage }}",
+  "description": "{{ site.description }}"
+}
+</script>
+</head>
+<body>
+  <div class="announce"><span class="mono">★ v{{ site.version }}</span><span>Open-source desktop UI for Podman &amp; Docker —</span><a href="/#download">download free →</a></div>
+  {% include "partials/nav.njk" %}
+  {{ content | safe }}
+  {% include "partials/footer.njk" %}
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+  <script src="/assets/js/os-detect.js?v={{ site.version }}"></script>
+  <script src="/assets/js/manual-nav.js?v={{ site.version }}"></script>
+</body>
+</html>
