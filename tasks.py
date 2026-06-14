@@ -237,8 +237,9 @@ def show_help(ctx):
 def prepare(ctx, docs=False):
     # Install infrastructure dependencies
     with ctx.cd(PROJECT_HOME):
-        run_env(ctx, "npm install -g yarn@latest rimraf@latest")
-        run_env(ctx, "yarn install")
+        if os.environ.get("CI") != "true":
+            run_env(ctx, "npm install -g yarn@latest rimraf@latest")
+        run_env(ctx, "yarn install --production=false")
 
 
 @task
