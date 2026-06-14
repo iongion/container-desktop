@@ -17,11 +17,17 @@ PROJECT_HOME="$(dirname "$SCRIPTPATH")"
 SOCAT_VERSION="1.8.0.1"
 SOCAT_TARBALL="socat-${SOCAT_VERSION}.tar.gz"
 SOCAT_PACKAGE="http://www.dest-unreach.org/socat/download/${SOCAT_TARBALL}"
+SOCAT_SHA256="dc350411e03da657269e529c4d49fe23ba7b4610b0b225c020df4cf9b46e6982"
 
 STATIC_CROSS_OPENSSH_ENABLE="no"
 STATIC_CROSS_OPENSSH="https://github.com/binary-manu/static-cross-openssh.git"
+STATIC_CROSS_OPENSSH_REF="5e0fc305332a5c3ad929ed6447c7e197a9c1af36"
 
 cd "$PROJECT_HOME"
+
+verify_socat_tarball() {
+  echo "${SOCAT_SHA256}  $PROJECT_HOME/temp/${SOCAT_TARBALL}" | sha256sum --check -
+}
 
 mkdir -p "$PROJECT_HOME/bin"
 mkdir -p "$PROJECT_HOME/temp"
@@ -39,9 +45,12 @@ GOOS=windows GOARCH=amd64 go build --ldflags '-s -w' -o "$PROJECT_HOME/bin/conta
 chmod +x "$PROJECT_HOME/bin/container-desktop-ssh-relay.exe"
 sha256sum < "$PROJECT_HOME/bin/container-desktop-ssh-relay.exe" > "$PROJECT_HOME/bin/container-desktop-ssh-relay.exe.sha256"
 
-if [[ ! -f "$PROJECT_HOME/temp/${SOCAT_TARBALL}" ]] || [[ ! -d "$PROJECT_HOME/temp/socat-${SOCAT_VERSION}" ]]; then
+if [[ ! -f "$PROJECT_HOME/temp/${SOCAT_TARBALL}" ]]; then
   echo "Downloading socat ${SOCAT_VERSION} from $SOCAT_PACKAGE"
-  curl -L "$SOCAT_PACKAGE" -o "$PROJECT_HOME/temp/${SOCAT_TARBALL}"
+  curl --fail --location --show-error "$SOCAT_PACKAGE" -o "$PROJECT_HOME/temp/${SOCAT_TARBALL}"
+fi
+verify_socat_tarball
+if [[ ! -d "$PROJECT_HOME/temp/socat-${SOCAT_VERSION}" ]]; then
   tar -xzf "$PROJECT_HOME/temp/${SOCAT_TARBALL}" -C "$PROJECT_HOME/temp"
 fi
 
@@ -103,12 +112,11 @@ if [[ "$STATIC_CROSS_OPENSSH_ENABLE" == "yes" ]]; then
     echo "Relay binary already exists for sshd"
   else
     if [[ ! -d "$PROJECT_HOME/temp/static-cross-openssh" ]]; then
-      git clone "$STATIC_CROSS_OPENSSH" "$PROJECT_HOME/temp/static-cross-openssh"
+      git clone --no-checkout "$STATIC_CROSS_OPENSSH" "$PROJECT_HOME/temp/static-cross-openssh"
     fi
     cd "$PROJECT_HOME/temp/static-cross-openssh"
-    git stash
-    git fetch --prune
-    git pull --rebase
+    git fetch --depth 1 origin "$STATIC_CROSS_OPENSSH_REF"
+    git checkout --detach "$STATIC_CROSS_OPENSSH_REF"
     # Additional flags (if needed)
     # export CC="musl-gcc"
     # export LD="musl-ld"

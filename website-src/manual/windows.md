@@ -58,7 +58,7 @@ Restart the computer, then set up the WSL distribution user account by starting 
 winget install -e --id=Microsoft.WSL
 ```
 
-- This installs the default Ubuntu distribution, fine for most users (Ubuntu-24.04 is the latest at the time of writing).
+- This installs the default Ubuntu distribution, fine for most users (Ubuntu-26.04 is current at the time of writing).
 - It also installs a profile inside Windows Terminal, a great terminal emulator for Windows.
 - After setting up your Linux user, follow the [Linux installation guide](#linux-quick) to install docker and/or podman.
 

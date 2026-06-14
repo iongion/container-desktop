@@ -239,9 +239,7 @@ def show_help(ctx):
 def prepare(ctx, docs=False):
     # Install infrastructure dependencies
     with ctx.cd(PROJECT_HOME):
-        if os.environ.get("CI") != "true":
-            run_env(ctx, "npm install -g yarn@latest rimraf@latest")
-        run_env(ctx, "yarn install --production=false")
+        run_env(ctx, "yarn install --frozen-lockfile --production=false")
 
 
 @task

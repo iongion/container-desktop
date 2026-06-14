@@ -25,7 +25,7 @@
 
 2. Install [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) - for managing multiple node versions, this project uses version pinning, because OS package-manager provided nodejs is usually not proper for development.
 
-   - `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`
+   - Install nvm `v0.39.1` through a trusted, version-pinned local method.
 
    Don't forget to setup your shell environment as described by nvm.
 
@@ -73,7 +73,7 @@
 
 ## Deployment
 
-podman system connection add default "//wsl.localhost/Ubuntu-24.04/home/$USER/.ssh/id_rsa" --socket-path "\\wsl.localhost\Ubuntu-24.04\mnt\wslg\runtime-dir\podman\podman.sock"
+podman system connection add default "//wsl.localhost/Ubuntu-26.04/home/$USER/.ssh/id_rsa" --socket-path "\\wsl.localhost\Ubuntu-26.04\mnt\wslg\runtime-dir\podman\podman.sock"
 
 ## Get URI
 

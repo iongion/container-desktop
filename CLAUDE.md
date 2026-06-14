@@ -37,14 +37,14 @@ Python ≥ 3.12 via `uv`.
 
 Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 
-- Install: `inv prepare` or `yarn install`
+- Install: `uv run --locked invoke prepare` or `yarn install --frozen-lockfile`
 - **Verify — run all three before claiming done:**
   `yarn check-types` (tsc) · `yarn lint` (Biome) · `yarn build` (main+preload+renderer)
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `inv release`
 - Relay: `cd support/container-desktop-relay && ./relay-build.sh`; scan `govulncheck ./...`
-- Python tooling: `make check` (ruff), `make prepare` (`uv sync --dev --no-install-project`)
+- Python tooling: `make check` (ruff), `make prepare` (`uv sync --locked --dev --no-install-project`)
 - Linux system deps (one-shot): `bash support/provision-deps.sh`
 
 ## Build / runtime model — READ BEFORE TOUCHING THE BUILD
@@ -101,7 +101,7 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   reintroduce `^`/`~` ranges casually.
 - **Transitive security pins live in `package.json` `resolutions`** (dompurify,
   lodash, fast-uri, @xmldom/xmldom, tmp, brace-expansion, uuid). Fix a transitive
-  advisory by adding/adjusting a resolution there, then `yarn install`.
+  advisory by adding/adjusting a resolution there, then update and review `yarn.lock`.
 - **`npm audit` is unreliable here** — it mis-evaluates yarn `resolutions` (reports
   already-patched versions as vulnerable). Verify by the **installed** version
   (`node -p "require('<pkg>/package.json').version"`), not by `npm audit`.
@@ -123,3 +123,6 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - `.github/dependabot.yml` groups minor/patch bumps weekly per ecosystem
   (npm / gomod / github-actions); **major bumps are never auto-proposed** (ignored
   globally) — adopt majors deliberately by hand.
+- Build/release automation must use lockfile-respecting installs
+  (`yarn install --frozen-lockfile`, `uv run --locked` / `uv sync --locked`) and
+  pinned tool/action versions. Do not use `@latest` or floating GitHub Actions tags.

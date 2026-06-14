@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(github.event.inputs.target == 'all' && '[{"target":"linux","os":"ubuntu-latest"},{"target":"macos","os":"macos-15-intel"},{"target":"windows","os":"windows-latest"}]' || github.event.inputs.target == 'linux' && '[{"target":"linux","os":"ubuntu-latest"}]' || github.event.inputs.target == 'macos' && '[{"target":"macos","os":"macos-15-intel"}]' || '[{"target":"windows","os":"windows-latest"}]') }}
+        include: ${{ fromJson(github.event.inputs.target == 'all' && '[{"target":"linux","os":"ubuntu-latest"},{"target":"macos","os":"macos-26"},{"target":"windows","os":"windows-latest"}]' || github.event.inputs.target == 'linux' && '[{"target":"linux","os":"ubuntu-latest"}]' || github.event.inputs.target == 'macos' && '[{"target":"macos","os":"macos-26"}]' || '[{"target":"windows","os":"windows-latest"}]') }}
 
     runs-on: ${{ matrix.os }}
 
@@ -40,46 +40,47 @@ jobs:
       ENVIRONMENT: ${{github.event.inputs.stage}}
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
+      UV_VERSION: "0.6.11"
 
     steps:
       - name: Clone Repository (latest)
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         if: github.event.inputs.git-ref == 'latest'
       - name: Clone Repository (custom ref)
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         if: github.event.inputs.git-ref != 'latest'
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
-          node-version: "24.16.0"
+          node-version-file: ".nvmrc"
           registry-url: "https://npm.pkg.github.com"
       - name: Use Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: "3.12"
-      - name: Install Python tools
-        run: python -m pip install --upgrade pip invoke
+          python-version-file: ".python-version"
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${{ env.UV_VERSION }}"
       - name: Use Go
         if: matrix.target == 'windows'
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: support/container-desktop-relay/go.mod
       - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: inv prepare
+        run: uv run --locked invoke prepare
       - name: Build ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: inv build
+        run: uv run --locked invoke build
         env:
           TARGET: ${{matrix.target}}
       - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: inv bundle
+        run: uv run --locked invoke bundle
         env:
           TARGET: ${{matrix.target}}
       - name: Checksum ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
-        run: inv checksums
+        run: uv run --locked invoke checksums
       - name: Publish ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: container-desktop-${{ matrix.target }}
           path: release/container-desktop*

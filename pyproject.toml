@@ -7,18 +7,18 @@ authors = [
     { name = "Ionut Stoica" }
 ]
 dependencies = [
-    "invoke",
-    "python-dotenv",
-    "semver"
+    "invoke==3.0.3",
+    "python-dotenv==1.2.2",
+    "semver==3.0.4"
 ]
 dynamic = ["version"]
 
 
 [dependency-groups]
 dev = [
-    "pytest",
-    "pytest-env>=1.6.0",
-    "ruff",
+    "pytest==9.0.3",
+    "pytest-env==1.6.0",
+    "ruff==0.15.17",
 ]
 
 [tool.uv]

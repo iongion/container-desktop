@@ -14,6 +14,8 @@
 #
 set -euo pipefail
 
+GOVULNCHECK_VERSION="${GOVULNCHECK_VERSION:-v1.3.0}"
+
 # --- privilege helper ----------------------------------------------------------
 if [ "$(id -u)" -eq 0 ]; then
   SUDO=""
@@ -75,8 +77,8 @@ if command -v go >/dev/null 2>&1; then
     if command -v govulncheck >/dev/null 2>&1 || [ -x "$GOBIN_DIR/govulncheck" ]; then
       log "govulncheck already installed ($GOBIN_DIR/govulncheck)."
     else
-      log "Installing govulncheck (Go vulnerability scanner)..."
-      go install golang.org/x/vuln/cmd/govulncheck@latest
+      log "Installing govulncheck ${GOVULNCHECK_VERSION} (Go vulnerability scanner)..."
+      go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
     fi
     case ":$PATH:" in
       *":$GOBIN_DIR:"*) : ;;
@@ -97,7 +99,7 @@ report_tool() {
   fi
 }
 report_tool node "via nvm: https://github.com/nvm-sh/nvm  (project pins .nvmrc)"
-report_tool yarn "npm install -g yarn"
+report_tool yarn "install yarn 1.22.22 through your pinned Node toolchain"
 report_tool uv   "https://docs.astral.sh/uv/  (used by 'make prepare')"
 report_tool go   "https://go.dev/dl/  (for support/container-desktop-relay)"
 

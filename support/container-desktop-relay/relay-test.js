@@ -10,7 +10,7 @@ const child = cp.spawn("./bin/container-desktop-ssh-relay.exe", [
   "--identity-path",
   "./temp/id_rsa",
   "--distribution",
-  "Ubuntu-24.04",
+  "Ubuntu-26.04",
   "--relay-program-path",
   "./bin/container-desktop-ssh-relay-sshd",
   "--watch-process-termination",

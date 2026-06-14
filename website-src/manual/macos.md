@@ -58,7 +58,7 @@ You can also use custom distribution images for the docker host OS — see the [
 </div>
 
 ```bash
-colima start --vm-type=vz --vz-rosetta --disk-image ~/Downloads/ubuntu-24.04-minimal-cloudimg-arm64-docker.qcow2
+colima start --vm-type=vz --vz-rosetta --disk-image ~/Downloads/ubuntu-26.04-minimal-cloudimg-arm64-docker.qcow2
 ```
 
 #### Install [docker](https://formulae.brew.sh/formula/docker) CLI tools and plugins
