@@ -15,7 +15,7 @@ Cross-platform **Electron desktop app** for managing container engines
 ## Stack
 
 Electron 42 · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
-Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · monaco · Biome (lint/format).
+Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format).
 Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Go 1.25+ (toolchain 1.26.4).
 Python ≥ 3.12 via `uv`.
 
@@ -64,13 +64,15 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   to ESM output.** The **renderer stays ESM**.
 - `__dirname` is native in the CJS main/preload (the common config only maps it to
   `import.meta.dirname` for ESM output).
-- **Preload** builds to `preload-<version>.cjs`; the renderer blocks on
+- **Preload** builds to `build/<version>/preload.cjs`; the renderer blocks on
   `window.Preloaded`, exposed via `contextBridge` in `preload.ts`
   (see `Native.ts:waitForPreload`).
 - **Production requires `ENVIRONMENT=production`** (e.g.
-  `cross-env ENVIRONMENT=production yarn build`): triggers the ncc single-file main
-  and loads the packaged renderer over `file://`. Without it the build defaults to
-  development and tries the dev-server URL → blank window when packaged.
+  `cross-env ENVIRONMENT=production yarn build`): emits the single-file
+  `build/<version>/{main.cjs,preload.cjs,renderer.mjs}` layout and loads the
+  packaged renderer over `file://`. `ssh2` is bundled by rolldown `ssr.noExternal`,
+  not ncc. Without production env the build defaults to development and tries the
+  dev-server URL → blank window when packaged.
 - Build target is `es2022`; the renderer uses top-level await — keep target ≥ es2022.
 
 ## Website (container-desktop.com) — `website/` IS GENERATED, NEVER EDIT IT
@@ -109,7 +111,7 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - **Dependencies are pinned to exact versions** in `package.json` — don't
   reintroduce `^`/`~` ranges casually.
 - **Transitive security pins live in `package.json` `resolutions`** (dompurify,
-  lodash, fast-uri, @xmldom/xmldom, tmp, brace-expansion, uuid). Fix a transitive
+  lodash, fast-uri, @xmldom/xmldom, tmp). Fix a transitive
   advisory by adding/adjusting a resolution there, then update and review `yarn.lock`.
 - **`npm audit` is unreliable here** — it mis-evaluates yarn `resolutions` (reports
   already-patched versions as vulnerable). Verify by the **installed** version
@@ -117,7 +119,8 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   `minimatch`/`picomatch` ReDoS advisories are build-tooling-only (not shipped) and
   now have in-range patches — pulled in by refreshing the lockfile entry, not a
   `resolution`. Only their breaking majors are blocked (see dependabot, below).
-- **No JS/TS test suite** — verify via type-check + lint + build + manual/CDP smoke.
+- **JS/TS tests:** 4 Vitest unit tests exist (`yarn test:run`); there is no E2E
+  suite yet. Verify via type-check + lint + test + build + manual/CDP smoke.
   Python tests use `pytest` (`support/` only).
 - Avoid `console.debug` in render/poll hot paths (floods DevTools, grows memory).
   Use `@/logger` (`createLogger`).

@@ -7,8 +7,6 @@
 // Docker-domain groups (contexts/swarm/builders/compose) are no-ops on Podman. The former duplicate machine
 // inspect in podman/shared.ts is folded in here.
 
-import { isEmpty } from "lodash-es";
-
 import { findProgramPath } from "@/container-client/detector";
 import {
   type CommandExecutionResult,
@@ -20,6 +18,7 @@ import {
   StartupStatus,
   type SystemInfo,
 } from "@/env/Types";
+import { isEmpty } from "@/utils";
 import { getAvailablePodmanMachines, normalizePodmanMachines } from "../../shared";
 import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";

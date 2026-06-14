@@ -3,7 +3,6 @@ import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { v4 } from "uuid";
 import { Application } from "@/container-client/Application";
 import type { ContainerImageMount } from "@/env/Types";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -11,7 +10,7 @@ import "./MountsForm.css";
 
 export const createMount = (): MountFormContainerImageMount => {
   return {
-    guid: v4(),
+    guid: crypto.randomUUID(),
     driver: "local",
     type: "bind",
     access: "ro",

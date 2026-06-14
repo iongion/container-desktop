@@ -11,8 +11,6 @@
 
 import type { AxiosInstance } from "axios";
 import type EventEmitter from "eventemitter3";
-import { isEmpty } from "lodash-es";
-
 import { systemNotifier } from "@/container-client/notifier";
 import { Runner } from "@/container-client/runner";
 import {
@@ -37,7 +35,7 @@ import {
   type SystemResetReport,
 } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { deepMerge } from "@/utils";
+import { deepMerge, isEmpty } from "@/utils";
 import { findProgramPath, findProgramVersion } from "../detector";
 import type { EngineDialect, HostContext, HostProfile, Transport } from "./composition";
 import type { CapabilityDescriptor, HostClientFacade } from "./facade";

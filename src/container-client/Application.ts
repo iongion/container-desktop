@@ -1,5 +1,3 @@
-import { v4 } from "uuid";
-
 import {
   createComposedHostClient,
   createConnectorBy,
@@ -675,10 +673,10 @@ export class Application {
               try {
                 const data = JSON.parse(analysis.stdout || JSON.stringify({ Results: [] }));
                 data.Results = (data.Results || []).map((it) => {
-                  it.guid = v4();
+                  it.guid = crypto.randomUUID();
                   it.Vulnerabilities = (it.Vulnerabilities || [])
                     .map((v) => {
-                      v.guid = v4();
+                      v.guid = crypto.randomUUID();
                       if (typeof report.counts[v.Severity] === "undefined") {
                         report.counts[v.Severity] = 0;
                       }

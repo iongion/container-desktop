@@ -1,4 +1,4 @@
-import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, sourceEnv } from "./vite.config.common.mjs";
+import { ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, sourceEnv } from "./vite.config.common.mjs";
 
 /**
  * @type {import('vite').UserConfig}
@@ -26,8 +26,5 @@ export default ({ mode, command }) => {
   config.build.rollupOptions.preserveEntrySignatures = "exports-only";
   config.build.rollupOptions.output.exports = "auto";
   config.build.rollupOptions.output.format = outputFormat;
-  if (ENVIRONMENT === "production") {
-    config.plugins.push(createSingleFile(false));
-  }
   return config;
 };

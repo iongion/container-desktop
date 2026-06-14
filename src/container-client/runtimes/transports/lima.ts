@@ -5,8 +5,6 @@
 // engine-agnostic here (both Podman-LIMA and Docker-LIMA start the instance the same way).
 
 import type { AxiosInstance } from "axios";
-import { isEmpty } from "lodash-es";
-
 import { LIMA_PROGRAM } from "@/container-client/connection";
 import { getAvailableLIMAInstances } from "@/container-client/shared";
 import {
@@ -17,6 +15,7 @@ import {
   type RunnerStopperOptions,
   StartupStatus,
 } from "@/env/Types";
+import { isEmpty } from "@/utils";
 import type { HostContext, Transport } from "../composition";
 import { createPlainApiDriver } from "./shared";
 

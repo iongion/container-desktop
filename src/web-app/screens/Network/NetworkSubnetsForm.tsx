@@ -2,9 +2,7 @@ import { Button, ControlGroup, FormGroup, H5, Icon, InputGroup } from "@blueprin
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
-// import { DevTool } from "@hookform/devtools";
 import { useTranslation } from "react-i18next";
-import { v4 } from "uuid";
 
 import type { NetworkSubnet } from "@/env/Types";
 
@@ -16,7 +14,7 @@ export interface NetworkSubnetItem extends NetworkSubnet {
 
 export const createNetworkSubnet = (): NetworkSubnetItem => {
   return {
-    guid: v4(),
+    guid: crypto.randomUUID(),
     gateway: "",
     subnet: "",
     lease_range: {

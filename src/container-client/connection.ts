@@ -1,5 +1,3 @@
-import { v4 } from "uuid";
-
 import {
   type Connector,
   ContainerEngine,
@@ -435,6 +433,6 @@ export async function createConnectorBy(
   const connectors = getDefaultConnectors(osType);
   const connector = connectors.find((it) => it.engine === engine && it.host === currentEngineHost)!;
   const copyOf = JSON.parse(JSON.stringify(deepMerge<Connector>({}, { ...connector }))) as Connector;
-  copyOf.id = id || `host.${v4()}.${connector.host}`;
+  copyOf.id = id || `host.${crypto.randomUUID()}.${connector.host}`;
   return copyOf;
 }

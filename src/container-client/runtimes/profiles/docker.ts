@@ -5,10 +5,9 @@
 // host; vendor adds the Docker-Desktop named-pipe discovery + a system-info relay read; WSL adds a scoped
 // DOCKER_HOST env read; LIMA/SSH reuse the shared bodies. docker-vendor keeps its reduced automatic-settings.
 
-import { isEmpty } from "lodash-es";
-
 import { ContainerEngineHost, type EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
+import { isEmpty } from "@/utils";
 import type { HostContext, HostProfile } from "../composition";
 import {
   availableAlways,

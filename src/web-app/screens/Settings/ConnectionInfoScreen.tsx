@@ -1,8 +1,8 @@
 import { Button, H5, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { isEmpty } from "lodash-es";
 import { useCallback } from "react";
 import { OperatingSystem } from "@/env/Types";
+import { isEmpty } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { Notification } from "@/web-app/Notification";

@@ -15,7 +15,6 @@ import {
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import classNames from "classnames";
-import { isEmpty } from "lodash-es";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -31,7 +30,7 @@ import {
   OperatingSystem,
   type Program,
 } from "@/env/Types";
-import { deepMerge } from "@/utils";
+import { deepMerge, isEmpty } from "@/utils";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { EngineHostSelect } from "./EngineHostSelect";

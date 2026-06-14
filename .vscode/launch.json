@@ -1,27 +1,35 @@
 {
   "version": "0.2.0",
+  // "Debug All" is the entry point: it starts `yarn dev` (Vite dev server + Electron)
+  // via the preLaunchTask, then attaches a debugger to BOTH processes. Breakpoints work
+  // in the real TypeScript sources thanks to the dev build's sourcemaps.
+  //   - Main process  -> Node inspector on 9229 (enabled by CONTAINER_DESKTOP_INSPECT)
+  //   - Renderer      -> Chrome DevTools Protocol on 9222 (already exposed by watch.mjs)
   "configurations": [
     {
-      "name": "Debug Main Process",
+      "name": "Attach Main Process",
       "type": "node",
-      "request": "launch",
+      "request": "attach",
+      "address": "127.0.0.1",
+      "port": 9229,
+      // watch.mjs kills + respawns Electron on every main-process change; reconnect.
+      "restart": true,
+      // Electron is launched with --inspect (not --inspect-brk), so don't stay paused.
+      "continueOnAttach": true,
       "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
-      "windows": {
-        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
-      },
-      "args": ["."],
-      "runtimeArgs": ["--sourcemap", "--remote-debugging-port=9222"],
-      "outputCapture": "std",
-      "env": {
-        "REMOTE_DEBUGGING_PORT": "9222"
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/build/**/*.cjs"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/build/**", "!**/node_modules/**"],
+      "skipFiles": ["<node_internals>/**"],
+      "presentation": {
+        "hidden": true
       }
     },
     {
-      "name": "Debug Renderer Process",
-      "port": 9222,
-      "request": "attach",
+      "name": "Attach Renderer Process",
       "type": "chrome",
+      "request": "attach",
+      "port": 9222,
       "webRoot": "${workspaceFolder}",
       "timeout": 60000,
       "presentation": {
@@ -32,7 +40,9 @@
   "compounds": [
     {
       "name": "Debug All",
-      "configurations": ["Debug Main Process", "Debug Renderer Process"],
+      "configurations": ["Attach Main Process", "Attach Renderer Process"],
+      "preLaunchTask": "dev: electron + inspector",
+      "stopAll": true,
       "presentation": {
         "order": 1
       }

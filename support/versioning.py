@@ -2,7 +2,7 @@
 
 Every function here takes file *contents* and returns new contents. All file IO,
 git and network side effects live in ``tasks.py``. Keeping these pure makes the
-fiddly rules -- the version embedded in ``package.json`` ``main`` (a filename),
+fiddly rules -- the version embedded in ``package.json`` ``main`` (a path),
 the docs cache-busters, the per-arch homebrew hashes -- straightforward to unit
 test (see ``tests/test_versioning.py``).
 """
@@ -43,10 +43,10 @@ def _replace_json_string_value(text: str, key: str, value: str) -> str:
 
 
 def set_package_json_version(text: str, version: str) -> str:
-    """Update ``version`` and the version embedded in ``main`` (a filename)."""
+    """Update ``version`` and the version embedded in ``main`` (a path segment)."""
     text = _replace_json_string_value(text, "version", version)
     return re.sub(
-        r'("main":\s*"build/main-)[^"]*(\.cjs")',
+        r'("main":\s*"build/)[^/]*(/main\.cjs")',
         rf"\g<1>{version}\g<2>",
         text,
         count=1,

@@ -4,7 +4,6 @@ import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { v4 } from "uuid";
 import { type Container, ContainerStateList } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { goToScreen } from "@/web-app/Navigator";
@@ -139,12 +138,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       } catch (error: any) {
         console.error("Command execution failed", error);
         const message = t("Command did not complete properly");
-        const details: { message: string; guid: string }[] = [{ message: `${error.message}`, guid: v4() }];
+        const details: { message: string; guid: string }[] = [
+          { message: `${error.message}`, guid: crypto.randomUUID() },
+        ];
         if (error.name === "AxiosError") {
           if (error.response?.data?.message) {
             details.push({
               message: error.response.data.message,
-              guid: v4(),
+              guid: crypto.randomUUID(),
             });
           }
         }

@@ -2,7 +2,8 @@ import path from "node:path";
 import { normalizePath } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
-import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, PROJECT_HOME, sourceEnv } from "./vite.config.common.mjs";
+import pkg from "./package.json";
+import { ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, PROJECT_HOME, sourceEnv } from "./vite.config.common.mjs";
 
 /**
  * @type {import('vite').UserConfig}
@@ -16,7 +17,10 @@ export default ({ mode, command }) => {
   // is CJS. This mirrors the industry-standard electron + vite setup.
   const outputFormat = "cjs";
   const config = getCommonViteConfig({ mode: mode || process.env.MODE || "development", command, outputName: "main", outputFormat });
-  config.build.emptyOutDir = false;
+  // Main builds first in `yarn build`; clean the versioned output directory once,
+  // then let preload/renderer add their files without wiping main.cjs. In dev watch,
+  // preload builds before main, so do not let the main watcher delete preload.cjs.
+  config.build.emptyOutDir = !process.env.VITE_DEV_SERVER_URL;
   config.build.ssr = true;
   // build.ssr auto-externalizes node_modules, which breaks ESM-only deps when
   // require()'d from the CJS bundle. Bundle everything except electron (provided by
@@ -37,13 +41,12 @@ export default ({ mode, command }) => {
   config.build.rollupOptions.output.exports = "auto";
   config.build.rollupOptions.output.format = outputFormat;
   if (ENVIRONMENT === "production") {
-    config.plugins.push(createSingleFile(false));
     config.plugins.push(
       viteStaticCopy({
         targets: [
           {
             src: normalizePath(path.resolve(PROJECT_HOME, "support/resources/appx")),
-            dest: normalizePath(path.resolve(PROJECT_HOME, "build"))
+            dest: normalizePath(path.resolve(PROJECT_HOME, "build", pkg.version))
           }
         ]
       })
