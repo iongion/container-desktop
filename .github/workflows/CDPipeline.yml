@@ -142,3 +142,48 @@ jobs:
             args+=(--clobber)
           fi
           node "${args[@]}"
+
+  # Deploy the website only AFTER the release assets are published, so the
+  # download links never point at not-yet-uploaded assets. pages.yml still
+  # handles standalone website/doc pushes unrelated to releases.
+  publish-pages:
+    timeout-minutes: 15
+    needs: publish-release
+    if: github.event.inputs.target == 'all' && github.event.inputs.stage == 'production' && github.event.inputs.publish-release == 'true'
+
+    runs-on: ubuntu-latest
+
+    # Pages deploy needs its own scopes; this overrides the workflow-level perms.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    # Share the Pages concurrency group with pages.yml so a release deploy and a
+    # standalone website/doc deploy never run at the same time.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Clone Repository (latest)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref == 'latest'
+      - name: Clone Repository (custom ref)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref != 'latest'
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: website
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
