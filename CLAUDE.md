@@ -28,6 +28,8 @@ Python ≥ 3.12 via `uv`.
   `src/rpc/` · `src/logger/` · `src/utils/` · `src/env/`
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · `tasks.py` / `Makefile`
+- **`website-src/`** — Eleventy sources for the public site (container-desktop.com),
+  compiled to the **generated `website/`** (never hand-edit `website/`; see Website below).
 - Path alias **`@/* → src/*`** (e.g. `@/web-app/...`), defined in `tsconfig.json`
   `paths` + explicit `resolve.alias` in the common vite config.
 
@@ -61,6 +63,19 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   and loads the packaged renderer over `file://`. Without it the build defaults to
   development and tries the dev-server URL → blank window when packaged.
 - Build target is `es2022`; the renderer uses top-level await — keep target ≥ es2022.
+
+## Website (container-desktop.com) — `website/` IS GENERATED, NEVER EDIT IT
+
+- **Never edit anything under `website/` by hand — it is compiled output, wiped and
+  rebuilt on every run.** Edit the **`website-src/`** sources instead (Eleventy:
+  `_includes/` layouts, `manual/*.md` guides, `_data/` data, `static/` assets), then
+  run **`make build-website`** (or `yarn build:website`; live preview `yarn dev:website`).
+- The committed `website/` is exactly what GitHub Pages serves
+  (`.github/workflows/pages.yml`). Flow: **edit `website-src/` → `make build-website`
+  → commit both `website-src/` and `website/` → push**.
+- Versions + per-OS download URLs are injected at build time from `package.json`
+  (`website-src/_data/`); never hand-edit a version in the output. `tasks.py` reruns
+  `build_website` on release so links match the tag.
 
 ## Dev launcher (`support/watch.mjs`) & debugging
 
