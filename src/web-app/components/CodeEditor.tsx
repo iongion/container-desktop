@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 
 import { AppTheme } from "@/web-app/App.types";
 import { useAppStore } from "@/web-app/stores/appStore";
+// Bundle Monaco locally (offline) instead of loading it from a CDN — must be
+// imported before <Editor> mounts so loader.config() runs before loader.init().
+import "./monaco-setup";
 import "./CodeEditor.css";
 
 export const DARK_THEME = "vs-dark";
