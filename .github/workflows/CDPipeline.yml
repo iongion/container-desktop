@@ -88,6 +88,11 @@ jobs:
         run: uv run --locked invoke build
         env:
           TARGET: ${{matrix.target}}
+      - name: Install Linux packaging deps
+        if: matrix.target == 'linux'
+        # bsdtar (libarchive-tools) is required by fpm to build the pacman target
+        # (.MTREE via `bsdtar --format=mtree`); it is not preinstalled on ubuntu-latest.
+        run: sudo apt-get update -y && sudo apt-get install -y libarchive-tools
       - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
         run: uv run --locked invoke bundle
         env:
