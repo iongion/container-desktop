@@ -23,9 +23,12 @@ const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 
 // Package formats to emit. Default builds native packages plus portable archives:
-// Linux: tar.gz + deb + rpm, macOS: dmg + tar.gz, Windows: appx + nsis (.exe) + zip.
+// Linux: tar.gz + deb + rpm + AppImage + pacman; macOS: dmg + tar.gz; Windows: appx + nsis (.exe) + zip.
 // Set PACKAGE_FORMATS=tgz to force portable .tgz tarballs on macOS/Windows.
-// Linux always emits tar.gz + deb + rpm.
+// Linux always emits tar.gz + deb + rpm + AppImage + pacman.
+// flatpak is intentionally omitted until Flathub is set up properly — a .flatpak
+// for a container manager needs sandbox / flatpak-spawn --host work to reach the
+// host Podman/Docker, and Flathub builds from a manifest, not a prebuilt bundle.
 const tgzOnly = process.env.PACKAGE_FORMATS === "tgz";
 
 // template
@@ -157,9 +160,14 @@ const config = {
   linux: {
     artifactName: linuxArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
     executableName: "container-desktop",
+    // Match the installed .desktop filename to Electron's app_id / WM_CLASS so
+    // desktop environments associate running windows with the launcher entry
+    // (icon, taskbar pinning, window grouping). Derives from desktopName in
+    // package.json, falling back to executableName. Default becomes true in v27.
+    syncDesktopName: true,
     maintainer: publisher,
     icon: "icons/appIcon.icns",
-    target: ["tar.gz", "deb", "rpm"],
+    target: ["tar.gz", "deb", "rpm", "AppImage", "pacman"],
     category: "Development;System;Utility",
     desktop: {
       entry: displayName,

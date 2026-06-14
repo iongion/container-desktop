@@ -1,5 +1,6 @@
 {
   "name": "container-desktop",
+  "desktopName": "container-desktop",
   "title": "Container Desktop",
   "version": "5.2.16",
   "author": "Ionut Stoica",
