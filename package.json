@@ -18,9 +18,10 @@
     "build:main": "vite build --mode=production --config vite.config.main.mjs",
     "build:preload": "vite build --mode=production --config vite.config.preload.mjs",
     "build:renderer": "vite build --mode=production --config vite.config.renderer.mjs",
+    "build:website": "eleventy",
+    "dev:website": "eleventy --serve --port=8088",
     "bundle": "cross-env DEBUG=electron-builder electron-builder --config electron-builder-config.cjs",
     "release": "yarn build && yarn bundle",
-    "package:mac_x86": "cross-env DEBUG=electron-builder electron-builder --publish never --macos --x64 --config electron-builder-config.cjs",
     "package:mac_arm": "cross-env DEBUG=electron-builder electron-builder --publish never --macos --arm64 --config electron-builder-config.cjs",
     "package:win_x86": "cross-env DEBUG=electron-builder electron-builder --publish never --windows --x64 --config electron-builder-config.cjs",
     "package:linux_x86": "cross-env DEBUG=electron-builder electron-builder --publish never --linux --x64 --config electron-builder-config.cjs",
@@ -86,6 +87,7 @@
     "zustand": "5.0.14"
   },
   "devDependencies": {
+    "@11ty/eleventy": "3.1.6",
     "@babel/core": "7.29.7",
     "@biomejs/biome": "2.5.0",
     "@electron/packager": "20.0.1",
@@ -127,7 +129,6 @@
     "fast-uri": "3.1.2",
     "@xmldom/xmldom": "0.8.13",
     "tmp": "0.2.7",
-    "brace-expansion": "2.0.3",
     "uuid": "14.0.0"
   },
   "repository": "https://github.com/iongion/container-desktop.git"

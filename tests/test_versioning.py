@@ -18,10 +18,10 @@ from support.versioning import (
     parse_version,
     promote_changelog,
     render_homebrew_rb,
-    set_website_version,
     set_manifest_version,
     set_package_json_version,
     set_plain_version,
+    set_website_version,
 )
 
 
@@ -85,13 +85,7 @@ def test_set_package_json_version_updates_version_and_main_filename():
 
 
 def test_set_manifest_version_leaves_manifest_version_key_alone():
-    text = (
-        "{\n"
-        '  "manifest_version": 2,\n'
-        '  "name": "Container Desktop",\n'
-        '  "version": "5.2.15"\n'
-        "}\n"
-    )
+    text = '{\n  "manifest_version": 2,\n  "name": "Container Desktop",\n  "version": "5.2.15"\n}\n'
     out = set_manifest_version(text, "5.2.16")
     assert '"manifest_version": 2' in out
     assert '"version": "5.2.16"' in out
@@ -144,25 +138,21 @@ def test_set_website_version_is_noop_when_already_current():
 # --- render_homebrew_rb ----------------------------------------------------
 
 
-def test_render_homebrew_rb_updates_version_and_per_arch_hashes_only():
+def test_render_homebrew_rb_updates_version_and_sha256():
     text = (
         'cask "container-desktop" do\n'
-        '  arch arm: "arm64", intel: "x64"\n'
         "\n"
         '  version "5.2.15"\n'
-        '  sha256 arm:   "aaa111",\n'
-        '         intel: "bbb222"\n'
+        '  sha256 "aaa111"\n'
         "\n"
         '  url "https://github.com/iongion/container-desktop/releases/'
-        'container-desktop-#{arch}-#{version}.dmg"\n'
+        'container-desktop-mac-arm64-#{version}.dmg"\n'
         "end\n"
     )
-    out = render_homebrew_rb(text, "5.2.16", "ccc333", "ddd444")
+    out = render_homebrew_rb(text, "5.2.16", "ccc333")
     assert 'version "5.2.16"' in out
     assert '"ccc333"' in out
-    assert '"ddd444"' in out
-    # the arch declaration must NOT be mistaken for a hash
-    assert 'arch arm: "arm64", intel: "x64"' in out
     # url interpolation must be preserved
-    assert "container-desktop-#{arch}-#{version}.dmg" in out
+    assert "container-desktop-mac-arm64-#{version}.dmg" in out
     assert "5.2.15" not in out
+    assert "aaa111" not in out

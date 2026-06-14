@@ -1,14 +1,15 @@
-import json
 import glob
-import shutil
 import hashlib
-import platform
+import json
 import os
+import platform
+import shutil
+import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from invoke import task, Collection
+from invoke import Collection, task
 
 from support.versioning import (
     bump_version,
@@ -17,14 +18,12 @@ from support.versioning import (
     set_manifest_version,
     set_package_json_version,
     set_plain_version,
-    set_website_version,
 )
+
 
 PROJECT_HOME = os.path.dirname(__file__)
 PROJECT_CODE = "container-desktop"
-PROJECT_VERSION = (
-    Path(os.path.join(PROJECT_HOME, "VERSION")).read_text(encoding="utf-8").strip()
-)
+PROJECT_VERSION = Path(os.path.join(PROJECT_HOME, "VERSION")).read_text(encoding="utf-8").strip()
 NODE_ENV = os.environ.get("NODE_ENV", "development")
 ENVIRONMENT = os.environ.get("ENVIRONMENT", NODE_ENV)
 APP_PROJECT_VERSION = PROJECT_VERSION
@@ -33,10 +32,15 @@ PORT = int(os.environ.get("PORT", str(3000)))
 PTY = os.name != "nt"
 
 
+def _urlopen(url):
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
+    return urllib.request.urlopen(url)  # noqa: S310 - scheme is validated above.
+
+
 def url_download(url, path):
-    url = url
-    output_file = path
-    with urllib.request.urlopen(url) as response, open(output_file, "wb") as out_file:
+    with _urlopen(url) as response, open(path, "wb") as out_file:
         shutil.copyfileobj(response, out_file)
 
 
@@ -85,12 +89,8 @@ def uninstall_self_signed_appx(ctx):
         appx_list = json.loads(appx_list_process.stdout or "[]")
         for app in appx_list:
             if "ContainerDesktop" in app["Name"]:
-                print(
-                    f"Appx already installed: {app['Name']} - removing {app['PackageFullName']}"
-                )
-                ctx.run(
-                    f'powershell.exe -Command "Remove-AppxPackage -Package \\"{app["PackageFullName"]}\\""'
-                )
+                print(f"Appx already installed: {app['Name']} - removing {app['PackageFullName']}")
+                ctx.run(f'powershell.exe -Command "Remove-AppxPackage -Package \\"{app["PackageFullName"]}\\""')
     except:
         print("Unable to parse appx list")
 
@@ -123,9 +123,7 @@ def install_self_signed_appx(ctx):
         csr_path = os.path.join(path, "temp/self-signed.csr")
         if not os.path.exists(csr_path):
             print(f"CSR not found at {csr_path} - generating")
-            ctx.run(
-                f"openssl req -new -key {private_key_path} -out {csr_path} -config {cert_config_path}"
-            )
+            ctx.run(f"openssl req -new -key {private_key_path} -out {csr_path} -config {cert_config_path}")
         # Self sign
         cert_path = os.path.join(path, "temp/self-signed.crt")
         if not os.path.exists(cert_path):
@@ -150,12 +148,8 @@ def install_self_signed_appx(ctx):
             "http://sha256timestamp.ws.symantec.com/sha256/timestamp",
         ]
     )
-    exe_path = os.path.join(
-        path, "release", f"container-desktop-x64-{PROJECT_VERSION}.exe"
-    )
-    appx_path = os.path.join(
-        path, "release", f"container-desktop-x64-{PROJECT_VERSION}.appx"
-    )
+    exe_path = os.path.join(path, "release", f"container-desktop-x64-{PROJECT_VERSION}.exe")
+    appx_path = os.path.join(path, "release", f"container-desktop-x64-{PROJECT_VERSION}.appx")
     with ctx.cd(path):
         if os.path.exists(exe_path):
             print(f"Signing {exe_path}")
@@ -196,7 +190,7 @@ def build_relay(ctx, env=None):
         if system == "Linux":
             run_env(ctx, f'cd "{relay_dir}" && ./relay-build.sh', env)
         elif system == "Windows":
-            run_env(ctx, "relay-build.cmd", env)
+            run_env(ctx, "powershell.exe -NoProfile -ExecutionPolicy Bypass -File relay-build.ps1", env)
             for file in glob.glob(os.path.join(relay_dir, "bin", "**")):
                 shutil.copy(file, os.path.join(path, "bin"))
         else:
@@ -208,9 +202,9 @@ def bundle(ctx, env=None):
     system = platform.system()
     path = Path(PROJECT_HOME)
     with ctx.cd(path):
+        env = {} if env is None else env
         env["DEBUG"] = "*"
         if system == "Darwin":
-            run_env(ctx, "yarn package:mac_x86", env)
             run_env(ctx, "yarn package:mac_arm", env)
         elif system == "Linux":
             run_env(ctx, "yarn package:linux_x86", env)
@@ -228,14 +222,14 @@ def checksums(ctx, env=None):
             continue
         checksum_path = f"{installer_path}.sha256"
         print(f"Creating checksum for {installer_path}")
-        file_contents = open(installer_path, "rb").read()
-        checksum = hashlib.sha256(file_contents).hexdigest()
+        with open(installer_path, "rb") as fp:
+            checksum = hashlib.sha256(fp.read()).hexdigest()
         with open(checksum_path, "w", encoding="utf-8") as fp:
             fp.write(checksum)
 
 
 @task(default=True)
-def help(ctx):
+def show_help(ctx):
     ctx.run("invoke --list")
 
 
@@ -273,6 +267,19 @@ def start(ctx, docs=False):
     path = Path(PROJECT_HOME)
     with ctx.cd(path):
         run_env(ctx, "yarn dev")
+
+
+@task(name="build-website")
+def build_website(ctx):
+    """Compile website-src/ into website/ (Eleventy static site generator).
+
+    website/ is fully generated output: it is cleaned, then rebuilt. The version
+    and per-release download URLs are baked in from package.json at build time,
+    so no string-replacement step is needed.
+    """
+    shutil.rmtree(os.path.join(PROJECT_HOME, "website"), ignore_errors=True)
+    with ctx.cd(PROJECT_HOME):
+        run_env(ctx, "yarn build:website")
 
 
 # --- versioning & release metadata ----------------------------------------
@@ -342,13 +349,14 @@ def bump(ctx, part="patch", perform=False):
     current = read_source_version()
     version = bump_version(current, part)
     print(f"Bump {current} -> {version} ({part})" + ("" if perform else "  (dry-run; pass --perform)"))
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     targets = _synced_targets(version)
     targets.append(("CHANGELOG.md", promote_changelog(_read_text("CHANGELOG.md"), version, today)))
     _apply(targets, perform)
     if not perform:
         print("Re-run with --perform to write files, commit, tag and push.")
         return
+    build_website(ctx)  # regenerate website/ from website-src with the new version
     with ctx.cd(PROJECT_HOME):
         ctx.run("git add -A")
         ctx.run(f'git commit -m "Release {version}"')
@@ -369,13 +377,14 @@ def _latest_release_version(ctx):
     return tag.lstrip("v")
 
 
-def _artifact_sha256(version, arch):
-    name = f"container-desktop-{arch}-{version}.dmg.sha256"
+def _artifact_sha256(version):
+    # macOS ships arm64 only.
+    name = f"container-desktop-mac-arm64-{version}.dmg.sha256"
     local = os.path.join(PROJECT_HOME, "release", name)
     if os.path.exists(local):
         return Path(local).read_text(encoding="utf-8").strip().split()[0]
     url = f"https://github.com/{REPO_SLUG}/releases/download/{version}/{name}"
-    with urllib.request.urlopen(url) as response:
+    with _urlopen(url) as response:
         return response.read().decode("utf-8").strip().split()[0]
 
 
@@ -389,23 +398,20 @@ def publish_meta(ctx, version=None, perform=False):
     """
     version = version or _latest_release_version(ctx)
     print(f"Render published metadata for {version}" + ("" if perform else "  (dry-run; pass --perform)"))
-    targets = [
-        ("website/index.html", set_website_version(_read_text("website/index.html"), version)),
-        ("website/VERSION", set_plain_version(_read_text("website/VERSION"), version)),
-        ("website/VERSION-Windows_NT", set_plain_version(_read_text("website/VERSION-Windows_NT"), version)),
-    ]
-    _apply(targets, perform)
     rb = "support/homebrew-cask/container-desktop.rb"
     if perform:
-        sha_arm = _artifact_sha256(version, "arm64")
-        sha_intel = _artifact_sha256(version, "x64")
-        _write_text(rb, render_homebrew_rb(_read_text(rb), version, sha_arm, sha_intel))
+        build_website(ctx)  # version + download URLs baked in from package.json
+        print("  rebuilt: website/ (generated from website-src/)")
+        sha_arm = _artifact_sha256(version)
+        _write_text(rb, render_homebrew_rb(_read_text(rb), version, sha_arm))
         print(f"  updated: {rb}")
     else:
-        print(f"  would update: {rb} (fetch dmg sha256 for arm64 + x64)")
+        print("  would rebuild: website/ (from website-src/) via build-website")
+        print(f"  would update: {rb} (fetch dmg sha256 for arm64)")
 
 
 namespace = Collection(
+    show_help,
     clean,
     prepare,
     build,
@@ -416,6 +422,7 @@ namespace = Collection(
     version_sync,
     publish_meta,
     start,
+    build_website,
     checksums,
     install_self_signed_appx,
     uninstall_self_signed_appx,

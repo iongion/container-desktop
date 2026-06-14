@@ -91,16 +91,10 @@ def set_website_version(text: str, version: str) -> str:
     return text.replace(current, version)
 
 
-def render_homebrew_rb(text: str, version: str, sha_arm: str, sha_intel: str) -> str:
-    """Update the cask ``version`` and the per-arch ``sha256`` values.
+def render_homebrew_rb(text: str, version: str, sha_arm: str) -> str:
+    """Update the cask ``version`` and its ``sha256`` (arm64-only).
 
-    The download URL uses ``#{version}`` interpolation so it needs no change, and
-    the ``arch arm:/intel:`` declaration must not be mistaken for the hashes.
+    The download URL uses ``#{version}`` interpolation so it needs no change.
     """
     text = re.sub(r'(version\s+")[^"]*(")', rf"\g<1>{version}\g<2>", text, count=1)
-    return re.sub(
-        r'(sha256\s+arm:\s*")[^"]*(",\s*intel:\s*")[^"]*(")',
-        rf"\g<1>{sha_arm}\g<2>{sha_intel}\g<3>",
-        text,
-        count=1,
-    )
+    return re.sub(r'(sha256\s+")[^"]*(")', rf"\g<1>{sha_arm}\g<2>", text, count=1)

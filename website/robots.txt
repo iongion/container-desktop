@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://container-desktop.com/sitemap.xml

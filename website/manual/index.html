@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en" data-version="5.2.15">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Manual — Container Desktop setup guides for Podman &amp; Docker</title>
+<meta name="description" content="Set up Podman and Docker on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
+<link rel="canonical" href="https://container-desktop.com/manual/" />
+<link rel="icon" href="/favicon.ico?v=5.2.15" type="image/x-icon" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=5.2.15" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=5.2.15" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5.2.15" />
+<link rel="mask-icon" href="/safari-pinned-tab.svg?v=5.2.15" color="#a01986" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#0f0014" />
+<meta name="msapplication-config" content="/browserconfig.xml" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Container Desktop" />
+<meta property="og:title" content="The Manual — Container Desktop setup guides for Podman &amp; Docker" />
+<meta property="og:description" content="Set up Podman and Docker on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
+<meta property="og:url" content="https://container-desktop.com/manual/" />
+<meta property="og:image" content="https://container-desktop.com/img/001-Dashboard.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="The Manual — Container Desktop setup guides for Podman &amp; Docker" />
+<meta name="twitter:description" content="Set up Podman and Docker on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
+<meta name="twitter:image" content="https://container-desktop.com/img/001-Dashboard.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="/assets/css/site.css?v=5.2.15" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Container Desktop",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Windows, macOS, Linux",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://container-desktop.com",
+  "downloadUrl": "https://github.com/iongion/container-desktop/releases",
+  "screenshot": "https://container-desktop.com/img/001-Dashboard.png",
+  "description": "A familiar desktop interface for the free, open container managers — Podman and Docker. Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux."
+}
+</script>
+</head>
+<body>
+  <div class="announce"><span class="mono">★ v5.2.15</span><span>Open-source desktop UI for Podman &amp; Docker —</span><a href="/#download">download free →</a></div>
+  <header class="nav"><div class="wrap">
+  <a class="brand" href="/"><span class="mark">cd</span><span>Container Desktop<small>Podman Desktop Companion</small></span></a>
+  <nav class="nav-links">
+    <a href="/#features">Features</a>
+    <a href="/manual/" class="on">Manual</a>
+    <a href="/#download">Download</a>
+    <a href="https://github.com/iongion/container-desktop">GitHub</a>
+  </nav>
+  <div class="nav-cta">
+    <span class="gh-star"><a class="github-button" href="https://github.com/iongion/container-desktop" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star iongion/container-desktop on GitHub">Star</a></span>
+    <a class="btn btn-primary" href="/#download">Download</a>
+  </div>
+</div></header>
+
+  <div class="wrap">
+  <div class="mhero">
+    <div class="eyebrow">Handbook · bring your own engine</div>
+    <h1>The Manual</h1>
+    <p>Set up Podman and Docker on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
+    <div class="osjump"><a href="#linux"><i class="fab fa-linux"></i> Linux</a><a href="#macos"><i class="fab fa-apple"></i> macOS</a><a href="#windows"><i class="fab fa-windows"></i> Windows</a>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside class="side">
+      <div class="grp"><i class="fab fa-linux"></i> Linux</div><a href="#linux-req">Requirements</a><a href="#linux-quick">1 · Quick guide</a><a href="#linux-podman-docker">2 · Podman as Docker</a><a href="#linux-dd-alt">3 · Docker Desktop alternative</a><a href="#linux-share">4 · Sharing connection</a>
+      <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-share">5 · Sharing connection</a>
+      <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
+    </aside>
+
+    <main class="content">
+      <div class="guide-os" id="linux"><i class="fab fa-linux"></i><h2>Linux</h2></div>
+      <section class="guide-sec" id="linux-req">
+<h3>Requirements</h3>
+<div class="note req">
+<p><strong>Linux offers the best experience</strong> and fastest speed when working with containers. Besides avoiding the need for virtualization, when we develop we usually target Linux for production. File-system speed and permissions don't fit well when not using something made for Linux. <strong>Although there is love for all operating systems, Linux is really shining here.</strong></p>
+</div>
+<p>Examples follow the Ubuntu distribution but can easily be adapted to any distribution.</p>
+</section>
+<section class="guide-sec" id="linux-quick">
+<h3><span class="n">01</span> Quick guide</h3>
+<h4>Update your system</h4>
+<pre><code class="language-bash">sudo apt-get update -y &amp;&amp; sudo apt-get upgrade -y
+</code></pre>
+<h4>Install development tools</h4>
+<pre><code class="language-bash">sudo apt-get install -y build-essential
+sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
+</code></pre>
+<h4>Install the docker container engine — this does NOT install Docker Desktop</h4>
+<pre><code class="language-bash">sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+echo &quot;deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release &amp;&amp; echo &quot;$VERSION_CODENAME&quot;) stable&quot; | sudo tee /etc/apt/sources.list.d/docker.list &gt; /dev/null
+sudo apt update -y
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker ${USER}   # restart your terminal after adding your user to the docker group
+sudo systemctl enable docker      # start docker on boot
+sudo systemctl restart docker     # start docker now
+sudo systemctl is-active docker   # check docker is running
+docker run hello-world            # test — docker cli must run without sudo at this point
+</code></pre>
+<h4>Install the podman container engine and podman-compose</h4>
+<pre><code class="language-bash">sudo apt-get install -y podman podman-compose
+</code></pre>
+<div class="note tip">
+<p>Distributions usually ship very old podman versions. For more recent versions use the <a href="https://software.opensuse.org/download/package?package=podman&amp;project=home%3Aalvistack">Alvistack project</a>, which provides repositories for most Linux flavors.</p>
+</div>
+<h4>Open Container Desktop</h4>
+<p>Connect to the <strong>System Podman</strong> or <strong>System Docker</strong> default connection and all should work.</p>
+</section>
+<section class="guide-sec" id="linux-podman-docker">
+<h3><span class="n">02</span> Podman acting as Docker</h3>
+<div class="note info">
+<p>This is referred to as <strong>Compatibility Mode</strong> — it should support all docker features, except the docker cli (use podman instead; you can alias it if you want).</p>
+</div>
+<h4>Start the podman api listening to <code>/var/run/docker.sock</code></h4>
+<pre><code class="language-bash">export DOCKER_HOST=/var/run/docker.sock
+podman system service --time=0 unix://${DOCKER_HOST} --log-level=debug
+</code></pre>
+<p>After this point, one can use <code>podman</code> or <code>docker</code> or any other tool that uses the socket.</p>
+</section>
+<section class="guide-sec" id="linux-dd-alt">
+<h3><span class="n">03</span> Docker Desktop alternative</h3>
+<p>This is so easy — follow the <a href="#linux-quick">Quick guide</a> to support both docker and/or podman, or just skip the podman part and focus on docker only.</p>
+</section>
+<section class="guide-sec" id="linux-share">
+<h3><span class="n">04</span> Sharing connection with Container Desktop</h3>
+<p>The <code>DOCKER_HOST</code> environment variable must be set to the same value Container Desktop is using when connected. The exact value is under <strong>Connection info</strong> in the <strong>Settings</strong> section.</p>
+</section>
+
+      <div class="guide-os" id="macos"><i class="fab fa-apple"></i><h2>macOS</h2></div>
+      <section class="guide-sec" id="macos-req">
+<h3>Requirements</h3>
+<div class="note req">
+<p>On macOS, virtualization is required to support both docker and podman container engines. Homebrew is seriously recommended to simplify provisioning and setup. Due to high cost, Container Desktop does not currently afford an Apple subscription to digitally sign applications, nor a digital certificate.</p>
+</div>
+<h4>Install <a href="https://brew.sh/">homebrew</a> (as a non-administrator user)</h4>
+<pre><code class="language-bash">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;
+brew update
+brew upgrade
+</code></pre>
+</section>
+<section class="guide-sec" id="macos-quick">
+<h3><span class="n">01</span> Quick guide</h3>
+<h4>Install <a href="https://github.com/abiosoft/colima">colima</a></h4>
+<pre><code class="language-bash">brew install colima
+</code></pre>
+<h4>Start the colima VM</h4>
+<pre><code class="language-bash">colima start --vm-type=vz --vz-rosetta
+</code></pre>
+<p>This uses the native macOS virtualization framework, allowing even x86 container images to run and avoiding volume-mount file-system permission issues.</p>
+<div class="note info">
+<p>You can also use custom distribution images for the docker host OS — see the <a href="https://github.com/abiosoft/colima-core/releases">colima-core releases</a>. After downloading the image of choice:</p>
+</div>
+<pre><code class="language-bash">colima start --vm-type=vz --vz-rosetta --disk-image ~/Downloads/ubuntu-24.04-minimal-cloudimg-arm64-docker.qcow2
+</code></pre>
+<h4>Install <a href="https://formulae.brew.sh/formula/docker">docker</a> CLI tools and plugins</h4>
+<pre><code class="language-bash">brew install docker docker-compose docker-buildx
+</code></pre>
+<p>This does not install Docker Desktop — only the command line tools that will use the colima docker engine. For the docker cli to find the plugins, add the following to your <code>~/.docker/config.json</code>:</p>
+<pre><code class="language-json">&quot;cliPluginsExtraDirs&quot;: [
+  &quot;$HOMEBREW_PREFIX/lib/docker/cli-plugins&quot;
+]
+</code></pre>
+<p>After all of the above you should have a completely compatible docker engine running on your Mac.</p>
+<h4>Allow the unsigned app to run (optional)</h4>
+<p>If you downloaded and installed Container Desktop for macOS, allow it to run despite the missing digital signature:</p>
+<pre><code class="language-bash">xattr -d com.apple.quarantine /Applications/Container\ Desktop.app
+</code></pre>
+<h4>Open Container Desktop</h4>
+<p>Connect to the <strong>System Docker</strong> default connection and all should work.</p>
+</section>
+<section class="guide-sec" id="macos-best">
+<h3><span class="n">02</span> Podman and Docker — best experience</h3>
+<h4>Install <a href="https://lima-vm.io/">lima</a></h4>
+<p>LIMA uses macOS native virtualization to provide Linux environments — it is like WSL, but for macOS.</p>
+<pre><code class="language-bash">brew install lima
+</code></pre>
+<h4>Podman VM</h4>
+<pre><code class="language-bash">limactl start podman   # start the podman VM
+limactl shell podman   # login to the podman VM
+</code></pre>
+<h4>Docker VM</h4>
+<pre><code class="language-bash">limactl start docker   # start the docker VM
+limactl shell docker   # login to the docker VM
+</code></pre>
+</section>
+<section class="guide-sec" id="macos-podman-docker">
+<h3><span class="n">03</span> Podman acting as Docker</h3>
+<div class="note info">
+<p>This is referred to as <strong>Compatibility Mode</strong> — it should support all docker features, except the docker cli (use podman instead; alias it if you want).</p>
+</div>
+<h4>Latest and greatest</h4>
+<p>Go to the <a href="https://github.com/containers/podman/releases">Podman releases page</a> and install the latest macOS pkg for your CPU. Consider:</p>
+<ul>
+<li>Upon installation, podman creates its own VM, also known as Podman Machine.</li>
+<li>It also sets the <code>DOCKER_HOST</code> environment variable to point at the podman unix socket, making it easy for the docker cli to use it.</li>
+</ul>
+<h4>Easiest (skip if using latest and greatest)</h4>
+<pre><code class="language-bash">brew install podman
+</code></pre>
+</section>
+<section class="guide-sec" id="macos-dd-alt">
+<h3><span class="n">04</span> Docker Desktop alternative</h3>
+<p>Using <strong>colima</strong> offers the easiest experience — just follow the <a href="#macos-quick">Quick guide</a> to support docker in full compatibility.</p>
+<h4>(*) Optional: native docker CLI without homebrew</h4>
+<p>Not recommended due to complexity. Latest docker CLI and plugin binaries can be found at:</p>
+<ul>
+<li><strong>Apple CPUs</strong> — <a href="https://download.docker.com/mac/static/stable/aarch64/">download.docker.com/mac/static/stable/aarch64</a></li>
+<li>Intel CPUs — <a href="https://download.docker.com/mac/static/stable/x86_64/">download.docker.com/mac/static/stable/x86_64</a></li>
+</ul>
+</section>
+<section class="guide-sec" id="macos-share">
+<h3><span class="n">05</span> Sharing connection with Container Desktop</h3>
+<p>The <code>DOCKER_HOST</code> environment variable must be set to the same value Container Desktop is using when connected. The exact value is under <strong>Connection info</strong> in the <strong>Settings</strong> section.</p>
+</section>
+
+      <div class="guide-os" id="windows"><i class="fab fa-windows"></i><h2>Windows</h2></div>
+      <section class="guide-sec" id="windows-req">
+<h3>Requirements</h3>
+<div class="note req">
+<p>On Windows, virtualization is required to support both podman and docker container engines. With WSL, the development experience has evolved — it is highly recommended to move away from msys/cygwin and just use WSL. Most of the time we deploy on Linux anyway, so an experience closer to reality is appropriate. It is also a good opportunity to learn Linux.</p>
+</div>
+<h4>As a non-administrator user</h4>
+<pre><code class="language-powershell">winget install -e --id=Microsoft.WindowsTerminal
+winget install &quot;Container Desktop&quot;
+</code></pre>
+<h4>Enable and install WSL (as administrator)</h4>
+<pre><code class="language-powershell">dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+winget install -e --id=Microsoft.WSL
+</code></pre>
+<div class="note info">
+<p>Restart the computer, then set up the WSL distribution user account by starting <code>wsl.exe</code> in a Windows Terminal.</p>
+</div>
+</section>
+<section class="guide-sec" id="windows-quick">
+<h3><span class="n">01</span> Quick guide</h3>
+<h4>Enable and install WSL (as administrator)</h4>
+<pre><code class="language-powershell">winget install -e --id=Microsoft.WSL
+</code></pre>
+<ul>
+<li>This installs the default Ubuntu distribution, fine for most users (Ubuntu-24.04 is the latest at the time of writing).</li>
+<li>It also installs a profile inside Windows Terminal, a great terminal emulator for Windows.</li>
+<li>After setting up your Linux user, follow the <a href="#linux-quick">Linux installation guide</a> to install docker and/or podman.</li>
+</ul>
+<h4>If WSL is already installed, update it and set version 2</h4>
+<pre><code class="language-powershell">wsl --update
+wsl --set-default-version 2
+</code></pre>
+<h4>As a non-administrator user</h4>
+<pre><code class="language-powershell">winget install -e --id=Microsoft.WindowsTerminal
+winget install -e --id=Docker.DockerCLI
+winget install -e --id=RedHat.Podman
+winget install &quot;Container Desktop&quot;
+</code></pre>
+<h4>Open Container Desktop</h4>
+<p>Create an automatic connection to your WSL distribution using either docker or podman engines. Choose your preferred one, make it default, and click <strong>Connect</strong>.</p>
+</section>
+<section class="guide-sec" id="windows-best">
+<h3><span class="n">02</span> Podman and Docker — best experience</h3>
+<h4>Requirements</h4>
+<p>Ensure all requirements are installed as per the <a href="#windows-req">requirements</a>.</p>
+<h4>Custom WSL</h4>
+<p>Inside the WSL distribution, follow the <a href="#linux-quick">Linux installation guide</a> to install both podman and docker container engines.</p>
+<h4>Best developer experience</h4>
+<p>Perform all container operations inside the WSL distribution directly — it is just Linux in the end. WSL is the best way to run Linux on Windows.</p>
+</section>
+<section class="guide-sec" id="windows-podman-docker">
+<h3><span class="n">03</span> Podman acting as Docker</h3>
+<div class="note info">
+<p>This is referred to as <strong>Compatibility Mode</strong> — it should support all docker features, except the docker cli (use podman instead; alias it if you want).</p>
+</div>
+<h4>Latest and greatest</h4>
+<p>Go to the <a href="https://github.com/containers/podman/releases">Podman releases page</a> and get the latest Windows installer. Consider:</p>
+<ul>
+<li>Upon installation, podman creates its own WSL distribution, also known as Podman Machine.</li>
+<li>It also sets the <code>DOCKER_HOST</code> environment variable to point at the podman named pipe.</li>
+</ul>
+<h4>Easiest (skip if using latest and greatest)</h4>
+<pre><code class="language-powershell">winget install -e --id=RedHat.Podman
+</code></pre>
+</section>
+<section class="guide-sec" id="windows-dd-alt">
+<h3><span class="n">04</span> Docker Desktop alternative</h3>
+<h4>Requirements</h4>
+<p>Ensure all requirements are installed as per the <a href="#windows-req">requirements</a>.</p>
+<h4>Add docker engine support</h4>
+<p>Inside the WSL distribution, follow the <a href="#linux-quick">Linux installation guide</a> to install the docker container engine.</p>
+<h4>Adding support for the native <code>docker.exe</code> binary</h4>
+<pre><code class="language-powershell">winget install -e --id=Docker.DockerCLI
+</code></pre>
+<p>A restart of your terminal is recommended after installing the CLI tools. Latest <code>docker.exe</code> binaries can also be found at:</p>
+<ul>
+<li><strong>Intel CPUs</strong> — <a href="https://download.docker.com/win/static/stable/x86_64/">download.docker.com/win/static/stable/x86_64</a></li>
+</ul>
+</section>
+<section class="guide-sec" id="windows-podman-custom">
+<h3><span class="n">05</span> Podman — custom installation</h3>
+<h4>Podman engine setup inside WSL</h4>
+<p>Inside the WSL distribution, follow the <a href="#linux-quick">Linux installation guide</a> to install the podman container engine.</p>
+<h4>Container Desktop</h4>
+<p>Open Container Desktop and create a new Podman engine connection using the WSL host, selecting your distribution of choice.</p>
+</section>
+<section class="guide-sec" id="windows-share">
+<h3><span class="n">06</span> Sharing connection with Container Desktop</h3>
+<p>The <code>DOCKER_HOST</code> environment variable must be set to the same value Container Desktop is using when connected. The exact value is under <strong>Connection info</strong> in the <strong>Settings</strong> section.</p>
+</section>
+<section class="guide-sec" id="windows-tips">
+<h3><span class="n">07</span> Tips &amp; tricks</h3>
+<h4>Ensure WSL 2 and cgroups v2</h4>
+<p>To ensure WSL version 2 is set: <code>wsl --set-default-version 2</code>. For the recommended cgroups v2, modify or create the <code>.wslconfig</code> file in <code>%USERPROFILE%</code> with:</p>
+<pre><code class="language-ini">[wsl2]
+# ...
+kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
+</code></pre>
+<div class="note info">
+<p>After modifying/creating, stop the WSL engine with <code>wsl.exe --shutdown</code> and restart with <code>wsl.exe</code>.</p>
+</div>
+<h4>Good to know</h4>
+<p>Although possible, <strong>it is not required</strong> to install the Container Desktop application inside WSL.</p>
+</section>
+
+    </main>
+  </div>
+</div>
+
+  <footer><div class="wrap">
+  <div class="fgrid">
+    <div class="fbrand">
+      <a class="brand" href="/"><span class="mark">cd</span><span>Container Desktop</span></a>
+      <p>A familiar desktop UI for Podman &amp; Docker. Free, open source, MIT licensed.</p>
+    </div>
+    <div class="fcol"><h5>Product</h5><a href="/#features">Features</a><a href="/#download">Download</a><a href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct">Microsoft Store</a><a href="https://github.com/iongion/container-desktop/releases">Releases</a></div>
+    <div class="fcol"><h5>Manual</h5><a href="/manual/#linux">Linux</a><a href="/manual/#macos">macOS</a><a href="/manual/#windows">Windows</a><a href="/manual/">Full handbook</a></div>
+    <div class="fcol"><h5>Community</h5><a href="https://github.com/iongion/container-desktop">GitHub</a><a href="https://github.com/iongion/container-desktop/issues">Issues</a><a href="https://x.com/iongion">Contact</a><a href="/privacy-policy/">Privacy policy</a></div>
+  </div>
+  <div class="fbar">
+    <span>© 2026 Ionut Stoica · MIT License</span>
+    <span class="mono">Made with care · Podman is the driving engine</span>
+  </div>
+</div></footer>
+
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+  <script src="/assets/js/os-detect.js?v=5.2.15"></script>
+  <script src="/assets/js/manual-nav.js?v=5.2.15"></script>
+</body>
+</html>

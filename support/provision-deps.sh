@@ -1,25 +1,18 @@
 #!/usr/bin/env bash
 #
-# provision-deps.sh - Install the Linux *system* packages required to build,
-# bundle and package Container Desktop (deb / rpm / pacman / flatpak / AppImage).
+# provision-deps.sh - Install the Linux *system* packages required to build and
+# bundle Container Desktop. Linux ships a tar.gz only, so this just needs a basic
+# build toolchain (git + a C toolchain for native deps).
 #
-# It is idempotent: re-running only installs what is missing. It covers the
-# tooling documented in DEVELOPMENT.md plus the flatpak runtime/SDK/base app
-# that the flatpak target needs (version is read from electron-builder-config.cjs).
+# It is idempotent: re-running only installs what is missing.
 #
 # It does NOT manage node/nvm, python or uv - those are per-user, version-pinned
 # toolchains (see DEVELOPMENT.md). Presence of those is only reported at the end.
 #
 # Usage:
-#   bash support/provision-deps.sh            # install system deps + flatpak setup
-#   SKIP_FLATPAK_RUNTIME=1 bash support/...   # skip the (large) flatpak runtime pull
+#   bash support/provision-deps.sh
 #
 set -euo pipefail
-
-# --- locate project root (so we can read electron-builder-config.cjs) ----------
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-PROJECT_HOME="$(dirname "$SCRIPT_DIR")"
-BUILDER_CONFIG="$PROJECT_HOME/electron-builder-config.cjs"
 
 # --- privilege helper ----------------------------------------------------------
 if [ "$(id -u)" -eq 0 ]; then
@@ -47,72 +40,28 @@ fi
 log "Detected package manager: $PM"
 
 # --- install system packages ---------------------------------------------------
-# Package sets per family. Names cover: build toolchain, flatpak + builder +
-# elfutils (debuginfo), rpm tooling, and bsdtar (libarchive) for pacman packages.
+# Package set per family: just a build toolchain + git. A tar.gz bundle needs no
+# distro-specific packaging tooling.
 install_packages() {
   case "$PM" in
     apt)
       $SUDO apt-get update -y
       $SUDO apt-get install -y \
-        build-essential git \
-        flatpak flatpak-builder elfutils \
-        rpm \
-        libarchive-tools
+        build-essential git
       ;;
     dnf|yum)
       $SUDO "$PM" groupinstall -y "Development Tools" || true
       $SUDO "$PM" install -y \
-        git \
-        flatpak flatpak-builder elfutils \
-        rpm-build \
-        bsdtar libarchive
+        git
       ;;
     pacman)
       $SUDO pacman -Sy --needed --noconfirm \
-        base-devel git \
-        flatpak flatpak-builder elfutils \
-        rpm-tools \
-        libarchive
+        base-devel git
       ;;
   esac
 }
 log "Installing system packages..."
 install_packages
-
-# --- flatpak: remote, git file protocol, runtime/SDK/base ----------------------
-if command -v flatpak >/dev/null 2>&1; then
-  log "Adding flathub remote (per-user)..."
-  flatpak remote-add --user --if-not-exists flathub \
-    https://flathub.org/repo/flathub.flatpakrepo
-
-  # flatpak-builder clones a local file:// repo during the build
-  log "Allowing git file:// protocol (needed by flatpak-builder)..."
-  git config --global --add protocol.file.allow always || \
-    warn "could not set git protocol.file.allow (set it manually if flatpak build fails)"
-
-  if [ "${SKIP_FLATPAK_RUNTIME:-0}" = "1" ]; then
-    warn "SKIP_FLATPAK_RUNTIME=1 set - not installing the flatpak runtime/SDK/base."
-  else
-    # Read runtime version + identifiers from the electron-builder config so this
-    # stays in sync with how the app is actually packaged.
-    RT_VER="$(grep -oE 'runtimeVersion:\s*"[^"]+"' "$BUILDER_CONFIG" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1 || true)"
-    RT_VER="${RT_VER:-24.08}"
-    RUNTIME="$(grep -oE 'runtime:\s*"[^"]+"' "$BUILDER_CONFIG" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/' | head -1 || true)"
-    RUNTIME="${RUNTIME:-org.freedesktop.Platform}"
-    SDK="$(grep -oE 'sdk:\s*"[^"]+"' "$BUILDER_CONFIG" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/' | head -1 || true)"
-    SDK="${SDK:-org.freedesktop.Sdk}"
-    BASE="$(grep -oE 'base:\s*"[^"]+"' "$BUILDER_CONFIG" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/' | head -1 || true)"
-    BASE="${BASE:-org.electronjs.Electron2.BaseApp}"
-
-    log "Installing flatpak runtime/SDK/base (version $RT_VER)..."
-    flatpak install -y --user flathub \
-      "${RUNTIME}//${RT_VER}" \
-      "${SDK}//${RT_VER}" \
-      "${BASE}//${RT_VER}"
-  fi
-else
-  warn "flatpak not on PATH after install - skipping flatpak runtime setup."
-fi
 
 # --- Go tooling for the SSH relay (support/container-desktop-relay) -------------
 # The relay's build toolchain (go1.26.x) is auto-fetched by Go itself from the

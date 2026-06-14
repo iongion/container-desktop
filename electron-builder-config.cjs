@@ -8,7 +8,7 @@ const semver = require("semver");
 const xml2js = require("xml2js");
 // pkg
 const pkg = require("./package.json");
-const { Name } = require("ajv");
+const { linuxArtifactName, macArtifactName, winArtifactName } = require("./support/release-artifacts.cjs");
 // module
 const version = pkg.version;
 const semverVersion = semver.parse(version);
@@ -17,10 +17,18 @@ const buildNumber = Number(
   process.env.BUILD_NUMBER || semverVersion.build?.[0] || semverVersion.prerelease?.[0]?.[0] || 0,
 );
 const buildVersion = `${semverVersion.major}.${semverVersion.minor}.${semverVersion.patch}.${buildNumber}`;
-// biome-ignore lint/suspicious/noTemplateCurlyInString: Need to be like this for electron-builder
-const artifactName = [pkg.name, "${arch}", version].join("-");
+const electronBuilderArchMacro = ["$", "{arch}"].join("");
+const electronBuilderExtMacro = ["$", "{ext}"].join("");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
+
+// Package formats to emit. Default builds native packages plus portable archives:
+// Linux: tar.gz, macOS: dmg + tar.gz, Windows: appx + nsis (.exe) + zip.
+// Set PACKAGE_FORMATS=tgz to force portable .tgz tarballs on every platform
+// instead. Nothing is removed — it's open source, so the full recipes stay in
+// the repo for anyone to build their own way; this flag only gates which targets
+// electron-builder outputs.
+const tgzOnly = process.env.PACKAGE_FORMATS === "tgz";
 
 // template
 dotenv.config({ path: path.join(PROJECT_HOME, ".env") });
@@ -43,7 +51,7 @@ const config = {
   productName: process.platform === "linux" ? pkg.name : displayName,
   buildNumber,
   buildVersion,
-  artifactName: `${artifactName}.\${ext}`,
+  artifactName: winArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
   copyright: `Copyright (c) ${year} ${pkg.author}`,
   releaseInfo: {
     releaseName,
@@ -72,47 +80,11 @@ const config = {
     buildResources: "src/resources",
   },
   publish: null,
-  flatpak: {
-    // Debug using: flatpak run --command=sh --devel --filesystem=$(pwd) container_desktop.iongion.github.io
-    // flatpak run -v container_desktop.iongion.github.io
-    // flatpak info container_desktop.iongion.github.io
-    base: "org.electronjs.Electron2.BaseApp",
-    branch: "main",
-    category: "Development",
-    runtime: "org.freedesktop.Platform",
-    runtimeVersion: "24.08",
-    license: "LICENSE",
-    // collection: "org.flathub.Stable",
-    sdk: "org.freedesktop.Sdk",
-    useWaylandFlags: true,
-    finishArgs: [
-      "--share=network",
-      "--share=ipc",
-      "--socket=wayland",
-      // "--socket=x11",
-      "--socket=fallback-x11",
-      "--socket=pulseaudio", // Is this really needed ?
-      "--socket=session-bus",
-      "--socket=system-bus",
-      "--socket=ssh-auth",
-      "--device=dri",
-      "--device=kvm",
-      "--device=shm",
-      "--filesystem=host",
-      "--filesystem=host-os",
-      "--filesystem=host-etc",
-      "--filesystem=home",
-      "--filesystem=/run/user",
-      "--filesystem=xdg-config",
-      "--filesystem=xdg-run/podman",
-      "--filesystem=xdg-run/docker",
-      "--talk-name=org.freedesktop.Notifications",
-    ],
-  },
   mac: {
+    artifactName: macArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
     category: "public.app-category.developer-tools",
     icon: "icons/appIcon.icns",
-    target: "dmg",
+    target: tgzOnly ? "tar.gz" : ["dmg", "tar.gz"],
     type: "development",
     entitlements: "entitlements.mac.plist",
     entitlementsInherit: "entitlements.mac.inherit.plist",
@@ -131,7 +103,7 @@ const config = {
     shortcutName: displayName,
   },
   win: {
-    target: ["appx", "nsis"],
+    target: tgzOnly ? ["tar.gz"] : ["appx", "nsis", "zip"],
     // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico",
@@ -185,20 +157,16 @@ const config = {
     maxVersionTested: "10.0.18362.0",
   },
   linux: {
+    artifactName: linuxArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
     executableName: "container-desktop",
     maintainer: publisher,
     icon: "icons/appIcon.icns",
-    target: ["deb", "pacman", "rpm", "flatpak", "AppImage"],
+    target: ["tar.gz"],
     category: "Development;System;Utility",
-    extraResources: ["support/templates"],
     desktop: {
       entry: displayName,
     },
     executableArgs: ["--no-sandbox"],
-  },
-  deb: {
-    afterInstall: "support/templates/after-install.sh",
-    afterRemove: "support/templates/after-remove.sh",
   },
 };
 

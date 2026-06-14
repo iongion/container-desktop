@@ -1,23 +1,21 @@
-import react from "@vitejs/plugin-react";
-import merge from "lodash.merge";
-import mimeTypes from "mime-types";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import react from "@vitejs/plugin-react";
+import merge from "lodash.merge";
+import mimeTypes from "mime-types";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import svgrPlugin from "vite-plugin-svgr";
-
+import pkg from "./package.json";
 import {
-  ENVIRONMENT,
-  PROJECT_HOME,
   createEJSContext,
+  ENVIRONMENT,
   getCommonViteConfig,
   getElectronVendorsCache,
+  PROJECT_HOME,
   sourceEnv,
   sourcemap,
 } from "./vite.config.common.mjs";
-
-import pkg from "./package.json";
 
 export function docsServer() {
   return {
@@ -30,12 +28,12 @@ export function docsServer() {
             res.writeHead(200);
             res.write(pkg.version);
             res.end();
-          } else if (req.originalUrl?.includes("/docs")) {
+          } else if (req.originalUrl?.includes("/website")) {
             let resource = path.join(__dirname, `${req.originalUrl}`);
             if (fs.lstatSync(resource).isDirectory()) {
               resource = path.join(resource, "index.html");
               res.setHeader("Content-Type", mimeTypes.lookup(resource) || "application/octet-stream");
-              res.setHeader("Location", "/docs/index.html");
+              res.setHeader("Location", "/website/index.html");
               res.writeHead(301);
             } else {
               if (fs.existsSync(resource)) {
@@ -68,7 +66,7 @@ export const createConfig = ({ mode, command, host, port }) => {
   sourceEnv(ENVIRONMENT);
   const cache = getElectronVendorsCache();
   console.debug({ PROJECT_HOME, command, host, port });
-  console.debug(`Website running at http://${host === "0.0.0.0" ? "localhost" : host}:${port}/docs/index.html`);
+  console.debug(`Website running at http://${host === "0.0.0.0" ? "localhost" : host}:${port}/website/index.html`);
   // Bootstrap
   // Build context
   const ejsContext = createEJSContext();
