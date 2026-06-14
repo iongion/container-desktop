@@ -3,3 +3,10 @@
   color: #ccc;
   line-height: 1.4em;
 }
+
+.ContainerLogsStatus {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px 0;
+}

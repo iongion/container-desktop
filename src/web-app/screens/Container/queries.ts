@@ -35,8 +35,14 @@ export const useContainersList = (connId: string) =>
     ...liveQueryOptions(),
   });
 
-export const useContainer = (connId: string, id?: string, opts?: FetchContainerOptions) => {
+export const useContainer = (
+  connId: string,
+  id?: string,
+  opts?: FetchContainerOptions,
+  queryOpts?: { live?: boolean; refetchIntervalMs?: number },
+) => {
   const qc = useQueryClient();
+  const live = queryOpts?.live ?? true;
   return useQuery({
     queryKey: containerKeys.detail(connId, id ?? ""),
     queryFn: () => new ContainersAdapter().get(id!, opts),
@@ -48,7 +54,7 @@ export const useContainer = (connId: string, id?: string, opts?: FetchContainerO
       }
       return undefined;
     },
-    ...liveQueryOptions(),
+    ...(live ? liveQueryOptions(queryOpts?.refetchIntervalMs) : {}),
   });
 };
 
@@ -68,12 +74,12 @@ export const useContainerProcesses = (connId: string, id?: string, enabled = tru
     ...liveQueryOptions(),
   });
 
-export const useContainerLogs = (connId: string, id?: string) =>
+export const useContainerLogs = (connId: string, id?: string, opts?: { enabled?: boolean; refetchIntervalMs?: number }) =>
   useQuery({
     queryKey: containerKeys.sub(connId, id ?? "", "logs"),
     queryFn: () => new ContainersAdapter().logs(id!),
-    enabled: !!connId && !!id,
-    ...liveQueryOptions(),
+    enabled: (opts?.enabled ?? true) && !!connId && !!id,
+    ...(opts?.refetchIntervalMs ? liveQueryOptions(opts.refetchIntervalMs) : {}),
   });
 
 export const useContainerKube = (connId: string, id?: string) =>

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- Container logs now use a live stream for running containers instead of polling full log snapshots, and stopped containers load logs once until manually refreshed.
+- The embedded terminal no longer recreates itself on every log update, preventing flicker and duplicate output.
+- Build output is now version-scoped under `build/<version>/` with stable target filenames.
+- Trimmed unused direct dependencies and removed the dead ncc single-file post-build step; ssh-related modules continue to be bundled by the Vite/Rolldown build.
+
+## Fixed
+
+- Container logs now decode Docker multiplexed stdout/stderr frames before writing to the terminal.
+- The development watcher no longer deletes `preload.cjs` after the preload build completes.
+- Monaco is bundled locally instead of being loaded from a CDN.
+
 ## [5.2.16] - 2026-06-14
 
 A large internal modernization of how the app talks to engines and manages state, plus user-facing list improvements.
