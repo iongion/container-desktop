@@ -99,6 +99,7 @@
     "Errorln",
     "execvp",
     "Expt",
+    "favicons",
     "featurename",
     "Fira",
     "flathub",
@@ -265,7 +266,9 @@
     "*.env": "ini",
     "*.env.**": "ini",
     "*.mk": "makefile",
-    "*.runtime": "ini"
+    "*.runtime": "ini",
+    "*.html": "njk",
+    "VERSION": "plaintext"
   },
   "files.eol": "\n",
   "files.exclude": {

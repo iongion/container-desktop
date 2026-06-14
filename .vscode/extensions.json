@@ -12,7 +12,8 @@
     "davidanson.vscode-markdownlint",
     "timonwong.shellcheck",
     "ms-vscode.makefile-tools",
-    "aaron-bond.better-comments"
+    "aaron-bond.better-comments",
+    "eseom.nunjucks-template"
   ],
   "unwantedRecommendations": ["ms-python.pylint"]
 }
