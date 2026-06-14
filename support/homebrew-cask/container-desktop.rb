@@ -1,8 +1,8 @@
 cask "container-desktop" do
-  version "5.2.13"
-  sha256 "4e14f9b0b0f936aea1ca3433ba58fe963bbcaad331880586062e8d37c7b9df51"
+  version "<VERSION>"
+  sha256 "<SHA256>"
 
-  url "https://github.com/iongion/container-desktop/releases/download/#{version}/container-desktop-arm64-#{version}.dmg",
+  url "https://github.com/iongion/container-desktop/releases/download/#{version}/container-desktop-mac-arm64-#{version}.dmg",
       verified: "github.com/iongion/container-desktop/"
   name "Container Desktop"
   desc "General purpose container operations"

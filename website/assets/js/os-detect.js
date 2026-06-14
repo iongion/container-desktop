@@ -3,10 +3,13 @@
 (() => {
   var ua = `${navigator.userAgent} ${navigator.platform || ""}`;
   var os = /Win/i.test(ua) ? "Windows" : /Mac|iPhone|iPad/i.test(ua) ? "macOS" : "Linux";
+  var currentCard;
+  var primary;
   var t;
   document.querySelectorAll(".dlc").forEach((c) => {
     var cur = c.getAttribute("data-os") === os;
     c.classList.toggle("cur", cur);
+    if (cur) currentCard = c;
     var tag = c.querySelector(".tag");
     if (cur && !tag) {
       t = document.createElement("div");
@@ -18,5 +21,9 @@
     }
   });
   var hb = document.getElementById("heroDownload");
-  if (hb) hb.textContent = `⬇ Download for ${os}`;
+  if (hb) {
+    hb.textContent = `⬇ Download for ${os}`;
+    primary = currentCard?.querySelector(".get");
+    if (primary) hb.setAttribute("href", primary.getAttribute("href"));
+  }
 })();

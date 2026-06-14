@@ -16,11 +16,11 @@ prepare:
 
 check:
 	@echo "Checking the project"
-	uv run ruff check --fix ./support
+	uv run ruff check --fix tasks.py ./support ./tests
 
 format:
 	@echo "Formatting the project"
-	uv run ruff format ./support
+	uv run ruff format tasks.py ./support ./tests
 	yarn format
 
 build-website:

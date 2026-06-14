@@ -139,7 +139,9 @@ section{position:relative}
 .dlc .get{width:100%;justify-content:center}
 .dlc .fmt{margin-top:12px;font-size:12px;color:var(--muted)}
 .dlc .fmt b{color:var(--ink-soft)}
-.dlc .portable{display:inline-block;margin-top:10px;font-size:12px;color:var(--cyan)}.dlc .portable:hover{text-decoration:underline}
+.dlc .dl-options{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--faint)}
+.dlc .dl-options a{color:var(--cyan)}
+.dlc .dl-options a:hover{text-decoration:underline}
 
 /* ---- publications / books ---- */
 .pubs{padding:80px 0;border-top:1px solid var(--border)}

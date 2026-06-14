@@ -14,13 +14,31 @@ on:
       target:
         description: "Target"
         required: true
-        default: "linux"
+        type: choice
+        default: "all"
+        options:
+          - all
+          - linux
+          - macos
+          - windows
 
 jobs:
   bundle:
-    timeout-minutes: 15
+    timeout-minutes: 30
 
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(github.event.inputs.target == 'all' && '["linux","macos","windows"]' || format('["{0}"]', github.event.inputs.target)) }}
+        include:
+          - target: linux
+            os: ubuntu-latest
+          - target: macos
+            os: macos-latest
+          - target: windows
+            os: windows-latest
+
+    runs-on: ${{ matrix.os }}
 
     env:
       CI: true
@@ -42,17 +60,32 @@ jobs:
         with:
           node-version: "24.16.0"
           registry-url: "https://npm.pkg.github.com"
-      - name: Prepare api ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
+      - name: Use Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Python tools
+        run: python -m pip install --upgrade pip invoke
+      - name: Use Go
+        if: matrix.target == 'windows'
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: support/container-desktop-relay/go.mod
+      - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
         run: inv prepare
-      - name: Build ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
+      - name: Build ${{github.event.inputs.stage}} ${{matrix.target}}
         run: inv build
         env:
-          TARGET: ${{github.event.inputs.target}}
-      - name: Bundle ${{github.event.inputs.stage}} ${{github.event.inputs.target}}
+          TARGET: ${{matrix.target}}
+      - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
         run: inv bundle
         env:
-          TARGET: ${{github.event.inputs.target}}
-      - name: Publish ${{github.event.inputs.stage}} ${{github.event.inputs.target}} artifacts
+          TARGET: ${{matrix.target}}
+      - name: Checksum ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
+        run: inv checksums
+      - name: Publish ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
         uses: actions/upload-artifact@v7
         with:
+          name: container-desktop-${{ matrix.target }}
           path: release/container-desktop*
+          if-no-files-found: error

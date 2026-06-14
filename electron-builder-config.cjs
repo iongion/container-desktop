@@ -8,6 +8,7 @@ const semver = require("semver");
 const xml2js = require("xml2js");
 // pkg
 const pkg = require("./package.json");
+const { linuxArtifactName, macArtifactName, winArtifactName } = require("./support/release-artifacts.cjs");
 // module
 const version = pkg.version;
 const semverVersion = semver.parse(version);
@@ -16,16 +17,17 @@ const buildNumber = Number(
   process.env.BUILD_NUMBER || semverVersion.build?.[0] || semverVersion.prerelease?.[0]?.[0] || 0,
 );
 const buildVersion = `${semverVersion.major}.${semverVersion.minor}.${semverVersion.patch}.${buildNumber}`;
-// biome-ignore lint/suspicious/noTemplateCurlyInString: Need to be like this for electron-builder
-const artifactName = [pkg.name, "${arch}", version].join("-");
+const electronBuilderArchMacro = ["$", "{arch}"].join("");
+const electronBuilderExtMacro = ["$", "{ext}"].join("");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 
-// Package formats to emit. Default builds the native package per platform —
-// Linux: tar.gz, macOS: dmg, Windows: appx + nsis (.exe). Set PACKAGE_FORMATS=tgz
-// to force portable .tgz tarballs on every platform instead. Nothing is removed —
-// it's open source, so the full recipes stay in the repo for anyone to build
-// their own way; this flag only gates which targets electron-builder outputs.
+// Package formats to emit. Default builds native packages plus portable archives:
+// Linux: tar.gz, macOS: dmg + tar.gz, Windows: appx + nsis (.exe) + zip.
+// Set PACKAGE_FORMATS=tgz to force portable .tgz tarballs on every platform
+// instead. Nothing is removed — it's open source, so the full recipes stay in
+// the repo for anyone to build their own way; this flag only gates which targets
+// electron-builder outputs.
 const tgzOnly = process.env.PACKAGE_FORMATS === "tgz";
 
 // template
@@ -49,7 +51,7 @@ const config = {
   productName: process.platform === "linux" ? pkg.name : displayName,
   buildNumber,
   buildVersion,
-  artifactName: `${artifactName}.\${ext}`,
+  artifactName: winArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
   copyright: `Copyright (c) ${year} ${pkg.author}`,
   releaseInfo: {
     releaseName,
@@ -79,6 +81,7 @@ const config = {
   },
   publish: null,
   mac: {
+    artifactName: macArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
     category: "public.app-category.developer-tools",
     icon: "icons/appIcon.icns",
     target: tgzOnly ? "tar.gz" : ["dmg", "tar.gz"],
@@ -154,6 +157,7 @@ const config = {
     maxVersionTested: "10.0.18362.0",
   },
   linux: {
+    artifactName: linuxArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
     executableName: "container-desktop",
     maintainer: publisher,
     icon: "icons/appIcon.icns",
