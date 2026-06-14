@@ -4,7 +4,7 @@ These cover the pure string transforms used by the ``bump`` / ``version-sync`` /
 ``publish-meta`` invoke tasks. They intentionally exercise the tricky cases that
 caused version drift in the past:
 
-* the version embedded in ``package.json`` ``main`` (a filename, not a field),
+* the version embedded in ``package.json`` ``main`` (a path, not a field),
 * not clobbering dependency pins or the ``manifest_version`` key,
 * promoting the changelog ``[Unreleased]`` section,
 * rewriting the docs download page (data-version, cache-busters, release URLs),
@@ -69,7 +69,7 @@ def test_set_package_json_version_updates_version_and_main_filename():
         "{\n"
         '  "name": "container-desktop",\n'
         '  "version": "5.2.15",\n'
-        '  "main": "build/main-5.2.15.cjs",\n'
+        '  "main": "build/5.2.15/main.cjs",\n'
         '  "dependencies": {\n'
         '    "react": "19.2.7"\n'
         "  }\n"
@@ -77,7 +77,7 @@ def test_set_package_json_version_updates_version_and_main_filename():
     )
     out = set_package_json_version(text, "5.2.16")
     assert '"version": "5.2.16"' in out
-    assert '"main": "build/main-5.2.16.cjs"' in out
+    assert '"main": "build/5.2.16/main.cjs"' in out
     # dependency pins must be untouched
     assert '"react": "19.2.7"' in out
 

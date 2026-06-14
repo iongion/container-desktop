@@ -138,22 +138,25 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
     define: userDefine,
     build: {
       target: "es2022",
-      outDir: path.join(__dirname, "build"),
+      outDir: path.join(__dirname, "build", pkg.version),
       emptyOutDir: false,
       sourcemap: sourcemap,
       chunkSizeWarningLimit: 50 * 1024,
       reportCompressedSize: mode === "production",
       minify: minify,
       cssMinify: minify,
+      // One CSS file for the renderer instead of per-component chunks.
+      cssCodeSplit: false,
       rollupOptions: merge({}, rollupOptions || {}, {
         output: {
-          manualChunks: (filename) => outputName,
           preserveModules: false,
           format: outputFormat === "umd" ? "umd" : outputFormat === "cjs" ? "cjs" : "es",
-          codeSplitting: true,
-          assetFileNames: `assets/${outputName}-${pkg.version}.[ext]`,
-          entryFileNames: `${outputName}-${pkg.version}.${outputExtension}`,
-          chunkFileNames: `${outputName}-${pkg.version}.[hash].${outputExtension}`,
+          // Single file per target: inline every dynamic import into the entry instead of
+          // emitting hashed chunk siblings. Mutually exclusive with manualChunks.
+          codeSplitting: false,
+          // Version is the output directory (build/<version>/), not a filename suffix.
+          assetFileNames: `assets/${outputName}.[ext]`,
+          entryFileNames: `${outputName}.${outputExtension}`,
         },
       }),
     },

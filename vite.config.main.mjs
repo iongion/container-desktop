@@ -2,6 +2,7 @@ import path from "node:path";
 import { normalizePath } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
+import pkg from "./package.json";
 import { createSingleFile, ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, PROJECT_HOME, sourceEnv } from "./vite.config.common.mjs";
 
 /**
@@ -43,7 +44,7 @@ export default ({ mode, command }) => {
         targets: [
           {
             src: normalizePath(path.resolve(PROJECT_HOME, "support/resources/appx")),
-            dest: normalizePath(path.resolve(PROJECT_HOME, "build"))
+            dest: normalizePath(path.resolve(PROJECT_HOME, "build", pkg.version))
           }
         ]
       })

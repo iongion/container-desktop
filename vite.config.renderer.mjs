@@ -129,6 +129,15 @@ export default ({ mode, command }) => {
     },
   });
   config.base = "";
+  // Emit Monaco's language workers as their own cleanly-named files (editor.worker.js,
+  // json.worker.js) next to renderer.mjs — offline, no base64 bloat, no hashes.
+  config.worker = {
+    rollupOptions: {
+      output: {
+        entryFileNames: "[name].js",
+      },
+    },
+  };
   config.build.rollupOptions.external = ["electron"];
   return config;
 };

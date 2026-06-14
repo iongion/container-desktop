@@ -175,10 +175,13 @@ def build(ctx, env=None):
     with ctx.cd(path):
         shutil.rmtree("build", ignore_errors=True)
         run_env(ctx, "yarn build", env)
+        # Icons are loaded from __dirname at runtime, so co-locate them with the
+        # versioned build output (build/<version>/) next to main.cjs.
+        build_dir = os.path.join("build", PROJECT_VERSION)
         for file in glob.glob("./src/resources/icons/appIcon*"):
-            shutil.copy(file, "./build")
+            shutil.copy(file, build_dir)
         for file in glob.glob("./src/resources/icons/trayIcon*"):
-            shutil.copy(file, "./build")
+            shutil.copy(file, build_dir)
 
 
 @task

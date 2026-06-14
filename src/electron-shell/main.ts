@@ -51,7 +51,9 @@ function is_ip_private(hostname: string): boolean {
 process.env.APP_PATH = APP_PATH;
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PROJECT_HOME = path.dirname(__dirname);
+// main.cjs lives in build/<version>/, so the repo root (dev) / app root (packaged) is two
+// levels up. Used only for dev-mode icon lookup under src/resources/icons.
+const PROJECT_HOME = path.dirname(path.dirname(__dirname));
 const URLS_ALLOWED = [
   // Allowed
   "https://container-desktop.com/", // Project website
@@ -258,7 +260,7 @@ async function createApplicationWindow() {
     applicationWindow.destroy();
   }
   logger.debug("Creating application window");
-  const preloadURL = path.join(__dirname, `preload-${import.meta.env.PROJECT_VERSION}.cjs`);
+  const preloadURL = path.join(__dirname, "preload.cjs");
   const appDevURL = import.meta.env.VITE_DEV_SERVER_URL;
   const appProdURL = url.format({
     pathname: path.join(__dirname, "index.html"),
