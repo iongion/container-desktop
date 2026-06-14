@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(github.event.inputs.target == 'all' && '[{"target":"linux","os":"ubuntu-latest"},{"target":"macos","os":"macos-26"},{"target":"windows","os":"windows-latest"}]' || github.event.inputs.target == 'linux' && '[{"target":"linux","os":"ubuntu-latest"}]' || github.event.inputs.target == 'macos' && '[{"target":"macos","os":"macos-26"}]' || '[{"target":"windows","os":"windows-latest"}]') }}
+        include: ${{ fromJson(github.event.inputs.target == 'all' && '[{"target":"linux","os":"ubuntu-latest"},{"target":"macos","os":"macos-latest"},{"target":"windows","os":"windows-latest"}]' || github.event.inputs.target == 'linux' && '[{"target":"linux","os":"ubuntu-latest"}]' || github.event.inputs.target == 'macos' && '[{"target":"macos","os":"macos-latest"}]' || '[{"target":"windows","os":"windows-latest"}]') }}
 
     runs-on: ${{ matrix.os }}
 
