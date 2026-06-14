@@ -1,10 +1,10 @@
 {
   "name": "container-desktop",
   "title": "Container Desktop",
-  "version": "5.2.15",
+  "version": "5.2.16",
   "author": "Ionut Stoica",
   "description": "Container Desktop",
-  "main": "build/main-5.2.15.cjs",
+  "main": "build/main-5.2.16.cjs",
   "homepage": "./",
   "type": "module",
   "scripts": {

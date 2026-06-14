@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.16] - 2026-06-14
+
 A large internal modernization of how the app talks to engines and manages state, plus user-facing list improvements.
 
 ## Added
