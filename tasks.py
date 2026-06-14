@@ -66,7 +66,7 @@ def run_env(ctx, cmd, env=None):
     nvm_dir = os.getenv("NVM_DIR", str(Path.home().joinpath(".nvm")))
     nvm_sh = os.path.join(nvm_dir, "nvm.sh")
     # print("ENVIRONMENT", cmd_env)
-    if os.path.exists(nvm_sh):
+    if os.environ.get("CI") != "true" and os.path.exists(nvm_sh):
         with ctx.prefix(f'source "{nvm_dir}/nvm.sh"'):
             nvm_rc = os.path.join(ctx.cwd, ".nvmrc")
             if os.path.exists(nvm_rc):
