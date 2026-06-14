@@ -1,5 +1,6 @@
 // Per-OS download matrix, derived from the package.json version at build time.
-// Reconciled formats: Linux .tar.gz, macOS .dmg, Windows installer.exe (+ Store).
+// Native format per OS, plus a portable archive where the installer differs:
+// Linux .tar.gz, macOS .dmg (+ portable .tar.gz), Windows installer.exe (+ portable .zip).
 import pkg from "../../package.json" with { type: "json" };
 
 const version = pkg.version;
@@ -22,6 +23,7 @@ export default {
       file: `${base}/container-desktop-arm64-${version}.dmg`,
       ext: ".dmg",
       note: "Standard <b>.dmg</b> disk image",
+      alt: { file: `${base}/container-desktop-arm64-${version}.tar.gz`, label: "or portable .tar.gz" },
     },
     {
       id: "Windows",
@@ -30,6 +32,7 @@ export default {
       file: `${base}/container-desktop-installer.exe`,
       ext: ".exe",
       note: "Installer <b>.exe</b> · also on the <b>MS Store</b>",
+      alt: { file: `${base}/container-desktop-x64-${version}.zip`, label: "or portable .zip" },
     },
   ],
 };

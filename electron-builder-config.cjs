@@ -81,7 +81,7 @@ const config = {
   mac: {
     category: "public.app-category.developer-tools",
     icon: "icons/appIcon.icns",
-    target: tgzOnly ? "tar.gz" : "dmg",
+    target: tgzOnly ? "tar.gz" : ["dmg", "tar.gz"],
     type: "development",
     entitlements: "entitlements.mac.plist",
     entitlementsInherit: "entitlements.mac.inherit.plist",
@@ -100,7 +100,7 @@ const config = {
     shortcutName: displayName,
   },
   win: {
-    target: tgzOnly ? ["tar.gz"] : ["appx", "nsis"],
+    target: tgzOnly ? ["tar.gz"] : ["appx", "nsis", "zip"],
     // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico",

@@ -78,6 +78,7 @@ description: "A familiar, open-source desktop interface for Podman and Docker â€
       <div class="meta">{{ d.meta }}</div>
       <a class="btn btn-primary get" href="{{ d.file }}">â¬‡ Download {{ d.ext }}</a>
       <div class="fmt">{{ d.note | safe }}</div>
+      {% if d.alt %}<a class="portable" href="{{ d.alt.file }}">{{ d.alt.label }}</a>{% endif %}
     </div>
     {% endfor %}
   </div>
