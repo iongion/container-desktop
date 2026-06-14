@@ -8,6 +8,7 @@ const require = createRequire(import.meta.url);
 const { linuxArtifactName, macArtifactName, winArtifactName } = require("../../support/release-artifacts.cjs");
 const version = pkg.version;
 const base = `https://github.com/iongion/container-desktop/releases/download/${version}`;
+const windowsInstallerWrapper = "container-desktop-installer.exe";
 
 export default {
   os: [
@@ -43,7 +44,8 @@ export default {
       id: "Windows",
       icon: "fa-windows",
       meta: "x64",
-      file: `${base}/${winArtifactName("x64", version, "exe")}`,
+      // This is the Microsoft Store wrapper manually uploaded to the release after packaging.
+      file: `${base}/${windowsInstallerWrapper}`,
       ext: ".exe",
       note: "Installer <b>.exe</b> · also on the <b>MS Store</b>",
       options: [
