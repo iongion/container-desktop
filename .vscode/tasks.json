@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Started automatically by the "Debug All" launch compound. Runs the normal dev
+      // flow (`yarn dev` -> support/watch.mjs: Vite dev server + Electron) but with the
+      // Electron main-process V8 inspector enabled on port 9229 so the Node debugger can
+      // attach. Kept as a background task: stopping the debug session leaves the dev
+      // server warm; stop this task to fully shut down (watch.mjs kills Electron on exit).
+      "label": "dev: electron + inspector",
+      "detail": "yarn dev with the Electron main-process inspector enabled (for VS Code debugging)",
+      "type": "shell",
+      "command": "yarn dev",
+      "isBackground": true,
+      "options": {
+        "env": {
+          "CONTAINER_DESKTOP_INSPECT": "9229"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "container-desktop-dev",
+        "source": "container-desktop",
+        // No diagnostics are parsed from dev output; "^$" never captures a problem.
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "container-desktop\\] dev watcher starting",
+          // Electron prints this once the main-process inspector is listening; that is the
+          // moment both the Node (9229) and renderer CDP (9222) endpoints are ready to attach.
+          "endsPattern": "Debugger listening on ws://"
+        }
+      }
+    }
+  ]
+}

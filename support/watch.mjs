@@ -22,16 +22,27 @@ const isHeadless = ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTO
 const remoteDebuggingPort = process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT || "9222";
 const remoteDebuggingOrigin =
   process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN || `http://localhost:${remoteDebuggingPort}`;
+// When set to a port, expose the Electron main-process V8 inspector so an IDE (the
+// VS Code "Debug All" launch) can attach a Node debugger and hit breakpoints in the
+// real TypeScript sources. Empty by default so a normal `yarn dev` is unchanged.
+const inspectPort = `${process.env.CONTAINER_DESKTOP_INSPECT || ""}`.trim();
 
 function buildElectronArgs() {
   // Expose the renderer over the Chrome DevTools Protocol so tools such as the
-  // Playwright MCP can attach to the running app in dev.
+  // Playwright MCP can attach to the running app in dev. When debugging from an IDE
+  // the CDP origin is widened to `*` so the IDE's renderer attach can connect.
+  const allowOrigins = inspectPort ? "*" : remoteDebuggingOrigin;
   const args = [
     ".",
     `--remote-debugging-port=${remoteDebuggingPort}`,
-    `--remote-allow-origins=${remoteDebuggingOrigin}`,
+    `--remote-allow-origins=${allowOrigins}`,
     "--no-sandbox",
   ];
+  if (inspectPort) {
+    // Main-process inspector for the IDE Node-debugger attach. Must precede "." so
+    // Electron treats it as a runtime flag rather than an application argument.
+    args.unshift(`--inspect=${inspectPort}`);
+  }
   if (isHeadless) {
     args.push("--disable-gpu", "--disable-gpu-sandbox", "--in-process-gpu", "--no-zygote", "--disable-features=VizDisplayCompositor", "--disable-dev-shm-usage", "--disable-web-security");
   }
@@ -175,6 +186,10 @@ function setupPreloadPackageWatcher({ ws }) {
     ],
   });
 }
+
+// Single-shot startup marker: lets an IDE background task detect that the watcher has
+// begun before the dev server / main-process inspector come up (see .vscode/tasks.json).
+console.log(`[container-desktop] dev watcher starting (inspect=${inspectPort || "off"})`);
 
 /**
  * Dev server for Renderer package
