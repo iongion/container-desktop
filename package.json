@@ -68,7 +68,6 @@
     "ipaddr.js": "^2.4.0",
     "monaco-editor": "^0.55.1",
     "path-to-regexp": "^8.4.2",
-    "portfinder": "^1.0.38",
     "pretty-bytes": "^7.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
