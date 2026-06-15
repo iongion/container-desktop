@@ -43,15 +43,17 @@ export const queryClient = new QueryClient({
 // the existing env polling flag (off in development), matching the previous screen poller behaviour. Spread into
 // the relevant useQuery options: useQuery({ queryKey, queryFn, ...liveQueryOptions() }).
 export const liveQueryOptions = (refetchIntervalMs: number = POLL_RATE_DEFAULT) => {
-  // Annotated so the disabled case stays the `false` literal (not widened to `boolean`, which
-  // react-query's refetchInterval rejects); the rest are primitives assignable to any useQuery<T>.
+  // Reserved for genuinely-live, event-less data (stats/processes/machines). Cache-first like the
+  // global default: no background polling, no focus refetch — TanStack already pauses the interval
+  // when the page is hidden (refetchIntervalInBackground:false) and stops polling for unmounted
+  // screens, so this is implicitly scoped to "the screen you're looking at".
   const refetchInterval: number | false = CurrentEnvironment.features.polling?.enabled ? refetchIntervalMs : false;
   return {
     staleTime: 0,
     refetchInterval,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   };
 };
