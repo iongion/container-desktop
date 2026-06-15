@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { type CreateSecretOptions, SecretsAdapter } from "@/container-client/adapters/secrets";
 import type { Secret } from "@/env/Types";
-import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const secretKeys = {
@@ -14,14 +13,6 @@ export const secretKeys = {
   details: () => [...secretKeys.all, "detail"] as const,
   detail: (connId: string, nameOrId: string) => [...secretKeys.details(), connId, nameOrId] as const,
 };
-
-export const useSecretsList = (connId: string) =>
-  useQuery({
-    queryKey: secretKeys.list(connId),
-    queryFn: () => new SecretsAdapter().list(),
-    enabled: !!connId,
-    ...liveQueryOptions(),
-  });
 
 export const useSecret = (connId: string, nameOrId?: string) => {
   const qc = useQueryClient();
@@ -36,7 +27,6 @@ export const useSecret = (connId: string, nameOrId?: string) => {
       }
       return undefined;
     },
-    ...liveQueryOptions(),
   });
 };
 

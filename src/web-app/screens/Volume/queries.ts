@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { type CreateVolumeOptions, VolumesAdapter } from "@/container-client/adapters/volumes";
 import type { Volume } from "@/env/Types";
-import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const volumeKeys = {
@@ -14,14 +13,6 @@ export const volumeKeys = {
   details: () => [...volumeKeys.all, "detail"] as const,
   detail: (connId: string, nameOrId: string) => [...volumeKeys.details(), connId, nameOrId] as const,
 };
-
-export const useVolumesList = (connId: string) =>
-  useQuery({
-    queryKey: volumeKeys.list(connId),
-    queryFn: () => new VolumesAdapter().list(),
-    enabled: !!connId,
-    ...liveQueryOptions(),
-  });
 
 export const useVolume = (connId: string, nameOrId?: string) => {
   const qc = useQueryClient();
@@ -36,7 +27,6 @@ export const useVolume = (connId: string, nameOrId?: string) => {
       }
       return undefined;
     },
-    ...liveQueryOptions(),
   });
 };
 

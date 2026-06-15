@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Application } from "@/container-client/Application";
 import { type FetchImageOptions, ImagesAdapter, type PushImageOptions } from "@/container-client/adapters/images";
 import type { ContainerImage } from "@/env/Types";
-import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export type ImageSubKey = "history" | "security";
@@ -18,14 +17,6 @@ export const imageKeys = {
   detail: (connId: string, id: string) => [...imageKeys.details(), connId, id] as const,
   sub: (connId: string, id: string, sub: ImageSubKey) => [...imageKeys.detail(connId, id), sub] as const,
 };
-
-export const useImagesList = (connId: string) =>
-  useQuery({
-    queryKey: imageKeys.list(connId),
-    queryFn: () => new ImagesAdapter().list(),
-    enabled: !!connId,
-    ...liveQueryOptions(),
-  });
 
 export const useImage = (connId: string, id?: string, opts?: FetchImageOptions) => {
   const qc = useQueryClient();
@@ -40,7 +31,6 @@ export const useImage = (connId: string, id?: string, opts?: FetchImageOptions) 
       }
       return undefined;
     },
-    ...liveQueryOptions(),
   });
 };
 
