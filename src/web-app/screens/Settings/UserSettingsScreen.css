@@ -120,7 +120,7 @@
   overflow: auto;
 }
 [data-running="no"] .AppSettingsEngineManagerConnections {
-  height: calc(100vh - 520px);
+  height: calc(100vh - 544px);
 }
 .AppSettingsEngineManagerConnections [data-table="host.connections"] thead {
   position: sticky;
@@ -182,6 +182,12 @@
 .PlatformConnectionDescription {
   padding-top: 5px;
   color: #999;
+}
+.PlatformConnectionError {
+  margin: 0;
+  padding-top: 5px;
+  font-size: 11px;
+  color: #cd4246;
 }
 
 [data-connection-is-system="yes"] .PlatformConnectionName {

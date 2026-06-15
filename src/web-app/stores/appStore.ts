@@ -35,6 +35,7 @@ import { Notification } from "@/web-app/Notification";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
+import { getFirstUnavailableReason } from "@/web-app/utils/availability";
 
 export const DEFAULT_SYSTEM_CONNECTION_ID = "system-default.podman";
 
@@ -276,8 +277,14 @@ export const useAppStore = create<AppStore>()((set, get) => {
                 intent: Intent.SUCCESS,
               });
             } else {
+              const unavailable = getFirstUnavailableReason(currentConnector.availability);
               Notification.show({
-                message: t("Connection skipped - please check the settings or install the requirements"),
+                message: unavailable?.reason
+                  ? t("Connection to {{name}} failed: {{reason}}", {
+                      name: currentConnector.name,
+                      reason: unavailable.reason,
+                    })
+                  : t("Connection skipped - please check the settings or install the requirements"),
                 intent: Intent.WARNING,
               });
             }

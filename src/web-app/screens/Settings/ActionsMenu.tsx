@@ -7,6 +7,7 @@ import type { Connection } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { getFirstUnavailableReason } from "@/web-app/utils/availability";
 
 import "./ActionsMenu.css";
 
@@ -113,6 +114,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   }, [setGlobalUserSettings, connection]);
   const isCurrent = currentConnector?.connectionId === connection?.id;
   const isConnected = isCurrent && currentConnector.availability.api;
+  const unavailableReason =
+    isCurrent && !isConnected ? getFirstUnavailableReason(currentConnector.availability) : undefined;
 
   const removeWidget = connection ? (
     <ConfirmMenu
@@ -135,7 +138,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
           icon={isConnected ? IconNames.POWER : IconNames.OFFLINE}
           intent={isConnected ? Intent.SUCCESS : Intent.NONE}
           text={isConnected ? t("Disconnect") : t("Connect")}
-          title={t("Connect")}
+          title={!isConnected && unavailableReason?.reason ? unavailableReason.reason : t("Connect")}
           onClick={isConnected ? onDisconnectClick : onConnectClick}
         />
       </ButtonGroup>

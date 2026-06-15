@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The development watcher no longer deletes `preload.cjs` after the preload build completes.
 - Monaco is bundled locally instead of being loaded from a CDN.
 - Remote SSH on Linux and macOS now verifies host keys instead of disabling the check, preventing man-in-the-middle attacks.
-- Remote SSH connections no longer hang indefinitely on "Please wait": the control connection is bounded (non-interactive, with a connect timeout) and a non-default SSH port is no longer dropped. When a connection fails, the app now reports the specific cause — missing ssh client, identity file not found, key permissions too open, host unreachable, or remote engine not running — instead of failing silently with no reason. (#171, #186)
+- Remote SSH connections no longer hang indefinitely on "Please wait": the control connection is bounded (non-interactive, with a connect timeout) and a non-default SSH port is no longer dropped. When a connection fails, the app now reports the specific cause — missing ssh client, identity file not found, key permissions too open, host unreachable, or remote engine not running — instead of failing silently with no reason. The cause is shown in the Settings connection list, on the connection's Connect button and in the startup notification, naming the exact step that failed. (#171, #186)
 
 ## [5.2.16] - 2026-06-14
 
