@@ -131,8 +131,6 @@ export const createDefine = (mode) => {
     "import.meta.env.PROJECT_TITLE": JSON.stringify(pkg.title),
     "import.meta.env.PROJECT_DESCRIPTION": JSON.stringify(pkg.description),
     "import.meta.env.ONLINE_API": JSON.stringify(process.env.ONLINE_API),
-    // Features
-    "import.meta.env.FEATURE_WSL_RELAY_METHOD": JSON.stringify(process.env.FEATURE_WSL_RELAY_METHOD),
     // Bugs
     "process.env.NODE_DEBUG": JSON.stringify(false),
   };

@@ -1,3 +1,5 @@
+//go:build windows
+
 // Original source: https://github.com/containers/gvisor-tap-vsock/blob/main/pkg/sshclient/ssh_forwarder.go
 package main
 

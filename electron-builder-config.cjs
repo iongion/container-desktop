@@ -121,28 +121,6 @@ const config = {
         { "rescap:Capability": { $: { Name: "runFullTrust" } } },
       ],
     ];
-    manifest.Package.Extensions = manifest.Package.Extensions || [];
-    manifest.Package.Extensions.push({
-      "desktop2:Extension": {
-        $: {
-          Category: "windows.firewallRules",
-        },
-        "desktop2:FirewallRules": {
-          $: {
-            Executable: "app\\bin\\container-desktop-ssh-relay.exe",
-          },
-          "desktop2:Rule": {
-            $: {
-              Direction: "in",
-              Profile: "private",
-              IPProtocol: "TCP",
-              LocalPortMin: "22022",
-              LocalPortMax: "24044",
-            },
-          },
-        },
-      },
-    });
     const builder = new xml2js.Builder();
     const manifestDocument = builder.buildObject(manifest);
     fs.writeFileSync(appxPath, manifestDocument);

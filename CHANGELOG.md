@@ -22,12 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Container statistics are only polled while the container is running.
 - The container logs view shows a live status pill (LIVE / CONNECTING / ENDED / SNAPSHOT) overlaid on the terminal in place of the status bar, and coalesces streamed output per animation frame to stay smooth under heavy logging.
 - Bundled JetBrains Mono as the default monospace font for logs, terminals and data views, for consistent, readable rendering across platforms (overridable in Settings).
+- WSL connections now use a lightweight stdio relay instead of running an SSH server inside the distribution; the injected helper is integrity-checked (SHA-256) before it runs. Podman Machine and Docker Desktop still connect directly through their host pipe.
 
 ## Fixed
 
 - Container logs now decode Docker multiplexed stdout/stderr frames before writing to the terminal.
 - The development watcher no longer deletes `preload.cjs` after the preload build completes.
 - Monaco is bundled locally instead of being loaded from a CDN.
+- Remote SSH on Linux and macOS now verifies host keys instead of disabling the check, preventing man-in-the-middle attacks.
 
 ## [5.2.16] - 2026-06-14
 
