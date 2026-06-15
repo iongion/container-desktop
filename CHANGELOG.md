@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The embedded terminal no longer recreates itself on every log update, preventing flicker and duplicate output.
 - Build output is now version-scoped under `build/<version>/` with stable target filenames.
 - Trimmed unused direct dependencies and removed the dead ncc single-file post-build step; ssh-related modules continue to be bundled by the Vite/Rolldown build.
+- Resource detail and inspect views (containers, images, pods, volumes, networks, secrets) now refresh from engine events instead of a 2-second poll, and polling pauses while the window is in the background; the remaining polled views (stats, processes, machines) only refresh while visible.
+- Container statistics are only polled while the container is running.
+- The container logs view shows a live status pill (LIVE / CONNECTING / ENDED / SNAPSHOT) overlaid on the terminal in place of the status bar, and coalesces streamed output per animation frame to stay smooth under heavy logging.
 
 ## Fixed
 
