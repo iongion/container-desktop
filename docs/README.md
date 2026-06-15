@@ -14,13 +14,13 @@ The app has two pillars, and the docs are organized around them:
 
 ## Read in this order
 
-| Doc | What it covers |
-| --- | --- |
-| [architecture/overview.md](architecture/overview.md) | The whole system at a glance — C4 **Context** (L1) + **Containers** (L2). Start here. |
-| [architecture/backend.md](architecture/backend.md) | Engine/connection support — C4 **Components** (L3): the Dialect × Transport × Profile composition. |
-| [architecture/frontend.md](architecture/frontend.md) | React renderer — C4 **Components** (L3): stores, queries, screens, the Native bridge. |
+| Doc                                                                      | What it covers                                                                                           |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| [architecture/backend.md](architecture/backend.md)                       | Engine/connection support — C4 **Components** (L3): the Dialect × Transport × Profile composition.       |
 | [architecture/connection-startup.md](architecture/connection-startup.md) | ★ The most intricate flow: establishing a connection to an engine at startup. Sequence + state diagrams. |
-| [architecture/engine-matrix.md](architecture/engine-matrix.md) | The engine × host × transport × scope support matrix and how a connection resolves. |
+| [architecture/engine-matrix.md](architecture/engine-matrix.md)           | The engine × host × transport × scope support matrix and how a connection resolves.                      |
+| [architecture/frontend.md](architecture/frontend.md)                     | React renderer — C4 **Components** (L3): stores, queries, screens, the Native bridge.                    |
+| [architecture/overview.md](architecture/overview.md)                     | The whole system at a glance — C4 **Context** (L1) + **Containers** (L2). Start here.                    |
 
 ## How to read the diagrams
 
@@ -28,15 +28,15 @@ Diagrams are [Mermaid](https://mermaid.js.org/) embedded in the markdown — Git
 renders them inline, no tooling required. They follow the
 [C4 model](https://c4model.com/): four zoom levels, of which we use three.
 
-| C4 level | Question it answers | Where |
-| --- | --- | --- |
-| **L1 Context** | What is the system, who uses it, what does it talk to? | overview |
-| **L2 Container** | What runnable pieces (processes/worlds) make it up? | overview |
+| C4 level         | Question it answers                                                   | Where             |
+| ---------------- | --------------------------------------------------------------------- | ----------------- |
+| **L1 Context**   | What is the system, who uses it, what does it talk to?                | overview          |
+| **L2 Container** | What runnable pieces (processes/worlds) make it up?                   | overview          |
 | **L3 Component** | What are the major parts inside a piece, and how do they collaborate? | backend, frontend |
-| L4 Code | (omitted — read the source via the per-doc *source map* tables) | — |
+| L4 Code          | (omitted — read the source via the per-doc _source map_ tables)       | —                 |
 
-> **Naming clash, read carefully:** in C4 a **"container"** means a *runnable
-> unit* (a process / deployable), **not** an OS/Linux container. This app manages
+> **Naming clash, read carefully:** in C4 a **"container"** means a _runnable
+> unit_ (a process / deployable), **not** an OS/Linux container. This app manages
 > OS containers, so to avoid confusion the docs say **"process"** or **"world"**
 > for the C4 sense and reserve "container" for the Podman/Docker kind.
 
