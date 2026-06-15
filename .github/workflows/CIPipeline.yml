@@ -1,0 +1,85 @@
+name: CIPipeline
+
+# Continuous-integration gate (companion to CDPipeline.yml, which builds/packages releases).
+# The release pipeline runs no checks, so this guards every PR and push to main with the full
+# verification set: type-check, lint, unit tests and a production build, plus the Go relay and
+# Python tooling suites.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.6.11"
+
+jobs:
+  app:
+    name: App — types, lint, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Use Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: ".nvmrc"
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --production=false
+      - name: Type-check
+        run: yarn check-types
+      - name: Lint (biome check, no writes)
+        run: yarn lint:check
+      - name: Unit tests (hermetic; live suite excluded by config)
+        run: yarn test:run
+      - name: Production build
+        # ENVIRONMENT=production exercises the packaged single-file layout (CLAUDE.md). A plain
+        # `yarn build` defaults to development and would give false confidence.
+        run: ENVIRONMENT=production yarn build
+
+  relay:
+    name: Relay (Go, ${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # windows-latest is REQUIRED: every relay SSH file is `//go:build windows`, so an Ubuntu-only
+        # `go test` never compiles the code paths the remote-SSH bugs (#171) live in.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: support/container-desktop-relay
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Use Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: support/container-desktop-relay/go.mod
+      - name: Test
+        run: go test ./...
+
+  tooling:
+    name: Tooling (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Use Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version-file: ".python-version"
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${{ env.UV_VERSION }}"
+      - name: Sync dev deps
+        run: uv sync --locked --dev --no-install-project
+      - name: Ruff (no fixes)
+        run: uv run --locked ruff check tasks.py ./support ./tests
+      - name: Pytest
+        run: uv run --locked pytest

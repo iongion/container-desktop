@@ -90,12 +90,6 @@ export function createConnectorSettings({
       settings.controller.version = overrides.controller.version || settings.controller.version;
       settings.controller.scope = overrides.controller.scope || settings.controller.scope;
     }
-    settings.controller = {
-      name: controllerName,
-      path: "",
-      version: "",
-      scope: "",
-    };
   }
   return settings;
 }

@@ -29,6 +29,8 @@
 
     /* Paths (baseUrl removed in TS 6; paths resolve relative to this file) */
     "paths": {
+      "@/__tests__": ["./src/__tests__"],
+      "@/__tests__/*": ["./src/__tests__/*"],
       "@/container-client": ["./src/container-client"],
       "@/container-client/*": ["./src/container-client/*"],
       "@/electron-shell": ["./src/electron-shell"],
