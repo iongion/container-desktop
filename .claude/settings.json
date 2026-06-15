@@ -1,6 +1,17 @@
 {
   "permissions": {
-    "allow": ["Read(**)", "Write(**)", "Edit(**)", "Read(//tmp/**)", "WebFetch(*)", "Skill(*)", "mcp__*", "Bash(*)"],
+    "allow": [
+      "Read(**)",
+      "Bash(yarn dev:*)",
+      "Bash(yarn check-types:*)",
+      "Bash(yarn lint:*)",
+      "Bash(yarn lint:check:*)",
+      "Bash(yarn build:*)",
+      "Bash(yarn test:run:*)",
+      "Bash(curl -s http://localhost:9222/json:*)",
+      "Bash(curl -s http://localhost:9222/json/version:*)",
+      "Bash(pgrep:*)"
+    ],
     "additionalDirectories": ["/tmp"]
   },
   "enableAllProjectMcpServers": true,
