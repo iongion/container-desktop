@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { type CreateNetworkOptions, NetworksAdapter } from "@/container-client/adapters/networks";
 import type { Network } from "@/env/Types";
-import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const networkKeys = {
@@ -14,14 +13,6 @@ export const networkKeys = {
   details: () => [...networkKeys.all, "detail"] as const,
   detail: (connId: string, name: string) => [...networkKeys.details(), connId, name] as const,
 };
-
-export const useNetworksList = (connId: string) =>
-  useQuery({
-    queryKey: networkKeys.list(connId),
-    queryFn: () => new NetworksAdapter().list(),
-    enabled: !!connId,
-    ...liveQueryOptions(),
-  });
 
 export const useNetwork = (connId: string, name?: string) => {
   const qc = useQueryClient();
@@ -36,7 +27,6 @@ export const useNetwork = (connId: string, name?: string) => {
       }
       return undefined;
     },
-    ...liveQueryOptions(),
   });
 };
 

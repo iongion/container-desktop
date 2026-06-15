@@ -8,6 +8,8 @@ import { Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useRef } from "react";
 
+import { createWriteBuffer } from "./terminalWriteBuffer";
+
 import "@xterm/xterm/css/xterm.css";
 
 import "./Terminal.css";
@@ -25,6 +27,7 @@ export interface TerminalProps {
   value?: string | Uint8Array;
   writeMode?: TerminalWriteMode;
   onReady?: (handle: TerminalHandle) => void;
+  overlay?: React.ReactNode;
 }
 
 function toTerminalData(value: string | Uint8Array): string {
@@ -34,7 +37,7 @@ function toTerminalData(value: string | Uint8Array): string {
   return new TextDecoder().decode(value);
 }
 
-export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append", onReady }: TerminalProps) => {
+export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append", onReady, overlay }: TerminalProps) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement | null>(null);
   const term = useRef<XTermTerminal | null>(null);
@@ -92,17 +95,20 @@ export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append",
     terminal.writeln("If they exist, logs will be displayed shortly");
     term.current = terminal;
     fit.current = fitAddon;
+    const writeBuffer = createWriteBuffer((chunk) => terminal.write(chunk));
     readyCallback.current?.({
       clear: () => {
+        writeBuffer.reset();
         terminal.clear();
         lastValue.current = "";
       },
       fit: () => fitAddon.fit(),
       getTerminal: () => terminal,
-      write: (data) => terminal.write(data as any),
+      write: (data) => writeBuffer.push(toTerminalData(data)),
     });
 
     return () => {
+      writeBuffer.dispose();
       terminal.dispose();
       term.current = null;
       fit.current = null;
@@ -148,6 +154,7 @@ export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append",
           <div className="TerminalViewContent"></div>
         </ResizeSensor>
       </div>
+      {overlay}
     </div>
   );
 };

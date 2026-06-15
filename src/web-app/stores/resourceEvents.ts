@@ -7,6 +7,7 @@ import { getActiveHostClient } from "@/container-client/adapters/shared";
 import { VolumesAdapter } from "@/container-client/adapters/volumes";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { createLogger } from "@/logger";
+import { queryClient } from "@/web-app/domain/queryClient";
 import {
   RESOURCE_DOMAINS,
   type ResourceDomain,
@@ -177,6 +178,10 @@ export class ResourceEventManager {
     try {
       const items = await this.loadDomain(host, domain);
       useResourceStore.getState().setSnapshot(connectionId, domain, items);
+      // Bridge: engine events (and mutations) that refresh the store also invalidate the
+      // TanStack cache for this domain, so open detail/inspect screens refetch on real
+      // events instead of blind polling. Partial-match key = [domain] root.
+      queryClient.invalidateQueries({ queryKey: [domain] });
     } catch (error: any) {
       logger.warn("Unable to refresh resource snapshot", { connectionId, domain, error });
       useResourceStore.getState().setStatus(connectionId, domain, {

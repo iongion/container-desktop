@@ -3,6 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { isContainerRunning } from "@/container-client/adapters/containers";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -22,8 +23,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const connectionId = useAppStore((state) => state.currentConnector?.id || "");
   const decodedId = decodeURIComponent(id || "");
   const containerQuery = useContainer(connectionId, decodedId);
-  const statsQuery = useContainerStats(connectionId, decodedId);
   const container = containerQuery.data;
+  const running = isContainerRunning(container);
+  const statsQuery = useContainerStats(connectionId, decodedId, running);
   const stats = statsQuery.data || container?.Stats;
   const pending =
     containerQuery.isLoading || containerQuery.isFetching || statsQuery.isLoading || statsQuery.isFetching;

@@ -20,14 +20,6 @@ export const podKeys = {
   sub: (connId: string, id: string, sub: PodSubKey) => [...podKeys.detail(connId, id), sub] as const,
 };
 
-export const usePodsList = (connId: string) =>
-  useQuery({
-    queryKey: podKeys.list(connId),
-    queryFn: () => new PodsAdapter().list(),
-    enabled: !!connId,
-    ...liveQueryOptions(),
-  });
-
 export const usePod = (connId: string, id?: string) => {
   const qc = useQueryClient();
   return useQuery({
@@ -41,7 +33,6 @@ export const usePod = (connId: string, id?: string) => {
       }
       return undefined;
     },
-    ...liveQueryOptions(),
   });
 };
 
