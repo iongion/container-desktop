@@ -11,8 +11,6 @@ interface ImportMetaEnv {
   readonly ONLINE_API: string;
   readonly HOST: string;
   readonly PORT: string;
-  // Features
-  readonly FEATURE_WSL_RELAY_METHOD: string;
   readonly VITE_DEV_SERVER_URL: string;
 }
 

@@ -4,20 +4,20 @@ import {
   spawn,
   spawnSync,
 } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
-import portfinder from "portfinder";
 import { getApiConfig } from "@/container-client/Api.clients";
 import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/container-client/services";
 import {
   type ApiDriverConfig,
   type CommandExecutionResult,
   type Connection,
-  ContainerEngine,
   ContainerEngineHost,
   type EngineConnectorSettings,
   OperatingSystem,
@@ -33,8 +33,7 @@ const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
 const DEFAULT_RETRIES_COUNT = 10;
 
-const PROGRAM_SOCAT_RELAY = "container-desktop-wsl-relay-socat";
-const PROGRAM_SSHD_RELAY = "container-desktop-ssh-relay-sshd";
+const PROGRAM_WSL_RELAY = "container-desktop-relay";
 const PROGRAM_SSH_RELAY = "container-desktop-ssh-relay.exe";
 
 // Servers
@@ -47,12 +46,6 @@ async function getWSLDistributionEnvironmentVariable(distribution: string, varia
     variable,
   ]);
   const wslUser = wslCommandOutput.stdout.toString().trim();
-  return wslUser;
-}
-
-async function getWSLDistributionUsername(distribution: string) {
-  const wslUserOutput = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "whoami"]);
-  const wslUser = wslUserOutput.stdout.toString().trim();
   return wslUser;
 }
 
@@ -82,77 +75,52 @@ async function convertWindowsPathToWSLPath(distribution: string, windowsPath: st
   return wslPath;
 }
 
+// sha256OfFile returns the lowercase hex SHA-256 of a (Windows-side) file, or ""
+// if it cannot be read - used to verify the relay bridge copied into the distro.
+async function sha256OfFile(filePath: string): Promise<string> {
+  try {
+    return createHash("sha256")
+      .update(await readFile(filePath))
+      .digest("hex");
+  } catch (error: any) {
+    logger.warn("Unable to hash relay program", filePath, error?.message);
+    return "";
+  }
+}
+
+// wslFileHasSha256 checks a file inside the distribution against an expected hash
+// using coreutils `sha256sum` (always present).
+async function wslFileHasSha256(distribution: string, wslPath: string, expectedHash: string): Promise<boolean> {
+  if (!expectedHash) {
+    return false;
+  }
+  try {
+    const out = await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "sha256sum", wslPath]);
+    const actual = `${out.stdout}`
+      .trim()
+      .toLowerCase()
+      .match(/^[a-f0-9]{64}/)?.[0];
+    return actual === expectedHash;
+  } catch {
+    return false;
+  }
+}
+
 async function ensureRelayProgramExistsInWSLDistribution(distribution: string, dstWSLPath: string, srcWinPath: string) {
   const baseDirectory = await Path.dirname(dstWSLPath);
   const srcWSLPath = await convertWindowsPathToWSLPath(distribution, srcWinPath);
+  const expectedHash = await sha256OfFile(srcWinPath);
   await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "mkdir", "-p", baseDirectory]);
-  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "cp", "-u", srcWSLPath, dstWSLPath]);
-  await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "chmod", "+x", dstWSLPath]);
+  // Copy only when the destination is missing or doesn't match the bundled binary
+  // (self-healing across upgrades), then verify integrity before it is ever executed.
+  if (!(await wslFileHasSha256(distribution, dstWSLPath, expectedHash))) {
+    await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "cp", srcWSLPath, dstWSLPath]);
+    await Command.Execute("wsl.exe", ["--distribution", distribution, "--exec", "chmod", "+x", dstWSLPath]);
+    if (expectedHash && !(await wslFileHasSha256(distribution, dstWSLPath, expectedHash))) {
+      throw new Error(`Relay program integrity verification failed for ${dstWSLPath}`);
+    }
+  }
   return dstWSLPath;
-}
-
-export async function waitForApi({
-  ping,
-  pipeFullPath,
-  tcpAddress,
-  timeout,
-  onStart,
-  abort,
-}: {
-  ping: boolean | undefined;
-  pipeFullPath: string;
-  tcpAddress: string;
-  timeout: number;
-  abort: AbortController;
-  onStart?: () => void;
-}): Promise<{ started: boolean; socketPath: string; tcpAddress: string }> {
-  let retries = DEFAULT_RETRIES_COUNT;
-  let isChecking = false;
-  const opts = { socketPath: pipeFullPath };
-  const driver = createNodeJSApiDriver(opts);
-  return await new Promise((resolve) => {
-    const iid = setInterval(() => {
-      if (isChecking) {
-        return;
-      }
-      isChecking = true;
-      retries -= 1;
-      if (retries <= 0) {
-        logger.warn("API check retries exhausted", { retries });
-        clearInterval(iid);
-        isChecking = false;
-        resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
-      } else {
-        if (ping && !abort.signal.aborted) {
-          driver
-            .get("/_ping", { signal: abort.signal })
-            .then((response) => {
-              if (response.data === "OK") {
-                clearInterval(iid);
-                isChecking = false;
-                onStart?.();
-                resolve({
-                  started: true,
-                  socketPath: pipeFullPath,
-                  tcpAddress,
-                });
-              } else {
-                isChecking = false;
-              }
-            })
-            .catch((error) => {
-              isChecking = false;
-              logger.error("Ping response failed", { retries }, error);
-            });
-        } else {
-          clearInterval(iid);
-          isChecking = false;
-          onStart?.();
-          resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
-        }
-      }
-    }, timeout);
-  });
 }
 
 export function killProcess(proc: ChildProcessWithoutNullStreams, signal?: NodeJS.Signals | number) {
@@ -201,7 +169,6 @@ export class WSLRelayServer {
   protected relayProcesses: { [key: string]: ChildProcessWithoutNullStreams } = {};
 
   protected socketPath?: string;
-  protected tcpAddress?: string;
   protected logLevel = "debug";
 
   constructor(opts: { logLevel: string }) {
@@ -218,14 +185,12 @@ export class WSLRelayServer {
       unixSocketPath,
       maxRespawnRetries,
       abort,
-      ping,
     }: {
       pipePath: string;
       distribution: string;
       unixSocketPath: string;
       maxRespawnRetries: number;
       abort: AbortController;
-      ping?: boolean;
     },
     // handlers
     onStart?: (server: WSLRelayServer, started: boolean) => void,
@@ -234,113 +199,48 @@ export class WSLRelayServer {
   ): Promise<{
     started: boolean;
     socketPath?: string;
-    tcpAddress?: string;
   }> => {
     let pipeFullPath = "";
-    let tcpAddress = "";
     if (this.isListening) {
       logger.debug("Named pipe server already started");
       return Promise.resolve({
         started: true,
         socketPath: this.socketPath,
-        tcpAddress: this.tcpAddress,
       });
     }
     distribution = distribution || "Ubuntu"; // Default to Ubuntu
     let wslAppHome = "";
-    let bundleWindowsSocatRelayProgramPath = "";
-    let bundleWindowsSSHRelayProgramPath = "";
-    let bundleWindowsSSHServerRelayProgramPath = "";
-    // Runtime wsl program paths
-    let wslSocatRelayProgramPath = "";
-    let wslSSHServerRelayProgramPath = "";
+    let bundleWindowsRelayProgramPath = "";
+    let wslRelayProgramPath = "";
     let args: string[] = [];
-    const relayMethod: string = import.meta.env.FEATURE_WSL_RELAY_METHOD;
     try {
       wslAppHome = await getWSLDistributionApplicationDataDir(distribution);
-      // Bundle Windows paths
-      bundleWindowsSSHRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSH_RELAY); // Windows binary
-      bundleWindowsSocatRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SOCAT_RELAY); // Linux binary
-      bundleWindowsSSHServerRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSHD_RELAY); // Linux binary
-      // Runtime WSL paths
-      wslSocatRelayProgramPath = `${wslAppHome}/bin/${PROGRAM_SOCAT_RELAY}`;
-      wslSSHServerRelayProgramPath = `${wslAppHome}/bin/${PROGRAM_SSHD_RELAY}`;
+      bundleWindowsRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_WSL_RELAY);
+      // Version-scope the in-distro path so an upgraded app never reuses a stale binary.
+      const relayVersion = import.meta.env.PROJECT_VERSION || "current";
+      wslRelayProgramPath = `${wslAppHome}/bin/${relayVersion}/${PROGRAM_WSL_RELAY}`;
       maxRespawnRetries = maxRespawnRetries || 5;
-      switch (relayMethod) {
-        case "sshd":
-          {
-            await ensureRelayProgramExistsInWSLDistribution(
-              distribution,
-              wslSSHServerRelayProgramPath,
-              bundleWindowsSSHServerRelayProgramPath,
-            );
-            pipeFullPath = pipePath;
-            this.socketPath = pipeFullPath;
-            this.tcpAddress = undefined;
-          }
-          break;
-        case "socat":
-          {
-            await ensureRelayProgramExistsInWSLDistribution(
-              distribution,
-              wslSocatRelayProgramPath,
-              bundleWindowsSocatRelayProgramPath,
-            );
-            pipeFullPath = pipePath;
-            args = [
-              // relay
-              "--distribution",
-              distribution,
-              "--exec",
-              wslSocatRelayProgramPath,
-              "-v",
-              "-d",
-              "-d",
-              "-d",
-              `UNIX-CONNECT:${unixSocketPath},retry,forever`,
-              "STDIO",
-            ];
-            this.socketPath = pipeFullPath;
-            this.tcpAddress = undefined;
-          }
-          break;
-        case "socat-tcp":
-          {
-            await ensureRelayProgramExistsInWSLDistribution(
-              distribution,
-              wslSocatRelayProgramPath,
-              bundleWindowsSocatRelayProgramPath,
-            );
-            const host = "127.0.0.1";
-            const port = await getFreeTCPPort();
-            tcpAddress = `http://${host}:${port}`;
-            args = [
-              // relay
-              "--distribution",
-              distribution,
-              "--exec",
-              wslSocatRelayProgramPath,
-              "-v",
-              "-d",
-              "-d",
-              "-d",
-              `TCP4-LISTEN:${port},reuseaddr,fork,bind=127.0.0.1`,
-              `UNIX-CONNECT:${unixSocketPath},retry,forever`,
-            ];
-            this.socketPath = undefined;
-            this.tcpAddress = tcpAddress;
-          }
-          break;
-        default:
-          break;
-      }
+      // Ensure the relay bridge exists inside the distribution, then relay the engine's unix
+      // socket over wsl.exe stdio (named pipe <-> stdio <-> unix socket; no listener, no SSH, no keys).
+      await ensureRelayProgramExistsInWSLDistribution(distribution, wslRelayProgramPath, bundleWindowsRelayProgramPath);
+      pipeFullPath = pipePath;
+      args = [
+        "--distribution",
+        distribution,
+        "--exec",
+        wslRelayProgramPath,
+        "--mode",
+        "bridge",
+        "--socket",
+        unixSocketPath,
+      ];
+      this.socketPath = pipeFullPath;
     } catch (error: any) {
-      logger.error("Error getting WSL relay program path", error.message);
+      logger.error("Error ensuring WSL relay program", error.message);
       onError?.(this, error);
       return Promise.resolve({
         started: false,
         socketPath: pipeFullPath,
-        tcpAddress,
       });
     }
     let serverResolved = false;
@@ -392,117 +292,7 @@ export class WSLRelayServer {
         });
       });
     };
-    // Start the SSH relay process
-    if (relayMethod === "sshd") {
-      this.isListening = true;
-      const relay_guid = crypto.randomUUID();
-      const windowsIdentityPath = await Path.join(await Platform.getUserDataPath(), "id_rsa");
-      let connectionString = "";
-      let sshServerAddress = "";
-      try {
-        const wslUser = await getWSLDistributionUsername(distribution);
-        const wslRelayHost = "localhost";
-        const wslRelayPort = await getFreeTCPPort();
-        sshServerAddress = `${wslRelayHost}:${wslRelayPort}`;
-        connectionString = `ssh://${wslUser}@${sshServerAddress}${unixSocketPath}`;
-        // Spawn a windows named pipe to ssh tunnel relay process
-        const relayNamedPipeSSHTunnelServerProcess = await spawnRelayProcess(
-          bundleWindowsSSHRelayProgramPath,
-          [
-            // SSHD arguments
-            "--named-pipe",
-            `npipe://${pipePath.replaceAll("\\", "/")}`,
-            "--ssh-connection",
-            connectionString,
-            "--ssh-timeout",
-            "15",
-            "--identity-path",
-            windowsIdentityPath,
-            // Relay arguments
-            "--distribution",
-            distribution,
-            "--relay-program-path",
-            wslSSHServerRelayProgramPath,
-            "--watch-process-termination",
-            "--generate-key-pair",
-            "--host",
-            wslRelayHost,
-            "--port",
-            `${wslRelayPort}`,
-          ],
-          {
-            onClose: (_, code) => {
-              this.isStarted = false;
-              this.isListening = false;
-              logger.debug(relay_guid, "Relay process closed", code);
-              onStop?.(this, true);
-            },
-          },
-        );
-        this.relayProcesses[relay_guid] = relayNamedPipeSSHTunnelServerProcess;
-      } catch (error: any) {
-        this.isStarted = false;
-        this.isListening = false;
-        logger.error(relay_guid, "Error starting relay process", error);
-        onError?.(this, error);
-        return Promise.resolve({
-          started: false,
-          socketPath: pipeFullPath,
-          tcpAddress: "",
-        });
-      }
-      this.isStarted = true;
-      this.isListening = true;
-      return await waitForApi({
-        ping,
-        pipeFullPath,
-        tcpAddress,
-        onStart: () => {
-          onStart?.(this, true);
-        },
-        timeout: 3000,
-        abort,
-      });
-    }
-    // Start the TCP relay process
-    if (relayMethod === "socat-tcp") {
-      this.isListening = true;
-      const guid = crypto.randomUUID();
-      try {
-        const relayProcess = await spawnRelayProcess("wsl.exe", args, {
-          onClose: (_, code) => {
-            this.isStarted = false;
-            this.isListening = false;
-            logger.debug(guid, "Relay process closed", code);
-            onStop?.(this, true);
-          },
-        });
-        this.relayProcesses[guid] = relayProcess;
-        this.isStarted = true;
-        this.isListening = true;
-        return await waitForApi({
-          ping,
-          pipeFullPath,
-          tcpAddress,
-          timeout: 250,
-          onStart: () => {
-            onStart?.(this, true);
-          },
-          abort,
-        });
-      } catch (error: any) {
-        this.isStarted = false;
-        this.isListening = false;
-        logger.error(guid, "Error starting relay process", error);
-        onError?.(this, error);
-        return Promise.resolve({
-          started: false,
-          socketPath: pipeFullPath,
-          tcpAddress,
-        });
-      }
-    }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       logger.debug(
         `Creating named pipe server listening on ${pipeFullPath}, relaying to Unix socket ${unixSocketPath} in WSL distribution ${distribution}`,
       );
@@ -578,7 +368,7 @@ export class WSLRelayServer {
         onError?.(this, err);
         if (!serverResolved) {
           serverResolved = true;
-          resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+          resolve({ started: false, socketPath: pipeFullPath });
         }
       });
       server.on("close", () => {
@@ -588,7 +378,7 @@ export class WSLRelayServer {
         onStop?.(this, true);
         if (!serverResolved) {
           serverResolved = true;
-          resolve({ started: false, socketPath: pipeFullPath, tcpAddress });
+          resolve({ started: false, socketPath: pipeFullPath });
         }
       });
       // Start the named pipe server
@@ -599,7 +389,7 @@ export class WSLRelayServer {
         onStart?.(this, true);
         if (!serverResolved) {
           serverResolved = true;
-          resolve({ started: true, socketPath: pipeFullPath, tcpAddress });
+          resolve({ started: true, socketPath: pipeFullPath });
         }
       });
       this.server = server;
@@ -648,18 +438,6 @@ export function withWSLRelayServer(
 
 export interface WrapperOpts extends SpawnOptionsWithoutStdio {
   wrapper: Wrapper;
-}
-
-// locals
-export async function getFreeTCPPort() {
-  const minPort = 22022;
-  try {
-    const port = await portfinder.getPortPromise({ port: minPort, startPort: minPort, stopPort: 24044 });
-    return port;
-  } catch (error: any) {
-    logger.error("Error getting free TCP port", error);
-  }
-  return minPort;
 }
 
 export function createNodeJSApiDriver(config: AxiosRequestConfig) {
@@ -743,13 +521,12 @@ export async function proxyRequestToWSLDistribution(
           console.error("Named pipe path not set for current connection", connection);
           throw new Error("Named pipe path not set for current connection");
         }
-        const { started, socketPath, tcpAddress } = await server.start(
+        const { started, socketPath } = await server.start(
           {
             pipePath,
             distribution: connection.settings.controller?.scope || "Ubuntu",
             unixSocketPath: `${connection.settings.api.connection.relay}`.replace("unix://", ""),
             maxRespawnRetries: 5,
-            ping: connection.engine === ContainerEngine.DOCKER,
             abort,
           },
           (_, started) => {
@@ -772,11 +549,10 @@ export async function proxyRequestToWSLDistribution(
           try {
             request.headers = deepMerge({}, config.headers || {}, request.headers || {});
             request.timeout = request.timeout || config.timeout || 1000;
-            request.baseURL = tcpAddress || request.baseURL || "http://d";
+            request.baseURL = request.baseURL || "http://d";
             request.socketPath = socketPath;
             logger.debug(">> WSL Relay request", request, {
               socketPath,
-              tcpAddress,
             });
             const driver = await createNodeJSApiDriver(request);
             const response = await driver.request(request);

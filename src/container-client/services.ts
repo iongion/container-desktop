@@ -53,8 +53,7 @@ export class SSHClient implements ISSHClient {
     this.params = params;
     const output = await Command.Execute(this.cli, [
       // SSH connection options
-      "-oStrictHostKeyChecking=no",
-      "-oUserKnownHostsFile=/dev/null",
+      "-oStrictHostKeyChecking=accept-new",
       "-i",
       params.privateKeyPath,
       `${params.username}@${params.host}`,
@@ -78,8 +77,7 @@ export class SSHClient implements ISSHClient {
   async execute(command: string[]) {
     const output = await Command.Execute(this.cli, [
       // SSH connection options
-      "-oStrictHostKeyChecking=no",
-      "-oUserKnownHostsFile=/dev/null",
+      "-oStrictHostKeyChecking=accept-new",
       "-i",
       this.params.privateKeyPath,
       `${this.params.username}@${this.params.host}`,
@@ -98,8 +96,7 @@ export class SSHClient implements ISSHClient {
     const sshConnection = `${this.params.username}@${this.params.host}:${this.params.port || 22}`;
     let spawnCLI = this.cli;
     let spawnArgs = [
-      "-oStrictHostKeyChecking=no",
-      "-oUserKnownHostsFile=/dev/null",
+      "-oStrictHostKeyChecking=accept-new",
       "-i",
       this.params.privateKeyPath,
       "-NL",
