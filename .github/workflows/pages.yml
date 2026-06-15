@@ -3,13 +3,13 @@ name: Deploy website to GitHub Pages
 # Publishes the static site in website/ to GitHub Pages via GitHub Actions
 # (replaces the classic "deploy from branch /docs" source so the folder can be
 # named freely). The custom domain is preserved through website/CNAME.
+#
+# Pages deploys ONLY as part of a release: CDPipeline.yml's publish-pages job runs
+# this content after the release assets are published. There is intentionally no
+# push trigger, so merging website/doc changes to main does not deploy on its own
+# — cut a release, or run this workflow manually below, to publish them.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "website/**"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:

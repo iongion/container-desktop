@@ -1,9 +1,10 @@
 PROJECT_ROOT:=$(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TEMP_DIR:=$(PROJECT_ROOT)/temp
+RELAY_DIR:=$(PROJECT_ROOT)/support/container-desktop-relay
 UV_VERSION:=0.6.11
 
 
-.PHONY: clean prepare-python prepare-node prepare check format build-website
+.PHONY: clean prepare-python prepare-node prepare check format build-website test test-app test-relay test-tooling
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -45,3 +46,31 @@ build-website:
 	@echo "Building the website (website-src -> website)"
 	rm -fr website
 	yarn build:website
+
+# Run the same verification set as CIPipeline.yml, locally. Mirrors its three jobs:
+# app (types/lint/tests/build), relay (Go) and tooling (Python). Run `make prepare`
+# first if dependencies are not installed. The Go relay job also runs on Windows in
+# CI (the SSH paths are //go:build windows) — that half can only be covered there.
+test: test-app test-relay test-tooling
+	@echo "All CI checks passed locally"
+
+test-app:
+	@echo "App — type-check, lint, unit tests, production build (like CIPipeline)"
+	@# nvm is a shell function — source it (as prepare-node does) so the .nvmrc node is used.
+	@if [ -s "$$NVM_DIR/nvm.sh" ]; then \
+		. "$$NVM_DIR/nvm.sh"; \
+		nvm use || nvm install; \
+	fi; \
+	yarn check-types && \
+	yarn lint:check && \
+	yarn test:run && \
+	ENVIRONMENT=production yarn build
+
+test-relay:
+	@echo "Relay — go test ./... (like CIPipeline)"
+	cd "$(RELAY_DIR)" && go test ./...
+
+test-tooling:
+	@echo "Tooling — ruff check (no fixes) + pytest (like CIPipeline)"
+	uv run --locked ruff check tasks.py ./support ./tests
+	uv run --locked pytest

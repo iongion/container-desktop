@@ -9,6 +9,7 @@ const xml2js = require("xml2js");
 // pkg
 const pkg = require("./package.json");
 const { linuxArtifactName, macArtifactName, winArtifactName } = require("./support/release-artifacts.cjs");
+const { electronBuilderTargets } = require("./support/build-matrix.cjs");
 // module
 const version = pkg.version;
 const semverVersion = semver.parse(version);
@@ -22,10 +23,11 @@ const electronBuilderExtMacro = ["$", "{ext}"].join("");
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 const PROJECT_HOME = path.resolve(__dirname);
 
-// Package formats to emit. Default builds native packages plus portable archives:
-// Linux: tar.gz + deb + rpm + AppImage + pacman; macOS: dmg + tar.gz; Windows: appx + nsis (.exe) + zip.
-// Set PACKAGE_FORMATS=tgz to force portable .tgz tarballs on macOS/Windows.
-// Linux always emits tar.gz + deb + rpm + AppImage + pacman.
+// Package formats to emit come from support/build-matrix.cjs — the single source
+// of truth shared with the website's download page, so the two never drift.
+// Default: Linux tar.gz + deb + rpm + AppImage + pacman; macOS dmg + tar.gz;
+// Windows appx + nsis (.exe) + zip. Set PACKAGE_FORMATS=tgz to force portable
+// .tgz tarballs on macOS/Windows (Linux always emits its full set).
 // flatpak is intentionally omitted until Flathub is set up properly — a .flatpak
 // for a container manager needs sandbox / flatpak-spawn --host work to reach the
 // host Podman/Docker, and Flathub builds from a manifest, not a prebuilt bundle.
@@ -85,7 +87,7 @@ const config = {
     artifactName: macArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
     category: "public.app-category.developer-tools",
     icon: "icons/appIcon.icns",
-    target: tgzOnly ? "tar.gz" : ["dmg", "tar.gz"],
+    target: tgzOnly ? "tar.gz" : electronBuilderTargets("mac"),
     type: "development",
     entitlements: "entitlements.mac.plist",
     entitlementsInherit: "entitlements.mac.inherit.plist",
@@ -104,7 +106,7 @@ const config = {
     shortcutName: displayName,
   },
   win: {
-    target: tgzOnly ? ["tar.gz"] : ["appx", "nsis", "zip"],
+    target: tgzOnly ? ["tar.gz"] : electronBuilderTargets("win"),
     // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
     icon: "icons/icon.ico",
@@ -145,7 +147,7 @@ const config = {
     syncDesktopName: true,
     maintainer: publisher,
     icon: "icons/appIcon.icns",
-    target: ["tar.gz", "deb", "rpm", "AppImage", "pacman"],
+    target: electronBuilderTargets("linux"),
     category: "Development;System;Utility",
     desktop: {
       entry: displayName,
