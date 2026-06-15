@@ -1,12 +1,10 @@
 import EventEmitter from "eventemitter3";
 import { type CommandExecutionResult, OperatingSystem, type SpawnedProcess } from "@/env/Types";
+import { runSSHPreflight } from "./diagnostics/ssh-preflight";
+import { buildSSHArgs, SSH_CONNECT_TIMEOUT_SECONDS, type SSHClientConnection } from "./ssh-args";
 
-export interface SSHClientConnection {
-  host: string;
-  port: number;
-  username: string;
-  privateKeyPath: string;
-}
+// Re-exported so existing importers (and tests) keep resolving these from "@/container-client/services".
+export { buildSSHArgs, SSH_CONNECT_TIMEOUT_SECONDS, type SSHClientConnection };
 
 export interface ISSHClient {
   isConnected: () => boolean;
@@ -51,40 +49,23 @@ export class SSHClient implements ISSHClient {
   }
   async connect(params: SSHClientConnection) {
     this.params = params;
-    const output = await Command.Execute(this.cli, [
-      // SSH connection options
-      "-oStrictHostKeyChecking=accept-new",
-      "-i",
-      params.privateKeyPath,
-      `${params.username}@${params.host}`,
-      "--",
-      "echo",
-      "SSH connection established",
-    ]);
-    if (output.success) {
-      if (output.stdout.trim() === "SSH connection established") {
-        this.connected = true;
-        this.em.emit("connection.established");
-      } else {
-        this.connected = false;
-        this.em.emit("error", output);
-      }
-    } else {
-      this.connected = false;
-      this.em.emit("error", output);
+    const output = await Command.Execute(this.cli, buildSSHArgs(params, ["echo", "SSH connection established"]));
+    if (output.success && output.stdout.trim() === "SSH connection established") {
+      this.connected = true;
+      this.em.emit("connection.established");
+      return;
     }
+    // The probe failed. Diagnose WHY so the UI can show an actionable reason instead of raw output
+    // (#186 "no connection, no reason"); the preflight is itself bounded, so this can't hang (#171).
+    this.connected = false;
+    const report = await runSSHPreflight(
+      { hostName: params.host, port: params.port, user: params.username, identityFile: params.privateKeyPath },
+      { osType: this.osType },
+    );
+    this.em.emit("error", { output, report });
   }
   async execute(command: string[]) {
-    const output = await Command.Execute(this.cli, [
-      // SSH connection options
-      "-oStrictHostKeyChecking=accept-new",
-      "-i",
-      this.params.privateKeyPath,
-      `${this.params.username}@${this.params.host}`,
-      "--",
-      ...command,
-    ]);
-    return output;
+    return await Command.Execute(this.cli, buildSSHArgs(this.params, command));
   }
   async startTunnel(config: {
     localAddress: string;

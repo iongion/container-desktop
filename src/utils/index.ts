@@ -7,6 +7,25 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
+/**
+ * Expand a leading `~` in a path to the given home dir. Shared by the SSH preflight diagnostic and
+ * the executor's `StartSSHConnection` so a key path resolves identically in both (otherwise preflight
+ * can report "key missing" while the real connect succeeds, or vice-versa).
+ */
+export function expandHome(filePath: string, homeDir: string): string {
+  if (!filePath) {
+    return filePath;
+  }
+  let result = filePath;
+  if (result.startsWith("~")) {
+    result = result.replace("~", homeDir);
+  }
+  if (result.includes("$HOME")) {
+    result = result.replace("$HOME", homeDir);
+  }
+  return result;
+}
+
 export function isEmpty(value: unknown): boolean {
   if (value == null) {
     return true;

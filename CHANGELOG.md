@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Notification Center: a right-side panel opened from a bell in the footer, with a notifications history and a filterable Activity log of engine API and CLI interactions (friendly labels, status, duration, copy-as-cURL/command). In-memory only.
 - Find in the current view with **Ctrl+F / Cmd+F** — a themed find widget (match counter, previous/next, case-sensitive) that highlights matches on container logs, inspect, processes and other detail and list views. JSON/YAML editors keep their built-in find, and list screens focus their existing filter box.
 - Configurable monospace font in Settings (family, size and weight): choose any font installed on your system, or reset to the bundled font in one click.
+- Testing foundation for the connection layer: a headless harness that runs the engine clients under Node, hermetic contract tests over the full engine × host matrix (Podman/Docker across native, WSL, LIMA, podman-machine and SSH) and the exact per-OS command/argv each transport builds, plus an SSH pre-flight diagnostic. A new **Verify** CI workflow type-checks, lints, unit-tests and production-builds every PR, and runs the Go relay tests on both Linux and Windows and the Python tooling tests.
 
 ## Changed
 
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The development watcher no longer deletes `preload.cjs` after the preload build completes.
 - Monaco is bundled locally instead of being loaded from a CDN.
 - Remote SSH on Linux and macOS now verifies host keys instead of disabling the check, preventing man-in-the-middle attacks.
+- Remote SSH connections no longer hang indefinitely on "Please wait": the control connection is bounded (non-interactive, with a connect timeout) and a non-default SSH port is no longer dropped. When a connection fails, the app now reports the specific cause — missing ssh client, identity file not found, key permissions too open, host unreachable, or remote engine not running — instead of failing silently with no reason. (#171, #186)
 
 ## [5.2.16] - 2026-06-14
 

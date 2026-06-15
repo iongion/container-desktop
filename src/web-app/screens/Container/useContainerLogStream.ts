@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ContainersAdapter, type ContainerLogsStream } from "@/container-client/adapters/containers";
+import { type ContainerLogsStream, ContainersAdapter } from "@/container-client/adapters/containers";
 import { createContainerLogDecoder } from "@/container-client/logs";
 import type { TerminalHandle } from "@/web-app/components/Terminal";
 

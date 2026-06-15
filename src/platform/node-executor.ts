@@ -25,13 +25,27 @@ import {
   type Wrapper,
 } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { axiosConfigToCURL, deepMerge, isEmpty } from "@/utils";
+import { axiosConfigToCURL, deepMerge, expandHome, isEmpty } from "@/utils";
 import { Platform } from "./node";
 
 const logger = createLogger("shared");
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
 const DEFAULT_RETRIES_COUNT = 10;
+
+/**
+ * Test-only: clear the module-global connection caches between cases/targets. `StopConnectionServices`
+ * only clears `RELAY_SERVERS_CACHE`; the SSH tunnel cache is otherwise cleared solely via a tunnel's
+ * `onStopTunnel`, so live tests reusing a process would otherwise reuse a stale tunnel.
+ */
+export function __resetConnectionCaches() {
+  for (const key of Object.keys(SSH_TUNNELS_CACHE)) {
+    delete SSH_TUNNELS_CACHE[key];
+  }
+  for (const key of Object.keys(RELAY_SERVERS_CACHE)) {
+    delete RELAY_SERVERS_CACHE[key];
+  }
+}
 
 const PROGRAM_WSL_RELAY = "container-desktop-relay";
 const PROGRAM_SSH_RELAY = "container-desktop-ssh-relay.exe";
@@ -955,13 +969,7 @@ export const Command: ICommand = {
     const homeDir = await Platform.getHomeDir();
     let privateKeyPath = await Path.join(homeDir, ".ssh/id_rsa");
     if (host.IdentityFile) {
-      privateKeyPath = host.IdentityFile;
-      if (privateKeyPath.startsWith("~")) {
-        privateKeyPath = privateKeyPath.replace("~", homeDir);
-      }
-      if (privateKeyPath.includes("$HOME")) {
-        privateKeyPath = privateKeyPath.replace("$HOME", homeDir);
-      }
+      privateKeyPath = expandHome(host.IdentityFile, homeDir);
     }
     host.IdentityFile = privateKeyPath;
     const isWindows = (os.type() as OperatingSystem) === OperatingSystem.Windows;
@@ -1007,8 +1015,20 @@ export const Command: ICommand = {
         } as ISSHClient);
       });
       connection.on("error", (error: any) => {
-        logger.error("SSH connection error", error.message);
-        reject(new Error("SSH connection error"));
+        // `error` is either a raw CommandExecutionResult (legacy) or { output, report } from the
+        // preflight. Surface the first concrete failure reason instead of a generic message so the
+        // caller/UI can explain why (#186), and attach the structured report for richer display.
+        const report = error?.report;
+        const reason =
+          report?.steps?.find((step: any) => !step.skipped && !step.ok)?.details ||
+          error?.message ||
+          error?.output?.stderr ||
+          error?.stderr ||
+          "SSH connection failed";
+        logger.error("SSH connection error", reason);
+        const wrapped: any = new Error(reason);
+        wrapped.report = report;
+        reject(wrapped);
       });
       const credentials = {
         host: host.HostName,
