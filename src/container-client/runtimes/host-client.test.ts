@@ -43,6 +43,11 @@ describe("getAvailability — scope awareness", () => {
     // The specific API reason survives instead of a generic "API is not running".
     expect(availability.api).toBe(false);
     expect(availability.report.api).toBe("API is not reachable at unix:///wrong/path.sock - start manually or connect");
+    // The single user-facing reason points at the real failing dimension (api), not "Path not set".
+    expect(availability.reason).toEqual({
+      dimension: "api",
+      details: "API is not reachable at unix:///wrong/path.sock - start manually or connect",
+    });
   });
 
   it("reports the controller dimension for scoped hosts (SSH remote)", async () => {
@@ -60,5 +65,7 @@ describe("getAvailability — scope awareness", () => {
 
     expect(availability.controller).toBe(false);
     expect(availability.report.controller).toBe("ssh not found in path");
+    // Root-cause walk surfaces the first failing dimension (controller), not the downstream api.
+    expect(availability.reason).toEqual({ dimension: "controller", details: "ssh not found in path" });
   });
 });

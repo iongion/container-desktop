@@ -29,7 +29,6 @@ import { LOGGING_LEVELS, PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { getFirstUnavailableReason } from "@/web-app/utils/availability";
 import { ActionsMenu } from "./ActionsMenu";
 import { ManageConnectionDrawer } from "./Connection";
 import { ScreenHeader } from "./ScreenHeader";
@@ -323,7 +322,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   const isCurrent = currentConnector?.connectionId === connection?.id;
                   const isConnected = isCurrent && currentConnector.availability.api;
                   const unavailableReason =
-                    isCurrent && !isConnected ? getFirstUnavailableReason(currentConnector.availability) : undefined;
+                    isCurrent && !isConnected ? currentConnector.availability.reason : undefined;
                   const isAutomatic = connection.settings.mode === "mode.automatic";
                   const descriptions = [connection.settings?.api?.connection?.uri || "", connection.description || ""];
                   const description = descriptions.filter((it) => !isEmpty(it)).join(". ");
@@ -343,12 +342,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <td>
                         <p className="PlatformConnectionName">{connection.name}</p>
                         {description ? <p className="PlatformConnectionDescription">{description}</p> : null}
-                        {unavailableReason?.reason ? (
+                        {unavailableReason?.details ? (
                           <p
                             className="PlatformConnectionError"
                             data-availability-dimension={unavailableReason.dimension}
                           >
-                            {unavailableReason.reason}
+                            {unavailableReason.details}
                           </p>
                         ) : null}
                       </td>

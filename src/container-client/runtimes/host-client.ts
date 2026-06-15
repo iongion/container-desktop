@@ -17,6 +17,7 @@ import {
   type ApiConnection,
   type ApiStartOptions,
   type AvailabilityCheck,
+  type AvailabilityDimension,
   type CommandExecutionResult,
   type Connection,
   type ContainerEngine,
@@ -558,6 +559,17 @@ export class HostClient implements HostContext {
       availability.api = false;
       // Preserve the specific reason (e.g. "API is not reachable …") rather than a generic message.
       availability.report.api = api.details || "API is not running";
+    }
+    // The first failing dimension in dependency order is the user-facing reason. Strict `=== false`
+    // skips dimensions that don't apply (controller/controllerScope are undefined on native hosts).
+    if (!availability.api) {
+      const order: AvailabilityDimension[] = ["host", "controller", "controllerScope", "program", "api"];
+      for (const dimension of order) {
+        if (availability[dimension] === false) {
+          availability.reason = { dimension, details: availability.report[dimension] ?? "" };
+          break;
+        }
+      }
     }
     systemNotifier.transmit("engine.availability", {
       trace: "Availability check complete",

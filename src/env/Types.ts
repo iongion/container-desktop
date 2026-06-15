@@ -336,6 +336,8 @@ export interface AvailabilityCheck {
   details?: string | null;
 }
 
+export type AvailabilityDimension = "host" | "controller" | "controllerScope" | "program" | "api";
+
 export interface EngineConnectorAvailability {
   enabled: boolean;
   host: boolean;
@@ -350,6 +352,9 @@ export interface EngineConnectorAvailability {
     controller?: string;
     controllerScope?: string;
   };
+  // The first failing dimension in dependency order — the user-facing reason a connection is
+  // unavailable. Computed by getAvailability; undefined when the API is reachable.
+  reason?: { dimension: AvailabilityDimension; details: string };
 }
 
 export interface Connection {
