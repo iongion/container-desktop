@@ -41,8 +41,9 @@ Python ≥ 3.12 via `uv`.
 Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 
 - Install: `uv run --locked invoke prepare` or `yarn install --frozen-lockfile`
-- **Verify — run all three before claiming done:**
-  `yarn check-types` (tsc) · `yarn lint` (Biome) · `yarn build` (main+preload+renderer)
+- **Verify — run all four before claiming done:**
+  `yarn check-types` (tsc) · `yarn lint` (Biome; `yarn lint:check` = no-write, used in CI) ·
+  `yarn test:run` (Vitest, hermetic) · `yarn build` (main+preload+renderer)
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `inv release`
@@ -119,9 +120,12 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   `minimatch`/`picomatch` ReDoS advisories are build-tooling-only (not shipped) and
   now have in-range patches — pulled in by refreshing the lockfile entry, not a
   `resolution`. Only their breaking majors are blocked (see dependabot, below).
-- **JS/TS tests:** 4 Vitest unit tests exist (`yarn test:run`); there is no E2E
-  suite yet. Verify via type-check + lint + test + build + manual/CDP smoke.
-  Python tests use `pytest` (`support/` only).
+- **Tests:** a hermetic **Vitest** suite (`yarn test:run`) runs the renderer +
+  container-client under plain Node via `src/__tests__/setup/` (headless globals + a recording
+  `fakeCommand`); `*.live.test.ts` + `installRealCommand()` are reserved for a future real-VM
+  suite (no separate config yet). Go relay `go test ./...`; Python `pytest` (`support/`). CI
+  gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md). Still
+  do a manual/CDP smoke for UI changes.
 - Avoid `console.debug` in render/poll hot paths (floods DevTools, grows memory).
   Use `@/logger` (`createLogger`).
 

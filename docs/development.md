@@ -43,20 +43,22 @@ pkill -f support/watch.mjs; pkill -f dist/electron
 > `electron` API vanishes). GPU flags are gated behind `CONTAINER_DESKTOP_HEADLESS`
 > — leave the default path alone; it avoided a GPU crash-loop.
 
-## Verify — run all three before claiming done
+## Verify — run all four before claiming done
 
 ```bash
 yarn check-types   # tsc
-yarn lint          # Biome (auto-fixes); yarn format to format only
+yarn lint          # Biome (auto-fixes); yarn lint:check = no writes (CI); yarn format to format only
+yarn test:run      # Vitest (hermetic) — see testing.md
 yarn build         # main + preload + renderer
 ```
 
-There are a few unit tests under vitest (`yarn test` / `yarn test:run`), but the
-type-check + lint + build trio is the real gate. Verify behaviour manually or over
-CDP — the renderer is exposed at `--remote-debugging-port=9222`, so you can attach
-a Playwright client via `--cdp-endpoint http://localhost:9222` to drive the real
-app (navigating bare `http://localhost:3000` won't work — it needs the preload
-bridge).
+These four are the gate CI enforces
+([`CIPipeline.yml`](../.github/workflows/CIPipeline.yml), which also runs the Go relay and
+Python suites). For the test model — the headless harness and the `fakeCommand` recording fake
+that let the connection layer run without Electron — see [testing.md](testing.md). Also verify
+behaviour over CDP: the renderer is exposed at `--remote-debugging-port=9222`, so you can
+attach a Playwright client via `--cdp-endpoint http://localhost:9222` to drive the real app
+(navigating bare `http://localhost:3000` won't work — it needs the preload bridge).
 
 ## Build & package
 
@@ -108,4 +110,5 @@ export DOCKER_HOST='unix:///tmp/podman.sock'
   [Connection startup](architecture/connection-startup.md) ·
   [Engine matrix](architecture/engine-matrix.md)
 - [Architecture notes / principles](architecture/notes.md)
+- [Testing](testing.md) — Vitest suites, the headless `Command` harness, CI gate
 - [`CLAUDE.md`](../CLAUDE.md) — canonical stack, conventions, working agreements

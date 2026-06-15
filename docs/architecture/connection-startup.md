@@ -143,15 +143,15 @@ connected.
 sequenceDiagram
   participant Host as HostClient (SSH)
   participant Cmd as Command · preload/Node
-  participant Relay as Go relay (SSH client)
+  participant Relay as ssh (Linux/macOS) · relay.exe (Windows)
   participant Remote as Remote host (sshd)
   participant Sock as Engine socket (remote)
 
   Note over Host: first API request triggers the tunnel
   Host->>Cmd: getApiDriver → getSSHConnection()
   Cmd->>Cmd: StartSSHConnection(sshHost)
-  Cmd->>Relay: SSH + direct-streamlocal channel
-  Relay->>Remote: connect (key auth)
+  Cmd->>Relay: start tunnel (ssh -NL · or SSH direct-streamlocal)
+  Relay->>Remote: connect · key auth · host key checked (accept-new / known_hosts)
   Remote->>Sock: dial unix socket
   Note over Host,Sock: tunnel up · local uri/npipe ↔ remote socket
   Host->>Cmd: ProxyRequest GET /containers/json
@@ -160,32 +160,42 @@ sequenceDiagram
   Sock-->>Host: response
 ```
 
-## The relay's job
+## Reaching a socket that isn't local
 
-The Go relay ([`support/container-desktop-relay/`](../../support/container-desktop-relay/))
-bridges a **named pipe or SSH channel** to a **Unix socket**, so a Windows or remote
-client can speak to an engine socket that lives inside WSL or on another host. It is
-an SSH server (listening on `:20022`, key auth) that handles
-`direct-streamlocal@openssh.com` channels, plus — on Windows — an SSH client that
-fronts a named pipe.
+Two host families can't open the engine's unix socket directly, so the bytes are carried to
+where the socket lives. **No SSH server runs inside WSL, and host keys are verified** (the old
+`:20022` sshd / `InsecureIgnoreHostKey` design is gone).
+
+- **WSL (Windows)** — the app's `WSLRelayServer`
+  ([`node-executor.ts`](../../src/platform/node-executor.ts)) listens on a Windows **named
+  pipe** and, per connection, runs the **Linux bridge**
+  ([`container-desktop-relay`](../../support/container-desktop-relay/main_linux.go),
+  `--mode bridge --socket <sock>`) inside the distro via `wsl.exe --exec`: named pipe ↔
+  `wsl.exe` stdio ↔ unix socket. No TCP listener, no SSH, no daemon left in the distro. The
+  bridge binary is injected under a **version-scoped** path and **SHA-256-verified** before it
+  runs (re-copied on mismatch, refused if it still doesn't match).
+- **Remote SSH** — the lazy tunnel above. On **Linux/macOS** the app shells out to the OS
+  `ssh` binary (`StrictHostKeyChecking=accept-new`, bounded connect, `-NL <local>:<remote>`),
+  with a structured pre-flight
+  ([`ssh-preflight.ts`](../../src/container-client/diagnostics/ssh-preflight.ts)) that explains
+  failures instead of hanging. On **Windows** it runs
+  [`container-desktop-ssh-relay.exe`](../../support/container-desktop-relay/main_windows.go) to
+  front a named pipe over an SSH `direct-streamlocal` channel, verifying `known_hosts`.
 
 ```mermaid
 flowchart LR
   client["Engine API client<br/>(container-client)"]:::component
   pipe["Windows named pipe"]:::external
-  sshc["SSH client (Windows)<br/>container-desktop-relay.exe"]:::container
-  sshd["SSH server (in WSL / remote)<br/>container-desktop-relay-linux"]:::container
-  sock["/run/.../podman.sock<br/>or /var/run/docker.sock"]:::external
+  server["WSLRelayServer<br/>(node-executor.ts)"]:::container
+  bridge["container-desktop-relay<br/>(linux · mode=bridge)"]:::container
+  sock["/run/.../podman.sock"]:::external
 
-  client --> pipe --> sshc -->|SSH :20022<br/>direct-streamlocal| sshd --> sock
+  client --> pipe --> server -->|wsl.exe --exec · stdio| bridge --> sock
 
   classDef component fill:#85bbf0,color:#000,stroke:#5d82a8;
   classDef container fill:#438dd5,color:#fff,stroke:#2e6295;
   classDef external fill:#8a8a8a,color:#fff,stroke:#5e5e5e;
 ```
-
-It also exposes health/readiness/metrics endpoints (`:20080/health`, `/ready`,
-`:20090/metrics`) — handy when a connection mysteriously won't come up.
 
 ## The availability gate
 

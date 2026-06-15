@@ -10,21 +10,21 @@ description: "Set up Podman and Docker on Linux, macOS and Windows — native, v
     <h1>The Manual</h1>
     <p>Set up Podman and Docker on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
     <div class="osjump">
-      {%- for g in collections.guides %}<a href="#{{ g.data.os }}"><i class="fab {{ g.data.osIcon }}"></i> {{ g.data.osLabel }}</a>{% endfor %}
+      {%- for g in collections.guides %}<a href="#{{ g.data.os }}"><i class="{{ g.data.iconClass or 'fab' }} {{ g.data.osIcon }}"></i> {{ g.data.osLabel }}</a>{% endfor %}
     </div>
   </div>
 
   <div class="shell">
     <aside class="side">
       {%- for g in collections.guides %}
-      <div class="grp"><i class="fab {{ g.data.osIcon }}"></i> {{ g.data.osLabel }}</div>
+      <div class="grp"><i class="{{ g.data.iconClass or 'fab' }} {{ g.data.osIcon }}"></i> {{ g.data.osLabel }}</div>
       {%- for s in g.data.sections %}<a href="#{{ s.id }}">{{ s.label }}</a>{% endfor %}
       {%- endfor %}
     </aside>
 
     <main class="content">
       {%- for g in collections.guides %}
-      <div class="guide-os" id="{{ g.data.os }}"><i class="fab {{ g.data.osIcon }}"></i><h2>{{ g.data.osLabel }}</h2></div>
+      <div class="guide-os" id="{{ g.data.os }}"><i class="{{ g.data.iconClass or 'fab' }} {{ g.data.osIcon }}"></i><h2>{{ g.data.osLabel }}</h2></div>
       {{ g.templateContent | safe }}
       {%- endfor %}
     </main>
