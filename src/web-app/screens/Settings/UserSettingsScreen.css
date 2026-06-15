@@ -232,3 +232,26 @@
 [data-theme="bp6-light"] .AppSettingsEngineManagerConnections .PlatformConnectionDescription {
   color: #777;
 }
+
+/* Monospace font-family Select popover: wider than the trigger (to show full font names), the
+   250+ item list capped to <50vh, denser items without icon indentation, and the filter input
+   moved to the bottom. */
+.AppMonospaceFontPopover .bp6-popover-content {
+  min-width: 320px;
+}
+.AppMonospaceFontPopover .bp6-popover-content > div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.AppMonospaceFontPopover .bp6-menu {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.AppMonospaceFontPopover .bp6-menu-item {
+  padding-left: 8px;
+  font-size: 12px;
+}
+/* Match the native size/weight selects' text size to the family Select button (12px). */
+.AppSettingsFontForm select {
+  font-size: 12px;
+}

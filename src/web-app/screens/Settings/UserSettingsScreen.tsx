@@ -11,8 +11,10 @@ import {
   HTMLTable,
   Icon,
   Intent,
+  MenuItem,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { type ItemPredicate, type ItemRenderer, Select } from "@blueprintjs/select";
 import { mdiEmoticonSad, mdiEmoticonWink } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { saveAs } from "file-saver";
@@ -233,6 +235,28 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [setGlobalUserSettings, userSettings.font],
   );
+  // Font family uses a DOM-based, filterable Blueprint Select (not a native <select>): a 250+ item
+  // native popup loses its pointer grab mid scrollbar-drag on Wayland, and this lets the user type
+  // to filter. "" = the bundled JetBrains Mono.
+  const fontFamilyItems = useMemo<string[]>(() => ["", ...systemFonts], [systemFonts]);
+  const fontFamilyLabel = (family: string) => family || t("JetBrains Mono (bundled)");
+  const renderFontFamily: ItemRenderer<string> = (family, { handleClick, handleFocus, modifiers }) => {
+    if (!modifiers.matchesPredicate) {
+      return null;
+    }
+    return (
+      <MenuItem
+        key={family || "__bundled__"}
+        active={modifiers.active}
+        roleStructure="listoption"
+        text={fontFamilyLabel(family)}
+        onClick={handleClick}
+        onFocus={handleFocus}
+      />
+    );
+  };
+  const filterFontFamily: ItemPredicate<string> = (query, family) =>
+    fontFamilyLabel(family).toLowerCase().includes(query.toLowerCase());
 
   let title = "";
   let errorMessage = "";
@@ -471,19 +495,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <div className="AppSettingsForm" data-form="font">
           <FormGroup label={t("Monospace font")} labelFor="fontFamily" className="AppSettingsFontForm">
             <ControlGroup>
-              <HTMLSelect
-                id="fontFamily"
-                title={t("Font family")}
-                value={userSettings.font?.family || ""}
-                onChange={(e) => onFontChange({ family: e.currentTarget.value })}
+              <Select<string>
+                className="AppSettingsFontFamily"
+                items={fontFamilyItems}
+                itemRenderer={renderFontFamily}
+                itemPredicate={filterFontFamily}
+                onItemSelect={(family) => onFontChange({ family })}
+                activeItem={userSettings.font?.family || ""}
+                popoverProps={{ minimal: true, popoverClassName: "AppMonospaceFontPopover" }}
+                inputProps={{ placeholder: t("Filter fonts…") }}
               >
-                <option value="">{t("JetBrains Mono (bundled)")}</option>
-                {systemFonts.map((family) => (
-                  <option key={family} value={family}>
-                    {family}
-                  </option>
-                ))}
-              </HTMLSelect>
+                <Button
+                  id="fontFamily"
+                  title={t("Font family")}
+                  text={fontFamilyLabel(userSettings.font?.family || "")}
+                  rightIcon={IconNames.CARET_DOWN}
+                  style={{ minWidth: 200, justifyContent: "space-between" }}
+                />
+              </Select>
               <HTMLSelect
                 id="fontSize"
                 title={t("Font size")}
