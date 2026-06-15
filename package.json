@@ -34,6 +34,7 @@
     "lint:check": "biome check ./src",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.mts",
     "watch": "node support/watch.mjs",
     "postinstall": "cross-env ELECTRON_RUN_AS_NODE=1 yarn electron support/update-electron-vendors.mjs"
   },
