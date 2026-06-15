@@ -86,11 +86,17 @@ const setWindowConfigOptions = debounce(async (opts: Electron.BrowserWindowConst
 }, 500);
 const isDebug = ["yes", "true", "1"].includes(`${process.env.CONTAINER_DESKTOP_DEBUG || ""}`.toLowerCase());
 const isDevelopment = () => {
+  // Standard Vite-Electron rule: development iff the build was made in development mode OR a Vite
+  // dev-server URL was injected (hot reload). NOT keyed on app.isPackaged — an unpackaged *production*
+  // build launched directly (e.g. Playwright `electron.launch` in E2E tests) must behave as production.
+  const dev = import.meta.env.ENVIRONMENT === "development" || Boolean(import.meta.env.VITE_DEV_SERVER_URL);
   logger.debug("Checking if development", {
     isPackaged: app.isPackaged,
     env: import.meta.env.ENVIRONMENT,
+    devServer: Boolean(import.meta.env.VITE_DEV_SERVER_URL),
+    dev,
   });
-  return !app.isPackaged || import.meta.env.ENVIRONMENT === "development";
+  return dev;
 };
 const activateTools = () => {
   if (isDevelopment() || isDebug) {
@@ -267,7 +273,9 @@ async function createApplicationWindow() {
     protocol: "file:",
     slashes: true,
   });
-  const appURL = isDevelopment() ? appDevURL : appProdURL;
+  // Use the dev server when present (hot reload), otherwise the built renderer from file:// — works
+  // packaged AND for an unpackaged production build launched directly (Playwright in E2E tests).
+  const appURL = appDevURL || appProdURL;
   const iconFile = CURRENT_OS_TYPE === OperatingSystem.MacOS ? "appIcon.png" : "appIcon-duotone.png";
   const iconPath = isDevelopment()
     ? path.join(PROJECT_HOME, "src/resources/icons", iconFile)
