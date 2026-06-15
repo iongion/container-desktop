@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Find in the current view with **Ctrl+F / Cmd+F** — a themed find widget (match counter, previous/next, case-sensitive) that highlights matches on container logs, inspect, processes and other detail and list views. JSON/YAML editors keep their built-in find, and list screens focus their existing filter box.
+- Configurable monospace font in Settings (family, size and weight): choose any font installed on your system, or reset to the bundled font in one click.
+
 ## Changed
 
 - Container logs now use a live stream for running containers instead of polling full log snapshots, and stopped containers load logs once until manually refreshed.
@@ -16,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resource detail and inspect views (containers, images, pods, volumes, networks, secrets) now refresh from engine events instead of a 2-second poll, and polling pauses while the window is in the background; the remaining polled views (stats, processes, machines) only refresh while visible.
 - Container statistics are only polled while the container is running.
 - The container logs view shows a live status pill (LIVE / CONNECTING / ENDED / SNAPSHOT) overlaid on the terminal in place of the status bar, and coalesces streamed output per animation frame to stay smooth under heavy logging.
+- Bundled JetBrains Mono as the default monospace font for logs, terminals and data views, for consistent, readable rendering across platforms (overridable in Settings).
 
 ## Fixed
 

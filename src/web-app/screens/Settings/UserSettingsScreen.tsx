@@ -210,6 +210,30 @@ export const Screen: AppScreen<ScreenProps> = () => {
     setIsChecking(false);
   }, [t, osType]);
 
+  // Monospace font override. Enumerating installed fonts is explicitly wanted here so users can
+  // pick one they have; the bundled JetBrains Mono always remains the fallback.
+  const [systemFonts, setSystemFonts] = useState<string[]>([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const query = (window as any).queryLocalFonts;
+        if (typeof query === "function") {
+          const fonts = await query();
+          const families = Array.from(new Set(fonts.map((f: any) => f.family))).sort() as string[];
+          setSystemFonts(families);
+        }
+      } catch (error: any) {
+        console.error("Unable to enumerate system fonts", error);
+      }
+    })();
+  }, []);
+  const onFontChange = useCallback(
+    async (patch: { family?: string; size?: number; weight?: number }) => {
+      await setGlobalUserSettings({ font: { ...userSettings.font, ...patch } });
+    },
+    [setGlobalUserSettings, userSettings.font],
+  );
+
   let title = "";
   let errorMessage = "";
   let icon: any;
@@ -443,6 +467,56 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </ButtonGroup>
             </FormGroup>
           )}
+        </div>
+        <div className="AppSettingsForm" data-form="font">
+          <FormGroup label={t("Monospace font")} labelFor="fontFamily" className="AppSettingsFontForm">
+            <ControlGroup>
+              <HTMLSelect
+                id="fontFamily"
+                title={t("Font family")}
+                value={userSettings.font?.family || ""}
+                onChange={(e) => onFontChange({ family: e.currentTarget.value })}
+              >
+                <option value="">{t("JetBrains Mono (bundled)")}</option>
+                {systemFonts.map((family) => (
+                  <option key={family} value={family}>
+                    {family}
+                  </option>
+                ))}
+              </HTMLSelect>
+              <HTMLSelect
+                id="fontSize"
+                title={t("Font size")}
+                value={userSettings.font?.size || ""}
+                onChange={(e) => onFontChange({ size: Number(e.currentTarget.value) || 0 })}
+              >
+                <option value="">{t("Size")}</option>
+                {[10, 11, 12, 13, 14, 16, 18].map((size) => (
+                  <option key={size} value={size}>
+                    {size}px
+                  </option>
+                ))}
+              </HTMLSelect>
+              <HTMLSelect
+                id="fontWeight"
+                title={t("Font weight")}
+                value={userSettings.font?.weight || ""}
+                onChange={(e) => onFontChange({ weight: Number(e.currentTarget.value) || 0 })}
+              >
+                <option value="">{t("Weight")}</option>
+                <option value="300">{t("Light")}</option>
+                <option value="400">{t("Regular")}</option>
+                <option value="500">{t("Medium")}</option>
+                <option value="600">{t("SemiBold")}</option>
+                <option value="700">{t("Bold")}</option>
+              </HTMLSelect>
+              <Button
+                icon={IconNames.RESET}
+                title={t("Reset to bundled font")}
+                onClick={() => onFontChange({ family: "", size: 0, weight: 0 })}
+              />
+            </ControlGroup>
+          </FormGroup>
         </div>
         <div className="AppSettingsForm" data-form="logging">
           <FormGroup label={t("Configuration and logging")} labelFor="userSettingsPath">

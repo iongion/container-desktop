@@ -1,0 +1,129 @@
+/* Global find widget + match highlighting.
+   Theme tokens live here so the feature is self-contained. Terminal decoration vars are
+   engine-only (the xterm surface is always dark); highlight/widget vars follow the full
+   skin (engine × light/dark). */
+
+:root {
+  --find-accent: #6caaff;
+  --find-hl-bg: rgba(108, 170, 255, 0.3);
+  --find-hl-active-bg: #6caaff;
+  --find-hl-active-fg: #03122e;
+  --find-widget-bg: #0b1942;
+  --find-widget-fg: #f6f7f9;
+  --find-widget-border: #1f4374;
+  --find-term-match: #24487e;
+  --find-term-active: #6caaff;
+}
+
+body[data-engine="docker"] {
+  --find-term-match: #24487e;
+  --find-term-active: #6caaff;
+}
+body[data-engine="podman"] {
+  --find-term-match: #5a2b6b;
+  --find-term-active: #bc59d5;
+}
+
+body.bp6-dark[data-engine="docker"] {
+  --find-accent: #6caaff;
+  --find-hl-bg: rgba(108, 170, 255, 0.3);
+  --find-hl-active-bg: #6caaff;
+  --find-hl-active-fg: #03122e;
+  --find-widget-bg: #0b1942;
+  --find-widget-fg: #f6f7f9;
+  --find-widget-border: #1f4374;
+}
+body.bp6-light[data-engine="docker"] {
+  --find-accent: #2f6fd0;
+  --find-hl-bg: rgba(47, 111, 208, 0.25);
+  --find-hl-active-bg: #2f6fd0;
+  --find-hl-active-fg: #ffffff;
+  --find-widget-bg: #ffffff;
+  --find-widget-fg: #1c2127;
+  --find-widget-border: #c1d2da;
+}
+body.bp6-dark[data-engine="podman"] {
+  --find-accent: #bc59d5;
+  --find-hl-bg: rgba(188, 89, 213, 0.3);
+  --find-hl-active-bg: #bc59d5;
+  --find-hl-active-fg: #1a051c;
+  --find-widget-bg: #341c42;
+  --find-widget-fg: #f6f7f9;
+  --find-widget-border: #4f175b;
+}
+body.bp6-light[data-engine="podman"] {
+  --find-accent: #9b3fb5;
+  --find-hl-bg: rgba(155, 63, 181, 0.22);
+  --find-hl-active-bg: #9b3fb5;
+  --find-hl-active-fg: #ffffff;
+  --find-widget-bg: #ffffff;
+  --find-widget-fg: #1c2127;
+  --find-widget-border: #dcdcdc;
+}
+
+/* DOM-screen match painting via the CSS Custom Highlight API. */
+::highlight(cd-find) {
+  background-color: var(--find-hl-bg);
+}
+::highlight(cd-find-active) {
+  background-color: var(--find-hl-active-bg);
+  color: var(--find-hl-active-fg);
+}
+
+.ContainerFindWidget {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--find-widget-bg);
+  color: var(--find-widget-fg);
+  border: 1px solid var(--find-widget-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.ContainerFindWidgetInput {
+  width: 180px;
+}
+.ContainerFindWidget .bp6-input {
+  font-size: 12px;
+}
+.ContainerFindWidgetCount {
+  min-width: 52px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+.ContainerFindWidget[data-no-matches="yes"] .ContainerFindWidgetCount {
+  color: #e76a6e;
+  opacity: 1;
+}
+.ContainerFindWidget[data-no-matches="yes"] .ContainerFindWidgetInput .bp6-input {
+  box-shadow: inset 0 0 0 1px #e76a6e;
+}
+.ContainerFindWidgetCase {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Blueprint's built-in "?" hotkeys dialog (populated by the find hotkey). The app themes
+   menus/popovers/drawers but not generic dialogs, so this one defaults to Blueprint grey.
+   Re-skin it with the same tokens as the find widget so it matches each engine theme. */
+.bp6-hotkey-dialog {
+  background-color: var(--find-widget-bg) !important;
+  color: var(--find-widget-fg);
+}
+.bp6-hotkey-dialog .bp6-heading,
+.bp6-hotkey-dialog .bp6-hotkey-label,
+.bp6-hotkey-dialog .bp6-hotkey-group {
+  color: var(--find-widget-fg) !important;
+}
+.bp6-hotkey-dialog .bp6-key-combo .bp6-key {
+  background: var(--find-widget-border);
+  color: var(--find-widget-fg);
+  box-shadow: none;
+}

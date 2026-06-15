@@ -281,6 +281,7 @@ export class Application {
       startApi: await this.userConfiguration.getKey("startApi", false),
       minimizeToSystemTray: await this.userConfiguration.getKey("minimizeToSystemTray", false),
       checkLatestVersion: await this.userConfiguration.getKey("checkLatestVersion", false),
+      font: await this.userConfiguration.getKey("font", {}),
       path: await await this.userConfiguration.getStoragePath(),
       logging: {
         level: await getLevel(),

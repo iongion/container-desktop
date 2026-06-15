@@ -104,6 +104,11 @@ export interface GlobalUserSettings {
   minimizeToSystemTray: boolean;
   checkLatestVersion: boolean;
   path: string;
+  font?: {
+    family?: string;
+    size?: number;
+    weight?: number;
+  };
   logging: {
     level: string;
   };
