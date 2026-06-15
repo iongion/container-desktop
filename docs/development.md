@@ -6,12 +6,12 @@ internals and conventions, the canonical guide is [`CLAUDE.md`](../CLAUDE.md).
 
 ## Prerequisites
 
-| Tool | Version | Notes |
-| --- | --- | --- |
-| Node | **24.16.0** | pinned in [`.nvmrc`](../.nvmrc) — run `nvm use` |
-| Yarn | **1.x** (classic) | the package manager; do not use npm |
-| Python | ≥ **3.12** via [`uv`](https://docs.astral.sh/uv/) | runs the `invoke` build tasks |
-| Go | **1.25+** | only to build the relay (`support/container-desktop-relay/`) |
+| Tool   | Version                                           | Notes                                                        |
+| ------ | ------------------------------------------------- | ------------------------------------------------------------ |
+| Go     | **1.25+**                                         | only to build the relay (`support/container-desktop-relay/`) |
+| Node   | **24.16.0**                                       | pinned in [`.nvmrc`](../.nvmrc) — run `nvm use`              |
+| Python | ≥ **3.12** via [`uv`](https://docs.astral.sh/uv/) | runs the `invoke` build tasks                                |
+| Yarn   | **1.x** (classic)                                 | the package manager; do not use npm                          |
 
 **Linux one-shot:** `bash support/provision-deps.sh` installs the build toolchain
 (auto-detects apt/dnf/pacman). On macOS use [Homebrew](https://brew.sh/); native

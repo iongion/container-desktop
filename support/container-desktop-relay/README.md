@@ -7,10 +7,10 @@ distribution, or on a **remote host over SSH (Windows only)**.
 One module builds into **two single-file binaries** (selected by `GOOS`). Each is static,
 needs no config file, and leaves nothing behind:
 
-| Binary | Build | Mode | Used for |
-|--------|-------|------|----------|
-| `container-desktop-relay` | `GOOS=linux` | **bridge** | WSL — runs inside the distro, bridges the engine socket to stdio |
-| `container-desktop-ssh-relay.exe` | `GOOS=windows` | **relay** | Remote SSH **on Windows** — bridges a Windows named pipe to a remote socket over SSH |
+| Binary                            | Build          | Mode       | Used for                                                                             |
+| --------------------------------- | -------------- | ---------- | ------------------------------------------------------------------------------------ |
+| `container-desktop-relay`         | `GOOS=linux`   | **bridge** | WSL — runs inside the distro, bridges the engine socket to stdio                     |
+| `container-desktop-ssh-relay.exe` | `GOOS=windows` | **relay**  | Remote SSH **on Windows** — bridges a Windows named pipe to a remote socket over SSH |
 
 > Remote SSH on **Linux/macOS does not use this relay** — the app shells out to the native
 > `ssh` client directly (`StrictHostKeyChecking=accept-new`). This helper only covers the WSL
@@ -35,11 +35,11 @@ parent (`wsl.exe`) dies (`PR_SET_PDEATHSIG`), so nothing is ever orphaned inside
 
 Flags — that is the entire surface:
 
-| Flag | Default | Meaning |
-|------|---------|---------|
-| `--mode` | `bridge` | only `bridge` is supported on the linux build |
-| `--socket` | — | engine unix socket to bridge (required) |
-| `--retry` | `50` | socket dial attempts (100 ms apart) before giving up |
+| Flag       | Default  | Meaning                                              |
+| ---------- | -------- | ---------------------------------------------------- |
+| `--mode`   | `bridge` | only `bridge` is supported on the linux build        |
+| `--retry`  | `50`     | socket dial attempts (100 ms apart) before giving up |
+| `--socket` | —        | engine unix socket to bridge (required)              |
 
 The app injects this binary into the distribution under a **version-scoped path**
 (`<app-home>/bin/<version>/container-desktop-relay`) and **verifies it by SHA-256** before

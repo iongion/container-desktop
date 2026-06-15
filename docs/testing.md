@@ -72,17 +72,17 @@ uv run --locked pytest
 
 [`CIPipeline.yml`](../.github/workflows/CIPipeline.yml) runs three jobs:
 
-| Job | Does |
-| --- | --- |
-| **app** | `yarn check-types` · `yarn lint:check` · `yarn test:run` · `ENVIRONMENT=production yarn build` |
-| **relay** | `go test ./...` on ubuntu **and** windows |
-| **tooling** | `ruff check` · `pytest` (via `uv`) |
+| Job         | Does                                                                                           |
+| ----------- | ---------------------------------------------------------------------------------------------- |
+| **app**     | `yarn check-types` · `yarn lint:check` · `yarn test:run` · `ENVIRONMENT=production yarn build` |
+| **relay**   | `go test ./...` on ubuntu **and** windows                                                      |
+| **tooling** | `ruff check` · `pytest` (via `uv`)                                                             |
 
 ## Source map
 
-| Piece | Path |
-| --- | --- |
-| Vitest config | [`vitest.config.mts`](../vitest.config.mts) |
-| Headless globals / live opt-in | [`src/__tests__/setup/headless.ts`](../src/__tests__/setup/headless.ts) |
-| Recording `Command` fake | [`src/__tests__/setup/fakeCommand.ts`](../src/__tests__/setup/fakeCommand.ts) |
-| CI gate | [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml) |
+| Piece                          | Path                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| CI gate                        | [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml)     |
+| Headless globals / live opt-in | [`src/__tests__/setup/headless.ts`](../src/__tests__/setup/headless.ts)       |
+| Recording `Command` fake       | [`src/__tests__/setup/fakeCommand.ts`](../src/__tests__/setup/fakeCommand.ts) |
+| Vitest config                  | [`vitest.config.mts`](../vitest.config.mts)                                   |
