@@ -99,10 +99,10 @@ flowchart TB
     `Command` (process spawn, `ProxyRequest` = HTTP over a unix socket / named
     pipe, `StartSSHConnection`), `FS`, `Platform`, `Path`, and `MessageBus`.
     Engine I/O physically happens here, in Node.
-- **Go relay** — `support/container-desktop-relay/`. A spawned helper that bridges
-  a Windows named pipe (or an SSH channel) to a Unix socket, so a Windows/remote
-  client can reach an engine socket living inside WSL or on a remote host. Used by
-  the SSH and WSL paths; see [connection-startup.md](connection-startup.md).
+- **Go relay** — `support/container-desktop-relay/`. A spawned helper that bridges a
+  Windows named pipe to a Unix socket — inside **WSL** via a stdio bridge (no SSH server in
+  the distro), or to a **remote host over SSH** on Windows. Linux/macOS remote SSH uses the
+  native `ssh` client instead. See [connection-startup.md](connection-startup.md).
 - **External engines** — Podman/Docker REST sockets, reachable directly (native),
   through a VM (machine/Lima), through WSL, or across SSH.
 

@@ -19,6 +19,7 @@ Full project documentation lives in [`docs/`](docs/):
   - [Notes / principles](docs/architecture/notes.md)
 - **Guides**
   - [Development](docs/development.md)
+  - [Testing](docs/testing.md)
   - [Usage](docs/usage.md)
   - [LIMA setup](docs/lima.md)
 - **Project**
@@ -52,10 +53,10 @@ Main goals
 - **Linux** - Install [podman](https://podman.io/docs/installation) - note that distributions usually have older versions of podman, see [Aalvistack](https://software.opensuse.org/download/package?package=podman&project=home%3Aalvistack) for the most recent repositories.
 Additional packages besides podman may be required, such as `aardvark-dns` and `passt` for networking (<https://passt.top/passt/about/>).
 If one wants to add support for docker container engine, the easiest is to install rootless docker as documented here <https://linuxhandbook.com/rootless-docker/>
-- **Windows** - Install [podman](https://podman.io/docs/installation) or provision your favorite WSL distribution with latest podman by following the instructions above for **Linux**. On your custom WSL distribution, a custom TCP relay is provided to relay unix sockets back to Windows native context.
+- **Windows** - Install [podman](https://podman.io/docs/installation) or provision your favorite WSL distribution with latest podman by following the instructions above for **Linux**. On your custom WSL distribution, a lightweight stdio relay bridges the engine's unix socket back to the Windows native context (named pipe ↔ `wsl.exe` stdio — no TCP listener or SSH server inside the distribution).
 - **MacOS** - Install [podman](https://podman.io/docs/installation) or [lima](https://lima-vm.io/)
 
-> NOTE - To access and monitor remote ssh installations, properly set-up the connections in your `$HOME/.ssh/config` or `$env:USERPROFILE/.ssh/config` just like you do for Visual Studio Code remote extensions <https://code.visualstudio.com/docs/remote/ssh> - SSH connections are tunneled through a **tcp** listener, listening to `localhost` only.
+> NOTE - To access and monitor remote ssh installations, properly set-up the connections in your `$HOME/.ssh/config` or `$env:USERPROFILE/.ssh/config` just like you do for Visual Studio Code remote extensions <https://code.visualstudio.com/docs/remote/ssh> - remote SSH connections use the native `ssh` client with host-key verification (`StrictHostKeyChecking=accept-new` against `known_hosts`) and forward the engine's unix socket to a local socket only.
 
 ## Usage
 
