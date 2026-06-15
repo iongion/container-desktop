@@ -25,6 +25,7 @@ import { AppHeader } from "@/web-app/components/AppHeader";
 import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
 import { FindHost } from "@/web-app/components/Find/FindHost";
+import { NotificationCenterHost } from "@/web-app/components/NotificationCenter/NotificationCenterHost";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Container/GenerateKubeScreen";
@@ -206,6 +207,7 @@ function AppLayout() {
           <div className="AppContentDocument">
             {content}
             <FindHost />
+            <NotificationCenterHost />
           </div>
         </div>
       </AppErrorBoundary>

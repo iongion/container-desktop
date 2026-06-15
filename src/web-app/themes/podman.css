@@ -274,3 +274,11 @@ body.bp6-light[data-engine="podman"] [data-actions-menu="container"] .ItemAction
 body.bp6-light .AppDataTable thead {
   background: #dcdcdc;
 }
+
+/* Notification Center — Podman accent for the active segment of the switcher.
+   Harnesses Blueprint's ButtonGroup active state (.bp6-active), tinted per engine. */
+body[data-engine="podman"] .NotificationCenterSwitch .bp6-button.bp6-active,
+body[data-engine="podman"] .NotificationCenterSwitch .bp6-button.bp6-active:hover {
+  background-color: #9b3fb5;
+  color: #fff;
+}
