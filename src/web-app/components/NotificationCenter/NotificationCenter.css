@@ -24,15 +24,9 @@
   gap: 2px;
 }
 
-/* The drawer header sits over the custom titlebar's drag strip (AppHeader sets
-   -webkit-app-region: drag), which otherwise swallows clicks on the switcher/actions as
-   window drags. Carve the interactive header back out, matching AppHeader's no-drag convention. */
-.NotificationCenterDrawer .bp6-drawer-header,
-.NotificationCenterHeaderBar,
-.NotificationCenterHeaderBar button {
+.NotificationSwitch button {
   -webkit-app-region: no-drag;
 }
-
 /* Segmented switcher = Blueprint ButtonGroup; the framework renders the active state.
    The active button is tinted per engine in themes/podman.css + docker.css. */
 .NotificationCenterSwitch .NotificationCenterSwitchCount {
