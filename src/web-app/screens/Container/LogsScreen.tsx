@@ -1,7 +1,8 @@
-import { Callout, Tag } from "@blueprintjs/core";
+import { Callout } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { isContainerRunning } from "@/container-client/adapters/containers";
+import { LiveLogBadge, type LogStatus } from "@/web-app/components/LiveLogBadge";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
 import { useRouteParams } from "@/web-app/Navigator";
@@ -39,20 +40,21 @@ export const Screen: AppScreen<ScreenProps> = () => {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
 
+  const badgeStatus: LogStatus = running ? (stream.status === "idle" ? "connecting" : stream.status) : "snapshot";
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
-        <div className="ContainerLogsStatus">
-          <Tag minimal icon={running ? IconNames.PULSE : IconNames.STOP} intent={running ? "success" : "none"}>
-            {running ? `Live logs: ${stream.status}` : "Stopped container: snapshot logs"}
-          </Tag>
-        </div>
         {stream.error ? <Callout intent="warning">Live log stream failed: {stream.error}</Callout> : null}
         {running ? (
-          <Terminal writeMode="append" onReady={stream.setTerminal} />
+          <Terminal writeMode="append" onReady={stream.setTerminal} overlay={<LiveLogBadge status={badgeStatus} />} />
         ) : (
-          <Terminal value={logsQuery.data || container.Logs} writeMode="replace" />
+          <Terminal
+            value={logsQuery.data || container.Logs}
+            writeMode="replace"
+            overlay={<LiveLogBadge status="snapshot" />}
+          />
         )}
       </div>
     </div>
