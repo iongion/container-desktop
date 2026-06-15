@@ -8,6 +8,9 @@ import { Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useRef } from "react";
 
+import { useAppStore } from "@/web-app/stores/appStore";
+
+import { registerFindTarget } from "./Find/findTargets";
 import { createWriteBuffer } from "./terminalWriteBuffer";
 
 import "@xterm/xterm/css/xterm.css";
@@ -20,6 +23,7 @@ export interface TerminalHandle {
   clear: () => void;
   fit: () => void;
   getTerminal: () => XTermTerminal | null;
+  getSearchAddon: () => SearchAddon | null;
   write: (data: string | Uint8Array) => void;
 }
 
@@ -37,15 +41,31 @@ function toTerminalData(value: string | Uint8Array): string {
   return new TextDecoder().decode(value);
 }
 
+// Resolve xterm font options from the user's settings, always keeping the bundled chain as a
+// fallback. xterm can't resolve CSS var(), so we read the resolved --monospace-font-embedded.
+function resolveTerminalFont(font?: { family?: string; size?: number; weight?: number }) {
+  const embedded =
+    getComputedStyle(document.body).getPropertyValue("--monospace-font-embedded").trim() ||
+    `"JetBrains Mono", monospace`;
+  return {
+    fontFamily: font?.family ? `"${font.family}", ${embedded}` : embedded,
+    fontSize: font?.size || 12,
+    fontWeight: (font?.weight || "normal") as any,
+  };
+}
+
 export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append", onReady, overlay }: TerminalProps) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement | null>(null);
   const term = useRef<XTermTerminal | null>(null);
   const fit = useRef<FitAddon | null>(null);
+  const search = useRef<SearchAddon | null>(null);
   const lastValue = useRef("");
   const readyCallback = useRef(onReady);
 
   readyCallback.current = onReady;
+
+  const font = useAppStore((state) => state.userSettings.font);
 
   const handleResize = (entries: ResizeEntry[]) => {
     const [entry] = entries;
@@ -62,18 +82,19 @@ export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append",
     const fitAddon = new FitAddon();
     const webglAddon = new WebglAddon();
     const unicode11Addon = new Unicode11Addon();
+    const initialFont = resolveTerminalFont(useAppStore.getState().userSettings.font);
     const terminal = new XTermTerminal({
       convertEol: true,
       drawBoldTextInBrightColors: true,
       rescaleOverlappingGlyphs: true,
       rightClickSelectsWord: true,
-      fontSize: 12,
-      fontFamily: `Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono", "Fira Code", monospace, "Powerline Extra Symbols"`,
+      fontSize: initialFont.fontSize,
+      fontFamily: initialFont.fontFamily,
       disableStdin: true,
       scrollback: 16 * 1024,
       logLevel: "error",
       allowProposedApi: true,
-      fontWeight: "normal",
+      fontWeight: initialFont.fontWeight,
     });
     if (viewRef.current) {
       terminal.open(viewRef.current);
@@ -81,7 +102,17 @@ export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append",
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(unicode11Addon);
     terminal.loadAddon(new WebLinksAddon());
-    terminal.loadAddon(new SearchAddon());
+    const searchAddon = new SearchAddon();
+    terminal.loadAddon(searchAddon);
+    search.current = searchAddon;
+    // Let the app's global find hotkey (mod/ctrl+f) bubble out of the terminal instead of
+    // being swallowed by xterm, so Ctrl+F opens the find widget while the terminal is focused.
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.type === "keydown" && (event.ctrlKey || event.metaKey) && (event.key === "f" || event.key === "F")) {
+        return false;
+      }
+      return true;
+    });
     try {
       terminal.loadAddon(webglAddon);
     } catch (error: any) {
@@ -104,17 +135,37 @@ export const Terminal: React.FC<TerminalProps> = ({ value, writeMode = "append",
       },
       fit: () => fitAddon.fit(),
       getTerminal: () => terminal,
+      getSearchAddon: () => search.current,
       write: (data) => writeBuffer.push(toTerminalData(data)),
     });
 
+    const unregisterFindTarget = viewRef.current
+      ? registerFindTarget({ type: "terminal", el: viewRef.current, getSearchAddon: () => search.current })
+      : undefined;
+
     return () => {
+      unregisterFindTarget?.();
       writeBuffer.dispose();
       terminal.dispose();
       term.current = null;
       fit.current = null;
+      search.current = null;
       lastValue.current = "";
     };
   }, []);
+
+  // Live-apply font changes to the existing terminal (no remount, scrollback preserved).
+  useEffect(() => {
+    const terminal = term.current;
+    if (!terminal) {
+      return;
+    }
+    const resolved = resolveTerminalFont(font);
+    terminal.options.fontFamily = resolved.fontFamily;
+    terminal.options.fontSize = resolved.fontSize;
+    terminal.options.fontWeight = resolved.fontWeight;
+    fit.current?.fit();
+  }, [font]);
 
   useEffect(() => {
     if (!term.current || typeof value === "undefined" || value === null) {

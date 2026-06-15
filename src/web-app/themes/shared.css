@@ -1,8 +1,27 @@
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/JetBrainsMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/JetBrainsMono-Bold.woff2") format("woff2");
+}
+
 :root {
   --app-data-table-items-padding: 10px;
-  --monospace-font:
-    Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono", "Fira Code", monospace,
-    "Powerline Extra Symbols";
+  /* The bundled fallback chain (JetBrains Mono first) — always present so a user's custom
+     font can degrade to it. The user font override (if any) is prepended to --monospace-font
+     at runtime in App.tsx; --monospace-font-size / --monospace-font-weight are set there too. */
+  --monospace-font-embedded:
+    "JetBrains Mono", Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono",
+    "Fira Code", monospace, "Powerline Extra Symbols";
+  --monospace-font: var(--monospace-font-embedded);
 }
 
 body.bp6-dark .bp6-menu {

@@ -1,7 +1,13 @@
 .CodeEditor {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
+}
+.AppScreenContent:has(.CodeEditor) {
+  overflow: visible;
+}
+.context-view:has(.workbench-hover-container) {
+  pointer-events: none;
 }
 .CodeEditorHeader {
   background: #111;

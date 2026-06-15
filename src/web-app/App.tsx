@@ -24,6 +24,7 @@ import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
 import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
+import { FindHost } from "@/web-app/components/Find/FindHost";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Container/GenerateKubeScreen";
@@ -202,7 +203,10 @@ function AppLayout() {
           {phase === AppBootstrapPhase.STARTING || !currentScreen ? null : (
             <AppSidebar disabled={!ready} screens={Screens} currentScreen={currentScreen} />
           )}
-          <div className="AppContentDocument">{content}</div>
+          <div className="AppContentDocument">
+            {content}
+            <FindHost />
+          </div>
         </div>
       </AppErrorBoundary>
     </>
@@ -219,6 +223,7 @@ export function AppMainScreen() {
   const currentConnector = useAppStore((state) => state.currentConnector);
   const nextConnection = useAppStore((state) => state.nextConnection);
   const theme = useAppStore((state) => state.userSettings.theme || DEFAULT_THEME);
+  const font = useAppStore((state) => state.userSettings.font);
   const initialize = useAppStore((state) => state.initialize);
   const startApplication = useAppStore((state) => state.startApplication);
 
@@ -234,6 +239,27 @@ export function AppMainScreen() {
       initialize().then(() => startApplication());
     }
   }, [initialize, startApplication]);
+
+  // Apply the user's monospace font override as CSS variables (removing them falls back to the
+  // bundled JetBrains Mono / built-in sizing). Consumed by code/pre/.bp6-code and the terminal.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (font?.family) {
+      root.style.setProperty("--monospace-font", `"${font.family}", var(--monospace-font-embedded)`);
+    } else {
+      root.style.removeProperty("--monospace-font");
+    }
+    if (font?.size) {
+      root.style.setProperty("--monospace-font-size", `${font.size}px`);
+    } else {
+      root.style.removeProperty("--monospace-font-size");
+    }
+    if (font?.weight) {
+      root.style.setProperty("--monospace-font-weight", `${font.weight}`);
+    } else {
+      root.style.removeProperty("--monospace-font-weight");
+    }
+  }, [font?.family, font?.size, font?.weight]);
 
   return (
     <div className="App">

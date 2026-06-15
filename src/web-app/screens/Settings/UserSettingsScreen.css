@@ -83,6 +83,7 @@
   padding-top: 10px;
 }
 .AppSettingsForm[data-form="flags"],
+.AppSettingsForm[data-form="font"],
 .AppSettingsForm[data-form="logging"] {
   display: flex;
   flex-direction: row;
@@ -94,6 +95,9 @@
 .AppSettingsForm[data-form="flags"] .bp6-form-group:first-child,
 .AppSettingsForm[data-form="logging"] .bp6-form-group:first-child {
   flex: 1;
+}
+.AppSettingsForm[data-form="logging"] {
+  padding-top: 10px;
 }
 [data-screen="settings-settings"] .NavbarLeft {
   display: flex;
@@ -109,7 +113,7 @@
 }
 
 .AppSettingsEngineManagerConnections {
-  height: calc(100vh - 380px);
+  height: calc(100vh - 410px);
   border: 1px solid #333;
   position: relative;
   background-color: #2a262c;
