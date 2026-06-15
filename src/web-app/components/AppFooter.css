@@ -7,10 +7,17 @@
 }
 .AppFooterNavbar {
   display: flex;
+  flex: 1 1 auto;
   margin: 0;
   padding: 0;
   box-shadow: none !important;
   height: 32px;
+  align-items: center;
+}
+/* Pin the bell to the far-right edge of the footer. */
+.AppFooterRightColumn {
+  margin-left: auto;
+  display: flex;
   align-items: center;
 }
 .AppFooter .bp6-navbar-group {

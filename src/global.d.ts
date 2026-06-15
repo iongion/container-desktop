@@ -70,12 +70,20 @@ declare global {
     send: (channel: string, ...data: any[]) => void;
   }
 
+  // Preload-exposed CLI activity bridge (see electron-shell/activityBus.ts). subscribe()
+  // returns an unsubscribe fn and replays entries buffered before the first subscriber.
+  export interface IActivityBus {
+    subscribe: (callback: (entry: any) => void) => () => void;
+    setEnabled: (enabled: boolean) => void;
+  }
+
   var Platform: IPlatform;
   var Command: ICommand;
   var Path: IPath;
   var FS: IFileSystem;
   var CURRENT_OS_TYPE: OperatingSystem;
   var MessageBus: IMessageBus;
+  var ActivityBus: IActivityBus;
 
   interface Window {
     Platform: IPlatform;
@@ -84,6 +92,7 @@ declare global {
     FS: IFileSystem;
     CURRENT_OS_TYPE: any;
     MessageBus: IMessageBus;
+    ActivityBus: IActivityBus;
   }
 }
 

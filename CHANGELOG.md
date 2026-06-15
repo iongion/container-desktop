@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Added
 
+- Notification Center: a right-side panel opened from a bell in the footer, with a notifications history and a filterable Activity log of engine API and CLI interactions (friendly labels, status, duration, copy-as-cURL/command). In-memory only.
 - Find in the current view with **Ctrl+F / Cmd+F** — a themed find widget (match counter, previous/next, case-sensitive) that highlights matches on container logs, inspect, processes and other detail and list views. JSON/YAML editors keep their built-in find, and list screens focus their existing filter box.
 - Configurable monospace font in Settings (family, size and weight): choose any font installed on your system, or reset to the bundled font in one click.
 

@@ -245,3 +245,11 @@ body.bp6-light[data-engine="docker"] [data-actions-menu="container"] .ItemAction
 body.bp6-light[data-engine="docker"] .AppDataTable thead {
   background: var(--docker-light-bg-color);
 }
+
+/* Notification Center — Docker accent for the active segment of the switcher.
+   Harnesses Blueprint's ButtonGroup active state (.bp6-active), tinted per engine. */
+body[data-engine="docker"] .NotificationCenterSwitch .bp6-button.bp6-active,
+body[data-engine="docker"] .NotificationCenterSwitch .bp6-button.bp6-active:hover {
+  background-color: #2f6fd6;
+  color: #fff;
+}

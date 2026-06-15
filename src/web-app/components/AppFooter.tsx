@@ -1,5 +1,6 @@
-import { Navbar, NavbarDivider, NavbarHeading } from "@blueprintjs/core";
+import { Alignment, Navbar, NavbarDivider, NavbarGroup, NavbarHeading } from "@blueprintjs/core";
 import i18n from "@/web-app/App.i18n";
+import { FooterBell } from "@/web-app/components/NotificationCenter/FooterBell";
 import { useAppStore } from "@/web-app/stores/appStore";
 import "./AppFooter.css";
 
@@ -52,6 +53,9 @@ export const AppFooter = () => {
             </NavbarHeading>
           </>
         )}
+        <NavbarGroup align={Alignment.END} className="AppFooterRightColumn">
+          <FooterBell />
+        </NavbarGroup>
       </Navbar>
     </div>
   );

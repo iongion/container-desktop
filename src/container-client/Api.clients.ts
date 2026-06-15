@@ -7,7 +7,8 @@ import {
   type EngineConnectorApiSettings,
   OperatingSystem,
 } from "@/env/Types";
-import { deepMerge } from "@/utils";
+import { axiosConfigToCURL, deepMerge } from "@/utils";
+import { systemNotifier } from "./notifier";
 
 export async function getApiConfig(
   api: EngineConnectorApiSettings,
@@ -48,6 +49,44 @@ export async function getApiConfig(
   return config;
 }
 
+// ── Activity Log instrumentation ───────────────────────────────────────────────────────
+// Every engine API call funnels through createApplicationApiDriver.request(); we emit a
+// "pending" entry immediately and patch a "settled" entry (status + duration) by guid so
+// long calls surface at once. The request body is stringified + truncated for memory; the
+// response body is intentionally not captured.
+const ACTIVITY_MAX_BODY = 8 * 1024;
+
+function activityStringify(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+function activityTruncate(text: string | undefined): string | undefined {
+  if (!text) return text;
+  return text.length > ACTIVITY_MAX_BODY ? `${text.slice(0, ACTIVITY_MAX_BODY)}… (${text.length} bytes)` : text;
+}
+function activityCurl(req: any, connection: Connection): string | undefined {
+  try {
+    const api = connection?.settings?.api;
+    const curl = axiosConfigToCURL({
+      baseURL: api?.baseURL,
+      socketPath: api?.connection?.uri,
+      url: req?.url,
+      method: req?.method,
+      params: req?.params,
+      headers: req?.headers,
+      data: req?.data,
+    });
+    return Array.isArray(curl) ? curl.join(" ") : curl;
+  } catch {
+    return undefined;
+  }
+}
+
 export function createApplicationApiDriver(connection: Connection, context?: any): AxiosInstance {
   async function request<_T = any, _DD = any>(request, config?: AxiosRequestConfig<any> | undefined) {
     const req = (config ? deepMerge({}, request, config) : request) || {
@@ -58,7 +97,41 @@ export function createApplicationApiDriver(connection: Connection, context?: any
       return acc;
     }, {} as any);
     req.headers = headersFlat as any;
-    return await Command.ProxyRequest(req, connection, context);
+
+    const guid = crypto.randomUUID();
+    const method = `${req.method || "GET"}`.toUpperCase();
+    const url = `${req.url || ""}`;
+    const startedAt = performance.now();
+    systemNotifier.transmit("activity.api", { phase: "pending", guid, method, url });
+    try {
+      const response = await Command.ProxyRequest(req, connection, context);
+      systemNotifier.transmit("activity.api", {
+        phase: "settled",
+        guid,
+        method,
+        url,
+        status: "ok",
+        httpStatus: response?.status,
+        durationMs: Math.round(performance.now() - startedAt),
+        requestBody: activityTruncate(activityStringify(req.data)),
+        curl: activityCurl(req, connection),
+      });
+      return response;
+    } catch (error: any) {
+      systemNotifier.transmit("activity.api", {
+        phase: "settled",
+        guid,
+        method,
+        url,
+        status: "error",
+        httpStatus: error?.response?.status,
+        durationMs: Math.round(performance.now() - startedAt),
+        error: `${error?.message || error}`,
+        requestBody: activityTruncate(activityStringify(req.data)),
+        curl: activityCurl(req, connection),
+      });
+      throw error;
+    }
   }
   const driver: AxiosInstance = {
     request,

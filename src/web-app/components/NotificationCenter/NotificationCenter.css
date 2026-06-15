@@ -1,0 +1,228 @@
+/* Structure only — engine/theme colors are layered on in themes/podman.css + docker.css.
+   The drawer background itself is already supplied by the shared .AppDrawer rules. */
+
+.NotificationCenterDrawer .bp6-drawer-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Drawer header bar: tab switcher on the left, Pause/Clear actions right after it. */
+.NotificationCenterHeaderBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-weight: normal;
+}
+/* Spacer pushes Pause/Clear to the far right, next to the drawer close icon. */
+.NotificationCenterHeaderActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Segmented switcher = Blueprint ButtonGroup; the framework renders the active state.
+   The active button is tinted per engine in themes/podman.css + docker.css. */
+.NotificationCenterSwitch .NotificationCenterSwitchCount {
+  margin-left: 6px;
+  font-size: 10px;
+}
+
+.NotificationCenterSwitch .bp6-button-text {
+  vertical-align: middle;
+}
+
+/* The drawer body's only child is the active tab panel — let it fill and self-scroll. */
+.NotificationCenterDrawer .bp6-drawer-body > .NotificationCenterPanel {
+  flex: 1 1 auto;
+}
+.NotificationCenterPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.ActivityListScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0 12px;
+}
+
+/* Filter toolbar: a single search field carrying the kind/severity toggles as its
+   right element. */
+.ActivityToolbar {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(138, 155, 168, 0.15);
+}
+.ActivityToolbarFilters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ActivityList {
+  display: flex;
+  flex-direction: column;
+}
+
+.ActivityRow {
+  border-bottom: 1px solid rgba(138, 155, 168, 0.15);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Header is a reset <button> when expandable, a plain <div> otherwise. */
+.ActivityRowHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.ActivityRowHeader {
+  cursor: pointer;
+}
+button.ActivityRowHeader:hover {
+  background: rgba(138, 155, 168, 0.08);
+}
+
+.ActivityRowDot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #8a9ba8;
+}
+.ActivityRowDot[data-severity="info"] {
+  background: #6caaff;
+}
+.ActivityRowDot[data-severity="success"] {
+  background: #3dcc91;
+}
+.ActivityRowDot[data-severity="warning"] {
+  background: #ffb366;
+}
+.ActivityRowDot[data-severity="error"] {
+  background: #ff7373;
+}
+
+.ActivityRowMain {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+}
+.ActivityRowPrimary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  word-break: break-word;
+}
+.ActivityRowSecondary {
+  margin-top: 2px;
+  font-family: var(--monospace-font, monospace);
+  font-size: 11px;
+  opacity: 0.6;
+  word-break: break-all;
+}
+.ActivityRowMeta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+.ActivityRowMeta .bp6-tag {
+  min-height: 16px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+.ActivityRowTime {
+  font-size: 11px;
+  opacity: 0.5;
+}
+.ActivityRowCount {
+  font-size: 10px;
+}
+
+/* Expanded detail (request/response, stdout/stderr, copy actions) */
+.ActivityRowDetail {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+/* Label line carries an optional inline action (e.g. Copy as cURL) on the right, so it
+   doesn't cost an extra row. */
+.ActivityDetailLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 20px;
+  margin-bottom: 2px;
+}
+.ActivityDetailLabel > span {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+.ActivityCopyButton.bp6-button {
+  min-height: 20px;
+  padding: 0 6px;
+}
+.ActivityDetailPre {
+  margin: 0;
+  max-height: 220px;
+  padding: 6px 8px;
+  overflow: auto;
+  font-family: var(--monospace-font, monospace);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+}
+
+/* Footer bell + unread badge */
+.FooterBell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.FooterBell .FooterBellBadge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 0 4px;
+  font-size: 9px;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Light-theme readability: the code/detail panes and hover need a light wash on the white
+   drawer (the dark default is for dark mode). Engine accents live in themes/{podman,docker}.css. */
+body.bp6-light .NotificationCenterDrawer .ActivityDetailPre {
+  background: rgba(17, 20, 24, 0.07);
+  color: #1c2127;
+}
+body.bp6-light .NotificationCenterDrawer button.ActivityRowHeader:hover {
+  background: rgba(17, 20, 24, 0.05);
+}
