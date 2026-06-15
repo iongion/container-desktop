@@ -262,19 +262,38 @@ export const Screen: AppScreen<ScreenProps> = () => {
   let title = "";
   let errorMessage = "";
   let icon: any;
+  const connectionFailureReason = currentConnector?.availability.api
+    ? undefined
+    : getFirstUnavailableReason(currentConnector?.availability);
+  const hasDefaultConnection = Boolean(
+    defaultConnector && connections.some((connection) => connection.id === defaultConnector),
+  );
 
   if (connections.length === 0) {
     title = t("No connections defined");
     errorMessage = t("To be able to continue, at least one connection needs to be defined.");
     icon = mdiEmoticonSad;
-  } else {
+  } else if (currentConnector && !currentConnector.availability.api) {
+    title = t("Connection failed");
+    errorMessage = connectionFailureReason?.reason
+      ? t("Connection to {{name}} failed: {{reason}}", {
+          name: currentConnector.name,
+          reason: connectionFailureReason.reason,
+        })
+      : t("Connection to {{name}} failed.", {
+          name: currentConnector.name,
+        });
+    icon = mdiEmoticonSad;
+  } else if (!hasDefaultConnection) {
     title = t("No default connection");
     errorMessage = t("To be able to start automatically, a default connection needs to be set.");
     icon = mdiEmoticonWink;
-    if (!currentConnector) {
-      title = t("No active connection");
-      errorMessage = t("To be able to continue, a connection needs to be established.");
-    }
+  } else if (!currentConnector) {
+    title = t("No active connection");
+    errorMessage = t("To be able to continue, a connection needs to be established.");
+    icon = mdiEmoticonWink;
+  } else {
+    icon = mdiEmoticonWink;
   }
 
   const contentWidget =
@@ -322,8 +341,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     runtimeEngineLabelsMap[`${connection.engine}:${connection.host}`] || connection.host;
                   const isCurrent = currentConnector?.connectionId === connection?.id;
                   const isConnected = isCurrent && currentConnector.availability.api;
-                  const unavailableReason =
-                    isCurrent && !isConnected ? getFirstUnavailableReason(currentConnector.availability) : undefined;
                   const isAutomatic = connection.settings.mode === "mode.automatic";
                   const descriptions = [connection.settings?.api?.connection?.uri || "", connection.description || ""];
                   const description = descriptions.filter((it) => !isEmpty(it)).join(". ");
@@ -343,14 +360,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <td>
                         <p className="PlatformConnectionName">{connection.name}</p>
                         {description ? <p className="PlatformConnectionDescription">{description}</p> : null}
-                        {unavailableReason?.reason ? (
-                          <p
-                            className="PlatformConnectionError"
-                            data-availability-dimension={unavailableReason.dimension}
-                          >
-                            {unavailableReason.reason}
-                          </p>
-                        ) : null}
                       </td>
                       <td>{connection.engine}</td>
                       <td>

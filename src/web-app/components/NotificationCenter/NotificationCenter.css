@@ -201,13 +201,13 @@ button.ActivityRowHeader:hover {
   border-radius: 3px;
 }
 
-/* Footer bell + unread badge */
-.FooterBell {
+/* Header bell + unread badge */
+.NotificationBell {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
-.FooterBell .FooterBellBadge {
+.NotificationBell .NotificationBellBadge {
   position: absolute;
   top: -2px;
   right: -4px;

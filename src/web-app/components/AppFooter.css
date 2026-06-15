@@ -14,12 +14,6 @@
   height: 32px;
   align-items: center;
 }
-/* Pin the bell to the far-right edge of the footer. */
-.AppFooterRightColumn {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-}
 .AppFooter .bp6-navbar-group {
   height: 32px;
 }

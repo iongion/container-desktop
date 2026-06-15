@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
 import { OperatingSystem, type Program, WindowAction } from "@/env/Types";
+import { NotificationBell } from "@/web-app/components/NotificationCenter/NotificationBell";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
 import type { AppScreen } from "../Types";
@@ -97,17 +98,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     });
   }
 
-  const rightSideActions =
-    provisioned && running ? (
-      <>
-        <AnchorButton href={pathTo("/screens/settings/user-settings")} icon={IconNames.COG} />
-        <AnchorButton
-          href={pathTo("/screens/troubleshoot")}
-          icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />}
-        />
-        {osType === OperatingSystem.MacOS ? null : <Divider />}
-      </>
-    ) : null;
+  const disabledHeaderActions = !(provisioned && running);
+  const rightSideActions = (
+    <>
+      <NotificationBell />
+      <AnchorButton
+        className="AppHeaderActionButton"
+        disabled={disabledHeaderActions}
+        href={pathTo("/screens/settings/user-settings")}
+        icon={IconNames.COG}
+        title={t("Settings")}
+        aria-label={t("Settings")}
+      />
+      <AnchorButton
+        className="AppHeaderActionButton"
+        disabled={disabledHeaderActions}
+        href={pathTo("/screens/troubleshoot")}
+        icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />}
+        title={t("Troubleshoot")}
+        aria-label={t("Troubleshoot")}
+      />
+      {osType === OperatingSystem.MacOS ? null : <Divider />}
+    </>
+  );
   const screenTitle = provisioned ? currentScreen?.Title : t("Your attention is needed");
 
   useEffect(() => {

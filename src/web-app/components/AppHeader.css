@@ -22,6 +22,25 @@
 }
 .AppHeaderActions {
   -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+}
+.AppHeaderActions .NotificationBell {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.AppHeaderActions .NotificationBellButton.bp6-button,
+.AppHeaderActions .AppHeaderActionButton.bp6-button {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
 }
 .App-projectNameVersion {
   display: flex;

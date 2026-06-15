@@ -183,12 +183,6 @@
   padding-top: 5px;
   color: #999;
 }
-.PlatformConnectionError {
-  margin: 0;
-  padding-top: 5px;
-  font-size: 11px;
-  color: #cd4246;
-}
 
 [data-connection-is-system="yes"] .PlatformConnectionName {
   font-weight: bold;

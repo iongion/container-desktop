@@ -135,7 +135,7 @@ export function selectUnreadCount(state: ActivityState): number {
 
 // ── Ingestion: system events (reused systemNotifier bus) ──────────────────────────────
 // These run at module load — coexisting with the existing appStore listeners (eventemitter3
-// supports multiple listeners per event). The drawer/footer import this module, so the
+// supports multiple listeners per event). The drawer/header import this module, so the
 // subscriptions are registered at app startup, not at component render.
 
 function toSystemEntry(event: SystemNotification): SystemEntry {

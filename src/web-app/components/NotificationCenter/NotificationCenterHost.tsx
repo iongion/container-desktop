@@ -9,7 +9,7 @@ import { NotificationsTab } from "./NotificationsTab";
 import "./NotificationCenter.css";
 
 // Single, app-wide mount for the notification center drawer (mirrors FindHost). The
-// per-screen footer bell only toggles store state; the drawer + entries live here so
+// header bell only toggles store state; the drawer + entries live here so
 // they persist across navigation.
 //
 // A custom segmented switcher lives in the drawer header bar (as the title) — it reads
@@ -58,11 +58,9 @@ export function NotificationCenterHost() {
             {tabs.map((tab) => (
               <Button key={tab.id} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}>
                 {tab.label}
-                {tab.count > 0 ? (
-                  <Tag round minimal className="NotificationCenterSwitchCount">
-                    {tab.count > 99 ? "99+" : tab.count}
-                  </Tag>
-                ) : null}
+                <Tag round minimal className="NotificationCenterSwitchCount">
+                  {tab.count > 99 ? "99+" : tab.count}
+                </Tag>
               </Button>
             ))}
           </ButtonGroup>
