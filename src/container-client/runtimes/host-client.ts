@@ -348,7 +348,12 @@ export class HostClient implements HostContext {
         this.logger.error(this.id, "API ping service failed - response error", response);
       }
     } catch (error: any) {
-      result.details = "API is not reachable - start manually or connect";
+      const apiSettings = await this.getSettings();
+      const endpoint =
+        apiSettings.api.connection?.uri || apiSettings.api.connection?.relay || apiSettings.api.baseURL || "";
+      result.details = endpoint
+        ? `API is not reachable at ${endpoint} - start manually or connect`
+        : "API is not reachable - start manually or connect";
       this.logger.error(this.id, "API ping service failed - response failure", error, driver);
     }
     systemNotifier.transmit("engine.availability", {
@@ -480,17 +485,21 @@ export class HostClient implements HostContext {
       trace: "Detecting host availability",
     });
     const check = await this.isEngineAvailable();
+    // Controller + scope only apply to scoped hosts (WSL / LIMA / SSH / podman-machine).
+    // Native hosts have no controller, so those dimensions are left undefined ("not applicable")
+    // rather than reported as a failure with a misleading "Path not set".
+    const scoped = this.isScoped();
     const availability: EngineConnectorAvailability = {
       enabled: check.success,
       host: false,
-      controller: false,
-      controllerScope: false,
+      controller: scoped ? false : undefined,
+      controllerScope: scoped ? false : undefined,
       program: false,
       api: false,
       report: {
         host: "Not checked",
-        controller: "Not checked",
-        controllerScope: "Not checked",
+        controller: scoped ? "Not checked" : undefined,
+        controllerScope: scoped ? "Not checked" : undefined,
         program: "Not checked",
         api: "Not checked",
       },
@@ -499,28 +508,32 @@ export class HostClient implements HostContext {
     if (check.success) {
       availability.host = true;
     }
-    if (availability.host) {
+    if (availability.host && scoped) {
       systemNotifier.transmit("engine.availability", {
-        trace: "Detecting host program availability",
+        trace: "Detecting host controller availability",
       });
       const controllerAvailability = await this.isControllerAvailable(settings);
       availability.report.controller = controllerAvailability.details;
       if (controllerAvailability.success) {
         availability.controller = true;
       }
-    } else {
-      availability.report.controller = "Not checked - host not available";
-    }
-    if (availability.controller) {
-      const controllerScope = await this.isControllerAvailable(settings);
-      availability.report.controllerScope = controllerScope.details;
-      if (controllerScope.success) {
-        availability.controllerScope = true;
+      if (availability.controller) {
+        // NOTE: controllerScope currently mirrors the controller check.
+        const controllerScope = await this.isControllerAvailable(settings);
+        availability.report.controllerScope = controllerScope.details;
+        if (controllerScope.success) {
+          availability.controllerScope = true;
+        }
+      } else {
+        availability.report.controllerScope = "Not checked - controller not available";
       }
-    } else {
+    } else if (scoped) {
+      availability.report.controller = "Not checked - host not available";
       availability.report.controllerScope = "Not checked - controller not available";
     }
-    if (availability.controllerScope) {
+    // The program lives inside the scope for scoped hosts, or directly on the host for native ones.
+    const canCheckProgram = availability.host && (scoped ? Boolean(availability.controllerScope) : true);
+    if (canCheckProgram) {
       systemNotifier.transmit("engine.availability", {
         trace: "Detecting guest program availability",
       });
@@ -529,6 +542,8 @@ export class HostClient implements HostContext {
       if (program.success) {
         availability.program = true;
       }
+    } else if (!availability.host) {
+      availability.report.program = "Not checked - host not available";
     } else {
       availability.report.program = "Not checked - controller scope not available";
     }
@@ -536,13 +551,13 @@ export class HostClient implements HostContext {
       trace: "Detecting guest api availability",
     });
     const api = await this.isApiRunning();
-    availability.report.api = api.details ?? "";
     if (api.success) {
       availability.api = true;
       availability.report.api = "API is running";
     } else {
       availability.api = false;
-      availability.report.api = "API is not running";
+      // Preserve the specific reason (e.g. "API is not reachable …") rather than a generic message.
+      availability.report.api = api.details || "API is not running";
     }
     systemNotifier.transmit("engine.availability", {
       trace: "Availability check complete",
