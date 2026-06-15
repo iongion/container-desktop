@@ -118,6 +118,9 @@ dist
 .env.test
 .env.*local
 
+# Live connectivity test targets (real hosts/keys; copy from targets.example.env)
+src/__tests__/live/targets.env
+
 # Extras
 .electron-vendors.cache.json
 
