@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-06-15
+
 ## Added
 
 - Notification Center: a right-side panel opened from a bell in the footer, with a notifications history and a filterable Activity log of engine API and CLI interactions (friendly labels, status, duration, copy-as-cURL/command). In-memory only.
