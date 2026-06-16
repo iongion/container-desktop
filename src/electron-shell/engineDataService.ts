@@ -8,7 +8,7 @@
 
 import { EventEmitter } from "eventemitter3";
 import { Application } from "@/container-client/Application";
-import { ContainersAdapter, isContainerRunning } from "@/container-client/adapters/containers";
+import { ContainersAdapter } from "@/container-client/adapters/containers";
 import { ImagesAdapter } from "@/container-client/adapters/images";
 import { NetworksAdapter } from "@/container-client/adapters/networks";
 import { PodsAdapter } from "@/container-client/adapters/pods";
@@ -27,7 +27,6 @@ import type {
   ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import type { ContainerStats } from "@/env/Types";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
 export type { AppRuntimeSnapshot, ConnectionPhase } from "@/container-client/resourceSyncProtocol";
@@ -47,7 +46,7 @@ export class EngineDataService {
   private readonly refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private app?: Application;
   private stopEvents: (() => void) | null = null;
-  private theme?: string; // active UI theme, surfaced to the tray popover via getTrayLive() (not the data push)
+  private machines: Array<{ name: string; running: boolean }> = []; // cache for the tray menu (see getMachines)
   private appRuntime: AppRuntimeSnapshot = {
     phase: "idle",
     running: false,
@@ -131,10 +130,12 @@ export class EngineDataService {
     }
     const current = this.appRuntime.currentConnector;
     if (!this.appRuntime.running || !current) {
+      this.machines = [];
       return;
     }
     const host = getActiveHostClient();
     await this.refreshAll(current.id, host);
+    this.machines = await this.loadMachines(host);
     if (host.capabilities.events) {
       this.stopEvents = await this.connectEvents(current.id, host);
     }
@@ -240,7 +241,6 @@ export class EngineDataService {
       const app = this.ensureApp();
       await app.setup();
       const userSettings = await app.getGlobalUserSettings();
-      this.theme = (userSettings as { theme?: string } | undefined)?.theme;
       const connections = [...(await app.getSystemConnections()), ...(await app.getConnections())];
       const target =
         connections.find((connection) => connection.id === targetConnectionId) ??
@@ -332,20 +332,18 @@ export class EngineDataService {
         this.refresh(current, "pods", host).catch(() => undefined),
         this.refresh(current, "containers", host).catch(() => undefined),
       ]);
+    } else if (resource === "machine") {
+      // Machine lifecycle has no /events signal — reload the cache and notify so the menu rebuilds.
+      this.machines = await this.loadMachines(host);
+      this.emitChange();
     }
   }
 
-  // The tray-only "live" bits, fetched on demand only while the popover is visible (so the app never
-  // becomes a background poller): the popover's theme, the current connection's machines, and raw
-  // per-container stats. Raw stats are returned as-is — the popover formats them, keeping the cross-ping
-  // CPU delta. This is NOT shareable standing data, so it never rides the resource push.
-  async getTrayLive(host: HostClientFacade = getActiveHostClient()): Promise<{
-    theme?: string;
-    machines: Array<{ name: string; running: boolean }>;
-    statsById: Record<string, ContainerStats>;
-  }> {
-    const [machines, statsById] = await Promise.all([this.loadMachines(host), this.loadRunningStats(host)]);
-    return { theme: this.theme, machines, statsById };
+  // The current connection's machines, cached so the frequently-rebuilt tray menu costs no engine call.
+  // Refreshed on connect/start and after a machine.* action (see performAction); empty when machines aren't
+  // a capability of the active host (e.g. Docker / remote).
+  getMachines(): Array<{ name: string; running: boolean }> {
+    return this.machines;
   }
 
   private async loadMachines(host: HostClientFacade): Promise<Array<{ name: string; running: boolean }>> {
@@ -361,26 +359,5 @@ export class EngineDataService {
     } catch {
       return [];
     }
-  }
-
-  private async loadRunningStats(host: HostClientFacade): Promise<Record<string, ContainerStats>> {
-    const current = this.appRuntime.currentConnector?.id;
-    if (!current || !this.appRuntime.running) {
-      return {};
-    }
-    const containers = this.getResourceState(current).containers as Array<{ Id: string }>;
-    const running = containers.filter((container) => isContainerRunning(container as any));
-    const adapter = new ContainersAdapter(host);
-    const statsById: Record<string, ContainerStats> = {};
-    await Promise.all(
-      running.map(async (container) => {
-        try {
-          statsById[container.Id] = await adapter.stats(container.Id);
-        } catch {
-          // best-effort per container — one failure must not drop the rest
-        }
-      }),
-    );
-    return statsById;
   }
 }

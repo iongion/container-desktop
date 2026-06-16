@@ -117,14 +117,14 @@ The `HostClientFacade` is the raw operations surface; screens don't call it dire
 The **main process is the single engine authority**: it owns the connection, the engine `/events` stream and
 all list fetching, **and** it executes the renderer's engine HTTP. The renderer runs no event manager and
 opens no second connection — `resourceEvents` is a thin client that starts the mirror and forwards "refresh
-now" nudges, and `Command.ProxyRequest` is forwarded to main so the app + tray share **one** tunnel / relay /
-socket pool. Reads are pushed to every window; the tray popover consumes that same push (see
-[system-tray.md](system-tray.md)).
+now" nudges, and `Command.ProxyRequest` is forwarded to main so there is **one** tunnel / relay / socket
+pool, in main. Reads are pushed to the app window; the native tray menu is built in main from that same
+owned data (see [system-tray.md](system-tray.md)).
 
 | Piece | Path | Role |
 | --- | --- | --- |
-| `EngineDataService` | [`electron-shell/engineDataService.ts`](../../src/electron-shell/engineDataService.ts) | Main-side owner: an `Application` (via `Application.initInstance`, no `window`), connection/runtime + per-connection resource state, initial lists + `/events` → debounced refresh, plus tray action execution and tray-live (machines/stats). Idempotent `ensureConnected` lets the renderer make main connect before its forwarded requests. |
-| `ResourceSyncBroker` | [`electron-shell/resourceSyncBroker.ts`](../../src/electron-shell/resourceSyncBroker.ts) | Pushes a `ResourceSyncSnapshot` to windows on change; answers `resource:get-snapshot` (main window or tray popover) + awaitable `resource:ensure-connected`; accepts a `resource:refresh` nudge. |
+| `EngineDataService` | [`electron-shell/engineDataService.ts`](../../src/electron-shell/engineDataService.ts) | Main-side owner: an `Application` (via `Application.initInstance`, no `window`), connection/runtime + per-connection resource state, initial lists + `/events` → debounced refresh, plus tray action execution and a machines cache for the native tray menu. Idempotent `ensureConnected` lets the renderer make main connect before its forwarded requests. |
+| `ResourceSyncBroker` | [`electron-shell/resourceSyncBroker.ts`](../../src/electron-shell/resourceSyncBroker.ts) | Pushes a `ResourceSyncSnapshot` to windows on change; answers `resource:get-snapshot` (main window) + awaitable `resource:ensure-connected`; accepts a `resource:refresh` nudge. |
 | `CommandProxyBroker` | [`electron-shell/commandProxyBroker.ts`](../../src/electron-shell/commandProxyBroker.ts) | Serves the renderer's forwarded `Command.ProxyRequest` against main's active host-client driver (one connection). Non-stream is request/response; container-log streams are opened here and chunked to the requesting window, with orphan cleanup when that window closes. |
 | `ResourceBus` (preload) | [`electron-shell/resourceBus.ts`](../../src/electron-shell/resourceBus.ts) | Allowlisted receive bridge (mirrors `TrayBus`) for the resource push. |
 | `commandProxyClient` (preload) | [`electron-shell/commandProxyClient.ts`](../../src/electron-shell/commandProxyClient.ts) | Forwards `Command.ProxyRequest` to main (non-stream invoke + a rebuilt stream emitter); the other Command methods (CLI / SSH) stay local. |
@@ -133,8 +133,8 @@ socket pool. Reads are pushed to every window; the tray popover consumes that sa
 
 Both the read layer and command execution are owned by main and live-verified (CDP smoke). The renderer
 still composes a `HostClient` for typing + per-engine normalizers, but its HTTP executes in main — so there
-is exactly **one** engine connection whether the app window is open, closed (hidden to tray), or only the
-tray popover is showing.
+is exactly **one** engine connection whether the app window is open, closed (hidden to tray), or the tray
+menu is acting on its own.
 
 ## Key types (the vocabulary)
 

@@ -57,8 +57,8 @@ function delayCheckUpdate(osType: OperatingSystem) {
   }, 1500);
 }
 
-// One-time (authority window only): follow a tray-initiated connection switch. The tray popover asks main
-// to switch; with a main window open, main forwards `tray:switch-connection` here so the app UI tracks the
+// One-time (main window only): follow a tray-initiated connection switch. The tray menu asks main to
+// switch; with a main window open, main forwards `tray:switch-connection` here so the app UI tracks the
 // same connection via its normal startApplication path. Guarded so it registers exactly once.
 let traySwitchListenerRegistered = false;
 function registerTraySwitchListener(get: () => AppStore): void {

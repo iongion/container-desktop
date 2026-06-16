@@ -113,15 +113,21 @@ describe("EngineDataService.performAction", () => {
   });
 });
 
-describe("EngineDataService.getTrayLive", () => {
-  it("returns the current connection's machines and no stats when idle", async () => {
+describe("EngineDataService.getMachines", () => {
+  it("is empty by default and is refreshed (and notifies) after a machine action", async () => {
     const fakeHost = {
       capabilities: { extensions: { machines: true } },
       getPodmanMachines: async () => [{ Name: "podman-machine-default", Running: true }],
+      startPodmanMachine: async () => true,
     } as unknown as HostClientFacade;
     const service = new EngineDataService();
-    const live = await service.getTrayLive(fakeHost);
-    expect(live.machines).toEqual([{ name: "podman-machine-default", running: true }]);
-    expect(live.statsById).toEqual({});
+    expect(service.getMachines()).toEqual([]);
+    let changes = 0;
+    service.subscribe(() => {
+      changes += 1;
+    });
+    await service.performAction("machine.start", "podman-machine-default", fakeHost);
+    expect(service.getMachines()).toEqual([{ name: "podman-machine-default", running: true }]);
+    expect(changes).toBeGreaterThan(0); // menu rebuild trigger
   });
 });

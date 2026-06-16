@@ -1,4 +1,4 @@
-// Preload-side typed subscribe bridge for the tray widget. Mirrors the ActivityBus pattern:
+// Preload-side typed subscribe bridge for the tray's main→renderer follow signal. Mirrors the ActivityBus pattern:
 // it runs in the Node-capable preload realm and is exposed to the renderer over the
 // contextBridge so a renderer can RECEIVE main-process pushes (the existing MessageBus only
 // does send/invoke). Keep this CJS-safe: no web-app imports — it is bundled into preload.cjs.
@@ -10,8 +10,7 @@ import { ipcRenderer } from "electron";
 
 // Channels a renderer may subscribe to (main -> renderer pushes). Anything else is rejected.
 const SUBSCRIBABLE = new Set<string>([
-  "tray:live", // main -> popover (active-gated theme + machines + raw container stats)
-  "tray:switch-connection", // main -> authority (follow a tray-initiated connection switch)
+  "tray:switch-connection", // main -> authority window (follow a tray-initiated connection switch)
 ]);
 
 export const TrayBus = {

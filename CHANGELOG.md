@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 
 - Bulk (mass) operations on the list screens of Containers, Pods, Machines, Images, Volumes, Networks and Secrets — multi-select rows with delete and lifecycle actions (stop/pause/start/restart).
-- System tray widget: a popover for the current connection's containers, pods and machines with start/stop/pause/restart controls and live CPU/memory, served by the main process so it keeps working with the main window closed.
+- System tray: a native menu for the current connection's containers, pods and machines with start/stop/pause/restart actions, built by the main process so it works with the main window closed (and reliable on Linux tray shells).
 
 ## Changed
 

@@ -27,13 +27,8 @@ export interface ResourceSyncBrokerDeps {
   onMessage: (channel: string, handler: (event: any, payload: any) => void) => void;
   /** Push a payload to every consumer window — wraps webContents.send fan-out in production. */
   broadcast: (channel: string, payload: unknown) => void;
-  /** Only the main app window may refresh/switch (writes) — wraps event.sender validation. */
+  /** Only the main app window may read/refresh/switch — wraps event.sender validation. */
   isAllowedSender: (event: any) => boolean;
-  /**
-   * Read-only get-snapshot may also come from the tray popover (it mirrors main's data the same way the
-   * app window does); writes stay restricted to `isAllowedSender`. Defaults to `isAllowedSender`.
-   */
-  isAllowedReader?: (event: any) => boolean;
 }
 
 export class ResourceSyncBroker {
@@ -42,9 +37,8 @@ export class ResourceSyncBroker {
   constructor(private readonly deps: ResourceSyncBrokerDeps) {}
 
   register(): void {
-    const isAllowedReader = this.deps.isAllowedReader ?? this.deps.isAllowedSender;
     this.deps.onInvoke(RESOURCE_SYNC.getSnapshot, (event) =>
-      isAllowedReader(event) ? this.deps.service.getSyncSnapshot() : null,
+      this.deps.isAllowedSender(event) ? this.deps.service.getSyncSnapshot() : null,
     );
     this.deps.onMessage(RESOURCE_SYNC.refresh, (event, payload: ResourceRefreshRequest) => {
       if (!this.deps.isAllowedSender(event) || !payload?.connectionId) {

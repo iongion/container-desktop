@@ -4,6 +4,7 @@ import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { ActivityBus, wrapCommandForActivity } from "./activityBus";
 import { forwardProxyRequest } from "./commandProxyClient";
+import { installPlatformGlobals } from "./globals";
 import { ResourceBus } from "./resourceBus";
 import { MessageBus } from "./shared";
 import { TrayBus } from "./trayBus";
@@ -15,15 +16,12 @@ import { TrayBus } from "./trayBus";
 const ActivityCommand = wrapCommandForActivity(Command);
 const ForwardingCommand: ICommand = { ...ActivityCommand, ProxyRequest: forwardProxyRequest };
 
-// patch global like in preload
-(global as any).Command = ForwardingCommand;
-(global as any).Platform = Platform;
-(global as any).Path = Path;
-(global as any).FS = FS;
-(global as any).CURRENT_OS_TYPE = CURRENT_OS_TYPE;
-(global as any).MessageBus = MessageBus;
-(global as any).TrayBus = TrayBus;
-(global as any).ResourceBus = ResourceBus;
+// Patch the shared platform globals (the same set main installs); preload adds the receive buses.
+installPlatformGlobals(global, {
+  command: ForwardingCommand,
+  messageBus: MessageBus,
+  extras: { TrayBus, ResourceBus },
+});
 
 function main() {
   console.debug("Preload script loaded");

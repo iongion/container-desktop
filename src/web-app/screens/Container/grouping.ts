@@ -1,9 +1,8 @@
 // Container list grouping — turns a flat Container[] into ContainerGroup[] keyed by the normalizer's
 // Computed.Group (name prefix before the first "-"/"_", or "Pod infrastructure" for "*-infra").
 //
-// Extracted verbatim from ManageScreen so the system-tray widget renders the SAME grouping/tree as the
-// main Containers screen (tray calls groupContainers(items, "", undefined)). Behavior is unchanged; this
-// is the single source of truth for container grouping.
+// Extracted verbatim from ManageScreen as the single source of truth for the Containers screen's grouping
+// (compose-project / name-prefix groups, "Pod infrastructure" pinned on top). Behavior is unchanged.
 
 import { IconNames } from "@blueprintjs/icons";
 

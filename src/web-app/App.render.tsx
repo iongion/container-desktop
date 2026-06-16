@@ -1,6 +1,5 @@
-// Full-app renderer. Extracted from index.tsx so the popover entry (index.html#tray) can be
-// dynamically imported separately and NEVER execute this bootstrap. The tray popover is an independent
-// consumer of main's owned data (no authority-side bridge), so nothing tray-specific mounts here.
+// Full-app renderer: the single window's bootstrap, dynamically imported from index.tsx. The tray is a
+// native OS menu owned by the main process (there is no tray renderer), so nothing tray-specific mounts here.
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";

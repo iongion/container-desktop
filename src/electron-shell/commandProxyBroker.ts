@@ -23,7 +23,7 @@ export interface CommandProxyBrokerDeps {
   onMessage: (channel: string, handler: (event: any, payload: any) => void) => void;
   /** Push a stream event to the window that opened the stream. */
   send: (event: any, channel: string, payload: unknown) => void;
-  /** Only the main app window forwards engine HTTP (the popover delegates actions via the tray channel). */
+  /** Only the main app window forwards engine HTTP. */
   isAllowedSender: (event: any) => boolean;
   /** Stable identity for a sender, so its streams can be reaped when its window closes. */
   senderId: (event: any) => number | string;
