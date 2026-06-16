@@ -8,7 +8,7 @@
 
 import { EventEmitter } from "eventemitter3";
 import { Application } from "@/container-client/Application";
-import { ContainersAdapter } from "@/container-client/adapters/containers";
+import { ContainersAdapter, isContainerRunning } from "@/container-client/adapters/containers";
 import { ImagesAdapter } from "@/container-client/adapters/images";
 import { NetworksAdapter } from "@/container-client/adapters/networks";
 import { PodsAdapter } from "@/container-client/adapters/pods";
@@ -27,6 +27,7 @@ import type {
   ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
+import type { ContainerStats } from "@/env/Types";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
 export type { AppRuntimeSnapshot, ConnectionPhase } from "@/container-client/resourceSyncProtocol";
@@ -46,6 +47,7 @@ export class EngineDataService {
   private readonly refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private app?: Application;
   private stopEvents: (() => void) | null = null;
+  private theme?: string; // active UI theme, surfaced to the tray popover via getTrayLive() (not the data push)
   private appRuntime: AppRuntimeSnapshot = {
     phase: "idle",
     running: false,
@@ -138,6 +140,20 @@ export class EngineDataService {
     }
   }
 
+  // Connect to a connection (idempotent): a no-op when main is already connected+running to it, otherwise a
+  // full start. The renderer awaits this before its forwarded engine requests, so main owns the connection
+  // their HTTP rides on — the foundation of the single-connection model.
+  async ensureConnected(targetConnectionId?: string): Promise<void> {
+    if (
+      this.appRuntime.running &&
+      this.appRuntime.currentConnector &&
+      (!targetConnectionId || this.appRuntime.currentConnector.id === targetConnectionId)
+    ) {
+      return;
+    }
+    await this.start(targetConnectionId);
+  }
+
   // Minimal /events attach: parse JSON lines → onEngineEvent (debounced refresh). Returns a stop handle so a
   // connection switch can detach the old stream. Reconnect/fallback polling are a later refinement.
   private async connectEvents(connectionId: string, host: HostClientFacade): Promise<() => void> {
@@ -224,6 +240,7 @@ export class EngineDataService {
       const app = this.ensureApp();
       await app.setup();
       const userSettings = await app.getGlobalUserSettings();
+      this.theme = (userSettings as { theme?: string } | undefined)?.theme;
       const connections = [...(await app.getSystemConnections()), ...(await app.getConnections())];
       const target =
         connections.find((connection) => connection.id === targetConnectionId) ??
@@ -278,5 +295,92 @@ export class EngineDataService {
       default:
         return [] as ResourceItemsByDomain[D][];
     }
+  }
+
+  // ── Tray operations — main IS the engine authority, so the tray needs no renderer ──────────────────
+
+  // Which "<resource>.<op>" kinds the tray may run — an allowlist on the (IPC-sourced) kind, NOT a second
+  // implementation: the op name IS the adapter/host method, so we dispatch to the single-sourced operation
+  // rather than re-listing it. Machine ops map to the host facade's `<op>PodmanMachine`.
+  private static readonly TRAY_OPS: Record<string, ReadonlySet<string>> = {
+    container: new Set(["start", "stop", "pause", "unpause", "restart"]),
+    pod: new Set(["start", "stop", "pause", "unpause", "restart", "kill"]),
+    machine: new Set(["start", "stop", "restart"]),
+  };
+
+  // Run a tray action against main's own connection (so the tray works with the main window closed). It
+  // delegates to the existing adapter/host methods — the same ones the renderer's mutations call — then
+  // nudges a refresh so the pushed resource state reflects it promptly (engine /events also fires, except
+  // for machine lifecycle).
+  async performAction(kind: string, id: string, host: HostClientFacade = getActiveHostClient()): Promise<void> {
+    const [resource, op] = kind.split(".", 2);
+    if (!op || !EngineDataService.TRAY_OPS[resource]?.has(op)) {
+      throw new Error(`Unknown tray action: ${kind}`);
+    }
+    if (resource === "container") {
+      await (new ContainersAdapter(host) as unknown as Record<string, (id: string) => Promise<unknown>>)[op](id);
+    } else if (resource === "pod") {
+      await (new PodsAdapter(host) as unknown as Record<string, (id: string) => Promise<unknown>>)[op](id);
+    } else {
+      await host[`${op}PodmanMachine` as "startPodmanMachine" | "stopPodmanMachine" | "restartPodmanMachine"](id);
+    }
+    const current = this.appRuntime.currentConnector?.id;
+    if (current && resource === "container") {
+      await this.refresh(current, "containers", host).catch(() => undefined);
+    } else if (current && resource === "pod") {
+      await Promise.all([
+        this.refresh(current, "pods", host).catch(() => undefined),
+        this.refresh(current, "containers", host).catch(() => undefined),
+      ]);
+    }
+  }
+
+  // The tray-only "live" bits, fetched on demand only while the popover is visible (so the app never
+  // becomes a background poller): the popover's theme, the current connection's machines, and raw
+  // per-container stats. Raw stats are returned as-is — the popover formats them, keeping the cross-ping
+  // CPU delta. This is NOT shareable standing data, so it never rides the resource push.
+  async getTrayLive(host: HostClientFacade = getActiveHostClient()): Promise<{
+    theme?: string;
+    machines: Array<{ name: string; running: boolean }>;
+    statsById: Record<string, ContainerStats>;
+  }> {
+    const [machines, statsById] = await Promise.all([this.loadMachines(host), this.loadRunningStats(host)]);
+    return { theme: this.theme, machines, statsById };
+  }
+
+  private async loadMachines(host: HostClientFacade): Promise<Array<{ name: string; running: boolean }>> {
+    if (!host.capabilities?.extensions?.machines) {
+      return [];
+    }
+    try {
+      const machines = (await host.getPodmanMachines()) as Array<{ Name?: string; State?: string; Running?: boolean }>;
+      return (machines ?? []).map((machine) => ({
+        name: `${machine.Name ?? ""}`,
+        running: `${machine.State ?? ""}`.toLowerCase() === "running" || !!machine.Running,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  private async loadRunningStats(host: HostClientFacade): Promise<Record<string, ContainerStats>> {
+    const current = this.appRuntime.currentConnector?.id;
+    if (!current || !this.appRuntime.running) {
+      return {};
+    }
+    const containers = this.getResourceState(current).containers as Array<{ Id: string }>;
+    const running = containers.filter((container) => isContainerRunning(container as any));
+    const adapter = new ContainersAdapter(host);
+    const statsById: Record<string, ContainerStats> = {};
+    await Promise.all(
+      running.map(async (container) => {
+        try {
+          statsById[container.Id] = await adapter.stats(container.Id);
+        } catch {
+          // best-effort per container — one failure must not drop the rest
+        }
+      }),
+    );
+    return statsById;
   }
 }

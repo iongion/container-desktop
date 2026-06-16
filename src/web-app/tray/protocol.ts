@@ -1,12 +1,17 @@
-// Shared protocol between the tray popover (<TrayApp/>), the authority renderer (<TrayBridge/>),
-// and the main-process broker. Channel names + payload types live here so all three agree.
+// Shared protocol between the tray popover (<TrayApp/>) and the main-process broker (TrayController).
+// Channel names + payload types live here so both agree.
 //
-// Flow:
-//   authority --tray:publish-snapshot--> main --tray:snapshot--> popover   (push)
-//   popover   --tray:get-snapshot (invoke)--> main                          (first paint)
-//   popover   --tray:ping--> main --tray:ping--> authority                  (visible-only refresh tick)
-//   popover   --tray:action (invoke, requestId)--> main --tray:perform-action--> authority
-//   authority --tray:action-result|tray:action-error--> main -> resolves the popover's invoke
+// The popover is a direct consumer of main's owned data — there is no second snapshot pipeline and no
+// authority renderer (TrayBridge was retired). Flow:
+//   - lists + connection: popover reads main's RESOURCE_SYNC snapshot (resourceSyncProtocol — the SHARED
+//     data channel, unchanged) and projects buildTraySnapshot() locally; main pushes on engine events.
+//   - live extras: main --tray:live--> popover        (push, active-gated: only while the popover is visible)
+//     carries the tray-only bits that aren't shareable standing data — theme, machines, raw container stats.
+//   - actions:  popover --tray:action (invoke)--> main, executed against main's own engine connection
+//   - switch:   popover --tray:action connection.switch--> main; main --tray:switch-connection--> authority
+//               so an open main window follows (headless: main switches its own data connection).
+
+import type { ContainerStats } from "@/env/Types";
 
 export type TrayTheme = "dark" | "light";
 
@@ -99,19 +104,22 @@ export interface TrayActionOutcome {
   error?: string;
 }
 
+// The active-gated push (main -> popover, only while the popover is visible). Carries the tray-only bits
+// that are NOT shareable standing data: the popover's theme, the current connection's machines, and raw
+// per-container stats (the popover formats stats locally, keeping the cross-ping CPU delta).
+export interface TrayLivePush {
+  theme?: string;
+  machines: Array<{ name: string; running: boolean }>;
+  statsById: Record<string, ContainerStats>;
+}
+
 export const TRAY = {
-  snapshot: "tray:snapshot",
-  setActive: "tray:set-active",
-  ping: "tray:ping",
-  getSnapshot: "tray:get-snapshot",
-  action: "tray:action",
-  performAction: "tray:perform-action",
-  actionResult: "tray:action-result",
-  actionError: "tray:action-error",
-  publishSnapshot: "tray:publish-snapshot",
-  resize: "tray:resize",
-  showApp: "tray:show-app",
-  quit: "tray:quit",
+  action: "tray:action", // popover -> main (invoke): executed against main's own engine connection
+  live: "tray:live", // main -> popover (push, active-gated): theme + machines + raw stats while visible
+  switchConnection: "tray:switch-connection", // main -> authority: follow a tray-initiated connection switch
+  resize: "tray:resize", // popover -> main
+  showApp: "tray:show-app", // popover -> main
+  quit: "tray:quit", // popover -> main
 } as const;
 
 function newRequestId(): string {
@@ -123,16 +131,8 @@ function newRequestId(): string {
 }
 
 // ── popover-side client helpers ──────────────────────────────────────────────
-export function subscribeSnapshot(callback: (snapshot: TraySnapshot) => void): () => void {
-  return window.TrayBus.subscribe(TRAY.snapshot, callback);
-}
-
-export function getSnapshot(): Promise<TraySnapshot | null> {
-  return window.MessageBus.invoke(TRAY.getSnapshot);
-}
-
-export function sendPing(): void {
-  window.MessageBus.send(TRAY.ping);
+export function subscribeLive(callback: (live: TrayLivePush) => void): () => void {
+  return window.TrayBus.subscribe(TRAY.live, callback);
 }
 
 export function requestAction(kind: TrayActionKind, id: string): Promise<TrayActionOutcome> {

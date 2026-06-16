@@ -1,6 +1,6 @@
 // Full-app renderer. Extracted from index.tsx so the popover entry (index.html#tray) can be
-// dynamically imported separately and NEVER execute this bootstrap. TrayBridge is mounted here
-// (inside the QueryClient + i18n providers) so it only runs in the authority window.
+// dynamically imported separately and NEVER execute this bootstrap. The tray popover is an independent
+// consumer of main's owned data (no authority-side bridge), so nothing tray-specific mounts here.
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -15,7 +15,6 @@ import { App } from "./App";
 import { I18nContextProvider } from "./App.i18n";
 import { queryClient } from "./domain/queryClient";
 import { CURRENT_ENVIRONMENT } from "./Environment";
-import { TrayBridge } from "./tray/TrayBridge";
 
 dayjs.extend(relativeTime);
 
@@ -30,7 +29,6 @@ export function renderApplication() {
             <body className="bp6-dark" data-engine={ContainerEngine.PODMAN} />
           </Helmet>
           <App />
-          <TrayBridge />
           {CURRENT_ENVIRONMENT === Environments.DEVELOPMENT && <ReactQueryDevtools initialIsOpen={false} />}
         </HelmetProvider>
       </I18nContextProvider>

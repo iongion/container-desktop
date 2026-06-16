@@ -10,10 +10,8 @@ import { ipcRenderer } from "electron";
 
 // Channels a renderer may subscribe to (main -> renderer pushes). Anything else is rejected.
 const SUBSCRIBABLE = new Set<string>([
-  "tray:snapshot", // main -> popover
-  "tray:set-active", // main -> authority
-  "tray:ping", // main -> authority (forwarded from the popover)
-  "tray:perform-action", // main -> authority
+  "tray:live", // main -> popover (active-gated theme + machines + raw container stats)
+  "tray:switch-connection", // main -> authority (follow a tray-initiated connection switch)
 ]);
 
 export const TrayBus = {

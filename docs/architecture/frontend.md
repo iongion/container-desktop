@@ -88,7 +88,10 @@ and, on mutation, invalidate the cache and nudge `resourceEvents` to resync.
 `Application.getInstance()`. `waitForPreload()` blocks until the preload has
 exposed `window.Preloaded`; after that the renderer can construct the
 `Application` singleton (which captures `window.MessageBus`) and call the backend.
-This is the single seam between UI and engine logic.
+This is the single seam between UI and engine logic. The `Application`/`HostClient` is composed in the
+renderer (for typing + per-engine normalizers), but its engine HTTP (`Command.ProxyRequest`) is forwarded to
+the **main process**, so the renderer never opens its own connection — the app and tray share one (see
+[backend.md](backend.md#main-owned-data-layer)).
 
 ## Screens
 

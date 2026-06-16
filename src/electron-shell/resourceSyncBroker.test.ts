@@ -10,11 +10,11 @@ const snap: ResourceSyncSnapshot = {
 
 function makeDeps() {
   let changeCb = () => {};
-  const invokeHandlers = new Map<string, (event: any) => unknown>();
+  const invokeHandlers = new Map<string, (event: any, payload: any) => unknown>();
   const messageHandlers = new Map<string, (event: any, payload: any) => void>();
   const broadcasts: Array<{ channel: string; payload: unknown }> = [];
   const refreshed: Array<{ connectionId: string; domain: string }> = [];
-  const started: Array<string | undefined> = [];
+  const ensured: Array<string | undefined> = [];
   return {
     service: {
       getSyncSnapshot: () => snap,
@@ -25,20 +25,20 @@ function makeDeps() {
       refresh: async (connectionId: string, domain: any) => {
         refreshed.push({ connectionId, domain });
       },
-      start: async (targetConnectionId?: string) => {
-        started.push(targetConnectionId);
+      ensureConnected: async (targetConnectionId?: string) => {
+        ensured.push(targetConnectionId);
       },
     },
-    onInvoke: (channel: string, handler: (event: any) => unknown) => invokeHandlers.set(channel, handler),
+    onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => invokeHandlers.set(channel, handler),
     onMessage: (channel: string, handler: (event: any, payload: any) => void) => messageHandlers.set(channel, handler),
     broadcast: (channel: string, payload: unknown) => broadcasts.push({ channel, payload }),
     isAllowedSender: (event: any) => event?.allowed === true,
     _fireChange: () => changeCb(),
-    _invoke: (channel: string, event: any) => invokeHandlers.get(channel)?.(event),
+    _invoke: (channel: string, event: any, payload?: any) => invokeHandlers.get(channel)?.(event, payload),
     _message: (channel: string, event: any, payload: any) => messageHandlers.get(channel)?.(event, payload),
     _broadcasts: () => broadcasts,
     _refreshed: () => refreshed,
-    _started: () => started,
+    _ensured: () => ensured,
   };
 }
 
@@ -69,11 +69,11 @@ describe("ResourceSyncBroker", () => {
     ]);
   });
 
-  it("routes a switch-connection request to service.start for an allowed sender only", () => {
+  it("routes ensure-connected to service.ensureConnected for an allowed sender only", async () => {
     const deps = makeDeps();
     new ResourceSyncBroker(deps).register();
-    deps._message(RESOURCE_SYNC.switchConnection, { allowed: false }, { connectionId: "c2" });
-    deps._message(RESOURCE_SYNC.switchConnection, { allowed: true }, { connectionId: "c2" });
-    expect(deps._started()).toEqual(["c2"]);
+    expect(await deps._invoke(RESOURCE_SYNC.ensureConnected, { allowed: false }, { connectionId: "c3" })).toBe(false);
+    expect(await deps._invoke(RESOURCE_SYNC.ensureConnected, { allowed: true }, { connectionId: "c3" })).toBe(true);
+    expect(deps._ensured()).toEqual(["c3"]);
   });
 });

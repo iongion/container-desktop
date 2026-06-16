@@ -75,3 +75,53 @@ describe("EngineDataService.connect", () => {
     expect(Array.isArray(snap.connections)).toBe(true);
   });
 });
+
+describe("EngineDataService.performAction", () => {
+  it("routes a container action to the containers adapter (POST .../stop)", async () => {
+    const calls: string[] = [];
+    const fakeHost = {
+      ENGINE: ContainerEngine.PODMAN,
+      getApiDriver: async () => ({
+        post: async (url: string) => {
+          calls.push(`POST ${url}`);
+          return { status: 204 };
+        },
+        get: async () => ({ status: 200, data: [] }),
+      }),
+    } as unknown as HostClientFacade;
+    const service = new EngineDataService();
+    await service.performAction("container.stop", "c1", fakeHost);
+    expect(calls).toContain("POST /containers/c1/stop");
+  });
+
+  it("routes a machine action to the host facade", async () => {
+    const started: string[] = [];
+    const fakeHost = {
+      startPodmanMachine: async (name: string) => {
+        started.push(name);
+        return true;
+      },
+    } as unknown as HostClientFacade;
+    const service = new EngineDataService();
+    await service.performAction("machine.start", "pm-default", fakeHost);
+    expect(started).toEqual(["pm-default"]);
+  });
+
+  it("rejects an unknown action kind", async () => {
+    const service = new EngineDataService();
+    await expect(service.performAction("bogus.kind", "x", {} as unknown as HostClientFacade)).rejects.toThrow();
+  });
+});
+
+describe("EngineDataService.getTrayLive", () => {
+  it("returns the current connection's machines and no stats when idle", async () => {
+    const fakeHost = {
+      capabilities: { extensions: { machines: true } },
+      getPodmanMachines: async () => [{ Name: "podman-machine-default", Running: true }],
+    } as unknown as HostClientFacade;
+    const service = new EngineDataService();
+    const live = await service.getTrayLive(fakeHost);
+    expect(live.machines).toEqual([{ name: "podman-machine-default", running: true }]);
+    expect(live.statsById).toEqual({});
+  });
+});

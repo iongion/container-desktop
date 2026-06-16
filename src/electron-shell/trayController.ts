@@ -26,9 +26,16 @@ export interface TrayControllerOptions {
   isDevelopment: () => boolean;
   isTrayWidgetEnabled: () => Promise<boolean>;
   getTrayIcon: (isDark?: boolean) => string;
-  getAuthorityWindow: () => BrowserWindow | undefined;
   showMainWindow: () => void;
   quitApplication: () => void;
+  // Main is the engine authority: the popover's actions are executed here (no renderer in the loop), and
+  // the active-gated "live" extras (theme/machines/raw stats) are fetched here while the popover is visible.
+  performAction: (request: {
+    requestId?: string;
+    kind: string;
+    id: string;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  fetchTrayLive: () => Promise<unknown>;
 }
 
 export class TrayController {
@@ -40,55 +47,24 @@ export class TrayController {
   // compositor hands over focus (Linux X11/Wayland), which would otherwise hide the popover the
   // instant it appears. reveal() sets this to a short window after showing.
   private suppressBlurUntil = 0;
-  private lastSnapshot: any = null;
-  private fallbackTraySuppressed = false;
   private readonly activateGuard = { last: 0 };
-  private readonly pendingActions = new Map<
-    string,
-    { resolve: (value: any) => void; timer: ReturnType<typeof setTimeout> }
-  >();
+  // The active-gated "live" push runs only while the popover is visible — the app never background-polls.
+  private liveTimer: ReturnType<typeof setInterval> | null = null;
+  private liveInFlight = false;
 
   constructor(private readonly options: TrayControllerOptions) {}
 
   registerIpc(): void {
-    ipcMain.on("tray:publish-snapshot", (event, snapshot) => {
-      if (!this.isFromAuthority(event)) return;
-      this.lastSnapshot = snapshot;
-      this.sendToPopover("tray:snapshot", snapshot);
-    });
-
-    ipcMain.handle("tray:get-snapshot", (event) => {
-      if (!this.isFromPopover(event)) return null;
-      return this.lastSnapshot;
-    });
-
-    ipcMain.on("tray:ping", (event) => {
-      if (!this.isFromPopover(event)) return;
-      this.sendToAuthority("tray:ping");
-    });
-
-    ipcMain.handle("tray:action", (event, request) => {
+    // The popover invokes an action; main executes it against its own engine connection and replies. No
+    // renderer round-trip — this is precisely what lets the tray act with the main window closed.
+    ipcMain.handle("tray:action", async (event, request) => {
       if (!this.isFromPopover(event)) return { ok: false, error: "unauthorized" };
-      const requestId = request?.requestId;
-      if (!requestId) return { ok: false, error: "missing requestId" };
-      return new Promise((resolve) => {
-        const timer = setTimeout(() => {
-          this.pendingActions.delete(requestId);
-          resolve({ ok: false, error: "timeout" });
-        }, 30000);
-        this.pendingActions.set(requestId, { resolve, timer });
-        this.sendToAuthority("tray:perform-action", request);
-      });
-    });
-
-    ipcMain.on("tray:action-result", (event, payload) => {
-      if (!this.isFromAuthority(event)) return;
-      this.settleAction(payload?.requestId, { ok: true, ...(payload ?? {}) });
-    });
-
-    ipcMain.on("tray:action-error", (event, payload) => {
-      if (!this.isFromAuthority(event)) return;
-      this.settleAction(payload?.requestId, { ok: false, error: payload?.error });
+      if (!request?.kind) return { ok: false, error: "missing action kind" };
+      try {
+        return await this.options.performAction(request);
+      } catch (error: any) {
+        return { ok: false, error: error?.message ?? String(error) };
+      }
     });
 
     ipcMain.on("tray:show-app", (event) => {
@@ -113,10 +89,9 @@ export class TrayController {
     });
 
     if (this.options.isDevelopment()) {
-      ipcMain.on("tray:dev-toggle", (event) => {
-        if (this.isFromAuthority(event)) {
-          this.togglePopover();
-        }
+      // Dev convenience (yarn dev:tray / support/tray-cdp.mjs): toggle the popover. Dev-gated; no sender check.
+      ipcMain.on("tray:dev-toggle", () => {
+        this.togglePopover();
       });
     }
   }
@@ -139,10 +114,6 @@ export class TrayController {
   }
 
   createSystemTray(): Tray | null {
-    if (this.fallbackTraySuppressed) {
-      this.options.logger.debug("Creating system tray - skipped - fallback tray suppressed");
-      return this.tray;
-    }
     if (this.tray) {
       this.options.logger.debug("Creating system tray - skipped - already present");
       return this.tray;
@@ -152,19 +123,6 @@ export class TrayController {
     this.tray.setContextMenu(this.buildMenu());
     this.tray.on("click", () => this.onActivate());
     return this.tray;
-  }
-
-  suppressFallbackTray(reason: string): void {
-    this.fallbackTraySuppressed = true;
-    this.destroySystemTray(reason);
-  }
-
-  async restoreFallbackTray(reason: string): Promise<void> {
-    this.fallbackTraySuppressed = false;
-    if (await this.options.isTrayWidgetEnabled()) {
-      this.options.logger.debug("Restoring system tray", { reason });
-      this.createSystemTray();
-    }
   }
 
   showPopover(anchorBounds?: Rectangle): void {
@@ -181,7 +139,7 @@ export class TrayController {
       this.suppressBlurUntil = Date.now() + 250;
       win.show();
       win.focus();
-      this.sendToAuthority("tray:set-active", true);
+      this.startLive();
     };
     // A newly created window (or one still loading) must wait for ready-to-show; a reused window
     // that already finished loading can reveal immediately. Drop any prior listener so repeated
@@ -197,7 +155,7 @@ export class TrayController {
   hidePopover(): void {
     if (!this.popoverWindow || this.popoverWindow.isDestroyed()) return;
     this.popoverWindow.hide();
-    this.sendToAuthority("tray:set-active", false);
+    this.stopLive();
     if (this.popoverDestroyTimer) clearTimeout(this.popoverDestroyTimer);
     this.popoverDestroyTimer = setTimeout(() => {
       this.popoverDestroyTimer = null;
@@ -233,13 +191,9 @@ export class TrayController {
   }
 
   destroy(): void {
+    this.stopLive();
     this.destroyPopover();
     this.destroySystemTray("destroy");
-    for (const [requestId, pending] of this.pendingActions) {
-      clearTimeout(pending.timer);
-      pending.resolve({ ok: false, error: "shutdown" });
-      this.pendingActions.delete(requestId);
-    }
   }
 
   private trayPopoverURL(): string {
@@ -362,20 +316,10 @@ export class TrayController {
     }
   }
 
-  private isFromAuthority(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
-    const authority = this.options.getAuthorityWindow();
-    return !!authority && !authority.isDestroyed() && event.sender === authority.webContents;
-  }
-
-  private isFromPopover(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
+  // Public so the resource broker can let the popover PULL the shared snapshot (read-only), the same way
+  // the app window does — without granting it the write channels.
+  isFromPopover(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
     return !!this.popoverWindow && !this.popoverWindow.isDestroyed() && event.sender === this.popoverWindow.webContents;
-  }
-
-  private sendToAuthority(channel: string, payload?: any): void {
-    const authority = this.options.getAuthorityWindow();
-    if (authority && !authority.isDestroyed()) {
-      authority.webContents.send(channel, payload);
-    }
   }
 
   private sendToPopover(channel: string, payload?: any): void {
@@ -384,13 +328,35 @@ export class TrayController {
     }
   }
 
-  private settleAction(requestId: string, outcome: any): void {
-    const pending = this.pendingActions.get(requestId);
-    if (!pending) {
+  // Active-gated "live" push: while the popover is visible, fetch the tray-only extras (theme + machines +
+  // raw container stats) from main on an interval and push them to the popover; stopped the moment it hides.
+  // This is the only repeating tray timer and it exists only while visible — so the app never background-polls.
+  private startLive(): void {
+    this.pushLive();
+    if (this.liveTimer) {
       return;
     }
-    clearTimeout(pending.timer);
-    this.pendingActions.delete(requestId);
-    pending.resolve(outcome);
+    this.liveTimer = setInterval(() => this.pushLive(), 2000);
+  }
+
+  private stopLive(): void {
+    if (this.liveTimer) {
+      clearInterval(this.liveTimer);
+      this.liveTimer = null;
+    }
+  }
+
+  private pushLive(): void {
+    if (this.liveInFlight || !this.popoverWindow || this.popoverWindow.isDestroyed()) {
+      return;
+    }
+    this.liveInFlight = true;
+    this.options
+      .fetchTrayLive()
+      .then((live) => this.sendToPopover("tray:live", live))
+      .catch((error) => this.options.logger.error("Unable to fetch tray live data", error))
+      .finally(() => {
+        this.liveInFlight = false;
+      });
   }
 }

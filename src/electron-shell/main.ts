@@ -5,15 +5,16 @@ import * as url from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import ipaddr from "ipaddr.js";
 // project
+import { getActiveHostClient } from "@/container-client/adapters/shared";
 import { userConfiguration } from "@/container-client/config";
 import { OperatingSystem } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { debounce } from "@/utils";
+import { CommandProxyBroker } from "./commandProxyBroker";
 import { createContextMenu } from "./contextMenu";
 import { EngineDataService } from "./engineDataService";
-import { GnomeTrayIntegration } from "./gnomeTrayIntegration";
 import { ResourceSyncBroker } from "./resourceSyncBroker";
 import { MessageBus } from "./shared";
 import { TrayController } from "./trayController";
@@ -79,7 +80,6 @@ const quitRegistry: any[] = [];
 let applicationWindow: Electron.BrowserWindow;
 let _notified = false;
 let trayController: TrayController;
-let gnomeTrayIntegration: GnomeTrayIntegration;
 const isTrayWidgetEnabled = async (): Promise<boolean> => {
   return await userConfiguration.getKey<boolean>("trayWidgetEnabled", true);
 };
@@ -249,11 +249,7 @@ ipcMain.on("notify", async (event, arg) => {
   if (arg && arg.message === "ready") {
     _notified = true;
     logger.debug("Settings received", arg.payload);
-    if (!gnomeTrayIntegration?.shouldStartHidden()) {
-      applicationWindow.show();
-    } else {
-      applicationWindow.setSkipTaskbar(true);
-    }
+    applicationWindow.show();
   }
 });
 ipcMain.handle("register.quit", async (event, options) => {
@@ -382,6 +378,10 @@ async function createApplicationWindow() {
   // Application window
   applicationWindow = new BrowserWindow(windowOptions);
   applicationWindow.setMinimumSize(960, 720);
+  // Reap any forwarded engine streams this window opened if its renderer goes away (reload/crash/quit), so
+  // a destroyed log view never leaks a live engine stream in main.
+  const mainWebContentsId = applicationWindow.webContents.id;
+  applicationWindow.webContents.once("destroyed", () => commandProxyBroker.disposeForSender(mainWebContentsId));
   applicationWindow.on("resize", async () => {
     const [width, height] = applicationWindow.getSize();
     const config = await getWindowConfigOptions();
@@ -405,15 +405,11 @@ async function createApplicationWindow() {
   });
   applicationWindow.on("close", onWindowClose);
   let windowShown = false;
-  const revealWindow = (force = false) => {
+  const revealWindow = () => {
     if (windowShown || applicationWindow.isDestroyed()) {
       return;
     }
     windowShown = true;
-    if (gnomeTrayIntegration?.shouldStartHidden() && !force) {
-      applicationWindow.setSkipTaskbar(true);
-      return;
-    }
     applicationWindow.show();
     if ((windowConfigOptions as any).isMaximized) {
       applicationWindow.maximize();
@@ -429,7 +425,7 @@ async function createApplicationWindow() {
   const readyWatchdog = setTimeout(() => {
     if (!windowShown && !applicationWindow.isDestroyed()) {
       logger.error("Window did not become ready in time - forcing show");
-      revealWindow(true);
+      revealWindow();
       showRecoveryDialog(
         "Container Desktop is taking too long to start",
         new Error("The interface did not finish loading within 20s."),
@@ -444,7 +440,7 @@ async function createApplicationWindow() {
       return;
     }
     logger.error("Renderer failed to load", { errorCode, errorDescription, validatedURL });
-    revealWindow(true);
+    revealWindow();
     applicationWindow
       .loadURL(
         fallbackErrorPageURL("Failed to load the application", `${errorDescription} (${errorCode})\n${validatedURL}`),
@@ -458,7 +454,7 @@ async function createApplicationWindow() {
     if (details.reason === "clean-exit") {
       return;
     }
-    revealWindow(true);
+    revealWindow();
     showRecoveryDialog("The application window crashed", new Error(`Renderer process gone: ${details.reason}`));
   });
   applicationWindow.webContents.on("unresponsive", () => {
@@ -498,7 +494,7 @@ async function createApplicationWindow() {
     // Guard against an undefined dev-server URL (e.g. VITE_DEV_SERVER_URL not set), which
     // would otherwise throw deep inside loadURL and leave a blank window.
     logger.error("No application URL resolved", { appDevURL, appProdURL, isDev: isDevelopment() });
-    revealWindow(true);
+    revealWindow();
     await applicationWindow
       .loadURL(fallbackErrorPageURL("No application URL", "The application URL could not be resolved."))
       .catch(() => undefined);
@@ -508,7 +504,7 @@ async function createApplicationWindow() {
       await applicationWindow.loadURL(appURL);
     } catch (error: any) {
       logger.error("Unable to load the application", error);
-      revealWindow(true);
+      revealWindow();
       await applicationWindow
         .loadURL(fallbackErrorPageURL("Unable to load the application", error?.message || String(error)))
         .catch(() => undefined);
@@ -554,26 +550,49 @@ function quitApplication() {
   app.quit();
 }
 
+// Main-owned engine service: owns the connection + per-connection resource state, executes tray actions
+// against its own connection, and supplies the active-gated tray "live" extras. Created before the tray +
+// broker so both delegate to it — main is the single engine authority, so the tray needs no renderer.
+const engineDataService = new EngineDataService();
+
 trayController = new TrayController({
   buildDir: __dirname,
   logger,
   isDevelopment,
   isTrayWidgetEnabled,
   getTrayIcon,
-  getAuthorityWindow: () => applicationWindow,
   showMainWindow,
   quitApplication,
+  // The popover invokes actions; main runs them so the tray works with the main window closed. A
+  // connection switch, when a main window is open, is followed by its normal startApplication path
+  // (full connector + capabilities); headless, main just switches its own data connection.
+  performAction: async (request) => {
+    if (request.kind === "connection.switch") {
+      if (applicationWindow && !applicationWindow.isDestroyed()) {
+        applicationWindow.webContents.send("tray:switch-connection", { id: request.id });
+      } else {
+        await engineDataService.start(request.id);
+      }
+      return { ok: true };
+    }
+    try {
+      await engineDataService.performAction(request.kind, request.id);
+      return { ok: true };
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? String(error) };
+    }
+  },
+  fetchTrayLive: () => engineDataService.getTrayLive(),
 });
 trayController.registerIpc();
 
-// Main-owned data layer: the service owns engine state (connection/runtime + per-connection resources);
-// the broker pushes snapshots to windows, answers their snapshot pulls, and accepts refresh/switch sends
-// (all sender-validated). Main connects on demand — the renderer sends `switch-connection` during its
-// startup, so main owns exactly the connection the renderer is on (and follows connection switches).
-const engineDataService = new EngineDataService();
+// Main-owned data layer: the broker pushes resource snapshots to windows, answers their snapshot pulls,
+// and accepts a refresh nudge + an awaitable ensure-connected. Writes are main-window-only; the read-only
+// snapshot pull is also allowed for the tray popover, which mirrors main's data exactly as the app does.
+// Main connects on demand — the renderer awaits `ensure-connected` before its forwarded engine requests.
 const resourceSyncBroker = new ResourceSyncBroker({
   service: engineDataService,
-  onInvoke: (channel, handler) => ipcMain.handle(channel, (event) => handler(event)),
+  onInvoke: (channel, handler) => ipcMain.handle(channel, (event, payload) => handler(event, payload)),
   onMessage: (channel, handler) => ipcMain.on(channel, (event, payload) => handler(event, payload)),
   broadcast: (channel, payload) => {
     for (const win of BrowserWindow.getAllWindows()) {
@@ -583,26 +602,27 @@ const resourceSyncBroker = new ResourceSyncBroker({
     }
   },
   isAllowedSender: (event) => isFromMainWindow(event),
+  isAllowedReader: (event) => isFromMainWindow(event) || trayController.isFromPopover(event),
 });
 resourceSyncBroker.register();
 
-gnomeTrayIntegration = new GnomeTrayIntegration({
-  projectHome: PROJECT_HOME,
-  buildDir: __dirname,
-  logger,
-  isDevelopment,
-  isTrayWidgetEnabled,
-  getTrayIcon: () => trayController.getIcon(),
-  showPopover: (bounds) => trayController.showPopover(bounds),
-  togglePopover: (bounds) => trayController.togglePopover(bounds),
-  hidePopover: () => trayController.hidePopover(),
-  destroyFallbackTray: (reason) => trayController.suppressFallbackTray(reason),
-  restoreFallbackTray: (reason) => trayController.restoreFallbackTray(reason),
+// Forwarded engine HTTP: the renderer's Command.ProxyRequest runs HERE, against main's single host-client
+// connection, so the app + main share ONE tunnel / relay / socket pool. Non-stream calls are request/
+// response; live streams (container logs) are opened here and their chunks pushed to the requesting window.
+// Only the main app window forwards (the popover delegates actions via the tray channel).
+const commandProxyBroker = new CommandProxyBroker({
+  ensureConnected: () => engineDataService.ensureConnected(),
+  getDriver: () => getActiveHostClient().getApiDriver(),
+  onInvoke: (channel, handler) => ipcMain.handle(channel, (event, payload) => handler(event, payload)),
+  onMessage: (channel, handler) => ipcMain.on(channel, (event, payload) => handler(event, payload)),
+  send: (event, channel, payload) => event.sender.send(channel, payload),
+  isAllowedSender: (event) => isFromMainWindow(event),
+  senderId: (event) => event.sender.id,
 });
+commandProxyBroker.register();
 
 async function main() {
   app.on("before-quit", () => {
-    gnomeTrayIntegration.close();
     trayController.destroy();
     if (quitRegistry) {
       logger.debug("Calling registered quit", quitRegistry);
@@ -625,15 +645,10 @@ async function main() {
     sendToRenderer("theme:change", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   await app.whenReady();
-  await gnomeTrayIntegration.setup();
   await createApplicationWindow();
-  // The renderer drives which connection main owns: it sends `switch-connection` during startup (and on
-  // every connection switch), which the broker routes to engineDataService.start(). So main connects on
-  // demand, in lockstep with the renderer's current connection — no auto-start race here.
-  const pendingGnomeTrayToggleBounds = gnomeTrayIntegration.consumePendingShowBounds();
-  if (pendingGnomeTrayToggleBounds) {
-    trayController.showPopover(pendingGnomeTrayToggleBounds);
-  }
+  // The renderer drives which connection main owns: it awaits `ensure-connected` before its forwarded
+  // engine requests (during startup and on every connection switch), which the broker routes to
+  // engineDataService.ensureConnected(). So main connects on demand, in lockstep with the renderer.
   // Always-on tray for the widget (independent of minimize-to-tray). The tray menu's
   // "Open widget" is the reliable cross-platform entry; left-click toggles where supported.
   if (await isTrayWidgetEnabled()) {
@@ -645,8 +660,8 @@ async function main() {
   }
   // Dev convenience (`yarn dev:tray`): auto-open the tray popover shortly after startup so the
   // widget is on screen without a manual click. Strictly dev-gated and reuses the normal show
-  // path; the short delay lets the authority renderer mount <TrayBridge/> to answer the first
-  // snapshot. Never runs in production.
+  // path; the short delay lets main finish connecting so the first live push carries data. Never
+  // runs in production.
   if (
     isDevelopment() &&
     ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTOP_OPEN_TRAY || ""}`.toLowerCase())
@@ -678,10 +693,7 @@ const singleInstanceLock = app.requestSingleInstanceLock();
 if (!singleInstanceLock) {
   app.quit();
 } else {
-  app.on("second-instance", (_event, argv) => {
-    if (gnomeTrayIntegration.handleSecondInstance(argv)) {
-      return;
-    }
+  app.on("second-instance", () => {
     showMainWindow();
   });
 

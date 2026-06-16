@@ -1,8 +1,0 @@
-{
-  "uuid": "container-desktop-tray@iongion.github.io",
-  "name": "Container Desktop Tray",
-  "description": "GNOME panel click bridge for Container Desktop's tray widget.",
-  "shell-version": ["45", "46", "47", "48", "49", "50"],
-  "url": "https://github.com/iongion/container-desktop",
-  "version": 1
-}

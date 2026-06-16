@@ -30,7 +30,7 @@ export const RESOURCE_SYNC = {
   snapshot: "resource:snapshot", // main → renderers (push)
   getSnapshot: "resource:get-snapshot", // renderer → main (invoke, returns ResourceSyncSnapshot)
   refresh: "resource:refresh", // renderer → main (send): refresh a domain now (post-mutation nudge)
-  switchConnection: "resource:switch-connection", // renderer → main (send): own this connection's data
+  ensureConnected: "resource:ensure-connected", // renderer → main (invoke): connect to id (idempotent), await ready
 } as const;
 
 export interface ResourceRefreshRequest {

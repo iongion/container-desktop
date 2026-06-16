@@ -57,6 +57,31 @@ function delayCheckUpdate(osType: OperatingSystem) {
   }, 1500);
 }
 
+// One-time (authority window only): follow a tray-initiated connection switch. The tray popover asks main
+// to switch; with a main window open, main forwards `tray:switch-connection` here so the app UI tracks the
+// same connection via its normal startApplication path. Guarded so it registers exactly once.
+let traySwitchListenerRegistered = false;
+function registerTraySwitchListener(get: () => AppStore): void {
+  if (traySwitchListenerRegistered || typeof window === "undefined" || !window.TrayBus) {
+    return;
+  }
+  traySwitchListenerRegistered = true;
+  window.TrayBus.subscribe("tray:switch-connection", (payload: { id?: string }) => {
+    const id = payload?.id;
+    if (!id) {
+      return;
+    }
+    const state = get();
+    if (state.currentConnector?.id === id) {
+      return;
+    }
+    const connection = state.connections.find((item) => item.id === id);
+    if (connection) {
+      void state.startApplication({ connection, startApi: false, skipAvailabilityCheck: false });
+    }
+  });
+}
+
 interface AppState {
   phase: AppBootstrapPhase;
   pending: boolean;
@@ -185,6 +210,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
     // ── async: bootstrap / settings ──
     initialize: async () => {
       await waitForPreload();
+      registerTraySwitchListener(get);
       const instance = Application.getInstance();
       const settings = await instance.getGlobalUserSettings();
       instance.setLogLevel(settings?.logging.level || "debug");
@@ -237,6 +263,11 @@ export const useAppStore = create<AppStore>()((set, get) => {
             }
           }
           systemNotifier.transmit("startup.phase", { trace: "Establishing connection" });
+          // Single connection: main owns the engine connection the renderer's forwarded HTTP rides on, so
+          // make main connect FIRST (idempotent, awaited) before instance.start() issues any engine request.
+          if (connection?.id) {
+            await window.MessageBus.invoke(RESOURCE_SYNC.ensureConnected, { connectionId: connection.id });
+          }
           const currentConnector = await instance.start(
             connection ? { startApi, connection, skipAvailabilityCheck: false } : undefined,
           );
@@ -271,9 +302,8 @@ export const useAppStore = create<AppStore>()((set, get) => {
               }
             }
             if (currentConnector.availability.api) {
-              // Main owns the engine data: tell it which connection to own (it follows switches), then
+              // Main already owns this connection (ensureConnected ran before any engine request above);
               // begin mirroring its pushed snapshots into the resource store.
-              window.MessageBus.send(RESOURCE_SYNC.switchConnection, { connectionId: currentConnector.id });
               await resourceEvents.start(currentConnector.id);
               Notification.show({
                 message: t("You are now connected to {{name}}", currentConnector),

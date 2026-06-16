@@ -1,30 +1,32 @@
-// TrayApp — the popover UI. A thin, IPC-fed view: it does NOT bootstrap Application/events and
-// never calls engine adapters directly. It pulls the first snapshot, subscribes to pushes, and
-// runs the ONLY repeating timer (a modest ping while visible). Theming is inherited by setting
-// the same body class + data-engine the main app uses, so Podman-purple / Docker-blue + light/
-// dark come from the existing themes/*.css for free.
+// TrayApp — the popover UI. A thin, data-driven view: it does NOT bootstrap Application/events and never
+// calls engine adapters. It mirrors the SAME shared snapshot the main app does (lists + connection) and
+// receives an active-gated tray:live push (theme, machines, raw stats) while visible, then projects the
+// compact TraySnapshot LOCALLY. There is no second snapshot pipeline. Theming uses the same body class +
+// data-engine the main app uses, so Podman-purple / Docker-blue + light/dark come from themes/*.css free.
 
 import { Button, ButtonGroup, HTMLSelect, ProgressBar, Spinner } from "@blueprintjs/core";
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 
+import { RESOURCE_SYNC, type ResourceSyncSnapshot } from "@/container-client/resourceSyncProtocol";
+import type { Container, ContainerStats, Pod } from "@/env/Types";
+
 import {
-  getSnapshot,
   quitApp,
   requestAction,
   resizeTray,
-  sendPing,
   showApp,
-  subscribeSnapshot,
+  subscribeLive,
   type TrayActionKind,
   type TrayContainerRow,
+  type TrayLivePush,
   type TrayMachineRow,
   type TrayPodRow,
   type TraySnapshot,
 } from "./protocol";
-
-const PING_INTERVAL_MS = 2500;
+import { buildTraySnapshot } from "./snapshot";
+import { type FormattedContainerStats, formatContainerStats } from "./stats-format";
 
 function actionKey(kind: TrayActionKind, id: string): string {
   return `${kind}:${id}`;
@@ -87,31 +89,57 @@ function metricValue(percent: number | undefined): number {
 }
 
 export function TrayApp() {
-  const [snapshot, setSnapshot] = useState<TraySnapshot | null>(null);
+  // Main owns the data: the popover mirrors the SAME shared snapshot the app does (lists + connection),
+  // plus an active-gated tray:live push for the tray-only extras (theme, machines, raw stats). The compact
+  // TraySnapshot is then projected LOCALLY (below) — no second snapshot pipeline.
+  const [sync, setSync] = useState<ResourceSyncSnapshot | null>(null);
+  const [live, setLive] = useState<{ theme?: string; machines: TrayMachineRow[] }>({ machines: [] });
+  const [statsById, setStatsById] = useState<Map<string, FormattedContainerStats>>(() => new Map());
+  const previousRawStatsRef = useRef<Map<string, ContainerStats>>(new Map());
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const widgetRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    getSnapshot()
-      .then((initial) => {
+    // Shared data channel (identical to the main app): initial pull + live pushes on engine events.
+    window.MessageBus.invoke(RESOURCE_SYNC.getSnapshot)
+      .then((initial: ResourceSyncSnapshot | null) => {
         if (mounted && initial) {
-          setSnapshot(initial);
+          setSync(initial);
         }
       })
       .catch(() => undefined);
-    const unsub = subscribeSnapshot((next) => {
+    const unsubSync = window.ResourceBus.subscribe(RESOURCE_SYNC.snapshot, (next: ResourceSyncSnapshot) => {
       if (mounted) {
-        setSnapshot(next);
+        setSync(next);
       }
     });
-    sendPing();
-    const interval = window.setInterval(sendPing, PING_INTERVAL_MS);
+    // Tray-only live extras (pushed only while visible). Stats arrive raw — format here, keeping the
+    // cross-ping CPU delta (a single stream=false sample has zeroed precpu_stats and would inflate it).
+    const unsubLive = subscribeLive((push: TrayLivePush) => {
+      if (!mounted) {
+        return;
+      }
+      setLive({ theme: push.theme, machines: push.machines ?? [] });
+      const previousRaw = previousRawStatsRef.current;
+      const formatted = new Map<string, FormattedContainerStats>();
+      const nextRaw = new Map<string, ContainerStats>();
+      for (const [id, sample] of Object.entries(push.statsById ?? {})) {
+        const previous = previousRaw.get(id);
+        const row = formatContainerStats(sample, previous);
+        const cpuFromDelta = previous !== undefined;
+        const directCpu = Number.isFinite(sample?.cpu_stats?.cpu);
+        formatted.set(id, cpuFromDelta || directCpu ? row : { ...row, cpuPercent: undefined });
+        nextRaw.set(id, sample);
+      }
+      previousRawStatsRef.current = nextRaw;
+      setStatsById(formatted);
+    });
     return () => {
       mounted = false;
-      unsub();
-      window.clearInterval(interval);
+      unsubSync();
+      unsubLive();
     };
   }, []);
 
@@ -140,6 +168,32 @@ export function TrayApp() {
       }
     };
   }, []);
+
+  // Project the compact TraySnapshot locally from main's shared data + the tray-only live extras. This is
+  // a render view-model, not an IPC payload — it never crosses a process boundary.
+  const snapshot = useMemo<TraySnapshot | null>(() => {
+    if (!sync) {
+      return null;
+    }
+    const runtime = sync.appRuntime;
+    const connectionId = runtime.currentConnector?.id ?? "";
+    const byDomain = connectionId ? (sync.resources[connectionId] ?? {}) : {};
+    return buildTraySnapshot({
+      theme: live.theme,
+      running: !!runtime.running,
+      currentConnector: runtime.currentConnector,
+      connections: runtime.connections,
+      connectors: runtime.currentConnector
+        ? [{ id: runtime.currentConnector.id, availability: { api: !!runtime.running } }]
+        : [],
+      containers: (byDomain.containers ?? []) as Container[],
+      pods: (byDomain.pods ?? []) as Pod[],
+      machines: live.machines,
+      eventsConnected: !!runtime.running,
+      showAll: true,
+      containerStats: statsById,
+    });
+  }, [sync, live, statsById]);
 
   const theme = snapshot?.theme ?? "dark";
   const engine = snapshot?.engine ?? "podman";
