@@ -5,9 +5,12 @@
 .AppDataTable[data-table="pods"] th:first-child {
   padding-left: 6px;
 }
-.AppDataTable[data-table="pods"] th:last-child {
+/* Actions column (second-to-last; the selection column is always last) stays shrink-to-fit. */
+.AppDataTable[data-table="pods"] th:nth-last-child(2),
+.AppDataTable[data-table="pods"] tbody td:nth-last-child(2) {
   padding-left: initial;
   min-width: 1px;
+  width: 1px !important;
 }
 
 [data-table="pods"] .PodDetailsButton {

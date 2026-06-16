@@ -42,6 +42,7 @@ export interface ApiEntry extends ActivityEntryBase {
   durationMs?: number;
   curl?: string;
   requestBody?: string; // JSON-stringified, truncated
+  responseBody?: string; // JSON-stringified, truncated — captured only for non-2xx responses
   error?: string;
 }
 

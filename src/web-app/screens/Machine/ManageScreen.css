@@ -5,9 +5,9 @@
 .AppDataTable[data-table="machines"] th:first-child {
   padding-left: 6px;
 }
-.AppDataTable[data-table="machines"] th:last-child {
-  padding-left: initial;
-  min-width: 1px;
+.AppDataTable[data-table="machines"] th:nth-last-child(2) {
+  padding-left: initial !important;
+  min-width: 1px !important;
 }
 
 .InspectMachineButton {

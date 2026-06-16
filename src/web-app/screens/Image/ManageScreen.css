@@ -5,7 +5,7 @@
 .AppDataTable[data-table="images"] th:first-child {
   padding-left: 6px;
 }
-.AppDataTable[data-table="images"] th:last-child {
+.AppDataTable[data-table="images"] th:nth-last-child(2) {
   padding-left: initial;
   min-width: 1px;
 }

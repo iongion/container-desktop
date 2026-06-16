@@ -52,8 +52,9 @@ export async function getApiConfig(
 // ── Activity Log instrumentation ───────────────────────────────────────────────────────
 // Every engine API call funnels through createApplicationApiDriver.request(); we emit a
 // "pending" entry immediately and patch a "settled" entry (status + duration) by guid so
-// long calls surface at once. The request body is stringified + truncated for memory; the
-// response body is intentionally not captured.
+// long calls surface at once. The request body is stringified + truncated for memory; the response
+// body is captured (stringified + truncated) only for unsuccessful responses (4xx/5xx) so failures can
+// be inspected without retaining every successful payload.
 const ACTIVITY_MAX_BODY = 8 * 1024;
 
 function activityStringify(value: unknown): string | undefined {
@@ -114,6 +115,7 @@ export function createApplicationApiDriver(connection: Connection, context?: any
         httpStatus: response?.status,
         durationMs: Math.round(performance.now() - startedAt),
         requestBody: activityTruncate(activityStringify(req.data)),
+        responseBody: response?.status >= 300 ? activityTruncate(activityStringify(response?.data)) : undefined,
         curl: activityCurl(req, connection),
       });
       return response;
@@ -128,6 +130,7 @@ export function createApplicationApiDriver(connection: Connection, context?: any
         durationMs: Math.round(performance.now() - startedAt),
         error: `${error?.message || error}`,
         requestBody: activityTruncate(activityStringify(req.data)),
+        responseBody: activityTruncate(activityStringify(error?.response?.data)),
         curl: activityCurl(req, connection),
       });
       throw error;

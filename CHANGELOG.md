@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Bulk (mass) operations on the list screens of Containers, Pods, Machines, Images, Volumes, Networks and Secrets — multi-select rows with delete and lifecycle actions (stop/pause/start/restart).
+
+## Changed
+
+- Notifications & activity log: the bell fills white when there are unread entries (counter badge removed); API response bodies and CLI output now show only for failed calls.
+
 ## [5.3.0] - 2026-06-15
 
 ## Added

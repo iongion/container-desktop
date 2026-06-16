@@ -1,4 +1,4 @@
-import { AnchorButton, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Code, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
@@ -8,6 +8,7 @@ import type { Connector, Secret } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
@@ -18,6 +19,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { SecretActionsMenu } from ".";
+import { useSecretBulkActions } from "./bulkActions";
 import "./ManageScreen.css";
 import { getSecretUrl } from "./Navigation";
 
@@ -62,6 +64,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, secretSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Spec?.Name || "", b.Spec?.Name || ""));
   }, [clientSort, secretSnapshot, searchTerm]);
+  const visibleIds = useMemo(() => secrets.map((s) => s.ID), [secrets]);
+  const selection = useBulkSelection(ID, visibleIds);
+  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useSecretBulkActions(connectionId || "");
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "secrets");
@@ -74,7 +79,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.KEY}
-        rightContent={<SecretActionsMenu onReload={onReload} />}
+        rightContent={
+          <>
+            {selection.count > 0 ? (
+              <>
+                <BulkActionsBar
+                  items={secrets}
+                  getId={bulkGetId}
+                  selectedIds={selection.selectedIds}
+                  actions={bulkActions}
+                  onClear={selection.clear}
+                  refresh={bulkRefresh}
+                />
+                <Divider />
+              </>
+            ) : null}
+            <SecretActionsMenu onReload={onReload} />
+          </>
+        }
       />
       <div className="AppScreenContent">
         {secrets.length === 0 ? (
@@ -108,6 +130,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
                 </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
+                <th data-column="select" className="BulkSelectColumn">
+                  <SelectionCheckbox
+                    checked={selection.headerState.checked}
+                    indeterminate={selection.headerState.indeterminate}
+                    onChange={selection.toggleAll}
+                    title={t("Select all")}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -132,6 +162,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{(dayjs(secret.CreatedAt) as any).fromNow()}</td>
                     <td>
                       <SecretActionsMenu withoutCreate secret={secret} />
+                    </td>
+                    <td className="BulkSelectColumn">
+                      <SelectionCheckbox
+                        checked={selection.isSelected(secret.ID)}
+                        onChange={() => selection.toggle(secret.ID)}
+                      />
                     </td>
                   </tr>
                 );

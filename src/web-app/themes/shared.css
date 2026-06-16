@@ -132,7 +132,18 @@ body.bp6-dark [data-table="pods"] .PodState[data-state="Paused"] {
 
 body.bp6-dark .ReactIcon,
 body.bp6-dark .AppLabelIcon {
-  color: #abb3bf;
+  color: #fff;
+}
+
+/* Blueprint (framework) icons default to a muted gray in dark mode that can read as "disabled". Render
+   non-intent icons in the bright foreground color so they match the mdi icon fills; disabled icons stay
+   muted so they still read as disabled. */
+body.bp6-dark .bp6-icon:not([class*="bp6-intent-"]) {
+  color: #fff;
+}
+body.bp6-dark .bp6-button:disabled .bp6-icon:not([class*="bp6-intent-"]),
+body.bp6-dark .bp6-button.bp6-disabled .bp6-icon:not([class*="bp6-intent-"]) {
+  color: #8a93a0;
 }
 
 body.bp6-light .ReactIcon,

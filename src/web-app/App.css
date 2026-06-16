@@ -178,6 +178,13 @@ pre,
 .AppDataTable tbody td:last-child {
   width: 1px !important;
 }
+/* When a bulk selection column is present (always the last column), the row Actions column moves to
+   second-to-last. Keep it shrink-to-fit for BOTH header and cells (the global :last-child rule above now
+   sizes the selection column instead). */
+.AppDataTable thead th:has(+ th.BulkSelectColumn),
+.AppDataTable tbody td:has(+ td.BulkSelectColumn) {
+  width: 1px !important;
+}
 .AppDataTable thead th[data-column="Actions"] {
   width: 1px;
 }

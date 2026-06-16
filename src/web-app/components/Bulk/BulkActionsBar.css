@@ -1,0 +1,26 @@
+.BulkActionsInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 12px;
+}
+
+/* The selection column is always rendered (checkbox only shown in select mode) and kept a constant
+   width so toggling select mode never shifts the other columns. */
+.BulkSelectColumn {
+  width: 36px !important;
+  min-width: 36px;
+  text-align: center;
+}
+
+.BulkSelectionCheckbox {
+  margin: 0;
+}
+
+.BulkConfirmPopover {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  white-space: nowrap;
+}

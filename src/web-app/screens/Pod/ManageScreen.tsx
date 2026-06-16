@@ -1,4 +1,4 @@
-import { AnchorButton, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Code, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
@@ -8,6 +8,7 @@ import type { Connector, Pod } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
@@ -19,6 +20,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ItemActionsMenu, ListActionsMenu } from ".";
+import { usePodBulkActions } from "./bulkActions";
 import "./ManageScreen.css";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -61,6 +63,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, podSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, podSnapshot, searchTerm]);
+  const visibleIds = useMemo(() => pods.map((p) => p.Id), [pods]);
+  const selection = useBulkSelection(ID, visibleIds);
+  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = usePodBulkActions(connectionId || "");
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refreshMany(connectionId, ["pods", "containers"]);
@@ -73,7 +78,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.KEY}
-        rightContent={<ListActionsMenu onReload={onReload} />}
+        rightContent={
+          <>
+            {selection.count > 0 ? (
+              <>
+                <BulkActionsBar
+                  items={pods}
+                  getId={bulkGetId}
+                  selectedIds={selection.selectedIds}
+                  actions={bulkActions}
+                  onClear={selection.clear}
+                  refresh={bulkRefresh}
+                />
+                <Divider />
+              </>
+            ) : null}
+            <ListActionsMenu onReload={onReload} />
+          </>
+        }
       />
       <div className="AppScreenContent">
         {pods.length === 0 ? (
@@ -120,6 +142,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
                 </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
+                <th data-column="select" className="BulkSelectColumn">
+                  <SelectionCheckbox
+                    checked={selection.headerState.checked}
+                    indeterminate={selection.headerState.indeterminate}
+                    onChange={selection.toggleAll}
+                    title={t("Select all")}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -153,6 +183,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                     <td>
                       <ItemActionsMenu pod={pod} />
+                    </td>
+                    <td className="BulkSelectColumn">
+                      <SelectionCheckbox
+                        checked={selection.isSelected(pod.Id)}
+                        onChange={() => selection.toggle(pod.Id)}
+                      />
                     </td>
                   </tr>
                 );
