@@ -234,6 +234,7 @@ systemNotifier.on("activity.api", (event: SystemNotification) => {
     httpStatus: data.httpStatus,
     durationMs: data.durationMs,
     requestBody: data.requestBody,
+    responseBody: data.responseBody,
     curl: data.curl,
     error: data.error,
   } as Partial<ApiEntry>);

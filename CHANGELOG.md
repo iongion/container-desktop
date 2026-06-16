@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Changed
 
-- Removed the unread counter badge from the header notifications bell.
+- Notifications & activity log: the bell fills white when there are unread entries (counter badge removed); API response bodies and CLI output now show only for failed calls.
 
 ## [5.3.0] - 2026-06-15
 

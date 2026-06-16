@@ -186,14 +186,28 @@ export function ActivityRow({ entry, count = 1 }: { entry: ActivityEntry; count?
               <>
                 <DetailBlock label={t("Equivalent cURL")} value={entry.curl} action={copyAction("curl", entry.curl)} />
                 <DetailBlock label={t("Request body")} value={entry.requestBody} />
+                <DetailBlock label={t("Response body")} value={entry.responseBody} />
                 {entry.error ? <DetailBlock label={t("Error")} value={entry.error} /> : null}
               </>
             ) : null}
             {entry.kind === "cli" ? (
-              <>
-                <DetailBlock label="stdout" value={entry.stdoutPreview} action={copyAction("cmd", entry.commandLine)} />
-                <DetailBlock label="stderr" value={entry.stderrPreview} />
-              </>
+              entry.status === "error" ? (
+                <>
+                  <DetailBlock
+                    label="stdout"
+                    value={entry.stdoutPreview}
+                    action={copyAction("cmd", entry.commandLine)}
+                  />
+                  <DetailBlock label="stderr" value={entry.stderrPreview} />
+                </>
+              ) : (
+                // Successful commands: show the command (copyable) but not the output.
+                <DetailBlock
+                  label={t("Command")}
+                  value={entry.commandLine}
+                  action={copyAction("cmd", entry.commandLine)}
+                />
+              )
             ) : null}
             {entry.kind === "system" ? <DetailBlock label={entry.eventType} value={safeJson(entry.data)} /> : null}
           </div>
