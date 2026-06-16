@@ -7,6 +7,19 @@
   //   - Renderer      -> Chrome DevTools Protocol on 9222 (already exposed by watch.mjs)
   "configurations": [
     {
+      // Dev with the system-tray widget auto-opened (`yarn dev:tray` sets
+      // CONTAINER_DESKTOP_OPEN_TRAY=1, which main.ts honours in development only).
+      // Runs the script in an integrated terminal; no debugger attach (use "Debug All" for that).
+      "name": "Dev (tray widget)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "yarn dev:tray",
+      "cwd": "${workspaceFolder}",
+      "presentation": {
+        "order": 2
+      }
+    },
+    {
       "name": "Attach Main Process",
       "type": "node",
       "request": "attach",

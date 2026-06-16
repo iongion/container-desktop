@@ -108,7 +108,8 @@ export DOCKER_HOST='unix:///tmp/podman.sock'
 - [Architecture overview](architecture/overview.md) — system context & processes
 - [Backend](architecture/backend.md) · [Frontend](architecture/frontend.md) ·
   [Connection startup](architecture/connection-startup.md) ·
-  [Engine matrix](architecture/engine-matrix.md)
+  [Engine matrix](architecture/engine-matrix.md) ·
+  [System tray](architecture/system-tray.md)
 - [Architecture notes / principles](architecture/notes.md)
 - [Testing](testing.md) — Vitest suites, the headless `Command` harness, CI gate
 - [`CLAUDE.md`](../CLAUDE.md) — canonical stack, conventions, working agreements

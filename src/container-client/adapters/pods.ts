@@ -98,6 +98,14 @@ export class PodsAdapter extends ResourceAdapter {
     return this.isOk(result);
   }
 
+  async start(id: string): Promise<boolean> {
+    const driver = await this.driver();
+    const result = await driver.post<boolean>(`/pods/${encodeURIComponent(id)}/start`, null, {
+      baseURL: LIBPOD_BASE_URL,
+    });
+    return this.isOk(result);
+  }
+
   async restart(id: string): Promise<boolean> {
     const driver = await this.driver();
     const result = await driver.post<boolean>(`/pods/${encodeURIComponent(id)}/restart`, null, {

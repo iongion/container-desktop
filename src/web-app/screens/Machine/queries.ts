@@ -71,6 +71,14 @@ export const useStopMachine = (connId: string) => {
   });
 };
 
+export const useStartMachine = (connId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => getActiveHostClient().startPodmanMachine(name),
+    onSuccess: (_result, name) => invalidateMachine(qc, connId, name),
+  });
+};
+
 export const useRestartMachine = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({

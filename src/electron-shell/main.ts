@@ -2,8 +2,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import * as url from "node:url";
 // vendors
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, Tray } from "electron";
-import contextMenu from "electron-context-menu";
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import ipaddr from "ipaddr.js";
 // project
 import { userConfiguration } from "@/container-client/config";
@@ -12,7 +11,10 @@ import { createLogger } from "@/logger";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { debounce } from "@/utils";
+import { createContextMenu } from "./contextMenu";
+import { GnomeTrayIntegration } from "./gnomeTrayIntegration";
 import { MessageBus } from "./shared";
+import { TrayController } from "./trayController";
 
 const APP_PATH = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
 
@@ -72,11 +74,21 @@ const DOMAINS_ALLOW_LIST = [
 ];
 const logger = createLogger("shell.main");
 const quitRegistry: any[] = [];
-let tray: any = null;
 let applicationWindow: Electron.BrowserWindow;
 let _notified = false;
+let trayController: TrayController;
+let gnomeTrayIntegration: GnomeTrayIntegration;
+const isTrayWidgetEnabled = async (): Promise<boolean> => {
+  return await userConfiguration.getKey<boolean>("trayWidgetEnabled", true);
+};
 const isHideToTrayOnClose = async () => {
-  return await userConfiguration.getKey("minimizeToSystemTray", false);
+  if (await userConfiguration.getKey<boolean>("minimizeToSystemTray", false)) {
+    return true;
+  }
+  // The tray widget needs the main (authority) renderer alive to serve it, so closing the
+  // window hides it to the tray instead of quitting while the widget is enabled. Explicit
+  // Quit (tray menu / application.exit) still terminates.
+  return await isTrayWidgetEnabled();
 };
 const getWindowConfigOptions = async () => {
   return await userConfiguration.getKey<Electron.BrowserWindowConstructorOptions>("window", {});
@@ -185,48 +197,69 @@ function fallbackErrorPageURL(title: string, message: string): string {
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
+// The tray popover is a real renderer (nodeIntegration, full bundle) sharing window.MessageBus.send,
+// so it can reach these channels. Gate app/window-state handlers to the main (authority) window only;
+// they must be no-ops for any other sender (e.g. the tray popover).
+function isFromMainWindow(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean {
+  return !!applicationWindow && !applicationWindow.isDestroyed() && event.sender === applicationWindow.webContents;
+}
+
 // ipc global setup
-ipcMain.on("window.minimize", () => {
+ipcMain.on("window.minimize", (event) => {
+  if (!isFromMainWindow(event)) return;
   if (applicationWindow.isMinimizable()) {
     applicationWindow.minimize();
   }
 });
-ipcMain.on("window.maximize", () => {
+ipcMain.on("window.maximize", (event) => {
+  if (!isFromMainWindow(event)) return;
   if (applicationWindow.isMaximized()) {
     applicationWindow.restore();
   } else {
     applicationWindow.maximize();
   }
 });
-ipcMain.on("window.restore", () => {
+ipcMain.on("window.restore", (event) => {
+  if (!isFromMainWindow(event)) return;
   applicationWindow.restore();
 });
 ipcMain.on("window.close", (event) => {
+  if (!isFromMainWindow(event)) return;
   applicationWindow.close();
 });
-ipcMain.on("application.exit", () => {
+ipcMain.on("application.exit", (event) => {
+  if (!isFromMainWindow(event)) return;
   app.exit();
 });
-ipcMain.on("application.relaunch", () => {
+ipcMain.on("application.relaunch", (event) => {
+  if (!isFromMainWindow(event)) return;
   app.relaunch();
 });
 ipcMain.on("register.process", (p) => {
   logger.debug("Must register", p);
 });
-ipcMain.on("openDevTools", () => {
+ipcMain.on("openDevTools", (event) => {
+  if (!isFromMainWindow(event)) return;
   activateTools();
 });
 ipcMain.on("notify", async (event, arg) => {
+  if (!isFromMainWindow(event)) return;
   if (arg && arg.message === "ready") {
     _notified = true;
     logger.debug("Settings received", arg.payload);
-    applicationWindow.show();
+    if (!gnomeTrayIntegration?.shouldStartHidden()) {
+      applicationWindow.show();
+    } else {
+      applicationWindow.setSkipTaskbar(true);
+    }
   }
 });
 ipcMain.handle("register.quit", async (event, options) => {
+  if (!isFromMainWindow(event)) return;
   quitRegistry.push(options);
 });
 ipcMain.handle("openFileSelector", async (event, options) => {
+  if (!isFromMainWindow(event)) return { canceled: true, filePaths: [] };
   logger.debug("IPC - openFileSelector - start", options);
   const selection = await dialog.showOpenDialog(applicationWindow, {
     defaultPath: app.getPath("home"),
@@ -237,6 +270,7 @@ ipcMain.handle("openFileSelector", async (event, options) => {
   return selection;
 });
 ipcMain.handle("openTerminal", async (event, options) => {
+  if (!isFromMainWindow(event)) return false;
   logger.debug("IPC - openTerminal - start", options);
   const success = await Platform.launchTerminal(options);
   logger.debug("IPC - openTerminal - result", options, success);
@@ -287,6 +321,10 @@ async function createApplicationWindow() {
     width: 1280,
     height: 800,
     ...(windowConfigOptions ?? {}),
+    // Hard floor for the main window — never smaller than 960x720 (applied after the saved
+    // geometry spread so a stale persisted size can't shrink below it).
+    minWidth: 960,
+    minHeight: 720,
     webPreferences: {
       devTools: true,
       nodeIntegration: true,
@@ -308,7 +346,7 @@ async function createApplicationWindow() {
   const hideToTray = async (event?: any) => {
     if (await isHideToTrayOnClose()) {
       logger.debug("Must hide to tray");
-      createSystemTray();
+      trayController.createSystemTray();
       applicationWindow.setSkipTaskbar(true);
       applicationWindow.hide();
       if (event) {
@@ -341,6 +379,7 @@ async function createApplicationWindow() {
   };
   // Application window
   applicationWindow = new BrowserWindow(windowOptions);
+  applicationWindow.setMinimumSize(960, 720);
   applicationWindow.on("resize", async () => {
     const [width, height] = applicationWindow.getSize();
     const config = await getWindowConfigOptions();
@@ -364,11 +403,15 @@ async function createApplicationWindow() {
   });
   applicationWindow.on("close", onWindowClose);
   let windowShown = false;
-  const revealWindow = () => {
+  const revealWindow = (force = false) => {
     if (windowShown || applicationWindow.isDestroyed()) {
       return;
     }
     windowShown = true;
+    if (gnomeTrayIntegration?.shouldStartHidden() && !force) {
+      applicationWindow.setSkipTaskbar(true);
+      return;
+    }
     applicationWindow.show();
     if ((windowConfigOptions as any).isMaximized) {
       applicationWindow.maximize();
@@ -384,7 +427,7 @@ async function createApplicationWindow() {
   const readyWatchdog = setTimeout(() => {
     if (!windowShown && !applicationWindow.isDestroyed()) {
       logger.error("Window did not become ready in time - forcing show");
-      revealWindow();
+      revealWindow(true);
       showRecoveryDialog(
         "Container Desktop is taking too long to start",
         new Error("The interface did not finish loading within 20s."),
@@ -399,7 +442,7 @@ async function createApplicationWindow() {
       return;
     }
     logger.error("Renderer failed to load", { errorCode, errorDescription, validatedURL });
-    revealWindow();
+    revealWindow(true);
     applicationWindow
       .loadURL(
         fallbackErrorPageURL("Failed to load the application", `${errorDescription} (${errorCode})\n${validatedURL}`),
@@ -413,7 +456,7 @@ async function createApplicationWindow() {
     if (details.reason === "clean-exit") {
       return;
     }
-    revealWindow();
+    revealWindow(true);
     showRecoveryDialog("The application window crashed", new Error(`Renderer process gone: ${details.reason}`));
   });
   applicationWindow.webContents.on("unresponsive", () => {
@@ -439,7 +482,7 @@ async function createApplicationWindow() {
     return { action: "deny" };
   });
   // Set-up context menu
-  contextMenu({
+  createContextMenu({
     window: applicationWindow,
     showInspectElement: true,
   });
@@ -453,7 +496,7 @@ async function createApplicationWindow() {
     // Guard against an undefined dev-server URL (e.g. VITE_DEV_SERVER_URL not set), which
     // would otherwise throw deep inside loadURL and leave a blank window.
     logger.error("No application URL resolved", { appDevURL, appProdURL, isDev: isDevelopment() });
-    revealWindow();
+    revealWindow(true);
     await applicationWindow
       .loadURL(fallbackErrorPageURL("No application URL", "The application URL could not be resolved."))
       .catch(() => undefined);
@@ -463,7 +506,7 @@ async function createApplicationWindow() {
       await applicationWindow.loadURL(appURL);
     } catch (error: any) {
       logger.error("Unable to load the application", error);
-      revealWindow();
+      revealWindow(true);
       await applicationWindow
         .loadURL(fallbackErrorPageURL("Unable to load the application", error?.message || String(error)))
         .catch(() => undefined);
@@ -477,6 +520,16 @@ async function createApplicationWindow() {
   return applicationWindow;
 }
 
+function showMainWindow() {
+  if (!applicationWindow || applicationWindow.isDestroyed()) return;
+  applicationWindow.excludedFromShownWindowsMenu = true;
+  applicationWindow.show();
+  applicationWindow.setSkipTaskbar(false);
+  if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
+    app.dock?.show();
+  }
+}
+
 function getTrayIcon(isDark = nativeTheme.shouldUseDarkColors): string {
   const theme = isDark ? "dark" : "light";
   const trayIconFile =
@@ -488,42 +541,47 @@ function getTrayIcon(isDark = nativeTheme.shouldUseDarkColors): string {
   return path.resolve(trayIconPath);
 }
 
-function createSystemTray() {
-  if (tray) {
-    logger.debug("Creating system tray menu - skipped - already present");
-    return tray;
+// Explicit quit (tray menu) — the only path that terminates while the widget keeps the app alive.
+function quitApplication() {
+  trayController.destroyPopover();
+  try {
+    if (applicationWindow && !applicationWindow.isDestroyed()) applicationWindow.destroy();
+  } catch (error: any) {
+    logger.error("Unable to destroy window on quit", error);
   }
-  const trayIconPath = getTrayIcon();
-  logger.debug("Creating system tray menu", trayIconPath);
-  tray = new Tray(getTrayIcon());
-  const trayMenu = Menu.buildFromTemplate([
-    {
-      label: `${import.meta.env.PROJECT_TITLE} - v${import.meta.env.PROJECT_VERSION}`,
-      click: async () => {
-        applicationWindow.excludedFromShownWindowsMenu = true;
-        applicationWindow.show();
-        applicationWindow.setSkipTaskbar(false);
-        if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
-          app.dock?.show();
-        }
-      },
-    },
-    { label: "", type: "separator" },
-    {
-      label: "Quit",
-      click: () => {
-        applicationWindow.destroy();
-        app.quit();
-      },
-    },
-  ]);
-  tray.setToolTip("Container Desktop");
-  tray.setContextMenu(trayMenu);
-  return tray;
+  app.quit();
 }
+
+trayController = new TrayController({
+  buildDir: __dirname,
+  logger,
+  isDevelopment,
+  isTrayWidgetEnabled,
+  getTrayIcon,
+  getAuthorityWindow: () => applicationWindow,
+  showMainWindow,
+  quitApplication,
+});
+trayController.registerIpc();
+
+gnomeTrayIntegration = new GnomeTrayIntegration({
+  projectHome: PROJECT_HOME,
+  buildDir: __dirname,
+  logger,
+  isDevelopment,
+  isTrayWidgetEnabled,
+  getTrayIcon: () => trayController.getIcon(),
+  showPopover: (bounds) => trayController.showPopover(bounds),
+  togglePopover: (bounds) => trayController.togglePopover(bounds),
+  hidePopover: () => trayController.hidePopover(),
+  destroyFallbackTray: (reason) => trayController.suppressFallbackTray(reason),
+  restoreFallbackTray: (reason) => trayController.restoreFallbackTray(reason),
+});
 
 async function main() {
   app.on("before-quit", () => {
+    gnomeTrayIntegration.close();
+    trayController.destroy();
     if (quitRegistry) {
       logger.debug("Calling registered quit", quitRegistry);
       quitRegistry.forEach((q) => {
@@ -541,20 +599,41 @@ async function main() {
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   app.commandLine.appendSwitch("ignore-certificate-errors");
   nativeTheme.on("updated", () => {
-    // Only refresh the icon if a tray already exists; do not create one on theme change.
-    if (tray) {
-      try {
-        const trayIconPath = getTrayIcon();
-        logger.debug("Set tray icon from", trayIconPath);
-        tray.setImage(trayIconPath);
-      } catch (e: any) {
-        logger.error("Unable to set sys-tray icon", e);
-      }
-    }
+    trayController.refreshIcon();
     sendToRenderer("theme:change", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   await app.whenReady();
+  await gnomeTrayIntegration.setup();
   await createApplicationWindow();
+  const pendingGnomeTrayToggleBounds = gnomeTrayIntegration.consumePendingShowBounds();
+  if (pendingGnomeTrayToggleBounds) {
+    trayController.showPopover(pendingGnomeTrayToggleBounds);
+  }
+  // Always-on tray for the widget (independent of minimize-to-tray). The tray menu's
+  // "Open widget" is the reliable cross-platform entry; left-click toggles where supported.
+  if (await isTrayWidgetEnabled()) {
+    try {
+      trayController.createSystemTray();
+    } catch (error: any) {
+      logger.error("Unable to create system tray", error);
+    }
+  }
+  // Dev convenience (`yarn dev:tray`): auto-open the tray popover shortly after startup so the
+  // widget is on screen without a manual click. Strictly dev-gated and reuses the normal show
+  // path; the short delay lets the authority renderer mount <TrayBridge/> to answer the first
+  // snapshot. Never runs in production.
+  if (
+    isDevelopment() &&
+    ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTOP_OPEN_TRAY || ""}`.toLowerCase())
+  ) {
+    setTimeout(() => {
+      try {
+        trayController.showPopover();
+      } catch (error: any) {
+        logger.error("Unable to auto-open tray popover", error);
+      }
+    }, 1500);
+  }
 }
 
 // Last-resort guards: a throw anywhere in the main process must surface a recoverable
@@ -570,6 +649,18 @@ process.on("unhandledRejection", (reason) => {
   }
 });
 
-main().catch((error) => {
-  showRecoveryDialog("Container Desktop failed to start", error);
-});
+const singleInstanceLock = app.requestSingleInstanceLock();
+if (!singleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, argv) => {
+    if (gnomeTrayIntegration.handleSecondInstance(argv)) {
+      return;
+    }
+    showMainWindow();
+  });
+
+  main().catch((error) => {
+    showRecoveryDialog("Container Desktop failed to start", error);
+  });
+}

@@ -1,0 +1,125 @@
+// Container list grouping — turns a flat Container[] into ContainerGroup[] keyed by the normalizer's
+// Computed.Group (name prefix before the first "-"/"_", or "Pod infrastructure" for "*-infra").
+//
+// Extracted verbatim from ManageScreen so the system-tray widget renders the SAME grouping/tree as the
+// main Containers screen (tray calls groupContainers(items, "", undefined)). Behavior is unchanged; this
+// is the single source of truth for container grouping.
+
+import { IconNames } from "@blueprintjs/icons";
+
+import { type Container, ContainerStateList } from "@/env/Types";
+import { sortAlphaNum } from "@/web-app/domain/utils";
+import type { SortSpec } from "@/web-app/stores/sortStore";
+import type { ContainerGroup } from "@/web-app/Types";
+import { compareSortValues, type SortSelectors, sortByField } from "@/web-app/utils/comparators";
+
+export const createContainerSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (it: Container) => {
+    const haystacks = [it.Names[0] || "", it.Image, it.Id, `${it.Pid}`, `${it.Size}`].map((t) => t.toLowerCase());
+    const matching = haystacks.find((it) => it.includes(query));
+    return !!matching;
+  };
+};
+
+export const containerSortSelectors: SortSelectors<Container> = {
+  name: (container) => container.Computed.Name || container.Names[0] || "",
+  image: (container) => container.Image,
+  pid: (container) => container.Pid,
+  state: (container) => container.Computed.DecodedState,
+  id: (container) => container.Id,
+  created: (container) =>
+    typeof container.Created === "string" ? Date.parse(container.Created) : Number(container.Created) * 1000,
+};
+
+export function isContainerGroupDirectory(group: ContainerGroup): boolean {
+  return group.Name === "Pod infrastructure" || group.Items.length > 1;
+}
+
+export function compareContainerGroups(sort: SortSpec | undefined) {
+  const selector = sort ? containerSortSelectors[sort.field] : undefined;
+  const direction = sort?.dir === "desc" ? -1 : 1;
+  return (a: ContainerGroup, b: ContainerGroup) => {
+    if (a.Name === "Pod infrastructure" && b.Name !== "Pod infrastructure") {
+      return -1;
+    }
+    if (b.Name === "Pod infrastructure" && a.Name !== "Pod infrastructure") {
+      return 1;
+    }
+    const aIsDirectory = isContainerGroupDirectory(a);
+    const bIsDirectory = isContainerGroupDirectory(b);
+    if (aIsDirectory !== bIsDirectory) {
+      return aIsDirectory ? -1 : 1;
+    }
+    if (sort?.field === "name") {
+      return direction * compareSortValues(a.Name || "", b.Name || "");
+    }
+    if (!aIsDirectory && !bIsDirectory && selector) {
+      const sorted = direction * compareSortValues(selector(a.Items[0]), selector(b.Items[0]));
+      if (sorted !== 0) {
+        return sorted;
+      }
+    }
+    return sortAlphaNum(a.Name || "", b.Name || "");
+  };
+}
+
+export function groupContainers(
+  containers: Container[],
+  searchTerm: string,
+  sort: SortSpec | undefined,
+): ContainerGroup[] {
+  let source = [...containers].sort((a, b) => {
+    if (a.Computed.Name && b.Computed.Name) {
+      return sortAlphaNum(a.Computed.Name, b.Computed.Name);
+    }
+    return sortAlphaNum(a.CreatedAt, b.CreatedAt);
+  });
+  if (searchTerm) {
+    source = source.filter(createContainerSearchFilter(searchTerm));
+  }
+  let groups: ContainerGroup[] = [];
+  const groupsMap: { [key: string]: ContainerGroup } = {};
+  source.forEach((it) => {
+    if (!it.Computed.Group) {
+      return;
+    }
+    let group = groupsMap[it.Computed.Group];
+    if (!group) {
+      group = {
+        Id: crypto.randomUUID(),
+        Name: it.Computed.Group,
+        Items: [],
+        Report: {
+          [ContainerStateList.CREATED]: 0,
+          [ContainerStateList.ERROR]: 0,
+          [ContainerStateList.EXITED]: 0,
+          [ContainerStateList.PAUSED]: 0,
+          [ContainerStateList.RUNNING]: 0,
+          [ContainerStateList.DEGRADED]: 0,
+          [ContainerStateList.STOPPED]: 0,
+        },
+        Weight: 1000,
+      };
+      groups.push(group);
+      groupsMap[it.Computed.Group] = group;
+    }
+    group.Report[it.Computed.DecodedState] += 1;
+    if (group.Items.length > 0) {
+      group.Weight = -1;
+    }
+    if (group.Name === "Pod infrastructure") {
+      group.Weight = -100;
+      group.Icon = IconNames.CUBE_ADD;
+    }
+    group.Items.push(it);
+  });
+  if (sort) {
+    groups = groups.map((group) => ({
+      ...group,
+      Items: sortByField(group.Items, sort, containerSortSelectors),
+    }));
+  }
+  groups = groups.sort(compareContainerGroups(sort));
+  return groups;
+}

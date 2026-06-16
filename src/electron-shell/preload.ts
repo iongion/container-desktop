@@ -4,6 +4,7 @@ import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { ActivityBus, wrapCommandForActivity } from "./activityBus";
 import { MessageBus } from "./shared";
+import { TrayBus } from "./trayBus";
 
 // Wrap Command BEFORE exposing it so every renderer-initiated CLI call is captured for the
 // Activity Log. The wrapped instance is what both the global patch and the renderer see.
@@ -16,6 +17,7 @@ const ActivityCommand = wrapCommandForActivity(Command);
 (global as any).FS = FS;
 (global as any).CURRENT_OS_TYPE = CURRENT_OS_TYPE;
 (global as any).MessageBus = MessageBus;
+(global as any).TrayBus = TrayBus;
 
 function main() {
   console.debug("Preload script loaded");
@@ -26,6 +28,7 @@ function main() {
   contextBridge.exposeInMainWorld("CURRENT_OS_TYPE", CURRENT_OS_TYPE);
   contextBridge.exposeInMainWorld("MessageBus", MessageBus);
   contextBridge.exposeInMainWorld("ActivityBus", ActivityBus);
+  contextBridge.exposeInMainWorld("TrayBus", TrayBus);
   contextBridge.exposeInMainWorld("Preloaded", true);
 }
 

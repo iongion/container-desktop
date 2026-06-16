@@ -497,9 +497,12 @@ export interface ContainerStats {
   precpu_stats: {
     cpu_usage: {
       total_usage: number;
+      percpu_usage?: number[];
       usage_in_kernelmode: number;
       usage_in_usermode: number;
     };
+    system_cpu_usage?: number;
+    online_cpus?: number;
     cpu: number;
     throttling_data: {
       periods: number;

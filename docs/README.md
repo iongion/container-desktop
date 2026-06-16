@@ -21,6 +21,7 @@ The app has two pillars, and the docs are organized around them:
 | [architecture/engine-matrix.md](architecture/engine-matrix.md)           | The engine × host × transport × scope support matrix and how a connection resolves.                      |
 | [architecture/frontend.md](architecture/frontend.md)                     | React renderer — C4 **Components** (L3): stores, queries, screens, the Native bridge.                    |
 | [architecture/overview.md](architecture/overview.md)                     | The whole system at a glance — C4 **Context** (L1) + **Containers** (L2). Start here.                    |
+| [architecture/system-tray.md](architecture/system-tray.md)               | System tray widget — Electron tray fallback, React popover, and optional GNOME Shell bridge.             |
 
 ## How to read the diagrams
 
