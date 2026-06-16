@@ -83,6 +83,12 @@ declare global {
     subscribe: (channel: string, callback: (payload: any) => void) => () => void;
   }
 
+  // Preload-exposed receive bridge for the main-owned data layer (see electron-shell/resourceBus.ts).
+  // subscribe() is allowlisted to the resource-sync push channels.
+  export interface IResourceBus {
+    subscribe: (channel: string, callback: (payload: any) => void) => () => void;
+  }
+
   var Platform: IPlatform;
   var Command: ICommand;
   var Path: IPath;
@@ -91,6 +97,7 @@ declare global {
   var MessageBus: IMessageBus;
   var ActivityBus: IActivityBus;
   var TrayBus: ITrayBus;
+  var ResourceBus: IResourceBus;
 
   interface Window {
     Platform: IPlatform;
@@ -101,6 +108,7 @@ declare global {
     MessageBus: IMessageBus;
     ActivityBus: IActivityBus;
     TrayBus: ITrayBus;
+    ResourceBus: IResourceBus;
   }
 }
 

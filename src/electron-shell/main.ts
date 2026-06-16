@@ -12,7 +12,9 @@ import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { debounce } from "@/utils";
 import { createContextMenu } from "./contextMenu";
+import { EngineDataService } from "./engineDataService";
 import { GnomeTrayIntegration } from "./gnomeTrayIntegration";
+import { ResourceSyncBroker } from "./resourceSyncBroker";
 import { MessageBus } from "./shared";
 import { TrayController } from "./trayController";
 
@@ -564,6 +566,26 @@ trayController = new TrayController({
 });
 trayController.registerIpc();
 
+// Main-owned data layer: the service owns engine state (connection/runtime + per-connection resources);
+// the broker pushes snapshots to windows, answers their snapshot pulls, and accepts refresh/switch sends
+// (all sender-validated). Main connects on demand — the renderer sends `switch-connection` during its
+// startup, so main owns exactly the connection the renderer is on (and follows connection switches).
+const engineDataService = new EngineDataService();
+const resourceSyncBroker = new ResourceSyncBroker({
+  service: engineDataService,
+  onInvoke: (channel, handler) => ipcMain.handle(channel, (event) => handler(event)),
+  onMessage: (channel, handler) => ipcMain.on(channel, (event, payload) => handler(event, payload)),
+  broadcast: (channel, payload) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send(channel, payload);
+      }
+    }
+  },
+  isAllowedSender: (event) => isFromMainWindow(event),
+});
+resourceSyncBroker.register();
+
 gnomeTrayIntegration = new GnomeTrayIntegration({
   projectHome: PROJECT_HOME,
   buildDir: __dirname,
@@ -605,6 +627,9 @@ async function main() {
   await app.whenReady();
   await gnomeTrayIntegration.setup();
   await createApplicationWindow();
+  // The renderer drives which connection main owns: it sends `switch-connection` during startup (and on
+  // every connection switch), which the broker routes to engineDataService.start(). So main connects on
+  // demand, in lockstep with the renderer's current connection — no auto-start race here.
   const pendingGnomeTrayToggleBounds = gnomeTrayIntegration.consumePendingShowBounds();
   if (pendingGnomeTrayToggleBounds) {
     trayController.showPopover(pendingGnomeTrayToggleBounds);

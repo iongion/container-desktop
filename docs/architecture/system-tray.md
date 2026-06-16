@@ -15,6 +15,20 @@ architecture is therefore layered:
 The GNOME extension is not the product UI. It is only a panel button that sends
 click geometry to the app; the actual widget remains the same React tray window.
 
+## Tray data, grouping, and the main-owned migration
+
+Today the popover's data is projected by `TrayBridge` in the authority renderer
+([`snapshot.ts`](../../src/web-app/tray/snapshot.ts)), and the container rows reuse the **main Containers
+screen's grouping** ([`grouping.ts`](../../src/web-app/screens/Container/grouping.ts) →
+`groupContainers`/`containerGroups`) so the tray tree matches the main list (compose-project / name-prefix
+groups, "Pod infrastructure" pinned on top).
+
+The requirement that the tray work **independently of the main app window** drove the **main-owned data
+layer** (see [backend.md → Main-owned data layer](backend.md#main-owned-data-layer)): the engine `/events`
+stream + list fetching now live in the main process, and the renderer — including the tray's `TrayBridge`
+authority — reads main's pushed snapshots via the mirror. The remaining follow-up is to retire `TrayBridge`
+and have **main build the tray snapshot directly**, so the tray runs with no main window open at all.
+
 ## Runtime shape
 
 ```mermaid

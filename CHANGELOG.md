@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 
 - Bulk (mass) operations on the list screens of Containers, Pods, Machines, Images, Volumes, Networks and Secrets — multi-select rows with delete and lifecycle actions (stop/pause/start/restart).
+- System tray widget: a popover for the current connection's containers, pods and machines with start/stop/pause/restart controls and live CPU/memory, plus an optional GNOME Shell extension bridge for click-to-open.
 
 ## Changed
 
 - Notifications & activity log: the bell fills white when there are unread entries (counter badge removed); API response bodies and CLI output now show only for failed calls.
+- Engine data (resource lists + live events) is now owned by the main process and mirrored to every window, so the app and the tray share one source of truth.
 
 ## [5.3.0] - 2026-06-15
 

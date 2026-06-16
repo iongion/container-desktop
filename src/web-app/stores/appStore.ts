@@ -11,6 +11,7 @@ import { create } from "zustand";
 import { OnlineApi } from "@/container-client/Api.clients";
 import { Application } from "@/container-client/Application";
 import { systemNotifier } from "@/container-client/notifier";
+import { RESOURCE_SYNC } from "@/container-client/resourceSyncProtocol";
 import {
   type CommandExecutionResult,
   type Connection,
@@ -270,6 +271,9 @@ export const useAppStore = create<AppStore>()((set, get) => {
               }
             }
             if (currentConnector.availability.api) {
+              // Main owns the engine data: tell it which connection to own (it follows switches), then
+              // begin mirroring its pushed snapshots into the resource store.
+              window.MessageBus.send(RESOURCE_SYNC.switchConnection, { connectionId: currentConnector.id });
               await resourceEvents.start(currentConnector.id);
               Notification.show({
                 message: t("You are now connected to {{name}}", currentConnector),

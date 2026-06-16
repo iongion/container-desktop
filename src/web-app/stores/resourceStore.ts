@@ -1,19 +1,12 @@
 import { create } from "zustand";
 
+import { RESOURCE_DOMAINS, type ResourceDomain, type ResourceItemsByDomain } from "@/container-client/resourceDomains";
 import type { Container, ContainerImage, Network, Pod, Secret, Volume } from "@/env/Types";
 
-export type ResourceDomain = "containers" | "images" | "pods" | "volumes" | "networks" | "secrets";
-
-export const RESOURCE_DOMAINS: ResourceDomain[] = ["containers", "images", "pods", "volumes", "networks", "secrets"];
-
-export interface ResourceItemsByDomain {
-  containers: Container;
-  images: ContainerImage;
-  pods: Pod;
-  volumes: Volume;
-  networks: Network;
-  secrets: Secret;
-}
+export type { ResourceDomain, ResourceItemsByDomain };
+// Re-exported so existing `@/web-app/stores/resourceStore` import sites keep resolving after the move
+// of the domain vocabulary into the neutral `@/container-client/resourceDomains` module.
+export { RESOURCE_DOMAINS };
 
 export interface ResourceSlice<T = unknown> {
   items: T[];

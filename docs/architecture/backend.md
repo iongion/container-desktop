@@ -15,11 +15,11 @@ There are two engines (Podman, Docker) and five host types (native, machine/
 vendor, WSL, Lima, SSH-remote) — ten combinations. Rather than ten inheritance
 leaves, each combination is **composed** from three single-purpose units:
 
-| Unit | Varies by | Answers | Source |
-| --- | --- | --- | --- |
-| **EngineDialect** | engine | "How do I speak to *this engine*?" — read its socket, build its service command, get system info | [`runtimes/dialects/{podman,docker}.ts`](../../src/container-client/runtimes/dialects/) |
-| **Transport** | host type | "How do I reach a host of *this kind*?" — start/stop a scope, shape the API URI, run the API, build the driver | [`runtimes/transports/{native,ssh,wsl,lima,podman-machine}.ts`](../../src/container-client/runtimes/transports/) |
-| **HostProfile** | (engine, host) | the thin glue — OS availability gate, automatic-settings detection, the per-host API-connection resolver | [`runtimes/profiles/{podman,docker}.ts`](../../src/container-client/runtimes/profiles/) |
+| Unit              | Varies by      | Answers                                                                                                        | Source                                                                                                           |
+| ----------------- | -------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **EngineDialect** | engine         | "How do I speak to _this engine_?" — read its socket, build its service command, get system info               | [`runtimes/dialects/{podman,docker}.ts`](../../src/container-client/runtimes/dialects/)                          |
+| **HostProfile**   | (engine, host) | the thin glue — OS availability gate, automatic-settings detection, the per-host API-connection resolver       | [`runtimes/profiles/{podman,docker}.ts`](../../src/container-client/runtimes/profiles/)                          |
+| **Transport**     | host type      | "How do I reach a host of _this kind_?" — start/stop a scope, shape the API URI, run the API, build the driver | [`runtimes/transports/{native,ssh,wsl,lima,podman-machine}.ts`](../../src/container-client/runtimes/transports/) |
 
 A **registry** maps each `(engine, host)` pair to its three units; a factory
 assembles them into a `HostClient`. The `HostClient` *is* the `HostContext` passed
@@ -97,6 +97,40 @@ flowchart TB
   Persisted settings and the saved connection list (the one piece the main process
   also imports).
 
+## Resource data layer (lists + freshness)
+
+The `HostClientFacade` is the raw operations surface; screens don't call it directly. Two layers sit on top:
+
+- **Per-resource adapters** — [`adapters/`](../../src/container-client/adapters/). Each
+  (`ContainersAdapter`, `ImagesAdapter`, `PodsAdapter`, `VolumesAdapter`, `NetworksAdapter`,
+  `SecretsAdapter`, …) extends [`ResourceAdapter`](../../src/container-client/adapters/shared.ts), which
+  binds the active `HostClient`'s Axios driver and the per-engine normalizers. Adapters expose typed
+  `list()/start()/stop()/…` over the engine REST API; `getActiveHostClient()` resolves the current host.
+- **Resource vocabulary** — [`resourceDomains.ts`](../../src/container-client/resourceDomains.ts): the
+  canonical `RESOURCE_DOMAINS`, `ResourceDomain`/`ResourceItemsByDomain` types, and the engine-event →
+  domain mapping (`normalizeResourceEventDomains`). Neutral (no Zustand/Electron) so **both** the renderer
+  and the main process import it. The renderer's `resourceEvents`/`resourceStore` consume it (see
+  [frontend.md](frontend.md)).
+
+### Main-owned data layer
+
+The **main process is the source of truth for engine reads**: it owns the engine `/events` stream and all
+list fetching, and pushes snapshots to every window. The renderer no longer runs its own event manager —
+`resourceEvents` is now a thin client that starts the mirror and forwards "refresh now" nudges to main.
+
+| Piece | Path | Role |
+| --- | --- | --- |
+| `EngineDataService` | [`electron-shell/engineDataService.ts`](../../src/electron-shell/engineDataService.ts) | Main-side owner: an `Application` (via `Application.initInstance`, no `window`), connection/runtime + per-connection resource state, initial lists + `/events` → debounced refresh; follows the renderer's connection switches. |
+| `ResourceSyncBroker` | [`electron-shell/resourceSyncBroker.ts`](../../src/electron-shell/resourceSyncBroker.ts) | Pushes a `ResourceSyncSnapshot` to windows on change; answers sender-validated `resource:get-snapshot`; accepts `resource:refresh` + `resource:switch-connection`. |
+| `ResourceBus` (preload) | [`electron-shell/resourceBus.ts`](../../src/electron-shell/resourceBus.ts) | Allowlisted receive bridge (mirrors `TrayBus`) for the push channel. |
+| `resourceMirror` (renderer) | [`web-app/stores/resourceMirror.ts`](../../src/web-app/stores/resourceMirror.ts) | Applies main's pushed snapshots into the **same** `resourceStore` the screens read (the seam). |
+| Shared protocol | [`container-client/resourceSyncProtocol.ts`](../../src/container-client/resourceSyncProtocol.ts) | Channels + `AppRuntimeSnapshot`/`ResourceSyncSnapshot` types. |
+
+The data/read-layer is owned by main and live-verified. **Still renderer-side (follow-ups):** command
+execution (mutations, log streaming) + connection identity run through the renderer's `Application` (so two
+connections exist today); retiring `TrayBridge` (main building the tray snapshot) and collapsing to a single
+connection remain.
+
 ## Key types (the vocabulary)
 
 All in [`src/env/Types.ts`](../../src/env/Types.ts):
@@ -122,16 +156,16 @@ availability — is the subject of its own page:
 
 ## Source map
 
-| Component | Path |
-| --- | --- |
-| Orchestrator | [`Application.ts`](../../src/container-client/Application.ts) |
+| Component                     | Path                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| API driver                    | [`Api.clients.ts`](../../src/container-client/Api.clients.ts)                   |
+| Composed client               | [`runtimes/host-client.ts`](../../src/container-client/runtimes/host-client.ts) |
 | Composition seam (interfaces) | [`runtimes/composition.ts`](../../src/container-client/runtimes/composition.ts) |
-| Composed client | [`runtimes/host-client.ts`](../../src/container-client/runtimes/host-client.ts) |
-| Registry (10 entries) | [`runtimes/registry.ts`](../../src/container-client/runtimes/registry.ts) |
-| Operations facade | [`runtimes/facade.ts`](../../src/container-client/runtimes/facade.ts) |
-| Dialects | [`runtimes/dialects/`](../../src/container-client/runtimes/dialects/) |
-| Transports | [`runtimes/transports/`](../../src/container-client/runtimes/transports/) |
-| Profiles | [`runtimes/profiles/`](../../src/container-client/runtimes/profiles/) |
-| Connector defaults | [`connection.ts`](../../src/container-client/connection.ts) |
-| API driver | [`Api.clients.ts`](../../src/container-client/Api.clients.ts) |
-| Types | [`src/env/Types.ts`](../../src/env/Types.ts) |
+| Connector defaults            | [`connection.ts`](../../src/container-client/connection.ts)                     |
+| Dialects                      | [`runtimes/dialects/`](../../src/container-client/runtimes/dialects/)           |
+| Operations facade             | [`runtimes/facade.ts`](../../src/container-client/runtimes/facade.ts)           |
+| Orchestrator                  | [`Application.ts`](../../src/container-client/Application.ts)                   |
+| Profiles                      | [`runtimes/profiles/`](../../src/container-client/runtimes/profiles/)           |
+| Registry (10 entries)         | [`runtimes/registry.ts`](../../src/container-client/runtimes/registry.ts)       |
+| Transports                    | [`runtimes/transports/`](../../src/container-client/runtimes/transports/)       |
+| Types                         | [`src/env/Types.ts`](../../src/env/Types.ts)                                    |

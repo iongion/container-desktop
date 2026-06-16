@@ -66,13 +66,14 @@ persistent chrome — header, sidebar, footer — around the routed `<Outlet/>`.
 **State — Zustand stores** ([`src/web-app/stores/`](../../src/web-app/stores/)),
 each one concern:
 
-| Store | Holds |
-| --- | --- |
-| `appStore` | bootstrap `phase`, `connectors` (availability matrix), `connections` (configured list), `currentConnector`, `userSettings`; the `initialize` / `startApplication` / connection-CRUD actions |
-| `resourceStore` | per-connection snapshots of containers/images/pods/volumes/networks/secrets (items, loading, lastError, eventsConnected) |
-| `resourceEvents` | the **events-first** engine: per-connection engine-event subscriptions that invalidate the affected queries; reconnect with backoff; polling is only a fallback when events are unavailable |
-| `uiStore` | ephemeral per-screen UI (search, selection, overlays); reset on connection switch |
-| `sortStore` | sort specs, persisted to localStorage |
+| Store            | Holds                                                                                                                                                                                                                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `appStore`       | bootstrap `phase`, `connectors` (availability matrix), `connections` (configured list), `currentConnector`, `userSettings`; the `initialize` / `startApplication` / connection-CRUD actions                                                                                                                                                |
+| `resourceEvents` | a thin client over the **main-owned** data layer: `start()` begins mirroring main's pushes; `refresh()/refreshMany()` send a "refresh now" nudge to main. The engine `/events` stream + list fetching run in the **main process** (see [backend.md](backend.md#main-owned-data-layer))                                                                                                                                                |
+| `resourceMirror` | applies the **main process's** pushed `ResourceSyncSnapshot`s into `resourceStore` (started by `resourceEvents.start()`) — same store, same screens (the seam). See [backend.md](backend.md#main-owned-data-layer) |
+| `resourceStore`  | per-connection snapshots of containers/images/pods/volumes/networks/secrets (items, loading, lastError, eventsConnected)                                                                                                                                                                                                                   |
+| `sortStore`      | sort specs, persisted to localStorage                                                                                                                                                                                                                                                                                                      |
+| `uiStore`        | ephemeral per-screen UI (search, selection, overlays); reset on connection switch                                                                                                                                                                                                                                                          |
 
 **Server state — TanStack Query** ([`src/web-app/domain/`](../../src/web-app/domain/)):
 `queryClient.ts` configures a **cache-first** client (`staleTime: Infinity`). Freshness is
@@ -96,19 +97,19 @@ per domain. Each screen is a small contract: it exports a component plus
 `Screen.ID`, `Screen.Title`, `Screen.Route`, and `Screen.Metadata` (icon), which
 `App.tsx` registers as a route.
 
-| Domain | Folder | Typical views |
-| --- | --- | --- |
-| Dashboard | `Dashboard/` | landing |
-| Containers | `Container/` | manage · logs · inspect · stats · processes · terminal · kube |
-| Images | `Image/` | manage · inspect · layers · security |
-| Pods | `Pod/` | manage · logs · inspect · processes · kube |
-| Machines | `Machine/` | manage · inspect |
-| Networks | `Network/` | manage · inspect |
-| Volumes | `Volume/` | manage · inspect |
-| Secrets | `Secret/` | manage · inspect |
-| Registries | `Registry/` | manage |
-| Settings | `Settings/` | user settings · connection info · system info |
-| Troubleshoot | `Troubleshoot/` | diagnostics |
+| Domain       | Folder          | Typical views                                                 |
+| ------------ | --------------- | ------------------------------------------------------------- |
+| Containers   | `Container/`    | manage · logs · inspect · stats · processes · terminal · kube |
+| Dashboard    | `Dashboard/`    | landing                                                       |
+| Images       | `Image/`        | manage · inspect · layers · security                          |
+| Machines     | `Machine/`      | manage · inspect                                              |
+| Networks     | `Network/`      | manage · inspect                                              |
+| Pods         | `Pod/`          | manage · logs · inspect · processes · kube                    |
+| Registries   | `Registry/`     | manage                                                        |
+| Secrets      | `Secret/`       | manage · inspect                                              |
+| Settings     | `Settings/`     | user settings · connection info · system info                 |
+| Troubleshoot | `Troubleshoot/` | diagnostics                                                   |
+| Volumes      | `Volume/`       | manage · inspect                                              |
 
 Navigation helpers live in [`Navigator.ts`](../../src/web-app/Navigator.ts);
 runtime config (environment, poll rate, doc links) in
@@ -141,15 +142,15 @@ A few features span the whole app rather than a single screen:
 
 ## Source map
 
-| Component | Path |
-| --- | --- |
-| Entry / providers | [`index.tsx`](../../src/web-app/index.tsx) |
-| App / router / layout | [`App.tsx`](../../src/web-app/App.tsx) · [`App.types.ts`](../../src/web-app/App.types.ts) |
-| Stores | [`stores/`](../../src/web-app/stores/) |
-| Query layer | [`domain/queryClient.ts`](../../src/web-app/domain/queryClient.ts) · [`domain/queries.ts`](../../src/web-app/domain/queries.ts) |
-| Native bridge | [`Native.ts`](../../src/web-app/Native.ts) |
-| Navigation / env | [`Navigator.ts`](../../src/web-app/Navigator.ts) · [`Environment.ts`](../../src/web-app/Environment.ts) |
-| Screens | [`screens/`](../../src/web-app/screens/) |
+| Component                      | Path                                                                                                                                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| App / router / layout          | [`App.tsx`](../../src/web-app/App.tsx) · [`App.types.ts`](../../src/web-app/App.types.ts)                                                                                                                                                  |
+| Entry / providers              | [`index.tsx`](../../src/web-app/index.tsx)                                                                                                                                                                                                 |
+| In-app Find                    | [`components/Find/`](../../src/web-app/components/Find/)                                                                                                                                                                                   |
+| Live logs                      | [`container-client/logs.ts`](../../src/container-client/logs.ts) · [`components/LiveLogBadge.tsx`](../../src/web-app/components/LiveLogBadge.tsx)                                                                                          |
+| Native bridge                  | [`Native.ts`](../../src/web-app/Native.ts)                                                                                                                                                                                                 |
+| Navigation / env               | [`Navigator.ts`](../../src/web-app/Navigator.ts) · [`Environment.ts`](../../src/web-app/Environment.ts)                                                                                                                                    |
 | Notification Center / Activity | [`components/NotificationCenter/`](../../src/web-app/components/NotificationCenter/) · [`stores/activityStore.ts`](../../src/web-app/stores/activityStore.ts) · [`electron-shell/activityBus.ts`](../../src/electron-shell/activityBus.ts) |
-| In-app Find | [`components/Find/`](../../src/web-app/components/Find/) |
-| Live logs | [`container-client/logs.ts`](../../src/container-client/logs.ts) · [`components/LiveLogBadge.tsx`](../../src/web-app/components/LiveLogBadge.tsx) |
+| Query layer                    | [`domain/queryClient.ts`](../../src/web-app/domain/queryClient.ts) · [`domain/queries.ts`](../../src/web-app/domain/queries.ts)                                                                                                            |
+| Screens                        | [`screens/`](../../src/web-app/screens/)                                                                                                                                                                                                   |
+| Stores                         | [`stores/`](../../src/web-app/stores/)                                                                                                                                                                                                     |

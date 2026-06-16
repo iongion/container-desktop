@@ -150,6 +150,14 @@ export class Application {
     return Application.instance;
   }
 
+  // Main-process construction: seed the singleton explicitly (Node OS type + a main-side messageBus)
+  // so the engine adapters' getActiveHostClient() resolves in main without a `window`/`navigator`.
+  // The renderer keeps using getInstance() unchanged.
+  static initInstance(env: ApplicationEnvironment): Application {
+    Application.instance = new Application(env);
+    return Application.instance;
+  }
+
   setLogLevel(level: string) {
     console.debug("Setting application log level", level);
     try {

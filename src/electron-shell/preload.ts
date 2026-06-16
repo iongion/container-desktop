@@ -3,6 +3,7 @@ import { contextBridge } from "electron";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { ActivityBus, wrapCommandForActivity } from "./activityBus";
+import { ResourceBus } from "./resourceBus";
 import { MessageBus } from "./shared";
 import { TrayBus } from "./trayBus";
 
@@ -18,6 +19,7 @@ const ActivityCommand = wrapCommandForActivity(Command);
 (global as any).CURRENT_OS_TYPE = CURRENT_OS_TYPE;
 (global as any).MessageBus = MessageBus;
 (global as any).TrayBus = TrayBus;
+(global as any).ResourceBus = ResourceBus;
 
 function main() {
   console.debug("Preload script loaded");
@@ -29,6 +31,7 @@ function main() {
   contextBridge.exposeInMainWorld("MessageBus", MessageBus);
   contextBridge.exposeInMainWorld("ActivityBus", ActivityBus);
   contextBridge.exposeInMainWorld("TrayBus", TrayBus);
+  contextBridge.exposeInMainWorld("ResourceBus", ResourceBus);
   contextBridge.exposeInMainWorld("Preloaded", true);
 }
 
