@@ -1,4 +1,4 @@
-import { AnchorButton, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Code, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiDns, mdiEthernet, mdiInfinity, mdiNetwork, mdiScrewdriver } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -10,6 +10,7 @@ import type { Network } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
@@ -20,6 +21,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu } from ".";
+import { useNetworkBulkActions } from "./bulkActions";
 import "./ManageScreen.css";
 import { getNetworkUrl } from "./Navigation";
 
@@ -66,6 +68,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, networkSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.name, b.name));
   }, [clientSort, networkSnapshot, searchTerm]);
+  const visibleIds = useMemo(() => (networks || []).map((n) => n.id), [networks]);
+  const selection = useBulkSelection(ID, visibleIds);
+  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useNetworkBulkActions(connectionId || "");
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "networks");
@@ -78,7 +83,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.HEAT_GRID}
-        rightContent={<ActionsMenu onReload={onReload} />}
+        rightContent={
+          <>
+            {selection.count > 0 ? (
+              <>
+                <BulkActionsBar
+                  items={networks || []}
+                  getId={bulkGetId}
+                  selectedIds={selection.selectedIds}
+                  actions={bulkActions}
+                  onClear={selection.clear}
+                  refresh={bulkRefresh}
+                />
+                <Divider />
+              </>
+            ) : null}
+            <ActionsMenu onReload={onReload} />
+          </>
+        }
       />
       <div className="AppScreenContent">
         {networks.length === 0 ? (
@@ -134,6 +156,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
                 </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
+                <th data-column="select" className="BulkSelectColumn">
+                  <SelectionCheckbox
+                    checked={selection.headerState.checked}
+                    indeterminate={selection.headerState.indeterminate}
+                    onChange={selection.toggleAll}
+                    title={t("Select all")}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -166,6 +196,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                     <td>
                       <ActionsMenu withoutCreate network={network} />
+                    </td>
+                    <td className="BulkSelectColumn">
+                      <SelectionCheckbox
+                        checked={selection.isSelected(network.id)}
+                        onChange={() => selection.toggle(network.id)}
+                      />
                     </td>
                   </tr>
                 );

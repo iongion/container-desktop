@@ -14,9 +14,10 @@
 [data-table="containers"] tbody td:nth-child(2) {
   text-align: left;
 }
-[data-table="containers"] thead th:last-child,
-[data-table="containers"] tbody td:last-child {
-  width: 1px;
+/* Actions column (second-to-last; selection column is always last) stays shrink-to-fit. */
+[data-table="containers"] thead th:nth-last-child(2),
+[data-table="containers"] tbody tr:not(.AppDataTableGroupRow) td:nth-last-child(2) {
+  width: 1px !important;
 }
 [data-table="containers"] tbody tr {
   position: relative;

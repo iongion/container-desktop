@@ -1,4 +1,4 @@
-import { AnchorButton, Code, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Code, Divider, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import dayjs from "dayjs";
@@ -10,6 +10,7 @@ import type { ContainerImage } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -19,6 +20,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu, getImageUrl } from ".";
+import { useImageBulkActions } from "./bulkActions";
 import "./ManageScreen.css";
 
 export const ID = "images";
@@ -61,6 +63,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const items = searchTerm ? imageSnapshot.filter(createImageSearchFilter(searchTerm)) : imageSnapshot;
     return sortByField(items, clientSort, imageSortSelectors);
   }, [clientSort, imageSnapshot, searchTerm]);
+  const visibleIds = useMemo(() => images.map((i) => i.Id), [images]);
+  const selection = useBulkSelection(ID, visibleIds);
+  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useImageBulkActions(connectionId || "");
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "images");
@@ -72,7 +77,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
       <AppScreenHeader
         searchTerm={searchTerm}
         onSearch={onSearchChange}
-        rightContent={<ActionsMenu withoutStart onReload={onReload} />}
+        rightContent={
+          <>
+            {selection.count > 0 ? (
+              <>
+                <BulkActionsBar
+                  items={images}
+                  getId={bulkGetId}
+                  selectedIds={selection.selectedIds}
+                  actions={bulkActions}
+                  onClear={selection.clear}
+                  refresh={bulkRefresh}
+                />
+                <Divider />
+              </>
+            ) : null}
+            <ActionsMenu withoutStart onReload={onReload} />
+          </>
+        }
       />
       <div className="AppScreenContent">
         {images.length === 0 ? (
@@ -125,6 +147,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
                 </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
+                <th data-column="select" className="BulkSelectColumn">
+                  <SelectionCheckbox
+                    checked={selection.headerState.checked}
+                    indeterminate={selection.headerState.indeterminate}
+                    onChange={selection.toggleAll}
+                    title={t("Select all")}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -154,6 +184,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{(dayjs(image.Created * 1000) as any).format("DD MMM YYYY HH:mm")}</td>
                     <td>
                       <ActionsMenu image={image} />
+                    </td>
+                    <td className="BulkSelectColumn">
+                      <SelectionCheckbox
+                        checked={selection.isSelected(image.Id)}
+                        onChange={() => selection.toggle(image.Id)}
+                      />
                     </td>
                   </tr>
                 );

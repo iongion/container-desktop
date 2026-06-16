@@ -1,4 +1,14 @@
-import { AnchorButton, Button, ButtonGroup, Code, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
+import {
+  AnchorButton,
+  Button,
+  ButtonGroup,
+  Code,
+  Divider,
+  HTMLTable,
+  Icon,
+  Intent,
+  NonIdealState,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import React, { useCallback, useMemo, useState } from "react";
@@ -8,6 +18,7 @@ import { type Container, ContainerStateList } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
@@ -19,6 +30,7 @@ import type { SortSpec } from "@/web-app/stores/sortStore";
 import type { AppScreen, AppScreenProps, ContainerGroup } from "@/web-app/Types";
 import { compareSortValues, type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 import { ActionsMenu } from ".";
+import { useContainerBulkActions } from "./bulkActions";
 import "./ManageScreen.css";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -154,6 +166,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
     () => groupContainers(containers, searchTerm, clientSort),
     [clientSort, containers, searchTerm],
   );
+  const visibleItems = useMemo(() => groups.flatMap((group) => group.Items), [groups]);
+  const visibleIds = useMemo(() => visibleItems.map((item) => item.Id), [visibleItems]);
+  const selection = useBulkSelection(ID, visibleIds);
+  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useContainerBulkActions(connectionId || "");
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "containers");
@@ -193,7 +209,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
       <AppScreenHeader
         searchTerm={searchTerm}
         onSearch={onSearchChange}
-        rightContent={<ActionsMenu onReload={onReload} />}
+        rightContent={
+          <>
+            {selection.count > 0 ? (
+              <>
+                <BulkActionsBar
+                  items={visibleItems}
+                  getId={bulkGetId}
+                  selectedIds={selection.selectedIds}
+                  actions={bulkActions}
+                  onClear={selection.clear}
+                  refresh={bulkRefresh}
+                />
+                <Divider />
+              </>
+            ) : null}
+            <ActionsMenu onReload={onReload} />
+          </>
+        }
       />
       <div className="AppScreenContent">
         {groups.length === 0 ? (
@@ -237,12 +270,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
                 </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
+                <th data-column="select" className="BulkSelectColumn">
+                  <SelectionCheckbox
+                    checked={selection.headerState.checked}
+                    indeterminate={selection.headerState.indeterminate}
+                    onChange={selection.toggleAll}
+                    title={t("Select all")}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
               {groups.map((group) => {
                 const containers = group.Items;
                 const isPartOfGroup = group.Items.length > 1;
+                const groupIds = containers.map((it) => it.Id);
+                const groupSelectedCount = groupIds.reduce((n, id) => n + (selection.isSelected(id) ? 1 : 0), 0);
+                const groupChecked = groupIds.length > 0 && groupSelectedCount === groupIds.length;
+                const groupIndeterminate = groupSelectedCount > 0 && groupSelectedCount < groupIds.length;
                 return (
                   <React.Fragment key={group.Name || group.Id}>
                     {containers.map((container, index) => {
@@ -297,6 +342,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                                   </li>
                                 </ul>
                               </div>
+                            </td>
+                            <td className="BulkSelectColumn">
+                              <SelectionCheckbox
+                                checked={groupChecked}
+                                indeterminate={groupIndeterminate}
+                                onChange={() => selection.toggleMany(groupIds)}
+                                title={t("Select all in group")}
+                              />
                             </td>
                           </tr>
                         ) : undefined;
@@ -379,6 +432,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                             <td>
                               <ActionsMenu container={container} withOverlay={containerOverlay === container.Id} />
+                            </td>
+                            <td className="BulkSelectColumn">
+                              <SelectionCheckbox
+                                checked={selection.isSelected(container.Id)}
+                                onChange={() => selection.toggle(container.Id)}
+                              />
                             </td>
                           </tr>
                         );

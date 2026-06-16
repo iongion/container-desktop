@@ -1,4 +1,4 @@
-import { AnchorButton, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiScrewdriver } from "@mdi/js";
 import dayjs from "dayjs";
@@ -9,6 +9,7 @@ import type { Volume } from "@/env/Types";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
+import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
@@ -18,6 +19,7 @@ import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 import { VolumeActionsMenu } from ".";
+import { useVolumeBulkActions } from "./bulkActions";
 import { getVolumeUrl } from "./Navigation";
 import "./ManageScreen.css";
 
@@ -59,6 +61,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, volumeSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, volumeSnapshot, searchTerm]);
+  const visibleIds = useMemo(() => volumes.map((v) => v.Name), [volumes]);
+  const selection = useBulkSelection(ID, visibleIds);
+  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useVolumeBulkActions(connectionId || "");
   const onReload = useCallback(() => {
     if (connectionId) {
       resourceEvents.refresh(connectionId, "volumes");
@@ -71,7 +76,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
         searchTerm={searchTerm}
         onSearch={onSearchChange}
         titleIcon={IconNames.DATABASE}
-        rightContent={<VolumeActionsMenu onReload={onReload} />}
+        rightContent={
+          <>
+            {selection.count > 0 ? (
+              <>
+                <BulkActionsBar
+                  items={volumes}
+                  getId={bulkGetId}
+                  selectedIds={selection.selectedIds}
+                  actions={bulkActions}
+                  onClear={selection.clear}
+                  refresh={bulkRefresh}
+                />
+                <Divider />
+              </>
+            ) : null}
+            <VolumeActionsMenu onReload={onReload} />
+          </>
+        }
       />
       <div className="AppScreenContent">
         {volumes.length === 0 ? (
@@ -102,6 +124,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <AppLabel iconName={IconNames.CALENDAR} text={t("Created")} />
                 </SortableColumnHeader>
                 <th data-column="Actions">&nbsp;</th>
+                <th data-column="select" className="BulkSelectColumn">
+                  <SelectionCheckbox
+                    checked={selection.headerState.checked}
+                    indeterminate={selection.headerState.indeterminate}
+                    onChange={selection.toggleAll}
+                    title={t("Select all")}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -124,6 +154,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{(dayjs(volume.CreatedAt) as any).fromNow()}</td>
                     <td>
                       <VolumeActionsMenu withoutCreate volume={volume} />
+                    </td>
+                    <td className="BulkSelectColumn">
+                      <SelectionCheckbox
+                        checked={selection.isSelected(volume.Name)}
+                        onChange={() => selection.toggle(volume.Name)}
+                      />
                     </td>
                   </tr>
                 );
