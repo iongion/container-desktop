@@ -11,6 +11,8 @@ import * as url from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 // project
 import { getActiveHostClient } from "@/container-client/adapters/shared";
+import { createMockCommand } from "@/container-client/mock/MockCommand";
+import { isMockMode } from "@/container-client/mock/mode";
 import { createLogger } from "@/logger";
 import { Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
@@ -28,6 +30,20 @@ import { TrayController } from "./trayController";
 import { shouldOpenExternally } from "./urlPolicy";
 import { WindowManager } from "./windowManager";
 
+function installBrokenPipeGuard(stream: NodeJS.WriteStream): void {
+  stream.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "EPIPE") {
+      return;
+    }
+    setImmediate(() => {
+      throw error;
+    });
+  });
+}
+
+installBrokenPipeGuard(process.stdout);
+installBrokenPipeGuard(process.stderr);
+
 const logger = createLogger("shell.main");
 
 // Path roots (entry-level + build-critical): main.cjs lives in build/<version>/, so the repo root (dev) /
@@ -36,9 +52,15 @@ const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const APP_PATH = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
 const PROJECT_HOME = path.dirname(path.dirname(__dirname));
+const MainCommand = isMockMode() ? createMockCommand() : Command;
+const USER_DATA_DIR = process.env.CONTAINER_DESKTOP_USER_DATA_DIR;
+
+if (USER_DATA_DIR) {
+  app.setPath("userData", USER_DATA_DIR);
+}
 
 // Patch the shared platform globals (the same set the preload installs).
-installPlatformGlobals(global, { command: Command, messageBus: MessageBus, extras: { APP_PATH } });
+installPlatformGlobals(global, { command: MainCommand, messageBus: MessageBus, extras: { APP_PATH } });
 process.env.APP_PATH = APP_PATH;
 
 const runtime = createRuntime({ appDir: __dirname, appPath: APP_PATH, projectHome: PROJECT_HOME });

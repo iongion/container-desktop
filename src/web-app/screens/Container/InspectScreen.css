@@ -1,35 +1,61 @@
 .ContainerInspectDisplay {
   font-size: 12px;
-  color: #ccc;
+  color: var(--app-text);
   line-height: 1.4em;
+}
+[data-table="container.inspect"] {
+  border-collapse: separate;
+  border-spacing: 0;
 }
 [data-table="container.inspect"] tr td {
   text-align: left;
   font-family: var(--monospace-font);
+  color: var(--app-text);
+  background-color: var(--app-surface);
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 72%, transparent);
 }
 [data-table="container.inspect"] tr td:first-child {
-  width: 1px;
+  width: 1px !important;
   font-weight: bold;
+  text-align: left !important;
+  white-space: nowrap;
 }
 [data-table="container.inspect"] tr td:nth-child(2) {
-  width: 100%;
-  text-align: left;
+  width: auto !important;
+  text-align: left !important;
   white-space: break-spaces;
 }
 [data-table="container.inspect"] tr td code:first-child {
-  border: 1px solid transparent;
+  border: 1px solid var(--app-border);
   padding: 4px;
   display: block;
   border-radius: 5px;
+  background: color-mix(in srgb, var(--app-chrome) 78%, var(--app-surface));
+  color: var(--app-text);
 }
 [data-table="container.inspect"] [data-table-row="group.name"] td {
+  width: auto !important;
   font-family: sans-serif;
   font-size: 14px;
   font-weight: bold;
+  text-align: left !important;
+  background: var(--app-group-bg) !important;
+  color: var(--app-text);
+  border-top: 1px solid var(--app-border);
+  border-bottom: 1px solid var(--app-border);
+}
+[data-table="container.inspect"] tr td[colspan="2"] {
+  width: auto !important;
+}
+[data-table="container.inspect"] tr:not([data-table-row="group.name"]):nth-child(odd) td {
+  background-color: color-mix(in srgb, var(--app-surface-strong) 32%, var(--app-surface));
+}
+[data-table="container.inspect"] tr td:last-child {
+  background-color: inherit;
 }
 .ContainerVolume {
   font-size: 12px;
-  color: #ccc;
+  color: var(--app-text);
   line-height: 1.4em;
   vertical-align: middle;
   display: flex;
@@ -49,9 +75,15 @@
   padding: 0;
   padding-left: 10px;
   list-style: none;
+  display: grid;
+  gap: 5px;
 }
 .ContainerVolumeMapping li {
-  margin-bottom: 5px;
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  margin-bottom: 0;
 }
 .ContainerVolumeMapping li:last-child {
   margin-bottom: 0;
@@ -63,9 +95,13 @@
   width: 90px !important;
   display: inline-block;
   padding: 4px;
-  margin-right: 10px;
+  margin-right: 0;
+  border: 1px solid var(--app-border);
+  background: color-mix(in srgb, var(--app-surface-strong) 72%, var(--app-surface));
+  color: var(--app-text);
 }
 .ContainerVolumeMapping li code {
   font-size: 12px;
   font-weight: normal;
+  color: var(--app-text);
 }

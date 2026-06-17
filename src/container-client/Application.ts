@@ -5,6 +5,13 @@ import {
   type HostClientFacade,
 } from "@/container-client";
 import { UserConfiguration } from "@/container-client/config";
+import {
+  buildMockConnections,
+  MOCK_DOCKER_SYSTEM_ID,
+  MOCK_PODMAN_SYSTEM_ID,
+  mockAvailability,
+} from "@/container-client/mock/connections";
+import { getMockEngine, isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
 import {
   type ApplicationEnvironment,
@@ -294,7 +301,11 @@ export class Application {
       logging: {
         level: await getLevel(),
       },
-      connector: await this.userConfiguration.getKey("connector"),
+      connector: isMockMode()
+        ? {
+            default: getMockEngine() === ContainerEngine.DOCKER ? MOCK_DOCKER_SYSTEM_ID : MOCK_PODMAN_SYSTEM_ID,
+          }
+        : await this.userConfiguration.getKey("connector"),
       connections: await this.getConnectionsFromConfiguration(),
     } as GlobalUserSettings;
     return settings;
@@ -466,6 +477,9 @@ export class Application {
 
   // Connection
   async getConnectionsFromConfiguration() {
+    if (isMockMode()) {
+      return buildMockConnections();
+    }
     let connections = await this.userConfiguration.getKey<Connection[]>("connections", []);
     if (connections.length) {
       // Backwards compatibility checks
@@ -536,6 +550,9 @@ export class Application {
   }
 
   async getSystemConnections() {
+    if (isMockMode()) {
+      return [];
+    }
     const connections: Connection[] = [];
     // Add system podman as default
     const firstPodman: Connection = getDefaultConnectors(this.osType).find(
@@ -918,6 +935,9 @@ export class Application {
         });
         host.setLogLevel(this.logLevel);
         await host.setSettings(settings);
+        if (isMockMode()) {
+          return { host, availability: mockAvailability() };
+        }
         if (settings.mode === "mode.automatic") {
           const scope = settings.controller?.scope || "";
           if (opts?.skipAvailabilityCheck) {

@@ -28,6 +28,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" referrerpolicy="no-referrer" />
+{% if demoReplay %}
+<link rel="stylesheet" href="https://cdn.rrweb.com/replay/current/dist/style.css" />
+{% endif %}
 <link rel="stylesheet" href="/assets/css/site.css?v={{ site.version }}" />
 <script type="application/ld+json">
 {
@@ -51,7 +54,17 @@
   {{ content | safe }}
   {% include "partials/footer.njk" %}
   <script async defer src="https://buttons.github.io/buttons.js"></script>
+{% if demoReplay %}
+  <script type="module">
+    import { Replayer } from "https://cdn.rrweb.com/replay/current/dist/replay.js";
+    window.rrwebReplayer = Replayer;
+    window.dispatchEvent(new Event("rrweb-replay-ready"));
+  </script>
+{% endif %}
   <script src="/assets/js/os-detect.js?v={{ site.version }}"></script>
   <script src="/assets/js/manual-nav.js?v={{ site.version }}"></script>
+{% if demoReplay %}
+  <script src="/assets/js/demo-replay.js?v={{ site.version }}"></script>
+{% endif %}
 </body>
 </html>

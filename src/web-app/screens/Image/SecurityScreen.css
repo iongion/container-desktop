@@ -1,24 +1,62 @@
 .AppDataTable[data-table="image.scanning.report"] {
   color: var(--app-text);
+  align-self: flex-start;
+  height: auto;
+  table-layout: fixed;
 }
 .AppDataTable[data-table="image.scanning.report"] tr th {
   text-align: center !important;
 }
+.AppDataTable[data-table="image.scanning.report"] tr td {
+  height: auto;
+  vertical-align: middle !important;
+}
 .AppDataTable[data-table="image.scanning.report"] tr td:first-child {
-  width: 1px;
+  width: 44px;
+}
+.AppDataTable[data-table="image.scanning.report"] tr th:nth-child(2),
+.AppDataTable[data-table="image.scanning.report"] tr td:nth-child(2) {
+  width: 210px;
+  text-align: left;
+}
+.AppDataTable[data-table="image.scanning.report"] tr th:nth-child(3),
+.AppDataTable[data-table="image.scanning.report"] tr td:nth-child(3) {
+  width: 125px;
+}
+.AppDataTable[data-table="image.scanning.report"] tr th:nth-child(4),
+.AppDataTable[data-table="image.scanning.report"] tr td:nth-child(4) {
+  width: 110px;
 }
 .AppDataTable[data-table="image.scanning.report"] tr th:last-child {
   text-align: center;
 }
-.AppDataTable[data-table="image.scanning.report"] tr td:nth-child(5),
+.AppDataTable[data-table="image.scanning.report"] tr th:nth-child(5),
+.AppDataTable[data-table="image.scanning.report"] tr td:nth-child(5) {
+  width: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.AppDataTable[data-table="image.scanning.report"] tr th:nth-child(6),
+.AppDataTable[data-table="image.scanning.report"] tr td:nth-child(6) {
+  width: 90px;
+}
+.AppDataTable[data-table="image.scanning.report"] tr th:last-child,
 .AppDataTable[data-table="image.scanning.report"] tr td:last-child {
+  width: 165px !important;
   white-space: nowrap;
 }
 .AppDataTable[data-table="image.scanning.report"] tr td[data-field="Description"] {
   text-align: left;
-  width: 100% !important;
+  width: auto !important;
   white-space: initial;
   text-overflow: ellipsis;
+  padding-top: 4px;
+  padding-bottom: 10px;
+  vertical-align: top !important;
+}
+.AppDataTable[data-table="image.scanning.report"] tr td[data-field="Description"] p {
+  margin: 0;
+  line-height: 1.35;
 }
 .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: var(--app-surface-strong);
@@ -78,8 +116,8 @@ table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="
   font-size: 10px !important;
 }
 .SecurityList {
-  display: flex;
   flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 .HeaderSeparator {

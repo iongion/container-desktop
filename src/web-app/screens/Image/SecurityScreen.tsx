@@ -182,7 +182,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                               <td>{dayjs(vulnerability.Published).format("DD MMM YYYY HH:mm")}</td>
                             </tr>
                             <tr data-row-highlight={highlight} data-severity={vulnerability.Severity}>
-                              <td colSpan={9} data-field="Description">
+                              <td colSpan={7} data-field="Description">
                                 <p>{vulnerability.Description}</p>
                               </td>
                             </tr>

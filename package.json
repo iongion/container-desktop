@@ -21,6 +21,8 @@
     "build:renderer": "vite build --mode=production --config vite.config.renderer.mjs",
     "build:website": "eleventy",
     "dev:website": "eleventy --serve --port=8088",
+    "demo:record": "node support/demoReplay.mjs --mode=dev",
+    "screenshots": "node support/screenshots.mjs --mode=dev",
     "bundle": "cross-env DEBUG=electron-builder electron-builder --config electron-builder-config.cjs",
     "release": "yarn build && yarn bundle",
     "release:github": "node support/release-artifacts.cjs publish",
@@ -82,6 +84,7 @@
   "devDependencies": {
     "@11ty/eleventy": "^3.1.6",
     "@biomejs/biome": "^2.5.0",
+    "@rrweb/record": "2.0.1",
     "@tanstack/react-query-devtools": "^5.101.0",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",

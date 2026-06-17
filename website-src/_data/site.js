@@ -17,7 +17,7 @@ export default {
   repoSlug: "iongion/container-desktop",
   podmanDesktop: "https://podman-desktop.io/",
   microsoftStore: "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct",
-  ogImage: "/img/001-Dashboard.png",
+  ogImage: "/img/podman/001-Dashboard.png",
   author: "Ionut Stoica",
   version: pkg.version,
   // Windows lags: the signed Microsoft Store installer is uploaded by hand and

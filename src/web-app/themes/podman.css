@@ -7,19 +7,6 @@
 body.bp6-dark[data-engine="podman"] .AppSettingUserConfigurationPath {
   background: var(--app-chrome);
 }
-/* Container inspect — Podman-only zebra striping, tied to the palette */
-body.bp6-dark[data-engine="podman"] [data-table="container.inspect"] [data-table-row="group.name"] td {
-  background: var(--app-chrome) !important;
-}
-body.bp6-dark[data-engine="podman"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
-  background-color: var(--app-surface-strong);
-  color: var(--app-text);
-}
-body.bp6-dark[data-engine="podman"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
-  background-color: var(--app-surface);
-  color: var(--app-text);
-}
-
 /* Status colors */
 body.bp6-dark[data-engine="podman"] [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #8b104c;
@@ -137,23 +124,11 @@ body.bp6-light[data-engine="podman"] .SecurityDetails {
   background: var(--app-surface-strong);
 }
 
-/* ── Container-inspect + Connection-info tables — consolidated from screen CSS (engine specifics).
-   Dark zebra/group already live above (tokenized); these are the remaining hardcoded specifics. ── */
-body.bp6-dark[data-engine="podman"] [data-table="container.inspect"] tr td code:first-child,
+/* Connection-info tables — engine specifics. */
 [data-theme="bp6-dark"][data-engine="podman"] [data-table="settings.connection-info"] tr td code:first-child {
   background: #110411;
   color: #f6c0fe;
 }
-body.bp6-light[data-engine="podman"] [data-table="container.inspect"] [data-table-row="group.name"] td {
-  background: #96a2b3 !important;
-}
-body.bp6-light[data-engine="podman"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
-  background-color: #cfd3d7;
-}
-body.bp6-light[data-engine="podman"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
-  background-color: #e1e1e1;
-}
-body.bp6-light[data-engine="podman"] [data-table="container.inspect"] tr td code:first-child,
 [data-theme="bp6-light"][data-engine="podman"] [data-table="settings.connection-info"] tr td code:first-child {
   background: #cbc8cb;
   border: 1px solid #412d4b;

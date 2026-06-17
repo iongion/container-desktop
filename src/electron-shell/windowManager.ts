@@ -182,10 +182,10 @@ export class WindowManager {
       width: 1280,
       height: 800,
       ...(windowConfigOptions ?? {}),
-      // Hard floor for the main window — never smaller than 960x720 (applied after the saved geometry spread
+      // Hard floor for the main window — never smaller than 960x718 (applied after the saved geometry spread
       // so a stale persisted size can't shrink below it).
       minWidth: 960,
-      minHeight: 720,
+      minHeight: 718,
       webPreferences: {
         devTools: true,
         nodeIntegration: true,
@@ -204,6 +204,7 @@ export class WindowManager {
       windowOptions.titleBarStyle = "hiddenInset";
     }
     let closed = false;
+    let fallbackPageLoaded = false;
     const hideToTray = async (event?: any) => {
       if (await this.deps.appConfig.isHideToTrayOnClose()) {
         this.deps.logger.debug("Must hide to tray");
@@ -240,7 +241,7 @@ export class WindowManager {
     };
     const win = new BrowserWindow(windowOptions);
     this.window = win;
-    win.setMinimumSize(960, 720);
+    win.setMinimumSize(960, 718);
     // Reap any forwarded engine streams this window opened if its renderer goes away (reload/crash/quit), so
     // a destroyed log view never leaks a live engine stream in main.
     const mainWebContentsId = win.webContents.id;
@@ -276,6 +277,16 @@ export class WindowManager {
         win.maximize();
       }
     };
+    const showFallbackPage = async (title: string, message: string) => {
+      if (fallbackPageLoaded || win.isDestroyed()) {
+        return;
+      }
+      fallbackPageLoaded = true;
+      revealWindow();
+      await win.loadURL(fallbackErrorPageURL(title, message)).catch(() => undefined);
+    };
+    const isLoadAbort = (error: any) =>
+      error?.errno === -3 || error?.code === "ERR_ABORTED" || `${error?.message || error}`.includes("ERR_ABORTED");
     win.once("ready-to-show", () => {
       this.deps.logger.debug("Application is ready to show");
       revealWindow();
@@ -297,18 +308,14 @@ export class WindowManager {
       clearTimeout(readyWatchdog);
       this.window = null;
     });
-    // Renderer failed to load (network/file error). Ignore user-initiated aborts (-3).
+    // Renderer failed to load (network/file error). Ignore user-initiated aborts (-3) and the fallback
+    // data URL itself; otherwise the recovery page can recursively nest itself until Electron rejects it.
     win.webContents.on("did-fail-load", (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
-      if (!isMainFrame || errorCode === -3) {
+      if (!isMainFrame || errorCode === -3 || fallbackPageLoaded || `${validatedURL}`.startsWith("data:")) {
         return;
       }
       this.deps.logger.error("Renderer failed to load", { errorCode, errorDescription, validatedURL });
-      revealWindow();
-      win
-        .loadURL(
-          fallbackErrorPageURL("Failed to load the application", `${errorDescription} (${errorCode})\n${validatedURL}`),
-        )
-        .catch(() => undefined);
+      showFallbackPage("Failed to load the application", `${errorDescription} (${errorCode})\n${validatedURL}`);
       this.deps.recovery.showRecoveryDialog(
         "Failed to load the application",
         new Error(`${errorDescription} (${errorCode})`),
@@ -347,10 +354,7 @@ export class WindowManager {
     if (!appURL) {
       // Defensive: an empty URL would throw deep inside loadURL and leave a blank window.
       this.deps.logger.error("No application URL resolved");
-      revealWindow();
-      await win
-        .loadURL(fallbackErrorPageURL("No application URL", "The application URL could not be resolved."))
-        .catch(() => undefined);
+      await showFallbackPage("No application URL", "The application URL could not be resolved.");
       this.deps.recovery.showRecoveryDialog(
         "Container Desktop could not start",
         new Error("No application URL resolved."),
@@ -359,12 +363,13 @@ export class WindowManager {
       try {
         await win.loadURL(appURL);
       } catch (error: any) {
-        this.deps.logger.error("Unable to load the application", error);
-        revealWindow();
-        await win
-          .loadURL(fallbackErrorPageURL("Unable to load the application", error?.message || String(error)))
-          .catch(() => undefined);
-        this.deps.recovery.showRecoveryDialog("Unable to load the application", error);
+        if (isLoadAbort(error)) {
+          this.deps.logger.debug("Ignoring aborted application load", error?.message || error);
+        } else {
+          this.deps.logger.error("Unable to load the application", error);
+          await showFallbackPage("Unable to load the application", error?.message || String(error));
+          this.deps.recovery.showRecoveryDialog("Unable to load the application", error);
+        }
       }
     }
     if (runtime.isDevelopment() || runtime.isDebug) {

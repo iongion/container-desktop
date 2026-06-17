@@ -71,6 +71,34 @@ section{position:relative}
 .row .shot{margin:0}
 .hero-glow{position:absolute;left:50%;top:340px;transform:translateX(-50%);width:760px;height:300px;
   background:radial-gradient(closest-side,rgba(160,25,134,.5),transparent);filter:blur(40px);z-index:-1}
+.replay-shot{background:#0b0710;border:0;max-width:min(var(--demo-replay-source-width, 1068px), calc(100vw - 56px));
+  box-shadow:0 50px 120px -40px rgba(160,25,134,.65),0 0 0 1px var(--border-2),0 0 0 1px rgba(0,0,0,.4)}
+.demo-replay-shell{position:relative;width:100%;min-height:360px;overflow:hidden;background:#110817}
+.demo-replay-player{position:absolute;left:0;top:0;overflow:hidden}
+.demo-replay-player .replayer-wrapper{position:absolute;left:0;top:0;background:#110817;z-index:1}
+.demo-replay-player[data-replay-poster="visible"] .replayer-wrapper{opacity:0}
+.demo-replay-player .replayer-wrapper iframe{border:0;background:#110817}
+.demo-replay-player .replayer-mouse{width:14px!important;height:14px!important;margin:-7px 0 0 -7px!important;border:2px solid #fff!important;border-radius:50%!important;background:var(--cyan)!important;box-shadow:0 0 0 3px rgba(19,171,255,.18),0 0 14px rgba(19,171,255,.82)!important;opacity:0!important;transition:opacity .18s ease-out!important}
+.demo-replay-player .replayer-mouse.is-moving{opacity:.9!important}
+.demo-replay-poster{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#110817;opacity:0;pointer-events:none;transition:opacity .16s ease-out;z-index:3}
+.demo-replay-player[data-replay-poster="visible"] .demo-replay-poster{opacity:1}
+.demo-replay-controls{display:grid;grid-template-columns:auto auto minmax(140px,1fr);align-items:center;gap:12px;padding:12px;border-top:1px solid var(--border);background:rgba(20,8,28,.92)}
+.demo-replay-transport{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid rgba(19,171,255,.32);border-radius:999px;background:rgba(19,171,255,.07)}
+.demo-replay-button{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:#fff;font-size:12px;line-height:1;cursor:pointer}
+.demo-replay-button:hover,.demo-replay-button:focus-visible{outline:none;background:rgba(19,171,255,.18)}
+.demo-replay-time{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.demo-replay-seek{position:relative;height:24px;min-width:0}
+.demo-replay-slider{--progress:0%;position:absolute;inset:0;width:100%;height:24px;margin:0;appearance:none;background:transparent;cursor:pointer;z-index:2}
+.demo-replay-slider:focus{outline:none}
+.demo-replay-slider::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:linear-gradient(90deg,var(--cyan) 0 var(--progress),rgba(182,130,255,.24) var(--progress) 100%)}
+.demo-replay-slider::-webkit-slider-thumb{appearance:none;width:15px;height:15px;border-radius:50%;border:2px solid #fff;background:var(--cyan);box-shadow:0 0 0 4px rgba(19,171,255,.16);margin-top:-4.5px}
+.demo-replay-slider::-moz-range-track{height:6px;border-radius:999px;background:rgba(182,130,255,.24)}
+.demo-replay-slider::-moz-range-progress{height:6px;border-radius:999px;background:var(--cyan)}
+.demo-replay-slider::-moz-range-thumb{width:15px;height:15px;border-radius:50%;border:2px solid #fff;background:var(--cyan);box-shadow:0 0 0 4px rgba(19,171,255,.16)}
+.demo-replay-markers{position:absolute;left:7px;right:7px;top:0;height:24px;pointer-events:auto;z-index:1}
+.demo-replay-marker{position:absolute;top:9px;width:2px;height:6px;border-radius:2px;background:rgba(255,255,255,.65);transform:translateX(-50%)}
+[data-demo-replay-error="true"] .demo-replay-controls{display:none}
+@media(max-width:620px){.demo-replay-controls{grid-template-columns:auto 1fr}.demo-replay-time{grid-column:1 / -1;order:4}.demo-replay-seek{grid-column:2;grid-row:1}}
 
 /* ---- trust ---- */
 .trust{margin-top:64px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:24px 0;background:rgba(20,8,28,.4)}
