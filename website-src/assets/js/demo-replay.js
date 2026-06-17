@@ -203,11 +203,7 @@
       } else {
         playing = false;
         setPlayButtonState(false);
-        if (clamped <= 0) {
-          poster.show();
-        } else {
-          poster.hide();
-        }
+        poster.hide();
         replayer.play(clamped);
         window.requestAnimationFrame(() => {
           replayer.pause(clamped);
@@ -302,7 +298,7 @@
     if (poster) {
       target.appendChild(poster);
     }
-    target.dataset.replayPoster = "visible";
+    target.dataset.replayPoster = "loading";
 
     const replayer = new Replayer(replay.events, {
       root: target,
@@ -320,7 +316,7 @@
     const cursor = installCursorIdle(replayer, replay);
     const posterControls = {
       show() {
-        target.dataset.replayPoster = "visible";
+        target.dataset.replayPoster = "loading";
       },
       hide() {
         target.dataset.replayPoster = "hidden";
@@ -328,6 +324,11 @@
     };
     const controls = renderControls(mount, replay, replayer, cursor, posterControls);
     cursor.hide();
+    window.requestAnimationFrame(() => {
+      replayer.pause(0);
+      posterControls.hide();
+      cursor.hide();
+    });
     installKeyboardShortcuts(mount, replay, replayer, controls);
     window.addEventListener("resize", () => resizeReplay(mount, replay, replayer), { passive: true });
   }
