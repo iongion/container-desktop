@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Security
+
+- js-yaml updated to 4.2.0, fixing a quadratic-complexity denial-of-service in YAML merge-key handling (CVE-2026-53550). Build-tooling dependency, not shipped in the app.
+
 ## [5.3.1] - 2026-06-17
 
 ## Added
