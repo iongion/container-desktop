@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.2] - 2026-06-17
+
 ## Added
 
 - `make release` — bump the version (commit, tag, push) and trigger the GitHub CDPipeline in one step.
 
 ## Changed
 
+- Many visual fixes
+- Documentation is now generated including screenshots and website player
 - Version bumps no longer regenerate or commit the static website, and refuse to run when CHANGELOG.md [Unreleased] is empty. The documentation site is now rebuilt and committed at the end of CDPipeline — once the release assets exist — so its download links always match the published release.
 
 ## Security
