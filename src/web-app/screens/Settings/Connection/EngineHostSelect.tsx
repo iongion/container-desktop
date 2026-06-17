@@ -95,10 +95,10 @@ export const EngineHostSelect: React.FC<EngineSelectProps> = ({
         activeItem={activeItem}
       >
         <Button
-          alignText={Alignment.LEFT}
+          alignText={Alignment.START}
           disabled={disabled}
           fill
-          rightIcon={IconNames.CARET_DOWN}
+          endIcon={IconNames.CARET_DOWN}
           title={activeItem?.description}
           text={activeItem?.label ?? t("-- Select --")}
           textClassName={classNames({
@@ -109,8 +109,8 @@ export const EngineHostSelect: React.FC<EngineSelectProps> = ({
       {withoutDetect ? null : (
         <>
           <Divider />
-          <ButtonGroup minimal>
-            <Button disabled={pending} small text={t("Detect")} intent={Intent.SUCCESS} onClick={onItemDetect} />
+          <ButtonGroup variant="minimal">
+            <Button disabled={pending} size="small" text={t("Detect")} intent={Intent.SUCCESS} onClick={onItemDetect} />
           </ButtonGroup>
         </>
       )}

@@ -32,7 +32,7 @@ table[data-table="image.layers"] {
   width: 1px;
   min-width: 40px;
   text-align: center;
-  color: #fff;
+  color: var(--app-text);
   vertical-align: top;
 }
 /* Size column */
@@ -63,16 +63,4 @@ table[data-table="image.layers"] {
   font-size: 12px;
   font-weight: bold;
   vertical-align: middle;
-}
-[data-theme="bp6-dark"] [data-table="image.layers.history"] .LayerIndex {
-  color: #ccc;
-}
-[data-theme="bp6-dark"] [data-table="image.layers.history"] .LayerHistory {
-  background-color: #333;
-}
-[data-theme="bp6-light"] [data-table="image.layers.history"] .LayerIndex {
-  color: #333;
-}
-[data-theme="bp6-light"] [data-table="image.layers.history"] .LayerHistory {
-  background-color: #ccc;
 }

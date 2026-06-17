@@ -62,8 +62,22 @@ export const ConfirmMenuItem: React.FC<ConfirmMenuItemProps> = ({
       className="ActionMenuItemConfirm"
       labelElement={
         <ButtonGroup>
-          <Button disabled={disabled} minimal small text={t("Yes")} intent={Intent.DANGER} onClick={onConfirmClick} />
-          <Button disabled={disabled} minimal small text={t("No")} intent={Intent.SUCCESS} onClick={onCancelClick} />
+          <Button
+            disabled={disabled}
+            variant="minimal"
+            size="small"
+            text={t("Yes")}
+            intent={Intent.DANGER}
+            onClick={onConfirmClick}
+          />
+          <Button
+            disabled={disabled}
+            variant="minimal"
+            size="small"
+            text={t("No")}
+            intent={Intent.SUCCESS}
+            onClick={onCancelClick}
+          />
         </ButtonGroup>
       }
     />
@@ -130,7 +144,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
       content={menuContent}
       placement="bottom-start"
     >
-      <Button minimal small icon={IconNames.MORE} />
+      <Button variant="minimal" size="small" icon={IconNames.MORE} />
     </PopoverNext>
   );
 };

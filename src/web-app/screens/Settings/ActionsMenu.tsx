@@ -133,7 +133,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
       <ButtonGroup>
         <Button
           className="ConnectionToggle"
-          small
+          size="small"
           disabled={isStarting}
           icon={isConnected ? IconNames.POWER : IconNames.OFFLINE}
           intent={isConnected ? Intent.SUCCESS : Intent.NONE}
@@ -143,10 +143,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
         />
       </ButtonGroup>
       &nbsp;
-      <ButtonGroup minimal>
+      <ButtonGroup variant="minimal">
         <Button
           disabled={connection.readonly || isStarting}
-          small
+          size="small"
           icon={IconNames.EDIT}
           title={connection.readonly ? t("This is a system default connection and cannot be changed") : t("Edit")}
           onClick={onEditClick}

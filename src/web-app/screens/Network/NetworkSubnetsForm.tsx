@@ -173,7 +173,7 @@ export const NetworkSubnetForm: React.FC<NetworkSubnetFormProps> = ({
         </FormGroup>
       </div>
       <div className="NetworkSubnetActions">
-        <Button disabled={disabled} minimal icon={action.icon} onClick={onActionClick} />
+        <Button disabled={disabled} variant="minimal" icon={action.icon} onClick={onActionClick} />
       </div>
     </div>
   );

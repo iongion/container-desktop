@@ -13,7 +13,7 @@
   align-items: center;
 }
 .VolumeTypeInput .bp6-divider {
-  border-color: #4c3d5c;
+  border-color: var(--app-border);
 }
 
 .ContainerMount {

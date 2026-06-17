@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Notifications & activity log: the bell fills white when there are unread entries (counter badge removed); API response bodies and CLI output now show only for failed calls.
 - Engine data and command execution are now owned by the main process and mirrored to every window, so the app and the tray share one engine connection and one source of truth.
+- Redesigned the theme system around design tokens so all four combinations (Docker and Podman × dark and light) are visually coherent; light mode now uses neutral white/gray surfaces with the engine color (Docker blue, Podman purple) applied only as an accent on interactive elements instead of tinting whole surfaces.
+- Modernized the renderer to the current Blueprint 6 component API (sizing via `size`, styles via `variant`, `endIcon`, `Alignment.START`/`END`, `PopoverNext`), removing all deprecated prop usage.
+- The code editor (inspect/JSON, generate-kube) and the terminal/log views now follow the light/dark theme — light surfaces in light mode, the engine-tinted dark surface in dark mode — instead of always rendering dark.
+
+## Fixed
+
+- Terminal output no longer auto-linkifies URLs, so untrusted text (e.g. container logs) can no longer surface clickable links — removing a phishing vector.
 
 ## [5.3.0] - 2026-06-15
 

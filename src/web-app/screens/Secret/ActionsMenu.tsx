@@ -84,7 +84,7 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
     [performActionCommand],
   );
   const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+    <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = secret ? (
     <ConfirmMenu onConfirm={onRemove} tag={secret.ID} disabled={disabledAction === "secret.remove"}>
@@ -99,8 +99,8 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
           <>
             {startButton ? <Divider /> : null}
             <Button
-              small
-              minimal
+              size="small"
+              variant="minimal"
               intent={Intent.NONE}
               title={t("Reload current list")}
               icon={IconNames.REFRESH}

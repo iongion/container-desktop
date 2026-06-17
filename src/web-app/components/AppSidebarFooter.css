@@ -22,9 +22,6 @@
 [data-engine="docker"] .AppSidebarFooter .bp6-navbar {
   background-image: url("../images/docker-engine.svg");
 }
-[data-theme="bp6-light"] [data-engine="docker"] .AppSidebarFooter .bp6-navbar {
-  background-blend-mode: difference;
-}
 .AppSidebarFooter .bp6-navbar-group {
   height: 32px;
   padding-left: 32px;
@@ -100,7 +97,7 @@
   padding: 5px !important;
 }
 .AppSidebarInfoPopover {
-  background-color: #ccc;
+  background-color: var(--app-surface);
   max-width: 140px;
 }
 

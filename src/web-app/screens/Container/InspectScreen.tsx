@@ -132,7 +132,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       </td>
                       <td>{item.value}</td>
                       <td>
-                        <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                        <Button
+                          size="small"
+                          variant="minimal"
+                          icon={IconNames.CLIPBOARD}
+                          onClick={onCopyToClipboardClick}
+                        />
                       </td>
                     </tr>
                   );

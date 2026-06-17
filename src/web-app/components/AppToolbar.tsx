@@ -4,7 +4,7 @@ import { IconNames } from "@blueprintjs/icons";
 export const AppToolbar = () => {
   return (
     <Navbar>
-      <NavbarGroup align={Alignment.LEFT}>
+      <NavbarGroup align={Alignment.START}>
         <ButtonGroup>
           <Button icon={IconNames.CLIPBOARD} />
           <Button icon={IconNames.CUT} />

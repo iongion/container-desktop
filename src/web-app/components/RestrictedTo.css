@@ -2,7 +2,7 @@
   display: flex;
   vertical-align: middle;
   margin-left: 20px;
-  color: #999;
+  color: var(--app-text-muted);
 }
 .RestrictedToEngineTitle {
   padding-left: 5px;

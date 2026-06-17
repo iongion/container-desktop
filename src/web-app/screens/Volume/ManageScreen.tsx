@@ -141,8 +141,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>
                       <AnchorButton
                         className="PodDetailsButton"
-                        minimal
-                        small
+                        variant="minimal"
+                        size="small"
                         href={getVolumeUrl(volume.Name, "inspect")}
                         text={volume.Name}
                         intent={Intent.PRIMARY}

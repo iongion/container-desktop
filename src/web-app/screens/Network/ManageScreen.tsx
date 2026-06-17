@@ -175,8 +175,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>
                       <AnchorButton
                         className="InspectNetworkButton"
-                        minimal
-                        small
+                        variant="minimal"
+                        size="small"
                         href={getNetworkUrl(network.id, "inspect")}
                         intent={Intent.PRIMARY}
                         icon={IconNames.EYE_OPEN}

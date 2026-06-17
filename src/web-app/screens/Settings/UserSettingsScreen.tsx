@@ -414,7 +414,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               ) : null}
             </ButtonGroup>
 
-            <ButtonGroup minimal className="ConnectionsExportImport">
+            <ButtonGroup variant="minimal" className="ConnectionsExportImport">
               <Button
                 disabled={connections.length === 0}
                 text={t("Export")}
@@ -470,7 +470,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   loading={isChecking}
                   disabled={isChecking}
                   intent={Intent.PRIMARY}
-                  small
+                  size="small"
                   text={t("Check now")}
                   icon={IconNames.UPDATED}
                   onClick={onVersionCheck}
@@ -496,7 +496,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   loading={isChecking}
                   disabled={isChecking}
                   intent={Intent.PRIMARY}
-                  small
+                  size="small"
                   text={t("Check now")}
                   icon={IconNames.UPDATED}
                   onClick={onVersionCheck}
@@ -529,7 +529,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   id="fontFamily"
                   title={t("Font family")}
                   text={fontFamilyLabel(userSettings.font?.family || "")}
-                  rightIcon={IconNames.CARET_DOWN}
+                  endIcon={IconNames.CARET_DOWN}
                   style={{ minWidth: 200, justifyContent: "space-between" }}
                 />
               </Select>

@@ -179,7 +179,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         disabled={action.name === disabledAction}
                         className="ActionButton"
                         fill
-                        minimal
+                        variant="minimal"
                         intent={action.intent || Intent.PRIMARY}
                         text={action.text}
                         href={action.href}

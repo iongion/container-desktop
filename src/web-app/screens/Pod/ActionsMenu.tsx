@@ -117,28 +117,28 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   const expandAsButtons = expand ? (
     <>
       <AnchorButton
-        minimal
+        variant="minimal"
         active={isActive ? isActive("pod.logs") : false}
         icon={IconNames.LIST}
         text={t("Logs")}
         href={getPodUrl(pod.Id, "logs")}
       />
       <AnchorButton
-        minimal
+        variant="minimal"
         active={isActive ? isActive("pod.processes") : false}
         icon={IconNames.LIST_COLUMNS}
         text={t("Processes")}
         href={getPodUrl(pod.Id, "processes")}
       />
       <AnchorButton
-        minimal
+        variant="minimal"
         active={isActive ? isActive("pod.inspect") : false}
         icon={IconNames.EYE_OPEN}
         text={t("Inspect")}
         href={getPodUrl(pod.Id, "inspect")}
       />
       <AnchorButton
-        minimal
+        variant="minimal"
         disabled={isKubeDisabled}
         active={isActive ? isActive("pod.kube") : false}
         icon={IconNames.TEXT_HIGHLIGHT}
@@ -215,7 +215,7 @@ export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate,
     setWithCreate(false);
   }, []);
   const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+    <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   return (
     <>
@@ -225,8 +225,8 @@ export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate,
           <>
             {startButton ? <Divider /> : null}
             <Button
-              small
-              minimal
+              size="small"
+              variant="minimal"
               intent={Intent.NONE}
               title={t("Reload current list")}
               icon={IconNames.REFRESH}

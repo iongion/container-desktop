@@ -10,7 +10,9 @@ import "./monaco-setup";
 import "./CodeEditor.css";
 
 export const DARK_THEME = "vs-dark";
-export const LIGHT_THEME = "vs-light";
+// Monaco's built-in light theme is "vs" — "vs-light" is not a registered theme, so
+// setTheme() would silently ignore it and leave the editor stuck on the dark theme.
+export const LIGHT_THEME = "vs";
 export const DEFAULT_THEME = DARK_THEME;
 
 export interface CodeEditorProps {
@@ -29,7 +31,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   headerTitle,
 }: CodeEditorProps) => {
   const userTheme = useAppStore((state) => state.userSettings.theme);
-  const [currentTheme, setCurrentTheme] = useState(theme || DEFAULT_THEME);
+  const [currentTheme, setCurrentTheme] = useState(theme || (userTheme === AppTheme.LIGHT ? LIGHT_THEME : DARK_THEME));
   const monaco = useMonaco();
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);

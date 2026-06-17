@@ -83,7 +83,7 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
     [performActionCommand],
   );
   const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+    <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = volume ? (
     <ConfirmMenu onConfirm={onRemove} tag={volume.Name} disabled={disabledAction === "volume.remove"}>
@@ -98,8 +98,8 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
           <>
             {startButton ? <Divider /> : null}
             <Button
-              small
-              minimal
+              size="small"
+              variant="minimal"
               intent={Intent.NONE}
               title={t("Reload current list")}
               icon={IconNames.REFRESH}

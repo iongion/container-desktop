@@ -70,8 +70,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <td>{layer.Size !== undefined ? prettyBytes(layer.Size) : t("- n/a -")}</td>
                   <td>
                     <Button
-                      small
-                      minimal
+                      size="small"
+                      variant="minimal"
                       icon={IconNames.CLIPBOARD}
                       data-action="copy.to.clipboard"
                       onClick={onCopyToClipboardClick}

@@ -55,8 +55,8 @@ export function BulkActionsBar<T>({ items, getId, selectedIds, actions, onClear,
 
   const renderButton = (action: BulkAction<T>, eligibleCount: number) => (
     <Button
-      small
-      minimal={!action.destructive}
+      size="small"
+      variant={action.destructive ? undefined : "minimal"}
       data-bulk-action={action.key}
       icon={action.icon}
       intent={action.intent}
@@ -92,8 +92,8 @@ export function BulkActionsBar<T>({ items, getId, selectedIds, actions, onClear,
             </span>
             <ButtonGroup>
               <Button
-                small
-                minimal
+                size="small"
+                variant="minimal"
                 intent={Intent.DANGER}
                 text={t("Yes")}
                 data-bulk-confirm="yes"
@@ -103,8 +103,8 @@ export function BulkActionsBar<T>({ items, getId, selectedIds, actions, onClear,
                 }}
               />
               <Button
-                small
-                minimal
+                size="small"
+                variant="minimal"
                 intent={Intent.SUCCESS}
                 text={t("No")}
                 data-bulk-confirm="no"

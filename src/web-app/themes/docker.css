@@ -1,60 +1,14 @@
-body.bp6-dark[data-engine="docker"] {
-  background-color: #030d2a;
-}
-body.bp6-dark[data-engine="docker"] .AppHeader,
-body.bp6-dark[data-engine="docker"] .AppHeader .bp6-navbar {
-  background-color: #030d2a;
-}
-body.bp6-dark[data-engine="docker"] .AppContent {
-  background-color: #0b142f;
-}
-body.bp6-dark[data-engine="docker"] .AppScreenHeader .bp6-navbar {
-  background-color: #1f4374;
-}
-body.bp6-dark[data-engine="docker"] .AppSidebar {
-  background-color: #030d2a;
-}
-body.bp6-dark[data-engine="docker"] .AppSidebarFooter,
-body.bp6-dark[data-engine="docker"] .AppSidebarFooter .bp6-navbar {
-  background-color: #02091f;
-}
+/* Dark — structural surfaces (header/sidebar/content/menus/drawers/tables) now come
+   from tokens.css. Only Docker-specific, non-structural rules remain; surface-ish bits
+   read the Docker dark tokens so they stay in tune with the palette. */
 body.bp6-dark[data-engine="docker"] .AppSettingUserConfigurationPath {
-  background: #030d2a;
-}
-body.bp6-dark[data-engine="docker"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
-  color: #6caaff;
-}
-body.bp6-dark[data-engine="docker"] .DashboardContainersReportTable {
-  border-color: #6caaff;
-}
-body.bp6-dark[data-engine="docker"] .bp6-popover-content .bp6-menu {
-  background-color: #1f4374 !important;
-}
-body.bp6-dark[data-engine="docker"] .bp6-popover-arrow-fill {
-  fill: #1f4374 !important;
-}
-body.bp6-dark[data-engine="docker"] .AppDrawer {
-  background-color: #0b1942 !important;
-  box-shadow: none;
+  background: var(--app-chrome);
 }
 body.bp6-dark[data-engine="docker"] .SecurityDetails {
-  background: #0d1f47 !important;
+  background: var(--app-surface);
 }
 body.bp6-dark[data-engine="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: #0f1c3f;
-}
-body.bp6-dark[data-engine="docker"] .AppDataTableGroupRow {
-  background-color: #030d2a;
-}
-body.bp6-dark[data-engine="docker"] [data-screen="registries"] .AppScreenContentView[data-column="right"] {
-  background: linear-gradient(to bottom, #1f4374, #0b142f, rgba(11, 20, 47, 0));
-}
-body.bp6-dark[data-engine="docker"] [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
-  background-color: #1f4374;
-  border-color: #5d9ef4;
-}
-body.bp6-dark[data-engine="docker"] .AppDataTable thead {
-  background: #1f4374;
 }
 
 /* Status colors */
@@ -96,89 +50,27 @@ body.bp6-dark[data-engine="docker"]
   background-color: #111;
   color: #fff;
 }
-body.bp6-dark[data-engine="docker"] .AppDataFormHeader {
-  background: #02091f;
-}
 
-/* Light */
-:root {
-  --docker-light-bg-color: #c1d2da;
-  --docker-dark-bg-color: #030d2a;
-}
-body.bp6-light[data-engine="docker"] .AppHeader,
-body.bp6-light[data-engine="docker"] .AppHeader .bp6-navbar {
-  background-color: var(--docker-light-bg-color);
-}
-body.bp6-light[data-engine="docker"] .AppContent {
-  background-color: #efefef;
-}
-body.bp6-light[data-engine="docker"] .AppScreenHeader .bp6-navbar {
-  background-color: var(--docker-light-bg-color);
-}
-body.bp6-light[data-engine="docker"] .AppSidebar {
-  background-color: var(--docker-light-bg-color);
-}
-body.bp6-light[data-engine="docker"] .AppSidebarFooter,
-body.bp6-light[data-engine="docker"] .AppSidebarFooter .bp6-navbar {
-  background-color: #7397a8;
-  color: #fff;
-}
-body.bp6-light[data-engine="docker"] [data-expanded="no"] .AppSidebarFooter .bp6-navbar svg {
-  color: #efefef;
-}
+/* ── Light — surface-ish specifics only; structural surfaces come from tokens.css. ── */
 body.bp6-light[data-engine="docker"] .AppSettingUserConfigurationPath {
-  background-color: var(--docker-light-bg-color);
-}
-body.bp6-light[data-engine="docker"] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
-  color: #597cd5;
-}
-body.bp6-light[data-engine="docker"] .DashboardContainersReportTable {
-  border-color: #597cd5;
-}
-body.bp6-light[data-engine="docker"] .bp6-popover-content .bp6-menu,
-body.bp6-light[data-engine="docker"] .AppSidebarFooterVersionsMenu {
-  background-color: #fff !important;
-  color: #333;
-}
-body.bp6-light[data-engine="docker"] .bp6-popover-arrow-fill {
-  fill: #fff !important;
-}
-body.bp6-light[data-engine="docker"] .AppDrawer {
-  background-color: #fff !important;
-  box-shadow: none;
-}
-body.bp6-light[data-engine="docker"] .AppScreen .bp6-navbar {
-  background-color: var(--docker-light-bg-color);
-}
-body.bp6-light[data-engine="docker"] .AppSettingsForm[data-form="host"] .AppSettingsFieldActive {
-  background: #efefef;
-}
-body.bp6-light[data-engine="docker"] .AppDataTableGroupRow {
-  background-color: var(--docker-light-bg-color);
-}
-body.bp6-light[data-engine="docker"] [data-screen="registries"] .AppScreenContentView[data-column="right"] {
-  background: linear-gradient(to bottom, var(--docker-light-bg-color), #efefef);
-}
-body.bp6-light[data-engine="docker"] .AppDataTableGroupName .bp6-button .bp6-button-text .buttonTextLabel {
-  color: #333;
-}
-body.bp6-light[data-engine="docker"] .AppDataTable[data-table="images"] .ContainerImageRegistry {
-  color: #888;
+  background: var(--app-surface-strong);
 }
 body.bp6-light[data-engine="docker"] .AppSettingUserConfigurationPath strong {
-  color: #333;
+  color: var(--app-text);
 }
-body.bp6-light[data-engine="docker"] .AppSettingUserConfigurationPath input {
-  background: #000;
+body.bp6-light[data-engine="docker"] .AppSettingsForm[data-form="host"] .AppSettingsFieldActive {
+  background: var(--app-surface-strong);
 }
-body.bp6-light[data-engine="docker"] [data-screen="settings-settings"] .AppScreenHeaderText {
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
+body.bp6-light[data-engine="docker"] .AppDataTableGroupName .bp6-button .bp6-button-text .buttonTextLabel {
+  color: var(--app-text);
+}
+body.bp6-light[data-engine="docker"] .AppDataTable[data-table="images"] .ContainerImageRegistry {
+  color: var(--app-text-muted);
 }
 
 /* Security */
 body.bp6-light[data-engine="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
-  background-color: #d5d6df;
+  background-color: var(--app-surface-strong);
 }
 body.bp6-light[data-engine="docker"] .Severity {
   color: #fff;
@@ -232,24 +124,89 @@ body.bp6-light[data-engine="docker"] .AppDataTable[data-table="image.scanning.re
   color: #789;
 }
 body.bp6-light[data-engine="docker"] .SecurityDetails {
-  background: #d5d6df;
+  background: var(--app-surface-strong);
 }
 body.bp6-light[data-engine="docker"] .AppDataTableGroupLinkVertical,
 body.bp6-light[data-engine="docker"] .AppDataTableGroupLinkHorizontal {
   filter: invert(1);
 }
-body.bp6-light[data-engine="docker"] [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
-  background-color: #ffffff;
-  border-color: #333;
+
+/* Sidebar-footer engine glyph. In light mode the Docker brand-blue logo clashes with the
+   neutral chrome and reads louder than the adjacent framework icons (moon/info/chevrons,
+   which are --bp-typography-color-muted #5f6b7c). Render it as a neutral monochrome icon
+   in that same fill via a mask, so it matches them. Masking a ::before (not the .bp6-navbar
+   itself) avoids clipping the navbar's text/buttons. The colored logo stays in dark mode. */
+body.bp6-light[data-engine="docker"] .AppSidebarFooter .bp6-navbar {
+  background-image: none;
+  position: relative;
 }
-body.bp6-light[data-engine="docker"] .AppDataTable thead {
-  background: var(--docker-light-bg-color);
+body.bp6-light[data-engine="docker"] .AppSidebarFooter .bp6-navbar::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 26px;
+  height: 26px;
+  background-color: var(--bp-typography-color-muted, #5f6b7c);
+  -webkit-mask: url("../images/docker-engine.svg") no-repeat center / 26px;
+  mask: url("../images/docker-engine.svg") no-repeat center / 26px;
+  pointer-events: none;
 }
 
-/* Notification Center — Docker accent for the active segment of the switcher.
-   Harnesses Blueprint's ButtonGroup active state (.bp6-active), tinted per engine. */
-body[data-engine="docker"] .NotificationCenterSwitch .bp6-button.bp6-active,
-body[data-engine="docker"] .NotificationCenterSwitch .bp6-button.bp6-active:hover {
-  background-color: #2f6fd6;
-  color: #fff;
+/* ── Container-inspect + Connection-info tables — consolidated from screen CSS (engine specifics). ── */
+body.bp6-dark[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
+  background-color: #273553;
+  color: #ccc;
+}
+body.bp6-dark[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
+  background-color: #202a3f;
+  color: #ccc;
+}
+body.bp6-dark[data-engine="docker"] [data-table="container.inspect"] tr td code:first-child,
+[data-theme="bp6-dark"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
+  background: #2f4e94;
+  color: #c4daff;
+}
+body.bp6-light[data-engine="docker"] [data-table="container.inspect"] [data-table-row="group.name"] td {
+  background: #96a2b3 !important;
+}
+body.bp6-light[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(odd) td:nth-child(2) {
+  background-color: #cfd3d7;
+}
+body.bp6-light[data-engine="docker"] [data-table="container.inspect"] tr:nth-child(even) td:nth-child(2) {
+  background-color: #e1e1e1;
+}
+body.bp6-light[data-engine="docker"] [data-table="container.inspect"] tr td code:first-child,
+[data-theme="bp6-light"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
+  background: #cbc8cb;
+  border: 1px solid #412d4b;
+}
+/* Inline player actions (container row hover) */
+[data-theme="bp6-dark"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
+  background: #1463ce;
+}
+[data-theme="bp6-light"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
+  background: #9eb0c8;
+}
+/* Loading splash engine logo */
+[data-engine="docker"] .AppLoadingSplashLogo {
+  background: url("../images/docker-engine.svg") no-repeat;
+}
+
+/* Connection manager (host.connections) — Docker dark specifics, consolidated from UserSettingsScreen.css */
+[data-theme="bp6-dark"]
+  [data-engine="docker"]
+  .AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-default="yes"]
+  td[data-flag="default"]
+  strong {
+  background-color: #00395a;
+}
+[data-theme="bp6-dark"]
+  [data-engine="docker"]
+  .AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-connected="yes"] {
+  background-color: #0b4e0b;
 }

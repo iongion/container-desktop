@@ -87,14 +87,14 @@ export function AppSidebarFooter() {
           </div>
         }
       >
-        <Button className="AppSidebarInfoButton" minimal icon={IconNames.INFO_SIGN} />
+        <Button className="AppSidebarInfoButton" variant="minimal" icon={IconNames.INFO_SIGN} />
       </PopoverNext>
     );
   }
   return (
     <div className="AppSidebarFooter">
       <div className="AppSidebarFooterOverlay">
-        <ButtonGroup minimal>
+        <ButtonGroup variant="minimal">
           <Button
             icon={theme === AppTheme.DARK ? IconNames.MOON : IconNames.FLASH}
             onClick={onThemeToggleClick}
@@ -112,7 +112,7 @@ export function AppSidebarFooter() {
         </ButtonGroup>
       </div>
       <Navbar className="AppSidebarFooterNavbar">
-        <NavbarGroup align={Alignment.LEFT} className="AppSidebarFooterVersions">
+        <NavbarGroup align={Alignment.START} className="AppSidebarFooterVersions">
           <NavbarHeading>
             <strong>GUI</strong> <span className="AppSidebarVersionString">{versionString}</span>
             {programString ? (
@@ -125,7 +125,7 @@ export function AppSidebarFooter() {
             ) : null}
           </NavbarHeading>
         </NavbarGroup>
-        <NavbarGroup align={Alignment.RIGHT} className="AppSidebarFooterRightColumn">
+        <NavbarGroup align={Alignment.END} className="AppSidebarFooterRightColumn">
           {rightContent}
         </NavbarGroup>
       </Navbar>

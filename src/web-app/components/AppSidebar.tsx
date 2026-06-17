@@ -37,12 +37,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
                 active={currentScreen?.ID === Screen.ID}
                 href={pathTo(Screen.Route.Path)}
                 text={t(Screen.Title)}
-                alignText={Alignment.LEFT}
-                minimal
+                alignText={Alignment.START}
+                variant="minimal"
                 key={Screen.ID}
                 data-screen={Screen.ID}
                 icon={Screen.Metadata?.LeftIcon}
-                rightIcon={Screen.Metadata?.RightIcon}
+                endIcon={Screen.Metadata?.RightIcon}
               />
             );
           })}

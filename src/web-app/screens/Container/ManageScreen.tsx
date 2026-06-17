@@ -196,7 +196,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           >
                             <td className="AppDataTableGroupName">
                               <Button
-                                minimal
+                                variant="minimal"
                                 icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
                                 text={
                                   <>
@@ -217,7 +217,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             </td>
                             <td colSpan={6}>
                               <div className="AppDataTableGroupDetails">
-                                <ButtonGroup minimal>
+                                <ButtonGroup variant="minimal">
                                   <Button icon={IconNames.SPLIT_COLUMNS} />
                                 </ButtonGroup>
                                 <ul className="ContainerReportStateCounts">
@@ -257,8 +257,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <AnchorButton
                             key={`${renderKey}-logs`}
                             className="ContainerLogsButton"
-                            minimal
-                            small
+                            variant="minimal"
+                            size="small"
                             href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`)}
                             text={nameText.startsWith("/") ? nameText.slice(1) : nameText}
                             intent={Intent.SUCCESS}
@@ -270,8 +270,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <AnchorButton
                             key={`${renderKey}-layers`}
                             className="ContainerLayersButton"
-                            minimal
-                            small
+                            variant="minimal"
+                            size="small"
                             href={pathTo(`/screens/image/${encodeURIComponent(container.ImageID)}/layers`)}
                             text={image.split("@")[0]}
                             intent={Intent.PRIMARY}

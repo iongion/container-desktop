@@ -106,7 +106,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("ID")}</code>
               </td>
               <td>
-                <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
                 {currentConnector?.id}
               </td>
@@ -117,7 +117,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("Name")}</code>
               </td>
               <td>
-                <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
                 {currentConnector?.name}
               </td>
@@ -128,7 +128,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("Label")}</code>
               </td>
               <td>
-                <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
                 {currentConnector?.label}
               </td>
@@ -140,7 +140,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <code>{t("Guest")}</code>
                 </td>
                 <td>
-                  <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                  <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                   &nbsp;
                   {currentConnector?.settings?.controller?.scope || ""}
                 </td>
@@ -152,7 +152,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("DOCKER_HOST")}</code>
               </td>
               <td>
-                <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
                 {normalizeConnectionString(currentConnector?.settings?.api?.connection?.uri || "")}
               </td>
@@ -163,7 +163,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("DOCKER_HOST - guest")}</code>
               </td>
               <td>
-                <Button small minimal icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
                 {normalizeConnectionString(currentConnector?.settings?.api?.connection?.relay || "")}
               </td>
