@@ -14,7 +14,6 @@
     "electron": "electron",
     "cross-env": "cross-env",
     "dev": "cross-env ENVIRONMENT=development node support/watch.mjs",
-    "dev:tray": "cross-env CONTAINER_DESKTOP_OPEN_TRAY=1 yarn dev",
     "prod": "cross-env ENVIRONMENT=production vite dev --mode=production",
     "build": "yarn build:main && yarn build:preload && yarn build:renderer",
     "build:main": "vite build --mode=production --config vite.config.main.mjs",
