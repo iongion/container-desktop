@@ -182,10 +182,10 @@ export class WindowManager {
       width: 1280,
       height: 800,
       ...(windowConfigOptions ?? {}),
-      // Hard floor for the main window — never smaller than 960x720 (applied after the saved geometry spread
+      // Hard floor for the main window — never smaller than 960x718 (applied after the saved geometry spread
       // so a stale persisted size can't shrink below it).
       minWidth: 960,
-      minHeight: 720,
+      minHeight: 718,
       webPreferences: {
         devTools: true,
         nodeIntegration: true,
@@ -241,7 +241,7 @@ export class WindowManager {
     };
     const win = new BrowserWindow(windowOptions);
     this.window = win;
-    win.setMinimumSize(960, 720);
+    win.setMinimumSize(960, 718);
     // Reap any forwarded engine streams this window opened if its renderer goes away (reload/crash/quit), so
     // a destroyed log view never leaks a live engine stream in main.
     const mainWebContentsId = win.webContents.id;

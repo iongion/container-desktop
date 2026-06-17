@@ -73,12 +73,13 @@ body.bp6-light .AppLabelIcon {
 
 /* ── Container volume mappings + image layer history (theme-only) — consolidated from screen CSS. ── */
 [data-theme="bp6-light"] .ContainerVolumeMapping li strong {
-  color: #333;
-  background-color: #b5c8d6;
+  color: var(--app-text);
+  background-color: color-mix(in srgb, var(--app-surface-strong) 72%, var(--app-surface));
+  border-color: var(--app-border);
 }
 [data-theme="bp6-light"] .ContainerVolumeIndex,
 [data-theme="bp6-light"] .ContainerVolumeMapping li code {
-  color: #333;
+  color: var(--app-text);
 }
 [data-theme="bp6-light"] [data-table="image.layers.history"] .LayerIndex {
   color: #333;

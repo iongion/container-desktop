@@ -28,6 +28,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" referrerpolicy="no-referrer" />
+
+<link rel="stylesheet" href="https://cdn.rrweb.com/replay/current/dist/style.css" />
+
 <link rel="stylesheet" href="/assets/css/site.css?v=5.3.1" />
 <script type="application/ld+json">
 {
@@ -71,10 +74,13 @@
     <a class="btn btn-ghost" href="/manual/">Read the Manual</a>
   </div>
   <div class="pd-callout">Looking for the official one made by the Podman team? That's <a href="https://podman-desktop.io/" target="_blank" rel="noopener">Podman Desktop</a> — also great.</div>
-  <div class="shot">
-    <video controls preload="none" poster="/videos/demo.png" aria-label="Container Desktop demo">
-      <source src="/videos/demo.mp4" type="video/mp4" />
-    </video>
+  <div class="shot replay-shot" data-demo-replay="/replays/container-desktop-demo.json">
+    <div class="demo-replay-shell" data-demo-replay-shell>
+      <div class="demo-replay-player" data-demo-replay-player data-replay-poster="visible" aria-label="Container Desktop demo replay">
+        <img class="demo-replay-poster" src="/videos/demo.png" alt="Container Desktop demo preview" />
+      </div>
+    </div>
+    <div class="demo-replay-controls" data-demo-replay-controls aria-label="Demo timeline"></div>
   </div>
 </div></section>
 
@@ -300,7 +306,17 @@
 </div></footer>
 
   <script async defer src="https://buttons.github.io/buttons.js"></script>
+
+  <script type="module">
+    import { Replayer } from "https://cdn.rrweb.com/replay/current/dist/replay.js";
+    window.rrwebReplayer = Replayer;
+    window.dispatchEvent(new Event("rrweb-replay-ready"));
+  </script>
+
   <script src="/assets/js/os-detect.js?v=5.3.1"></script>
   <script src="/assets/js/manual-nav.js?v=5.3.1"></script>
+
+  <script src="/assets/js/demo-replay.js?v=5.3.1"></script>
+
 </body>
 </html>

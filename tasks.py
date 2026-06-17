@@ -293,6 +293,13 @@ def update_screenshots(ctx):
         run_env(ctx, "yarn screenshots")
 
 
+@task(name="update-demo-replay")
+def update_demo_replay(ctx):
+    """Regenerate the website rrweb demo replay from the mock backend."""
+    with ctx.cd(PROJECT_HOME):
+        run_env(ctx, "yarn demo:record")
+
+
 # --- versioning & release metadata ----------------------------------------
 #
 # package.json `version` is the single source of truth. `version-sync` and
@@ -537,6 +544,7 @@ namespace = Collection(
     version_sync,
     publish_release,
     publish_meta,
+    update_demo_replay,
     update_screenshots,
     start,
     build_website,

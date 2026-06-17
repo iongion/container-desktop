@@ -40,7 +40,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const onCopyToClipboardClick = useCallback(
     async (e) => {
-      const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("td:nth-child(2)");
+      const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("[data-copy-value]");
       await navigator.clipboard.writeText(contentNode?.innerText || "");
       Notification.show({
         message: t("The value was copied to clipboard"),
@@ -105,7 +105,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 items = group.items.map((item, index) => {
                   return (
                     <tr key={`group_${group.name}_${item.key}_${item.value}`}>
-                      <td colSpan={3}>
+                      <td colSpan={2}>
                         <div className="ContainerVolume">
                           <div className="ContainerVolumeIndex">{index + 1}.</div>
                           <ul className="ContainerVolumeMapping">
@@ -130,7 +130,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <td>
                         <code>{item.key}</code>
                       </td>
-                      <td>{item.value}</td>
                       <td>
                         <Button
                           size="small"
@@ -138,6 +137,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           icon={IconNames.CLIPBOARD}
                           onClick={onCopyToClipboardClick}
                         />
+                        &nbsp;
+                        <span data-copy-value>{item.value}</span>
                       </td>
                     </tr>
                   );
@@ -146,7 +147,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               return (
                 <React.Fragment key={group.name}>
                   <tr key={`group_${group.name}`} data-table-row="group.name" data-section-group={group.name}>
-                    <td colSpan={3}>{group.title}</td>
+                    <td colSpan={2}>{group.title}</td>
                   </tr>
                   {items}
                 </React.Fragment>

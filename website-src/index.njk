@@ -2,6 +2,7 @@
 layout: layouts/base.njk
 title: "Container Desktop — Podman & Docker desktop UI for Windows, macOS, Linux"
 description: "A familiar, open-source desktop interface for Podman and Docker — local, remote over SSH, and WSL, the same UI on Windows, macOS and Linux. Free, MIT licensed."
+demoReplay: true
 ---
 <div class="hero-glow"></div>
 <section class="hero"><div class="wrap">
@@ -13,10 +14,13 @@ description: "A familiar, open-source desktop interface for Podman and Docker �
     <a class="btn btn-ghost" href="/manual/">Read the Manual</a>
   </div>
   <div class="pd-callout">Looking for the official one made by the Podman team? That's <a href="{{ site.podmanDesktop }}" target="_blank" rel="noopener">Podman Desktop</a> — also great.</div>
-  <div class="shot">
-    <video controls preload="none" poster="/videos/demo.png" aria-label="Container Desktop demo">
-      <source src="/videos/demo.mp4" type="video/mp4" />
-    </video>
+  <div class="shot replay-shot" data-demo-replay="/replays/container-desktop-demo.json">
+    <div class="demo-replay-shell" data-demo-replay-shell>
+      <div class="demo-replay-player" data-demo-replay-player data-replay-poster="visible" aria-label="Container Desktop demo replay">
+        <img class="demo-replay-poster" src="/videos/demo.png" alt="Container Desktop demo preview" />
+      </div>
+    </div>
+    <div class="demo-replay-controls" data-demo-replay-controls aria-label="Demo timeline"></div>
   </div>
 </div></section>
 

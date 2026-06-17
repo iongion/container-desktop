@@ -85,18 +85,19 @@ body.bp6-dark .AppDataFormFields .bp6-form-group label {
   color: #ccc;
 }
 body.bp6-dark [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
-  background-color: #4f175b;
-  border-color: #2d0236;
+  background-color: var(--app-accent-active);
+  border-color: var(--app-accent-hover);
 }
 
 /* ── Container volume mappings + image layer history (theme-only) — consolidated from screen CSS. ── */
 [data-theme="bp6-dark"] .ContainerVolumeMapping li strong {
-  color: #ccc;
-  background-color: #003055;
+  color: var(--app-text);
+  background-color: color-mix(in srgb, var(--app-surface-strong) 72%, var(--app-surface));
+  border-color: var(--app-border);
 }
 [data-theme="bp6-dark"] .ContainerVolumeIndex,
 [data-theme="bp6-dark"] .ContainerVolumeMapping li code {
-  color: #ccc;
+  color: var(--app-text);
 }
 [data-theme="bp6-dark"] [data-table="image.layers.history"] .LayerIndex {
   color: #ccc;

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -13,6 +13,7 @@ import {
   navigate,
   resolveRoute,
   runPreActions,
+  setSidebarExpanded,
   waitReady,
   waitForSelectorCount,
 } from "./screenshotActions.mjs";
@@ -27,9 +28,10 @@ const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = path.join(ROOT, "website-src", "static", "img");
 const DEFAULT_PORT = 9322;
+const DEFAULT_CAPTURE_SETTLE_MS = 1000;
 
 function parseArgs(argv) {
-  const args = { mode: "dev", killStray: false };
+  const args = { mode: "dev", killStray: false, engines: null, only: null };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--kill-stray") {
@@ -39,21 +41,77 @@ function parseArgs(argv) {
     } else if (arg === "--mode") {
       args.mode = argv[index + 1];
       index += 1;
+    } else if (arg.startsWith("--engine=")) {
+      args.engines = parseCsvArg(arg.slice("--engine=".length));
+    } else if (arg === "--engine") {
+      args.engines = parseCsvArg(argv[index + 1]);
+      index += 1;
+    } else if (arg.startsWith("--only=")) {
+      args.only = parseCsvArg(arg.slice("--only=".length));
+    } else if (arg === "--only") {
+      args.only = parseCsvArg(argv[index + 1]);
+      index += 1;
     }
   }
   return args;
 }
 
+function parseCsvArg(value) {
+  return new Set(
+    String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+}
+
+function resolveEngines(args) {
+  if (!args.engines) {
+    return SCREENSHOT_ENGINES;
+  }
+  const engines = SCREENSHOT_ENGINES.filter((engine) => args.engines.has(engine));
+  if (engines.length !== args.engines.size) {
+    const unknown = [...args.engines].filter((engine) => !SCREENSHOT_ENGINES.includes(engine));
+    throw new Error(`Unknown screenshot engine: ${unknown.join(", ")}`);
+  }
+  return engines;
+}
+
 function electronEnv(engine, port) {
   const env = { ...process.env };
+  const userDataDir = path.join(ROOT, ".tmp", "mock-user-data", "screenshots", engine);
+  rmSync(userDataDir, { recursive: true, force: true });
+  mkdirSync(userDataDir, { recursive: true });
+  seedWindowSettings(userDataDir, SCREENSHOT_VIEWPORT);
   delete env.ELECTRON_RUN_AS_NODE;
   env.CONTAINER_DESKTOP_MOCK = engine;
+  env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT = `${port}`;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN = `http://localhost:${port}`;
   env.ENVIRONMENT = "development";
   env.NODE_ENV = "development";
   env.CI = env.CI || "true";
   return env;
+}
+
+function seedWindowSettings(userDataDir, viewport) {
+  writeFileSync(
+    path.join(userDataDir, "user-settings.json"),
+    JSON.stringify(
+      {
+        minimizeToSystemTray: false,
+        trayWidgetEnabled: false,
+        expandSidebar: false,
+        window: {
+          width: viewport.width,
+          height: viewport.height,
+          isMaximized: false,
+        },
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 function commandFor(mode, port) {
@@ -102,7 +160,7 @@ async function findAppPage(browser, timeoutMs) {
         }
         const preloaded = await page.evaluate(() => globalThis.Preloaded === true).catch(() => false);
         if (preloaded) {
-          await page.setViewportSize(SCREENSHOT_VIEWPORT);
+          await waitForAppViewport(page, SCREENSHOT_VIEWPORT);
           return page;
         }
       }
@@ -110,6 +168,14 @@ async function findAppPage(browser, timeoutMs) {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error("No app page with preload bridge found");
+}
+
+async function waitForAppViewport(page, viewport) {
+  await page.waitForFunction(
+    ([width, height]) => window.innerWidth === width && window.innerHeight === height,
+    [viewport.width, viewport.height],
+    { timeout: 10_000 },
+  );
 }
 
 async function stopProcess(child) {
@@ -195,14 +261,24 @@ function materializeItem(item, engine) {
   };
 }
 
-async function cleanOutputDirectories() {
-  for (const file of STALE_FLAT_SCREENSHOTS) {
-    await rm(path.join(OUT_DIR, file), { force: true });
+async function cleanOutputDirectories(engines, only) {
+  if (!only) {
+    for (const file of STALE_FLAT_SCREENSHOTS) {
+      await rm(path.join(OUT_DIR, file), { force: true });
+    }
+    for (const engine of SCREENSHOT_ENGINES) {
+      const engineOutDir = path.join(OUT_DIR, engine);
+      await rm(engineOutDir, { recursive: true, force: true });
+      mkdirSync(engineOutDir, { recursive: true });
+    }
+    return;
   }
-  for (const engine of SCREENSHOT_ENGINES) {
+  for (const engine of engines) {
     const engineOutDir = path.join(OUT_DIR, engine);
-    await rm(engineOutDir, { recursive: true, force: true });
     mkdirSync(engineOutDir, { recursive: true });
+    for (const file of only) {
+      await rm(path.join(engineOutDir, file), { force: true });
+    }
   }
 }
 
@@ -211,25 +287,34 @@ async function captureItem(page, engine, item) {
   console.log(`capturing ${engine}/${engineItem.file}`);
   const route = await resolveRoute(page, engineItem);
   await navigate(page, route);
+  await setSidebarExpanded(page, engineItem.expandSidebar === true);
   await runPreActions(page, engineItem.pre);
   if (engineItem.waitFor) {
     await waitForSelectorCount(page, engineItem.waitFor, engineItem.minCount || 1);
   }
+  await page.waitForTimeout(engineItem.settleMs ?? DEFAULT_CAPTURE_SETTLE_MS);
   await captureWindow(page, path.join(OUT_DIR, engine, engineItem.file));
   console.log(`captured ${engine}/${engineItem.file}`);
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const engines = resolveEngines(args);
   mkdirSync(OUT_DIR, { recursive: true });
   if (args.killStray) {
     await killStray();
   }
-  await cleanOutputDirectories();
+  await cleanOutputDirectories(engines, args.only);
   let port = DEFAULT_PORT;
-  for (const engine of SCREENSHOT_ENGINES) {
+  for (const engine of engines) {
+    const manifest = args.only
+      ? screenshotManifest.filter((item) => args.only.has(materializeItem(item, engine).file))
+      : screenshotManifest;
+    if (manifest.length === 0) {
+      throw new Error(`No screenshot manifest entries matched ${[...args.only].join(", ")} for ${engine}`);
+    }
     await withApp(engine, args.mode, port, async (page) => {
-      for (const item of screenshotManifest) {
+      for (const item of manifest) {
         await captureItem(page, engine, item);
       }
     });

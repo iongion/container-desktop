@@ -11,18 +11,63 @@ export async function waitReady(page, opts = {}) {
 }
 
 export async function freezeUi(page) {
-  await page.addStyleTag({
-    content: `
-      *, *::before, *::after {
-        animation-duration: 0s !important;
-        animation-delay: 0s !important;
-        transition-duration: 0s !important;
-        transition-delay: 0s !important;
-        caret-color: transparent !important;
-      }
-      .bp6-toast-container, .bp6-overlay-backdrop { display: none !important; }
-    `,
-  });
+  const content = `
+    *, *::before, *::after {
+      animation-duration: 0s !important;
+      animation-delay: 0s !important;
+      transition-duration: 0s !important;
+      transition-delay: 0s !important;
+      caret-color: transparent !important;
+    }
+    .AppToaster,
+    .NotificationAppToaster,
+    .bp6-toast,
+    .bp6-toast-container,
+    .bp6-overlay-toaster,
+    .bp6-overlay-backdrop,
+    [class*="Toaster"],
+    [class*="toast"],
+    [class*="Toast"] {
+      display: none !important;
+    }
+  `;
+  let lastError;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await page.addStyleTag({ content });
+      await page.evaluate(() => {
+        const selectors = [
+          ".AppToaster",
+          ".NotificationAppToaster",
+          ".bp6-toast",
+          ".bp6-toast-container",
+          ".bp6-overlay-toaster",
+          '[class*="Toaster"]',
+          '[class*="toast"]',
+          '[class*="Toast"]',
+        ];
+        const hideToasts = () => {
+          for (const element of document.querySelectorAll(selectors.join(","))) {
+            element.style.setProperty("display", "none", "important");
+            element.style.setProperty("visibility", "hidden", "important");
+            element.style.setProperty("opacity", "0", "important");
+            element.style.setProperty("pointer-events", "none", "important");
+          }
+        };
+        hideToasts();
+        if (!globalThis.__containerDesktopCaptureToastObserver) {
+          globalThis.__containerDesktopCaptureToastObserver = new MutationObserver(hideToasts);
+          globalThis.__containerDesktopCaptureToastObserver.observe(document.body, { childList: true, subtree: true });
+        }
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      await page.waitForLoadState("domcontentloaded").catch(() => undefined);
+      await page.waitForTimeout(250);
+    }
+  }
+  throw lastError;
 }
 
 export async function navigate(page, route) {
@@ -41,6 +86,19 @@ export async function waitForSelectorCount(page, selector, minCount = 1, timeout
     [selector, minCount],
     { timeout },
   );
+}
+
+export async function setSidebarExpanded(page, expanded) {
+  await page.locator(".AppSidebar").waitFor({ timeout: 30_000 });
+  const desired = expanded ? "yes" : "no";
+  const current = await page.locator(".AppSidebar").first().getAttribute("data-expanded");
+  if (current === desired) {
+    return;
+  }
+  await page.locator(".AppSidebarFooterOverlay button").last().click();
+  await page.waitForFunction((value) => document.querySelector(".AppSidebar")?.getAttribute("data-expanded") === value, desired, {
+    timeout: 10_000,
+  });
 }
 
 export async function resolveFirstId(page, resolver) {
@@ -70,11 +128,27 @@ export async function resolveRoute(page, item) {
   return route;
 }
 
+async function moveToLocator(page, locator, duration = 700) {
+  await locator.waitFor({ timeout: 30_000 });
+  await locator.scrollIntoViewIfNeeded();
+  const box = await locator.boundingBox();
+  if (!box) {
+    throw new Error("Unable to move pointer: element has no bounding box");
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: Math.max(8, Math.round(duration / 24)),
+  });
+  await page.waitForTimeout(120);
+}
+
 export async function openRowActions(page, rowSelector) {
   const row = page.locator(rowSelector).first();
-  await row.waitFor({ timeout: 30_000 });
-  await row.hover();
-  await row.locator("button").last().click();
+  await moveToLocator(page, row, 800);
+  const menuButton = row.locator("button").last();
+  await moveToLocator(page, menuButton, 450);
+  await page.mouse.down();
+  await page.waitForTimeout(80);
+  await page.mouse.up();
   await page.locator(".bp6-portal .bp6-menu").first().waitFor({ timeout: 10_000 });
 }
 
@@ -89,6 +163,8 @@ export async function runPreActions(page, actions = []) {
       await openRowActions(page, action.rowSelector);
     } else if (action.action === "openNetworkCreate") {
       await openNetworkCreate(page);
+    } else if (action.action === "setSidebarExpanded") {
+      await setSidebarExpanded(page, action.expanded !== false);
     } else {
       throw new Error(`Unknown screenshot pre action: ${action.action}`);
     }
@@ -96,5 +172,5 @@ export async function runPreActions(page, actions = []) {
 }
 
 export async function captureWindow(page, path) {
-  await page.locator(".App").screenshot({ path });
+  await page.locator(".App").screenshot({ path, scale: "css" });
 }

@@ -550,6 +550,9 @@ export class Application {
   }
 
   async getSystemConnections() {
+    if (isMockMode()) {
+      return [];
+    }
     const connections: Connection[] = [];
     // Add system podman as default
     const firstPodman: Connection = getDefaultConnectors(this.osType).find(

@@ -5,7 +5,7 @@ UV_VERSION:=0.6.11
 PART?=patch
 
 
-.PHONY: clean prepare-python prepare-node prepare check format build-website screenshots release test test-app test-relay test-tooling
+.PHONY: clean prepare-python prepare-node prepare check format build-website demo-replay screenshots release test test-app test-relay test-tooling
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -56,6 +56,15 @@ screenshots:
 		nvm use || nvm install; \
 	fi; \
 	yarn screenshots
+
+demo-replay:
+	@echo "Regenerating website rrweb demo replay"
+	@# nvm is a shell function — source it (as prepare-node does) so the .nvmrc node is used.
+	@if [ -s "$$NVM_DIR/nvm.sh" ]; then \
+		. "$$NVM_DIR/nvm.sh"; \
+		nvm use || nvm install; \
+	fi; \
+	yarn demo:record
 
 # Cut a release: bump the version (commit + tag + push) then trigger the GitHub
 # CDPipeline for that tag. Unlike `inv release` (which builds/bundles locally),
