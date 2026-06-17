@@ -90,7 +90,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           title={it.title}
           key={it.action}
           data-action={it.action}
-          minimal
+          variant="minimal"
           icon={it.icon as any}
           onClick={onWindowControlClick}
         />
@@ -148,7 +148,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <span>{screenTitle}</span>
         </NavbarGroup>
         <NavbarGroup>
-          <ButtonGroup minimal className="AppHeaderActions">
+          <ButtonGroup variant="minimal" className="AppHeaderActions">
             {rightSideActions}
             {rightSideControls}
           </ButtonGroup>

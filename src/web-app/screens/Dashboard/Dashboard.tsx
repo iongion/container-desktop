@@ -143,7 +143,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 className="DashboardContainerDocsUrl"
                 href={CONTAINER_DOCS_URL}
                 target="_blank"
-                minimal
+                variant="minimal"
                 icon={IconNames.LINK}
                 text={t("Explore more in the docs")}
                 intent={Intent.PRIMARY}

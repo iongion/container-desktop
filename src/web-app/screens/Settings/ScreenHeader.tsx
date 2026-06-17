@@ -22,14 +22,14 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
   const expandAsButtons = expand ? (
     <>
       <AnchorButton
-        minimal
+        variant="minimal"
         active={isActive ? isActive("settings-settings") : false}
         icon={IconNames.COG}
         text={t("User settings")}
         href={getSettingsUrl("user-settings")}
       />
       <AnchorButton
-        minimal
+        variant="minimal"
         disabled={!isRunning}
         active={isActive ? isActive("settings.connection-info") : false}
         icon={IconNames.POWER}
@@ -38,7 +38,7 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
         title={isRunning ? t("") : t("Access to this screen requires connection")}
       />
       <AnchorButton
-        minimal
+        variant="minimal"
         disabled={!isRunning}
         active={isActive ? isActive("settings.system-info") : false}
         icon={IconNames.EYE_OPEN}

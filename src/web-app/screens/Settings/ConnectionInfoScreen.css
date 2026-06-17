@@ -1,5 +1,5 @@
 .AppScreen[data-screen="settings.connection-info"] .ConnectionCodeEditor {
-  border: 1px solid #000;
+  border: 1px solid var(--app-border);
 }
 .AppScreen[data-screen="settings.connection-info"] .AppScreenContent {
   overflow: hidden;
@@ -8,6 +8,8 @@
   margin: 0;
   padding: 5px;
   font-size: 12px;
+  /* Matches the table header (also --app-surface-strong) in both themes; engine code-chips live in docker/podman.css. */
+  background: var(--app-surface-strong);
 }
 
 [data-table="settings.connection-info"] tr td {
@@ -38,34 +40,4 @@
   padding: 4px;
   display: block;
   border-radius: 5px;
-}
-
-[data-theme="bp6-dark"] [data-table="settings.connection-info"] thead tr th {
-  background: #000;
-}
-[data-theme="bp6-dark"] .AppScreen[data-screen="settings.connection-info"] h5 {
-  background: #000000;
-}
-[data-theme="bp6-light"] .AppScreen[data-screen="settings.connection-info"] h5 {
-  background: #bcbcbc;
-}
-[data-theme="bp6-light"] [data-table="settings.connection-info"] thead tr th {
-  background: #bcbcbc;
-}
-[data-theme="bp6-dark"][data-engine="podman"] [data-table="settings.connection-info"] tr td code:first-child {
-  background: #110411;
-  color: #f6c0fe;
-}
-[data-theme="bp6-light"][data-engine="podman"] [data-table="settings.connection-info"] tr td code:first-child {
-  background: #cbc8cb;
-  border: 1px solid #412d4b;
-}
-
-[data-theme="bp6-dark"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
-  background: #2f4e94;
-  color: #c4daff;
-}
-[data-theme="bp6-light"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
-  background: #cbc8cb;
-  border: 1px solid #412d4b;
 }

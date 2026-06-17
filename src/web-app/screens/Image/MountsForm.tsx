@@ -71,7 +71,7 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
           defaultValue={mount.source}
           render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
             const pathSelectButton = isNative ? (
-              <Button minimal icon={IconNames.LOCATE} onClick={onVolumeHostPathSelectClick} />
+              <Button variant="minimal" icon={IconNames.LOCATE} onClick={onVolumeHostPathSelectClick} />
             ) : undefined;
             return (
               <FormGroup inline disabled={disabled} label={t("Source")} labelFor={name}>
@@ -115,7 +115,7 @@ export const MountForm: React.FC<MountFormProps> = ({ disabled, mount, mountInde
         />
       </div>
       <div className="ContainerMountActions">
-        <Button disabled={disabled} minimal icon={action.icon} onClick={onActionClick} />
+        <Button disabled={disabled} variant="minimal" icon={action.icon} onClick={onActionClick} />
       </div>
     </div>
   );

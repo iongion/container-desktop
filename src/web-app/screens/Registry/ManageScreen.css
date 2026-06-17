@@ -59,7 +59,7 @@
   overflow: hidden;
 }
 [data-table="registries"] .InspectNetworkId {
-  color: #aaa;
+  color: var(--app-text-muted);
   font-size: 11px;
   text-overflow: ellipsis;
   overflow: hidden;

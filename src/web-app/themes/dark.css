@@ -1,0 +1,106 @@
+/* Engine-agnostic DARK theme overrides.
+ *
+ * Rules here are scoped to the dark theme ONLY (`body.bp6-dark`, i.e. data-theme="bp6-dark")
+ * and carry NO `[data-engine]` selector — they apply to both Podman and Docker in dark mode.
+ * Engine-specific dark rules live in docker.css / podman.css; truly universal rules live in
+ * shared.css. (Moved here from shared.css + podman.css during theme centralization.) */
+
+/* Menu/arrow follow the active engine's elevated surface (was a hardcoded purple
+   that leaked into Docker dark). The per-engine value comes from tokens.css. */
+body.bp6-dark .bp6-menu {
+  background: var(--app-surface) !important;
+}
+body.bp6-dark .bp6-popover-arrow-fill {
+  fill: var(--app-surface) !important;
+}
+body.bp6-dark .bp6-input {
+  background: rgba(17, 20, 24, 0.3);
+  box-shadow:
+    0 0 0 0 rgb(76 144 240 / 0%),
+    0 0 0 0 rgb(76 144 240 / 0%),
+    0 0 0 0 rgb(76 144 240 / 0%),
+    inset 0 1px 0 0 rgb(17 20 24 / 60%),
+    inset -1px 0 0 rgb(17 20 24 / 60%),
+    inset 1px 0 0 rgb(17 20 24 / 60%),
+    inset 0 -1px 0 0 #8f99a8;
+  color: #f6f7f9;
+}
+body.bp6-dark .bp6-navbar {
+  box-shadow:
+    0 0 0 1px rgb(17 20 24 / 20%),
+    0 0 0 rgb(17 20 24 / 0%),
+    0 1px 1px rgb(17 20 24 / 40%);
+}
+
+/* Pod state */
+body.bp6-dark [data-table="pods"] .PodState[data-state="Degraded"] {
+  background-color: #611f69;
+}
+body.bp6-dark [data-table="pods"] .PodState[data-state="Exited"] {
+  background-color: #8b104c;
+}
+body.bp6-dark [data-table="pods"] .PodState[data-state="Running"] {
+  color: #60ff45;
+}
+body.bp6-dark [data-table="pods"] .PodState[data-state="Created"] {
+  color: #00a6ff;
+}
+body.bp6-dark [data-table="pods"] .PodState[data-state="Stopped"] {
+  color: #888a83;
+}
+body.bp6-dark [data-table="pods"] .PodState[data-state="Paused"] {
+  color: orange;
+}
+
+body.bp6-dark .ReactIcon,
+body.bp6-dark .AppLabelIcon {
+  color: #fff;
+}
+
+/* Blueprint (framework) icons default to a muted gray in dark mode that can read as "disabled". Render
+   non-intent icons in the bright foreground color so they match the mdi icon fills; disabled icons stay
+   muted so they still read as disabled. */
+body.bp6-dark .bp6-icon:not([class*="bp6-intent-"]) {
+  color: #fff;
+}
+body.bp6-dark .bp6-button:disabled .bp6-icon:not([class*="bp6-intent-"]),
+body.bp6-dark .bp6-button.bp6-disabled .bp6-icon:not([class*="bp6-intent-"]) {
+  color: #8a93a0;
+}
+
+body.bp6-dark .AppErrorBoundaryCallout .bp6-heading,
+body.bp6-dark .AppErrorBoundaryCallout p {
+  color: #fff !important;
+}
+
+body.bp6-dark .AppDataTable[data-table="image.scanning.report"] tr td p {
+  color: #fff;
+}
+
+/* Moved from podman.css (these were engine-agnostic despite living in the Podman file) */
+body.bp6-dark .AppDataTable[data-table="images"] .ContainerImageRegistry {
+  color: #ccc;
+}
+body.bp6-dark .AppDataFormFields .bp6-form-group label {
+  color: #ccc;
+}
+body.bp6-dark [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
+  background-color: #4f175b;
+  border-color: #2d0236;
+}
+
+/* ── Container volume mappings + image layer history (theme-only) — consolidated from screen CSS. ── */
+[data-theme="bp6-dark"] .ContainerVolumeMapping li strong {
+  color: #ccc;
+  background-color: #003055;
+}
+[data-theme="bp6-dark"] .ContainerVolumeIndex,
+[data-theme="bp6-dark"] .ContainerVolumeMapping li code {
+  color: #ccc;
+}
+[data-theme="bp6-dark"] [data-table="image.layers.history"] .LayerIndex {
+  color: #ccc;
+}
+[data-theme="bp6-dark"] [data-table="image.layers.history"] .LayerHistory {
+  background-color: #333;
+}

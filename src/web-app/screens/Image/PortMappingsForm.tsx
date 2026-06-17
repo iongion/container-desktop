@@ -155,7 +155,7 @@ export const PortMappingForm: React.FC<PortMappingFormProps> = ({
         </FormGroup>
       </div>
       <div className="ContainerImagePortMappingActions">
-        <Button disabled={disabled} minimal icon={action.icon} onClick={onActionClick} />
+        <Button disabled={disabled} variant="minimal" icon={action.icon} onClick={onActionClick} />
       </div>
     </div>
   );

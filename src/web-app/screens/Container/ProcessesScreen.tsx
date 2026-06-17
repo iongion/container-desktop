@@ -81,8 +81,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <td key={processColumnKey} data-column={processColumn} data-command={columnValue}>
                             <Button
                               onClick={onCopyToClipboardClick}
-                              minimal
-                              small
+                              variant="minimal"
+                              size="small"
                               title={t("{{command}} (click to copy to clipboard)", { command: columnValue })}
                               icon={IconNames.CLIPBOARD}
                             />

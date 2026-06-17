@@ -81,8 +81,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         <div className="CommandColumn">
                           <code title={text}>{text}</code>
                           <Button
-                            small
-                            minimal
+                            size="small"
+                            variant="minimal"
                             icon={IconNames.CLIPBOARD}
                             data-action="copy.to.clipboard"
                             title={t("Copy to clipboard")}

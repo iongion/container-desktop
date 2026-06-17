@@ -169,6 +169,12 @@ export class ContainersAdapter extends ResourceAdapter {
     return this.isOk(result);
   }
 
+  async start(id: string): Promise<boolean> {
+    const driver = await this.driver();
+    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/start`);
+    return this.isOk(result);
+  }
+
   async stop(id: string): Promise<boolean> {
     const driver = await this.driver();
     const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`);

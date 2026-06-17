@@ -47,6 +47,10 @@ export default ({ mode, command }) => {
           {
             src: normalizePath(path.resolve(PROJECT_HOME, "support/resources/appx")),
             dest: normalizePath(path.resolve(PROJECT_HOME, "build", pkg.version))
+          },
+          {
+            src: normalizePath(path.resolve(PROJECT_HOME, "support/gnome-shell-extension")),
+            dest: normalizePath(path.resolve(PROJECT_HOME, "build", pkg.version))
           }
         ]
       })

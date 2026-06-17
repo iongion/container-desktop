@@ -20,7 +20,7 @@
 .ResourceItemInlineActionsMenu
   .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   > svg {
-  color: #fff;
+  color: var(--app-text);
 }
 
 .ResourceItemInlineActionsMenu
@@ -34,7 +34,7 @@
   .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   svg
   path {
-  fill: #fff;
+  fill: var(--app-text);
 }
 
 code,
@@ -281,13 +281,13 @@ pre,
 }
 .AppFormFieldMeasureUnit {
   height: 30px;
-  background: #0b020c;
+  background: var(--app-surface-strong);
   width: 30px;
   display: flex;
   align-items: center;
   align-content: center;
   justify-content: center;
-  color: #ae69d6;
+  color: var(--app-accent);
 }
 
 .AppErrorBoundaryCallout {
@@ -299,8 +299,8 @@ pre,
 }
 
 .bp6-disabled .AppFormFieldMeasureUnit {
-  color: #798192;
-  background-color: #36334d;
+  color: var(--app-text-muted);
+  background-color: var(--app-surface-strong);
 }
 
 [data-running="no"] .AppContentDocument {

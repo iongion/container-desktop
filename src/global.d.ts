@@ -77,6 +77,18 @@ declare global {
     setEnabled: (enabled: boolean) => void;
   }
 
+  // Preload-exposed tray-widget receive bridge (see electron-shell/trayBus.ts). subscribe()
+  // is allowlisted to known tray channels and strips the raw IpcRendererEvent.
+  export interface ITrayBus {
+    subscribe: (channel: string, callback: (payload: any) => void) => () => void;
+  }
+
+  // Preload-exposed receive bridge for the main-owned data layer (see electron-shell/resourceBus.ts).
+  // subscribe() is allowlisted to the resource-sync push channels.
+  export interface IResourceBus {
+    subscribe: (channel: string, callback: (payload: any) => void) => () => void;
+  }
+
   var Platform: IPlatform;
   var Command: ICommand;
   var Path: IPath;
@@ -84,6 +96,8 @@ declare global {
   var CURRENT_OS_TYPE: OperatingSystem;
   var MessageBus: IMessageBus;
   var ActivityBus: IActivityBus;
+  var TrayBus: ITrayBus;
+  var ResourceBus: IResourceBus;
 
   interface Window {
     Platform: IPlatform;
@@ -93,6 +107,8 @@ declare global {
     CURRENT_OS_TYPE: any;
     MessageBus: IMessageBus;
     ActivityBus: IActivityBus;
+    TrayBus: ITrayBus;
+    ResourceBus: IResourceBus;
   }
 }
 

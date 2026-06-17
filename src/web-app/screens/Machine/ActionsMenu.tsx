@@ -128,7 +128,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
     performActionCommand("machine.connect", { confirm: { success: false } });
   }, [performActionCommand]);
   const startButton = withoutCreate ? null : (
-    <Button small intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
+    <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = machine ? (
     <ConfirmMenu onConfirm={onRemove} tag={machine.Name} disabled={disabledAction === "machine.remove"}>
@@ -171,8 +171,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate
           <>
             {startButton ? <Divider /> : null}
             <Button
-              small
-              minimal
+              size="small"
+              variant="minimal"
               intent={Intent.NONE}
               title={t("Reload current list")}
               icon={IconNames.REFRESH}

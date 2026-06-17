@@ -10,7 +10,7 @@
 [data-table="troubleshoot.actions"] tr td p {
   margin: 0;
   padding: 0;
-  color: #aaa;
+  color: var(--app-text-muted);
 }
 [data-screen="troubleshoot"] .ActionButton {
   display: inline-block;

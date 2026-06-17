@@ -96,7 +96,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
   const canCreateRegistry = currentConnector?.capabilities?.extensions.registries === true;
   const createButton = withoutCreate ? null : (
     <Button
-      small
+      size="small"
       intent={Intent.SUCCESS}
       disabled={!canCreateRegistry}
       title={

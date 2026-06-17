@@ -163,8 +163,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>
                       <Button
                         className="RegistrySearchResultButton"
-                        minimal
-                        small
+                        variant="minimal"
+                        size="small"
                         intent={Intent.PRIMARY}
                         icon={IconNames.LIST_DETAIL_VIEW}
                         onClick={() => onRegistrySearchResultClick(it)}

@@ -1,0 +1,127 @@
+/* Engine-agnostic LIGHT theme overrides.
+ *
+ * Rules here are scoped to the light theme ONLY (`body.bp6-light`, i.e. data-theme="bp6-light")
+ * and carry NO `[data-engine]` selector — they apply to both Podman and Docker in light mode.
+ * Engine-specific light rules live in docker.css / podman.css; truly universal rules live in
+ * shared.css. (Moved here from shared.css + podman.css during theme centralization.) */
+
+/* Container status */
+body.bp6-light [data-table="containers"] .ContainerState[data-state="exited"] {
+  background-color: #a45f80;
+  color: #fff;
+}
+body.bp6-light [data-table="containers"] .ContainerState[data-state="running"] {
+  background-color: #b5ddae;
+  color: #333;
+}
+body.bp6-light [data-table="containers"] .ContainerState[data-state="created"] {
+  color: #1ea0e6;
+}
+body.bp6-light [data-table="containers"] .ContainerState[data-state="stopped"] {
+  color: #333;
+}
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li {
+  background: #efefef;
+}
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li span {
+  background-color: #efefef;
+  color: #333;
+}
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
+  color: #333;
+  background-color: #b5ddae;
+}
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
+  background-color: #a45f80;
+  color: #fff;
+}
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
+body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
+  background-color: #efefef;
+  color: #333;
+}
+
+/* Pod state */
+body.bp6-light table tr td {
+  color: #242b31;
+}
+body.bp6-light [data-table="pods"] .PodState[data-state="Degraded"] {
+  background-color: #611f69;
+  color: #eee;
+}
+body.bp6-light [data-table="pods"] .PodState[data-state="Exited"] {
+  background-color: #a45f80;
+  color: #eee;
+}
+body.bp6-light [data-table="pods"] .PodState[data-state="Running"] {
+  background-color: #b5ddae;
+}
+body.bp6-light [data-table="pods"] .PodState[data-state="Created"] {
+  background-color: #00a6ff;
+}
+body.bp6-light [data-table="pods"] .PodState[data-state="Stopped"] {
+  color: #888a83;
+}
+body.bp6-light [data-table="pods"] .PodState[data-state="Paused"] {
+  background-color: orange;
+}
+
+body.bp6-light .ReactIcon,
+body.bp6-light .AppLabelIcon {
+  color: #5f6b7c;
+}
+
+/* ── Container volume mappings + image layer history (theme-only) — consolidated from screen CSS. ── */
+[data-theme="bp6-light"] .ContainerVolumeMapping li strong {
+  color: #333;
+  background-color: #b5c8d6;
+}
+[data-theme="bp6-light"] .ContainerVolumeIndex,
+[data-theme="bp6-light"] .ContainerVolumeMapping li code {
+  color: #333;
+}
+[data-theme="bp6-light"] [data-table="image.layers.history"] .LayerIndex {
+  color: #333;
+}
+[data-theme="bp6-light"] [data-table="image.layers.history"] .LayerHistory {
+  background-color: #ccc;
+}
+
+/* Connection manager (host.connections) — light specifics, consolidated from UserSettingsScreen.css */
+[data-theme="bp6-light"]
+  .AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-default="yes"]
+  td[data-flag="default"]
+  strong {
+  background-color: #ffffff;
+}
+[data-theme="bp6-light"]
+  .AppSettingsEngineManagerConnections
+  [data-table="host.connections"]
+  tr[data-connection-is-connected="yes"] {
+  background-color: #baffba;
+}
+[data-theme="bp6-light"] .AppSettingsEngineManagerConnections .PlatformScopeLabel {
+  color: #333;
+}
+[data-theme="bp6-light"] .AppSettingsEngineManagerConnections .PlatformConnectionDescription {
+  color: #777;
+}
+/* Notification center drawer — light readability, consolidated from NotificationCenter.css */
+body.bp6-light .NotificationCenterDrawer .ActivityDetailPre {
+  background: rgba(17, 20, 24, 0.07);
+  color: #1c2127;
+}
+body.bp6-light .NotificationCenterDrawer button.ActivityRowHeader:hover {
+  background: rgba(17, 20, 24, 0.05);
+}
+/* Settings storage-path code box — light readability (a light box, not a black terminal). */
+body.bp6-light .AppSettingUserConfigurationPath input {
+  background: #ffffff;
+  border-color: #d6dae1;
+  color: #1b2430;
+}
+body.bp6-light .AppSettingUserConfigurationPath strong {
+  color: #5b6675;
+}

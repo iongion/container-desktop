@@ -173,11 +173,11 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
       >
         <Button
           className="ScopeSelectButton"
-          alignText={Alignment.LEFT}
+          alignText={Alignment.START}
           disabled={disabled}
           fill
           icon={IconNames.CONTROL}
-          rightIcon={IconNames.CARET_DOWN}
+          endIcon={IconNames.CARET_DOWN}
           text={
             <>
               <div className="ScopeSelectButtonText">{activeItem?.Name ?? t("-- Select --")}</div>
@@ -190,7 +190,7 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
         />
       </Select>
       {withoutDetect ? null : (
-        <ButtonGroup minimal>
+        <ButtonGroup variant="minimal">
           <Divider />
           <Button
             icon={isScopeStarted(activeItem) ? IconNames.STOP : IconNames.PLAY}
@@ -202,7 +202,7 @@ export const ScopeSelect: React.FC<ScopeSelectProps> = ({
           <Button
             icon={IconNames.REFRESH}
             disabled={disabled || pending}
-            small
+            size="small"
             text={detectLabel}
             intent={Intent.SUCCESS}
             onClick={onDetect}

@@ -38,20 +38,12 @@
   background-color: #f00;
 }
 
-[data-theme="bp6-dark"] [data-engine="podman"] .AppFooter,
-[data-theme="bp6-dark"] [data-engine="podman"] .AppFooterNavbar {
-  background-color: #4f175b;
+/* Footer status bar follows the engine/mode "chrome" tone (matches header + sidebar),
+   with a hairline to separate it from content. Driven by tokens.css per combo. */
+[data-engine] .AppFooter,
+[data-engine] .AppFooterNavbar {
+  background-color: var(--app-chrome);
 }
-[data-theme="bp6-light"] [data-engine="podman"] .AppFooter,
-[data-theme="bp6-light"] [data-engine="podman"] .AppFooterNavbar {
-  background-color: #cfcfcf;
-}
-
-[data-theme="bp6-dark"] [data-engine="docker"] .AppFooter,
-[data-theme="bp6-dark"] [data-engine="docker"] .AppFooterNavbar {
-  background-color: #02091f;
-}
-[data-theme="bp6-light"] [data-engine="docker"] .AppFooter,
-[data-theme="bp6-light"] [data-engine="docker"] .AppFooterNavbar {
-  background-color: #7397a8;
+[data-engine] .AppFooter {
+  border-top: 1px solid var(--app-border);
 }

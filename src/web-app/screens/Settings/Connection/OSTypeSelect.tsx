@@ -54,8 +54,8 @@ export const OSTypeSelect: React.FC<OSTypeSelectProps> = ({
       {withoutDetect ? null : (
         <>
           <Divider />
-          <ButtonGroup minimal>
-            <Button disabled={pending} small text={t("Detect")} intent={Intent.SUCCESS} onClick={onItemDetect} />
+          <ButtonGroup variant="minimal">
+            <Button disabled={pending} size="small" text={t("Detect")} intent={Intent.SUCCESS} onClick={onItemDetect} />
           </ButtonGroup>
         </>
       )}

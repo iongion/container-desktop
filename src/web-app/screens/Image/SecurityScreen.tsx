@@ -169,7 +169,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                                   href={vulnerability.PrimaryURL}
                                   text={vulnerability.VulnerabilityID}
                                   target="_blank"
-                                  minimal
+                                  variant="minimal"
                                   intent={Intent.PRIMARY}
                                 />
                               </td>

@@ -15,11 +15,11 @@ There are two engines (Podman, Docker) and five host types (native, machine/
 vendor, WSL, Lima, SSH-remote) — ten combinations. Rather than ten inheritance
 leaves, each combination is **composed** from three single-purpose units:
 
-| Unit | Varies by | Answers | Source |
-| --- | --- | --- | --- |
-| **EngineDialect** | engine | "How do I speak to *this engine*?" — read its socket, build its service command, get system info | [`runtimes/dialects/{podman,docker}.ts`](../../src/container-client/runtimes/dialects/) |
-| **Transport** | host type | "How do I reach a host of *this kind*?" — start/stop a scope, shape the API URI, run the API, build the driver | [`runtimes/transports/{native,ssh,wsl,lima,podman-machine}.ts`](../../src/container-client/runtimes/transports/) |
-| **HostProfile** | (engine, host) | the thin glue — OS availability gate, automatic-settings detection, the per-host API-connection resolver | [`runtimes/profiles/{podman,docker}.ts`](../../src/container-client/runtimes/profiles/) |
+| Unit              | Varies by      | Answers                                                                                                        | Source                                                                                                           |
+| ----------------- | -------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **EngineDialect** | engine         | "How do I speak to _this engine_?" — read its socket, build its service command, get system info               | [`runtimes/dialects/{podman,docker}.ts`](../../src/container-client/runtimes/dialects/)                          |
+| **HostProfile**   | (engine, host) | the thin glue — OS availability gate, automatic-settings detection, the per-host API-connection resolver       | [`runtimes/profiles/{podman,docker}.ts`](../../src/container-client/runtimes/profiles/)                          |
+| **Transport**     | host type      | "How do I reach a host of _this kind_?" — start/stop a scope, shape the API URI, run the API, build the driver | [`runtimes/transports/{native,ssh,wsl,lima,podman-machine}.ts`](../../src/container-client/runtimes/transports/) |
 
 A **registry** maps each `(engine, host)` pair to its three units; a factory
 assembles them into a `HostClient`. The `HostClient` *is* the `HostContext` passed
@@ -97,6 +97,45 @@ flowchart TB
   Persisted settings and the saved connection list (the one piece the main process
   also imports).
 
+## Resource data layer (lists + freshness)
+
+The `HostClientFacade` is the raw operations surface; screens don't call it directly. Two layers sit on top:
+
+- **Per-resource adapters** — [`adapters/`](../../src/container-client/adapters/). Each
+  (`ContainersAdapter`, `ImagesAdapter`, `PodsAdapter`, `VolumesAdapter`, `NetworksAdapter`,
+  `SecretsAdapter`, …) extends [`ResourceAdapter`](../../src/container-client/adapters/shared.ts), which
+  binds the active `HostClient`'s Axios driver and the per-engine normalizers. Adapters expose typed
+  `list()/start()/stop()/…` over the engine REST API; `getActiveHostClient()` resolves the current host.
+- **Resource vocabulary** — [`resourceDomains.ts`](../../src/container-client/resourceDomains.ts): the
+  canonical `RESOURCE_DOMAINS`, `ResourceDomain`/`ResourceItemsByDomain` types, and the engine-event →
+  domain mapping (`normalizeResourceEventDomains`). Neutral (no Zustand/Electron) so **both** the renderer
+  and the main process import it. The renderer's `resourceEvents`/`resourceStore` consume it (see
+  [frontend.md](frontend.md)).
+
+### Main-owned data layer
+
+The **main process is the single engine authority**: it owns the connection, the engine `/events` stream and
+all list fetching, **and** it executes the renderer's engine HTTP. The renderer runs no event manager and
+opens no second connection — `resourceEvents` is a thin client that starts the mirror and forwards "refresh
+now" nudges, and `Command.ProxyRequest` is forwarded to main so there is **one** tunnel / relay / socket
+pool, in main. Reads are pushed to the app window; the native tray menu is built in main from that same
+owned data (see [system-tray.md](system-tray.md)).
+
+| Piece | Path | Role |
+| --- | --- | --- |
+| `EngineDataService` | [`electron-shell/engineDataService.ts`](../../src/electron-shell/engineDataService.ts) | Main-side owner: an `Application` (via `Application.initInstance`, no `window`), connection/runtime + per-connection resource state, initial lists + `/events` → debounced refresh, plus tray action execution and a machines cache for the native tray menu. Idempotent `ensureConnected` lets the renderer make main connect before its forwarded requests. |
+| `ResourceSyncBroker` | [`electron-shell/resourceSyncBroker.ts`](../../src/electron-shell/resourceSyncBroker.ts) | Pushes a `ResourceSyncSnapshot` to windows on change; answers `resource:get-snapshot` (main window) + awaitable `resource:ensure-connected`; accepts a `resource:refresh` nudge. |
+| `CommandProxyBroker` | [`electron-shell/commandProxyBroker.ts`](../../src/electron-shell/commandProxyBroker.ts) | Serves the renderer's forwarded `Command.ProxyRequest` against main's active host-client driver (one connection). Non-stream is request/response; container-log streams are opened here and chunked to the requesting window, with orphan cleanup when that window closes. |
+| `ResourceBus` (preload) | [`electron-shell/resourceBus.ts`](../../src/electron-shell/resourceBus.ts) | Allowlisted receive bridge (mirrors `TrayBus`) for the resource push. |
+| `commandProxyClient` (preload) | [`electron-shell/commandProxyClient.ts`](../../src/electron-shell/commandProxyClient.ts) | Forwards `Command.ProxyRequest` to main (non-stream invoke + a rebuilt stream emitter); the other Command methods (CLI / SSH) stay local. |
+| `resourceMirror` (renderer) | [`web-app/stores/resourceMirror.ts`](../../src/web-app/stores/resourceMirror.ts) | Applies main's pushed snapshots into the **same** `resourceStore` the screens read (the seam). |
+| Shared protocols | [`resourceSyncProtocol.ts`](../../src/container-client/resourceSyncProtocol.ts) · [`commandProxyProtocol.ts`](../../src/container-client/commandProxyProtocol.ts) | Channels + `AppRuntimeSnapshot`/`ResourceSyncSnapshot` + command-proxy payload types. |
+
+Both the read layer and command execution are owned by main and live-verified (CDP smoke). The renderer
+still composes a `HostClient` for typing + per-engine normalizers, but its HTTP executes in main — so there
+is exactly **one** engine connection whether the app window is open, closed (hidden to tray), or the tray
+menu is acting on its own.
+
 ## Key types (the vocabulary)
 
 All in [`src/env/Types.ts`](../../src/env/Types.ts):
@@ -122,16 +161,16 @@ availability — is the subject of its own page:
 
 ## Source map
 
-| Component | Path |
-| --- | --- |
-| Orchestrator | [`Application.ts`](../../src/container-client/Application.ts) |
+| Component                     | Path                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| API driver                    | [`Api.clients.ts`](../../src/container-client/Api.clients.ts)                   |
+| Composed client               | [`runtimes/host-client.ts`](../../src/container-client/runtimes/host-client.ts) |
 | Composition seam (interfaces) | [`runtimes/composition.ts`](../../src/container-client/runtimes/composition.ts) |
-| Composed client | [`runtimes/host-client.ts`](../../src/container-client/runtimes/host-client.ts) |
-| Registry (10 entries) | [`runtimes/registry.ts`](../../src/container-client/runtimes/registry.ts) |
-| Operations facade | [`runtimes/facade.ts`](../../src/container-client/runtimes/facade.ts) |
-| Dialects | [`runtimes/dialects/`](../../src/container-client/runtimes/dialects/) |
-| Transports | [`runtimes/transports/`](../../src/container-client/runtimes/transports/) |
-| Profiles | [`runtimes/profiles/`](../../src/container-client/runtimes/profiles/) |
-| Connector defaults | [`connection.ts`](../../src/container-client/connection.ts) |
-| API driver | [`Api.clients.ts`](../../src/container-client/Api.clients.ts) |
-| Types | [`src/env/Types.ts`](../../src/env/Types.ts) |
+| Connector defaults            | [`connection.ts`](../../src/container-client/connection.ts)                     |
+| Dialects                      | [`runtimes/dialects/`](../../src/container-client/runtimes/dialects/)           |
+| Operations facade             | [`runtimes/facade.ts`](../../src/container-client/runtimes/facade.ts)           |
+| Orchestrator                  | [`Application.ts`](../../src/container-client/Application.ts)                   |
+| Profiles                      | [`runtimes/profiles/`](../../src/container-client/runtimes/profiles/)           |
+| Registry (10 entries)         | [`runtimes/registry.ts`](../../src/container-client/runtimes/registry.ts)       |
+| Transports                    | [`runtimes/transports/`](../../src/container-client/runtimes/transports/)       |
+| Types                         | [`src/env/Types.ts`](../../src/env/Types.ts)                                    |

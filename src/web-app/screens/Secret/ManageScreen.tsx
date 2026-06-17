@@ -147,8 +147,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>
                       <AnchorButton
                         className="PodDetailsButton"
-                        minimal
-                        small
+                        variant="minimal"
+                        size="small"
                         href={getSecretUrl(secret.ID, "inspect")}
                         text={secret.Spec.Name}
                         intent={Intent.PRIMARY}

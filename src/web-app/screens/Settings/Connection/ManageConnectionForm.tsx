@@ -695,11 +695,11 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                 intent={invalid ? Intent.DANGER : Intent.NONE}
                 placeholder={t("auto")}
                 rightElement={
-                  <ButtonGroup minimal>
+                  <ButtonGroup variant="minimal">
                     {flags.withCustomProgramPath ? undefined : (
                       <Button
                         disabled={pending}
-                        small
+                        size="small"
                         title={t("Managed by {{name}} - click to override", program)}
                         icon={isCustomProgramPathEditable ? IconNames.UNLOCK : IconNames.LOCK}
                         intent={Intent.NONE}
@@ -710,7 +710,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                     {flags.isProgramBrowseEnabled ? (
                       <Button
                         disabled={pending}
-                        small
+                        size="small"
                         text={t("Browse")}
                         intent={Intent.PRIMARY}
                         data-target="program"
@@ -721,10 +721,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                 }
               />
               <Divider />
-              <ButtonGroup minimal>
+              <ButtonGroup variant="minimal">
                 <Button
                   disabled={pending || flags.isProgramPathDetectDisabled}
-                  small
+                  size="small"
                   text={t("Detect")}
                   title={flags.executableDetectButtonTitle}
                   intent={Intent.SUCCESS}
@@ -899,10 +899,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                       placeholder={t("auto")}
                       rightElement={
                         isNativeApplication ? (
-                          <ButtonGroup minimal>
+                          <ButtonGroup variant="minimal">
                             <Button
                               disabled={pending}
-                              small
+                              size="small"
                               text={t("Browse")}
                               intent={Intent.PRIMARY}
                               data-target="controller"
@@ -913,10 +913,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                       }
                     />
                     <Divider />
-                    <ButtonGroup minimal>
+                    <ButtonGroup variant="minimal">
                       <Button
                         disabled={pending}
-                        small
+                        size="small"
                         text={t("Detect")}
                         intent={Intent.SUCCESS}
                         data-target="controller"
@@ -1062,10 +1062,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                                     placeholder={t("auto")}
                                     rightElement={
                                       flags.withCustomApiConnectionUri ? undefined : (
-                                        <ButtonGroup minimal>
+                                        <ButtonGroup variant="minimal">
                                           <Button
                                             disabled={pending}
-                                            small
+                                            size="small"
                                             title={t("Managed by {{name}} - click to override", program)}
                                             icon={isCustomApiConnectionUriEditable ? IconNames.UNLOCK : IconNames.LOCK}
                                             intent={Intent.NONE}
@@ -1077,10 +1077,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                                     }
                                   />
                                   <Divider />
-                                  <ButtonGroup minimal>
+                                  <ButtonGroup variant="minimal">
                                     <Button
                                       disabled={pending || flags.isCustomApiConnectionUriDetectDisabled}
-                                      small
+                                      size="small"
                                       text={t("Detect")}
                                       intent={Intent.SUCCESS}
                                       onClick={onApiConnectionUriDetectClick}
@@ -1120,10 +1120,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                                       placeholder={t("auto")}
                                       rightElement={
                                         flags.withCustomApiConnectionRelay ? undefined : (
-                                          <ButtonGroup minimal>
+                                          <ButtonGroup variant="minimal">
                                             <Button
                                               disabled={pending}
-                                              small
+                                              size="small"
                                               title={t("Managed by {{name}} - click to override", program)}
                                               icon={
                                                 isCustomApiConnectionRelayEditable ? IconNames.UNLOCK : IconNames.LOCK
@@ -1137,10 +1137,10 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
                                       }
                                     />
                                     <Divider />
-                                    <ButtonGroup minimal>
+                                    <ButtonGroup variant="minimal">
                                       <Button
                                         disabled={pending || flags.isCustomApiConnectionRelayDetectDisabled}
-                                        small
+                                        size="small"
                                         text={t("Detect")}
                                         intent={Intent.SUCCESS}
                                         onClick={onApiConnectionRelayDetectClick}

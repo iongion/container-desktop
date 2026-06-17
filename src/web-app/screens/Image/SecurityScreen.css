@@ -1,5 +1,5 @@
 .AppDataTable[data-table="image.scanning.report"] {
-  color: #ccc;
+  color: var(--app-text);
 }
 .AppDataTable[data-table="image.scanning.report"] tr th {
   text-align: center !important;
@@ -21,7 +21,7 @@
   text-overflow: ellipsis;
 }
 .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
-  background-color: #1f131f;
+  background-color: var(--app-surface-strong);
 }
 .AppDataTable[data-table="image.scanning.report"] .OpenURLButton {
   white-space: nowrap;
@@ -55,17 +55,17 @@ table[data-table="image.scanning.report.counts"] tr td .Severity[data-severity="
   background-color: #1a0f0f;
 }
 .AppDataTable[data-table="image.scanning.report"] tr td {
-  color: #789;
+  color: var(--app-text-muted);
 }
 .SecurityDetails {
-  background: #1a051c;
+  background: var(--app-surface);
   padding: 10px;
   display: flex;
   font-size: 12px;
 }
 .SecurityDetails table {
   font-size: 12px;
-  color: #222;
+  color: var(--app-text);
 }
 .SecurityDetails table tr td {
   vertical-align: middle;

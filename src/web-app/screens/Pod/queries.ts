@@ -99,6 +99,14 @@ export const useStopPod = (connId: string) => {
   });
 };
 
+export const useStartPod = (connId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => new PodsAdapter().start(id),
+    onSuccess: async (_result, id) => invalidatePod(qc, connId, id),
+  });
+};
+
 export const useRestartPod = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({

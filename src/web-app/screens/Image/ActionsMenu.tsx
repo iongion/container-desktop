@@ -101,8 +101,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   );
   const startButton = withoutStart ? null : (
     <Button
-      small
-      minimal
+      size="small"
+      variant="minimal"
       intent={Intent.SUCCESS}
       text={t("Start")}
       icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />}
@@ -113,21 +113,21 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     image && expand ? (
       <>
         <AnchorButton
-          minimal
+          variant="minimal"
           active={isActive ? isActive("image.layers") : false}
           icon={IconNames.LAYERS}
           text={t("Layers")}
           href={getImageUrl(image.Id, "layers")}
         />
         <AnchorButton
-          minimal
+          variant="minimal"
           active={isActive ? isActive("image.inspect") : false}
           icon={IconNames.EYE_OPEN}
           text={t("Inspect")}
           href={getImageUrl(image.Id, "inspect")}
         />
         <AnchorButton
-          minimal
+          variant="minimal"
           active={isActive ? isActive("image.security") : false}
           icon={IconNames.CONFIRM}
           text={t("Security")}
@@ -152,8 +152,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           <>
             {startButton ? <Divider /> : null}
             <Button
-              small
-              minimal
+              size="small"
+              variant="minimal"
               intent={Intent.NONE}
               title={t("Reload current list")}
               icon={IconNames.REFRESH}

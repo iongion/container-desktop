@@ -209,28 +209,28 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     expand && container ? (
       <>
         <AnchorButton
-          minimal
+          variant="minimal"
           active={isActive ? isActive("container.logs") : false}
           icon={IconNames.ALIGN_JUSTIFY}
           text={t("Logs")}
           href={getContainerUrl(container.Id, "logs")}
         />
         <AnchorButton
-          minimal
+          variant="minimal"
           active={isActive ? isActive("container.inspect") : false}
           icon={IconNames.EYE_OPEN}
           text={t("Inspect")}
           href={getContainerUrl(container.Id, "inspect")}
         />
         <AnchorButton
-          minimal
+          variant="minimal"
           active={isActive ? isActive("container.processes") : false}
           icon={IconNames.PANEL_TABLE}
           text={t("Processes")}
           href={getContainerUrl(container.Id, "processes")}
         />
         <AnchorButton
-          minimal
+          variant="minimal"
           active={isActive ? isActive("container.kube") : false}
           icon={IconNames.TEXT_HIGHLIGHT}
           text={t("Kube")}
@@ -278,7 +278,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     if (withOverlay) {
       expandAsOverlay = (
         <div className="ItemActionsOverlayMenu">
-          <ButtonGroup minimal className="ItemActionsOverlayMenuActions">
+          <ButtonGroup variant="minimal" className="ItemActionsOverlayMenuActions">
             <Button
               data-container={container.Id}
               data-action="container.connect"
@@ -320,7 +320,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     } else if (withInlinePlayerActions) {
       withInlinePlayerActionsWidget = (
         <div className="InlinePlayerActions">
-          <ButtonGroup minimal>
+          <ButtonGroup variant="minimal">
             <Button
               data-container={container.Id}
               data-action={isPaused ? "container.unpause" : "container.pause"}
@@ -439,8 +439,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         <>
           {expandAsOverlay || withInlinePlayerActionsWidget ? <Divider /> : null}
           <Button
-            small
-            minimal
+            size="small"
+            variant="minimal"
             intent={Intent.NONE}
             title={t("Reload current list")}
             icon={IconNames.REFRESH}

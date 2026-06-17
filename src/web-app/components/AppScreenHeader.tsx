@@ -40,7 +40,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   children,
 }: AppScreenHeaderProps) => {
   const { t } = useTranslation();
-  const onSearchKeyPress = useCallback(
+  const onSearchKeyDown = useCallback(
     (e) => {
       if (e.key === "Enter") {
         if (onSearchTrigger) {
@@ -55,11 +55,16 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   }, []);
   const withList = !!listRoutePath;
   const backButton = withBack ? (
-    <Navbar.Group align={Alignment.LEFT}>
+    <Navbar.Group align={Alignment.START}>
       <Navbar.Heading>
-        <Button minimal title={t("Go back")} icon={IconNames.CHEVRON_LEFT} onClick={onGoBackClick} />
+        <Button variant="minimal" title={t("Go back")} icon={IconNames.CHEVRON_LEFT} onClick={onGoBackClick} />
         {withList && (
-          <AnchorButton minimal icon={listRouteIcon || IconNames.LIST} href={listRoutePath} title={t("Jump to list")} />
+          <AnchorButton
+            variant="minimal"
+            icon={listRouteIcon || IconNames.LIST}
+            href={listRoutePath}
+            title={t("Jump to list")}
+          />
         )}
       </Navbar.Heading>
     </Navbar.Group>
@@ -72,11 +77,11 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
         type="search"
         placeholder={t("Type a search term")}
         onChange={onSearch}
-        onKeyPress={onSearchKeyPress}
+        onKeyDown={onSearchKeyDown}
         rightElement={
           withSearchTrigger ? (
             <Button
-              minimal
+              variant="minimal"
               text={t("Search")}
               onClick={onSearchTrigger}
               className="SearchButtonTrigger"
@@ -99,7 +104,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   }
   let rightWidget: React.ReactNode | null = null;
   if (rightContent) {
-    rightWidget = <Navbar.Group align={Alignment.RIGHT}>{rightContent}</Navbar.Group>;
+    rightWidget = <Navbar.Group align={Alignment.END}>{rightContent}</Navbar.Group>;
   }
   return (
     <div className="AppScreenHeader">

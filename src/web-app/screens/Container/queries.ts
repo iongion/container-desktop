@@ -112,6 +112,14 @@ export const useUnpauseContainer = (connId: string) => {
   });
 };
 
+export const useStartContainer = (connId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => new ContainersAdapter().start(id),
+    onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
+  });
+};
+
 export const useStopContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({

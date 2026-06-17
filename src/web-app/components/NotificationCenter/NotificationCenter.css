@@ -207,6 +207,17 @@ button.ActivityRowHeader:hover {
   display: inline-flex;
   align-items: center;
 }
+/* Theme-aware bell icon: muted normally, engine accent when unread (never hardcoded white). */
+.NotificationBell .NotificationBellIcon,
+.NotificationBell .NotificationBellIcon svg,
+.NotificationBell .NotificationBellIcon path {
+  fill: var(--app-text-muted);
+}
+.NotificationBell .NotificationBellIcon--unread,
+.NotificationBell .NotificationBellIcon--unread svg,
+.NotificationBell .NotificationBellIcon--unread path {
+  fill: var(--app-accent);
+}
 .NotificationBell .NotificationBellBadge {
   position: absolute;
   top: -2px;
@@ -218,14 +229,4 @@ button.ActivityRowHeader:hover {
   line-height: 16px;
   text-align: center;
   pointer-events: none;
-}
-
-/* Light-theme readability: the code/detail panes and hover need a light wash on the white
-   drawer (the dark default is for dark mode). Engine accents live in themes/{podman,docker}.css. */
-body.bp6-light .NotificationCenterDrawer .ActivityDetailPre {
-  background: rgba(17, 20, 24, 0.07);
-  color: #1c2127;
-}
-body.bp6-light .NotificationCenterDrawer button.ActivityRowHeader:hover {
-  background: rgba(17, 20, 24, 0.05);
 }

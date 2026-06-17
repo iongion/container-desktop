@@ -1,43 +1,20 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-import { createRoot } from "react-dom/client";
-import { Helmet, HelmetProvider } from "react-helmet-async";
+// Renderer entry. A single window loads this bundle: the main app. (The tray is a native OS menu built in
+// the main process — there is no tray renderer.) Global CSS is imported here.
 
 import "./index.css";
-
-import { ContainerEngine, Environments } from "@/env/Types";
-import { App } from "./App";
-import { I18nContextProvider } from "./App.i18n";
-import { queryClient } from "./domain/queryClient";
-import { CURRENT_ENVIRONMENT } from "./Environment";
+// Cascade order: universal → tokens (semantic palette + Blueprint bridge + shared structure)
+// → theme-only (dark/light) → engine-specific (docker/podman). Specificity rises in the same
+// order, so engine rules win over theme rules win over shared structure win over universal.
+import "./themes/shared.css";
+import "./themes/tokens.css";
+import "./themes/dark.css";
+import "./themes/light.css";
 import "./themes/docker.css";
 import "./themes/podman.css";
-import "./themes/shared.css";
 
-dayjs.extend(relativeTime);
-
-export async function renderApplication() {
-  const container = document.getElementById("root");
-  const root = createRoot(container!);
-  console.debug("Settings up the native bridge");
-  console.debug("Starting web-app", { engine: ContainerEngine.PODMAN });
-  root.render(
-    // <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <I18nContextProvider>
-        <HelmetProvider>
-          <Helmet>
-            <body className="bp6-dark" data-engine={ContainerEngine.PODMAN} />
-          </Helmet>
-          <App />
-          {CURRENT_ENVIRONMENT === Environments.DEVELOPMENT && <ReactQueryDevtools initialIsOpen={false} />}
-        </HelmetProvider>
-      </I18nContextProvider>
-    </QueryClientProvider>,
-    //</StrictMode>
-  );
+async function boot() {
+  const { renderApplication } = await import("./App.render");
+  renderApplication();
 }
 
-renderApplication();
+boot();

@@ -157,8 +157,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 const podDetailsButton = (
                   <AnchorButton
                     className="PodDetailsButton"
-                    minimal
-                    small
+                    variant="minimal"
+                    size="small"
                     href={pathTo(`/screens/pod/${encodeURIComponent(pod.Id)}/processes`)}
                     text={pod.Name}
                     intent={Intent.PRIMARY}

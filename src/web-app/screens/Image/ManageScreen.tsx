@@ -161,8 +161,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
               {images.map((image) => {
                 const imageLayersButton = (
                   <AnchorButton
-                    minimal
-                    small
+                    variant="minimal"
+                    size="small"
                     href={getImageUrl(image.Id, "layers")}
                     text={image.Name}
                     intent={Intent.PRIMARY}

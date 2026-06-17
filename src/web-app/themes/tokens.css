@@ -1,0 +1,227 @@
+/* ───────────────────────────────────────────────────────────────────────────
+ * Semantic design tokens + Blueprint bridge + shared structural surfaces.
+ *
+ * The harmonious core of the theme. Instead of hand-painting every component per
+ * engine×mode with hardcoded hex, we:
+ *   1. Define a small semantic palette per `[data-theme][data-engine]` combo
+ *      (--app-accent*, --app-bg, --app-chrome, --app-surface*, --app-border, --app-text*).
+ *   2. BRIDGE that palette into Blueprint's own token layer (--bp-intent-primary-*),
+ *      so every Blueprint component (buttons, links, tabs, focus rings, inputs,
+ *      selected rows, primary surfaces) re-tints to the engine accent automatically.
+ *   3. Drive the app's structural surfaces (header / sidebar / content / menus /
+ *      drawers / tables) from the SAME tokens via ONE shared set of structure rules —
+ *      only the token *values* differ per combo.
+ *
+ * Tokens are declared on <html> (data-theme lives there); structure rules match on
+ * body[data-engine] and read the inherited tokens. To re-tone a combo, edit its
+ * values block below — nothing else.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* Neutral fallbacks so a missing combo never renders empty surfaces. */
+:root {
+  --app-accent: var(--bp-intent-primary-rest, #2d72d2);
+  --app-accent-hover: var(--bp-intent-primary-hover, #215db0);
+  --app-accent-active: var(--bp-intent-primary-active, #184a90);
+  --app-accent-fg: #ffffff;
+  --app-accent-text: var(--app-accent);
+  --app-bg: var(--bp-surface-background-color-default-rest, #1c2127);
+  --app-chrome: var(--app-bg);
+  --app-surface: var(--app-bg);
+  --app-surface-strong: var(--app-surface);
+  --app-group-bg: var(--app-chrome);
+  --app-border: var(--bp-surface-border-color-default, rgba(255, 255, 255, 0.16));
+  --app-text: inherit;
+  --app-text-muted: var(--bp-typography-color-muted, #8a93a0);
+}
+
+/* ── DOCKER · DARK (deep blue) ────────────────────────────────────────────── */
+html[data-theme="bp6-dark"][data-engine="docker"] {
+  --app-accent: #2f7df0;
+  --app-accent-hover: #2569d6;
+  --app-accent-active: #1d56b8;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #6fb2ff;
+  --app-bg: #0d1834;
+  --app-chrome: #0a1228;
+  --app-surface: #16264f;
+  --app-surface-strong: #1f3a6b;
+  --app-group-bg: #122044;
+  --app-border: rgba(108, 162, 255, 0.16);
+  --app-text: #c8d3e6;
+  --app-text-muted: #8593ac;
+}
+
+/* ── DOCKER · LIGHT — neutral surfaces (clean grays + white), blue used ONLY as the accent.
+ *    Hierarchy: white app frame (header/sidebar) → soft-gray content backdrop → white cards/
+ *    menus → subtle-gray table headers. No blue wash on neutrals. */
+html[data-theme="bp6-light"][data-engine="docker"] {
+  --app-accent: #2563eb;
+  --app-accent-hover: #1d54c9;
+  --app-accent-active: #1a46a8;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #1f59cf;
+  --app-bg: #f4f6f9; /* content backdrop — soft cool gray so white surfaces lift off it */
+  --app-chrome: #ffffff; /* header + sidebar — white app frame */
+  --app-surface: #ffffff; /* cards, menus, drawers, screen-header bar */
+  --app-surface-strong: #eaedf2; /* table headers — near-neutral cool gray (accent reserved for interactive) */
+  --app-group-bg: #eef0f4; /* group-header rows — distinct from white body rows */
+  --app-border: #e2e6ec; /* neutral cool-gray hairline */
+  --app-text: #1b2430;
+  --app-text-muted: #5b6675;
+}
+
+/* ── PODMAN · DARK (deep purple) ──────────────────────────────────────────── */
+html[data-theme="bp6-dark"][data-engine="podman"] {
+  --app-accent: #a855c9;
+  --app-accent-hover: #9242b1;
+  --app-accent-active: #7b3398;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #d98fe8;
+  --app-bg: #211333;
+  --app-chrome: #170a20;
+  --app-surface: #321a44;
+  --app-surface-strong: #4a2360;
+  --app-group-bg: #2a1640;
+  --app-border: rgba(200, 140, 230, 0.17);
+  --app-text: #d8c9e2;
+  --app-text-muted: #9c87a9;
+}
+
+/* ── PODMAN · LIGHT (lavender) ────────────────────────────────────────────── */
+html[data-theme="bp6-light"][data-engine="podman"] {
+  --app-accent: #8e3aa8;
+  --app-accent-hover: #7b3093;
+  --app-accent-active: #66277a;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #82309c;
+  --app-bg: #f5f6f8; /* neutral light gray content backdrop — no purple wash */
+  --app-chrome: #ffffff; /* white app frame (header + sidebar) */
+  --app-surface: #ffffff; /* cards, menus, drawers */
+  --app-surface-strong: #eeecf1; /* table headers — near-neutral warm gray (accent reserved for interactive) */
+  --app-group-bg: #f1eff4; /* group-header rows — distinct from white body rows */
+  --app-border: #e4e2e7; /* neutral hairline */
+  --app-text: #241a2c;
+  --app-text-muted: #6a5b75;
+}
+
+/* ── BRIDGE → Blueprint's intent tokens.
+ *    intent-primary is per-combo (reads --app-accent*). intent-default is ONE neutral hue
+ *    per engine; Blueprint's own color-mix formulas adapt it per mode AND per variant —
+ *    solid default buttons/selects get a dim fill (color-mix with the palette base), while
+ *    minimal/outlined stay transparent (their rest is `background: none`). So default
+ *    buttons go subtly engine-tinted by moving ONE token — no per-component CSS, no
+ *    :not() variant-fighting. */
+[data-engine] {
+  --bp-intent-primary-rest: var(--app-accent);
+  --bp-intent-primary-hover: var(--app-accent-hover);
+  --bp-intent-primary-active: var(--app-accent-active);
+  --bp-intent-primary-foreground: var(--app-accent-fg);
+  /* Blueprint drives input focus rings, primary surfaces and primary text from
+     SEPARATE token families (not intent-primary). Bridge them too, or focus rings
+     and links stay stock blue under podman. Verified via computed box-shadow:
+     `.bp6-input:focus` reads --bp-surface-background-color-primary-hover. */
+  --bp-surface-background-color-primary-rest: var(--app-accent);
+  --bp-surface-background-color-primary-hover: var(--app-accent-hover);
+  --bp-surface-background-color-primary-active: var(--app-accent-active);
+  --bp-emphasis-focus-color: var(--app-accent);
+  --bp-typography-color-primary-rest: var(--app-accent-text);
+  --bp-typography-color-primary-hover: var(--app-accent-hover);
+  --bp-typography-color-primary-active: var(--app-accent-active);
+}
+[data-engine="docker"] {
+  --bp-intent-default-rest: #556a90;
+  --bp-intent-default-hover: #62769c;
+  --bp-intent-default-active: #4c5f83;
+}
+[data-engine="podman"] {
+  --bp-intent-default-rest: #6b5c88;
+  --bp-intent-default-hover: #786a96;
+  --bp-intent-default-active: #5e5179;
+}
+
+/* ── SHARED STRUCTURE — one rule per surface, engine/mode-agnostic, reads tokens.
+ *    Specificity (0,2,1) intentionally sits BELOW the engine files (0,3,1) so an
+ *    engine file can still override a single surface where it genuinely differs. */
+body[data-engine] {
+  background-color: var(--app-bg);
+}
+body[data-engine] .AppHeader,
+body[data-engine] .AppHeader .bp6-navbar {
+  background-color: var(--app-chrome);
+}
+body[data-engine] .AppContent {
+  background-color: var(--app-bg);
+}
+body[data-engine] .AppSidebar {
+  background-color: var(--app-chrome);
+}
+body[data-engine] .AppSidebarFooter,
+body[data-engine] .AppSidebarFooter .bp6-navbar {
+  background-color: var(--app-chrome);
+}
+body[data-engine] .AppScreenHeader .bp6-navbar,
+body[data-engine] .AppScreen .bp6-navbar {
+  background-color: var(--app-surface);
+}
+body[data-engine] .AppDrawer {
+  background-color: var(--app-surface);
+  box-shadow: none;
+}
+body[data-engine] .bp6-popover-content .bp6-menu {
+  background-color: var(--app-surface);
+}
+body[data-engine] .bp6-popover-arrow-fill {
+  fill: var(--app-surface);
+}
+body[data-engine] .AppDataTable thead {
+  background: var(--app-surface-strong);
+  border-bottom: 1px solid var(--app-border);
+}
+body[data-engine] .AppDataTableGroupRow,
+body[data-engine] .AppDataTableGroupRow td {
+  background-color: var(--app-group-bg);
+}
+body[data-engine] .AppDataFormHeader {
+  background: var(--app-chrome);
+}
+body[data-engine] .AppScreen[data-screen="dashboard"] .AppScreenContent p {
+  color: var(--app-accent-text);
+}
+body[data-engine] .DashboardContainersReportTable {
+  border-color: var(--app-accent-text);
+}
+body[data-engine] [data-screen="registries"] .AppScreenContentView[data-column="right"] {
+  background: linear-gradient(to bottom, var(--app-surface-strong), var(--app-bg), rgba(0, 0, 0, 0));
+}
+body[data-engine] [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
+  background-color: var(--app-surface);
+  border-color: var(--app-accent);
+}
+/* Notification Center — active segment tinted with the engine accent. */
+body[data-engine] .NotificationCenterSwitch .bp6-button.bp6-active,
+body[data-engine] .NotificationCenterSwitch .bp6-button.bp6-active:hover {
+  background-color: var(--app-accent);
+  color: var(--app-accent-fg);
+}
+
+/* Input / textarea focus ring. Blueprint hardcodes this to palette blue in its compiled
+   CSS (.bp6-input:focus, line ~8060) — there is NO token to bridge — so we override the
+   rule directly with the engine accent. Specificity is deliberate: `body .bp6-input:focus`
+   (0,2,1) beats the light base (0,2,0) but loses to intent rules (0,3,0), and the dark
+   selector (0,3,1) beats dark base (0,3,0) but loses to dark intent (0,4,0) — so
+   error/success/warning inputs keep their semantic ring; only default inputs re-tint. */
+body .bp6-input:focus,
+body .bp6-input.bp6-active,
+body .bp6-input[readonly]:focus {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent),
+    inset 0 1px 1px rgba(17, 20, 24, 0.2);
+}
+body.bp6-dark .bp6-input:focus,
+body.bp6-dark .bp6-input.bp6-active,
+body.bp6-dark .bp6-input[readonly]:focus {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent);
+}

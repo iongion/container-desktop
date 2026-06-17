@@ -4,7 +4,8 @@
   height: 100%;
   overflow: hidden;
   padding: 8px;
-  background: #000;
+  /* Follow the app surface token so the frame matches the theme (and per-engine dark tint) in all combos. */
+  background: var(--app-surface);
 }
 .TerminalViewContentWrap {
   position: relative;
@@ -23,4 +24,10 @@
 .TerminalViewContent .xterm-viewport {
   width: 100% !important;
   height: 100%;
+}
+/* xterm.css hardcodes .xterm .xterm-viewport background to #000 (for opaque scrollbars) and its WebGL
+   renderer never repaints it from the theme — override it to follow the app surface token instead. */
+.TerminalViewContent .xterm,
+.TerminalViewContent .xterm .xterm-viewport {
+  background-color: var(--app-surface);
 }

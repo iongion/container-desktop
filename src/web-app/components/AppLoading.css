@@ -9,12 +9,6 @@
   width: 256px;
   height: 256px;
 }
-[data-engine="podman"] .AppLoadingSplashLogo {
-  background: url("../images/podman-engine.svg") no-repeat;
-}
-[data-engine="docker"] .AppLoadingSplashLogo {
-  background: url("../images/docker-engine.svg") no-repeat;
-}
 .AppLoadingSplashContent {
   display: flex;
   width: 100%;
@@ -32,7 +26,7 @@
   margin-top: 4px;
   width: 400px;
   height: 90px;
-  border: 1px solid #333;
+  border: 1px solid var(--app-border);
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
