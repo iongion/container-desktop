@@ -140,6 +140,21 @@ def test_extract_changelog_section_rejects_missing_version():
         extract_changelog_section("# Changelog\n\n## [5.2.15] - 2026-01-01\n", "5.2.16")
 
 
+def test_extract_changelog_section_raises_on_empty_unreleased():
+    # The bump guard relies on this: an [Unreleased] with no body must raise.
+    text = "# Changelog\n\n## [Unreleased]\n\n## [5.3.0] - 2026-06-15\n\n- Shipped\n"
+    with pytest.raises(ValueError, match="empty"):
+        extract_changelog_section(text, "Unreleased")
+
+
+def test_extract_changelog_section_returns_unreleased_body_when_present():
+    text = "# Changelog\n\n## [Unreleased]\n\n## Added\n\n- New thing\n\n## [5.3.0] - 2026-06-15\n\n- Shipped\n"
+    out = extract_changelog_section(text, "Unreleased")
+    assert "## Added" in out
+    assert "- New thing" in out
+    assert "5.3.0" not in out
+
+
 # --- set_website_version ------------------------------------------------------
 
 

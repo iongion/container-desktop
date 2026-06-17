@@ -2,9 +2,10 @@ PROJECT_ROOT:=$(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TEMP_DIR:=$(PROJECT_ROOT)/temp
 RELAY_DIR:=$(PROJECT_ROOT)/support/container-desktop-relay
 UV_VERSION:=0.6.11
+PART?=patch
 
 
-.PHONY: clean prepare-python prepare-node prepare check format build-website test test-app test-relay test-tooling
+.PHONY: clean prepare-python prepare-node prepare check format build-website release test test-app test-relay test-tooling
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -46,6 +47,20 @@ build-website:
 	@echo "Building the website (website-src -> website)"
 	rm -fr website
 	yarn build:website
+
+# Cut a release: bump the version (commit + tag + push) then trigger the GitHub
+# CDPipeline for that tag. Unlike `inv release` (which builds/bundles locally),
+# this drives the cloud pipeline that builds every OS target, publishes the
+# GitHub release and — at the end — rebuilds and commits the website. Override
+# the bump size with `make release PART=minor` (default: patch). The bump aborts
+# if CHANGELOG.md [Unreleased] is empty, so document the release first.
+release:
+	@echo "Releasing: bump ($(PART)) then trigger CDPipeline"
+	uv run --locked invoke bump --part=$(PART) --perform
+	@V=$$(cat VERSION); echo "Triggering CDPipeline for $$V"; \
+	gh workflow run CDPipeline.yml --ref main \
+		-f git-ref=$$V -f stage=production -f target=all \
+		-f publish-release=true -f replace-release=false
 
 # Run the same verification set as CIPipeline.yml, locally. Mirrors its three jobs:
 # app (types/lint/tests/build), relay (Go) and tooling (Python). Run `make prepare`

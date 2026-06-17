@@ -10,7 +10,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-from invoke import Collection, task
+from invoke import Collection, Exit, task
 
 from support.versioning import (
     bump_version,
@@ -349,7 +349,18 @@ def bump(ctx, part="patch", perform=False):
 
     Increments package.json by --part (patch|minor|major), updates VERSION and
     the web manifest, and promotes the CHANGELOG [Unreleased] section.
+
+    Refuses to run when [Unreleased] is empty -- a release must document
+    something. The static website is intentionally NOT rebuilt here: it is
+    recompiled and committed at the end of CDPipeline, once the release assets
+    exist, so its download links never point at a not-yet-published version.
     """
+    # Refuse to release an empty changelog (extract_changelog_section raises on
+    # an empty section body); the same heading regex matches "[Unreleased]".
+    try:
+        extract_changelog_section(_read_text("CHANGELOG.md"), "Unreleased")
+    except ValueError as exc:
+        raise Exit(f"Refusing to bump: {exc} -- add entries to the [Unreleased] section first.") from exc
     current = read_source_version()
     version = bump_version(current, part)
     print(f"Bump {current} -> {version} ({part})" + ("" if perform else "  (dry-run; pass --perform)"))
@@ -360,9 +371,9 @@ def bump(ctx, part="patch", perform=False):
     if not perform:
         print("Re-run with --perform to write files, commit, tag and push.")
         return
-    build_website(ctx)  # regenerate website/ from website-src with the new version
     with ctx.cd(PROJECT_HOME):
-        ctx.run("git add -A")
+        # Stage only version-source files -- never the generated website/.
+        ctx.run("git add package.json VERSION public/manifest.json CHANGELOG.md")
         ctx.run(f'git commit -m "Release {version}"')
         ctx.run(f'git tag -a "{version}" -m "{version}"')
         ctx.run("git push")
