@@ -8,6 +8,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import { createRoot } from "react-dom/client";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 
+import { isMockMode } from "@/container-client/mock/mode";
 import { ContainerEngine, Environments } from "@/env/Types";
 
 import { App } from "./App";
@@ -20,6 +21,7 @@ dayjs.extend(relativeTime);
 export function renderApplication() {
   const container = document.getElementById("root");
   const root = createRoot(container!);
+  const showDevtools = CURRENT_ENVIRONMENT === Environments.DEVELOPMENT && !isMockMode();
   root.render(
     <QueryClientProvider client={queryClient}>
       <I18nContextProvider>
@@ -28,7 +30,7 @@ export function renderApplication() {
             <body className="bp6-dark" data-engine={ContainerEngine.PODMAN} />
           </Helmet>
           <App />
-          {CURRENT_ENVIRONMENT === Environments.DEVELOPMENT && <ReactQueryDevtools initialIsOpen={false} />}
+          {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
         </HelmetProvider>
       </I18nContextProvider>
     </QueryClientProvider>,

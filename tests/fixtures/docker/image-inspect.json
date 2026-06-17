@@ -1,0 +1,55 @@
+{
+  "sha256:11aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff77889900": {
+    "Id": "sha256:11aa22bb33cc44dd55ee66ff7788990011aa22bb33cc44dd55ee66ff77889900",
+    "RepoTags": ["nginx:1.27-alpine"],
+    "RepoDigests": ["nginx@sha256:1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff"],
+    "Created": "2024-11-02T09:15:00Z",
+    "Size": 24300000,
+    "VirtualSize": 24300000,
+    "Author": "NGINX Docker Maintainers",
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Labels": { "maintainer": "NGINX Docker Maintainers" },
+    "Config": {
+      "Env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "NGINX_VERSION=1.27"],
+      "Cmd": ["nginx", "-g", "daemon off;"],
+      "ExposedPorts": { "80/tcp": {} },
+      "Entrypoint": ["/docker-entrypoint.sh"]
+    }
+  },
+  "sha256:22bb33cc44dd55ee66ff77889900aabb22bb33cc44dd55ee66ff77889900aabb": {
+    "Id": "sha256:22bb33cc44dd55ee66ff77889900aabb22bb33cc44dd55ee66ff77889900aabb",
+    "RepoTags": ["node:22-alpine"],
+    "RepoDigests": ["node@sha256:222233334444555566667777888899990000aaaabbbbccccddddeeeeffff1111"],
+    "Created": "2024-10-28T14:00:00Z",
+    "Size": 174000000,
+    "VirtualSize": 174000000,
+    "Author": "Node.js Docker Team",
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Labels": null,
+    "Config": {
+      "Env": ["NODE_VERSION=22.11.0", "YARN_VERSION=1.22.22"],
+      "Cmd": ["node"],
+      "WorkingDir": "/srv/app",
+      "ExposedPorts": { "3000/tcp": {} }
+    }
+  },
+  "sha256:33cc44dd55ee66ff77889900aabbcc3333cc44dd55ee66ff77889900aabbcc33": {
+    "Id": "sha256:33cc44dd55ee66ff77889900aabbcc3333cc44dd55ee66ff77889900aabbcc33",
+    "RepoTags": ["mysql:8.4"],
+    "RepoDigests": ["mysql@sha256:33334444555566667777888899990000aaaabbbbccccddddeeeeffff11112222"],
+    "Created": "2024-10-23T08:00:00Z",
+    "Size": 611000000,
+    "VirtualSize": 611000000,
+    "Author": "Oracle",
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Labels": null,
+    "Config": {
+      "Env": ["MYSQL_MAJOR=8.4", "MYSQL_VERSION=8.4.3-1.el9"],
+      "Cmd": ["mysqld"],
+      "ExposedPorts": { "3306/tcp": {} }
+    }
+  }
+}

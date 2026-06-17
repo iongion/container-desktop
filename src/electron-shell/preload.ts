@@ -1,5 +1,7 @@
 import { contextBridge } from "electron";
 
+import { createMockCommand } from "@/container-client/mock/MockCommand";
+import { isMockMode } from "@/container-client/mock/mode";
 import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { ActivityBus, wrapCommandForActivity } from "./activityBus";
@@ -13,8 +15,11 @@ import { TrayBus } from "./trayBus";
 // then forward ProxyRequest to MAIN so the single engine connection (tunnel / relay / socket pool) lives
 // only there. The CLI/SSH methods stay local (one-shot, no persistent connection). This composed instance
 // is what both the global patch and the renderer see.
-const ActivityCommand = wrapCommandForActivity(Command);
-const ForwardingCommand: ICommand = { ...ActivityCommand, ProxyRequest: forwardProxyRequest };
+const BaseCommand = isMockMode() ? createMockCommand() : Command;
+const ActivityCommand = wrapCommandForActivity(BaseCommand);
+const ForwardingCommand: ICommand = isMockMode()
+  ? ActivityCommand
+  : { ...ActivityCommand, ProxyRequest: forwardProxyRequest };
 
 // Patch the shared platform globals (the same set main installs); preload adds the receive buses.
 installPlatformGlobals(global, {
@@ -34,6 +39,7 @@ function main() {
   contextBridge.exposeInMainWorld("ActivityBus", ActivityBus);
   contextBridge.exposeInMainWorld("TrayBus", TrayBus);
   contextBridge.exposeInMainWorld("ResourceBus", ResourceBus);
+  contextBridge.exposeInMainWorld("CONTAINER_DESKTOP_MOCK", process.env.CONTAINER_DESKTOP_MOCK ?? "");
   contextBridge.exposeInMainWorld("Preloaded", true);
 }
 

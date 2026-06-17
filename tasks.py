@@ -286,6 +286,13 @@ def build_website(ctx):
         run_env(ctx, "yarn build:website")
 
 
+@task(name="update-screenshots")
+def update_screenshots(ctx):
+    """Regenerate deterministic website screenshots from the mock backend."""
+    with ctx.cd(PROJECT_HOME):
+        run_env(ctx, "yarn screenshots")
+
+
 # --- versioning & release metadata ----------------------------------------
 #
 # package.json `version` is the single source of truth. `version-sync` and
@@ -530,6 +537,7 @@ namespace = Collection(
     version_sync,
     publish_release,
     publish_meta,
+    update_screenshots,
     start,
     build_website,
     checksums,

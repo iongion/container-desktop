@@ -11,6 +11,8 @@ import * as url from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 // project
 import { getActiveHostClient } from "@/container-client/adapters/shared";
+import { createMockCommand } from "@/container-client/mock/MockCommand";
+import { isMockMode } from "@/container-client/mock/mode";
 import { createLogger } from "@/logger";
 import { Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
@@ -36,9 +38,10 @@ const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const APP_PATH = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
 const PROJECT_HOME = path.dirname(path.dirname(__dirname));
+const MainCommand = isMockMode() ? createMockCommand() : Command;
 
 // Patch the shared platform globals (the same set the preload installs).
-installPlatformGlobals(global, { command: Command, messageBus: MessageBus, extras: { APP_PATH } });
+installPlatformGlobals(global, { command: MainCommand, messageBus: MessageBus, extras: { APP_PATH } });
 process.env.APP_PATH = APP_PATH;
 
 const runtime = createRuntime({ appDir: __dirname, appPath: APP_PATH, projectHome: PROJECT_HOME });

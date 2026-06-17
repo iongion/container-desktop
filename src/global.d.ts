@@ -98,6 +98,7 @@ declare global {
   var ActivityBus: IActivityBus;
   var TrayBus: ITrayBus;
   var ResourceBus: IResourceBus;
+  var CONTAINER_DESKTOP_MOCK: string;
 
   interface Window {
     Platform: IPlatform;
@@ -109,6 +110,7 @@ declare global {
     ActivityBus: IActivityBus;
     TrayBus: ITrayBus;
     ResourceBus: IResourceBus;
+    CONTAINER_DESKTOP_MOCK: string;
   }
 }
 

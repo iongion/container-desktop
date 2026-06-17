@@ -1,0 +1,23 @@
+{
+  "Volumes": [
+    {
+      "CreatedAt": "2024-11-02T09:14:00Z",
+      "Driver": "local",
+      "Labels": { "com.docker.compose.project": "shop", "com.docker.compose.volume": "web-data" },
+      "Mountpoint": "/var/lib/docker/volumes/web-data/_data",
+      "Name": "web-data",
+      "Options": {},
+      "Scope": "local"
+    },
+    {
+      "CreatedAt": "2024-11-02T08:28:00Z",
+      "Driver": "local",
+      "Labels": { "com.docker.compose.project": "shop", "com.docker.compose.volume": "db-data" },
+      "Mountpoint": "/var/lib/docker/volumes/db-data/_data",
+      "Name": "db-data",
+      "Options": {},
+      "Scope": "local"
+    }
+  ],
+  "Warnings": null
+}

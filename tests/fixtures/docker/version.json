@@ -1,0 +1,18 @@
+{
+  "Version": "27.3.1",
+  "ApiVersion": "1.47",
+  "MinAPIVersion": "1.24",
+  "GitCommit": "41ca978",
+  "GoVersion": "go1.23.1",
+  "Os": "linux",
+  "Arch": "amd64",
+  "KernelVersion": "6.8.0-generic",
+  "BuildTime": "2024-10-27T00:00:00Z",
+  "Components": [
+    {
+      "Name": "Engine",
+      "Version": "27.3.1",
+      "Details": { "ApiVersion": "1.47", "MinAPIVersion": "1.24", "GitCommit": "41ca978" }
+    }
+  ]
+}

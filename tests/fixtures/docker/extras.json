@@ -1,0 +1,75 @@
+{
+  "versionText": "Docker version 27.3.1, build 41ca978",
+  "logs": [
+    "2024-11-02T09:15:01Z /docker-entrypoint.sh: Configuration complete; ready for start up",
+    "2024-11-02T09:15:01Z nginx: [notice] using the \"epoll\" event method",
+    "2024-11-02T09:15:02Z nginx: [notice] start worker processes",
+    "2024-11-02T09:15:02Z 172.18.0.3 - - \"GET /health HTTP/1.1\" 200"
+  ],
+  "stats": {
+    "e1f2a3b4c5d6f70819203a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d": {
+      "read": "2024-11-02T12:00:00Z",
+      "preread": "2024-11-02T11:59:59Z",
+      "cpu_stats": {
+        "cpu_usage": { "total_usage": 93500000, "percpu_usage": [12000000, 11000000], "usage_in_kernelmode": 12000000, "usage_in_usermode": 81500000 },
+        "system_cpu_usage": 9900000000,
+        "online_cpus": 8,
+        "throttling_data": { "periods": 0, "throttled_periods": 0, "throttled_time": 0 }
+      },
+      "precpu_stats": {
+        "cpu_usage": { "total_usage": 93200000, "percpu_usage": [11900000, 10900000], "usage_in_kernelmode": 11900000, "usage_in_usermode": 81300000 },
+        "system_cpu_usage": 9890000000,
+        "online_cpus": 8,
+        "throttling_data": { "periods": 0, "throttled_periods": 0, "throttled_time": 0 }
+      },
+      "memory_stats": { "usage": 20971520, "max_usage": 23068672, "limit": 8589934592 },
+      "pids_stats": { "current": 4 },
+      "blkio_stats": {
+        "io_service_bytes_recursive": [],
+        "io_serviced_recursive": null,
+        "io_queue_recursive": null,
+        "io_service_time_recursive": null,
+        "io_wait_time_recursive": null,
+        "io_merged_recursive": null,
+        "io_time_recursive": null,
+        "sectors_recursive": null
+      },
+      "networks": {
+        "eth0": {
+          "rx_bytes": 2097152,
+          "rx_packets": 2100,
+          "rx_errors": 0,
+          "rx_dropped": 0,
+          "tx_bytes": 1048576,
+          "tx_packets": 1480,
+          "tx_errors": 0,
+          "tx_dropped": 0
+        }
+      }
+    }
+  },
+  "top": {
+    "Titles": ["UID", "PID", "PPID", "C", "STIME", "TTY", "TIME", "CMD"],
+    "Processes": [
+      ["root", "1", "0", "0", "09:15", "?", "00:00:00", "nginx: master process nginx -g daemon off;"],
+      ["nginx", "21", "1", "0", "09:15", "?", "00:00:00", "nginx: worker process"],
+      ["nginx", "22", "1", "0", "09:15", "?", "00:00:00", "nginx: worker process"]
+    ]
+  },
+  "securityReport": {
+    "scanner": "trivy",
+    "status": "success",
+    "counts": { "CRITICAL": 0, "HIGH": 2, "MEDIUM": 4, "LOW": 8, "UNKNOWN": 0 },
+    "result": [
+      {
+        "Target": "nginx:1.27-alpine (alpine 3.20)",
+        "Class": "os-pkgs",
+        "Type": "alpine",
+        "Vulnerabilities": [
+          { "VulnerabilityID": "CVE-2024-1001", "PkgName": "libcrypto3", "InstalledVersion": "3.3.0-r1", "FixedVersion": "3.3.0-r2", "Severity": "HIGH", "Title": "openssl: example overflow", "Description": "Mock libcrypto package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-1001", "Published": "2024-09-12T12:00:00Z" },
+          { "VulnerabilityID": "CVE-2024-1002", "PkgName": "musl", "InstalledVersion": "1.2.5-r0", "FixedVersion": "1.2.5-r1", "Severity": "MEDIUM", "Title": "musl: example resolver issue", "Description": "Mock musl package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-1002", "Published": "2024-08-24T09:30:00Z" }
+        ]
+      }
+    ]
+  }
+}

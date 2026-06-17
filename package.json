@@ -21,6 +21,7 @@
     "build:renderer": "vite build --mode=production --config vite.config.renderer.mjs",
     "build:website": "eleventy",
     "dev:website": "eleventy --serve --port=8088",
+    "screenshots": "node support/screenshots.mjs --mode=dev",
     "bundle": "cross-env DEBUG=electron-builder electron-builder --config electron-builder-config.cjs",
     "release": "yarn build && yarn bundle",
     "release:github": "node support/release-artifacts.cjs publish",

@@ -1,0 +1,62 @@
+[
+  {
+    "Id": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "ParentId": "",
+    "RepoTags": ["docker.io/library/nginx:1.27-alpine"],
+    "RepoDigests": ["docker.io/library/nginx@sha256:1234567890abcdef"],
+    "Names": ["docker.io/library/nginx:1.27-alpine"],
+    "Created": 1730538900,
+    "CreatedAt": "2024-11-02T09:15:00Z",
+    "Size": 24300000,
+    "VirtualSize": 24300000,
+    "SharedSize": 0,
+    "Containers": 2,
+    "Digest": "sha256:1234567890abcdef",
+    "Labels": { "maintainer": "NGINX Docker Maintainers" }
+  },
+  {
+    "Id": "sha256:b2c3d4e5f6071829a3b4c5d6e7f8091ab2c3d4e5f6071829a3b4c5d6e7f8091a",
+    "ParentId": "",
+    "RepoTags": ["docker.io/library/postgres:16"],
+    "RepoDigests": ["docker.io/library/postgres@sha256:abcdef1234567890"],
+    "Names": ["docker.io/library/postgres:16"],
+    "Created": 1729500000,
+    "CreatedAt": "2024-10-21T08:00:00Z",
+    "Size": 438000000,
+    "VirtualSize": 438000000,
+    "SharedSize": 0,
+    "Containers": 1,
+    "Digest": "sha256:abcdef1234567890",
+    "Labels": { "maintainer": "PostgreSQL Docker Community" }
+  },
+  {
+    "Id": "sha256:c3d4e5f6071829a3b4c5d6e7f8091a2bc3d4e5f6071829a3b4c5d6e7f8091a2b",
+    "ParentId": "",
+    "RepoTags": ["docker.io/library/redis:7-alpine"],
+    "RepoDigests": ["docker.io/library/redis@sha256:7890abcdef123456"],
+    "Names": ["docker.io/library/redis:7-alpine"],
+    "Created": 1728900000,
+    "CreatedAt": "2024-10-14T10:00:00Z",
+    "Size": 41200000,
+    "VirtualSize": 41200000,
+    "SharedSize": 0,
+    "Containers": 1,
+    "Digest": "sha256:7890abcdef123456",
+    "Labels": null
+  },
+  {
+    "Id": "sha256:d4e5f6071829a3b4c5d6e7f8091a2b3cd4e5f6071829a3b4c5d6e7f8091a2b3c",
+    "ParentId": "",
+    "RepoTags": ["docker.io/library/alpine:3.20"],
+    "RepoDigests": ["docker.io/library/alpine@sha256:abc123def456"],
+    "Names": ["docker.io/library/alpine:3.20"],
+    "Created": 1727000000,
+    "CreatedAt": "2024-09-22T12:00:00Z",
+    "Size": 7800000,
+    "VirtualSize": 7800000,
+    "SharedSize": 0,
+    "Containers": 0,
+    "Digest": "sha256:abc123def456",
+    "Labels": null
+  }
+]
