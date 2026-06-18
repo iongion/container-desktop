@@ -2,8 +2,8 @@
 // ResourceSync broker, the ResourceBus preload bridge, and the renderer store mirrors. Neutral module so
 // both processes import it without pulling in Zustand/Electron.
 
-import type { ResourceDomain } from "./resourceDomains";
 import type { ConnectorCapabilities } from "@/env/Types";
+import type { ResourceDomain } from "./resourceDomains";
 
 export type ConnectionPhase = "idle" | "starting" | "ready" | "failed" | "reconnecting";
 

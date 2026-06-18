@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { CreateMachineOptions, PodmanMachine, PodmanMachineInspect } from "@/env/Types";
-import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { liveQueryOptions } from "@/web-app/domain/queryClient";
 
 export const machineKeys = {
   all: ["machines"] as const,

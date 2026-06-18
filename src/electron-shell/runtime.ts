@@ -3,8 +3,8 @@
 // Electron's `app` + the bundle location), so this module itself imports no Electron and is trivial to
 // reason about. A different shell would supply its own RuntimePaths + URL.
 
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import * as url from "node:url";
 
 import { OperatingSystem } from "@/env/Types";
