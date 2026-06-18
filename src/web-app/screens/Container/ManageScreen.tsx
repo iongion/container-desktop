@@ -193,13 +193,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 const groupSelectedCount = groupIds.reduce((n, id) => n + (selection.isSelected(id) ? 1 : 0), 0);
                 const groupChecked = groupIds.length > 0 && groupSelectedCount === groupIds.length;
                 const groupIndeterminate = groupSelectedCount > 0 && groupSelectedCount < groupIds.length;
+                // Groups are built per-connection, so all items share one connection — qualify React keys by it
+                // (a pod/group named e.g. "lamp" can exist on several engines at once in the merged workspace).
+                const connId = containers[0]?.connectionId ?? "";
                 return (
-                  <React.Fragment key={group.Name || group.Id}>
+                  <React.Fragment key={`${connId}:${group.Name || group.Id}`}>
                     {containers.map((container, index) => {
-                      const renderKey = `containerRowKey-${group.Name || group.Id}-${container.Id}`;
+                      const renderKey = `containerRowKey-${connId}-${group.Name || group.Id}-${container.Id}`;
                       const groupName = container.Computed.Group;
                       const isCollapsed = groupName && !!collapse[groupName];
-                      const containerGroupItemKey = `containerGroupKey-${group.Name || group.Id}-${container.Id}`;
+                      const containerGroupItemKey = `containerGroupKey-${connId}-${group.Name || group.Id}-${container.Id}`;
                       const containerGroupRow =
                         isPartOfGroup && index === 0 ? (
                           <tr
@@ -367,7 +370,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         );
                       }
                       const row = (
-                        <React.Fragment key={container.Id}>
+                        <React.Fragment key={getRowId(container)}>
                           {containerGroupRow}
                           {containerGroupData}
                         </React.Fragment>

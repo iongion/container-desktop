@@ -1,66 +1,16 @@
-/* ConnectionsMenu — header popover listing every configured connection with live per-connection status.
-   Engine-agnostic chrome via app tokens (works under podman/docker/unified); status dots are semantic. */
-.ConnectionsMenuButton .bp6-button-text {
-  font-variant-numeric: tabular-nums;
+/* ConnectionsMenu — connections popover (standard Blueprint Menu/MenuItem) listing every configured
+   connection. Status is shown by the connect/disconnect icon's color (no separate dot); engine by name. */
+.ConnectionsMenu {
+  min-width: 300px;
+  max-width: 420px;
 }
-.ConnectionsMenuPanel {
-  min-width: 280px;
-  max-width: 380px;
-  padding: 6px;
-  background: var(--app-surface);
-  color: var(--app-text);
-}
-.ConnectionsMenuHeading {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.6;
-  padding: 4px 6px 6px;
-}
-.ConnectionsMenuEmpty {
-  padding: 8px 6px;
-  opacity: 0.7;
-  font-size: 12px;
-}
-.ConnectionsMenuRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: 4px;
-}
-.ConnectionsMenuRow:hover {
-  background: var(--app-surface-strong);
-}
-.ConnectionsMenuStatus {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #888a83;
-}
-.ConnectionsMenuStatus[data-status="ready"] {
-  background: #2ecc71;
-}
-.ConnectionsMenuStatus[data-status="failed"] {
-  background: #e76a6e;
-}
-.ConnectionsMenuStatus[data-status="idle"] {
-  background: #888a83;
-}
+/* Connection name + inline "primary" tag (kept compact; Menu handles row layout/hover). */
 .ConnectionsMenuName {
-  flex: 1 1 auto;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-width: 0;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .ConnectionsMenuPrimaryTag {
-  flex: 0 0 auto;
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -71,4 +21,34 @@
 }
 .ConnectionsMenuActions {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+/* Keep every part of a connection row vertically centered (the PRIMARY pill and action buttons must not
+   shift the baseline), and keep the icon-only action buttons tight so they add no stray vertical margin. */
+.ConnectionsMenu .bp6-menu-item {
+  align-items: center;
+  font-size: 12px;
+}
+/* The label slot holds the action buttons — make it a centered flex row so they sit on the row's midline. */
+.ConnectionsMenu .bp6-menu-item-label {
+  display: flex;
+  align-items: center;
+}
+.ConnectionsMenuActions .bp6-button {
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Icon-only action buttons: drop any (empty) text span and icon text-gap so the glyph is dead-centered with
+   no stray right/bottom space. */
+.ConnectionsMenuActions .bp6-button .bp6-button-text {
+  display: none;
+}
+.ConnectionsMenuActions .bp6-button > svg {
+  margin: 0;
 }

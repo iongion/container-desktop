@@ -173,19 +173,35 @@ function AppLayout() {
     startApplication();
   }, [startApplication]);
 
-  let content: React.ReactNode;
-  if (ready) {
-    content = <Outlet />;
-  } else if (phase === AppBootstrapPhase.FAILED) {
-    content = (
-      <div className="AppScreenViewport">
-        <UserSettingsScreen navigator={window.navigator} />
-        <AppFooter />
-      </div>
-    );
-  } else {
-    content = <AppLoading />;
-  }
+  // De-gated shell: once bootstrap is past the splash, routes ALWAYS render — per-connection status (failed /
+  // reconnecting / disconnected) shows inline. The full-screen takeover is gone, so every sidebar link works.
+  const booting = phase === AppBootstrapPhase.INITIAL || phase === AppBootstrapPhase.STARTING;
+
+  // Landing: when bootstrap finishes with nothing connected, route to the connection manager so the user can
+  // connect/fix an engine; once the first engine comes up there, advance into the workspace (Dashboard). Both
+  // are one-shot and the advance only fires from the landing screen, so manual navigation and transient
+  // mid-session drops are never hijacked.
+  const landedRef = useRef(false);
+  const prevRunningRef = useRef(false);
+  useEffect(() => {
+    if (!ready) {
+      return;
+    }
+    if (!landedRef.current) {
+      landedRef.current = true;
+      prevRunningRef.current = !!running;
+      if (!running) {
+        router.navigate({ to: ConnectionsScreen.Route.Path });
+      }
+      return;
+    }
+    if (running && !prevRunningRef.current && currentScreen?.Route?.Path === ConnectionsScreen.Route.Path) {
+      router.navigate({ to: DashboardScreen.Route.Path });
+    }
+    prevRunningRef.current = !!running;
+  }, [ready, running, currentScreen]);
+
+  const content: React.ReactNode = booting ? <AppLoading /> : <Outlet />;
 
   return (
     <>
@@ -204,7 +220,7 @@ function AppLayout() {
         suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
       >
         <div className="AppContent">
-          {phase === AppBootstrapPhase.STARTING || !currentScreen ? null : (
+          {booting || !currentScreen ? null : (
             <AppSidebar disabled={!ready} screens={Screens} currentScreen={currentScreen} />
           )}
           <div className="AppContentDocument">

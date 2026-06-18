@@ -1,5 +1,7 @@
-import { Intent, Navbar, NavbarDivider, NavbarHeading, Tag } from "@blueprintjs/core";
+import { Button, Intent, Navbar, NavbarDivider, NavbarHeading, Tag } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/web-app/App.i18n";
+import { ConnectionsMenu } from "@/web-app/components/ConnectionsMenu";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import "./AppFooter.css";
@@ -22,21 +24,29 @@ export const AppFooter = () => {
     <div className="AppFooter">
       <Navbar className="AppFooterNavbar">
         <NavbarHeading>
-          <Tag
-            className="AppFooterCurrentConnectorBadge"
-            round
-            intent={isConnected ? Intent.SUCCESS : Intent.DANGER}
-            data-connected={isConnected ? "yes" : "no"}
-            htmlTitle={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
-          >
-            {connectedCount}
-          </Tag>
-          <div
-            className="AppFooterCurrentConnector"
-            title={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
-          >
-            {isConnected ? t("Connected") : t("Disconnected")}
-          </div>
+          {/* Single entry point for connections: this status button opens the connect/disconnect menu
+              (the caret-up end icon hints the popover opens upward). */}
+          <ConnectionsMenu>
+            <Button
+              className="AppFooterConnectionsButton"
+              variant="minimal"
+              size="small"
+              data-connected={isConnected ? "yes" : "no"}
+              endIcon={IconNames.CARET_UP}
+              aria-label={t("Connections")}
+              title={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
+            >
+              <Tag
+                className="AppFooterCurrentConnectorBadge"
+                round
+                intent={isConnected ? Intent.SUCCESS : Intent.DANGER}
+                data-connected={isConnected ? "yes" : "no"}
+              >
+                {connectedCount}
+              </Tag>
+              <span className="AppFooterCurrentConnector">{isConnected ? t("Connected") : t("Disconnected")}</span>
+            </Button>
+          </ConnectionsMenu>
         </NavbarHeading>
         {expandSidebar || !isConnected ? null : (
           <>

@@ -986,6 +986,36 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
           </FormGroup>
         ) : null}
 
+        {/* Auto-reconnect after a drop (engine stop / SSH broken / internet down) — overrides the global default */}
+        {host ? (
+          <FormGroup
+            className="ContainerStartupFormGroup"
+            disabled={pending}
+            labelFor="settings.api.autoReconnect"
+            label={t("Connection recovery")}
+          >
+            <Controller
+              control={control}
+              name="settings.api.autoReconnect"
+              render={({ field: { onChange, onBlur, value, name, ref } }) => {
+                return (
+                  <Switch
+                    label={t("Automatically reconnect if this connection drops")}
+                    inline
+                    disabled={pending}
+                    id={name}
+                    name={name}
+                    checked={value ?? true}
+                    onBlur={onBlur}
+                    onChange={onChange}
+                    inputRef={ref}
+                  />
+                );
+              }}
+            />
+          </FormGroup>
+        ) : null}
+
         {host ? (
           <Controller
             control={control}

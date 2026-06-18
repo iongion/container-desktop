@@ -4,7 +4,7 @@
 
 import type { ResourceDomain } from "./resourceDomains";
 
-export type ConnectionPhase = "idle" | "starting" | "ready" | "failed";
+export type ConnectionPhase = "idle" | "starting" | "ready" | "failed" | "reconnecting";
 
 // Per-connection runtime for a connection main has attempted to bring up (multi-connection: several at once).
 export interface ConnectionRuntimeInfo {
@@ -19,6 +19,12 @@ export interface ConnectionRuntimeInfo {
   // version), populated by main when the connection comes up. Lets the renderer show the REAL version of
   // EVERY connected engine, not just the primary.
   version?: string;
+  // Auto-reconnect bookkeeping: main schedules a back-off retry when a live connection drops (engine stop,
+  // SSH broken, internet down). Surfaced so the connection manager / footer can render "Reconnecting… (N)"
+  // and the next attempt time, without a separate channel.
+  reconnecting?: boolean;
+  attempt?: number;
+  nextRetryAt?: number;
 }
 
 // Main owns the CONNECTION phase + connection identity; the renderer keeps its own UI-bootstrap phase
@@ -44,8 +50,20 @@ export interface ResourceSyncSnapshot {
   resources: ResourceSnapshotByConnection;
 }
 
+// One connect-progress line streamed from main as it brings a connection up (or retries it after a drop).
+// Appended into the renderer's bootstrap phase box so multi-engine progress interleaves, labeled per engine.
+export interface ResourceConnectProgress {
+  connectionId: string;
+  engine: string;
+  name: string;
+  trace: string;
+  phase: ConnectionPhase;
+  ts: number;
+}
+
 export const RESOURCE_SYNC = {
   snapshot: "resource:snapshot", // main → renderers (push)
+  progress: "resource:progress", // main → renderers (push): one per-connection connect/reconnect progress line
   getSnapshot: "resource:get-snapshot", // renderer → main (invoke, returns ResourceSyncSnapshot)
   refresh: "resource:refresh", // renderer → main (send): refresh a domain now (post-mutation nudge)
   ensureConnected: "resource:ensure-connected", // renderer → main (invoke): connect to id (idempotent), await ready

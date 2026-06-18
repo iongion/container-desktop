@@ -10,6 +10,7 @@ import { RESOURCE_SYNC } from "@/container-client/resourceSyncProtocol";
 
 const SUBSCRIBABLE = new Set<string>([
   RESOURCE_SYNC.snapshot, // main -> renderers
+  RESOURCE_SYNC.progress, // main -> renderers (per-connection connect/reconnect progress)
 ]);
 
 export const ResourceBus = {

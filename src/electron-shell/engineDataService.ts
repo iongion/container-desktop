@@ -23,16 +23,22 @@ import {
 import type {
   AppRuntimeSnapshot,
   ConnectionRuntimeInfo,
+  ResourceConnectProgress,
   ResourceSnapshotByConnection,
   ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import type { Connection } from "@/env/Types";
+import type { Connection, GlobalUserSettings } from "@/env/Types";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
 export type { AppRuntimeSnapshot, ConnectionPhase } from "@/container-client/resourceSyncProtocol";
 
 const EVENT_REFRESH_DEBOUNCE_MS = 500;
+// A /events stream that closes within this window of opening never really established (an engine/mock with no
+// working /events endpoint) — treat it as "no live events", NOT a drop to reconnect.
+const EVENTS_MIN_UPTIME_MS = 1500;
+// Ready at least this long ⇒ the connection proved stable, so the NEXT drop restarts back-off from scratch.
+const RECONNECT_STABLE_MS = 30000;
 
 // Per-connection resource state: each domain holds the LIST of its items (ResourceItemsByDomain[D] is singular).
 type ResourceState = { [D in ResourceDomain]: ResourceItemsByDomain[D][] };
@@ -78,6 +84,16 @@ export class EngineDataService {
   private primaryId?: string;
   // Primary connection's machine cache for the tray menu (see getMachines); per-connection cache in the map.
   private machines: Array<{ name: string; running: boolean }> = [];
+  // Auto-reconnect bookkeeping: the full Connection (to rebuild a dropped host), the pending back-off timer +
+  // attempt counter per id, and the set of connections the USER explicitly disconnected (never auto-reconnect
+  // those until an explicit reconnect). See handleDrop/scheduleReconnect.
+  private readonly connectionById = new Map<string, Connection>();
+  private readonly reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly reconnectAttempts = new Map<string, number>();
+  private readonly userDisconnected = new Set<string>();
+  // After a successful connect we wait RECONNECT_STABLE_MS before zeroing the attempt counter, so a flapping
+  // connection keeps backing off instead of resetting to a tight retry every time it briefly connects.
+  private readonly stabilizeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   subscribe(listener: () => void): () => void {
     this.emitter.on("change", listener);
@@ -86,8 +102,21 @@ export class EngineDataService {
     };
   }
 
+  // Per-connection connect/reconnect progress (a separate event from "change"): the broker fans these to
+  // renderers on their own channel so the bootstrap phase box can stream multi-engine progress interleaved.
+  subscribeProgress(listener: (progress: ResourceConnectProgress) => void): () => void {
+    this.emitter.on("progress", listener);
+    return () => {
+      this.emitter.off("progress", listener);
+    };
+  }
+
   private emitChange(): void {
     this.emitter.emit("change");
+  }
+
+  private emitProgress(progress: Omit<ResourceConnectProgress, "ts">): void {
+    this.emitter.emit("progress", { ...progress, ts: Date.now() } satisfies ResourceConnectProgress);
   }
 
   getResourceState(connectionId: string): ResourceState {
@@ -187,6 +216,9 @@ export class EngineDataService {
   // from the connection manager. Failures are isolated per connection (Promise.allSettled) so one offline
   // engine never blocks the others or the app.
   async connectAll(): Promise<void> {
+    // Boot / connect-all is an explicit "bring everything up" intent — clear any prior user-disconnect
+    // suppression so auto-reconnect is armed again for this session.
+    this.userDisconnected.clear();
     const connections = await this.loadConnections();
     const app = this.ensureApp();
     const userSettings = await app.getGlobalUserSettings();
@@ -209,7 +241,15 @@ export class EngineDataService {
   async connectOne(connection: Connection): Promise<void> {
     const id = connection.id;
     const desc = descriptorOf(connection);
+    this.connectionById.set(id, connection); // remembered so a drop can rebuild this host without a disk read
     this.runtimeByConnection.set(id, { ...desc, phase: "starting", running: false });
+    this.emitProgress({
+      connectionId: id,
+      engine: desc.engine,
+      name: desc.name,
+      trace: "connecting",
+      phase: "starting",
+    });
     this.emitChange();
     try {
       const app = this.ensureApp();
@@ -226,6 +266,7 @@ export class EngineDataService {
           running: true,
           version: engineVersionOf(connection, host),
         });
+        this.markConnected(id); // arm the stability timer; cancels any pending retry (no tight back-off reset)
         await this.refreshAll(id, host);
         const machines = await this.loadMachines(host);
         this.machinesByConnection.set(id, machines);
@@ -240,16 +281,29 @@ export class EngineDataService {
         if (host.capabilities.events) {
           this.stopEventsByConnection.set(id, await this.connectEvents(id, host));
         }
+        this.emitProgress({ connectionId: id, engine: desc.engine, name: desc.name, trace: "ready", phase: "ready" });
       } else {
         this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false });
+        this.emitProgress({
+          connectionId: id,
+          engine: desc.engine,
+          name: desc.name,
+          trace: "unavailable",
+          phase: "failed",
+        });
+        this.maybeContinueReconnect(connection, "engine unavailable");
       }
     } catch (error: any) {
-      this.runtimeByConnection.set(id, {
-        ...desc,
+      const reason = `${error?.message ?? error}`;
+      this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false, error: reason });
+      this.emitProgress({
+        connectionId: id,
+        engine: desc.engine,
+        name: desc.name,
+        trace: `failed: ${reason}`,
         phase: "failed",
-        running: false,
-        error: `${error?.message ?? error}`,
       });
+      this.maybeContinueReconnect(connection, reason);
     }
     this.emitChange();
   }
@@ -257,6 +311,10 @@ export class EngineDataService {
   // Disconnect ONE connection: stop its stream, drop its host/machines/runtime/resource state. Other
   // connections are untouched. Reassigns the primary if the disconnected one was primary.
   async disconnectOne(connectionId: string): Promise<void> {
+    // Explicit user disconnect: suppress auto-reconnect and cancel any pending back-off retry. The stream's
+    // own close handler is a no-op here (stop() flips the intentional-stop flag before tearing it down).
+    this.userDisconnected.add(connectionId);
+    this.clearReconnect(connectionId);
     const stop = this.stopEventsByConnection.get(connectionId);
     if (stop) {
       stop();
@@ -290,6 +348,8 @@ export class EngineDataService {
     if (!this.primaryId) {
       this.primaryId = target.id;
     }
+    // Explicit (re)connect intent re-arms auto-reconnect for this connection.
+    this.userDisconnected.delete(target.id);
     await this.connectOne(target);
   }
 
@@ -307,8 +367,159 @@ export class EngineDataService {
     await this.ensureConnected(targetConnectionId);
   }
 
+  // ── Auto-reconnect (drop recovery) ──────────────────────────────────────────────────────────────────
+
+  // A live connection dropped: tear down its dead host/stream and start (or continue) a back-off retry,
+  // unless the user explicitly disconnected it. Called from the /events stream's end/error/close handlers.
+  private handleDrop(connectionId: string, reason: string): void {
+    if (this.userDisconnected.has(connectionId)) {
+      return;
+    }
+    const connection = this.connectionById.get(connectionId);
+    if (!connection) {
+      return;
+    }
+    this.stopEventsByConnection.delete(connectionId);
+    this.hostByConnection.delete(connectionId);
+    void this.scheduleReconnect(connection, reason);
+  }
+
+  // Continue an in-progress back-off cycle when a reconnect attempt itself fails. A FIRST-time connect
+  // failure (no cycle in flight) is left as "failed" and not retried — only drops of a live connection
+  // auto-reconnect.
+  private maybeContinueReconnect(connection: Connection, reason: string): void {
+    if (this.reconnectAttempts.has(connection.id) && !this.userDisconnected.has(connection.id)) {
+      void this.scheduleReconnect(connection, reason);
+    }
+  }
+
+  // Mark the connection "reconnecting", emit a progress line, and schedule the next connectOne after a
+  // full-jittered exponential back-off. Honors the per-connection / global enable flag and maxRetries.
+  private async scheduleReconnect(connection: Connection, reason: string): Promise<void> {
+    const id = connection.id;
+    if (this.userDisconnected.has(id)) {
+      return;
+    }
+    const desc = descriptorOf(connection);
+    const policy = await this.resolveReconnectPolicy(connection);
+    const attempt = (this.reconnectAttempts.get(id) ?? 0) + 1;
+    const giveUp = !policy.enabled || (policy.maxRetries != null && attempt > policy.maxRetries);
+    if (giveUp) {
+      this.reconnectAttempts.delete(id);
+      this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false, error: reason });
+      this.emitProgress({
+        connectionId: id,
+        engine: desc.engine,
+        name: desc.name,
+        trace: policy.enabled ? "reconnect gave up" : `connection lost: ${reason}`,
+        phase: "failed",
+      });
+      this.emitChange();
+      return;
+    }
+    this.reconnectAttempts.set(id, attempt);
+    const delay = this.backoffDelay(attempt, policy);
+    this.runtimeByConnection.set(id, {
+      ...desc,
+      phase: "reconnecting",
+      running: false,
+      error: reason,
+      reconnecting: true,
+      attempt,
+      nextRetryAt: Date.now() + delay,
+    });
+    this.emitProgress({
+      connectionId: id,
+      engine: desc.engine,
+      name: desc.name,
+      trace: `reconnecting in ${Math.max(1, Math.round(delay / 1000))}s (attempt ${attempt})`,
+      phase: "reconnecting",
+    });
+    this.emitChange();
+    const existing = this.reconnectTimers.get(id);
+    if (existing) {
+      clearTimeout(existing);
+    }
+    this.reconnectTimers.set(
+      id,
+      setTimeout(() => {
+        this.reconnectTimers.delete(id);
+        if (!this.userDisconnected.has(id)) {
+          void this.connectOne(connection);
+        }
+      }, delay),
+    );
+  }
+
+  // A connection just came up: cancel any pending retry and (re)arm a stability timer that zeroes the attempt
+  // counter only after it has stayed up RECONNECT_STABLE_MS — so a flapping engine keeps backing off instead
+  // of resetting to a tight retry on every brief connect.
+  private markConnected(connectionId: string): void {
+    const retry = this.reconnectTimers.get(connectionId);
+    if (retry) {
+      clearTimeout(retry);
+      this.reconnectTimers.delete(connectionId);
+    }
+    const existing = this.stabilizeTimers.get(connectionId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+    this.stabilizeTimers.set(
+      connectionId,
+      setTimeout(() => {
+        this.stabilizeTimers.delete(connectionId);
+        this.reconnectAttempts.delete(connectionId);
+      }, RECONNECT_STABLE_MS),
+    );
+  }
+
+  // Cancel any pending retry/stabilize timers + reset the attempt counter (on a user disconnect or give-up).
+  private clearReconnect(connectionId: string): void {
+    const timer = this.reconnectTimers.get(connectionId);
+    if (timer) {
+      clearTimeout(timer);
+      this.reconnectTimers.delete(connectionId);
+    }
+    const stabilize = this.stabilizeTimers.get(connectionId);
+    if (stabilize) {
+      clearTimeout(stabilize);
+      this.stabilizeTimers.delete(connectionId);
+    }
+    this.reconnectAttempts.delete(connectionId);
+  }
+
+  // Effective policy: the per-connection override wins, else the global default (enabled by default), with a
+  // 1s→30s ×2 back-off unless the user tuned it.
+  private async resolveReconnectPolicy(
+    connection: Connection,
+  ): Promise<{ enabled: boolean; initialMs: number; maxMs: number; factor: number; maxRetries?: number }> {
+    let global: GlobalUserSettings["reconnect"];
+    try {
+      global = (await this.ensureApp().getGlobalUserSettings())?.reconnect;
+    } catch {
+      global = undefined;
+    }
+    const perConnection = connection.settings?.api?.autoReconnect;
+    return {
+      enabled: perConnection ?? global?.enabled ?? true,
+      initialMs: global?.initialMs ?? 1000,
+      maxMs: global?.maxMs ?? 30000,
+      factor: global?.factor ?? 2,
+      maxRetries: global?.maxRetries,
+    };
+  }
+
+  // Full-jittered exponential back-off (floored at 250ms) so simultaneous drops — e.g. internet down taking
+  // every remote at once — don't retry in lockstep.
+  private backoffDelay(attempt: number, policy: { initialMs: number; maxMs: number; factor: number }): number {
+    const base = Math.min(policy.maxMs, policy.initialMs * policy.factor ** Math.max(0, attempt - 1));
+    return Math.max(250, Math.floor(Math.random() * base));
+  }
+
   // Minimal /events attach: parse JSON lines → onEngineEvent (debounced refresh). Returns a stop handle so a
-  // connection disconnect can detach this connection's stream. Reconnect/fallback polling are a later refinement.
+  // connection disconnect can detach this connection's stream. An UNEXPECTED end/error/close is treated as a
+  // drop → handleDrop schedules an auto-reconnect with back-off; the stop handle flips `stopped` first so an
+  // intentional teardown is never mistaken for a drop.
   private async connectEvents(connectionId: string, host: HostClientFacade): Promise<() => void> {
     try {
       const stream = (await host.getEventsStream({ since: `${Math.floor(Date.now() / 1000)}` })) as
@@ -318,6 +529,8 @@ export class EngineDataService {
         return () => undefined;
       }
       let buffer = "";
+      let stopped = false;
+      const openedAt = Date.now();
       stream.on("data", (chunk: unknown) => {
         buffer += typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk as Uint8Array);
         const lines = buffer.split(/\r?\n/);
@@ -334,7 +547,25 @@ export class EngineDataService {
           }
         }
       });
+      // A live connection that loses its event stream has dropped (engine stopped, SSH/socket broken,
+      // internet down). De-dupe end/error/close; an intentional teardown (stop() sets `stopped`) is ignored.
+      const onDropped = (reason: string) => {
+        if (stopped) {
+          return;
+        }
+        stopped = true;
+        // A stream that closes almost immediately never really opened (e.g. an engine/mock without a working
+        // /events endpoint): treat it as "no live events here", not a drop — leave the connection ready.
+        if (Date.now() - openedAt < EVENTS_MIN_UPTIME_MS) {
+          return;
+        }
+        this.handleDrop(connectionId, reason);
+      };
+      stream.on("end", () => onDropped("connection ended"));
+      stream.on("error", (error: any) => onDropped(`connection error: ${error?.message ?? error}`));
+      stream.on("close", () => onDropped("connection closed"));
       return () => {
+        stopped = true;
         try {
           if (stream.destroy) {
             stream.destroy();

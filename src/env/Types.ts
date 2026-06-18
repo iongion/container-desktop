@@ -116,6 +116,16 @@ export interface GlobalUserSettings {
   connector: {
     default: string | undefined;
   };
+  // Auto-reconnect policy applied when a live connection drops (engine stop, SSH broken, internet down).
+  // Global default; a connection may override via its api.autoReconnect. Optional for back-compat — main
+  // falls back to enabled with a 1s→30s exponential back-off when this is absent.
+  reconnect?: {
+    enabled: boolean;
+    initialMs?: number;
+    maxMs?: number;
+    factor?: number;
+    maxRetries?: number;
+  };
   registries: Registry[];
 }
 
@@ -153,6 +163,9 @@ export interface EngineConnectorApiSettings {
   baseURL: string;
   connection: ApiConnection;
   autoStart?: boolean;
+  // Per-connection override for auto-reconnect after a drop. Unset = inherit the global default
+  // (GlobalUserSettings.reconnect.enabled). true/false force it for this connection.
+  autoReconnect?: boolean;
 }
 
 export interface EngineConnectorSettings {

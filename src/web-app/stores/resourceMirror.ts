@@ -7,6 +7,7 @@ import type { ResourceDomain } from "@/container-client/resourceDomains";
 import { RESOURCE_SYNC, type ResourceSyncSnapshot } from "@/container-client/resourceSyncProtocol";
 import { createLogger } from "@/logger";
 
+import { useAppStore } from "./appStore";
 import { useResourceStore } from "./resourceStore";
 
 const logger = createLogger("resource.mirror");
@@ -21,6 +22,12 @@ export function applyResourceSyncSnapshot(snapshot: ResourceSyncSnapshot): void 
   }
   // Mirror the per-connection runtime so the connection manager / footer render live multi-engine status.
   store.setActiveRuntime(snapshot.appRuntime?.active ?? []);
+  // Project the merged app-runtime onto the shell phase (the single readiness source): this flips the app to
+  // READY as soon as the first engine connects, and keeps it there as connections come/go — so connectOne /
+  // connectAll / disconnectOne move the shell automatically, with no per-action setPhase.
+  if (snapshot.appRuntime) {
+    useAppStore.getState().applyAppRuntime(snapshot.appRuntime);
+  }
 }
 
 let started = false;

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import type { Connection } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { ConnectIcon, DisconnectIcon } from "@/web-app/components/icons/ConnectionIcons";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
@@ -131,7 +132,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
           className="ConnectionToggle"
           size="small"
           disabled={isStarting}
-          icon={isConnected ? IconNames.POWER : IconNames.OFFLINE}
+          icon={isConnected ? <DisconnectIcon /> : <ConnectIcon />}
           intent={isConnected ? Intent.SUCCESS : Intent.NONE}
           text={isConnected ? t("Disconnect") : t("Connect")}
           title={!isConnected && unavailableReason ? unavailableReason : t("Connect")}

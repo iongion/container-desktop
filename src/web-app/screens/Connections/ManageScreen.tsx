@@ -141,7 +141,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   let title = "";
   let errorMessage = "";
   let icon: any;
-  const connectionFailureReason = currentConnector?.availability.api
+  const connectionFailureReason = currentConnector?.availability?.api
     ? undefined
     : getFirstUnavailableReason(currentConnector?.availability);
   const hasDefaultConnection = Boolean(
@@ -152,7 +152,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     title = t("No connections defined");
     errorMessage = t("To be able to continue, at least one connection needs to be defined.");
     icon = mdiEmoticonSad;
-  } else if (currentConnector && !currentConnector.availability.api) {
+  } else if (currentConnector && !currentConnector.availability?.api) {
     title = t("Connection failed");
     errorMessage = connectionFailureReason?.reason
       ? t("Connection to {{name}} failed: {{reason}}", {

@@ -55,6 +55,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [setGlobalUserSettings],
   );
+  const onAutoReconnect = useCallback(
+    async (e) => {
+      await setGlobalUserSettings({
+        reconnect: { ...userSettings.reconnect, enabled: !!e.currentTarget.checked },
+      });
+    },
+    [setGlobalUserSettings, userSettings.reconnect],
+  );
   const onLoggingLevelChange = useCallback(
     async (e) => {
       const configuration: Partial<GlobalUserSettingsOptions> = {};
@@ -163,6 +171,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 label={t("Automatically check for new version at startup")}
                 checked={!!userSettings.checkLatestVersion}
                 onChange={onCheckLatestVersion}
+              />
+            </ControlGroup>
+            <ControlGroup>
+              <Checkbox
+                id="autoReconnect"
+                label={t("Automatically reconnect dropped connections")}
+                checked={userSettings.reconnect?.enabled ?? true}
+                onChange={onAutoReconnect}
               />
             </ControlGroup>
           </FormGroup>

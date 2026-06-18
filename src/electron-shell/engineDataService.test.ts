@@ -113,6 +113,77 @@ describe("EngineDataService.performAction", () => {
   });
 });
 
+describe("EngineDataService auto-reconnect", () => {
+  const conn = (id: string, autoReconnect?: boolean) =>
+    ({ id, name: id, engine: ContainerEngine.PODMAN, settings: { api: { autoReconnect } } }) as any;
+
+  it("does NOT reconnect a connection the user explicitly disconnected", () => {
+    const service = new EngineDataService();
+    const sched = vi.fn();
+    (service as any).scheduleReconnect = sched;
+    (service as any).connectionById.set("c1", conn("c1"));
+    (service as any).userDisconnected.add("c1");
+    (service as any).handleDrop("c1", "socket closed");
+    expect(sched).not.toHaveBeenCalled();
+  });
+
+  it("marks a dropped connection 'reconnecting' and retries connectOne after the back-off", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    (service as any).resolveReconnectPolicy = async () => ({
+      enabled: true,
+      initialMs: 1000,
+      maxMs: 30000,
+      factor: 2,
+    });
+    const connectCalls: string[] = [];
+    (service as any).connectOne = async (c: any) => {
+      connectCalls.push(c.id);
+    };
+    (service as any).connectionById.set("c1", conn("c1"));
+    (service as any).handleDrop("c1", "socket closed");
+    await vi.advanceTimersByTimeAsync(0); // let scheduleReconnect's awaited policy resolve
+    expect(service.getAppRuntimeSnapshot().active?.find((r) => r.id === "c1")?.phase).toBe("reconnecting");
+    await vi.advanceTimersByTimeAsync(30000); // exceed the (jittered, ≤1s) attempt-1 delay
+    expect(connectCalls).toEqual(["c1"]);
+    vi.useRealTimers();
+  });
+
+  it("leaves a dropped connection 'failed' (no retry) when auto-reconnect is disabled", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    (service as any).resolveReconnectPolicy = async () => ({
+      enabled: false,
+      initialMs: 1000,
+      maxMs: 30000,
+      factor: 2,
+    });
+    const connectCalls: string[] = [];
+    (service as any).connectOne = async (c: any) => {
+      connectCalls.push(c.id);
+    };
+    (service as any).connectionById.set("c1", conn("c1"));
+    (service as any).handleDrop("c1", "socket closed");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(service.getAppRuntimeSnapshot().active?.find((r) => r.id === "c1")?.phase).toBe("failed");
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(connectCalls).toEqual([]);
+    vi.useRealTimers();
+  });
+
+  it("back-off is floored at 250ms and capped at maxMs", () => {
+    const service = new EngineDataService();
+    const policy = { initialMs: 1000, maxMs: 30000, factor: 2 };
+    const rnd = vi.spyOn(Math, "random");
+    rnd.mockReturnValue(0);
+    expect((service as any).backoffDelay(1, policy)).toBe(250); // jitter 0 → floor
+    rnd.mockReturnValue(0.999999);
+    expect((service as any).backoffDelay(1, policy)).toBeLessThanOrEqual(1000); // attempt-1 base
+    expect((service as any).backoffDelay(50, policy)).toBeLessThanOrEqual(30000); // capped at maxMs
+    rnd.mockRestore();
+  });
+});
+
 describe("EngineDataService.getMachines", () => {
   it("is empty by default and is refreshed (and notifies) after a machine action", async () => {
     const fakeHost = {

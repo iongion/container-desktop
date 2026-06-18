@@ -9,6 +9,7 @@
 import type { ResourceDomain } from "@/container-client/resourceDomains";
 import {
   RESOURCE_SYNC,
+  type ResourceConnectProgress,
   type ResourceRefreshRequest,
   type ResourceSwitchRequest,
   type ResourceSyncSnapshot,
@@ -22,6 +23,7 @@ export interface ResourceSyncBrokerDeps {
     ensureConnected(targetConnectionId?: string): Promise<void>;
     connectAll?(): Promise<void>;
     disconnectOne?(connectionId: string): Promise<void>;
+    subscribeProgress?(cb: (progress: ResourceConnectProgress) => void): () => void;
   };
   /** Register an invoke (request/response) handler — wraps ipcMain.handle in production. */
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
@@ -35,6 +37,7 @@ export interface ResourceSyncBrokerDeps {
 
 export class ResourceSyncBroker {
   private unsubscribe: (() => void) | null = null;
+  private progressUnsubscribe: (() => void) | null = null;
 
   constructor(private readonly deps: ResourceSyncBrokerDeps) {}
 
@@ -78,10 +81,17 @@ export class ResourceSyncBroker {
     this.unsubscribe = this.deps.service.subscribe(() => {
       this.deps.broadcast(RESOURCE_SYNC.snapshot, this.deps.service.getSyncSnapshot());
     });
+    // Per-connection connect/reconnect progress lines: pushed on their own channel (decoupled from the
+    // coarse snapshot cadence) so the renderer's bootstrap phase box can stream them interleaved per engine.
+    this.progressUnsubscribe =
+      this.deps.service.subscribeProgress?.((progress) => this.deps.broadcast(RESOURCE_SYNC.progress, progress)) ??
+      null;
   }
 
   dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = null;
+    this.progressUnsubscribe?.();
+    this.progressUnsubscribe = null;
   }
 }
