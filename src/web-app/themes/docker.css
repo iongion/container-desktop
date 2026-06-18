@@ -131,6 +131,11 @@ body.bp6-light[data-engine="docker"] .AppDataTableGroupLinkHorizontal {
   filter: invert(1);
 }
 
+/* Sidebar-footer engine glyph: the colored Docker logo, overriding the unified default in AppSidebarFooter.css. */
+[data-engine="docker"] .AppSidebarFooter .bp6-navbar {
+  background-image: url("../images/docker-engine.svg");
+}
+
 /* Sidebar-footer engine glyph. In light mode the Docker brand-blue logo clashes with the
    neutral chrome and reads louder than the adjacent framework icons (moon/info/chevrons,
    which are --bp-typography-color-muted #5f6b7c). Render it as a neutral monochrome icon

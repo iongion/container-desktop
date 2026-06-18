@@ -61,6 +61,31 @@ body.bp6-light[data-engine="podman"] {
   --find-widget-border: #dcdcdc;
 }
 
+/* UNIFIED (merged multi-engine) — engine-agnostic teal, matching the unified chrome accent. Without these the
+   find widget falls back to the docker-blue :root defaults under the unified theme. */
+body[data-engine="unified"] {
+  --find-term-match: #1d5a52;
+  --find-term-active: #14b8a6;
+}
+body.bp6-dark[data-engine="unified"] {
+  --find-accent: #14b8a6;
+  --find-hl-bg: rgba(20, 184, 166, 0.3);
+  --find-hl-active-bg: #14b8a6;
+  --find-hl-active-fg: #04231f;
+  --find-widget-bg: #15302b;
+  --find-widget-fg: #f6f7f9;
+  --find-widget-border: #1d5a52;
+}
+body.bp6-light[data-engine="unified"] {
+  --find-accent: #0d9488;
+  --find-hl-bg: rgba(13, 148, 136, 0.22);
+  --find-hl-active-bg: #0d9488;
+  --find-hl-active-fg: #ffffff;
+  --find-widget-bg: #ffffff;
+  --find-widget-fg: #1c2127;
+  --find-widget-border: #c7d6d2;
+}
+
 /* DOM-screen match painting via the CSS Custom Highlight API. */
 ::highlight(cd-find) {
   background-color: var(--find-hl-bg);
