@@ -42,6 +42,18 @@
   align-items: center;
   justify-content: center;
 }
+/* The connections button uses a Blueprint icon (DATA_CONNECTION). Blueprint paints button icons with its own
+   MUTED gray (`.bp6-dark .bp6-button:not([class*="bp6-intent-"]) .bp6-icon`, specificity 0,5,0), so beside the
+   white mdi icons it reads as "disabled". Pin it to the SAME per-theme color the sibling mdi `.ReactIcon` icons
+   use (white in dark; muted slate in light — the whole header icon set is intentionally muted in light) so the
+   header stays consistent in every theme. The `body.bp6-*` prefix lifts these to (0,5,1) to clear Blueprint's
+   (0,5,0) without `!important`; disabled header buttons still get Blueprint's dimmed icon. */
+body.bp6-dark .AppHeaderActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
+  color: #fff;
+}
+body.bp6-light .AppHeaderActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
+  color: #5f6b7c;
+}
 .App-projectNameVersion {
   display: flex;
   flex: 1;
