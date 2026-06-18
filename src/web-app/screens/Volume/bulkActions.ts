@@ -1,7 +1,8 @@
-// screens/Volume/bulkActions.ts — bulk action config for the Volumes list. Volumes only support a single
-// destructive Remove action; there are no lifecycle states, so the eligibility predicate is always true.
-// Volumes are keyed by Name (not Id). Wires to the same VolumesAdapter.remove method the single-row mutation
-// uses; one list refresh runs after the batch (by BulkActionsBar).
+// screens/Volume/bulkActions.ts — bulk action config for the merged Volumes list. Volumes only support a
+// single destructive Remove action; there are no lifecycle states, so the eligibility predicate is always
+// true. Volumes are keyed by Name (not Id). The always-merged selection can span engines, so each run routes
+// to the item's OWN connection (resolveConnectionHost → a connection-scoped VolumesAdapter) and the
+// post-batch refresh nudges every connected engine. One list refresh runs after the batch (by BulkActionsBar).
 
 import { Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
@@ -11,20 +12,25 @@ import { useTranslation } from "react-i18next";
 import { VolumesAdapter } from "@/container-client/adapters/volumes";
 import type { Volume } from "@/env/Types";
 import type { BulkAction } from "@/web-app/components/Bulk";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
-export function useVolumeBulkActions(connId: string): {
-  actions: BulkAction<Volume>[];
-  getId: (item: Volume) => string;
+type MergedVolume = MergedResource<Volume>;
+
+export function useVolumeBulkActions(): {
+  actions: BulkAction<MergedVolume>[];
+  getId: (item: MergedVolume) => string;
   refresh: () => Promise<void>;
 } {
   const { t } = useTranslation();
   return useMemo(() => {
-    const adapter = new VolumesAdapter();
     const refresh = async () => {
-      await resourceEvents.refresh(connId, "volumes");
+      for (const id of getConnectedConnectionIds()) {
+        await resourceEvents.refresh(id, "volumes");
+      }
     };
-    const actions: BulkAction<Volume>[] = [
+    const actions: BulkAction<MergedVolume>[] = [
       {
         key: "remove",
         label: t("Remove"),
@@ -32,9 +38,9 @@ export function useVolumeBulkActions(connId: string): {
         intent: Intent.DANGER,
         destructive: true,
         eligible: () => true,
-        run: (v) => adapter.remove(v.Name),
+        run: async (v) => new VolumesAdapter(await resolveConnectionHost(v.connectionId)).remove(v.Name),
       },
     ];
-    return { actions, getId: (item: Volume) => item.Name, refresh };
-  }, [connId, t]);
+    return { actions, getId: (item: MergedVolume) => item.Name, refresh };
+  }, [t]);
 }

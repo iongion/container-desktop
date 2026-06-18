@@ -1,13 +1,12 @@
 import {
   Alignment,
+  AnchorButton,
   Button,
   ButtonGroup,
   Intent,
   Navbar,
   NavbarGroup,
   NavbarHeading,
-  PopoverInteractionKind,
-  PopoverNext,
   Spinner,
   SpinnerSize,
 } from "@blueprintjs/core";
@@ -17,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppTheme } from "@/web-app/App.types";
 import { PROJECT_VERSION } from "@/web-app/Environment";
+import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 import "./AppSidebarFooter.css";
@@ -57,40 +57,21 @@ export function AppSidebarFooter() {
   }
   const versionString = `v${PROJECT_VERSION}`;
   const programString = programInfo.version ? `${programInfo.name} ${programInfo.version}` : "";
-  let rightContent = pending ? (
+  // Settings cog → user settings (mirrors the titlebar's cog); replaces the old version-info popover button.
+  const rightContent = pending ? (
     <div className="AppSidebarFooterPendingIndicator">
       <Spinner intent={Intent.PRIMARY} size={SpinnerSize.SMALL} />
     </div>
-  ) : null;
-  if (!expandSidebar) {
-    rightContent = (
-      <PopoverNext
-        usePortal={false}
-        inheritDarkTheme
-        transitionDuration={0}
-        interactionKind={PopoverInteractionKind.CLICK}
-        popoverClassName="bp6-popover-content-sizing AppSidebarInfoPopover"
-        placement="top-start"
-        content={
-          <div className="AppSidebarFooterVersionsMenu">
-            <span className="AppSidebarVersionString">
-              <strong>GUI</strong> {versionString}
-            </span>
-            {programString ? (
-              <>
-                <br />
-                <span className="AppSidebarProgramString" title={programTitle}>
-                  <strong>CLI</strong> {programString || "current"}
-                </span>
-              </>
-            ) : null}
-          </div>
-        }
-      >
-        <Button className="AppSidebarInfoButton" variant="minimal" icon={IconNames.INFO_SIGN} />
-      </PopoverNext>
-    );
-  }
+  ) : (
+    <AnchorButton
+      className="AppSidebarSettingsButton"
+      variant="minimal"
+      icon={IconNames.COG}
+      href={pathTo("/screens/settings/user-settings")}
+      title={t("Settings")}
+      aria-label={t("Settings")}
+    />
+  );
   return (
     <div className="AppSidebarFooter">
       <div className="AppSidebarFooterOverlay">

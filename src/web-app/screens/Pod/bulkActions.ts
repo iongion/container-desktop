@@ -14,38 +14,45 @@ import { useTranslation } from "react-i18next";
 import { PodsAdapter } from "@/container-client/adapters/pods";
 import { type Pod, PodStatusList } from "@/env/Types";
 import type { BulkAction } from "@/web-app/components/Bulk";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
+
+// Always-merged selection can span engines, so each run routes to the item's OWN connection.
+type MergedPod = MergedResource<Pod>;
 
 export const podCanPause = (status: PodStatusList) => status === PodStatusList.RUNNING;
 export const podCanStop = (status: PodStatusList) => status === PodStatusList.RUNNING;
 export const podCanRestart = (status: PodStatusList) => status === PodStatusList.RUNNING;
 export const podCanStart = (status: PodStatusList) => status !== PodStatusList.RUNNING;
 
-export function usePodBulkActions(connId: string): {
-  actions: BulkAction<Pod>[];
-  getId: (item: Pod) => string;
+export function usePodBulkActions(): {
+  actions: BulkAction<MergedPod>[];
+  getId: (item: MergedPod) => string;
   refresh: () => Promise<void>;
 } {
   const { t } = useTranslation();
   return useMemo(() => {
-    const adapter = new PodsAdapter();
+    // Pods refresh both pods and containers on every connected engine.
     const refresh = async () => {
-      await resourceEvents.refreshMany(connId, ["pods", "containers"]);
+      for (const id of getConnectedConnectionIds()) {
+        await resourceEvents.refreshMany(id, ["pods", "containers"]);
+      }
     };
-    const actions: BulkAction<Pod>[] = [
+    const actions: BulkAction<MergedPod>[] = [
       {
         key: "pause",
         label: t("Pause"),
         icon: IconNames.PAUSE,
         eligible: (p) => podCanPause(p.Status),
-        run: (p) => adapter.pause(p.Id),
+        run: async (i) => new PodsAdapter(await resolveConnectionHost(i.connectionId)).pause(i.Id),
       },
       {
         key: "stop",
         label: t("Stop"),
         icon: IconNames.STOP,
         eligible: (p) => podCanStop(p.Status),
-        run: (p) => adapter.stop(p.Id),
+        run: async (i) => new PodsAdapter(await resolveConnectionHost(i.connectionId)).stop(i.Id),
       },
       {
         // Start = resume a paused pod, or start (restart) a non-running one.
@@ -53,14 +60,17 @@ export function usePodBulkActions(connId: string): {
         label: t("Start"),
         icon: IconNames.PLAY,
         eligible: (p) => podCanStart(p.Status),
-        run: (p) => (p.Status === PodStatusList.PAUSED ? adapter.unpause(p.Id) : adapter.restart(p.Id)),
+        run: async (i) =>
+          i.Status === PodStatusList.PAUSED
+            ? new PodsAdapter(await resolveConnectionHost(i.connectionId)).unpause(i.Id)
+            : new PodsAdapter(await resolveConnectionHost(i.connectionId)).restart(i.Id),
       },
       {
         key: "restart",
         label: t("Restart"),
         icon: IconNames.RESET,
         eligible: (p) => podCanRestart(p.Status),
-        run: (p) => adapter.restart(p.Id),
+        run: async (i) => new PodsAdapter(await resolveConnectionHost(i.connectionId)).restart(i.Id),
       },
       {
         key: "remove",
@@ -69,9 +79,9 @@ export function usePodBulkActions(connId: string): {
         intent: Intent.DANGER,
         destructive: true,
         eligible: () => true,
-        run: (p) => adapter.remove(p.Id),
+        run: async (i) => new PodsAdapter(await resolveConnectionHost(i.connectionId)).remove(i.Id),
       },
     ];
-    return { actions, getId: (item: Pod) => item.Id, refresh };
-  }, [connId, t]);
+    return { actions, getId: (item: MergedPod) => item.Id, refresh };
+  }, [t]);
 }

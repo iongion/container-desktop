@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Unified (merged multi-engine) mark: three overlapping nodes forming one cluster — "multiple
+     engines → one platform". Graduated teal mirrors the `unified` theme accent (tokens.css).
+     Solid/opaque (no blend mode) so the mark stays legible as a CSS background on BOTH the
+     dark-slate and light-gray unified chrome. -->
+<svg
+   width="100%"
+   height="100%"
+   viewBox="0 0 256 256"
+   version="1.1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <g fill-rule="evenodd">
+    <circle cx="128" cy="90" r="52" fill="#2dd4bf" />
+    <circle cx="92" cy="152" r="52" fill="#0d9488" />
+    <circle cx="164" cy="152" r="52" fill="#14b8a6" />
+  </g>
+</svg>

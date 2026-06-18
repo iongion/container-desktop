@@ -5,7 +5,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import type { SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
-import { useRouteParams } from "@/web-app/Navigator";
+import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
@@ -20,7 +20,9 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const { id } = useRouteParams<{ id: string }>();
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const { connId } = useRouteSearch<{ connId?: string }>();
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connId || primaryConnectionId;
   const decodedId = decodeURIComponent(id || "");
   const imageQuery = useImage(connectionId, decodedId);
   const image = imageQuery.data;

@@ -3,11 +3,11 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type Container, ContainerEngineHost, ContainerStateList, OperatingSystem } from "@/env/Types";
+import { ContainerEngineHost, ContainerStateList, OperatingSystem } from "@/env/Types";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
+import { useMergedResources } from "@/web-app/hooks/useMergedResources";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import "./Dashboard.css";
@@ -17,16 +17,12 @@ export const Title = "Dashboard";
 
 export interface ScreenProps extends AppScreenProps {}
 
-const EMPTY_CONTAINERS: Container[] = [];
-
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const osType = useAppStore((state) => state.osType);
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id;
-  const containers = useResourceStore((state) =>
-    connectionId ? state.byConnection[connectionId]?.containers.items || EMPTY_CONTAINERS : EMPTY_CONTAINERS,
-  );
+  // Always-merged workspace: aggregate container stats across every connected engine.
+  const containers = useMergedResources("containers");
   const host = currentConnector?.host;
   const program = currentConnector?.settings.program;
   const scope = currentConnector?.settings.controller?.scope || "";

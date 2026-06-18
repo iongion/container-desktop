@@ -11,12 +11,18 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
+import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import {
+  type MergedResource,
+  mergedKey,
+  useIsUnifiedMode,
+  useMergedResources,
+  useResourceReload,
+} from "@/web-app/hooks/useMergedResources";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { resourceEvents } from "@/web-app/stores/resourceEvents";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
@@ -29,17 +35,21 @@ export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "networks";
 
-const EMPTY_NETWORKS: Network[] = [];
+// Always-merged workspace: rows come from every connected engine, each carrying its engine/connection.
+type MergedNetwork = MergedResource<Network>;
 
 const createNetworkSearchFilter = (searchTerm: string) => {
   const query = searchTerm.toLowerCase();
-  return (network: Network) => {
-    const haystacks = [network.name || "", network.id || ""].map((value) => value.toLowerCase());
+  return (network: MergedNetwork) => {
+    const haystacks = [network.name, network.id, network.engine, network.connectionName].map((value) =>
+      `${value ?? ""}`.toLowerCase(),
+    );
     return haystacks.some((value) => value.includes(query));
   };
 };
 
-const networkSortSelectors: SortSelectors<Network> = {
+const networkSortSelectors: SortSelectors<MergedNetwork> = {
+  engine: (network) => network.engine,
   name: (network) => network.name,
   id: (network) => network.id,
   driver: (network) => network.driver,
@@ -54,28 +64,26 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id;
   const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
     ID,
     currentConnector?.capabilities?.sort,
   );
-  const networkSnapshot = useResourceStore((state) =>
-    connectionId ? state.byConnection[connectionId]?.networks.items || EMPTY_NETWORKS : EMPTY_NETWORKS,
-  );
+  const networkSnapshot = useMergedResources("networks");
   const networks = useMemo(() => {
     const items = searchTerm ? networkSnapshot.filter(createNetworkSearchFilter(searchTerm)) : networkSnapshot;
     return clientSort
       ? sortByField(items, clientSort, networkSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.name, b.name));
   }, [clientSort, networkSnapshot, searchTerm]);
-  const visibleIds = useMemo(() => (networks || []).map((n) => n.id), [networks]);
+  // Composite selection/React key — ids collide across engines, so qualify each by its connection.
+  const getRowId = useCallback((network: MergedNetwork) => mergedKey(network, network.id), []);
+  const visibleIds = useMemo(() => networks.map(getRowId), [networks, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
-  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useNetworkBulkActions(connectionId || "");
-  const onReload = useCallback(() => {
-    if (connectionId) {
-      resourceEvents.refresh(connectionId, "networks");
-    }
-  }, [connectionId]);
+  const { actions: bulkActions, refresh: bulkRefresh } = useNetworkBulkActions();
+  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
+  const unified = useIsUnifiedMode();
+  // Always-merged: a manual reload refreshes this domain on every connected engine.
+  const onReload = useResourceReload("networks");
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -89,7 +97,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <>
                 <BulkActionsBar
                   items={networks || []}
-                  getId={bulkGetId}
+                  getId={getRowId}
                   selectedIds={selection.selectedIds}
                   actions={bulkActions}
                   onClear={selection.clear}
@@ -164,20 +172,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
+                <EngineColumnHeader unified={unified} />
               </tr>
             </thead>
             <tbody>
               {(networks || []).map((network) => {
+                const rowId = getRowId(network);
                 const creationDate =
                   typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
                 return (
-                  <tr key={network.id} data-network={network.id}>
+                  <tr key={rowId} data-network={network.id} data-engine-row={unified ? network.engine : undefined}>
                     <td>
                       <AnchorButton
                         className="InspectNetworkButton"
                         variant="minimal"
                         size="small"
-                        href={getNetworkUrl(network.id, "inspect")}
+                        href={getNetworkUrl(network.id, "inspect", network.connectionId)}
                         intent={Intent.PRIMARY}
                         icon={IconNames.EYE_OPEN}
                       >
@@ -195,14 +205,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{network.dns_enabled ? t("Yes") : t("No")}</td>
                     <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                     <td>
-                      <ActionsMenu withoutCreate network={network} />
+                      <ActionsMenu withoutCreate network={network} connectionId={network.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">
                       <SelectionCheckbox
-                        checked={selection.isSelected(network.id)}
-                        onChange={() => selection.toggle(network.id)}
+                        checked={selection.isSelected(rowId)}
+                        onChange={() => selection.toggle(rowId)}
                       />
                     </td>
+                    <EngineColumnCell
+                      unified={unified}
+                      engine={network.engine}
+                      connectionName={network.connectionName}
+                    />
                   </tr>
                 );
               })}

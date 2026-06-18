@@ -1,7 +1,8 @@
-// screens/Secret/bulkActions.ts — bulk action config for the Secrets list. Secrets support a single
-// destructive Remove; there is no lifecycle state to gate on, so the action is always eligible. Wires to
-// the same SecretsAdapter method the single-row mutation uses; one list refresh runs after the batch
-// (by BulkActionsBar).
+// screens/Secret/bulkActions.ts — bulk action config for the merged Secrets list. Secrets support a single
+// destructive Remove; there is no lifecycle state to gate on, so the action is always eligible. The
+// always-merged selection can span engines, so each run routes to the item's OWN connection
+// (resolveConnectionHost → a connection-scoped SecretsAdapter) and the post-batch refresh nudges every
+// connected engine. One list refresh runs after the batch (by BulkActionsBar).
 
 import { Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
@@ -11,20 +12,25 @@ import { useTranslation } from "react-i18next";
 import { SecretsAdapter } from "@/container-client/adapters/secrets";
 import type { Secret } from "@/env/Types";
 import type { BulkAction } from "@/web-app/components/Bulk";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
-export function useSecretBulkActions(connId: string): {
-  actions: BulkAction<Secret>[];
-  getId: (item: Secret) => string;
+type MergedSecret = MergedResource<Secret>;
+
+export function useSecretBulkActions(): {
+  actions: BulkAction<MergedSecret>[];
+  getId: (item: MergedSecret) => string;
   refresh: () => Promise<void>;
 } {
   const { t } = useTranslation();
   return useMemo(() => {
-    const adapter = new SecretsAdapter();
     const refresh = async () => {
-      await resourceEvents.refresh(connId, "secrets");
+      for (const id of getConnectedConnectionIds()) {
+        await resourceEvents.refresh(id, "secrets");
+      }
     };
-    const actions: BulkAction<Secret>[] = [
+    const actions: BulkAction<MergedSecret>[] = [
       {
         key: "remove",
         label: t("Remove"),
@@ -32,9 +38,9 @@ export function useSecretBulkActions(connId: string): {
         intent: Intent.DANGER,
         destructive: true,
         eligible: () => true,
-        run: (s) => adapter.remove(s.ID),
+        run: async (i) => new SecretsAdapter(await resolveConnectionHost(i.connectionId)).remove(i.ID),
       },
     ];
-    return { actions, getId: (item: Secret) => item.ID, refresh };
-  }, [connId, t]);
+    return { actions, getId: (item: MergedSecret) => item.ID, refresh };
+  }, [t]);
 }

@@ -1,10 +1,11 @@
 import { Button, H5, HTMLTable, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { OperatingSystem } from "@/env/Types";
 import { isEmpty } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -61,23 +62,27 @@ function normalizeConnectionString(host: string) {
 }
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const connections = useAppStore((state) => state.connections);
   const currentConnector = useAppStore((state) => state.currentConnector);
   const osType = useAppStore((state) => state.osType);
-  const isScoped = !isEmpty(currentConnector?.settings.controller?.scope || "");
+  // Always-merged workspace: pick WHICH connected connection to inspect (defaults to the primary).
+  const [connectionId, setConnectionId] = useState("");
+  const selected = connections.find((item) => item.id === connectionId) ?? currentConnector;
+  const isScoped = !isEmpty(selected?.settings.controller?.scope || "");
   const source = (isScoped ? `${codeExample}${scopedCodeExample}` : `${codeExample}`)
     // Host
-    .replaceAll("%HOST_DOCKER_HOST%", normalizeConnectionString(currentConnector?.settings?.api?.connection?.uri || ""))
+    .replaceAll("%HOST_DOCKER_HOST%", normalizeConnectionString(selected?.settings?.api?.connection?.uri || ""))
     // Scope
-    .replaceAll("%SCOPE_DOCKER_HOST%", currentConnector?.settings?.api?.connection?.relay || "")
+    .replaceAll("%SCOPE_DOCKER_HOST%", selected?.settings?.api?.connection?.relay || "")
     // Scope
-    .replaceAll("%BASE_URL%", JSON.stringify(currentConnector?.settings?.api?.baseURL || "http://localhost"))
+    .replaceAll("%BASE_URL%", JSON.stringify(selected?.settings?.api?.baseURL || "http://localhost"))
     // Environment
     .replaceAll("%ENV_EXPORT%", osType === OperatingSystem.Windows ? "$env:DOCKER_HOST" : "export DOCKER_HOST")
     // Extras
     .replaceAll("%OPERATING_SYSTEM%", osType === OperatingSystem.Windows ? "Windows" : osType)
-    .replaceAll("%CLI%", currentConnector?.settings.program?.name || "")
-    .replaceAll("%LABEL%", currentConnector?.label || "")
-    .replaceAll("%SCOPE%", currentConnector?.settings.controller?.scope || "");
+    .replaceAll("%CLI%", selected?.settings.program?.name || "")
+    .replaceAll("%LABEL%", selected?.label || "")
+    .replaceAll("%SCOPE%", selected?.settings.controller?.scope || "");
 
   const onCopyToClipboardClick = useCallback(async (e) => {
     const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("td:nth-child(2)");
@@ -90,8 +95,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader currentScreen={ID} titleText={currentConnector?.name || ""} />
+      <ScreenHeader currentScreen={ID} titleText={selected?.name || ""} />
       <div className="AppScreenContent">
+        <ConnectionSelect value={connectionId} onChange={setConnectionId} />
         <HTMLTable compact striped interactive className="AppDataTable" data-table="settings.connection-info">
           <thead>
             <tr>
@@ -108,7 +114,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <td>
                 <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
-                {currentConnector?.id}
+                {selected?.id}
               </td>
               <td></td>
             </tr>
@@ -119,7 +125,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <td>
                 <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
-                {currentConnector?.name}
+                {selected?.name}
               </td>
               <td></td>
             </tr>
@@ -130,7 +136,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <td>
                 <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
-                {currentConnector?.label}
+                {selected?.label}
               </td>
               <td></td>
             </tr>
@@ -142,7 +148,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <td>
                   <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                   &nbsp;
-                  {currentConnector?.settings?.controller?.scope || ""}
+                  {selected?.settings?.controller?.scope || ""}
                 </td>
                 <td></td>
               </tr>
@@ -154,7 +160,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <td>
                 <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
-                {normalizeConnectionString(currentConnector?.settings?.api?.connection?.uri || "")}
+                {normalizeConnectionString(selected?.settings?.api?.connection?.uri || "")}
               </td>
               <td></td>
             </tr>
@@ -165,7 +171,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <td>
                 <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
                 &nbsp;
-                {normalizeConnectionString(currentConnector?.settings?.api?.connection?.relay || "")}
+                {normalizeConnectionString(selected?.settings?.api?.connection?.relay || "")}
               </td>
               <td></td>
             </tr>

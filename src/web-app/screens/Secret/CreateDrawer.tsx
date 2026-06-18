@@ -2,7 +2,6 @@ import {
   Button,
   ButtonGroup,
   Classes,
-  Drawer,
   DrawerSize,
   FormGroup,
   InputGroup,
@@ -11,12 +10,13 @@ import {
   TextArea,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { memo, useState } from "react";
+import { memo, useId, useState } from "react";
 import isEqual from "react-fast-compare";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import { useAppStore } from "@/web-app/stores/appStore";
+import { AppDrawer } from "@/web-app/components/AppDrawer";
+import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
 import { useCreateSecret } from "./queries";
 
 // Secret drawer
@@ -26,12 +26,13 @@ export interface CreateDrawerProps {
 export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
   ({ onClose }: CreateDrawerProps) => {
     const { t } = useTranslation();
+    const formId = useId();
     const { control, handleSubmit } = useForm<{
       secretName: string;
       secretBody: string;
     }>();
     const [pending, setPending] = useState(false);
-    const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+    const [connectionId, setConnectionId] = useState("");
     const secretCreate = useCreateSecret(connectionId);
     const onSubmit = handleSubmit(async (data) => {
       try {
@@ -51,29 +52,22 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
       <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
     );
     return (
-      <Drawer
-        className="AppDrawer"
+      <AppDrawer
         icon={IconNames.PLUS}
         title={t("Create new secret")}
-        usePortal
         size={DrawerSize.SMALL}
         onClose={onClose}
-        isOpen
-        hasBackdrop={false}
+        formId={formId}
+        submitting={pending}
       >
         <div className={Classes.DRAWER_BODY}>
-          <form className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
-            <ButtonGroup fill>
-              <Button
-                disabled={pending}
-                intent={Intent.PRIMARY}
-                icon={IconNames.KEY}
-                title={t("Click to launch creation")}
-                text={t("Create")}
-                type="submit"
-              />
-            </ButtonGroup>
-            {pendingIndicator}
+          <form id={formId} className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
+            <ConnectionSelect
+              value={connectionId}
+              onChange={setConnectionId}
+              filter={isPodmanConnection}
+              disabled={pending}
+            />
             <div className="AppDataForm" data-form="secret.create">
               <FormGroup disabled={pending} label={t("Name")} labelFor="secretName" labelInfo="(required)">
                 <Controller
@@ -130,9 +124,20 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
                 />
               </FormGroup>
             </div>
+            {pendingIndicator}
+            <ButtonGroup fill>
+              <Button
+                disabled={pending}
+                intent={Intent.PRIMARY}
+                icon={IconNames.KEY}
+                title={t("Click to launch creation")}
+                text={t("Create")}
+                type="submit"
+              />
+            </ButtonGroup>
           </form>
         </div>
-      </Drawer>
+      </AppDrawer>
     );
   },
   (prev, next) => {

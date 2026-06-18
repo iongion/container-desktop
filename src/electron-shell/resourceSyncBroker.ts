@@ -20,6 +20,8 @@ export interface ResourceSyncBrokerDeps {
     subscribe(cb: () => void): () => void;
     refresh(connectionId: string, domain: ResourceDomain): Promise<void>;
     ensureConnected(targetConnectionId?: string): Promise<void>;
+    connectAll?(): Promise<void>;
+    disconnectOne?(connectionId: string): Promise<void>;
   };
   /** Register an invoke (request/response) handler — wraps ipcMain.handle in production. */
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
@@ -55,6 +57,22 @@ export class ResourceSyncBroker {
         return false;
       }
       await this.deps.service.ensureConnected(payload?.connectionId);
+      return true;
+    });
+    // Connect every auto-start connection — boot of the merged, multi-engine workspace.
+    this.deps.onInvoke(RESOURCE_SYNC.connectAll, async (event) => {
+      if (!this.deps.isAllowedSender(event)) {
+        return false;
+      }
+      await this.deps.service.connectAll?.();
+      return true;
+    });
+    // Disconnect one connection by id (connection manager).
+    this.deps.onInvoke(RESOURCE_SYNC.disconnect, async (event, payload: ResourceSwitchRequest) => {
+      if (!this.deps.isAllowedSender(event) || !payload?.connectionId) {
+        return false;
+      }
+      await this.deps.service.disconnectOne?.(payload.connectionId);
       return true;
     });
     this.unsubscribe = this.deps.service.subscribe(() => {

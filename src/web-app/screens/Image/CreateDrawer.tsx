@@ -2,8 +2,6 @@ import {
   Button,
   ButtonGroup,
   Classes,
-  Divider,
-  Drawer,
   DrawerSize,
   FormGroup,
   HTMLTable,
@@ -13,16 +11,17 @@ import {
   ProgressBar,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 // module
 import type { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
 // project
 import { toPortMappings } from "@/utils";
+import { AppDrawer } from "@/web-app/components/AppDrawer";
+import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
 import { useCreateContainer } from "@/web-app/screens/Container/queries";
-import { useAppStore } from "@/web-app/stores/appStore";
 import { createMount, type MountFormContainerImageMount, MountsForm } from "./MountsForm";
 import { PortMappingsForm } from "./PortMappingsForm";
 import { useImage } from "./queries";
@@ -37,15 +36,25 @@ export interface CreateFormData {
 }
 export interface CreateDrawerProps {
   image: ContainerImage;
+  // The image's owning connection. A container is created FROM this image, so it MUST be created on the same
+  // engine — the picker is shown (for engine clarity, like every form) but locked to this connection.
+  connectionId?: string;
   onClose: () => void;
 }
-export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: CreateDrawerProps) => {
+export const CreateDrawer: React.FC<CreateDrawerProps> = ({
+  image,
+  connectionId: connectionIdProp,
+  onClose,
+}: CreateDrawerProps) => {
   const { t } = useTranslation();
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const formId = useId();
+  const [connectionId, setConnectionId] = useState(connectionIdProp || "");
   const containerCreate = useCreateContainer(connectionId);
   const imageDetails = useImage(connectionId, image.Id, { Id: image.Id });
   const template = imageDetails.data || image;
   const pending = imageDetails.isLoading || containerCreate.isPending;
+  // The container can only be created on the engine that holds this image, so the picker is locked to it.
+  const lockToImageConnection = useCallback((it: { id: string }) => it.id === connectionId, [connectionId]);
 
   // Form initial data
   const mounts = useMemo(() => {
@@ -113,110 +122,124 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ image, onClose }: Cr
   }, [reset, mounts, mappings]);
 
   return (
-    <Drawer
-      className="AppDrawer AppCreateImageDrawer"
+    <AppDrawer
+      className="AppCreateImageDrawer"
       icon={IconNames.LAYOUT_BALLOON}
       title={t("Start from image")}
-      usePortal
       size={DrawerSize.SMALL}
       onClose={onClose}
-      isOpen
-      hasBackdrop={false}
+      formId={formId}
+      submitting={pending}
+      submitIcon={IconNames.CUBE_ADD}
+      submitTitle={t("Create and start")}
     >
-      <FormProvider {...methods}>
-        <form onSubmit={onSubmit} className={Classes.DRAWER_BODY}>
-          <HTMLTable compact striped className="AppDataTable">
-            <tbody>
-              <tr>
-                <td>{t("Name")}</td>
-                <td>{image.Name}</td>
-              </tr>
-              <tr>
-                <td>{t("Tag")}</td>
-                <td>{image.Tag}</td>
-              </tr>
-              <tr>
-                <td>{t("Registry")}</td>
-                <td>{image.Registry}</td>
-              </tr>
-            </tbody>
-          </HTMLTable>
-          <ButtonGroup fill>
-            <Button
-              type="submit"
+      <div className={Classes.DRAWER_BODY}>
+        <FormProvider {...methods}>
+          <form id={formId} onSubmit={onSubmit} className={Classes.DIALOG_BODY}>
+            <ConnectionSelect
+              value={connectionId}
+              onChange={setConnectionId}
+              filter={lockToImageConnection}
               disabled={pending}
-              intent={Intent.PRIMARY}
-              icon={IconNames.CUBE_ADD}
-              title={t("Click to launch creation")}
-              text={t("Create and start")}
             />
-            <Divider />
-
-            <Controller
-              control={control}
-              name="amount"
-              defaultValue={1}
-              render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-                return (
-                  <NumericInput
-                    required
-                    disabled={pending}
-                    name={name}
-                    inputRef={ref}
-                    value={value}
-                    onValueChange={onChange}
-                    onBlur={onBlur}
-                    className="AmountOfContainers"
-                    title={t(
-                      "Amount of containers to be launched. If launching more than one, port mappings will be adjusted by incrementing the host port.",
-                    )}
-                    allowNumericCharactersOnly
-                    min={1}
-                    max={65535}
-                    stepSize={1}
-                    minorStepSize={1}
-                    data-invalid={invalid}
-                    intent={invalid ? Intent.DANGER : Intent.NONE}
-                  />
-                );
-              }}
-            />
-          </ButtonGroup>
-          <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
-          <div className="AppDataForm">
-            <FormGroup
-              disabled={pending}
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: Example string
-              helperText={t("If not set, it will be automatically generated. Use ${index} to insert a counter.")}
-              label={t("Container name")}
-              labelFor="imageContainerName"
-              labelInfo="(optional)"
-            >
-              <Controller
-                control={control}
-                name="imageContainerName"
-                defaultValue=""
-                render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
-                  return (
-                    <InputGroup
-                      disabled={pending}
-                      name={name}
-                      inputRef={ref}
-                      value={value}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      placeholder={t("Type to set a name")}
-                      data-invalid={invalid}
-                    />
-                  );
-                }}
+            <HTMLTable compact striped className="AppDataTable">
+              <tbody>
+                <tr>
+                  <td>{t("Name")}</td>
+                  <td>{image.Name}</td>
+                </tr>
+                <tr>
+                  <td>{t("Tag")}</td>
+                  <td>{image.Tag}</td>
+                </tr>
+                <tr>
+                  <td>{t("Registry")}</td>
+                  <td>{image.Registry}</td>
+                </tr>
+              </tbody>
+            </HTMLTable>
+            <div className="AppDataForm">
+              <FormGroup
+                disabled={pending}
+                label={t("Number of containers")}
+                labelFor="amount"
+                helperText={t(
+                  "If launching more than one, port mappings will be adjusted by incrementing the host port.",
+                )}
+              >
+                <Controller
+                  control={control}
+                  name="amount"
+                  defaultValue={1}
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                    return (
+                      <NumericInput
+                        required
+                        fill
+                        disabled={pending}
+                        name={name}
+                        inputRef={ref}
+                        value={value}
+                        onValueChange={onChange}
+                        onBlur={onBlur}
+                        className="AmountOfContainers"
+                        allowNumericCharactersOnly
+                        min={1}
+                        max={65535}
+                        stepSize={1}
+                        minorStepSize={1}
+                        data-invalid={invalid}
+                        intent={invalid ? Intent.DANGER : Intent.NONE}
+                      />
+                    );
+                  }}
+                />
+              </FormGroup>
+              <FormGroup
+                disabled={pending}
+                // biome-ignore lint/suspicious/noTemplateCurlyInString: Example string
+                helperText={t("If not set, it will be automatically generated. Use ${index} to insert a counter.")}
+                label={t("Container name")}
+                labelFor="imageContainerName"
+                labelInfo="(optional)"
+              >
+                <Controller
+                  control={control}
+                  name="imageContainerName"
+                  defaultValue=""
+                  render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid } }) => {
+                    return (
+                      <InputGroup
+                        disabled={pending}
+                        name={name}
+                        inputRef={ref}
+                        value={value}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        placeholder={t("Type to set a name")}
+                        data-invalid={invalid}
+                      />
+                    );
+                  }}
+                />
+              </FormGroup>
+              <PortMappingsForm portMappings={mappings} disabled={pending} />
+              <MountsForm mounts={mounts} disabled={pending} />
+            </div>
+            <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
+            <ButtonGroup fill>
+              <Button
+                type="submit"
+                disabled={pending}
+                intent={Intent.PRIMARY}
+                icon={IconNames.CUBE_ADD}
+                title={t("Click to launch creation")}
+                text={t("Create and start")}
               />
-            </FormGroup>
-            <PortMappingsForm portMappings={mappings} disabled={pending} />
-            <MountsForm mounts={mounts} disabled={pending} />
-          </div>
-        </form>
-      </FormProvider>
-    </Drawer>
+            </ButtonGroup>
+          </form>
+        </FormProvider>
+      </div>
+    </AppDrawer>
   );
 };

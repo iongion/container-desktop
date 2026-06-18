@@ -47,12 +47,14 @@ export interface ManageConnectionFormProps {
   connection?: Connection;
   mode: "create" | "edit";
   onClose: () => void;
+  formId?: string;
 }
 
 export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   mode,
   connection,
   onClose,
+  formId,
 }: ManageConnectionFormProps) => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(false);
@@ -293,6 +295,9 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
 
   // Handlers
   const onSubmit = handleSubmit(async (data) => {
+    if (pending) {
+      return;
+    }
     try {
       setPending(true);
       if (mode === "create") {
@@ -748,23 +753,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   }, [resetFormData, connection, fetchControllerScopes]);
 
   return (
-    <form className={classNames(Classes.DIALOG_BODY, "ManageConnectionForm")} onSubmit={onSubmit}>
-      <ButtonGroup fill>
-        <Button
-          disabled={pending}
-          intent={Intent.PRIMARY}
-          icon={IconNames.HEAT_GRID}
-          title={t("Click to launch creation")}
-          text={mode === "create" ? t("Create") : t("Update")}
-          type="submit"
-        />
-      </ButtonGroup>
-      {pending && (
-        <div className="AppDrawerPendingIndicator">
-          <Spinner intent={Intent.SUCCESS} size={SpinnerSize.SMALL} />
-          <span>{t("Please wait ...")}</span>
-        </div>
-      )}
+    <form id={formId} className={classNames(Classes.DIALOG_BODY, "ManageConnectionForm")} onSubmit={onSubmit}>
       <div className="AppDataForm" data-form="connection.create">
         <FormGroup
           disabled={pending}
@@ -1187,6 +1176,22 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
           </FormGroup>
         ) : null}
       </div>
+      {pending && (
+        <div className="AppDrawerPendingIndicator">
+          <Spinner intent={Intent.SUCCESS} size={SpinnerSize.SMALL} />
+          <span>{t("Please wait ...")}</span>
+        </div>
+      )}
+      <ButtonGroup fill>
+        <Button
+          disabled={pending}
+          intent={Intent.PRIMARY}
+          icon={IconNames.HEAT_GRID}
+          title={t("Click to launch creation")}
+          text={mode === "create" ? t("Create") : t("Update")}
+          type="submit"
+        />
+      </ButtonGroup>
     </form>
   );
 };

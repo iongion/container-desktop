@@ -14,6 +14,15 @@
   font-size: 12px;
 }
 
+/* Form-field labels — one consistent size, 2px below Blueprint's default (~14px), for denser, calmer forms:
+   FormGroup labels, checkbox/switch/radio controls, and bespoke inline field labels (e.g. the subnet
+   Gateway/Subnet/Start IP/End IP labels). */
+.bp6-form-group label.bp6-label,
+.bp6-control,
+.AppDataForm label {
+  font-size: 12px;
+}
+
 .ResourceItemInlineActionsMenu
   .bp6-button:not(.bp6-disabled):not(:hover):not(:active):not(.bp6-active):not([class*="bp6-intent-"])
   .bp6-icon,

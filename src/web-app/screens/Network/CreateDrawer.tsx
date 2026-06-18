@@ -1,12 +1,13 @@
-import { Button, ButtonGroup, Classes, Drawer, DrawerSize, Intent, ProgressBar } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, DrawerSize, Intent, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { NetworkSubnet } from "@/env/Types";
+import { AppDrawer } from "@/web-app/components/AppDrawer";
+import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
-import { useAppStore } from "@/web-app/stores/appStore";
 import { NetworkPropertiesForm } from "./NetworkPropertiesForm";
 import { createNetworkSubnet, type NetworkSubnetItem, NetworkSubnetsForm } from "./NetworkSubnetsForm";
 import { useCreateNetwork } from "./queries";
@@ -52,6 +53,7 @@ export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActions
   );
   return (
     <>
+      {pendingIndicator}
       <ButtonGroup fill>
         <Button
           disabled={pending || !formState.isValid}
@@ -62,7 +64,6 @@ export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActions
           type="submit"
         />
       </ButtonGroup>
-      {pendingIndicator}
     </>
   );
 };
@@ -72,6 +73,7 @@ export interface CreateDrawerProps {
 }
 export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
+  const formId = useId();
   const subnets = useMemo(() => {
     return [createNetworkSubnet()];
   }, []);
@@ -92,7 +94,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
   const { handleSubmit } = methods;
   const [pending, setPending] = useState(false); // Form initial data
 
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const [connectionId, setConnectionId] = useState("");
   const networkCreate = useCreateNetwork(connectionId);
   const onSubmit = handleSubmit(async (data) => {
     setPending(true);
@@ -124,27 +126,26 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
     }
   });
   return (
-    <Drawer
-      className="AppDrawer"
+    <AppDrawer
       icon={IconNames.PLUS}
       title={t("Create new network")}
-      usePortal
       size={DrawerSize.SMALL}
       onClose={onClose}
-      isOpen
-      hasBackdrop={false}
+      formId={formId}
+      submitting={pending}
     >
       <div className={Classes.DRAWER_BODY}>
         <FormProvider {...methods}>
-          <form name="CreateNetworkForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
-            <FormActions pending={pending} />
+          <form id={formId} name="CreateNetworkForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
+            <ConnectionSelect value={connectionId} onChange={setConnectionId} disabled={pending} />
             <div className="AppDataForm" data-form="network.create">
               <NetworkPropertiesForm disabled={pending} />
               <NetworkSubnetsForm subnets={subnets} disabled={pending} />
             </div>
+            <FormActions pending={pending} />
           </form>
         </FormProvider>
       </div>
-    </Drawer>
+    </AppDrawer>
   );
 };

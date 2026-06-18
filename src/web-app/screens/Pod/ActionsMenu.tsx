@@ -20,6 +20,7 @@ interface ListActionsMenuProps {
 }
 interface ItemActionsMenuProps {
   pod: Pod;
+  connectionId?: string;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
   onReload?: () => void;
@@ -27,6 +28,7 @@ interface ItemActionsMenuProps {
 
 export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   pod,
+  connectionId: connectionIdProp,
   expand,
   isActive,
   onReload,
@@ -34,7 +36,9 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id || "";
+  // The row's owning connection in the merged list; falls back to the primary for header/detail usage.
+  const primaryConnectionId = currentConnector?.id || "";
+  const connectionId = connectionIdProp || primaryConnectionId;
   const podPause = usePausePod(connectionId);
   const podUnpause = useUnpausePod(connectionId);
   const podStop = useStopPod(connectionId);
@@ -121,21 +125,21 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
         active={isActive ? isActive("pod.logs") : false}
         icon={IconNames.LIST}
         text={t("Logs")}
-        href={getPodUrl(pod.Id, "logs")}
+        href={getPodUrl(pod.Id, "logs", connectionId)}
       />
       <AnchorButton
         variant="minimal"
         active={isActive ? isActive("pod.processes") : false}
         icon={IconNames.LIST_COLUMNS}
         text={t("Processes")}
-        href={getPodUrl(pod.Id, "processes")}
+        href={getPodUrl(pod.Id, "processes", connectionId)}
       />
       <AnchorButton
         variant="minimal"
         active={isActive ? isActive("pod.inspect") : false}
         icon={IconNames.EYE_OPEN}
         text={t("Inspect")}
-        href={getPodUrl(pod.Id, "inspect")}
+        href={getPodUrl(pod.Id, "inspect", connectionId)}
       />
       <AnchorButton
         variant="minimal"
@@ -143,20 +147,24 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
         active={isActive ? isActive("pod.kube") : false}
         icon={IconNames.TEXT_HIGHLIGHT}
         text={t("Kube")}
-        href={getPodUrl(pod.Id, "kube")}
+        href={getPodUrl(pod.Id, "kube", connectionId)}
         title={kubeTitle}
       />
     </>
   ) : undefined;
   const expandAsMenuItems = expand ? undefined : (
     <>
-      <MenuItem icon={IconNames.LIST} text={t("Logs")} href={getPodUrl(pod.Id, "logs")} />
-      <MenuItem icon={IconNames.LIST_COLUMNS} text={t("Processes")} href={getPodUrl(pod.Id, "processes")} />
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect")} />
+      <MenuItem icon={IconNames.LIST} text={t("Logs")} href={getPodUrl(pod.Id, "logs", connectionId)} />
+      <MenuItem
+        icon={IconNames.LIST_COLUMNS}
+        text={t("Processes")}
+        href={getPodUrl(pod.Id, "processes", connectionId)}
+      />
+      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect", connectionId)} />
       <MenuItem
         icon={IconNames.TEXT_HIGHLIGHT}
         text={t("Kube")}
-        href={getPodUrl(pod.Id, "kube")}
+        href={getPodUrl(pod.Id, "kube", connectionId)}
         disabled={isKubeDisabled}
         title={kubeTitle}
       />

@@ -13,8 +13,12 @@ export interface TrayControllerOptions {
   showMainWindow: () => void;
   quitApplication: () => void;
   // Main is the engine authority: the menu's actions are executed here (no renderer in the loop), so the
-  // tray works with the main window closed. `connection.switch` is handled by main (an open window follows).
-  performAction: (request: { kind: string; id: string }) => Promise<{ ok: boolean; error?: string }>;
+  // tray works with the main window closed. Each action carries the owning connection id (always-merged).
+  performAction: (request: {
+    kind: string;
+    id: string;
+    connectionId: string;
+  }) => Promise<{ ok: boolean; error?: string }>;
   // Snapshot of main's current data, projected for the menu. Read on every (re)build — see refreshMenu.
   getMenuData: () => TrayMenuData;
 }
@@ -69,10 +73,10 @@ export class TrayController {
     }
     try {
       const template = buildTrayMenuTemplate(this.options.getMenuData(), {
-        onAction: (kind, id) =>
+        onAction: (kind, id, connectionId) =>
           void this.options
-            .performAction({ kind, id })
-            .catch((error) => this.options.logger.error("Tray action failed", { kind, id, error })),
+            .performAction({ kind, id, connectionId })
+            .catch((error) => this.options.logger.error("Tray action failed", { kind, id, connectionId, error })),
         onShowApp: () => this.options.showMainWindow(),
         onQuit: () => this.options.quitApplication(),
       });

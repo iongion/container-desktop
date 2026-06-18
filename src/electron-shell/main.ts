@@ -107,20 +107,16 @@ trayController = new TrayController({
   getTrayIcon: (isDark) => runtime.trayIconPath(isDark ?? nativeTheme.shouldUseDarkColors),
   showMainWindow: () => windowManager.showMainWindow(),
   quitApplication,
-  // The menu invokes actions; main runs them so the tray works with the main window closed. A connection
-  // switch, when a main window is open, is followed by its normal startApplication path; headless, main just
-  // switches its own data connection.
+  // The menu invokes actions; main runs them so the tray works with the main window closed. Each action
+  // carries its connection id, so it routes to the host that owns the resource (always-merged workspace).
   performAction: async (request) => {
-    if (request.kind === "connection.switch") {
-      if (windowManager.hasLiveWindow()) {
-        windowManager.sendToRenderer("tray:switch-connection", { id: request.id });
-      } else {
-        await engineDataService.start(request.id);
-      }
-      return { ok: true };
-    }
     try {
-      await engineDataService.performAction(request.kind, request.id);
+      await engineDataService.performAction(
+        request.kind,
+        request.id,
+        engineDataService.getHost(request.connectionId),
+        request.connectionId,
+      );
       return { ok: true };
     } catch (error: any) {
       return { ok: false, error: error?.message ?? String(error) };
@@ -129,27 +125,31 @@ trayController = new TrayController({
   // Project main's current data for the native menu (no renderer involved). Read on every rebuild.
   getMenuData: () => {
     const snapshot = engineDataService.getSyncSnapshot();
-    const rt = snapshot.appRuntime;
-    const current = rt.currentConnector;
-    const byDomain: any = current ? (snapshot.resources[current.id] ?? {}) : {};
-    const containers = (byDomain.containers ?? []) as any[];
-    const pods = (byDomain.pods ?? []) as any[];
-    return {
-      running: !!rt.running,
-      current: current ? { id: current.id, name: current.name, engine: current.engine } : undefined,
-      connections: rt.connections.map((c) => ({ id: c.id, name: c.name, engine: c.engine })),
-      containers: containers.map((c) => ({
-        id: `${c.Id}`,
-        name: `${c.Computed?.Name || (c.Names?.[0] ?? "").replace(/^\//, "") || `${c.Id}`.slice(0, 12)}`,
-        state: `${c.Computed?.DecodedState ?? c.State ?? ""}`.toLowerCase(),
-      })),
-      pods: pods.map((p) => ({
-        id: `${p.Id}`,
-        name: `${p.Name ?? `${p.Id}`.slice(0, 12)}`,
-        status: `${p.Status ?? p.State ?? ""}`.toLowerCase(),
-      })),
-      machines: engineDataService.getMachines(),
-    };
+    // One section per connection main has brought up; each carries ITS OWN containers/pods/machines so the
+    // tray aggregates every engine and routes actions to the owning host by connection id.
+    const connections = (snapshot.appRuntime.active ?? []).map((rt) => {
+      const byDomain: any = snapshot.resources[rt.id] ?? {};
+      const containers = (byDomain.containers ?? []) as any[];
+      const pods = (byDomain.pods ?? []) as any[];
+      return {
+        id: rt.id,
+        name: rt.name,
+        engine: rt.engine,
+        running: rt.running,
+        containers: containers.map((c) => ({
+          id: `${c.Id}`,
+          name: `${c.Computed?.Name || (c.Names?.[0] ?? "").replace(/^\//, "") || `${c.Id}`.slice(0, 12)}`,
+          state: `${c.Computed?.DecodedState ?? c.State ?? ""}`.toLowerCase(),
+        })),
+        pods: pods.map((p) => ({
+          id: `${p.Id}`,
+          name: `${p.Name ?? `${p.Id}`.slice(0, 12)}`,
+          status: `${p.Status ?? p.State ?? ""}`.toLowerCase(),
+        })),
+        machines: engineDataService.getMachines(rt.id),
+      };
+    });
+    return { connections };
   },
 });
 
@@ -176,8 +176,11 @@ resourceSyncBroker.register();
 // Forwarded engine HTTP: the renderer's Command.ProxyRequest runs HERE, against main's single host-client
 // connection, so the app + main share ONE tunnel / relay / socket pool. Only the main app window forwards.
 commandProxyBroker = new CommandProxyBroker({
-  ensureConnected: () => engineDataService.ensureConnected(),
-  getDriver: () => getActiveHostClient().getApiDriver(),
+  ensureConnected: (connectionId) => engineDataService.ensureConnected(connectionId),
+  getDriver: (connectionId) => {
+    const host = (connectionId ? engineDataService.getHost(connectionId) : undefined) ?? getActiveHostClient();
+    return host.getApiDriver();
+  },
   onInvoke: (channel, handler) => ipcMain.handle(channel, (event, payload) => handler(event, payload)),
   onMessage: (channel, handler) => ipcMain.on(channel, (event, payload) => handler(event, payload)),
   send: (event, channel, payload) => event.sender.send(channel, payload),

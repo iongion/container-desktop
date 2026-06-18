@@ -15,19 +15,23 @@ import { useRemoveVolume } from "./queries";
 
 export interface VolumeActionsMenuProps {
   volume?: Volume;
+  connectionId?: string;
   withoutCreate?: boolean;
   onReload?: () => void;
 }
 
 export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
   volume,
+  connectionId: connectionIdProp,
   withoutCreate,
   onReload,
 }: VolumeActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  // The row's owning connection in the merged list; falls back to the primary for the header/create usage.
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connectionIdProp || primaryConnectionId;
   const volumeRemove = useRemoveVolume(connectionId);
   const performActionCommand = useCallback(
     async (action: string) => {
@@ -87,7 +91,11 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
   );
   const removeWidget = volume ? (
     <ConfirmMenu onConfirm={onRemove} tag={volume.Name} disabled={disabledAction === "volume.remove"}>
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getVolumeUrl(volume.Name, "inspect")} />
+      <MenuItem
+        icon={IconNames.EYE_OPEN}
+        text={t("Inspect")}
+        href={getVolumeUrl(volume.Name, "inspect", connectionId)}
+      />
     </ConfirmMenu>
   ) : undefined;
   return (

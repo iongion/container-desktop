@@ -52,6 +52,41 @@ body.bp6-dark [data-table="pods"] .PodState[data-state="Paused"] {
   color: orange;
 }
 
+/* Container state — engine-agnostic (also applies under the unified chrome; the per-engine files keep their
+   own higher-specificity copies, so podman/docker rows are unchanged). Mirrors light.css. */
+body.bp6-dark [data-table="containers"] .ContainerState[data-state="exited"] {
+  background-color: #8b104c;
+}
+body.bp6-dark [data-table="containers"] .ContainerState[data-state="running"] {
+  color: #60ff45;
+}
+body.bp6-dark [data-table="containers"] .ContainerState[data-state="created"] {
+  color: #00a6ff;
+}
+body.bp6-dark [data-table="containers"] .ContainerState[data-state="stopped"] {
+  color: #888a83;
+}
+body.bp6-dark [data-table="containers"] .ContainerState[data-state="paused"] {
+  color: orange;
+}
+body.bp6-dark [data-table="containers"] .ContainerReportStateCounts li {
+  background: #111;
+}
+body.bp6-dark [data-table="containers"] .ContainerReportStateCounts li span {
+  background-color: #111;
+}
+body.bp6-dark [data-table="containers"] .ContainerReportStateCounts li[data-state="running"] {
+  color: #60ff45;
+}
+body.bp6-dark [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"] {
+  background-color: #8b104c;
+}
+body.bp6-dark [data-table="containers"] .ContainerReportStateCounts li[data-state="running"][data-count="0"],
+body.bp6-dark [data-table="containers"] .ContainerReportStateCounts li[data-state="exited"][data-count="0"] {
+  background-color: #111;
+  color: #fff;
+}
+
 body.bp6-dark .ReactIcon,
 body.bp6-dark .AppLabelIcon {
   color: #fff;

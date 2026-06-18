@@ -28,11 +28,17 @@ function makeDeps(driver: { request: (config: any) => Promise<any> }) {
   const messageHandlers = new Map<string, (event: any, payload: any) => void>();
   const sent: Array<{ channel: string; payload: any }> = [];
   let ensured = 0;
+  let lastEnsuredId: string | undefined;
+  let lastDriverId: string | undefined;
   return {
-    ensureConnected: async () => {
+    ensureConnected: async (connectionId?: string) => {
       ensured += 1;
+      lastEnsuredId = connectionId;
     },
-    getDriver: async () => driver,
+    getDriver: async (connectionId?: string) => {
+      lastDriverId = connectionId;
+      return driver;
+    },
     onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => invokeHandlers.set(channel, handler),
     onMessage: (channel: string, handler: (event: any, payload: any) => void) => messageHandlers.set(channel, handler),
     send: (_event: any, channel: string, payload: unknown) => sent.push({ channel, payload }),
@@ -42,6 +48,8 @@ function makeDeps(driver: { request: (config: any) => Promise<any> }) {
     _message: (channel: string, event: any, payload?: any) => messageHandlers.get(channel)?.(event, payload),
     _sent: () => sent,
     _ensured: () => ensured,
+    _lastEnsuredId: () => lastEnsuredId,
+    _lastDriverId: () => lastDriverId,
   };
 }
 
@@ -69,6 +77,24 @@ describe("CommandProxyBroker", () => {
     const result: any = await deps._invoke(COMMAND_PROXY.request, ALLOWED, { req: { url: "/containers/json" } });
     expect(deps._ensured()).toBe(1);
     expect(result).toMatchObject({ stream: false, ok: true, status: 200, data: [{ Id: "a" }] });
+  });
+
+  it("routes ensureConnected + getDriver to the connection the payload addresses", async () => {
+    const deps = makeDeps({ request: async () => ({ status: 200, data: [], headers: {} }) });
+    new CommandProxyBroker(deps).register();
+    await deps._invoke(COMMAND_PROXY.request, ALLOWED, {
+      req: { url: "/images/json" },
+      connection: { id: "mock.docker.system" },
+    });
+    expect(deps._lastEnsuredId()).toBe("mock.docker.system");
+    expect(deps._lastDriverId()).toBe("mock.docker.system");
+  });
+
+  it("falls back to the primary (undefined id) when the payload carries no connection", async () => {
+    const deps = makeDeps({ request: async () => ({ status: 200, data: [], headers: {} }) });
+    new CommandProxyBroker(deps).register();
+    await deps._invoke(COMMAND_PROXY.request, ALLOWED, { req: { url: "/images/json" } });
+    expect(deps._lastDriverId()).toBeUndefined();
   });
 
   it("carries an engine error response (non-2xx) so the renderer can rebuild it", async () => {

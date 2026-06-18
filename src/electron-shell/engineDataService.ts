@@ -1,10 +1,9 @@
-// EngineDataService — the main-process owner of engine state for the active connection.
-//
-// Stage A: a standalone, fully-tested module that holds connection/runtime state + per-connection
-// resource state, refreshes domains through the container-client adapters, maps engine events to
-// debounced refreshes, and connects via the Node `Application`. It runs PARALLEL to the renderer (no IPC,
-// no cutover yet — those are later stages). It builds on globals main already assigns at startup
-// (Command/Platform/Path/FS/CURRENT_OS_TYPE), so it needs no `window`/`navigator`.
+// EngineDataService — the main-process owner of engine state. MULTI-CONNECTION: it brings up several
+// connections at once (connectAll on boot for auto-start connections, connectOne on demand) and holds a host
+// client + /events stop-handle + machine cache + runtime status PER connection id. It refreshes domains
+// through the container-client adapters, maps engine events to debounced per-connection refreshes, and
+// exposes a merged snapshot the renderer mirrors. The single "primary" connection is the create/pull + tray
+// default. It builds on globals main assigns at startup (Command/Platform/Path/FS/CURRENT_OS_TYPE).
 
 import { EventEmitter } from "eventemitter3";
 import { Application } from "@/container-client/Application";
@@ -23,10 +22,12 @@ import {
 } from "@/container-client/resourceDomains";
 import type {
   AppRuntimeSnapshot,
+  ConnectionRuntimeInfo,
   ResourceSnapshotByConnection,
   ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
+import type { Connection } from "@/env/Types";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
 export type { AppRuntimeSnapshot, ConnectionPhase } from "@/container-client/resourceSyncProtocol";
@@ -36,8 +37,31 @@ const EVENT_REFRESH_DEBOUNCE_MS = 500;
 // Per-connection resource state: each domain holds the LIST of its items (ResourceItemsByDomain[D] is singular).
 type ResourceState = { [D in ResourceDomain]: ResourceItemsByDomain[D][] };
 
+type ConnectionDescriptor = { id: string; name: string; engine: string; host?: string };
+
 function emptyResourceState(): ResourceState {
   return Object.fromEntries(RESOURCE_DOMAINS.map((domain) => [domain, []])) as unknown as ResourceState;
+}
+
+function descriptorOf(connection: { id: string; name: string; engine: unknown; host?: unknown }): ConnectionDescriptor {
+  return {
+    id: connection.id,
+    name: connection.name,
+    engine: `${connection.engine}`,
+    host: connection.host ? `${connection.host}` : undefined,
+  };
+}
+
+// The user-facing engine version for a connection: the controller version when the engine reports one
+// (e.g. a Podman machine), else the program version. Read from the connection's detected settings so the
+// renderer (footer/connection manager) always has the REAL per-connection version, not just the primary's.
+function engineVersionOf(connection: Connection, host: HostClientFacade): string | undefined {
+  const program = connection.settings?.program;
+  const controller = connection.settings?.controller;
+  if (host.capabilities?.extensions?.controllerVersion && controller?.version) {
+    return controller.version;
+  }
+  return program?.version || controller?.version || undefined;
 }
 
 export class EngineDataService {
@@ -45,14 +69,15 @@ export class EngineDataService {
   private readonly resourceByConnection = new Map<string, ResourceState>();
   private readonly refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private app?: Application;
-  private stopEvents: (() => void) | null = null;
-  private machines: Array<{ name: string; running: boolean }> = []; // cache for the tray menu (see getMachines)
-  private appRuntime: AppRuntimeSnapshot = {
-    phase: "idle",
-    running: false,
-    osType: `${CURRENT_OS_TYPE}`,
-    connections: [],
-  };
+  // Multi-connection: a host client, /events stop-handle, machine cache and runtime status PER connection id.
+  private readonly hostByConnection = new Map<string, HostClientFacade>();
+  private readonly stopEventsByConnection = new Map<string, () => void>();
+  private readonly machinesByConnection = new Map<string, Array<{ name: string; running: boolean }>>();
+  private readonly runtimeByConnection = new Map<string, ConnectionRuntimeInfo>();
+  private connectionsList: ConnectionDescriptor[] = [];
+  private primaryId?: string;
+  // Primary connection's machine cache for the tray menu (see getMachines); per-connection cache in the map.
+  private machines: Array<{ name: string; running: boolean }> = [];
 
   subscribe(listener: () => void): () => void {
     this.emitter.on("change", listener);
@@ -69,8 +94,33 @@ export class EngineDataService {
     return this.resourceByConnection.get(connectionId) ?? emptyResourceState();
   }
 
+  // The live host client for a connection (undefined until it has been brought up). Used by the command proxy
+  // to route the renderer's forwarded HTTP to the right engine, and by refresh/performAction.
+  getHost(connectionId: string): HostClientFacade | undefined {
+    return this.hostByConnection.get(connectionId);
+  }
+
   getAppRuntimeSnapshot(): AppRuntimeSnapshot {
-    return this.appRuntime;
+    const active = Array.from(this.runtimeByConnection.values());
+    const running = active.some((r) => r.running);
+    const primary = this.primaryId ? this.runtimeByConnection.get(this.primaryId) : undefined;
+    const phase: AppRuntimeSnapshot["phase"] = running
+      ? "ready"
+      : active.some((r) => r.phase === "starting")
+        ? "starting"
+        : active.length
+          ? "failed"
+          : "idle";
+    return {
+      phase,
+      running,
+      osType: `${CURRENT_OS_TYPE}`,
+      currentConnector: primary
+        ? { id: primary.id, name: primary.name, engine: primary.engine, host: primary.host }
+        : undefined,
+      connections: this.connectionsList,
+      active,
+    };
   }
 
   getResourceSnapshotByConnection(): ResourceSnapshotByConnection {
@@ -83,7 +133,7 @@ export class EngineDataService {
 
   // The full current view pushed to renderers (app/runtime + every connection's resource lists).
   getSyncSnapshot(): ResourceSyncSnapshot {
-    return { appRuntime: this.appRuntime, resources: this.getResourceSnapshotByConnection() };
+    return { appRuntime: this.getAppRuntimeSnapshot(), resources: this.getResourceSnapshotByConnection() };
   }
 
   setResourceItems<D extends ResourceDomain>(connectionId: string, domain: D, items: ResourceItemsByDomain[D][]): void {
@@ -97,7 +147,7 @@ export class EngineDataService {
   async refresh<D extends ResourceDomain>(
     connectionId: string,
     domain: D,
-    host: HostClientFacade = getActiveHostClient(),
+    host: HostClientFacade = this.hostByConnection.get(connectionId) ?? getActiveHostClient(),
   ): Promise<void> {
     const items = await this.loadDomain(host, domain);
     this.setResourceItems(connectionId, domain, items);
@@ -115,48 +165,150 @@ export class EngineDataService {
     });
   }
 
-  async refreshAll(connectionId: string, host: HostClientFacade = getActiveHostClient()): Promise<void> {
+  async refreshAll(
+    connectionId: string,
+    host: HostClientFacade = this.hostByConnection.get(connectionId) ?? getActiveHostClient(),
+  ): Promise<void> {
     await Promise.all(this.supportedDomains(host).map((domain) => this.refresh(connectionId, domain, host)));
   }
 
-  // Full main-side startup for a connection (the configured default, or a specific id on a renderer-driven
-  // switch): connect, detach any prior stream, load the initial lists, and attach the /events stream so the
-  // resource state stays fresh — the renderer mirror reads it via the broker.
-  async start(targetConnectionId?: string): Promise<void> {
-    await this.connect(targetConnectionId);
-    if (this.stopEvents) {
-      this.stopEvents();
-      this.stopEvents = null;
-    }
-    const current = this.appRuntime.currentConnector;
-    if (!this.appRuntime.running || !current) {
-      this.machines = [];
-      return;
-    }
-    const host = getActiveHostClient();
-    await this.refreshAll(current.id, host);
-    this.machines = await this.loadMachines(host);
-    if (host.capabilities.events) {
-      this.stopEvents = await this.connectEvents(current.id, host);
-    }
+  // ── Lifecycle (multi-connection) ───────────────────────────────────────────────────────────────────
+
+  // Load the configured connection list (system + user) and cache the descriptors for the snapshot.
+  private async loadConnections(): Promise<Connection[]> {
+    const app = this.ensureApp();
+    await app.setup();
+    const connections = [...(await app.getSystemConnections()), ...(await app.getConnections())];
+    this.connectionsList = connections.map(descriptorOf);
+    return connections;
   }
 
-  // Connect to a connection (idempotent): a no-op when main is already connected+running to it, otherwise a
-  // full start. The renderer awaits this before its forwarded engine requests, so main owns the connection
-  // their HTTP rides on — the foundation of the single-connection model.
+  // Connect every auto-start connection (the boot set). Non-auto-start connections are connected on demand
+  // from the connection manager. Failures are isolated per connection (Promise.allSettled) so one offline
+  // engine never blocks the others or the app.
+  async connectAll(): Promise<void> {
+    const connections = await this.loadConnections();
+    const app = this.ensureApp();
+    const userSettings = await app.getGlobalUserSettings();
+    const def = userSettings?.connector?.default;
+    this.primaryId = def && connections.some((c) => c.id === def) ? def : connections[0]?.id;
+    const autoConnect = connections.filter((c) => !c.disabled && c.settings?.api?.autoStart);
+    await Promise.allSettled(autoConnect.map((connection) => this.connectOne(connection)));
+    // Ensure the primary is up even if it was not flagged auto-start.
+    if (this.primaryId && !this.hostByConnection.has(this.primaryId)) {
+      const primary = connections.find((c) => c.id === this.primaryId);
+      if (primary) {
+        await this.connectOne(primary);
+      }
+    }
+    this.emitChange();
+  }
+
+  // Bring up ONE connection: build its host (cached by id, no shared "current" mutation), load its lists,
+  // attach its /events stream. Records per-connection runtime; never tears down other connections' streams.
+  async connectOne(connection: Connection): Promise<void> {
+    const id = connection.id;
+    const desc = descriptorOf(connection);
+    this.runtimeByConnection.set(id, { ...desc, phase: "starting", running: false });
+    this.emitChange();
+    try {
+      const app = this.ensureApp();
+      await app.setup();
+      const { host, availability } = await app.connectHostClient(connection, {
+        startApi: !!connection.settings?.api?.autoStart,
+      });
+      const running = availability?.api ?? false;
+      if (host && running) {
+        this.hostByConnection.set(id, host);
+        this.runtimeByConnection.set(id, {
+          ...desc,
+          phase: "ready",
+          running: true,
+          version: engineVersionOf(connection, host),
+        });
+        await this.refreshAll(id, host);
+        const machines = await this.loadMachines(host);
+        this.machinesByConnection.set(id, machines);
+        if (id === this.primaryId) {
+          this.machines = machines;
+        }
+        const previousStop = this.stopEventsByConnection.get(id);
+        if (previousStop) {
+          previousStop();
+          this.stopEventsByConnection.delete(id);
+        }
+        if (host.capabilities.events) {
+          this.stopEventsByConnection.set(id, await this.connectEvents(id, host));
+        }
+      } else {
+        this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false });
+      }
+    } catch (error: any) {
+      this.runtimeByConnection.set(id, {
+        ...desc,
+        phase: "failed",
+        running: false,
+        error: `${error?.message ?? error}`,
+      });
+    }
+    this.emitChange();
+  }
+
+  // Disconnect ONE connection: stop its stream, drop its host/machines/runtime/resource state. Other
+  // connections are untouched. Reassigns the primary if the disconnected one was primary.
+  async disconnectOne(connectionId: string): Promise<void> {
+    const stop = this.stopEventsByConnection.get(connectionId);
+    if (stop) {
+      stop();
+      this.stopEventsByConnection.delete(connectionId);
+    }
+    this.hostByConnection.delete(connectionId);
+    this.machinesByConnection.delete(connectionId);
+    this.runtimeByConnection.delete(connectionId);
+    this.resourceByConnection.delete(connectionId);
+    if (this.primaryId === connectionId) {
+      this.primaryId = Array.from(this.runtimeByConnection.values()).find((r) => r.running)?.id;
+      this.machines = (this.primaryId && this.machinesByConnection.get(this.primaryId)) || [];
+    }
+    this.emitChange();
+  }
+
+  // Connect a specific connection if it isn't up yet (idempotent). Used by the command proxy before it
+  // forwards a request, and by the renderer/tray. With no id, ensures the primary/default connection is up.
   async ensureConnected(targetConnectionId?: string): Promise<void> {
-    if (
-      this.appRuntime.running &&
-      this.appRuntime.currentConnector &&
-      (!targetConnectionId || this.appRuntime.currentConnector.id === targetConnectionId)
-    ) {
+    const id = targetConnectionId ?? this.primaryId;
+    if (id && this.hostByConnection.has(id) && this.runtimeByConnection.get(id)?.running) {
       return;
     }
-    await this.start(targetConnectionId);
+    const connections = await this.loadConnections();
+    const app = this.ensureApp();
+    const def = (await app.getGlobalUserSettings())?.connector?.default;
+    const target = connections.find((c) => c.id === id) ?? connections.find((c) => c.id === def) ?? connections[0];
+    if (!target) {
+      return;
+    }
+    if (!this.primaryId) {
+      this.primaryId = target.id;
+    }
+    await this.connectOne(target);
+  }
+
+  // Back-compat: the single-connection entry point (tests + idempotent boot). Ensures the target (or the
+  // configured default) connection is connected and recorded in the runtime snapshot.
+  async connect(targetConnectionId?: string): Promise<void> {
+    await this.ensureConnected(targetConnectionId);
+  }
+
+  // Tray "switch connection" (headless path): make `id` the primary and ensure it is connected.
+  async start(targetConnectionId?: string): Promise<void> {
+    if (targetConnectionId) {
+      this.primaryId = targetConnectionId;
+    }
+    await this.ensureConnected(targetConnectionId);
   }
 
   // Minimal /events attach: parse JSON lines → onEngineEvent (debounced refresh). Returns a stop handle so a
-  // connection switch can detach the old stream. Reconnect/fallback polling are a later refinement.
+  // connection disconnect can detach this connection's stream. Reconnect/fallback polling are a later refinement.
   private async connectEvents(connectionId: string, host: HostClientFacade): Promise<() => void> {
     try {
       const stream = (await host.getEventsStream({ since: `${Math.floor(Date.now() / 1000)}` })) as
@@ -231,50 +383,6 @@ export class EngineDataService {
     return this.app;
   }
 
-  // Connects a connection (the given id, else the configured default) and records the app/runtime snapshot.
-  // Defensive: any failure resolves to phase "failed" rather than throwing, so a missing/unavailable engine
-  // never crashes main.
-  async connect(targetConnectionId?: string): Promise<void> {
-    this.appRuntime = { ...this.appRuntime, phase: "starting" };
-    this.emitChange();
-    try {
-      const app = this.ensureApp();
-      await app.setup();
-      const userSettings = await app.getGlobalUserSettings();
-      const connections = [...(await app.getSystemConnections()), ...(await app.getConnections())];
-      const target =
-        connections.find((connection) => connection.id === targetConnectionId) ??
-        connections.find((connection) => connection.id === userSettings?.connector?.default) ??
-        connections[0];
-      const currentConnector = await app.start(
-        target ? { startApi: false, connection: target, skipAvailabilityCheck: false } : undefined,
-      );
-      const running = currentConnector?.availability?.api ?? false;
-      this.appRuntime = {
-        phase: currentConnector && running ? "ready" : "failed",
-        running,
-        osType: `${CURRENT_OS_TYPE}`,
-        currentConnector: currentConnector
-          ? {
-              id: currentConnector.id,
-              name: currentConnector.name,
-              engine: currentConnector.engine,
-              host: currentConnector.host,
-            }
-          : undefined,
-        connections: connections.map((connection) => ({
-          id: connection.id,
-          name: connection.name,
-          engine: connection.engine,
-          host: connection.host,
-        })),
-      };
-    } catch {
-      this.appRuntime = { ...this.appRuntime, phase: "failed" };
-    }
-    this.emitChange();
-  }
-
   private async loadDomain<D extends ResourceDomain>(
     host: HostClientFacade,
     domain: D,
@@ -308,11 +416,15 @@ export class EngineDataService {
     machine: new Set(["start", "stop", "restart"]),
   };
 
-  // Run a tray action against main's own connection (so the tray works with the main window closed). It
-  // delegates to the existing adapter/host methods — the same ones the renderer's mutations call — then
-  // nudges a refresh so the pushed resource state reflects it promptly (engine /events also fires, except
-  // for machine lifecycle).
-  async performAction(kind: string, id: string, host: HostClientFacade = getActiveHostClient()): Promise<void> {
+  // Run a tray action against a connection's host (defaults to the primary, so the tray works with the main
+  // window closed). It delegates to the existing adapter/host methods — the same ones the renderer's
+  // mutations call — then nudges a refresh so the pushed resource state reflects it promptly.
+  async performAction(
+    kind: string,
+    id: string,
+    host: HostClientFacade = this.primaryHost(),
+    connectionId: string | undefined = this.primaryId,
+  ): Promise<void> {
     const [resource, op] = kind.split(".", 2);
     if (!op || !EngineDataService.TRAY_OPS[resource]?.has(op)) {
       throw new Error(`Unknown tray action: ${kind}`);
@@ -324,25 +436,35 @@ export class EngineDataService {
     } else {
       await host[`${op}PodmanMachine` as "startPodmanMachine" | "stopPodmanMachine" | "restartPodmanMachine"](id);
     }
-    const current = this.appRuntime.currentConnector?.id;
-    if (current && resource === "container") {
-      await this.refresh(current, "containers", host).catch(() => undefined);
-    } else if (current && resource === "pod") {
+    if (connectionId && resource === "container") {
+      await this.refresh(connectionId, "containers", host).catch(() => undefined);
+    } else if (connectionId && resource === "pod") {
       await Promise.all([
-        this.refresh(current, "pods", host).catch(() => undefined),
-        this.refresh(current, "containers", host).catch(() => undefined),
+        this.refresh(connectionId, "pods", host).catch(() => undefined),
+        this.refresh(connectionId, "containers", host).catch(() => undefined),
       ]);
     } else if (resource === "machine") {
       // Machine lifecycle has no /events signal — reload the cache and notify so the menu rebuilds.
-      this.machines = await this.loadMachines(host);
+      const machines = await this.loadMachines(host);
+      this.machines = machines;
+      if (connectionId) {
+        this.machinesByConnection.set(connectionId, machines);
+      }
       this.emitChange();
     }
   }
 
-  // The current connection's machines, cached so the frequently-rebuilt tray menu costs no engine call.
-  // Refreshed on connect/start and after a machine.* action (see performAction); empty when machines aren't
-  // a capability of the active host (e.g. Docker / remote).
-  getMachines(): Array<{ name: string; running: boolean }> {
+  private primaryHost(): HostClientFacade {
+    return (this.primaryId && this.hostByConnection.get(this.primaryId)) || getActiveHostClient();
+  }
+
+  // The primary connection's machines, cached so the frequently-rebuilt tray menu costs no engine call.
+  // Refreshed on connect and after a machine.* action (see performAction); empty when machines aren't a
+  // capability of the active host (e.g. Docker / remote).
+  getMachines(connectionId?: string): Array<{ name: string; running: boolean }> {
+    if (connectionId) {
+      return this.machinesByConnection.get(connectionId) ?? [];
+    }
     return this.machines;
   }
 

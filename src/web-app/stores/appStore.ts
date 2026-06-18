@@ -128,6 +128,10 @@ interface AppActions {
   createConnection: (connection: Connection) => Promise<Connection>;
   updateConnection: (payload: { id: string; connection: Partial<Connection> }) => Promise<Connection>;
   removeConnection: (id: string) => Promise<boolean>;
+  // per-connection lifecycle (always-merged workspace; no global reset)
+  connectOne: (connectionId: string) => Promise<void>;
+  disconnectOne: (connectionId: string) => Promise<void>;
+  makePrimary: (connectionId: string) => Promise<void>;
 }
 
 type AppStore = AppState & AppActions;
@@ -305,10 +309,15 @@ export const useAppStore = create<AppStore>()((set, get) => {
               // Main already owns this connection (ensureConnected ran before any engine request above);
               // begin mirroring its pushed snapshots into the resource store.
               await resourceEvents.start(currentConnector.id);
-              Notification.show({
-                message: t("You are now connected to {{name}}", currentConnector),
-                intent: Intent.SUCCESS,
-              });
+              // Always-merged workspace: bring up every OTHER auto-start connection too (idempotent — the
+              // primary above is a no-op here). Main connects them via Promise.allSettled (isolated failures)
+              // and pushes a merged snapshot covering all of them; the already-subscribed mirror fans them
+              // into resourceStore.byConnection. A failure here must not sink the primary that already works.
+              try {
+                await window.MessageBus.invoke(RESOURCE_SYNC.connectAll);
+              } catch (error: any) {
+                console.error("Unable to connect additional engines", error);
+              }
             } else {
               Notification.show({
                 message: t("Unable to establish connection"),
@@ -466,6 +475,29 @@ export const useAppStore = create<AppStore>()((set, get) => {
         await get().getConnections();
         return info;
       }),
+
+    // ── async: per-connection lifecycle (always-merged workspace — additive, no global reset) ──
+    // connect/disconnect a SINGLE connection via main; main re-pushes a merged snapshot, so the runtime
+    // store + merged lists update without a full bootstrap. Used by the header connection manager + Settings.
+    connectOne: async (connectionId) => {
+      try {
+        await window.MessageBus.invoke(RESOURCE_SYNC.ensureConnected, { connectionId });
+      } catch (error: any) {
+        console.error("Unable to connect engine", connectionId, error);
+        Notification.show({ message: t("Unable to establish connection"), intent: Intent.DANGER });
+      }
+    },
+    disconnectOne: async (connectionId) => {
+      try {
+        await window.MessageBus.invoke(RESOURCE_SYNC.disconnect, { connectionId });
+      } catch (error: any) {
+        console.error("Unable to disconnect engine", connectionId, error);
+      }
+    },
+    // "Primary" = the default create/pull target (persisted, renderer-owned) — no engine restart.
+    makePrimary: async (connectionId) => {
+      await get().setGlobalUserSettings({ connector: { default: connectionId } });
+    },
   };
 });
 

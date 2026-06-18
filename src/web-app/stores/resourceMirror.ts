@@ -19,6 +19,8 @@ export function applyResourceSyncSnapshot(snapshot: ResourceSyncSnapshot): void 
       store.setSnapshot(connectionId, domain as ResourceDomain, (items ?? []) as never[]);
     }
   }
+  // Mirror the per-connection runtime so the connection manager / footer render live multi-engine status.
+  store.setActiveRuntime(snapshot.appRuntime?.active ?? []);
 }
 
 let started = false;

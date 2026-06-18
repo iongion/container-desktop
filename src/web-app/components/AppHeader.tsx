@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
 import { OperatingSystem, type Program, WindowAction } from "@/env/Types";
+import { ConnectionsMenu } from "@/web-app/components/ConnectionsMenu";
 import { NotificationBell } from "@/web-app/components/NotificationCenter/NotificationBell";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
@@ -101,6 +102,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const disabledHeaderActions = !(provisioned && running);
   const rightSideActions = (
     <>
+      <ConnectionsMenu />
       <NotificationBell />
       <AnchorButton
         className="AppHeaderActionButton"

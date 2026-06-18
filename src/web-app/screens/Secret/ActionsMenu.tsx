@@ -17,19 +17,23 @@ import { useRemoveSecret } from "./queries";
 
 export interface SecretActionsMenuProps {
   secret?: Secret;
+  connectionId?: string;
   withoutCreate?: boolean;
   onReload?: () => void;
 }
 
 export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
   secret,
+  connectionId: connectionIdProp,
   withoutCreate,
   onReload,
 }: SecretActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  // The row's owning connection in the merged list; falls back to the primary for the header/create usage.
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connectionIdProp || primaryConnectionId;
   const secretRemove = useRemoveSecret(connectionId);
   const performActionCommand = useCallback(
     async (action: string) => {
@@ -88,7 +92,7 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
   );
   const removeWidget = secret ? (
     <ConfirmMenu onConfirm={onRemove} tag={secret.ID} disabled={disabledAction === "secret.remove"}>
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getSecretUrl(secret.ID, "inspect")} />
+      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getSecretUrl(secret.ID, "inspect", connectionId)} />
     </ConfirmMenu>
   ) : undefined;
   return (

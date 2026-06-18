@@ -10,12 +10,18 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
+import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import {
+  type MergedResource,
+  mergedKey,
+  useIsUnifiedMode,
+  useMergedResources,
+  useResourceReload,
+} from "@/web-app/hooks/useMergedResources";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { resourceEvents } from "@/web-app/stores/resourceEvents";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 import { VolumeActionsMenu } from ".";
@@ -27,17 +33,21 @@ export const ID = "volumes";
 
 export interface ScreenProps extends AppScreenProps {}
 
-const EMPTY_VOLUMES: Volume[] = [];
+// Always-merged workspace: rows come from every connected engine, each carrying its engine/connection.
+type MergedVolume = MergedResource<Volume>;
 
 const createVolumeSearchFilter = (searchTerm: string) => {
   const query = searchTerm.toLowerCase();
-  return (volume: Volume) => {
-    const haystacks = [volume.Name, volume.Scope || ""].map((value) => value.toLowerCase());
+  return (volume: MergedVolume) => {
+    const haystacks = [volume.Name, volume.Scope, volume.engine, volume.connectionName].map((value) =>
+      `${value ?? ""}`.toLowerCase(),
+    );
     return haystacks.some((value) => value.includes(query));
   };
 };
 
-const volumeSortSelectors: SortSelectors<Volume> = {
+const volumeSortSelectors: SortSelectors<MergedVolume> = {
+  engine: (volume) => volume.engine,
   name: (volume) => volume.Name,
   driver: (volume) => volume.Driver,
   created: (volume) => Date.parse(volume.CreatedAt || ""),
@@ -47,28 +57,26 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id;
   const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
     ID,
     currentConnector?.capabilities?.sort,
   );
-  const volumeSnapshot = useResourceStore((state) =>
-    connectionId ? state.byConnection[connectionId]?.volumes.items || EMPTY_VOLUMES : EMPTY_VOLUMES,
-  );
+  const volumeSnapshot = useMergedResources("volumes");
   const volumes = useMemo(() => {
     const items = searchTerm ? volumeSnapshot.filter(createVolumeSearchFilter(searchTerm)) : volumeSnapshot;
     return clientSort
       ? sortByField(items, clientSort, volumeSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, volumeSnapshot, searchTerm]);
-  const visibleIds = useMemo(() => volumes.map((v) => v.Name), [volumes]);
+  // Composite selection/React key — ids collide across engines, so qualify each by its connection.
+  const getRowId = useCallback((volume: MergedVolume) => mergedKey(volume, volume.Name), []);
+  const visibleIds = useMemo(() => volumes.map(getRowId), [volumes, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
-  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useVolumeBulkActions(connectionId || "");
-  const onReload = useCallback(() => {
-    if (connectionId) {
-      resourceEvents.refresh(connectionId, "volumes");
-    }
-  }, [connectionId]);
+  const { actions: bulkActions, refresh: bulkRefresh } = useVolumeBulkActions();
+  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
+  const unified = useIsUnifiedMode();
+  // Always-merged: a manual reload refreshes this domain on every connected engine.
+  const onReload = useResourceReload("volumes");
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -82,7 +90,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <>
                 <BulkActionsBar
                   items={volumes}
-                  getId={bulkGetId}
+                  getId={getRowId}
                   selectedIds={selection.selectedIds}
                   actions={bulkActions}
                   onClear={selection.clear}
@@ -132,18 +140,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
+                <EngineColumnHeader unified={unified} />
               </tr>
             </thead>
             <tbody>
               {volumes.map((volume) => {
+                const rowId = getRowId(volume);
                 return (
-                  <tr key={volume.Name}>
+                  <tr key={rowId} data-engine-row={unified ? volume.engine : undefined}>
                     <td>
                       <AnchorButton
                         className="PodDetailsButton"
                         variant="minimal"
                         size="small"
-                        href={getVolumeUrl(volume.Name, "inspect")}
+                        href={getVolumeUrl(volume.Name, "inspect", volume.connectionId)}
                         text={volume.Name}
                         intent={Intent.PRIMARY}
                         icon={IconNames.EYE_OPEN}
@@ -153,14 +163,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{volume.Driver}</td>
                     <td>{(dayjs(volume.CreatedAt) as any).fromNow()}</td>
                     <td>
-                      <VolumeActionsMenu withoutCreate volume={volume} />
+                      <VolumeActionsMenu withoutCreate volume={volume} connectionId={volume.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">
                       <SelectionCheckbox
-                        checked={selection.isSelected(volume.Name)}
-                        onChange={() => selection.toggle(volume.Name)}
+                        checked={selection.isSelected(rowId)}
+                        onChange={() => selection.toggle(rowId)}
                       />
                     </td>
+                    <EngineColumnCell unified={unified} engine={volume.engine} connectionName={volume.connectionName} />
                   </tr>
                 );
               })}

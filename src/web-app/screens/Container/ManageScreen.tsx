@@ -19,12 +19,18 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
+import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import {
+  type MergedResource,
+  mergedKey,
+  useIsUnifiedMode,
+  useMergedResources,
+  useResourceReload,
+} from "@/web-app/hooks/useMergedResources";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { resourceEvents } from "@/web-app/stores/resourceEvents";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ActionsMenu } from ".";
 import { useContainerBulkActions } from "./bulkActions";
@@ -35,7 +41,8 @@ export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "containers";
 
-const EMPTY_CONTAINERS: Container[] = [];
+// Always-merged: rows from every connected engine, each carrying its engine/connection.
+type MergedContainer = MergedResource<Container>;
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const [containerOverlay, setContainerOverlay] = useState<string | undefined>();
@@ -45,27 +52,33 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id;
   const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
     ID,
     currentConnector?.capabilities?.sort,
   );
-  const containers = useResourceStore((state) =>
-    connectionId ? state.byConnection[connectionId]?.containers.items || EMPTY_CONTAINERS : EMPTY_CONTAINERS,
-  );
-  const groups = useMemo(
-    () => groupContainers(containers, searchTerm, clientSort),
-    [clientSort, containers, searchTerm],
-  );
-  const visibleItems = useMemo(() => groups.flatMap((group) => group.Items), [groups]);
-  const visibleIds = useMemo(() => visibleItems.map((item) => item.Id), [visibleItems]);
-  const selection = useBulkSelection(ID, visibleIds);
-  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useContainerBulkActions(connectionId || "");
-  const onReload = useCallback(() => {
-    if (connectionId) {
-      resourceEvents.refresh(connectionId, "containers");
+  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
+  const unified = useIsUnifiedMode();
+  const merged = useMergedResources("containers");
+  // Group WITHIN each connection so identically-named groups on different engines never merge.
+  const groups = useMemo(() => {
+    const byConnection = new Map<string, MergedContainer[]>();
+    for (const container of merged) {
+      const list = byConnection.get(container.connectionId);
+      if (list) {
+        list.push(container);
+      } else {
+        byConnection.set(container.connectionId, [container]);
+      }
     }
-  }, [connectionId]);
+    return [...byConnection.values()].flatMap((list) => groupContainers(list, searchTerm, clientSort));
+  }, [merged, searchTerm, clientSort]);
+  // Composite selection/React key — ids collide across engines, so qualify each by its connection.
+  const getRowId = useCallback((container: MergedContainer) => mergedKey(container, container.Id), []);
+  const visibleItems = useMemo(() => groups.flatMap((group) => group.Items) as MergedContainer[], [groups]);
+  const visibleIds = useMemo(() => visibleItems.map(getRowId), [visibleItems, getRowId]);
+  const selection = useBulkSelection(ID, visibleIds);
+  const { actions: bulkActions, refresh: bulkRefresh } = useContainerBulkActions();
+  const onReload = useResourceReload("containers");
   const onGroupToggleClick = useCallback((e) => {
     const groupName = e.currentTarget.getAttribute("data-prefix-group");
     setCollapse((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
@@ -106,7 +119,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <>
                 <BulkActionsBar
                   items={visibleItems}
-                  getId={bulkGetId}
+                  getId={getRowId}
                   selectedIds={selection.selectedIds}
                   actions={bulkActions}
                   onClear={selection.clear}
@@ -169,13 +182,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
+                <EngineColumnHeader unified={unified} />
               </tr>
             </thead>
             <tbody>
               {groups.map((group) => {
-                const containers = group.Items;
+                const containers = group.Items as MergedContainer[];
                 const isPartOfGroup = group.Items.length > 1;
-                const groupIds = containers.map((it) => it.Id);
+                const groupIds = containers.map(getRowId);
                 const groupSelectedCount = groupIds.reduce((n, id) => n + (selection.isSelected(id) ? 1 : 0), 0);
                 const groupChecked = groupIds.length > 0 && groupSelectedCount === groupIds.length;
                 const groupIndeterminate = groupSelectedCount > 0 && groupSelectedCount < groupIds.length;
@@ -242,6 +256,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                                 title={t("Select all in group")}
                               />
                             </td>
+                            <EngineColumnCell
+                              unified={unified}
+                              engine={containers[0].engine}
+                              connectionName={containers[0].connectionName}
+                            />
                           </tr>
                         ) : undefined;
                       let containerGroupData: React.ReactNode | null = null;
@@ -259,7 +278,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             className="ContainerLogsButton"
                             variant="minimal"
                             size="small"
-                            href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`)}
+                            href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`, undefined, {
+                              connId: container.connectionId,
+                            })}
                             text={nameText.startsWith("/") ? nameText.slice(1) : nameText}
                             intent={Intent.SUCCESS}
                             icon={IconNames.ALIGN_JUSTIFY}
@@ -272,7 +293,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             className="ContainerLayersButton"
                             variant="minimal"
                             size="small"
-                            href={pathTo(`/screens/image/${encodeURIComponent(container.ImageID)}/layers`)}
+                            href={pathTo(`/screens/image/${encodeURIComponent(container.ImageID)}/layers`, undefined, {
+                              connId: container.connectionId,
+                            })}
                             text={image.split("@")[0]}
                             intent={Intent.PRIMARY}
                             icon={IconNames.LAYERS}
@@ -298,6 +321,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <tr
                             data-prefix-group={isPartOfGroup ? groupName : undefined}
                             data-container={container.Id}
+                            data-engine-row={unified ? container.engine : undefined}
                             data-state={container.Computed.DecodedState}
                             onFocus={onContainerFocus}
                             onBlur={onContainerBlur}
@@ -322,14 +346,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             </td>
                             <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                             <td>
-                              <ActionsMenu container={container} withOverlay={containerOverlay === container.Id} />
+                              <ActionsMenu
+                                container={container}
+                                connectionId={container.connectionId}
+                                withOverlay={containerOverlay === container.Id}
+                              />
                             </td>
                             <td className="BulkSelectColumn">
                               <SelectionCheckbox
-                                checked={selection.isSelected(container.Id)}
-                                onChange={() => selection.toggle(container.Id)}
+                                checked={selection.isSelected(getRowId(container))}
+                                onChange={() => selection.toggle(getRowId(container))}
                               />
                             </td>
+                            <EngineColumnCell
+                              unified={unified}
+                              engine={container.engine}
+                              connectionName={container.connectionName}
+                            />
                           </tr>
                         );
                       }

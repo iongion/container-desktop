@@ -22,6 +22,10 @@
 [data-engine="docker"] .AppSidebarFooter .bp6-navbar {
   background-image: url("../images/docker-engine.svg");
 }
+/* Merged/multi-engine chrome: no single engine owns the footer, so show the unified mark. */
+[data-engine="unified"] .AppSidebarFooter .bp6-navbar {
+  background-image: url("../images/unified-engine.svg");
+}
 .AppSidebarFooter .bp6-navbar-group {
   height: 32px;
   padding-left: 32px;

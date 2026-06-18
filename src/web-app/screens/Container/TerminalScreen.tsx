@@ -1,7 +1,7 @@
 import { IconNames } from "@blueprintjs/icons";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
-import { useRouteParams } from "@/web-app/Navigator";
+import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
@@ -15,7 +15,9 @@ export const ID = "container.terminal";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { id } = useRouteParams<{ id: string }>();
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const { connId } = useRouteSearch<{ connId?: string }>();
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connId || primaryConnectionId;
   const containerQuery = useContainer(connectionId, decodeURIComponent(id || ""));
   const container = containerQuery.data;
   if (!container) {

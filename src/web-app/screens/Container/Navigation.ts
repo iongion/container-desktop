@@ -1,8 +1,8 @@
 import type { Container } from "@/env/Types";
 import { pathTo } from "@/web-app/Navigator";
 
-export const getContainerUrl = (id: string, view: string) => {
-  return pathTo(`/screens/container/${encodeURIComponent(id)}/${encodeURIComponent(view)}`);
+export const getContainerUrl = (id: string, view: string, connId?: string) => {
+  return pathTo(`/screens/container/${encodeURIComponent(id)}/${encodeURIComponent(view)}`, undefined, { connId });
 };
 
 export const getContainerServiceUrl = (container: Container) => {

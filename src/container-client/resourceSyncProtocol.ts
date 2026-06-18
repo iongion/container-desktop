@@ -6,14 +6,32 @@ import type { ResourceDomain } from "./resourceDomains";
 
 export type ConnectionPhase = "idle" | "starting" | "ready" | "failed";
 
+// Per-connection runtime for a connection main has attempted to bring up (multi-connection: several at once).
+export interface ConnectionRuntimeInfo {
+  id: string;
+  name: string;
+  engine: string;
+  host?: string;
+  phase: ConnectionPhase;
+  running: boolean;
+  error?: string;
+  // Detected user-facing engine version (controller version when the engine reports one, else program
+  // version), populated by main when the connection comes up. Lets the renderer show the REAL version of
+  // EVERY connected engine, not just the primary.
+  version?: string;
+}
+
 // Main owns the CONNECTION phase + connection identity; the renderer keeps its own UI-bootstrap phase
-// (preload wait, React mount) and merges the two (spec §6, High-1 refinement).
+// (preload wait, React mount) and merges the two (spec §6, High-1 refinement). `currentConnector` is the
+// PRIMARY connection (create/pull target, tray header, back-compat); `active` carries every connection main
+// has brought up (or tried to) so the renderer can render the merged, multi-engine workspace.
 export interface AppRuntimeSnapshot {
   phase: ConnectionPhase;
   running: boolean;
   osType: string;
   currentConnector?: { id: string; name: string; engine: string; host?: string };
   connections: Array<{ id: string; name: string; engine: string; host?: string }>;
+  active?: ConnectionRuntimeInfo[];
 }
 
 // Per-connection, per-domain resource items (arrays of normalized records, serializable across IPC).
@@ -31,6 +49,8 @@ export const RESOURCE_SYNC = {
   getSnapshot: "resource:get-snapshot", // renderer → main (invoke, returns ResourceSyncSnapshot)
   refresh: "resource:refresh", // renderer → main (send): refresh a domain now (post-mutation nudge)
   ensureConnected: "resource:ensure-connected", // renderer → main (invoke): connect to id (idempotent), await ready
+  connectAll: "resource:connect-all", // renderer → main (invoke): connect every auto-start connection, await
+  disconnect: "resource:disconnect", // renderer → main (invoke): disconnect one connection by id
 } as const;
 
 export interface ResourceRefreshRequest {

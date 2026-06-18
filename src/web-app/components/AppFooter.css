@@ -37,6 +37,10 @@
 .AppFooterCurrentConnectorStatus[data-connected="no"] {
   background-color: #f00;
 }
+/* The per-engine "engine version" list (no icons) shown when engines are connected. */
+.AppFooterEngineVersionSep {
+  opacity: 0.5;
+}
 
 /* Footer status bar follows the engine/mode "chrome" tone (matches header + sidebar),
    with a hairline to separate it from content. Driven by tokens.css per combo. */

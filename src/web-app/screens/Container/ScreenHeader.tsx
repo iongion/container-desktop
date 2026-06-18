@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { Container } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { pathTo } from "@/web-app/Navigator";
+import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
 
@@ -23,6 +23,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   onReload,
 }: ScreenHeaderProps) => {
   const { t } = useTranslation();
+  // Keep the owning connection while moving between this resource's detail views (ids collide across engines).
+  const { connId } = useRouteSearch<{ connId?: string }>();
   let currentListRoutePath = listRoutePath;
   if (container && !currentListRoutePath) {
     currentListRoutePath = pathTo("/screens/containers");
@@ -39,6 +41,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       rightContent={
         <ActionsMenu
           container={container}
+          connectionId={connId}
           expand
           withInlinePlayerActions
           onReload={onReload}

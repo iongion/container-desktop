@@ -3,6 +3,10 @@
 // pure-projection pattern. TrayController feeds it `Menu.buildFromTemplate(...)` and re-runs it on every
 // EngineDataService change (the documented Linux-correct way to update a tray menu).
 //
+// Always-merged workspace: every connected engine is shown. A single engine renders flat; multiple engines
+// each get a `name — engine ▸` section. Every action carries its connection id so it routes to the owning
+// host (performAction with the main window closed).
+//
 // Native menus can't host inline buttons, progress bars, or live updates, so per-item actions are
 // fly-out submenus and stats are dropped. Long lists are capped with a "Show all … in app" escape.
 
@@ -10,17 +14,24 @@ import type { MenuItemConstructorOptions } from "electron";
 
 type Item = MenuItemConstructorOptions;
 
-export interface TrayMenuData {
+export interface TrayConnectionData {
+  id: string;
+  name: string;
+  engine: string;
   running: boolean;
-  current?: { id: string; name: string; engine: string };
-  connections: Array<{ id: string; name: string; engine: string }>;
   containers: Array<{ id: string; name: string; state: string }>; // state from Computed.DecodedState
   pods: Array<{ id: string; name: string; status: string }>;
   machines: Array<{ name: string; running: boolean }>;
 }
 
+export interface TrayMenuData {
+  // Every connection main has brought up (or attempted). The menu shows only the running ones.
+  connections: TrayConnectionData[];
+}
+
 export interface TrayMenuHandlers {
-  onAction: (kind: string, id: string) => void; // -> EngineDataService.performAction
+  // -> EngineDataService.performAction(kind, id, host-of-connectionId, connectionId)
+  onAction: (kind: string, id: string, connectionId: string) => void;
   onShowApp: () => void;
   onQuit: () => void;
 }
@@ -82,14 +93,24 @@ function machineActions(running: boolean): Action[] {
     : [{ kind: "machine.start", title: "Start" }];
 }
 
-// One resource row: a single action collapses to a flat `Verb "name"` item; multiple actions become a
-// `name ▸` fly-out. `id` is the container/pod id or the machine name (what performAction expects).
-function resourceItem(name: string, id: string, actions: Action[], onAction: TrayMenuHandlers["onAction"]): Item {
+// One resource row, scoped to its owning connection: a single action collapses to a flat `Verb "name"` item;
+// multiple actions become a `name ▸` fly-out. `id` is the container/pod id or the machine name; `connectionId`
+// routes the action to the engine that owns the resource.
+function resourceItem(
+  name: string,
+  id: string,
+  actions: Action[],
+  connectionId: string,
+  onAction: TrayMenuHandlers["onAction"],
+): Item {
   if (actions.length === 1) {
     const only = actions[0];
-    return { label: `${only.title} "${name}"`, click: () => onAction(only.kind, id) };
+    return { label: `${only.title} "${name}"`, click: () => onAction(only.kind, id, connectionId) };
   }
-  return { label: name, submenu: actions.map((a) => ({ label: a.title, click: () => onAction(a.kind, id) })) };
+  return {
+    label: name,
+    submenu: actions.map((a) => ({ label: a.title, click: () => onAction(a.kind, id, connectionId) })),
+  };
 }
 
 // Cap a rendered list, appending a "Show all N in app…" escape when it overflows.
@@ -101,61 +122,68 @@ function capped(rows: Item[], total: number, onShowApp: TrayMenuHandlers["onShow
   return out;
 }
 
+// The Running/Stopped/Pods/Machines items for ONE connection, with every action routed to that connection.
+function connectionSections(
+  connection: TrayConnectionData,
+  onAction: TrayMenuHandlers["onAction"],
+  onShowApp: TrayMenuHandlers["onShowApp"],
+): Item[] {
+  const { id } = connection;
+  const running = connection.containers.filter((c) => {
+    const s = c.state.toLowerCase();
+    return s === "running" || s === "paused";
+  });
+  const stopped = connection.containers.filter((c) => !running.includes(c));
+  const body: Item[] = [];
+  if (running.length > 0) {
+    const rows = running.map((c) => resourceItem(c.name, c.id, containerActions(c.state), id, onAction));
+    body.push({ label: `Running (${running.length})`, submenu: capped(rows, running.length, onShowApp) });
+  }
+  if (stopped.length > 0) {
+    const rows = stopped.map((c) => resourceItem(c.name, c.id, containerActions(c.state), id, onAction));
+    body.push({ label: `Stopped (${stopped.length})`, submenu: capped(rows, stopped.length, onShowApp) });
+  }
+  if (connection.pods.length > 0) {
+    body.push({
+      label: "Pods",
+      submenu: connection.pods.map((p) => resourceItem(p.name, p.id, podActions(p.status), id, onAction)),
+    });
+  }
+  if (connection.machines.length > 0) {
+    body.push({
+      label: "Machines",
+      submenu: connection.machines.map((m) => resourceItem(m.name, m.name, machineActions(m.running), id, onAction)),
+    });
+  }
+  if (body.length === 0) {
+    body.push({ label: "No resources", enabled: false });
+  }
+  return body;
+}
+
 export function buildTrayMenuTemplate(data: TrayMenuData, handlers: TrayMenuHandlers): Item[] {
   const { onAction, onShowApp, onQuit } = handlers;
   const items: Item[] = [];
 
-  if (!data.current) {
+  const connected = data.connections.filter((c) => c.running);
+  if (connected.length === 0) {
     items.push({ label: "Connecting…", enabled: false });
-  } else {
-    const dot = data.running ? "●" : "○";
-    items.push({ label: `${dot} ${data.current.name} — ${data.current.engine}`, enabled: false });
-
-    if (data.connections.length > 1) {
-      items.push({
-        label: "Connection",
-        submenu: data.connections.map((c) => ({
-          label: `${c.name} (${c.engine})`,
-          type: "radio",
-          checked: c.id === data.current?.id,
-          click: () => onAction("connection.switch", c.id),
-        })),
-      });
-    }
-
+  } else if (connected.length === 1) {
+    // Single engine: render its sections flat (the familiar single-connection layout).
+    const only = connected[0];
+    items.push({ label: `● ${only.name} — ${only.engine}`, enabled: false });
     items.push({ type: "separator" });
-
-    const running = data.containers.filter((c) => {
-      const s = c.state.toLowerCase();
-      return s === "running" || s === "paused";
-    });
-    const stopped = data.containers.filter((c) => !running.includes(c));
-
-    const body: Item[] = [];
-    if (running.length > 0) {
-      const rows = running.map((c) => resourceItem(c.name, c.id, containerActions(c.state), onAction));
-      body.push({ label: `Running (${running.length})`, submenu: capped(rows, running.length, onShowApp) });
-    }
-    if (stopped.length > 0) {
-      const rows = stopped.map((c) => resourceItem(c.name, c.id, containerActions(c.state), onAction));
-      body.push({ label: `Stopped (${stopped.length})`, submenu: capped(rows, stopped.length, onShowApp) });
-    }
-    if (data.pods.length > 0) {
-      body.push({
-        label: "Pods",
-        submenu: data.pods.map((p) => resourceItem(p.name, p.id, podActions(p.status), onAction)),
+    items.push(...connectionSections(only, onAction, onShowApp));
+  } else {
+    // Multiple engines: a summary line, then one `name — engine ▸` section per connected engine.
+    items.push({ label: `● ${connected.length} engines connected`, enabled: false });
+    items.push({ type: "separator" });
+    for (const connection of connected) {
+      items.push({
+        label: `${connection.name} — ${connection.engine}`,
+        submenu: connectionSections(connection, onAction, onShowApp),
       });
     }
-    if (data.machines.length > 0) {
-      body.push({
-        label: "Machines",
-        submenu: data.machines.map((m) => resourceItem(m.name, m.name, machineActions(m.running), onAction)),
-      });
-    }
-    if (body.length === 0) {
-      body.push({ label: data.running ? "No resources" : "Connecting…", enabled: false });
-    }
-    items.push(...body);
   }
 
   items.push({ type: "separator" });

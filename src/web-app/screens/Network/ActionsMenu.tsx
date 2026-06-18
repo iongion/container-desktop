@@ -16,6 +16,7 @@ import { useRemoveNetwork } from "./queries";
 
 interface ActionsMenuProps {
   network?: Network;
+  connectionId?: string;
   withoutCreate?: boolean;
   onReload?: () => void;
 }
@@ -27,11 +28,18 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ network, withoutCreate, onReload }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({
+  network,
+  connectionId: connectionIdProp,
+  withoutCreate,
+  onReload,
+}: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  // The row's owning connection in the merged list; falls back to the primary for the header/create usage.
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connectionIdProp || primaryConnectionId;
   const networkRemove = useRemoveNetwork(connectionId);
   const performActionCommand = useCallback(
     async (

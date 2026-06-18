@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Application } from "@/container-client/Application";
 import { type FetchImageOptions, ImagesAdapter, type PushImageOptions } from "@/container-client/adapters/images";
 import type { ContainerImage } from "@/env/Types";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export type ImageSubKey = "history" | "security";
@@ -22,7 +23,7 @@ export const useImage = (connId: string, id?: string, opts?: FetchImageOptions) 
   const qc = useQueryClient();
   return useQuery({
     queryKey: imageKeys.detail(connId, id ?? ""),
-    queryFn: () => new ImagesAdapter().get(id!, opts),
+    queryFn: async () => new ImagesAdapter(await resolveConnectionHost(connId)).get(id!, opts),
     enabled: !!connId && !!id,
     placeholderData: () => {
       for (const [, data] of qc.getQueriesData<ContainerImage[]>({ queryKey: imageKeys.list(connId) })) {
@@ -37,7 +38,7 @@ export const useImage = (connId: string, id?: string, opts?: FetchImageOptions) 
 export const useImageHistory = (connId: string, id?: string) =>
   useQuery({
     queryKey: imageKeys.sub(connId, id ?? "", "history"),
-    queryFn: () => new ImagesAdapter().history(id!),
+    queryFn: async () => new ImagesAdapter(await resolveConnectionHost(connId)).history(id!),
     enabled: !!connId && !!id,
   });
 
@@ -52,7 +53,7 @@ export const useImageSecurity = (connId: string, id?: string, target?: string) =
 export const useRemoveImage = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => new ImagesAdapter().remove(id),
+    mutationFn: async (id: string) => new ImagesAdapter(await resolveConnectionHost(connId)).remove(id),
     onSuccess: async (_result, id) => {
       await resourceEvents.refresh(connId, "images");
       qc.removeQueries({ queryKey: imageKeys.detail(connId, id) });
@@ -64,7 +65,7 @@ export const useRemoveImage = (connId: string) => {
 export const usePullImage = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => new ImagesAdapter().pull(name),
+    mutationFn: async (name: string) => new ImagesAdapter(await resolveConnectionHost(connId)).pull(name),
     onSuccess: async () => {
       await resourceEvents.refresh(connId, "images");
       qc.invalidateQueries({ queryKey: imageKeys.list(connId) });
@@ -73,7 +74,8 @@ export const usePullImage = (connId: string) => {
 };
 
 // Push is an outbound upload — it does not change local cache, so there is nothing to invalidate.
-export const usePushImage = () =>
+export const usePushImage = (connId: string) =>
   useMutation({
-    mutationFn: ({ id, opts }: { id: string; opts?: PushImageOptions }) => new ImagesAdapter().push(id, opts),
+    mutationFn: async ({ id, opts }: { id: string; opts?: PushImageOptions }) =>
+      new ImagesAdapter(await resolveConnectionHost(connId)).push(id, opts),
   });

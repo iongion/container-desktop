@@ -904,6 +904,39 @@ export class Application {
     return this._currentContainerEngineHostClient as T;
   }
 
+  // Per-connection host lookup over the cache getConnectionApi() populates — lets main (and the command
+  // proxy) serve several connections at once by id, instead of the single _currentContainerEngineHostClient.
+  getHostClientFor<T extends HostClientFacade = HostClientFacade>(connectionId: string): T | undefined {
+    return this.connectionApis[connectionId] as T | undefined;
+  }
+
+  // Build a host for a specific connection and cache it by id, WITHOUT mutating the singular
+  // _currentContainerEngineHostClient — so several connections can be brought up in parallel (connectAll)
+  // without racing on a shared "current". Returns the host + its availability for the caller's runtime state.
+  async connectHostClient(
+    connection: Connection,
+    opts?: { startApi?: boolean; skipAvailabilityCheck?: boolean },
+  ): Promise<{ host?: HostClientFacade; availability?: EngineConnectorAvailability }> {
+    const connector = deepMerge<Connector>(
+      {},
+      await createConnectorBy(this.osType, connection.engine, connection.host, connection.id),
+      connection,
+    );
+    connector.connectionId = connection.id;
+    connector.settings = deepMerge({}, connection.settings);
+    connector.logLevel = this.logLevel;
+    const { host, availability } = await this.createConnectorContainerEngineHostClient(connector, {
+      connection: connector,
+      startApi: opts?.startApi ?? false,
+      skipAvailabilityCheck: opts?.skipAvailabilityCheck ?? false,
+      origin: "connectHostClient",
+    });
+    if (host) {
+      this.connectionApis[connection.id] = host;
+    }
+    return { host, availability };
+  }
+
   protected startupStatus: StartupStatus = StartupStatus.STOPPED;
 
   async createConnectorContainerEngineHostClient(

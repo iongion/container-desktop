@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { ContainerEngine } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
+import { useIsUnifiedMode } from "@/web-app/hooks/useMergedResources";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
 import { AppBootstrapPhase } from "@/web-app/App.types";
@@ -229,7 +230,10 @@ export function AppMainScreen() {
   const initialize = useAppStore((state) => state.initialize);
   const startApplication = useAppStore((state) => state.startApplication);
 
-  const engine = nextConnection?.engine || currentConnector?.engine || ContainerEngine.PODMAN;
+  // Merged workspace: when more than one connection is up the chrome uses the neutral `unified` theme;
+  // a single connection keeps its own engine theme. Per-row markers still carry each engine's own accent.
+  const unified = useIsUnifiedMode();
+  const engine = unified ? "unified" : nextConnection?.engine || currentConnector?.engine || ContainerEngine.PODMAN;
   const host = nextConnection?.host || currentConnector?.host || undefined;
 
   useEffect(() => {

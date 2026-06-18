@@ -11,11 +11,17 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
+import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import {
+  type MergedResource,
+  mergedKey,
+  useIsUnifiedMode,
+  useMergedResources,
+  useResourceReload,
+} from "@/web-app/hooks/useMergedResources";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { resourceEvents } from "@/web-app/stores/resourceEvents";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
@@ -27,17 +33,21 @@ export const ID = "images";
 
 export interface ScreenProps extends AppScreenProps {}
 
-const EMPTY_IMAGES: ContainerImage[] = [];
+// Always-merged workspace: rows come from every connected engine, each carrying its engine/connection.
+type MergedImage = MergedResource<ContainerImage>;
 
 const createImageSearchFilter = (searchTerm: string) => {
   const query = searchTerm.toLowerCase();
-  return (image: ContainerImage) => {
-    const haystacks = [image.Name, image.Id].map((value) => value.toLowerCase());
+  return (image: MergedImage) => {
+    const haystacks = [image.Name, image.Id, image.engine, image.connectionName].map((value) =>
+      `${value ?? ""}`.toLowerCase(),
+    );
     return haystacks.some((value) => value.includes(query));
   };
 };
 
-const imageSortSelectors: SortSelectors<ContainerImage> = {
+const imageSortSelectors: SortSelectors<MergedImage> = {
+  engine: (image) => image.engine,
   name: (image) => image.Name,
   registry: (image) => image.Registry,
   tag: (image) => image.Tag,
@@ -51,26 +61,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id;
   const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
     ID,
     currentConnector?.capabilities?.sort,
   );
-  const imageSnapshot = useResourceStore((state) =>
-    connectionId ? state.byConnection[connectionId]?.images.items || EMPTY_IMAGES : EMPTY_IMAGES,
-  );
+  const imageSnapshot = useMergedResources("images");
   const images = useMemo(() => {
     const items = searchTerm ? imageSnapshot.filter(createImageSearchFilter(searchTerm)) : imageSnapshot;
     return sortByField(items, clientSort, imageSortSelectors);
   }, [clientSort, imageSnapshot, searchTerm]);
-  const visibleIds = useMemo(() => images.map((i) => i.Id), [images]);
+  // Composite selection/React key — ids collide across engines, so qualify each by its connection.
+  const getRowId = useCallback((image: MergedImage) => mergedKey(image, image.Id), []);
+  const visibleIds = useMemo(() => images.map(getRowId), [images, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
-  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useImageBulkActions(connectionId || "");
-  const onReload = useCallback(() => {
-    if (connectionId) {
-      resourceEvents.refresh(connectionId, "images");
-    }
-  }, [connectionId]);
+  const { actions: bulkActions, refresh: bulkRefresh } = useImageBulkActions();
+  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
+  const unified = useIsUnifiedMode();
+  // Always-merged: a manual reload refreshes this domain on every connected engine.
+  const onReload = useResourceReload("images");
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -83,7 +91,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <>
                 <BulkActionsBar
                   items={images}
-                  getId={bulkGetId}
+                  getId={getRowId}
                   selectedIds={selection.selectedIds}
                   actions={bulkActions}
                   onClear={selection.clear}
@@ -155,22 +163,24 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
+                <EngineColumnHeader unified={unified} />
               </tr>
             </thead>
             <tbody>
               {images.map((image) => {
+                const rowId = getRowId(image);
                 const imageLayersButton = (
                   <AnchorButton
                     variant="minimal"
                     size="small"
-                    href={getImageUrl(image.Id, "layers")}
+                    href={getImageUrl(image.Id, "layers", image.connectionId)}
                     text={image.Name}
                     intent={Intent.PRIMARY}
                     icon={IconNames.LAYERS}
                   />
                 );
                 return (
-                  <tr key={image.Id} data-image={image.Id}>
+                  <tr key={rowId} data-image={image.Id} data-engine-row={unified ? image.engine : undefined}>
                     <td>{imageLayersButton}</td>
                     <td>{image.Registry}</td>
                     <td>{image.Tag}</td>
@@ -183,14 +193,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </td>
                     <td>{(dayjs(image.Created * 1000) as any).format("DD MMM YYYY HH:mm")}</td>
                     <td>
-                      <ActionsMenu image={image} />
+                      <ActionsMenu image={image} connectionId={image.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">
                       <SelectionCheckbox
-                        checked={selection.isSelected(image.Id)}
-                        onChange={() => selection.toggle(image.Id)}
+                        checked={selection.isSelected(rowId)}
+                        onChange={() => selection.toggle(rowId)}
                       />
                     </td>
+                    <EngineColumnCell unified={unified} engine={image.engine} connectionName={image.connectionName} />
                   </tr>
                 );
               })}

@@ -2,7 +2,6 @@ import {
   Button,
   ButtonGroup,
   Classes,
-  Drawer,
   DrawerSize,
   FormGroup,
   InputGroup,
@@ -10,12 +9,13 @@ import {
   ProgressBar,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useId, useState } from "react";
 import isEqual from "react-fast-compare";
 import { useTranslation } from "react-i18next";
 
 // project
-import { useAppStore } from "@/web-app/stores/appStore";
+import { AppDrawer } from "@/web-app/components/AppDrawer";
+import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { useCreateVolume } from "./queries";
 
 // Volume drawer
@@ -25,11 +25,12 @@ export interface CreateDrawerProps {
 export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
   ({ onClose }: CreateDrawerProps) => {
     const { t } = useTranslation();
+    const formId = useId();
     const [name, setName] = useState("");
     const [type, setType] = useState("");
     const [driver, setDriver] = useState("");
     const [pending, setPending] = useState(false);
-    const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+    const [connectionId, setConnectionId] = useState("");
     const volumeCreate = useCreateVolume(connectionId);
     const onCreateClick = useCallback(async () => {
       setPending(true);
@@ -68,29 +69,25 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
       <div className="AppDrawerPendingIndicator">{pending && <ProgressBar intent={Intent.SUCCESS} />}</div>
     );
     return (
-      <Drawer
-        className="AppDrawer"
+      <AppDrawer
+        className="AppCreateVolumeDrawer"
         icon={IconNames.PLUS}
         title={t("Create new volume")}
-        usePortal
         size={DrawerSize.SMALL}
         onClose={onClose}
-        isOpen
-        hasBackdrop={false}
+        formId={formId}
+        submitting={pending}
       >
         <div className={Classes.DRAWER_BODY}>
-          <div className={Classes.DIALOG_BODY}>
-            <ButtonGroup fill>
-              <Button
-                disabled={pending}
-                intent={Intent.PRIMARY}
-                icon={IconNames.DATABASE}
-                title={t("Click to launch creation")}
-                text={t("Create")}
-                onClick={onCreateClick}
-              />
-            </ButtonGroup>
-            {pendingIndicator}
+          <form
+            id={formId}
+            className={Classes.DIALOG_BODY}
+            onSubmit={(e) => {
+              e.preventDefault();
+              onCreateClick();
+            }}
+          >
+            <ConnectionSelect value={connectionId} onChange={setConnectionId} disabled={pending} />
             <div className="AppDataForm">
               <FormGroup
                 disabled={pending}
@@ -129,9 +126,20 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
                 />
               </FormGroup>
             </div>
-          </div>
+            {pendingIndicator}
+            <ButtonGroup fill>
+              <Button
+                type="submit"
+                disabled={pending}
+                intent={Intent.PRIMARY}
+                icon={IconNames.DATABASE}
+                title={t("Click to launch creation")}
+                text={t("Create")}
+              />
+            </ButtonGroup>
+          </form>
         </div>
-      </Drawer>
+      </AppDrawer>
     );
   },
   (prev, next) => {

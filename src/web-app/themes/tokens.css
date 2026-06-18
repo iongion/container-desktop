@@ -34,6 +34,19 @@
   --app-text-muted: var(--bp-typography-color-muted, #8a93a0);
 }
 
+/* ── PER-ENGINE ROW ACCENTS — standalone, theme-scoped tokens for the always-merged lists.
+ *    Independent of the active [data-engine] chrome (which is `unified` in merged mode) so a row
+ *    marker — Engine-column dot, row-left accent border, engine filter chip — always shows ITS OWN
+ *    engine's brand color. Values mirror each engine's --app-accent; dark is the default, light overrides. */
+:root {
+  --engine-accent-docker: #2f7df0;
+  --engine-accent-podman: #a855c9;
+}
+html[data-theme="bp6-light"] {
+  --engine-accent-docker: #2563eb;
+  --engine-accent-podman: #8e3aa8;
+}
+
 /* ── DOCKER · DARK (deep blue) ────────────────────────────────────────────── */
 html[data-theme="bp6-dark"][data-engine="docker"] {
   --app-accent: #2f7df0;
@@ -104,6 +117,41 @@ html[data-theme="bp6-light"][data-engine="podman"] {
   --app-text-muted: #6a5b75;
 }
 
+/* ── UNIFIED · DARK — neutral slate + teal accent. The merged, multi-engine chrome (data-engine="unified",
+ *    set when >1 connection is up); per-row engine markers still carry each engine's own accent. ── */
+html[data-theme="bp6-dark"][data-engine="unified"] {
+  --app-accent: #14b8a6;
+  --app-accent-hover: #0d9488;
+  --app-accent-active: #0f766e;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #5eead4;
+  --app-bg: #171c26;
+  --app-chrome: #11151d;
+  --app-surface: #1f2733;
+  --app-surface-strong: #2b3543;
+  --app-group-bg: #1b222e;
+  --app-border: rgba(148, 163, 184, 0.16);
+  --app-text: #cbd5e1;
+  --app-text-muted: #8a93a0;
+}
+
+/* ── UNIFIED · LIGHT — neutral gray + teal accent ── */
+html[data-theme="bp6-light"][data-engine="unified"] {
+  --app-accent: #0d9488;
+  --app-accent-hover: #0f766e;
+  --app-accent-active: #115e59;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #0f766e;
+  --app-bg: #f4f6f8;
+  --app-chrome: #ffffff;
+  --app-surface: #ffffff;
+  --app-surface-strong: #eceff3;
+  --app-group-bg: #eef1f4;
+  --app-border: #e2e6ec;
+  --app-text: #1b2430;
+  --app-text-muted: #5b6675;
+}
+
 /* ── BRIDGE → Blueprint's intent tokens.
  *    intent-primary is per-combo (reads --app-accent*). intent-default is ONE neutral hue
  *    per engine; Blueprint's own color-mix formulas adapt it per mode AND per variant —
@@ -137,6 +185,11 @@ html[data-theme="bp6-light"][data-engine="podman"] {
   --bp-intent-default-rest: #6b5c88;
   --bp-intent-default-hover: #786a96;
   --bp-intent-default-active: #5e5179;
+}
+[data-engine="unified"] {
+  --bp-intent-default-rest: #4b5563;
+  --bp-intent-default-hover: #586271;
+  --bp-intent-default-active: #404853;
 }
 
 /* ── SHARED STRUCTURE — one rule per surface, engine/mode-agnostic, reads tokens.

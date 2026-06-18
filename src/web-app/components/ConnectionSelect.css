@@ -1,0 +1,31 @@
+/* ConnectionSelect — the connection picker shown as the first element of connection-dependent forms.
+   Engine-agnostic chrome (app tokens / Blueprint); the per-engine identity is the embedded EngineCell marker. */
+.ConnectionSelect {
+  margin-bottom: 12px;
+}
+.ConnectionSelect .ConnectionSelectButton {
+  width: 100%;
+}
+/* Vertically center the engine icon + connection name inside the trigger button (Blueprint's button-text wraps
+   the content and would otherwise baseline-align the inline-flex row, leaving the icon sitting high). */
+.ConnectionSelect .ConnectionSelectButton .bp6-button-text {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  min-width: 0;
+}
+.ConnectionSelectOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  line-height: 1;
+}
+.ConnectionSelectOption .EngineCellIcon {
+  display: block;
+}
+.ConnectionSelectOptionName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

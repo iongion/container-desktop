@@ -23,6 +23,7 @@ import "./ActionsMenu.css";
 // Actions menu
 interface ActionsMenuProps {
   container?: Container;
+  connectionId?: string;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
   withOverlay?: boolean;
@@ -39,6 +40,7 @@ interface PerformActionOptions {
 
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   container: userContainer,
+  connectionId: connectionIdProp,
   expand,
   isActive,
   withInlinePlayerActions,
@@ -50,13 +52,15 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const [pending, setPending] = useState(false);
   const [container, setContainer] = useState<Container | undefined>(userContainer);
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id || "";
+  // The row's owning connection in the merged list; falls back to the primary for the header usage.
+  const primaryConnectionId = currentConnector?.id || "";
+  const connectionId = connectionIdProp || primaryConnectionId;
   const pauseContainer = usePauseContainer(connectionId);
   const unpauseContainer = useUnpauseContainer(connectionId);
   const stopContainer = useStopContainer(connectionId);
   const restartContainer = useRestartContainer(connectionId);
   const removeContainer = useRemoveContainer(connectionId);
-  const connectContainer = useConnectContainer();
+  const connectContainer = useConnectContainer(connectionId);
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -213,28 +217,28 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           active={isActive ? isActive("container.logs") : false}
           icon={IconNames.ALIGN_JUSTIFY}
           text={t("Logs")}
-          href={getContainerUrl(container.Id, "logs")}
+          href={getContainerUrl(container.Id, "logs", connectionId)}
         />
         <AnchorButton
           variant="minimal"
           active={isActive ? isActive("container.inspect") : false}
           icon={IconNames.EYE_OPEN}
           text={t("Inspect")}
-          href={getContainerUrl(container.Id, "inspect")}
+          href={getContainerUrl(container.Id, "inspect", connectionId)}
         />
         <AnchorButton
           variant="minimal"
           active={isActive ? isActive("container.processes") : false}
           icon={IconNames.PANEL_TABLE}
           text={t("Processes")}
-          href={getContainerUrl(container.Id, "processes")}
+          href={getContainerUrl(container.Id, "processes", connectionId)}
         />
         <AnchorButton
           variant="minimal"
           active={isActive ? isActive("container.kube") : false}
           icon={IconNames.TEXT_HIGHLIGHT}
           text={t("Kube")}
-          href={getContainerUrl(container.Id, "kube")}
+          href={getContainerUrl(container.Id, "kube", connectionId)}
           disabled={!isKubeAvailable}
           title={kubeDisabledTitle}
         />
@@ -243,17 +247,25 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const expandAsMenuItems =
     expand || !container ? undefined : (
       <>
-        <MenuItem icon={IconNames.ALIGN_JUSTIFY} text={t("Logs")} href={getContainerUrl(container.Id, "logs")} />
-        <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getContainerUrl(container.Id, "inspect")} />
+        <MenuItem
+          icon={IconNames.ALIGN_JUSTIFY}
+          text={t("Logs")}
+          href={getContainerUrl(container.Id, "logs", connectionId)}
+        />
+        <MenuItem
+          icon={IconNames.EYE_OPEN}
+          text={t("Inspect")}
+          href={getContainerUrl(container.Id, "inspect", connectionId)}
+        />
         <MenuItem
           icon={IconNames.PANEL_TABLE}
           text={t("Processes")}
-          href={getContainerUrl(container.Id, "processes")}
+          href={getContainerUrl(container.Id, "processes", connectionId)}
         />
         <MenuItem
           icon={IconNames.TEXT_HIGHLIGHT}
           text={t("Kube")}
-          href={getContainerUrl(container.Id, "kube")}
+          href={getContainerUrl(container.Id, "kube", connectionId)}
           disabled={!isKubeAvailable}
           title={kubeDisabledTitle}
         />
@@ -386,7 +398,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
             disabled={!isRunning}
             icon={IconNames.CHART}
             text={t("Stats")}
-            href={getContainerUrl(container.Id, "stats")}
+            href={getContainerUrl(container.Id, "stats", connectionId)}
           />
           <MenuItem
             data-container={container.Id}

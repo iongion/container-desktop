@@ -1,0 +1,74 @@
+/* ConnectionsMenu — header popover listing every configured connection with live per-connection status.
+   Engine-agnostic chrome via app tokens (works under podman/docker/unified); status dots are semantic. */
+.ConnectionsMenuButton .bp6-button-text {
+  font-variant-numeric: tabular-nums;
+}
+.ConnectionsMenuPanel {
+  min-width: 280px;
+  max-width: 380px;
+  padding: 6px;
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.ConnectionsMenuHeading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  padding: 4px 6px 6px;
+}
+.ConnectionsMenuEmpty {
+  padding: 8px 6px;
+  opacity: 0.7;
+  font-size: 12px;
+}
+.ConnectionsMenuRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.ConnectionsMenuRow:hover {
+  background: var(--app-surface-strong);
+}
+.ConnectionsMenuStatus {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #888a83;
+}
+.ConnectionsMenuStatus[data-status="ready"] {
+  background: #2ecc71;
+}
+.ConnectionsMenuStatus[data-status="failed"] {
+  background: #e76a6e;
+}
+.ConnectionsMenuStatus[data-status="idle"] {
+  background: #888a83;
+}
+.ConnectionsMenuName {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ConnectionsMenuPrimaryTag {
+  flex: 0 0 auto;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--app-accent);
+  color: var(--app-accent-fg);
+}
+.ConnectionsMenuActions {
+  flex: 0 0 auto;
+}

@@ -15,10 +15,11 @@ export const COMMAND_PROXY = {
 } as const;
 
 // What the preload sends to main. `req` is a serializable subset of the axios request config; the full
-// Connection rides along, though main proxies via its own active host client (single connection).
+// Connection rides along — main routes each request to that connection's host client by `connection.id`,
+// so several connections' forwarded HTTP can be served at once (falls back to the primary when absent).
 export interface CommandProxyRequestPayload {
   req: Record<string, unknown>;
-  connection: unknown;
+  connection?: ({ id?: string } & Record<string, unknown>) | null;
 }
 
 // Non-stream reply. On failure the engine's error response (status + body) is carried so the renderer can

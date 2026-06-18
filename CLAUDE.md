@@ -101,6 +101,15 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - The renderer is exposed over **CDP at `--remote-debugging-port=9222`**; attach a
   Playwright MCP via `--cdp-endpoint http://localhost:9222` to drive the real app.
   Navigating bare `http://localhost:3000` won't work — it needs the preload bridge.
+- **`support/cdp.mjs`** is the headless CDP driver for verification/screenshots — it
+  **attaches** to the already-running dev app (never launches/closes it), settles through
+  reloads, prints a structured snapshot (theme/engine/route + per-connection counts &
+  runtime from `resource:get-snapshot`), and writes a PNG:
+  `node support/cdp.mjs /tmp/app.png '#/screens/containers'`. Env: `RELOAD=1` re-runs the
+  renderer bootstrap (initialize → connectAll); `EVAL='<expr>'` runs an expression in the
+  page and prints its JSON result (use `EVAL="$(cat file.js)"` for multi-line — incl. async
+  IIFEs); `CDP_URL` overrides the endpoint. Multi-engine dev: `CONTAINER_DESKTOP_MOCK=1 yarn dev`
+  boots Podman+Docker mocks, then drive with this. (See [memory: Verify Electron app via CDP].)
 - Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`.
 
 ## Conventions

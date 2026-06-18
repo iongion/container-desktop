@@ -15,10 +15,10 @@ interface ForwardedStream {
 }
 
 export interface CommandProxyBrokerDeps {
-  /** Ensure main is connected before proxying (idempotent) — the renderer also awaits this on startup. */
-  ensureConnected: () => Promise<void>;
-  /** Main's active host-client Axios driver; its requests ride main's single tunnel/relay/socket pool. */
-  getDriver: () => Promise<{ request: (config: any) => Promise<any> }>;
+  /** Ensure the target connection is up before proxying (idempotent) — the renderer also awaits this. */
+  ensureConnected: (connectionId?: string) => Promise<void>;
+  /** The target connection's host-client Axios driver (falls back to the primary when id is absent). */
+  getDriver: (connectionId?: string) => Promise<{ request: (config: any) => Promise<any> }>;
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
   onMessage: (channel: string, handler: (event: any, payload: any) => void) => void;
   /** Push a stream event to the window that opened the stream. */
@@ -74,8 +74,11 @@ export class CommandProxyBroker {
     if (!this.deps.isAllowedSender(event)) {
       return { stream: false, ok: false, message: "unauthorized" };
     }
-    await this.deps.ensureConnected();
-    const driver = await this.deps.getDriver();
+    // Route to the connection the renderer addressed (its adapter forwards the owning Connection) so several
+    // connections' forwarded HTTP can be served at once; falls back to the primary when the id is absent.
+    const connectionId = (payload?.connection as { id?: string } | null | undefined)?.id;
+    await this.deps.ensureConnected(connectionId);
+    const driver = await this.deps.getDriver(connectionId);
     const req = (payload?.req ?? {}) as Record<string, unknown>;
     if (req.responseType === "stream") {
       return this.openStream(event, driver, req);

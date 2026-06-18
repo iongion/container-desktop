@@ -5,7 +5,7 @@ import { isContainerRunning } from "@/container-client/adapters/containers";
 import { LiveLogBadge, type LogStatus } from "@/web-app/components/LiveLogBadge";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
-import { useRouteParams } from "@/web-app/Navigator";
+import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
@@ -19,7 +19,9 @@ export const ID = "container.logs";
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { id } = useRouteParams<{ id: string }>();
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const { connId } = useRouteSearch<{ connId?: string }>();
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connId || primaryConnectionId;
   const decodedId = decodeURIComponent(id || "");
   const containerQuery = useContainer(connectionId, decodedId, undefined, { live: false });
   const container = containerQuery.data;

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { type CreateNetworkOptions, NetworksAdapter } from "@/container-client/adapters/networks";
 import type { Network } from "@/env/Types";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
 export const networkKeys = {
@@ -18,7 +19,7 @@ export const useNetwork = (connId: string, name?: string) => {
   const qc = useQueryClient();
   return useQuery({
     queryKey: networkKeys.detail(connId, name ?? ""),
-    queryFn: () => new NetworksAdapter().get(name!),
+    queryFn: async () => new NetworksAdapter(await resolveConnectionHost(connId)).get(name!),
     enabled: !!connId && !!name,
     placeholderData: () => {
       for (const [, data] of qc.getQueriesData<Network[]>({ queryKey: networkKeys.list(connId) })) {
@@ -33,7 +34,8 @@ export const useNetwork = (connId: string, name?: string) => {
 export const useCreateNetwork = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (opts: CreateNetworkOptions) => new NetworksAdapter().create(opts),
+    mutationFn: async (opts: CreateNetworkOptions) =>
+      new NetworksAdapter(await resolveConnectionHost(connId)).create(opts),
     onSuccess: async () => {
       await resourceEvents.refresh(connId, "networks");
       qc.invalidateQueries({ queryKey: networkKeys.list(connId) });
@@ -44,7 +46,7 @@ export const useCreateNetwork = (connId: string) => {
 export const useRemoveNetwork = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => new NetworksAdapter().remove(name),
+    mutationFn: async (name: string) => new NetworksAdapter(await resolveConnectionHost(connId)).remove(name),
     onSuccess: async (_result, name) => {
       qc.removeQueries({ queryKey: networkKeys.detail(connId, name) });
       await resourceEvents.refresh(connId, "networks");

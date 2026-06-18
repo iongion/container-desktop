@@ -9,13 +9,19 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
+import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import {
+  type MergedResource,
+  mergedKey,
+  useIsUnifiedMode,
+  useMergedResources,
+  useResourcesReload,
+} from "@/web-app/hooks/useMergedResources";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { resourceEvents } from "@/web-app/stores/resourceEvents";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
@@ -27,17 +33,19 @@ export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "pods";
 
-const EMPTY_PODS: Pod[] = [];
+// Always-merged: rows from every connected engine (pods are Podman-only), each carrying its engine/connection.
+type MergedPod = MergedResource<Pod>;
 
 const createPodSearchFilter = (searchTerm: string) => {
   const query = searchTerm.toLowerCase();
-  return (pod: Pod) => {
-    const haystacks = [pod.Name, pod.Id].map((value) => value.toLowerCase());
+  return (pod: MergedPod) => {
+    const haystacks = [pod.Name, pod.Id, pod.engine, pod.connectionName].map((value) => `${value ?? ""}`.toLowerCase());
     return haystacks.some((value) => value.includes(query));
   };
 };
 
-const podSortSelectors: SortSelectors<Pod> = {
+const podSortSelectors: SortSelectors<MergedPod> = {
+  engine: (pod) => pod.engine,
   name: (pod) => pod.Name,
   containers: (pod) => pod.Containers.length,
   state: (pod) => pod.Status,
@@ -49,28 +57,25 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id;
   const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
     ID,
     currentConnector?.capabilities?.sort,
   );
-  const podSnapshot = useResourceStore((state) =>
-    connectionId ? state.byConnection[connectionId]?.pods.items || EMPTY_PODS : EMPTY_PODS,
-  );
+  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
+  const unified = useIsUnifiedMode();
+  const podSnapshot = useMergedResources("pods");
   const pods = useMemo(() => {
     const items = searchTerm ? podSnapshot.filter(createPodSearchFilter(searchTerm)) : podSnapshot;
     return clientSort
       ? sortByField(items, clientSort, podSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, podSnapshot, searchTerm]);
-  const visibleIds = useMemo(() => pods.map((p) => p.Id), [pods]);
+  // Composite selection/React key — ids collide across engines, so qualify each by its connection.
+  const getRowId = useCallback((pod: MergedPod) => mergedKey(pod, pod.Id), []);
+  const visibleIds = useMemo(() => pods.map(getRowId), [pods, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
-  const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = usePodBulkActions(connectionId || "");
-  const onReload = useCallback(() => {
-    if (connectionId) {
-      resourceEvents.refreshMany(connectionId, ["pods", "containers"]);
-    }
-  }, [connectionId]);
+  const { actions: bulkActions, refresh: bulkRefresh } = usePodBulkActions();
+  const onReload = useResourcesReload("pods", "containers");
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -84,7 +89,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <>
                 <BulkActionsBar
                   items={pods}
-                  getId={bulkGetId}
+                  getId={getRowId}
                   selectedIds={selection.selectedIds}
                   actions={bulkActions}
                   onClear={selection.clear}
@@ -150,6 +155,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
+                <EngineColumnHeader unified={unified} />
               </tr>
             </thead>
             <tbody>
@@ -159,7 +165,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     className="PodDetailsButton"
                     variant="minimal"
                     size="small"
-                    href={pathTo(`/screens/pod/${encodeURIComponent(pod.Id)}/processes`)}
+                    href={pathTo(`/screens/pod/${encodeURIComponent(pod.Id)}/processes`, undefined, {
+                      connId: pod.connectionId,
+                    })}
                     text={pod.Name}
                     intent={Intent.PRIMARY}
                     icon={IconNames.LIST_COLUMNS}
@@ -169,7 +177,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 const creationDate =
                   typeof pod.Created === "string" ? dayjs(pod.Created) : dayjs(Number(pod.Created) * 1000);
                 return (
-                  <tr key={pod.Id} data-pod={pod.Id} data-state={pod.Status}>
+                  <tr
+                    key={getRowId(pod)}
+                    data-pod={pod.Id}
+                    data-engine-row={unified ? pod.engine : undefined}
+                    data-state={pod.Status}
+                  >
                     <td>{podDetailsButton}</td>
                     <td>{pod.Containers.length}</td>
                     <td>
@@ -182,14 +195,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </td>
                     <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                     <td>
-                      <ItemActionsMenu pod={pod} />
+                      <ItemActionsMenu pod={pod} connectionId={pod.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">
                       <SelectionCheckbox
-                        checked={selection.isSelected(pod.Id)}
-                        onChange={() => selection.toggle(pod.Id)}
+                        checked={selection.isSelected(getRowId(pod))}
+                        onChange={() => selection.toggle(getRowId(pod))}
                       />
                     </td>
+                    <EngineColumnCell unified={unified} engine={pod.engine} connectionName={pod.connectionName} />
                   </tr>
                 );
               })}

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { RESOURCE_DOMAINS, type ResourceDomain, type ResourceItemsByDomain } from "@/container-client/resourceDomains";
+import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
 import type { Container, ContainerImage, Network, Pod, Secret, Volume } from "@/env/Types";
 
 export type { ResourceDomain, ResourceItemsByDomain };
@@ -23,6 +24,9 @@ export type ResourceConnectionSnapshot = {
 
 interface ResourceStoreState {
   byConnection: Record<string, ResourceConnectionSnapshot>;
+  // Per-connection runtime (phase/running/error), mirrored from the SAME snapshot as the resource lists.
+  // Drives the connection manager / footer / dashboard. Keyed by connection id via each item's `.id`.
+  activeRuntime: ConnectionRuntimeInfo[];
 }
 
 interface ResourceStoreActions {
@@ -35,6 +39,7 @@ interface ResourceStoreActions {
   ) => void;
   resetConnection: (connectionId: string) => void;
   resetAll: () => void;
+  setActiveRuntime: (active: ConnectionRuntimeInfo[]) => void;
 }
 
 export type ResourceStore = ResourceStoreState & ResourceStoreActions;
@@ -61,6 +66,7 @@ export function createConnectionSnapshot(): ResourceConnectionSnapshot {
 
 export const useResourceStore = create<ResourceStore>()((set) => ({
   byConnection: {},
+  activeRuntime: [],
 
   ensureConnection: (connectionId) =>
     set((state) =>
@@ -113,7 +119,9 @@ export const useResourceStore = create<ResourceStore>()((set) => ({
       return { byConnection };
     }),
 
-  resetAll: () => set({ byConnection: {} }),
+  resetAll: () => set({ byConnection: {}, activeRuntime: [] }),
+
+  setActiveRuntime: (activeRuntime) => set({ activeRuntime }),
 }));
 
 export function getResourceSlice<D extends ResourceDomain>(

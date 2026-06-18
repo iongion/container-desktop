@@ -1,13 +1,15 @@
-import { Button, ButtonGroup, Classes, Drawer, DrawerSize, Intent, ProgressBar } from "@blueprintjs/core";
+import { Button, ButtonGroup, Classes, DrawerSize, Intent, ProgressBar } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngine } from "@/env/Types";
+import { AppDrawer } from "@/web-app/components/AppDrawer";
+import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useCreateRegistry } from "./queries";
@@ -30,6 +32,7 @@ export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActions
   );
   return (
     <>
+      {pendingIndicator}
       <ButtonGroup fill>
         <Button
           disabled={pending || !formState.isValid}
@@ -40,7 +43,6 @@ export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActions
           type="submit"
         />
       </ButtonGroup>
-      {pendingIndicator}
     </>
   );
 };
@@ -50,6 +52,7 @@ export interface CreateDrawerProps {
 }
 export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDrawerProps) => {
   const { t } = useTranslation();
+  const formId = useId();
   const methods = useForm<CreateFormData>({
     mode: "all",
     reValidateMode: "onChange",
@@ -61,11 +64,13 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
   const { handleSubmit } = methods;
   const [pending, setPending] = useState(false); // Form initial data
 
-  const currentConnector = useAppStore((state) => state.currentConnector);
-  const registryCreate = useCreateRegistry(currentConnector?.id || "");
+  const [connectionId, setConnectionId] = useState("");
+  const connections = useAppStore((state) => state.connections);
+  const registryCreate = useCreateRegistry(connectionId);
   const onSubmit = handleSubmit(async (data) => {
     setPending(true);
     try {
+      const selectedEngine = connections.find((it) => it.id === connectionId)?.engine;
       await registryCreate.mutateAsync({
         created: dayjs().toISOString(),
         name: data.registryName,
@@ -74,7 +79,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
         enabled: true,
         isRemovable: true,
         isSystem: false,
-        engine: currentConnector?.engine ? [currentConnector.engine] : [ContainerEngine.PODMAN],
+        engine: selectedEngine ? [selectedEngine] : [ContainerEngine.PODMAN],
       });
       onClose();
       Notification.show({
@@ -94,26 +99,26 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
     }
   });
   return (
-    <Drawer
-      className="AppDrawer"
+    <AppDrawer
+      className="AppCreateRegistryDrawer"
       icon={<ReactIcon.Icon path={mdiCubeUnfolded} size={0.75} className="ReactIcon" />}
       title={t("Configure registry")}
-      usePortal
       size={DrawerSize.SMALL}
       onClose={onClose}
-      isOpen
-      hasBackdrop={false}
+      formId={formId}
+      submitting={pending}
     >
       <div className={Classes.DRAWER_BODY}>
         <FormProvider {...methods}>
-          <form name="CreateRegistryForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
-            <FormActions pending={pending} />
+          <form id={formId} name="CreateRegistryForm" className={Classes.DIALOG_BODY} onSubmit={onSubmit}>
+            <ConnectionSelect value={connectionId} onChange={setConnectionId} disabled={pending} />
             <div className="AppDataForm" data-form="registry.create">
               <RegistryPropertiesForm disabled={pending} />
             </div>
+            <FormActions pending={pending} />
           </form>
         </FormProvider>
       </div>
-    </Drawer>
+    </AppDrawer>
   );
 };

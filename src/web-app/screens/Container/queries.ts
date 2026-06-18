@@ -11,6 +11,7 @@ import {
 } from "@/container-client/adapters/containers";
 import { getActiveHostClient } from "@/container-client/adapters/shared";
 import type { Container } from "@/env/Types";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
@@ -37,7 +38,7 @@ export const useContainer = (
   const live = queryOpts?.live ?? false;
   return useQuery({
     queryKey: containerKeys.detail(connId, id ?? ""),
-    queryFn: () => new ContainersAdapter().get(id!, opts),
+    queryFn: async () => new ContainersAdapter(await resolveConnectionHost(connId)).get(id!, opts),
     enabled: !!connId && !!id,
     placeholderData: () => {
       for (const [, data] of qc.getQueriesData<Container[]>({ queryKey: containerKeys.list(connId) })) {
@@ -53,7 +54,7 @@ export const useContainer = (
 export const useContainerStats = (connId: string, id?: string, enabled = true) =>
   useQuery({
     queryKey: containerKeys.sub(connId, id ?? "", "stats"),
-    queryFn: () => new ContainersAdapter().stats(id!),
+    queryFn: async () => new ContainersAdapter(await resolveConnectionHost(connId)).stats(id!),
     enabled: enabled && !!connId && !!id,
     ...liveQueryOptions(),
   });
@@ -61,7 +62,7 @@ export const useContainerStats = (connId: string, id?: string, enabled = true) =
 export const useContainerProcesses = (connId: string, id?: string, enabled = true) =>
   useQuery({
     queryKey: containerKeys.sub(connId, id ?? "", "processes"),
-    queryFn: () => new ContainersAdapter().processes(id!),
+    queryFn: async () => new ContainersAdapter(await resolveConnectionHost(connId)).processes(id!),
     enabled: enabled && !!connId && !!id,
     ...liveQueryOptions(),
   });
@@ -73,7 +74,7 @@ export const useContainerLogs = (
 ) =>
   useQuery({
     queryKey: containerKeys.sub(connId, id ?? "", "logs"),
-    queryFn: () => new ContainersAdapter().logs(id!),
+    queryFn: async () => new ContainersAdapter(await resolveConnectionHost(connId)).logs(id!),
     enabled: (opts?.enabled ?? true) && !!connId && !!id,
     ...(opts?.refetchIntervalMs ? liveQueryOptions(opts.refetchIntervalMs) : {}),
   });
@@ -99,7 +100,7 @@ const refreshContainer = async (qc: ReturnType<typeof useQueryClient>, connId: s
 export const usePauseContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => new ContainersAdapter().pause(id),
+    mutationFn: async (id: string) => new ContainersAdapter(await resolveConnectionHost(connId)).pause(id),
     onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
@@ -107,7 +108,7 @@ export const usePauseContainer = (connId: string) => {
 export const useUnpauseContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => new ContainersAdapter().unpause(id),
+    mutationFn: async (id: string) => new ContainersAdapter(await resolveConnectionHost(connId)).unpause(id),
     onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
@@ -115,7 +116,7 @@ export const useUnpauseContainer = (connId: string) => {
 export const useStartContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => new ContainersAdapter().start(id),
+    mutationFn: async (id: string) => new ContainersAdapter(await resolveConnectionHost(connId)).start(id),
     onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
@@ -123,7 +124,7 @@ export const useStartContainer = (connId: string) => {
 export const useStopContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => new ContainersAdapter().stop(id),
+    mutationFn: async (id: string) => new ContainersAdapter(await resolveConnectionHost(connId)).stop(id),
     onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
@@ -131,7 +132,7 @@ export const useStopContainer = (connId: string) => {
 export const useRestartContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => new ContainersAdapter().restart(id),
+    mutationFn: async (id: string) => new ContainersAdapter(await resolveConnectionHost(connId)).restart(id),
     onSuccess: async (_result, id) => refreshContainer(qc, connId, id),
   });
 };
@@ -139,7 +140,7 @@ export const useRestartContainer = (connId: string) => {
 export const useRemoveContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => new ContainersAdapter().remove(id),
+    mutationFn: async (id: string) => new ContainersAdapter(await resolveConnectionHost(connId)).remove(id),
     onSuccess: async (_result, id) => {
       await resourceEvents.refresh(connId, "containers");
       qc.removeQueries({ queryKey: containerKeys.detail(connId, id) });
@@ -151,7 +152,8 @@ export const useRemoveContainer = (connId: string) => {
 export const useCreateContainer = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (opts: CreateContainerOptions) => new ContainersAdapter().create(opts),
+    mutationFn: async (opts: CreateContainerOptions) =>
+      new ContainersAdapter(await resolveConnectionHost(connId)).create(opts),
     onSuccess: async () => {
       await resourceEvents.refresh(connId, "containers");
       qc.invalidateQueries({ queryKey: containerKeys.list(connId) });
@@ -159,8 +161,9 @@ export const useCreateContainer = (connId: string) => {
   });
 };
 
-export const useConnectContainer = () => {
+export const useConnectContainer = (connId: string) => {
   return useMutation({
-    mutationFn: (container: Container) => new ContainersAdapter().connectToContainer(container),
+    mutationFn: async (container: Container) =>
+      new ContainersAdapter(await resolveConnectionHost(connId)).connectToContainer(container),
   });
 };

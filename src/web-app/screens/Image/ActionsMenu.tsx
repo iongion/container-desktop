@@ -15,6 +15,7 @@ import { usePullImage, usePushImage, useRemoveImage } from "./queries";
 
 interface ActionsMenuProps {
   image?: ContainerImage;
+  connectionId?: string;
   withoutStart?: boolean;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
@@ -24,6 +25,7 @@ interface ActionsMenuProps {
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   expand,
   image,
+  connectionId: connectionIdProp,
   withoutStart,
   isActive,
   onReload,
@@ -31,9 +33,11 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  // The row's owning connection in the merged list; falls back to the primary for the header/create usage.
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connectionIdProp || primaryConnectionId;
   const imagePull = usePullImage(connectionId);
-  const imagePush = usePushImage();
+  const imagePush = usePushImage(connectionId);
   const imageRemove = useRemoveImage(connectionId);
   const performActionCommand = useCallback(
     async (action: string) => {
@@ -117,14 +121,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           active={isActive ? isActive("image.layers") : false}
           icon={IconNames.LAYERS}
           text={t("Layers")}
-          href={getImageUrl(image.Id, "layers")}
+          href={getImageUrl(image.Id, "layers", connectionId)}
         />
         <AnchorButton
           variant="minimal"
           active={isActive ? isActive("image.inspect") : false}
           icon={IconNames.EYE_OPEN}
           text={t("Inspect")}
-          href={getImageUrl(image.Id, "inspect")}
+          href={getImageUrl(image.Id, "inspect", connectionId)}
         />
         <AnchorButton
           variant="minimal"
@@ -132,16 +136,20 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           icon={IconNames.CONFIRM}
           text={t("Security")}
           intent={Intent.DANGER}
-          href={getImageUrl(image!.Id, "security")}
+          href={getImageUrl(image!.Id, "security", connectionId)}
         />
       </>
     ) : undefined;
   const expandAsMenuItems =
     expand || !image ? undefined : (
       <>
-        <MenuItem icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers")} />
-        <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect")} />
-        <MenuItem icon={IconNames.CONFIRM} text={t("Security check")} href={getImageUrl(image.Id, "security")} />
+        <MenuItem icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers", connectionId)} />
+        <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect", connectionId)} />
+        <MenuItem
+          icon={IconNames.CONFIRM}
+          text={t("Security check")}
+          href={getImageUrl(image.Id, "security", connectionId)}
+        />
       </>
     );
   return (
@@ -184,7 +192,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           </ConfirmMenu>
         ) : null}
       </ButtonGroup>
-      {withCreate && image && <CreateDrawer image={image} onClose={onCreateClose} />}
+      {withCreate && image && <CreateDrawer image={image} connectionId={connectionId} onClose={onCreateClose} />}
     </>
   );
 };

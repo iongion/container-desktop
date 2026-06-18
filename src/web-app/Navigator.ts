@@ -1,4 +1,4 @@
-import { useParams } from "@tanstack/react-router";
+import { useParams, useSearch } from "@tanstack/react-router";
 import { compile } from "path-to-regexp";
 
 /**
@@ -10,13 +10,35 @@ export function useRouteParams<T extends Record<string, string>>(): T {
   return useParams({ strict: false }) as unknown as T;
 }
 
+/**
+ * Typed accessor for the active route's search (query) params — same un-inferred-shape caveat as
+ * useRouteParams. Used to thread the owning `connId` from a merged list row into its detail/inspect/
+ * logs/terminal screen: resource Ids collide across engines, so the bare path `$id` isn't enough to
+ * pick the right connection. Absent `connId` (legacy/deep links) falls back to the primary connector.
+ */
+export function useRouteSearch<T extends Record<string, string | undefined>>(): T {
+  return useSearch({ strict: false }) as unknown as T;
+}
+
 function generatePath(pattern: string, params: Record<string, string | number>) {
   const toPath = compile(pattern);
   return toPath(params as any);
 }
 
-export function pathTo<S extends string>(path: S, params?: any): string {
+export function pathTo<S extends string>(path: S, params?: any, query?: Record<string, string | undefined>): string {
   let clean = generatePath(path, params);
+  if (query) {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null && value !== "") {
+        search.set(key, value);
+      }
+    }
+    const qs = search.toString();
+    if (qs) {
+      clean = `${clean}?${qs}`;
+    }
+  }
   if (window.location.protocol === "file:") {
     clean = `file://${window.location.pathname}#${clean}`;
   } else {

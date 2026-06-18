@@ -1,8 +1,9 @@
-// screens/Network/bulkActions.ts — bulk action config for the Networks list. Networks expose a single
+// screens/Network/bulkActions.ts — bulk action config for the merged Networks list. Networks expose a single
 // destructive Remove button. The selection key is the network id (the row's unique key), but the remove
 // adapter takes the network name — mirroring the per-row ActionsMenu, which passes network.name to remove.
-// Wires to the same NetworksAdapter.remove the single-row mutation uses; one list refresh runs after the
-// batch (by BulkActionsBar).
+// The always-merged selection can span engines, so each run routes to the item's OWN connection
+// (resolveConnectionHost → a connection-scoped NetworksAdapter) and the post-batch refresh nudges every
+// connected engine. One list refresh runs after the batch (by BulkActionsBar).
 
 import { Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
@@ -12,20 +13,25 @@ import { useTranslation } from "react-i18next";
 import { NetworksAdapter } from "@/container-client/adapters/networks";
 import type { Network } from "@/env/Types";
 import type { BulkAction } from "@/web-app/components/Bulk";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
-export function useNetworkBulkActions(connId: string): {
-  actions: BulkAction<Network>[];
-  getId: (item: Network) => string;
+type MergedNetwork = MergedResource<Network>;
+
+export function useNetworkBulkActions(): {
+  actions: BulkAction<MergedNetwork>[];
+  getId: (item: MergedNetwork) => string;
   refresh: () => Promise<void>;
 } {
   const { t } = useTranslation();
   return useMemo(() => {
-    const adapter = new NetworksAdapter();
     const refresh = async () => {
-      await resourceEvents.refresh(connId, "networks");
+      for (const id of getConnectedConnectionIds()) {
+        await resourceEvents.refresh(id, "networks");
+      }
     };
-    const actions: BulkAction<Network>[] = [
+    const actions: BulkAction<MergedNetwork>[] = [
       {
         key: "remove",
         label: t("Remove"),
@@ -33,9 +39,9 @@ export function useNetworkBulkActions(connId: string): {
         intent: Intent.DANGER,
         destructive: true,
         eligible: () => true,
-        run: (n) => adapter.remove(n.name),
+        run: async (i) => new NetworksAdapter(await resolveConnectionHost(i.connectionId)).remove(i.name),
       },
     ];
-    return { actions, getId: (item: Network) => item.id, refresh };
-  }, [connId, t]);
+    return { actions, getId: (item: MergedNetwork) => item.id, refresh };
+  }, [t]);
 }

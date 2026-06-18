@@ -7,7 +7,7 @@ import type { Connection } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
-import { getFirstUnavailableReason } from "@/web-app/utils/availability";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 
 import "./ActionsMenu.css";
 
@@ -26,12 +26,13 @@ interface PerformActionOptions {
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
-  const currentConnector = useAppStore((state) => state.currentConnector);
   const [isStarting, setIsStarting] = useState(false);
-  const startApplication = useAppStore((state) => state.startApplication);
-  const stopApplication = useAppStore((state) => state.stopApplication);
+  const connectOne = useAppStore((state) => state.connectOne);
+  const disconnectOne = useAppStore((state) => state.disconnectOne);
   const removeConnection = useAppStore((state) => state.removeConnection);
   const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
+  // Live per-connection status from main's merged snapshot: connected = main has this one up and running.
+  const runtime = useResourceStore((state) => state.activeRuntime.find((info) => info.id === connection.id));
   const performActionCommand = useCallback(
     async (
       action: string,
@@ -81,20 +82,17 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   const onConnectClick = useCallback(async () => {
     setIsStarting(true);
     try {
-      await startApplication({
-        startApi: connection.settings.api.autoStart ?? false,
-        connection,
-        skipAvailabilityCheck: false,
-      });
+      // Per-connection connect (always-merged): bring up just this engine via main — no global bootstrap reset.
+      await connectOne(connection.id);
     } catch (error: any) {
-      console.error("Unable to start the application", error);
+      console.error("Unable to connect", error);
     } finally {
       setIsStarting(false);
     }
-  }, [startApplication, connection]);
+  }, [connectOne, connection]);
   const onDisconnectClick = useCallback(async () => {
-    await stopApplication({ stopApi: true, connection });
-  }, [stopApplication, connection]);
+    await disconnectOne(connection.id);
+  }, [disconnectOne, connection]);
 
   const onRemove = useCallback(
     (tag, confirmed) => {
@@ -112,17 +110,15 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
       },
     });
   }, [setGlobalUserSettings, connection]);
-  const isCurrent = currentConnector?.connectionId === connection?.id;
-  const isConnected = isCurrent && currentConnector.availability.api;
-  const unavailableReason =
-    isCurrent && !isConnected ? getFirstUnavailableReason(currentConnector.availability) : undefined;
+  const isConnected = !!runtime?.running;
+  const unavailableReason = runtime?.error;
 
   const removeWidget = connection ? (
     <ConfirmMenu
       onConfirm={onRemove}
       tag={connection.id}
-      title={isCurrent ? t("Current connection cannot be removed") : null}
-      disabled={connection.readonly || isStarting || isCurrent || disabledAction === "connection.remove"}
+      title={isConnected ? t("A connected connection cannot be removed") : null}
+      disabled={connection.readonly || isStarting || isConnected || disabledAction === "connection.remove"}
     >
       <MenuItem icon={IconNames.TARGET} text={t("Make default")} intent={Intent.NONE} onClick={onMakeDefault} />
       <MenuDivider />
@@ -138,7 +134,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
           icon={isConnected ? IconNames.POWER : IconNames.OFFLINE}
           intent={isConnected ? Intent.SUCCESS : Intent.NONE}
           text={isConnected ? t("Disconnect") : t("Connect")}
-          title={!isConnected && unavailableReason?.reason ? unavailableReason.reason : t("Connect")}
+          title={!isConnected && unavailableReason ? unavailableReason : t("Connect")}
           onClick={isConnected ? onDisconnectClick : onConnectClick}
         />
       </ButtonGroup>

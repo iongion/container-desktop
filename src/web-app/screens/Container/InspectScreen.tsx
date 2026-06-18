@@ -4,7 +4,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
-import { useRouteParams } from "@/web-app/Navigator";
+import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -29,7 +29,9 @@ interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const { id } = useRouteParams<{ id: string }>();
-  const connectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const { connId } = useRouteSearch<{ connId?: string }>();
+  const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
+  const connectionId = connId || primaryConnectionId;
   const decodedId = decodeURIComponent(id || "");
   const containerQuery = useContainer(connectionId, decodedId);
   const { data: container, refetch } = containerQuery;
