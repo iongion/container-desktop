@@ -131,8 +131,8 @@
       "text": "managing local, SSH, WSL, and LIMA connections for both Podman and Docker from one place",
       "actions": [
         {
-          "type": "click",
-          "selector": "a[aria-label=\"Settings\"]",
+          "type": "navigate",
+          "route": "/screens/connections/manage",
           "waitFor": "tr[data-connection-id=\"mock.podman.system\"][data-connection-is-default=\"yes\"][data-connection-is-current=\"yes\"][data-connection-is-connected=\"yes\"]"
         },
         { "type": "wait", "ms": 250 }

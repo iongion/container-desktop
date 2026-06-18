@@ -61,13 +61,13 @@ section{position:relative}
 .gh-star{min-width:118px;height:28px;display:flex;align-items:center}
 @media(max-width:860px){.nav-links{display:none}.gh-star{display:none}}
 
-/* ---- theme swatches (engine color picker; scales as engines are added) ---- */
-.theme-swatches{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.theme-swatch{width:18px;height:18px;padding:0;border-radius:50%;cursor:pointer;background:var(--sw);
+/* ---- engine switcher (per-engine color picker; scales as engines are added) ---- */
+.engine-switcher{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.engine-swatch{width:18px;height:18px;padding:0;border-radius:50%;cursor:pointer;background:var(--sw);
   border:1px solid rgba(255,255,255,.28);transition:transform .14s,box-shadow .14s}
-.theme-swatch:hover{transform:scale(1.15)}
-.theme-swatch:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--purple-l)}
-.theme-swatch.is-active{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--magenta)}
+.engine-swatch:hover{transform:scale(1.15)}
+.engine-swatch:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--purple-l)}
+.engine-swatch.is-active{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--magenta)}
 
 /* ---- hero ---- */
 .hero{padding:74px 0 30px;text-align:center}

@@ -20,7 +20,7 @@ const themes = [
     id: "unified",
     label: "Unified",
     swatch: "#0a5f50",
-    tagline: "Unified Desktop Companion",
+    tagline: "Unified desktop companion",
     shots: "unified",
     replay: "/replays/unified.json",
     poster: "/videos/unified.png",
@@ -29,16 +29,16 @@ const themes = [
     id: "podman",
     label: "Podman",
     swatch: "#a01986",
-    tagline: "Podman Desktop Companion",
+    tagline: "Podman desktop companion",
     shots: "podman",
-    replay: "/replays/container-desktop-demo.json",
-    poster: "/videos/demo.png",
+    replay: "/replays/podman.json",
+    poster: "/videos/podman.png",
   },
   {
     id: "docker",
     label: "Docker",
     swatch: "#163d8a",
-    tagline: "Docker Desktop Companion",
+    tagline: "Docker desktop companion",
     shots: "docker",
     replay: "/replays/docker.json",
     poster: "/videos/docker.png",
@@ -47,7 +47,7 @@ const themes = [
 const defaultTheme = "unified";
 // Baked into the nav brand so the default theme's tagline shows before JS runs (no flash);
 // theme-switcher.js swaps it on each swatch click.
-const defaultTagline = (themes.find((theme) => theme.id === defaultTheme) || {}).tagline;
+const defaultTagline = themes.find((theme) => theme.id === defaultTheme)?.tagline;
 
 export default {
   name: "Container Desktop",

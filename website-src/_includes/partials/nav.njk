@@ -1,5 +1,5 @@
 <header class="nav"><div class="wrap">
-  <a class="brand" href="/"><span class="mark">cd</span><span>{{ site.name }}<small>{{ site.tagline }}</small></span></a>
+  <a class="brand" href="/"><span class="mark">cd</span><span>{{ site.name }}<small class="brand-tagline">{{ site.defaultTagline or site.tagline }}</small></span></a>
   <nav class="nav-links">
     <a href="/#features">Features</a>
     <a href="/manual/"{% if active == "manual" %} class="on"{% endif %}>Manual</a>
@@ -7,9 +7,9 @@
     <a href="{{ site.repo }}">GitHub</a>
   </nav>
   <div class="nav-cta">
-    <div class="theme-swatches" role="group" aria-label="Color theme">
+    <div class="engine-switcher" role="group" aria-label="Engine switcher">
       {%- for t in site.themes %}
-      <button type="button" class="theme-swatch{% if t.id == site.defaultTheme %} is-active{% endif %}" data-theme-id="{{ t.id }}" data-shots="{{ t.shots }}" data-replay="{{ t.replay }}" data-poster="{{ t.poster }}" style="--sw:{{ t.swatch }}" title="{{ t.label }} theme" aria-label="{{ t.label }} theme" aria-pressed="{% if t.id == site.defaultTheme %}true{% else %}false{% endif %}"></button>
+      <button type="button" class="engine-swatch{% if t.id == site.defaultTheme %} is-active{% endif %}" data-theme-id="{{ t.id }}" data-shots="{{ t.shots }}" data-replay="{{ t.replay }}" data-poster="{{ t.poster }}" data-tagline="{{ t.tagline }}" style="--sw:{{ t.swatch }}" title="{{ t.label }}" aria-label="{{ t.label }} engine" aria-pressed="{% if t.id == site.defaultTheme %}true{% else %}false{% endif %}"></button>
       {%- endfor %}
     </div>
     <span class="gh-star"><a class="github-button" href="{{ site.repo }}" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star {{ site.repoSlug }} on GitHub">Star</a></span>

@@ -36,6 +36,19 @@ export default {
       alt: "Containers",
       flip: false,
     },
+    {
+      eyebrow: "Settings",
+      title: "Yours to configure, top to bottom",
+      copy: "Set the theme and monospace font, decide how it starts and sits in the system tray, pick your log level, and always see exactly where settings and logs are stored.",
+      bullets: [
+        "Theme &amp; monospace font to taste",
+        "Startup, tray &amp; update controls",
+        "Transparent storage &amp; log paths",
+      ],
+      img: "/img/podman/UserSettings.png",
+      alt: "Settings",
+      flip: true,
+    },
   ],
   grid: [
     {

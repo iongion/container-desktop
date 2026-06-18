@@ -5,18 +5,27 @@
 // <head> applies the stored theme before first paint to avoid a color flash.
 (() => {
   var STORAGE_KEY = "cd-theme";
-  var swatches = Array.prototype.slice.call(document.querySelectorAll(".theme-swatch"));
+  var swatches = Array.prototype.slice.call(document.querySelectorAll(".engine-swatch"));
   if (!swatches.length) return;
 
   var ids = swatches.map((s) => s.dataset.themeId);
   var shotsFor = {};
   var replayFor = {};
+  var taglineFor = {};
   var initial;
   var initialActive;
   swatches.forEach((s) => {
     shotsFor[s.dataset.themeId] = s.dataset.shots || "podman";
     replayFor[s.dataset.themeId] = { replay: s.dataset.replay || "", poster: s.dataset.poster || "" };
+    taglineFor[s.dataset.themeId] = s.dataset.tagline || "";
   });
+
+  function updateTagline(id) {
+    var el = document.querySelector(".brand-tagline");
+    if (el && taglineFor[id]) {
+      el.textContent = taglineFor[id];
+    }
+  }
 
   // Every known screenshot folder, so the swap matches images currently pointing at any engine
   // (e.g. switching unified -> docker), not just podman/docker.
@@ -125,6 +134,7 @@
     swapScreenshots(shotsFor[id]);
     syncThemeColor();
     updateReplay(id);
+    updateTagline(id);
   }
 
   function onSwatchClick(event) {

@@ -60,20 +60,27 @@ export const screenshotManifest = [
     minCountByEngine: { podman: 12, docker: 1, unified: 12 },
   },
   {
+    file: "UserSettings.png",
+    route: "/screens/settings/user-settings",
+    waitFor: '[data-screen="settings-settings"] [data-form="flags"]',
+  },
+  {
     file: "SystemInfo.png",
-    route: "/screens/settings/system-info",
-    waitFor: '[data-screen="settings.system-info"] .CodeEditor .monaco-editor',
+    route: "/screens/connections/system-info",
+    waitFor: '[data-screen="connections.system-info"] .CodeEditor .monaco-editor',
   },
   {
     file: "ConnectionManager.png",
-    route: "/screens/settings/user-settings",
+    route: "/screens/connections/manage",
     waitForByEngine: {
       podman:
         'tr[data-connection-id="mock.podman.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
       docker:
         'tr[data-connection-id="mock.docker.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
-      // Merged view: podman is the primary/default; both system rows are connected.
-      unified: 'tr[data-connection-id="mock.docker.system"][data-connection-is-connected="yes"]',
+      // Merged view: podman is the primary/default/current (is-connected tracks the current
+      // connection only — see ManageScreen isConnected); both system rows are listed.
+      unified:
+        'tr[data-connection-id="mock.podman.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
     },
   },
   {

@@ -105,8 +105,8 @@ function buildTourSteps({ introEngine, pods, connectionRowId }) {
     text: "managing local, SSH, WSL and LIMA connections for Podman and Docker from one place",
     actions: [
       {
-        type: "click",
-        selector: 'a[aria-label="Settings"]',
+        type: "navigate",
+        route: "/screens/connections/manage",
         waitFor: `tr[data-connection-id="${connectionRowId}"][data-connection-is-connected="yes"]`,
       },
       { type: "wait", ms: 250 },
@@ -116,8 +116,13 @@ function buildTourSteps({ introEngine, pods, connectionRowId }) {
   return steps;
 }
 
-// podman: keep the original, polished scenario verbatim; only add its poster path.
-const podman = { ...demoScenario, poster: "website-src/static/videos/demo.png" };
+// podman: keep the original, polished scenario verbatim; normalize its output/poster to the
+// podman|docker|unified naming used everywhere else.
+const podman = {
+  ...demoScenario,
+  output: "website-src/static/replays/podman.json",
+  poster: "website-src/static/videos/podman.png",
+};
 
 const docker = {
   ...baseConfig,
