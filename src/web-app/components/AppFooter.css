@@ -2,7 +2,7 @@
   height: 32px;
   display: flex;
   overflow: hidden;
-  padding-left: 15px;
+  padding-left: 5px;
   padding-right: 5px;
 }
 .AppFooterNavbar {
@@ -24,6 +24,21 @@
   display: flex;
   align-items: center;
 }
+/* Status cluster: engine glyph + connections button on one centered row. */
+.AppFooterStatus {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+}
+/* Engine glyph moved here from the sidebar footer — sits in front of the connections button. Unified default;
+   per-engine themes override the image (podman.css / docker.css). Scaled to 0.8 to match the count badge. */
+.AppFooterEngineIcon {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  background: url("../images/unified-engine.svg") no-repeat center / contain;
+  transform: scale(0.8);
+}
 /* Connection count badge (green = N connected, red = disconnected) — replaces the old status dot.
    Scaled to 80% so the pill reads as a compact marker next to the label. */
 .AppFooterCurrentConnectorBadge {
@@ -42,6 +57,12 @@
   padding: 2px 6px;
   font-size: 12px;
   font-weight: inherit;
+}
+/* No focus ring on the footer connections trigger (per design). */
+.AppFooterConnectionsButton.bp6-button:focus,
+.AppFooterConnectionsButton.bp6-button:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 .AppFooterConnectionsButton.bp6-button .bp6-button-text {
   display: inline-flex;

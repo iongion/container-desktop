@@ -9,6 +9,11 @@
 import { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 import "monaco-editor/esm/vs/language/json/monaco.contribution.js";
+// Basic-languages Monarch tokenizers give offline syntax highlighting for the read-only JS/TS code examples
+// (e.g. the Connection info "code example", language="javascript"). They colorize on the main thread and need
+// no dedicated worker — unlike the JSON language service above — so the base editor worker is enough.
+import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution.js";
+import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution.js";
 
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";

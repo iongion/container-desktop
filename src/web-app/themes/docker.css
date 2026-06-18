@@ -131,31 +131,21 @@ body.bp6-light[data-engine="docker"] .AppDataTableGroupLinkHorizontal {
   filter: invert(1);
 }
 
-/* Sidebar-footer engine glyph: the colored Docker logo, overriding the unified default in AppSidebarFooter.css. */
-[data-engine="docker"] .AppSidebarFooter .bp6-navbar {
+/* Footer engine glyph (in front of the connections status): the colored Docker logo, overriding the unified
+   default in AppFooter.css. */
+[data-engine="docker"] .AppFooterEngineIcon {
   background-image: url("../images/docker-engine.svg");
 }
 
-/* Sidebar-footer engine glyph. In light mode the Docker brand-blue logo clashes with the
-   neutral chrome and reads louder than the adjacent framework icons (moon/info/chevrons,
-   which are --bp-typography-color-muted #5f6b7c). Render it as a neutral monochrome icon
-   in that same fill via a mask, so it matches them. Masking a ::before (not the .bp6-navbar
-   itself) avoids clipping the navbar's text/buttons. The colored logo stays in dark mode. */
-body.bp6-light[data-engine="docker"] .AppSidebarFooter .bp6-navbar {
+/* In light mode the Docker brand-blue logo clashes with the neutral chrome and reads louder than the adjacent
+   framework icons (--bp-typography-color-muted #5f6b7c). Render it as a neutral monochrome icon in that same
+   fill via a mask, so it matches them. The glyph is now a standalone element, so we can mask it directly (no
+   ::before needed). The colored logo stays in dark mode. */
+body.bp6-light[data-engine="docker"] .AppFooterEngineIcon {
   background-image: none;
-  position: relative;
-}
-body.bp6-light[data-engine="docker"] .AppSidebarFooter .bp6-navbar::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 4px;
-  width: 26px;
-  height: 26px;
   background-color: var(--bp-typography-color-muted, #5f6b7c);
-  -webkit-mask: url("../images/docker-engine.svg") no-repeat center / 26px;
-  mask: url("../images/docker-engine.svg") no-repeat center / 26px;
-  pointer-events: none;
+  -webkit-mask: url("../images/docker-engine.svg") no-repeat center / contain;
+  mask: url("../images/docker-engine.svg") no-repeat center / contain;
 }
 
 /* Connection-info tables — engine specifics. */

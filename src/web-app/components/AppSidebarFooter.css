@@ -3,101 +3,39 @@
   margin: 0;
   padding: 0;
   height: 32px;
-  font-size: 10px;
   white-space: nowrap;
 }
-/* Engine-agnostic default = the unified mark (no single engine owns the footer). Engine themes
-   (docker.css / podman.css) override with their own glyph; merged/multi-engine chrome keeps this default. */
+/* The engine glyph moved to the AppFooter and the version line was dropped — only the settings cog remains. */
 .AppSidebarFooter .bp6-navbar {
   margin: 0;
   padding: 0;
-  background-repeat: no-repeat;
-  background-position: center left;
-  background-position-x: 4px;
-  background-position-y: 4px;
-  background-size: 26px;
-  background-image: url("../images/unified-engine.svg");
   height: 32px;
+}
+.AppSidebarFooterNavbar {
+  display: flex;
+  padding: 0;
 }
 .AppSidebarFooter .bp6-navbar-group {
   height: 32px;
-  padding-left: 32px;
+  padding-left: 0;
   padding-right: 0;
 }
+/* The settings cog fills the footer width (both expanded and collapsed) with a centered icon. */
 .AppSidebarFooter .AppSidebarFooterRightColumn {
   display: flex;
   align-items: center;
-  vertical-align: middle;
   justify-content: center;
-  min-width: 32px;
+  width: 100%;
 }
-.AppSidebarFooter .bp6-navbar-heading {
-  font-size: 12px;
+/* Settings cog: fills the bar; 3px breathing margin on every side except the top (it sits below the edge). */
+.AppSidebarFooter .AppSidebarSettingsButton {
+  flex: 1 1 auto;
+  margin: 0 3px 3px;
 }
-.AppSidebarVersionString {
-  font-size: 10px;
-  white-space: nowrap;
-}
-.AppSidebarProgramString {
-  font-size: 10px;
-  white-space: nowrap;
-}
-.AppSidebarFooterOverlay {
-  position: absolute;
-  top: -34px;
-  right: 4px;
-}
-.AppSidebarFooterNavbar {
-  white-space: nowrap;
-  padding: 2px;
-  display: flex;
-}
-.AppSidebarFooterVersions {
-  text-overflow: ellipsis;
-  overflow: hidden;
-  width: calc(100% - 30px);
-  outline: none;
-}
-.AppSidebarFooterVersions > .bp6-navbar-heading {
+.AppSidebarFooterPendingIndicator {
   display: flex;
   align-items: center;
-  margin: 0;
-  column-gap: 4px;
-}
-.AppSidebar[data-expanded="no"] .AppSidebarFooterVersions {
-  display: none;
-}
-.AppSidebar[data-expanded="no"] .AppSidebarFooterRightColumn {
+  justify-content: center;
   width: 100%;
-  justify-content: flex-end;
-  padding-left: 0;
-}
-.AppSidebar[data-expanded="no"] .AppSidebarFooterPendingIndicator {
-  position: relative;
-  margin-right: 4px;
-  right: 3px;
   outline: none;
-}
-.AppSidebarInfoButton {
-  position: relative;
-  right: 3px;
-  outline: none;
-}
-.AppSidebarFooterVersionsMenu {
-  position: relative;
-}
-.AppSidebarFooterVersionsMenu .AppSidebarVersionString,
-.AppSidebarFooterVersionsMenu .AppSidebarProgramString {
-  font-size: 14px;
-}
-.AppSidebarFooterNavbar .bp6-popover-content {
-  padding: 5px !important;
-}
-.AppSidebarInfoPopover {
-  background-color: var(--app-surface);
-  max-width: 140px;
-}
-
-.AppSidebar[data-expanded="yes"] .AppSidebarFooterRightColumn {
-  padding-left: 0;
 }

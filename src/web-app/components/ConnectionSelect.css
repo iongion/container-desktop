@@ -29,3 +29,24 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Header variant (the `inline` prop adds Blueprint's .bp6-inline — used only in the Connection/System info
+   screen headers, never in the stacked create forms). Render as a compact, content-sized Blueprint Select
+   that sits at the end of the header: drop the form's bottom spacing, vertically center the label + control,
+   and size the trigger to its content (so the caret hugs the text instead of being pushed to a full-width edge),
+   with a min/max so it stays stable and truncates long names. */
+.ConnectionSelect.bp6-inline {
+  margin-bottom: 0;
+  align-items: center;
+}
+.ConnectionSelect.bp6-inline .ConnectionSelectButton {
+  width: auto;
+  min-width: 180px;
+  max-width: 280px;
+}
+/* Blueprint's inline form-content grows (`.bp6-form-group.bp6-inline .bp6-form-content { flex:1 1 0% }`, 0,3,0)
+   so a normal input fills the row; here it would leave the content-sized trigger floating at the left of a
+   stretched box (a big gap before the header edge). Shrink it to the trigger so the Select sits flush at the
+   end of the header — the extra `.bp6-form-group` class lifts this to (0,4,0) to win over Blueprint's rule. */
+.ConnectionSelect.bp6-form-group.bp6-inline .bp6-form-content {
+  flex: 0 0 auto;
+}

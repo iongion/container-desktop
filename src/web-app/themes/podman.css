@@ -144,7 +144,8 @@ body.bp6-light[data-engine="podman"] .SecurityDetails {
 [data-engine="podman"] .AppLoadingSplashLogo {
   background: url("../images/podman-engine.svg") no-repeat;
 }
-/* Sidebar-footer engine glyph: the Podman logo, overriding the unified default in AppSidebarFooter.css. */
-[data-engine="podman"] .AppSidebarFooter .bp6-navbar {
+/* Footer engine glyph (in front of the connections status): the Podman logo, overriding the unified default
+   in AppFooter.css. */
+[data-engine="podman"] .AppFooterEngineIcon {
   background-image: url("../images/podman-engine.svg");
 }

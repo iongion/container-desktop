@@ -84,7 +84,7 @@ export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
   return (
     <FormGroup className="ConnectionSelect" label={label ?? t("Connection")} inline={inline}>
       <Select<Connection>
-        fill
+        fill={!inline}
         filterable={items.length > 6}
         resetOnSelect
         scrollToActiveItem
@@ -100,7 +100,7 @@ export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
           alignText={Alignment.START}
           className="ConnectionSelectButton"
           disabled={locked}
-          fill
+          fill={!inline}
           endIcon={IconNames.CARET_DOWN}
           text={
             active ? (

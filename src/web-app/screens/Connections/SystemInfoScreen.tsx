@@ -1,8 +1,10 @@
 import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { useState } from "react";
 
 import { t } from "@/web-app/App.i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -18,10 +20,15 @@ export const View = "system-info";
 export const Title = "System info";
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const connections = useAppStore((state) => state.connections);
   const provisioned = useAppStore((state) => state.provisioned);
   const running = useAppStore((state) => state.running);
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const systemInfoQuery = useSystemInfo(currentConnector?.id || "", provisioned && running);
+  // Always-merged workspace: pick WHICH connected connection to inspect (defaults to the primary), mirroring
+  // the Connection info screen. The query targets the selected connection's host (see useSystemInfo).
+  const [connectionId, setConnectionId] = useState("");
+  const selected = connections.find((item) => item.id === connectionId) ?? currentConnector;
+  const systemInfoQuery = useSystemInfo(selected?.id || "", provisioned && running);
   const systemInfo = systemInfoQuery.data;
   const pending = systemInfoQuery.isLoading || systemInfoQuery.isFetching;
 
@@ -46,7 +53,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader currentScreen={ID} titleText={currentConnector?.name || ""} />
+      <ScreenHeader
+        currentScreen={ID}
+        centerContent={
+          <>
+            <div className="ScreenHeaderSpacer" />
+            <ConnectionSelect value={connectionId} onChange={setConnectionId} inline />
+          </>
+        }
+      />
       <div className="AppScreenContent">{contentWidget}</div>
     </div>
   );

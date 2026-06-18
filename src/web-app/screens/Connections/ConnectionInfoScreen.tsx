@@ -97,7 +97,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader
         currentScreen={ID}
-        centerContent={<ConnectionSelect value={connectionId} onChange={setConnectionId} inline />}
+        centerContent={
+          <>
+            <div className="ScreenHeaderSpacer" />
+            <ConnectionSelect value={connectionId} onChange={setConnectionId} inline />
+          </>
+        }
       />
       <div className="AppScreenContent">
         <HTMLTable compact striped interactive className="AppDataTable" data-table="connections.connection-info">

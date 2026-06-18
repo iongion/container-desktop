@@ -112,6 +112,17 @@ pre,
 .AppScreenHeader > .bp6-navbar {
   display: flex;
 }
+/* Blueprint's default navbar inline padding (0 15px) is too wide for this app's dense chrome — tighten every
+   navbar to 8px. Component navbars that set their own padding (e.g. the footers) are more specific and keep it. */
+.bp6-navbar {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+/* Table headers are not content — never let a stray drag select their labels. */
+.AppDataTable thead,
+.bp6-html-table thead {
+  user-select: none;
+}
 .AppScreenHeader .NavbarCenter,
 .AppScreenHeader .NavbarCenterContent {
   display: flex;

@@ -20,7 +20,7 @@ const themes = [
     id: "unified",
     label: "Unified",
     swatch: "#0a5f50",
-    tagline: "Unified desktop companion",
+    tagline: "Containers desktop companion",
     shots: "unified",
     replay: "/replays/unified.json",
     poster: "/videos/unified.png",

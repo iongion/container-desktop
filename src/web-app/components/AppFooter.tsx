@@ -2,13 +2,11 @@ import { Button, Intent, Navbar, NavbarDivider, NavbarHeading, Tag } from "@blue
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/web-app/App.i18n";
 import { ConnectionsMenu } from "@/web-app/components/ConnectionsMenu";
-import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import "./AppFooter.css";
 
 export const AppFooter = () => {
   const { t } = i18n;
-  const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
   // Always-merged workspace: the footer reflects EVERY connected engine, not just the primary. The per-
   // connection runtime (mirrored from main) carries each engine's REAL detected version.
   const activeRuntime = useResourceStore((state) => state.activeRuntime);
@@ -23,7 +21,10 @@ export const AppFooter = () => {
   return (
     <div className="AppFooter">
       <Navbar className="AppFooterNavbar">
-        <NavbarHeading>
+        <NavbarHeading className="AppFooterStatus">
+          {/* Engine glyph (moved here from the sidebar footer) sits IN FRONT OF — not inside — the
+              connections status button; themed per engine via CSS, scaled to match the count badge. */}
+          <span className="AppFooterEngineIcon" aria-hidden="true" />
           {/* Single entry point for connections: this status button opens the connect/disconnect menu
               (the caret-up end icon hints the popover opens upward). */}
           <ConnectionsMenu>
@@ -48,7 +49,7 @@ export const AppFooter = () => {
             </Button>
           </ConnectionsMenu>
         </NavbarHeading>
-        {expandSidebar || !isConnected ? null : (
+        {!isConnected ? null : (
           <>
             <NavbarDivider />
             <NavbarHeading>
