@@ -88,6 +88,7 @@ function electronEnv(engine, port) {
   env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT = `${port}`;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN = `http://localhost:${port}`;
+  env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN = "1";
   env.ENVIRONMENT = "development";
   env.NODE_ENV = "development";
   env.CI = env.CI || "true";

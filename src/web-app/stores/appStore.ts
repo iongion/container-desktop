@@ -318,7 +318,6 @@ export const useAppStore = create<AppStore>()((set, get) => {
         await instance.setup();
         systemNotifier.transmit("startup.phase", { trace: "Setup ready" });
         const userSettings = await instance.getGlobalUserSettings();
-        instance.notify("ready", userSettings);
         try {
           get().setPhase(AppBootstrapPhase.STARTING);
           await get().reset();
@@ -369,6 +368,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
           get().setPhase(AppBootstrapPhase.READY);
         } finally {
           systemNotifier.transmit("startup.phase", { trace: "Startup finished" });
+          instance.notify("ready", get().userSettings || userSettings);
         }
         return get().phase === AppBootstrapPhase.READY;
       });

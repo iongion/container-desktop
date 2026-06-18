@@ -63,6 +63,7 @@ function electronEnv(engine, port, viewport) {
   env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT = `${port}`;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN = `http://localhost:${port}`;
+  env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN = "1";
   env.ENVIRONMENT = "development";
   env.NODE_ENV = "development";
   env.CI = env.CI || "true";
@@ -301,49 +302,6 @@ async function addReplayPause(page, pauses, duration, settleMs = 80) {
   });
 }
 
-async function showDemoHighlight(page, box, padding = 8) {
-  await page.evaluate(
-    ({ target, inset }) => {
-      document.getElementById("container-desktop-demo-highlight")?.remove();
-      const highlight = document.createElement("div");
-      highlight.id = "container-desktop-demo-highlight";
-      highlight.setAttribute("aria-hidden", "true");
-      Object.assign(highlight.style, {
-        position: "fixed",
-        left: `${Math.max(0, target.x - inset)}px`,
-        top: `${Math.max(0, target.y - inset)}px`,
-        width: `${target.width + inset * 2}px`,
-        height: `${target.height + inset * 2}px`,
-        border: "2px solid #13abff",
-        borderRadius: "10px",
-        boxShadow: "0 0 0 4px rgba(19,171,255,.28), 0 0 26px rgba(19,171,255,.62)",
-        boxSizing: "border-box",
-        pointerEvents: "none",
-        zIndex: "2147483000",
-      });
-      document.body.appendChild(highlight);
-    },
-    { target: box, inset: padding },
-  );
-}
-
-async function pulseDemoHighlight(page) {
-  await page.evaluate(() => {
-    const highlight = document.getElementById("container-desktop-demo-highlight");
-    if (!highlight) {
-      return;
-    }
-    highlight.style.borderColor = "#b682ff";
-    highlight.style.boxShadow = "0 0 0 5px rgba(182,130,255,.32), 0 0 30px rgba(182,130,255,.7)";
-  });
-}
-
-async function clearDemoHighlight(page) {
-  await page.evaluate(() => {
-    document.getElementById("container-desktop-demo-highlight")?.remove();
-  });
-}
-
 async function moveToSelector(page, selector, duration = 900) {
   const locator = page.locator(selector).first();
   await locator.waitFor({ timeout: 30_000 });
@@ -367,15 +325,12 @@ function firstResolverSelector(action) {
 }
 
 async function clickSelector(page, action, context) {
-  const box = await moveToSelector(page, action.selector, action.duration || 900);
-  await showDemoHighlight(page, box, action.highlightPadding ?? context.highlightPadding);
+  await moveToSelector(page, action.selector, action.duration || 900);
   await addReplayPause(page, context.pauses, action.focusMs ?? context.actionFocusMs);
   await page.mouse.down();
   await page.waitForTimeout(80);
   await page.mouse.up();
-  await pulseDemoHighlight(page);
   await addReplayPause(page, context.pauses, action.pulseMs ?? context.actionPulseMs);
-  await clearDemoHighlight(page);
   if (action.waitReady !== false) {
     await waitReady(page).catch(() => undefined);
   }
@@ -390,10 +345,8 @@ async function runAction(page, action, context) {
     const route = await resolveRoute(page, action);
     const selector = action.highlightSelector || firstResolverSelector(action);
     if (selector) {
-      const box = await moveToSelector(page, selector, action.duration || 900);
-      await showDemoHighlight(page, box, action.highlightPadding ?? context.highlightPadding);
+      await moveToSelector(page, selector, action.duration || 900);
       await addReplayPause(page, context.pauses, action.focusMs ?? context.navigationFocusMs);
-      await clearDemoHighlight(page);
     }
     await navigate(page, route);
     if (action.waitFor) {
@@ -468,7 +421,6 @@ async function runScenario(page, scenario) {
     actionResultMs: scenario.actionResultMs ?? 2200,
     navigationFocusMs: scenario.navigationFocusMs ?? 1800,
     navigationResultMs: scenario.navigationResultMs ?? 2600,
-    highlightPadding: scenario.highlightPadding ?? 8,
   };
   await waitReady(page);
   await page.waitForTimeout(scenario.recordingSettleMs ?? 1000);

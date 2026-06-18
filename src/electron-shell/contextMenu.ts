@@ -18,6 +18,10 @@ export interface ContextMenuOptions {
   showSelectAll?: boolean;
 }
 
+function externalOpenDisabled(): boolean {
+  return process.env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN === "1" || !!process.env.CONTAINER_DESKTOP_MOCK;
+}
+
 function buildTemplate(
   window: BrowserWindow,
   props: ContextMenuParams,
@@ -53,7 +57,7 @@ function buildTemplate(
     separate();
     template.push(
       { label: "Copy Link Address", click: () => clipboard.writeText(linkURL) },
-      { label: "Open Link in Browser", click: () => void shell.openExternal(linkURL) },
+      { label: "Open Link in Browser", enabled: !externalOpenDisabled(), click: () => void shell.openExternal(linkURL) },
     );
   }
 

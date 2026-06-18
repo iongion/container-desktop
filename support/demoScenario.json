@@ -13,7 +13,6 @@
   "actionResultMs": 3500,
   "navigationFocusMs": 2400,
   "navigationResultMs": 4200,
-  "highlightPadding": 8,
   "steps": [
     {
       "keyword": "Given",

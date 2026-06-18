@@ -37,6 +37,7 @@ export interface WindowManagerDeps {
 
 export class WindowManager {
   private window: BrowserWindow | null = null;
+  private revealMainWindow: (() => void) | null = null;
 
   constructor(private readonly deps: WindowManagerDeps) {}
 
@@ -90,6 +91,10 @@ export class WindowManager {
 
   // Plain show — the renderer's "ready" notification path.
   show(): void {
+    if (this.revealMainWindow) {
+      this.revealMainWindow();
+      return;
+    }
     this.window?.show();
   }
 
@@ -201,7 +206,8 @@ export class WindowManager {
     const windowConfigOptions =
       (await this.deps.appConfig.getWindowConfig()) as Electron.BrowserWindowConstructorOptions;
     const windowOptions: Electron.BrowserWindowConstructorOptions = {
-      show: false, // Use the 'ready-to-show' event to show the instantiated BrowserWindow.
+      // Keep the native window hidden until the renderer explicitly reports that the app chrome is ready.
+      show: false,
       backgroundColor: "#1a051c",
       width: 1280,
       height: 800,
@@ -291,9 +297,14 @@ export class WindowManager {
     });
     win.on("close", onWindowClose);
     let windowShown = false;
+    let readyWatchdog: NodeJS.Timeout | undefined;
     const revealWindow = () => {
       if (windowShown || win.isDestroyed()) {
         return;
+      }
+      if (readyWatchdog) {
+        clearTimeout(readyWatchdog);
+        readyWatchdog = undefined;
       }
       windowShown = true;
       win.show();
@@ -301,6 +312,7 @@ export class WindowManager {
         win.maximize();
       }
     };
+    this.revealMainWindow = revealWindow;
     const showFallbackPage = async (title: string, message: string) => {
       if (fallbackPageLoaded || win.isDestroyed()) {
         return;
@@ -312,12 +324,11 @@ export class WindowManager {
     const isLoadAbort = (error: any) =>
       error?.errno === -3 || error?.code === "ERR_ABORTED" || `${error?.message || error}`.includes("ERR_ABORTED");
     win.once("ready-to-show", () => {
-      this.deps.logger.debug("Application is ready to show");
-      revealWindow();
+      this.deps.logger.debug("Application render surface is ready; waiting for renderer chrome");
     });
-    // Watchdog: if the renderer never reaches "ready-to-show" (e.g. it hangs on a never-resolving preload),
-    // force the window visible so it is never an invisible, frozen process, and surface a recoverable error.
-    const readyWatchdog = setTimeout(() => {
+    // Watchdog: if the renderer never sends its "ready" notification (e.g. it hangs on a never-resolving
+    // preload/bootstrap), force the window visible so it is never an invisible, frozen process.
+    readyWatchdog = setTimeout(() => {
       if (!windowShown && !win.isDestroyed()) {
         this.deps.logger.error("Window did not become ready in time - forcing show");
         revealWindow();
@@ -327,9 +338,13 @@ export class WindowManager {
         );
       }
     }, 20000);
-    win.webContents.once("did-finish-load", () => clearTimeout(readyWatchdog));
     win.on("closed", () => {
-      clearTimeout(readyWatchdog);
+      if (readyWatchdog) {
+        clearTimeout(readyWatchdog);
+      }
+      if (this.revealMainWindow === revealWindow) {
+        this.revealMainWindow = null;
+      }
       this.window = null;
     });
     // Renderer failed to load (network/file error). Ignore user-initiated aborts (-3) and the fallback
@@ -366,6 +381,10 @@ export class WindowManager {
     });
     // External navigation: never open a second window — defer to the URL policy and open externally or deny.
     win.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
+      if (process.env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN === "1" || process.env.CONTAINER_DESKTOP_MOCK) {
+        this.deps.logger.debug("External browser open disabled", details.url);
+        return { action: "deny" };
+      }
       if (this.deps.urlPolicy.shouldOpenExternally(details.url)) {
         shell.openExternal(details.url, { activate: true });
       } else {
