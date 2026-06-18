@@ -4,6 +4,7 @@
 // reason about. A different shell would supply its own RuntimePaths + URL.
 
 import path from "node:path";
+import fs from "node:fs";
 import * as url from "node:url";
 
 import { OperatingSystem } from "@/env/Types";
@@ -19,6 +20,14 @@ export interface RuntimePaths {
 }
 
 const DEBUG_FLAGS = ["yes", "true", "1"];
+type RuntimeIconEngine = "docker" | "podman" | "unified";
+
+function normalizeIconEngine(engine?: string): RuntimeIconEngine {
+  if (engine === "docker" || engine === "unified") {
+    return engine;
+  }
+  return "podman";
+}
 
 export function createRuntime(paths: RuntimePaths) {
   // Standard Vite-Electron rule: development iff the build was made in development mode OR a Vite dev-server
@@ -27,27 +36,42 @@ export function createRuntime(paths: RuntimePaths) {
   const isDevelopment = (): boolean =>
     import.meta.env.ENVIRONMENT === "development" || Boolean(import.meta.env.VITE_DEV_SERVER_URL);
   const isDebug = DEBUG_FLAGS.includes(`${process.env.CONTAINER_DESKTOP_DEBUG || ""}`.toLowerCase());
+  let currentIconEngine: RuntimeIconEngine = "podman";
   const iconsDir = (): string => (isDevelopment() ? path.join(paths.projectHome, "src/resources/icons") : paths.appDir);
+  const iconPath = (file: string): string => path.join(iconsDir(), file);
+  const existingIconPath = (file: string, fallback: string): string => {
+    const candidate = iconPath(file);
+    return fs.existsSync(candidate) ? candidate : iconPath(fallback);
+  };
+  const engineIconPath = (base: string, engine?: string): string => {
+    const fallback = `${base}.png`;
+    const normalizedEngine = normalizeIconEngine(engine ?? currentIconEngine);
+    if (normalizedEngine === "podman") {
+      return iconPath(fallback);
+    }
+    return existingIconPath(`${base}-${normalizedEngine}.png`, fallback);
+  };
 
   return {
     isDevelopment,
     isDebug,
     appPath: paths.appPath,
     appDir: paths.appDir,
+    setIconEngine: (engine?: string): void => {
+      currentIconEngine = normalizeIconEngine(engine);
+    },
     preloadPath: (): string => path.join(paths.appDir, "preload.cjs"),
     // Dev server when present (hot reload), otherwise the built renderer from file:// — works packaged AND
     // for an unpackaged production build launched directly.
     rendererURL: (): string =>
       import.meta.env.VITE_DEV_SERVER_URL ||
       url.format({ pathname: path.join(paths.appDir, "index.html"), protocol: "file:", slashes: true }),
-    appIconPath: (): string => {
-      const file = CURRENT_OS_TYPE === OperatingSystem.MacOS ? "appIcon.png" : "appIcon-duotone.png";
-      return path.join(iconsDir(), file);
-    },
-    trayIconPath: (isDark: boolean): string => {
+    appIconPath: (engine?: string): string =>
+      engineIconPath("appIcon", CURRENT_OS_TYPE === OperatingSystem.Linux ? "unified" : engine),
+    trayIconPath: (isDark: boolean, engine?: string): string => {
       const theme = isDark ? "dark" : "light";
-      const file = CURRENT_OS_TYPE === OperatingSystem.MacOS ? `trayIcon-${theme}-mac.png` : `trayIcon-${theme}.png`;
-      return path.resolve(path.join(iconsDir(), file));
+      const base = CURRENT_OS_TYPE === OperatingSystem.MacOS ? `trayIcon-${theme}-mac` : `trayIcon-${theme}`;
+      return path.resolve(engineIconPath(base, engine));
     },
   };
 }

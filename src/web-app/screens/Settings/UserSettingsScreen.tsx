@@ -149,9 +149,68 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const filterFontFamily: ItemPredicate<string> = (query, family) =>
     fontFamilyLabel(family).toLowerCase().includes(query.toLowerCase());
 
+  const versionCheckWidget =
+    import.meta.env.TARGET === OperatingSystem.Windows ? (
+      <FormGroup
+        inline
+        label={t("Check for new versions")}
+        data-target={import.meta.env.TARGET}
+        className="AppSettingsFormVersionCheck AppSettingsHeaderVersionCheck"
+        labelFor="checkLatestVersionNow"
+      >
+        <ButtonGroup className="AppSettingsFormVersionCheckActions">
+          <AnchorButton
+            className="AppSettingsFormVersionCheckStore"
+            title={t("Check latest version")}
+            href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct"
+            target="_blank"
+          />
+          <Button
+            id="checkLatestVersionNow"
+            fill
+            loading={isChecking}
+            disabled={isChecking}
+            intent={Intent.PRIMARY}
+            size="small"
+            text={t("Check now")}
+            icon={IconNames.UPDATED}
+            onClick={onVersionCheck}
+          />
+        </ButtonGroup>
+      </FormGroup>
+    ) : (
+      <FormGroup
+        inline
+        label={t("Check for new versions")}
+        data-target={import.meta.env.TARGET}
+        className="AppSettingsFormVersionCheck AppSettingsHeaderVersionCheck"
+        labelFor="checkLatestVersionNow"
+      >
+        <ButtonGroup fill className="AppSettingsFormVersionCheckActions">
+          <AnchorButton
+            icon={IconNames.DOWNLOAD}
+            text={t("Versions")}
+            href="https://github.com/iongion/container-desktop/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+          <Button
+            id="checkLatestVersionNow"
+            loading={isChecking}
+            disabled={isChecking}
+            intent={Intent.PRIMARY}
+            size="small"
+            text={t("Check now")}
+            icon={IconNames.UPDATED}
+            onClick={onVersionCheck}
+          />
+        </ButtonGroup>
+      </FormGroup>
+    );
+
   return (
     <div className="AppScreen" data-screen={ID}>
-      <AppScreenHeader withoutSearch>
+      <AppScreenHeader withoutSearch rightContent={versionCheckWidget}>
         <div className="AppScreenHeaderText">{PROJECT_VERSION}</div>
       </AppScreenHeader>
       <div className="AppScreenContent">
@@ -182,60 +241,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
               />
             </ControlGroup>
           </FormGroup>
-          {import.meta.env.TARGET === OperatingSystem.Windows ? (
-            <FormGroup
-              label={t("Check for new versions")}
-              data-target={import.meta.env.TARGET}
-              className="AppSettingsFormVersionCheck"
-              labelFor="checkLatestVersion"
-            >
-              <ButtonGroup className="AppSettingsFormVersionCheckActions">
-                <Button
-                  fill
-                  loading={isChecking}
-                  disabled={isChecking}
-                  intent={Intent.PRIMARY}
-                  size="small"
-                  text={t("Check now")}
-                  icon={IconNames.UPDATED}
-                  onClick={onVersionCheck}
-                />
-                <AnchorButton
-                  id="checkLatestVersion"
-                  className="AppSettingsFormVersionCheckStore"
-                  title={t("Check latest version")}
-                  href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct"
-                  target="_blank"
-                />
-              </ButtonGroup>
-            </FormGroup>
-          ) : (
-            <FormGroup
-              label={t("Check for new versions")}
-              data-target={import.meta.env.TARGET}
-              className="AppSettingsFormVersionCheck"
-              labelFor="checkLatestVersion"
-            >
-              <ButtonGroup fill className="AppSettingsFormVersionCheckActions">
-                <Button
-                  loading={isChecking}
-                  disabled={isChecking}
-                  intent={Intent.PRIMARY}
-                  size="small"
-                  text={t("Check now")}
-                  icon={IconNames.UPDATED}
-                  onClick={onVersionCheck}
-                />
-                <AnchorButton
-                  icon={IconNames.DOWNLOAD}
-                  text={t("Versions")}
-                  href="https://github.com/iongion/container-desktop/releases"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                />
-              </ButtonGroup>
-            </FormGroup>
-          )}
         </div>
         <div className="AppSettingsForm" data-form="font">
           <FormGroup label={t("Monospace font")} labelFor="fontFamily" className="AppSettingsFontForm">

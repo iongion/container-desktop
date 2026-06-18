@@ -146,7 +146,7 @@ const config = {
     // package.json, falling back to executableName. Default becomes true in v27.
     syncDesktopName: true,
     maintainer: publisher,
-    icon: "icons/appIcon.icns",
+    icon: "icons/appIcon-unified.png",
     target: electronBuilderTargets("linux"),
     category: "Development;System;Utility",
     desktop: {

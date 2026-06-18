@@ -5,7 +5,6 @@
   height: 32px;
   white-space: nowrap;
 }
-/* The engine glyph moved to the AppFooter and the version line was dropped — only the settings cog remains. */
 .AppSidebarFooter .bp6-navbar {
   margin: 0;
   padding: 0;

@@ -65,6 +65,7 @@ process.env.APP_PATH = APP_PATH;
 
 const runtime = createRuntime({ appDir: __dirname, appPath: APP_PATH, projectHome: PROJECT_HOME });
 const appConfig = createAppConfig();
+
 // Main-owned engine service: owns the connection + per-connection resource state, executes tray actions
 // against its own connection, and supplies the data the tray menu is built from.
 const engineDataService = new EngineDataService();
@@ -74,6 +75,38 @@ const engineDataService = new EngineDataService();
 let windowManager: WindowManager;
 let trayController: TrayController;
 let commandProxyBroker: CommandProxyBroker;
+type IconEngine = "docker" | "podman" | "unified";
+let currentIconEngine: IconEngine = "podman";
+
+function detectIconEngine(): IconEngine | undefined {
+  const snapshot = engineDataService.getAppRuntimeSnapshot();
+  const runningEngines = new Set(
+    (snapshot.active ?? []).filter((connection) => connection.running).map((connection) => connection.engine),
+  );
+  if (runningEngines.size > 1) {
+    return "unified";
+  }
+  const [runningEngine] = runningEngines;
+  if (runningEngine === "docker") {
+    return "docker";
+  }
+  if (runningEngine === "podman") {
+    return "podman";
+  }
+  if (snapshot.currentConnector?.engine === "docker") {
+    return "docker";
+  }
+  if (snapshot.currentConnector?.engine === "podman") {
+    return "podman";
+  }
+  return undefined;
+}
+
+function getIconEngine(): IconEngine {
+  currentIconEngine = detectIconEngine() ?? currentIconEngine;
+  runtime.setIconEngine(currentIconEngine);
+  return currentIconEngine;
+}
 
 const recovery = createRecoveryService({
   isReady: () => app.isReady(),
@@ -104,7 +137,7 @@ function quitApplication() {
 
 trayController = new TrayController({
   logger,
-  getTrayIcon: (isDark) => runtime.trayIconPath(isDark ?? nativeTheme.shouldUseDarkColors),
+  getTrayIcon: (isDark) => runtime.trayIconPath(isDark ?? nativeTheme.shouldUseDarkColors, getIconEngine()),
   showMainWindow: () => windowManager.showMainWindow(),
   quitApplication,
   // The menu invokes actions; main runs them so the tray works with the main window closed. Each action
@@ -153,8 +186,13 @@ trayController = new TrayController({
   },
 });
 
-// Rebuild the tray menu whenever main's data changes (connection, lists, machine actions).
-engineDataService.subscribe(() => trayController.refreshMenu());
+// Rebuild the tray menu and engine-colored shell icons whenever main's data changes.
+engineDataService.subscribe(() => {
+  const iconEngine = getIconEngine();
+  trayController.refreshMenu();
+  trayController.refreshIcon();
+  windowManager.setIcon(runtime.appIconPath(iconEngine));
+});
 
 // Main-owned data layer: pushes resource snapshots to the main window, answers its snapshot pull + a refresh
 // nudge + an awaitable ensure-connected. Reads + writes are main-window-only.

@@ -11,14 +11,34 @@
   padding-right: 4px;
   padding-left: 4px;
 }
-.AppSettingsFormVersionCheck,
 .AppSettingsFormLoggingLevel {
   display: flex;
   width: 215px;
 }
-.AppSettingsFormVersionCheck .bp6-form-group {
+.AppSettingsFormVersionCheck {
+  display: block;
+  width: 230px;
+  margin: 0;
+}
+.AppSettingsHeaderVersionCheck {
   display: flex;
-  flex: 1;
+  align-items: center;
+  column-gap: 0;
+  width: auto;
+}
+.AppSettingsHeaderVersionCheck .bp6-label {
+  display: inline-flex;
+  margin: 0;
+  font-size: 12px;
+  line-height: 30px;
+  white-space: nowrap;
+}
+.AppSettingsHeaderVersionCheck.bp6-inline .bp6-label {
+  margin-right: 6px;
+}
+.AppSettingsHeaderVersionCheck .bp6-form-content {
+  flex: 0 0 230px;
+  width: 230px;
 }
 .AppSettingsFormVersionCheckStore {
   background-color: transparent !important;
@@ -34,6 +54,7 @@
 .AppSettingsFormVersionCheckActions {
   display: flex;
   flex: 1;
+  width: 100%;
 }
 .AppSettingUserConfigurationPath {
   width: 100%;

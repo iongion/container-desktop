@@ -1,0 +1,79 @@
+.AppHeaderLogo {
+  display: block;
+  width: 200px;
+  height: 50px;
+  color: var(--app-logo-title, var(--app-text-muted));
+  overflow: visible;
+  --app-logo-accent: var(--app-accent);
+  --app-logo-accent-strong: var(--app-accent-hover);
+  --app-logo-letter-secondary: #9ca3af;
+  --app-logo-title: var(--app-text-muted);
+  --app-logo-tagline: color-mix(in srgb, var(--app-text-muted) 88%, var(--app-accent) 12%);
+}
+
+body.bp6-light .AppHeaderLogo {
+  --app-logo-letter-secondary: #6b7280;
+}
+
+body[data-engine="unified"] .AppHeaderLogo {
+  --app-logo-accent: #14b8a6;
+  --app-logo-accent-strong: #0d9488;
+}
+
+body.bp6-light[data-engine="unified"] .AppHeaderLogo {
+  --app-logo-accent: #0d9488;
+  --app-logo-accent-strong: #0f766e;
+}
+
+body[data-engine="podman"] .AppHeaderLogo {
+  --app-logo-accent: #a855c9;
+  --app-logo-accent-strong: #7b3398;
+}
+
+body.bp6-light[data-engine="podman"] .AppHeaderLogo {
+  --app-logo-accent: #8e3aa8;
+  --app-logo-accent-strong: #66277a;
+}
+
+body[data-engine="docker"] .AppHeaderLogo {
+  --app-logo-accent: #1d56b8;
+  --app-logo-accent-strong: #163d8a;
+}
+
+body.bp6-light[data-engine="docker"] .AppHeaderLogo {
+  --app-logo-accent: #1f59cf;
+  --app-logo-accent-strong: #1a46a8;
+}
+
+.AppHeaderLogoMarkC {
+  fill: var(--app-logo-accent);
+}
+
+.AppHeaderLogoMarkD {
+  fill: var(--app-logo-letter-secondary);
+}
+
+.AppHeaderLogoMarkOutline {
+  fill: none;
+  stroke: var(--app-logo-accent-strong);
+  stroke-dasharray: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-miterlimit: 4;
+  stroke-width: 1.05833;
+}
+
+.AppHeaderLogoTitle {
+  fill: var(--app-logo-title);
+}
+
+.AppHeaderLogoTagline {
+  display: none;
+  fill: var(--app-logo-tagline);
+}
+
+body[data-engine="unified"] .AppHeaderLogoTagline--unified,
+body[data-engine="podman"] .AppHeaderLogoTagline--podman,
+body[data-engine="docker"] .AppHeaderLogoTagline--docker {
+  display: inline;
+}

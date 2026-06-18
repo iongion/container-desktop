@@ -5,34 +5,38 @@
 }
 .AppHeader .bp6-navbar {
   display: flex;
-  background: url("../images/container-desktop.svg") no-repeat 0 center;
-  background-size: contain;
-  background-position-x: 7px;
 }
 .AppHeader .bp6-navbar-heading {
   height: 100%;
 }
-.App-companyLogoBrand {
-  width: 200px;
+.App-projectBrand {
+  display: flex;
+  align-items: center;
   height: 100%;
 }
-[data-os="MacOS"] .AppHeader .bp6-navbar,
-[data-os="Darwin"] .AppHeader .bp6-navbar {
-  background-position-x: center;
+.App-companyLogoBrand {
+  display: flex;
+  align-items: center;
+  width: 200px;
+  height: 100%;
+  box-sizing: border-box;
+}
+[data-os="MacOS"] .App-projectBrand,
+[data-os="Darwin"] .App-projectBrand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+[data-os="MacOS"] .App-companyLogoBrand,
+[data-os="Darwin"] .App-companyLogoBrand {
+  justify-content: center;
 }
 .AppHeaderActions {
   -webkit-app-region: no-drag;
   display: inline-flex;
   align-items: center;
 }
-.AppHeaderActions .NotificationBell {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.AppHeaderActions .NotificationBellButton.bp6-button,
 .AppHeaderActions .AppHeaderActionButton.bp6-button {
   width: 30px;
   min-width: 30px;

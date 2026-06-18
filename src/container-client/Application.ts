@@ -244,7 +244,7 @@ export class Application {
     }
   }
   public isNative() {
-    return CURRENT_OS_TYPE !== OperatingSystem.Browser && CURRENT_OS_TYPE !== OperatingSystem.Unknown;
+    return this.getOsType() !== OperatingSystem.Browser && this.getOsType() !== OperatingSystem.Unknown;
   }
   public async withWindowControls() {
     return this.isNative() && [OperatingSystem.Linux, OperatingSystem.Windows].includes(this.getOsType());

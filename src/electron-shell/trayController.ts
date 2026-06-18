@@ -1,4 +1,5 @@
-import { Menu, nativeTheme, Tray } from "electron";
+import fs from "node:fs";
+import { Menu, nativeImage, nativeTheme, Tray } from "electron";
 
 import { buildTrayMenuTemplate, type TrayMenuData } from "./trayMenu";
 
@@ -37,6 +38,11 @@ export class TrayController {
     return this.options.getTrayIcon(isDark);
   }
 
+  private loadIcon(iconPath: string): Electron.NativeImage {
+    const icon = nativeImage.createFromBuffer(fs.readFileSync(iconPath));
+    return icon.isEmpty() ? nativeImage.createFromPath(iconPath) : icon;
+  }
+
   refreshIcon(): void {
     if (!this.tray || this.tray.isDestroyed()) {
       return;
@@ -44,7 +50,7 @@ export class TrayController {
     try {
       const trayIconPath = this.getIcon();
       this.options.logger.debug("Set tray icon from", trayIconPath);
-      this.tray.setImage(trayIconPath);
+      this.tray.setImage(this.loadIcon(trayIconPath));
     } catch (error: any) {
       this.options.logger.error("Unable to set sys-tray icon", error);
     }
@@ -55,7 +61,7 @@ export class TrayController {
       this.options.logger.debug("Creating system tray - skipped - already present");
       return this.tray;
     }
-    this.tray = new Tray(this.getIcon());
+    this.tray = new Tray(this.loadIcon(this.getIcon()));
     this.tray.setToolTip("Container Desktop");
     this.refreshMenu();
     // Left-click pops the menu where the OS emits a click (macOS/Windows). On Linux the

@@ -80,6 +80,45 @@
 .AppFooterEngineVersionSep {
   opacity: 0.5;
 }
+.AppFooterEngineVersions {
+  min-width: 0;
+  overflow: hidden;
+}
+.AppFooterCurrentProgram {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.AppFooterActions {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0;
+}
+.AppFooterActions .NotificationBell {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.AppFooterActions .NotificationBellButton.bp6-button,
+.AppFooterActions .AppFooterActionButton.bp6-button {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+}
+.AppFooterActions .NotificationBellButton.bp6-button:focus,
+.AppFooterActions .NotificationBellButton.bp6-button:focus-visible,
+.AppFooterActions .AppFooterActionButton.bp6-button:focus,
+.AppFooterActions .AppFooterActionButton.bp6-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 
 /* Footer status bar follows the engine/mode "chrome" tone (matches header + sidebar),
    with a hairline to separate it from content. Driven by tokens.css per combo. */

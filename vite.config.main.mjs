@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { normalizePath } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
@@ -12,6 +13,8 @@ import { ENVIRONMENT, getCommonViteConfig, getElectronVendorsCache, PROJECT_HOME
 export default ({ mode, command }) => {
   sourceEnv(ENVIRONMENT);
   const cache = getElectronVendorsCache();
+  const runtimeIconsDir = path.resolve(PROJECT_HOME, "src/resources/icons");
+  const buildOutputDir = path.resolve(PROJECT_HOME, "build", pkg.version);
   // Main process is bundled as CommonJS (electron exposes its API via the CJS
   // require hook, not as ESM named exports). Source stays ESM/TS; only the output
   // is CJS. This mirrors the industry-standard electron + vite setup.
@@ -40,6 +43,18 @@ export default ({ mode, command }) => {
   config.build.rollupOptions.preserveEntrySignatures = "exports-only";
   config.build.rollupOptions.output.exports = "auto";
   config.build.rollupOptions.output.format = outputFormat;
+  config.plugins.push({
+    name: "copy-runtime-icons",
+    closeBundle() {
+      fs.mkdirSync(buildOutputDir, { recursive: true });
+      for (const fileName of fs.readdirSync(runtimeIconsDir)) {
+        const source = path.join(runtimeIconsDir, fileName);
+        if (fs.statSync(source).isFile()) {
+          fs.copyFileSync(source, path.join(buildOutputDir, fileName));
+        }
+      }
+    }
+  });
   if (ENVIRONMENT === "production") {
     config.plugins.push(
       viteStaticCopy({

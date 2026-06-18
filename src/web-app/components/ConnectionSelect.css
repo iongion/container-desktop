@@ -6,13 +6,23 @@
 .ConnectionSelect .ConnectionSelectButton {
   width: 100%;
 }
+.ConnectionSelect .ConnectionSelectButton.bp6-button {
+  display: flex;
+  align-items: center;
+}
 /* Vertically center the engine icon + connection name inside the trigger button (Blueprint's button-text wraps
    the content and would otherwise baseline-align the inline-flex row, leaving the icon sitting high). */
 .ConnectionSelect .ConnectionSelectButton .bp6-button-text {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   margin: 0;
   min-width: 0;
+  overflow: hidden;
+}
+.ConnectionSelect .ConnectionSelectButton > .bp6-icon:last-child {
+  flex: 0 0 auto;
+  margin-left: 8px;
 }
 .ConnectionSelectOption {
   display: flex;
@@ -21,13 +31,41 @@
   min-width: 0;
   line-height: 1;
 }
+/* AppScreenHeader has a generic title rule for spans in the center slot. Inline connection pickers also live
+   there, so explicitly keep their icon + name row as a real flex row instead of letting the title rule clip
+   the nested spans and squash the engine icon. */
+.AppScreenHeader .ConnectionSelect .ConnectionSelectOption {
+  display: flex;
+  max-width: none;
+  overflow: visible;
+}
 .ConnectionSelectOption .EngineCellIcon {
   display: block;
+}
+.AppScreenHeader .ConnectionSelect .EngineCell {
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  max-width: none;
+  height: 20px;
+  overflow: visible;
+}
+.AppScreenHeader .ConnectionSelect .EngineCellIcon {
+  flex: 0 0 16px;
+  width: 16px;
+  max-width: none;
+  height: 16px;
+  overflow: visible;
 }
 .ConnectionSelectOptionName {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.AppScreenHeader .ConnectionSelect .ConnectionSelectOptionName {
+  display: block;
+  max-width: none;
 }
 /* Header variant (the `inline` prop adds Blueprint's .bp6-inline — used only in the Connection/System info
    screen headers, never in the stacked create forms). Render as a compact, content-sized Blueprint Select
@@ -42,6 +80,8 @@
   width: auto;
   min-width: 180px;
   max-width: 280px;
+  padding-left: 12px;
+  padding-right: 8px;
 }
 /* Blueprint's inline form-content grows (`.bp6-form-group.bp6-inline .bp6-form-content { flex:1 1 0% }`, 0,3,0)
    so a normal input fills the row; here it would leave the content-sized trigger floating at the left of a

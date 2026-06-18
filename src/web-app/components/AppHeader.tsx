@@ -7,12 +7,10 @@ import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
 import { OperatingSystem, type Program, WindowAction } from "@/env/Types";
-import { AppTheme } from "@/web-app/App.types";
-import { NotificationBell } from "@/web-app/components/NotificationCenter/NotificationBell";
-import { useAppStore } from "@/web-app/stores/appStore";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
 import type { AppScreen } from "../Types";
+import { AppHeaderLogo } from "./AppHeaderLogo";
 
 import "./AppHeader.css";
 
@@ -52,11 +50,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   provisioned,
 }: AppHeaderProps) => {
   const { t } = useTranslation();
-  const theme = useAppStore((state) => state.userSettings.theme);
-  const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
-  const onThemeToggleClick = useCallback(() => {
-    setGlobalUserSettings({ theme: theme === AppTheme.DARK ? AppTheme.LIGHT : AppTheme.DARK });
-  }, [theme, setGlobalUserSettings]);
   const [withControls, setWithControls] = useState(true);
   const onWindowControlClick = useCallback((e) => {
     const action: WindowAction = e.currentTarget.getAttribute("data-action");
@@ -108,7 +101,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const disabledHeaderActions = !(provisioned && running);
   const rightSideActions = (
     <>
-      <NotificationBell />
       <AnchorButton
         className="AppHeaderActionButton"
         href={pathTo("/screens/connections/manage")}
@@ -123,15 +115,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />}
         title={t("Troubleshoot")}
         aria-label={t("Troubleshoot")}
-      />
-      <Divider />
-      <Button
-        className="AppHeaderActionButton"
-        variant="minimal"
-        icon={theme === AppTheme.DARK ? IconNames.MOON : IconNames.FLASH}
-        onClick={onThemeToggleClick}
-        title={t("Toggle {{mode}} mode", { mode: theme === AppTheme.DARK ? t("light") : t("dark") })}
-        aria-label={t("Toggle theme")}
       />
       {osType === OperatingSystem.MacOS ? null : <Divider />}
     </>
@@ -150,7 +133,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     <div className="AppHeader" id="AppHeader">
       <Navbar>
         <NavbarGroup className="App-projectBrand">
-          <div className="App-companyLogoBrand">&nbsp;</div>
+          <div className="App-companyLogoBrand">
+            <AppHeaderLogo />
+          </div>
         </NavbarGroup>
         <NavbarGroup
           className="App-projectNameVersion"

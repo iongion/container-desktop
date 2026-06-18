@@ -1,9 +1,48 @@
 .AppSidebar {
+  position: relative;
   display: flex;
   height: 100%;
   width: 250px;
   flex-direction: column;
   padding-top: 2px;
+}
+.AppSidebar .AppSidebarExpandButton {
+  outline: none;
+  box-shadow: none;
+}
+.AppSidebar .AppSidebarExpandButton.bp6-button.bp6-minimal {
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  z-index: 2;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 999px !important;
+  background-color: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+.AppSidebar .AppSidebarExpandButton.bp6-button.bp6-minimal:hover,
+.AppSidebar .AppSidebarExpandButton.bp6-button.bp6-minimal:active {
+  border-color: var(--app-accent);
+  background-color: color-mix(in srgb, var(--app-surface-strong) 78%, var(--app-accent) 22%);
+  color: var(--app-accent-text);
+}
+.AppSidebar .AppSidebarExpandButton.bp6-button .bp6-icon,
+.AppSidebar .AppSidebarExpandButton.bp6-button svg {
+  margin: 0;
+}
+.AppSidebar .AppSidebarExpandButton.bp6-button .bp6-icon,
+.AppSidebar .AppSidebarExpandButton.bp6-button .bp6-icon svg {
+  width: 12px;
+  height: 12px;
 }
 .AppSidebarActions {
   width: 100%;

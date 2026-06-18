@@ -4,7 +4,8 @@
 // recovery, context menu) are injected, so the orchestration is explicit and the electron-free core stays
 // reusable; a different shell replaces THIS file. No other module should touch BrowserWindow directly.
 
-import { app, BrowserWindow, dialog, shell } from "electron";
+import fs from "node:fs";
+import { app, BrowserWindow, dialog, nativeImage, shell } from "electron";
 
 import { OperatingSystem } from "@/env/Types";
 import { CURRENT_OS_TYPE } from "@/platform/node";
@@ -92,6 +93,27 @@ export class WindowManager {
     this.window?.show();
   }
 
+  private loadIcon(iconPath: string): Electron.NativeImage {
+    const icon = nativeImage.createFromBuffer(fs.readFileSync(iconPath));
+    return icon.isEmpty() ? nativeImage.createFromPath(iconPath) : icon;
+  }
+
+  setIcon(iconPath: string): void {
+    try {
+      const icon = this.loadIcon(iconPath);
+      if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
+        app.dock?.setIcon(icon);
+      }
+      if (!this.hasLiveWindow()) {
+        return;
+      }
+      (this.window as BrowserWindow).setIcon(icon);
+      this.deps.logger.debug("Updated application icon", iconPath);
+    } catch (error: any) {
+      this.deps.logger.error("Unable to update application icon", error);
+    }
+  }
+
   // Full reveal from the tray: restore taskbar entry + dock.
   showMainWindow(): void {
     if (!this.hasLiveWindow()) {
@@ -158,6 +180,8 @@ export class WindowManager {
   }
 
   async create(): Promise<BrowserWindow> {
+    const reloadURL =
+      this.window && !this.window.isDestroyed() ? this.window.webContents.getURL() || undefined : undefined;
     if (this.window) {
       this.deps.logger.debug("Window already created - destroying it");
       // Remove our listeners before destroying so re-creation never accumulates duplicates.
@@ -195,7 +219,7 @@ export class WindowManager {
         webviewTag: false,
         preload: preloadURL,
       },
-      icon: iconPath,
+      icon: this.loadIcon(iconPath),
     };
     this.deps.logger.debug("Setting application icon", iconPath);
     if (CURRENT_OS_TYPE === OperatingSystem.Linux || CURRENT_OS_TYPE === OperatingSystem.Windows) {
@@ -351,7 +375,8 @@ export class WindowManager {
     });
     this.deps.createContextMenu({ window: win, showInspectElement: true });
     this.deps.logger.debug("Application is", { appURL, preloadURL, current: runtime.appDir, path: runtime.appPath });
-    if (!appURL) {
+    const targetURL = reloadURL && !reloadURL.startsWith("data:") ? reloadURL : appURL;
+    if (!targetURL) {
       // Defensive: an empty URL would throw deep inside loadURL and leave a blank window.
       this.deps.logger.error("No application URL resolved");
       await showFallbackPage("No application URL", "The application URL could not be resolved.");
@@ -361,7 +386,7 @@ export class WindowManager {
       );
     } else {
       try {
-        await win.loadURL(appURL);
+        await win.loadURL(targetURL);
       } catch (error: any) {
         if (isLoadAbort(error)) {
           this.deps.logger.debug("Ignoring aborted application load", error?.message || error);
@@ -378,4 +403,5 @@ export class WindowManager {
     }
     return win;
   }
+
 }

@@ -1,4 +1,6 @@
-import { Alignment, AnchorButton, ButtonGroup } from "@blueprintjs/core";
+import { Alignment, AnchorButton, Button, ButtonGroup } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -18,7 +20,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
   const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
+  const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
   const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
+  const onExpandCollapseSidebarClick = useCallback(() => {
+    setGlobalUserSettings({ expandSidebar: !expandSidebar });
+  }, [expandSidebar, setGlobalUserSettings]);
+
   return (
     <div
       className="AppSidebar"
@@ -26,6 +33,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
       data-disabled={disabled ? "yes" : "no"}
       title={disabled ? t("To use these features a connection must be established") : ""}
     >
+      <Button
+        className="AppSidebarExpandButton"
+        variant="minimal"
+        icon={expandSidebar ? IconNames.DOUBLE_CHEVRON_LEFT : IconNames.DOUBLE_CHEVRON_RIGHT}
+        onClick={onExpandCollapseSidebarClick}
+        title={t("{{action}} the sidebar", {
+          action: expandSidebar ? t("Collapse") : t("Expand"),
+        })}
+        aria-label={t("{{action}} the sidebar", {
+          action: expandSidebar ? t("Collapse") : t("Expand"),
+        })}
+      />
       <div className="AppSidebarActions">
         <ButtonGroup vertical>
           {sidebarScreens.map((Screen) => {

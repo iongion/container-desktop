@@ -7,9 +7,6 @@ import { useAppStore } from "@/web-app/stores/appStore";
 
 import "./AppSidebarFooter.css";
 
-// The sidebar footer now holds ONLY the settings cog. The theme toggle moved to the app header, the
-// expand/collapse toggle moved to the top of the sidebar, and the GUI/CLI version line was dropped (it was a
-// single-connection artifact — per-engine versions now live permanently in the app footer).
 export function AppSidebarFooter() {
   const { t } = useTranslation();
   const pending = useAppStore((state) => state.pending);
