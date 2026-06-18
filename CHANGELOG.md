@@ -9,20 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Added
 
-- Dedicated **Connections** screen (`/screens/connections`) grouping connection management with the Connection info and System info tabs; opened from the titlebar button.
-- Per-connection **auto-reconnect** with exponential back-off when a live connection drops (engine stop, SSH broken, internet down). Enabled by default; overridable globally (User settings) and per connection. A user-initiated disconnect is never auto-reconnected.
-- Bootstrap progress indicator now streams **per-engine** connect phases, interleaved across engines.
+- Dedicated **Connections** screen for managing connections, viewing connection details and checking system information.
+- **Unified** engine mode for mixed Podman and Docker sessions, with its own colors, logo and application icons.
+- Per-connection **auto-reconnect** when an engine drops unexpectedly, with controls in user settings and per connection.
 
 ## Changed
 
-- User settings now holds only app settings (tray, version check, font, logging) — connection management moved to the new Connections screen. The titlebar button opens Connections; the sidebar-footer cog opens User settings.
-- Footer connection status is now a green/red count badge with a simple "Connected" / "Disconnected" label.
-- Bootstrap now connects every auto-start engine **in parallel** (an offline engine no longer blocks the others or the app); app-shell readiness is derived from the merged engine snapshot, so the workspace appears as soon as any engine is up.
+- The app can connect to Podman and Docker together, show their resources in the same lists and keep each row clearly tied to its engine.
+- Startup is more responsive when more than one engine is configured: available engines open the workspace even if another engine is offline.
+- User settings is now focused on app preferences, while connection management lives in the Connections screen.
+- The footer now groups connection status, theme switching and notifications in one place.
+- The header, sidebar footer, connection selector and settings header have been tightened up for a cleaner, more consistent layout.
+- The application logo, tray icon and taskbar icon now better match the active Podman, Docker or unified look where the platform supports it.
+- The website now includes Podman, Docker and unified previews for the app theme.
 
 ## Fixed
 
-- Multi-connection bootstrap regression: the app again **auto-connects** engines on startup, the per-connection **Connect** button works, and sidebar links route normally (previously every link showed one screen while not connected, no auto-connect happened, and Connect did nothing).
-- Merged Containers list: container groups/rows are now keyed per connection, so identically-named pods/groups on different engines (e.g. a `lamp` pod on both Podman and Docker) render as distinct groups instead of colliding (React duplicate-key warning; groups could be omitted).
+- Auto-connect on startup, per-connection **Connect** buttons and sidebar navigation work reliably again.
+- Container groups with the same name on different engines now remain separate instead of hiding or mixing rows.
+- The connection selector now has consistent spacing, centered engine icons and a right-aligned caret across connection views.
+- Header and footer icon buttons no longer show unwanted outlines in normal use.
 
 ## [5.3.2] - 2026-06-17
 

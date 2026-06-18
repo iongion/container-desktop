@@ -391,10 +391,13 @@ export class Application {
   }
 
   // System actions
-  async connectToContainer(opts: ContainerConnectOptions) {
+  async connectToContainer(opts: ContainerConnectOptions & { host?: HostClientFacade }) {
     const { id, title, shell } = opts || {};
     this.logger.debug("Connecting to container", opts);
-    const currentApi = this.getCurrentEngineConnectionApi();
+    const currentApi = opts.host || this.getCurrentEngineConnectionApi();
+    if (!currentApi) {
+      throw new Error("No active engine connection");
+    }
     const { program, controller } = await currentApi.getSettings();
     let launcherPath = "";
     const containerArgs: string[] = [];
@@ -608,8 +611,8 @@ export class Application {
     return await currentApi.resetSystem();
   }
 
-  async checkSecurity(options: { scanner: string; subject: string; target: string }) {
-    const currentApi = this.getCurrentEngineConnectionApi();
+  async checkSecurity(options: { scanner: string; subject: string; target: string; host?: HostClientFacade }) {
+    const currentApi = options.host || this.getCurrentEngineConnectionApi();
     const report: any = {
       status: "failure",
       scanner: {
@@ -628,6 +631,9 @@ export class Application {
       fault: undefined,
     };
     try {
+      if (!currentApi) {
+        throw new Error("No active engine connection");
+      }
       let program: Program;
       const scanner = options?.scanner || "trivy";
       const settings = await currentApi.getSettings();
@@ -771,11 +777,14 @@ export class Application {
     return await this.getRegistriesMap();
   }
 
-  async searchRegistry(opts: RegistrySearchOptions) {
+  async searchRegistry(opts: RegistrySearchOptions & { host?: HostClientFacade }) {
     const { filters, term, registry } = opts || {};
     this.logger.debug("searchRegistry", { filters, term, registry });
     let items = [];
-    const host = this._currentContainerEngineHostClient as HostClientFacade;
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
     const { program } = await host.getSettings();
     const filtersList: any[] = [];
     const programArgs = ["search"];
@@ -821,13 +830,12 @@ export class Application {
       programArgs.push(...filtersList);
       programArgs.push(...[term]);
     }
-    const currentApi = this.getCurrentEngineConnectionApi();
     let result: CommandExecutionResult;
-    if (currentApi.isScoped()) {
-      const { controller } = await currentApi.getSettings();
-      result = await currentApi.runScopeCommand(program.path || program.name, programArgs, controller?.scope || "");
+    if (host.isScoped()) {
+      const { controller } = await host.getSettings();
+      result = await host.runScopeCommand(program.path || program.name, programArgs, controller?.scope || "");
     } else {
-      result = await currentApi.runHostCommand(program.path || program.name, programArgs);
+      result = await host.runHostCommand(program.path || program.name, programArgs);
     }
     if (!result.success) {
       this.logger.error("Unable to search", { term, registry }, result);
@@ -847,11 +855,14 @@ export class Application {
     return normalizeAndSortSearchResults(items);
   }
 
-  async pullFromRegistry(opts: RegistryPullOptions) {
+  async pullFromRegistry(opts: RegistryPullOptions & { host?: HostClientFacade }) {
     // biome-ignore lint/correctness/noUnusedVariables: Available for future use
     const { image, onProgress } = opts;
     this.logger.debug("pull from registry", image);
-    const host = this._currentContainerEngineHostClient as HostClientFacade;
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
     const { program, controller } = await host.getSettings();
     let result: CommandExecutionResult;
     if (host.isScoped()) {

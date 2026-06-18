@@ -285,6 +285,7 @@ export class ContainersAdapter extends ResourceAdapter {
       id: item.Id,
       title: item.Name || "",
       shell: undefined,
+      host: this.host,
     });
   }
 }

@@ -9,7 +9,6 @@ import {
   type CreateContainerOptions,
   type FetchContainerOptions,
 } from "@/container-client/adapters/containers";
-import { getActiveHostClient } from "@/container-client/adapters/shared";
 import type { Container } from "@/env/Types";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
@@ -83,7 +82,11 @@ export const useContainerKube = (connId: string, id?: string) =>
   useQuery({
     queryKey: containerKeys.sub(connId, id ?? "", "kube"),
     queryFn: async () => {
-      const result = await getActiveHostClient().generateKube(id!);
+      const host = await resolveConnectionHost(connId);
+      if (!host) {
+        throw new Error("No active engine connection");
+      }
+      const result = await host.generateKube(id!);
       return result.success ? result.stdout : "";
     },
     enabled: !!connId && !!id,

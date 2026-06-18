@@ -46,7 +46,13 @@ export const useImageHistory = (connId: string, id?: string) =>
 export const useImageSecurity = (connId: string, id?: string, target?: string) =>
   useQuery({
     queryKey: imageKeys.sub(connId, id ?? "", "security"),
-    queryFn: () => Application.getInstance().checkSecurity({ scanner: "trivy", subject: "image", target: target! }),
+    queryFn: async () =>
+      Application.getInstance().checkSecurity({
+        scanner: "trivy",
+        subject: "image",
+        target: target!,
+        host: await resolveConnectionHost(connId),
+      }),
     enabled: !!connId && !!id && !!target,
   });
 

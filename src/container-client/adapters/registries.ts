@@ -5,6 +5,7 @@
 
 import { Application } from "@/container-client/Application";
 import { normalizeRegistrySearchResult } from "@/container-client/normalizers/shared";
+import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import type {
   CommandExecutionResult,
   RegistriesMap,
@@ -15,6 +16,8 @@ import type {
 } from "@/env/Types";
 
 export class RegistriesAdapter {
+  constructor(private readonly host?: HostClientFacade) {}
+
   async getRegistriesMap(): Promise<RegistriesMap> {
     return Application.getInstance().getRegistriesMap();
   }
@@ -39,11 +42,11 @@ export class RegistriesAdapter {
 
   async searchRegistry(opts: RegistrySearchOptions): Promise<RegistrySearchResult[]> {
     const instance = Application.getInstance();
-    const items = await instance.searchRegistry(opts);
+    const items = await instance.searchRegistry({ ...opts, host: this.host });
     return items.map((it) => normalizeRegistrySearchResult(it, opts));
   }
 
   async pullFromRegistry(opts: RegistryPullOptions): Promise<CommandExecutionResult> {
-    return await Application.getInstance().pullFromRegistry(opts);
+    return await Application.getInstance().pullFromRegistry({ ...opts, host: this.host });
   }
 }

@@ -4,7 +4,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CreatePodOptions, PodsAdapter } from "@/container-client/adapters/pods";
-import { getActiveHostClient } from "@/container-client/adapters/shared";
 import type { Pod } from "@/env/Types";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
@@ -48,7 +47,13 @@ export const usePodProcesses = (connId: string, id?: string) =>
 export const usePodLogs = (connId: string, id?: string, tail?: number) =>
   useQuery({
     queryKey: podKeys.sub(connId, id ?? "", "logs"),
-    queryFn: () => getActiveHostClient().getPodLogs(id!, tail),
+    queryFn: async () => {
+      const host = await resolveConnectionHost(connId);
+      if (!host) {
+        throw new Error("No active engine connection");
+      }
+      return host.getPodLogs(id!, tail);
+    },
     enabled: !!connId && !!id,
     ...liveQueryOptions(),
   });
@@ -57,7 +62,11 @@ export const usePodKube = (connId: string, id?: string) =>
   useQuery({
     queryKey: podKeys.sub(connId, id ?? "", "kube"),
     queryFn: async () => {
-      const result = await getActiveHostClient().generateKube(id!);
+      const host = await resolveConnectionHost(connId);
+      if (!host) {
+        throw new Error("No active engine connection");
+      }
+      const result = await host.generateKube(id!);
       return result.success ? result.stdout : "";
     },
     enabled: !!connId && !!id,
