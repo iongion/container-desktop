@@ -56,7 +56,7 @@ const MainCommand = isMockMode() ? createMockCommand() : Command;
 const USER_DATA_DIR = process.env.CONTAINER_DESKTOP_USER_DATA_DIR;
 
 if (USER_DATA_DIR) {
-  app.setPath("userData", USER_DATA_DIR);
+  app.setPath("userData", path.isAbsolute(USER_DATA_DIR) ? USER_DATA_DIR : path.resolve(PROJECT_HOME, USER_DATA_DIR));
 }
 
 // Patch the shared platform globals (the same set the preload installs).
