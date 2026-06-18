@@ -202,7 +202,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         onChange={() => selection.toggle(getRowId(pod))}
                       />
                     </td>
-                    <EngineColumnCell visible={showEngineColumn} engine={pod.engine} connectionName={pod.connectionName} />
+                    <EngineColumnCell
+                      visible={showEngineColumn}
+                      engine={pod.engine}
+                      connectionName={pod.connectionName}
+                    />
                   </tr>
                 );
               })}
