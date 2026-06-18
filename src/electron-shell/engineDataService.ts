@@ -43,7 +43,13 @@ const RECONNECT_STABLE_MS = 30000;
 // Per-connection resource state: each domain holds the LIST of its items (ResourceItemsByDomain[D] is singular).
 type ResourceState = { [D in ResourceDomain]: ResourceItemsByDomain[D][] };
 
-type ConnectionDescriptor = { id: string; name: string; engine: string; host?: string; capabilities?: ConnectorCapabilities };
+type ConnectionDescriptor = {
+  id: string;
+  name: string;
+  engine: string;
+  host?: string;
+  capabilities?: ConnectorCapabilities;
+};
 
 function emptyResourceState(): ResourceState {
   return Object.fromEntries(RESOURCE_DOMAINS.map((domain) => [domain, []])) as unknown as ResourceState;

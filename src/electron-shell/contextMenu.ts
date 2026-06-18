@@ -57,7 +57,11 @@ function buildTemplate(
     separate();
     template.push(
       { label: "Copy Link Address", click: () => clipboard.writeText(linkURL) },
-      { label: "Open Link in Browser", enabled: !externalOpenDisabled(), click: () => void shell.openExternal(linkURL) },
+      {
+        label: "Open Link in Browser",
+        enabled: !externalOpenDisabled(),
+        click: () => void shell.openExternal(linkURL),
+      },
     );
   }
 

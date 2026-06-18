@@ -172,7 +172,9 @@ export const Platform: IPlatform = {
   async getUserDataPath() {
     const explicitUserDataDir = await Platform.getEnvironmentVariable("CONTAINER_DESKTOP_USER_DATA_DIR");
     if (explicitUserDataDir) {
-      return path.isAbsolute(explicitUserDataDir) ? explicitUserDataDir : path.resolve(process.cwd(), explicitUserDataDir);
+      return path.isAbsolute(explicitUserDataDir)
+        ? explicitUserDataDir
+        : path.resolve(process.cwd(), explicitUserDataDir);
     }
     const home = await Platform.getHomeDir();
     const appName = import.meta.env.PROJECT_NAME || "container-desktop";

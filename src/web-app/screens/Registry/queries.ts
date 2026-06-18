@@ -47,7 +47,8 @@ export const useSearchRegistry = () =>
 export const usePullFromRegistry = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (opts: RegistryPullOptions) => new RegistriesAdapter(await resolveConnectionHost(connId)).pullFromRegistry(opts),
+    mutationFn: async (opts: RegistryPullOptions) =>
+      new RegistriesAdapter(await resolveConnectionHost(connId)).pullFromRegistry(opts),
     onSuccess: async () => {
       await resourceEvents.refresh(connId, "images");
       qc.invalidateQueries({ queryKey: imageKeys.list(connId) });

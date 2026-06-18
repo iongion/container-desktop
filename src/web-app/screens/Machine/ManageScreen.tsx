@@ -62,7 +62,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
     [activeRuntime, currentConnector],
   );
   const connectionId = machineRuntime?.id || "";
-  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(ID, machineRuntime?.capabilities?.sort);
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
+    ID,
+    machineRuntime?.capabilities?.sort,
+  );
   const machinesQuery = useMachinesList(connectionId, machineRuntime?.capabilities?.extensions.machines === true);
   const machineSnapshot = machinesQuery.data || EMPTY_MACHINES;
   const machines = useMemo(() => {

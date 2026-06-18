@@ -422,5 +422,4 @@ export class WindowManager {
     }
     return win;
   }
-
 }
