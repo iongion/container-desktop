@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-version="5.3.2">
+<html lang="en" data-version="5.3.2" data-theme="unified">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem("cd-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Container Desktop — Podman &amp; Docker desktop UI for Windows, macOS, Linux</title>
 <meta name="description" content="A familiar, open-source desktop interface for Podman and Docker — local, remote over SSH, and WSL, the same UI on Windows, macOS and Linux. Free, MIT licensed." />
 <link rel="canonical" href="https://container-desktop.com/" />
@@ -59,6 +60,11 @@
     <a href="https://github.com/iongion/container-desktop">GitHub</a>
   </nav>
   <div class="nav-cta">
+    <div class="theme-swatches" role="group" aria-label="Color theme">
+      <button type="button" class="theme-swatch is-active" data-theme-id="unified" data-shots="unified" data-replay="/replays/unified.json" data-poster="/videos/unified.png" style="--sw:#0a5f50" title="Unified theme" aria-label="Unified theme" aria-pressed="true"></button>
+      <button type="button" class="theme-swatch" data-theme-id="podman" data-shots="podman" data-replay="/replays/container-desktop-demo.json" data-poster="/videos/demo.png" style="--sw:#a01986" title="Podman theme" aria-label="Podman theme" aria-pressed="false"></button>
+      <button type="button" class="theme-swatch" data-theme-id="docker" data-shots="docker" data-replay="/replays/docker.json" data-poster="/videos/docker.png" style="--sw:#163d8a" title="Docker theme" aria-label="Docker theme" aria-pressed="false"></button>
+    </div>
     <span class="gh-star"><a class="github-button" href="https://github.com/iongion/container-desktop" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star iongion/container-desktop on GitHub">Star</a></span>
     <a class="btn btn-primary" href="/#download">Download</a>
   </div>
@@ -74,7 +80,7 @@
     <a class="btn btn-ghost" href="/manual/">Read the Manual</a>
   </div>
   <div class="pd-callout">Looking for the official one made by the Podman team? That's <a href="https://podman-desktop.io/" target="_blank" rel="noopener">Podman Desktop</a> — also great.</div>
-  <div class="shot replay-shot" data-demo-replay="/replays/container-desktop-demo.json">
+  <div class="shot replay-shot" data-demo-replay="/replays/container-desktop-demo.json" data-demo-poster="/videos/demo.png">
     <div class="demo-replay-shell" data-demo-replay-shell>
       <div class="demo-replay-player" data-demo-replay-player data-replay-poster="loading" aria-label="Container Desktop demo replay">
         <img class="demo-replay-poster" src="/videos/demo.png" alt="Container Desktop demo preview" />
@@ -315,6 +321,7 @@
 
   <script src="/assets/js/os-detect.js?v=5.3.2"></script>
   <script src="/assets/js/manual-nav.js?v=5.3.2"></script>
+  <script src="/assets/js/theme-switcher.js?v=5.3.2"></script>
 
   <script src="/assets/js/demo-replay.js?v=5.3.2"></script>
 

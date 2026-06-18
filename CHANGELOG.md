@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Dedicated **Connections** screen (`/screens/connections`) grouping connection management with the Connection info and System info tabs; opened from the titlebar button.
+
+## Changed
+
+- User settings now holds only app settings (tray, version check, font, logging) — connection management moved to the new Connections screen. The titlebar button opens Connections; the sidebar-footer cog opens User settings.
+- Footer connection status is now a green/red count badge with a simple "Connected" / "Disconnected" label.
+
 ## [5.3.2] - 2026-06-17
 
 ## Added

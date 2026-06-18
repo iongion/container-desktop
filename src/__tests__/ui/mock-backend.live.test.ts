@@ -109,7 +109,7 @@ for (const spec of specs) {
     });
 
     it("uses the mock system connection as the default connected row", async () => {
-      await navigate(session.page, "/screens/settings/user-settings");
+      await navigate(session.page, "/screens/connections/manage");
 
       const connectionRows = session.page.locator('[data-table="host.connections"] tbody tr');
       expect(await connectionRows.count()).toBeGreaterThanOrEqual(8);

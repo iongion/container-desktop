@@ -106,11 +106,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <NotificationBell />
       <AnchorButton
         className="AppHeaderActionButton"
-        disabled={disabledHeaderActions}
-        href={pathTo("/screens/settings/user-settings")}
-        icon={IconNames.COG}
-        title={t("Settings")}
-        aria-label={t("Settings")}
+        href={pathTo("/screens/connections/manage")}
+        icon={IconNames.DATA_CONNECTION}
+        title={t("Connections")}
+        aria-label={t("Connections")}
       />
       <AnchorButton
         className="AppHeaderActionButton"

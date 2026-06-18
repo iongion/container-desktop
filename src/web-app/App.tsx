@@ -29,6 +29,9 @@ import { FindHost } from "@/web-app/components/Find/FindHost";
 import { NotificationCenterHost } from "@/web-app/components/NotificationCenter/NotificationCenterHost";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { pathTo } from "@/web-app/Navigator";
+import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
+import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
+import { Screen as SystemInfoScreen } from "@/web-app/screens/Connections/SystemInfoScreen";
 import { Screen as ContainerGenerateKubeScreen } from "@/web-app/screens/Container/GenerateKubeScreen";
 import { Screen as ContainerInspectScreen } from "@/web-app/screens/Container/InspectScreen";
 import { Screen as ContainerLogsScreen } from "@/web-app/screens/Container/LogsScreen";
@@ -53,8 +56,6 @@ import { Screen as PodProcessesScreen } from "@/web-app/screens/Pod/ProcessesScr
 import { Screen as RegistriesScreen } from "@/web-app/screens/Registry/ManageScreen";
 import { Screen as SecretInspectScreen } from "@/web-app/screens/Secret/InspectScreen";
 import { Screen as SecretsScreen } from "@/web-app/screens/Secret/ManageScreen";
-import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Settings/ConnectionInfoScreen";
-import { Screen as SystemInfoScreen } from "@/web-app/screens/Settings/SystemInfoScreen";
 import { Screen as UserSettingsScreen } from "@/web-app/screens/Settings/UserSettingsScreen";
 import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Troubleshoot";
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
@@ -89,6 +90,7 @@ const Screens = [
   VolumesScreen,
   VolumeInspectScreen,
   UserSettingsScreen,
+  ConnectionsScreen,
   ConnectionInfoScreen,
   SystemInfoScreen,
   TroubleshootScreen,

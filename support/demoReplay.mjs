@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { demoScenario } from "./demoScenario.mjs";
+import { demoScenarios } from "./demoScenarios.mjs";
 import {
   captureWindow,
   freezeUi,
@@ -21,10 +21,9 @@ import {
 const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_PORT = 9422;
-const POSTER_PATH = path.join(ROOT, "website-src", "static", "videos", "demo.png");
 
 function parseArgs(argv) {
-  const args = { mode: "dev", killStray: false };
+  const args = { mode: "dev", killStray: false, engines: null };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--kill-stray") {
@@ -34,17 +33,31 @@ function parseArgs(argv) {
     } else if (arg === "--mode") {
       args.mode = argv[index + 1];
       index += 1;
+    } else if (arg.startsWith("--engine=")) {
+      args.engines = parseCsvArg(arg.slice("--engine=".length));
+    } else if (arg === "--engine") {
+      args.engines = parseCsvArg(argv[index + 1]);
+      index += 1;
     }
   }
   return args;
 }
 
-function electronEnv(engine, port) {
+function parseCsvArg(value) {
+  return new Set(
+    String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+}
+
+function electronEnv(engine, port, viewport) {
   const env = { ...process.env };
   const userDataDir = path.join(ROOT, ".tmp", "mock-user-data", "demo", engine);
   rmSync(userDataDir, { recursive: true, force: true });
   mkdirSync(userDataDir, { recursive: true });
-  seedWindowSettings(userDataDir, demoScenario.viewport);
+  seedWindowSettings(userDataDir, viewport);
   delete env.ELECTRON_RUN_AS_NODE;
   env.CONTAINER_DESKTOP_MOCK = engine;
   env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
@@ -176,19 +189,19 @@ async function killStray() {
   }
 }
 
-async function withApp(engine, mode, port, fn) {
+async function withApp(scenario, mode, port, fn) {
   const spec = commandFor(mode, port);
   const child = spawn(spec.command, spec.args, {
     cwd: ROOT,
     detached: process.platform !== "win32",
-    env: electronEnv(engine, port),
+    env: electronEnv(scenario.engine, port, scenario.viewport),
     stdio: ["ignore", "inherit", "inherit"],
   });
   let browser;
   try {
     const session = await waitForApp(port);
     browser = session.browser;
-    await waitForAppViewport(session.page, demoScenario.viewport);
+    await waitForAppViewport(session.page, scenario.viewport);
     await session.page.waitForLoadState("domcontentloaded").catch(() => undefined);
     await freezeUi(session.page);
     await fn(session.page);
@@ -490,9 +503,9 @@ async function runScenario(page, scenario) {
   return { events, chapters, pauses };
 }
 
-async function writePoster(page) {
-  mkdirSync(path.dirname(POSTER_PATH), { recursive: true });
-  await captureWindow(page, POSTER_PATH);
+async function writePoster(page, posterPath) {
+  mkdirSync(path.dirname(posterPath), { recursive: true });
+  await captureWindow(page, posterPath);
 }
 
 function replayOffsetAt(timestamp, pauses) {
@@ -661,7 +674,8 @@ function normalizeRecording(scenario, recording) {
     .map((event) =>
       sanitizeRecordingEvent({
         ...event,
-        timestamp: scenario.baseTimestamp + (event.timestamp - firstTimestamp + replayOffsetAt(event.timestamp, pauses)),
+        timestamp:
+          scenario.baseTimestamp + (event.timestamp - firstTimestamp + replayOffsetAt(event.timestamp, pauses)),
       }),
     )
     .filter(Boolean);
@@ -699,19 +713,30 @@ async function main() {
   if (args.killStray) {
     await killStray();
   }
-  const outPath = path.join(ROOT, demoScenario.output);
-  mkdirSync(path.dirname(outPath), { recursive: true });
-  await withApp(demoScenario.engine, args.mode, DEFAULT_PORT, async (page) => {
-    await waitReady(page);
-    await page.waitForTimeout(demoScenario.posterSettleMs ?? 1000);
-    await setSidebarExpanded(page, false);
-    await waitForNoToasts(page);
-    await writePoster(page);
-    const recording = await runScenario(page, demoScenario);
-    const replay = normalizeRecording(demoScenario, recording);
-    writeFileSync(outPath, `${JSON.stringify(replay)}\n`);
-    console.log(`wrote ${path.relative(ROOT, outPath)} (${replay.events.length} events)`);
-  });
+  const scenarios = args.engines
+    ? demoScenarios.filter((scenario) => args.engines.has(scenario.engine))
+    : demoScenarios;
+  if (scenarios.length === 0) {
+    throw new Error(`No demo scenario matched engine(s): ${[...(args.engines || [])].join(", ")}`);
+  }
+  let port = DEFAULT_PORT;
+  for (const scenario of scenarios) {
+    const outPath = path.join(ROOT, scenario.output);
+    const posterPath = path.join(ROOT, scenario.poster);
+    mkdirSync(path.dirname(outPath), { recursive: true });
+    await withApp(scenario, args.mode, port, async (page) => {
+      await waitReady(page);
+      await page.waitForTimeout(scenario.posterSettleMs ?? 1000);
+      await setSidebarExpanded(page, false);
+      await waitForNoToasts(page);
+      await writePoster(page, posterPath);
+      const recording = await runScenario(page, scenario);
+      const replay = normalizeRecording(scenario, recording);
+      writeFileSync(outPath, `${JSON.stringify(replay)}\n`);
+      console.log(`wrote ${path.relative(ROOT, outPath)} (${replay.events.length} events)`);
+    });
+    port += 1;
+  }
 }
 
 main().catch(async (error) => {

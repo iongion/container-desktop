@@ -251,7 +251,7 @@
     controls.replaceChildren(transport, time, seek);
     updateTimeline(0);
 
-    window.setInterval(() => {
+    const progressTimer = window.setInterval(() => {
       if (!playing) {
         return;
       }
@@ -266,11 +266,11 @@
       }
     }, 500);
 
-    return { seekTo };
+    return { seekTo, dispose: () => window.clearInterval(progressTimer) };
   }
 
   function installKeyboardShortcuts(mount, replay, replayer, controls) {
-    mount.addEventListener("keydown", (event) => {
+    const handler = (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
         return;
       }
@@ -278,7 +278,51 @@
       const delta = event.key === "ArrowLeft" ? -1000 : 1000;
       const offset = Math.max(0, Math.min(durationOf(replay.events), currentOffset(replayer, replay) + delta));
       controls.seekTo(offset);
-    });
+    };
+    mount.addEventListener("keydown", handler);
+    return () => mount.removeEventListener("keydown", handler);
+  }
+
+  // Per-mount teardown hooks (timer, listeners) + the original poster markup, so a
+  // theme switch can rebuild the player on a different replay without leaking.
+  const replayState = new WeakMap();
+
+  function teardownReplay(mount) {
+    const state = replayState.get(mount);
+    if (!state) {
+      return;
+    }
+    for (const dispose of state.cleanups) {
+      try {
+        dispose();
+      } catch {
+        /* ignore */
+      }
+    }
+    state.cleanups = [];
+  }
+
+  function buildPoster(mount, state) {
+    if (!state.posterHtml) {
+      return null;
+    }
+    const holder = document.createElement("div");
+    holder.innerHTML = state.posterHtml;
+    const poster = holder.firstElementChild;
+    const src = mount.getAttribute("data-demo-poster");
+    const fallbackSrc = mount.getAttribute("data-demo-poster-fallback");
+    if (poster) {
+      if (fallbackSrc) {
+        poster.onerror = () => {
+          poster.onerror = null;
+          poster.setAttribute("src", fallbackSrc);
+        };
+      }
+      if (src) {
+        poster.setAttribute("src", src);
+      }
+    }
+    return poster;
   }
 
   async function initReplay(mount) {
@@ -288,12 +332,26 @@
       return;
     }
 
-    const [Replayer, response] = await Promise.all([waitForReplayer(), fetch(replayUrl)]);
+    let state = replayState.get(mount);
+    if (!state) {
+      state = { cleanups: [], posterHtml: target.querySelector(".demo-replay-poster")?.outerHTML || null };
+      replayState.set(mount, state);
+    }
+    teardownReplay(mount);
+    delete mount.dataset.demoReplayError;
+
+    const Replayer = await waitForReplayer();
+    let response = await fetch(replayUrl);
+    // Until an engine's replay is captured its JSON is absent; fall back to podman's.
+    const fallbackUrl = mount.getAttribute("data-demo-replay-fallback");
+    if (!response.ok && fallbackUrl && fallbackUrl !== replayUrl) {
+      response = await fetch(fallbackUrl);
+    }
     if (!response.ok) {
       throw new Error(`Unable to load replay: ${response.status}`);
     }
     const replay = await response.json();
-    const poster = target.querySelector(".demo-replay-poster")?.cloneNode(true);
+    const poster = buildPoster(mount, state);
     target.replaceChildren();
     if (poster) {
       target.appendChild(poster);
@@ -329,14 +387,28 @@
       posterControls.hide();
       cursor.hide();
     });
-    installKeyboardShortcuts(mount, replay, replayer, controls);
-    window.addEventListener("resize", () => resizeReplay(mount, replay, replayer), { passive: true });
+    const disposeKeys = installKeyboardShortcuts(mount, replay, replayer, controls);
+    const onResize = () => resizeReplay(mount, replay, replayer);
+    window.addEventListener("resize", onResize, { passive: true });
+    state.cleanups.push(controls.dispose, disposeKeys, () => window.removeEventListener("resize", onResize));
   }
 
-  for (const mount of mounts) {
+  function runReplay(mount) {
     initReplay(mount).catch((error) => {
       mount.dataset.demoReplayError = "true";
       console.error(error);
     });
+  }
+
+  // Re-rendered by theme-switcher.js when the swatch selects an engine whose
+  // tutorial replay/poster differ from the one currently shown.
+  window.__cdReplayReinit = () => {
+    for (const mount of mounts) {
+      runReplay(mount);
+    }
+  };
+
+  for (const mount of mounts) {
+    runReplay(mount);
   }
 })();

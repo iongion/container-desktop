@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-version="5.3.2">
+<html lang="en" data-version="5.3.2" data-theme="unified">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem("cd-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>The Manual — Container Desktop setup guides for Podman &amp; Docker</title>
 <meta name="description" content="Set up Podman and Docker on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
 <link rel="canonical" href="https://container-desktop.com/manual/" />
@@ -57,6 +58,11 @@
     <a href="https://github.com/iongion/container-desktop">GitHub</a>
   </nav>
   <div class="nav-cta">
+    <div class="theme-swatches" role="group" aria-label="Color theme">
+      <button type="button" class="theme-swatch is-active" data-theme-id="unified" data-shots="unified" data-replay="/replays/unified.json" data-poster="/videos/unified.png" style="--sw:#0a5f50" title="Unified theme" aria-label="Unified theme" aria-pressed="true"></button>
+      <button type="button" class="theme-swatch" data-theme-id="podman" data-shots="podman" data-replay="/replays/container-desktop-demo.json" data-poster="/videos/demo.png" style="--sw:#a01986" title="Podman theme" aria-label="Podman theme" aria-pressed="false"></button>
+      <button type="button" class="theme-swatch" data-theme-id="docker" data-shots="docker" data-replay="/replays/docker.json" data-poster="/videos/docker.png" style="--sw:#163d8a" title="Docker theme" aria-label="Docker theme" aria-pressed="false"></button>
+    </div>
     <span class="gh-star"><a class="github-button" href="https://github.com/iongion/container-desktop" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star iongion/container-desktop on GitHub">Star</a></span>
     <a class="btn btn-primary" href="/#download">Download</a>
   </div>
@@ -435,6 +441,7 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 
   <script src="/assets/js/os-detect.js?v=5.3.2"></script>
   <script src="/assets/js/manual-nav.js?v=5.3.2"></script>
+  <script src="/assets/js/theme-switcher.js?v=5.3.2"></script>
 
 </body>
 </html>

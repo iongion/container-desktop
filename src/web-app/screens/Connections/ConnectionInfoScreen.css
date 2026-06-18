@@ -1,0 +1,65 @@
+.AppScreen[data-screen="connections.connection-info"] .ConnectionCodeEditor {
+  border: 1px solid var(--app-border);
+}
+.AppScreen[data-screen="connections.connection-info"] .AppScreenContent {
+  overflow: hidden;
+}
+.AppScreen[data-screen="connections.connection-info"] h5 {
+  margin: 0;
+  padding: 5px;
+  font-size: 12px;
+  /* Matches the table header (also --app-surface-strong) in both themes; engine code-chips live in docker/podman.css. */
+  background: var(--app-surface-strong);
+}
+
+[data-table="connections.connection-info"] tr td {
+  text-align: left;
+  font-family: var(--monospace-font);
+}
+[data-table="connections.connection-info"] tr td {
+  text-align: left;
+  font-family: var(--monospace-font);
+}
+[data-table="connections.connection-info"] tr td:first-child {
+  width: 1px;
+  font-weight: bold;
+}
+[data-table="connections.connection-info"] tr th:nth-child(2),
+[data-table="connections.connection-info"] tr td:nth-child(2) {
+  width: 100%;
+  text-align: left;
+}
+[data-table="connections.connection-info"] tr td code:first-child {
+  border: 1px solid transparent;
+  padding: 4px;
+  display: block;
+  border-radius: 5px;
+}
+[data-table="connections.connection-info"] tr td code:first-child {
+  border: 1px solid transparent;
+  padding: 4px;
+  display: block;
+  border-radius: 5px;
+}
+
+/* Connection picker lives inline in the header center (no title); ~a third of the bar wide. */
+.AppScreen[data-screen="connections.connection-info"] .AppScreenHeader .ConnectionSelect {
+  width: 34vw;
+  margin: 0;
+  align-items: center;
+}
+/* Inline FormGroup keeps its content block-width by default — let the Select fill the 34vw (minus label). */
+.AppScreen[data-screen="connections.connection-info"] .AppScreenHeader .ConnectionSelect .bp6-form-content {
+  flex: 1;
+  min-width: 0;
+}
+/* The header's `.NavbarCenterContent span` rule (for the title) forces inline-block/max-width:80%/clip onto
+   the picker's inner spans, mangling the icon+name row — restore the flex layout and full width here. */
+.AppScreen[data-screen="connections.connection-info"] .AppScreenHeader .ConnectionSelectOption {
+  display: flex;
+  max-width: none;
+  overflow: visible;
+}
+.AppScreen[data-screen="connections.connection-info"] .AppScreenHeader .ConnectionSelectOptionName {
+  max-width: none;
+}

@@ -6,7 +6,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 
 import { useAppStore } from "@/web-app/stores/appStore";
 
-import { getSettingsUrl } from "./Navigation";
+import { getConnectionsUrl } from "./Navigation";
 
 interface ScreenHeaderSectionsTabBarProps {
   expand?: boolean;
@@ -23,27 +23,27 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
     <>
       <AnchorButton
         variant="minimal"
-        active={isActive ? isActive("settings-settings") : false}
-        icon={IconNames.COG}
-        text={t("User settings")}
-        href={getSettingsUrl("user-settings")}
+        active={isActive ? isActive("connections.manage") : false}
+        icon={IconNames.DATA_CONNECTION}
+        text={t("Connections")}
+        href={getConnectionsUrl("manage")}
       />
       <AnchorButton
         variant="minimal"
         disabled={!isRunning}
-        active={isActive ? isActive("settings.connection-info") : false}
+        active={isActive ? isActive("connections.connection-info") : false}
         icon={IconNames.POWER}
         text={t("Connection info")}
-        href={getSettingsUrl("connection-info")}
+        href={getConnectionsUrl("connection-info")}
         title={isRunning ? t("") : t("Access to this screen requires connection")}
       />
       <AnchorButton
         variant="minimal"
         disabled={!isRunning}
-        active={isActive ? isActive("settings.system-info") : false}
+        active={isActive ? isActive("connections.system-info") : false}
         icon={IconNames.EYE_OPEN}
         text={t("System info")}
-        href={getSettingsUrl("system-info")}
+        href={getConnectionsUrl("system-info")}
         title={isRunning ? t("") : t("Access to this screen requires connection")}
       />
     </>
@@ -54,20 +54,21 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
 interface ScreenHeaderProps {
   currentScreen: string;
   titleText?: string;
+  rightContent?: React.ReactNode;
+  centerContent?: React.ReactNode;
   children?: any;
 }
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   currentScreen,
   titleText,
+  rightContent,
+  centerContent,
   children,
 }: ScreenHeaderProps) => {
   return (
-    <AppScreenHeader
-      titleText={titleText}
-      withoutSearch
-      rightContent={<ScreenHeaderSectionsTabBar expand isActive={(input) => input === currentScreen} />}
-    >
+    <AppScreenHeader titleText={titleText} withoutSearch rightContent={rightContent} centerContent={centerContent}>
+      <ScreenHeaderSectionsTabBar expand isActive={(input) => input === currentScreen} />
       {children}
     </AppScreenHeader>
   );

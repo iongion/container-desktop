@@ -125,11 +125,11 @@ body.bp6-light[data-engine="podman"] .SecurityDetails {
 }
 
 /* Connection-info tables — engine specifics. */
-[data-theme="bp6-dark"][data-engine="podman"] [data-table="settings.connection-info"] tr td code:first-child {
+[data-theme="bp6-dark"][data-engine="podman"] [data-table="connections.connection-info"] tr td code:first-child {
   background: #110411;
   color: #f6c0fe;
 }
-[data-theme="bp6-light"][data-engine="podman"] [data-table="settings.connection-info"] tr td code:first-child {
+[data-theme="bp6-light"][data-engine="podman"] [data-table="connections.connection-info"] tr td code:first-child {
   background: #cbc8cb;
   border: 1px solid #412d4b;
 }

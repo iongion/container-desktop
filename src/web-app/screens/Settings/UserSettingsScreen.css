@@ -1,12 +1,4 @@
-.AppSettingsEngineManager {
-  margin-top: 10px;
-}
 .AppSettingsForm .bp6-form-group {
-  margin: 0;
-}
-.AppSettingsCallout {
-  text-align: center;
-  padding: 5px !important;
   margin: 0;
 }
 .AppSettingsFormColumn {
@@ -110,83 +102,6 @@
   padding-bottom: 6px;
   border-radius: 5px;
   font-size: 11px;
-}
-
-.AppSettingsEngineManagerConnections {
-  height: calc(100vh - 410px);
-  border: 1px solid var(--app-border);
-  position: relative;
-  background-color: var(--app-surface);
-  overflow: auto;
-}
-[data-running="no"] .AppSettingsEngineManagerConnections {
-  height: calc(100vh - 544px);
-}
-.AppSettingsEngineManagerConnections [data-table="host.connections"] thead {
-  position: sticky;
-  width: 100%;
-}
-.AppSettingsEngineManagerConnections [data-table="host.connections"] tbody {
-  vertical-align: top;
-}
-.AppSettingsEngineManagerConnections [data-table="host.connections"] tbody tr td:nth-child(1) {
-  width: 1px;
-}
-.AppSettingsEngineManagerConnections [data-table="host.connections"] thead tr th:nth-child(2),
-.AppSettingsEngineManagerConnections [data-table="host.connections"] tbody tr td:nth-child(2) {
-  text-align: left !important;
-  width: 100%;
-}
-.AppSettingsEngineManagerConnections
-  [data-table="host.connections"]
-  tr[data-connection-is-default="yes"]
-  td[data-flag="default"]
-  strong {
-  background-color: #670841;
-  padding: 4px;
-  border-radius: 5px;
-  width: 30px;
-  display: inline-block;
-}
-.AppSettingsEngineManagerConnections [data-table="host.connections"] tr[data-connection-is-connected="yes"] {
-  background-color: #1b3f1b;
-}
-.AppSettingsEngineManagerConnections .PlatformScopeName,
-.AppSettingsEngineManagerConnections .PlatformScopeLabel {
-  margin: 0;
-  padding: 0;
-}
-.AppSettingsEngineManagerConnections .PlatformScopeName {
-  font-weight: bold;
-}
-.AppSettingsEngineManagerConnections .PlatformScopeLabel {
-  font-size: 9px;
-  color: var(--app-text-muted);
-}
-.AppSettingsEngineManagerConnectionsController {
-  display: flex;
-  padding: 5px;
-}
-.ConnectionsExportImport {
-  width: 214px !important;
-  margin-left: 5px;
-}
-.PlatformConnectionName,
-.PlatformConnectionDescription {
-  margin: 0;
-  padding: 0;
-}
-.PlatformConnectionName {
-  font-size: 12px;
-}
-.PlatformConnectionDescription {
-  padding-top: 5px;
-  color: var(--app-text-muted);
-}
-
-[data-connection-is-system="yes"] .PlatformConnectionName {
-  font-weight: bold;
-  text-decoration: underline;
 }
 
 /* Monospace font-family Select popover: wider than the trigger (to show full font names), the

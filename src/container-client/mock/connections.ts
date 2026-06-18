@@ -10,6 +10,7 @@ import {
   type EngineConnectorAvailability,
   type EngineConnectorSettings,
 } from "@/env/Types";
+import { getMockEngines } from "./mode";
 
 export const MOCK_PODMAN_SYSTEM_ID = "mock.podman.system";
 export const MOCK_DOCKER_SYSTEM_ID = "mock.docker.system";
@@ -94,6 +95,11 @@ function mockConnection(opts: MockConnectionOptions): Connection {
 
 /** The connection list surfaced everywhere in mock mode (boot, Connection Manager, tray). */
 export function buildMockConnections(): Connection[] {
+  // Only the system connection(s) for the active mock engine(s) auto-start, so the app lands in the
+  // single-engine workspace for "podman"/"docker" and the merged/unified one for "unified" (see
+  // ./mode getMockEngines). The remote SSH/WSL/LIMA samples stay manual — they exist to populate the
+  // Connection Manager, not to connect at boot.
+  const engines = getMockEngines();
   return [
     mockConnection({
       id: MOCK_PODMAN_SYSTEM_ID,
@@ -102,7 +108,7 @@ export function buildMockConnections(): Connection[] {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
       uri: "",
-      autoStart: true,
+      autoStart: engines.includes(ContainerEngine.PODMAN),
       controller: controller("podman", "podman-machine-default", MOCK_PODMAN_VERSION),
     }),
     mockConnection({
@@ -112,7 +118,7 @@ export function buildMockConnections(): Connection[] {
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
       uri: "",
-      autoStart: true,
+      autoStart: engines.includes(ContainerEngine.DOCKER),
     }),
     mockConnection({
       id: "mock.podman.ssh",

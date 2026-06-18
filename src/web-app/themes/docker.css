@@ -159,11 +159,11 @@ body.bp6-light[data-engine="docker"] .AppSidebarFooter .bp6-navbar::before {
 }
 
 /* Connection-info tables — engine specifics. */
-[data-theme="bp6-dark"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
+[data-theme="bp6-dark"][data-engine="docker"] [data-table="connections.connection-info"] tr td code:first-child {
   background: #2f4e94;
   color: #c4daff;
 }
-[data-theme="bp6-light"][data-engine="docker"] [data-table="settings.connection-info"] tr td code:first-child {
+[data-theme="bp6-light"][data-engine="docker"] [data-table="connections.connection-info"] tr td code:first-child {
   background: #cbc8cb;
   border: 1px solid #412d4b;
 }

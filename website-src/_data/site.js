@@ -7,6 +7,48 @@ import pkg from "../../package.json" with { type: "json" };
 const require = createRequire(import.meta.url);
 const { WINDOWS_INSTALLER_VERSION } = require("../../support/build-matrix.cjs");
 
+// Engine color themes — single source of truth for the swatch picker and the per-engine media that
+// swaps with it. `id` matches the CSS html[data-theme="…"] blocks in assets/css/site.css; `swatch`
+// is the nav dot; `tagline` is the brand sub-line under the logo; `shots` is the screenshot folder
+// under static/img/; `replay`/`poster` are the tutorial pseudo-video + its first frame. Capture
+// writes per-engine media to /replays/<id>.json and /videos/<id>.png (see support/screenshots.mjs +
+// support/demoReplay.mjs); until an engine has its own, point it at podman's. Add an engine = one
+// entry here + one [data-theme] block in site.css; the nav loop, theme-switcher.js and
+// demo-replay.js pick it up automatically.
+const themes = [
+  {
+    id: "unified",
+    label: "Unified",
+    swatch: "#0a5f50",
+    tagline: "Unified Desktop Companion",
+    shots: "unified",
+    replay: "/replays/unified.json",
+    poster: "/videos/unified.png",
+  },
+  {
+    id: "podman",
+    label: "Podman",
+    swatch: "#a01986",
+    tagline: "Podman Desktop Companion",
+    shots: "podman",
+    replay: "/replays/container-desktop-demo.json",
+    poster: "/videos/demo.png",
+  },
+  {
+    id: "docker",
+    label: "Docker",
+    swatch: "#163d8a",
+    tagline: "Docker Desktop Companion",
+    shots: "docker",
+    replay: "/replays/docker.json",
+    poster: "/videos/docker.png",
+  },
+];
+const defaultTheme = "unified";
+// Baked into the nav brand so the default theme's tagline shows before JS runs (no flash);
+// theme-switcher.js swaps it on each swatch click.
+const defaultTagline = (themes.find((theme) => theme.id === defaultTheme) || {}).tagline;
+
 export default {
   name: "Container Desktop",
   tagline: "Podman Desktop Companion",
@@ -19,6 +61,9 @@ export default {
   microsoftStore: "https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct",
   ogImage: "/img/podman/001-Dashboard.png",
   author: "Ionut Stoica",
+  themes,
+  defaultTheme,
+  defaultTagline,
   version: pkg.version,
   // Windows lags: the signed Microsoft Store installer is uploaded by hand and
   // only bumped after the Store accepts a submission, so the in-app Windows

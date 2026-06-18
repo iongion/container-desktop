@@ -14,7 +14,7 @@ import "./ConnectionInfoScreen.css";
 
 interface ScreenProps extends AppScreenProps {}
 
-export const ID = "settings.connection-info";
+export const ID = "connections.connection-info";
 export const View = "connection-info";
 export const Title = "Connection info";
 
@@ -95,10 +95,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader currentScreen={ID} titleText={selected?.name || ""} />
+      <ScreenHeader
+        currentScreen={ID}
+        centerContent={<ConnectionSelect value={connectionId} onChange={setConnectionId} inline />}
+      />
       <div className="AppScreenContent">
-        <ConnectionSelect value={connectionId} onChange={setConnectionId} />
-        <HTMLTable compact striped interactive className="AppDataTable" data-table="settings.connection-info">
+        <HTMLTable compact striped interactive className="AppDataTable" data-table="connections.connection-info">
           <thead>
             <tr>
               <th data-column="Property">{t("Property")}</th>
@@ -189,7 +191,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/settings/${View}`,
+  Path: `/screens/connections/${View}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,

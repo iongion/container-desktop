@@ -123,7 +123,8 @@ html[data-theme="bp6-dark"][data-engine="unified"] {
   --app-accent: #14b8a6;
   --app-accent-hover: #0d9488;
   --app-accent-active: #0f766e;
-  --app-accent-fg: #ffffff;
+  /* Dark fg on the bright teal accent: white-on-#14b8a6 is ~2.2:1 (unreadable); this dark teal is ~7.7:1. */
+  --app-accent-fg: #04312c;
   --app-accent-text: #5eead4;
   --app-bg: #171c26;
   --app-chrome: #11151d;

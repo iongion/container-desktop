@@ -53,6 +53,8 @@ export interface ConnectionSelectProps {
   filter?: (connection: Connection) => boolean;
   disabled?: boolean;
   label?: string;
+  // Render the label beside the Select (used in the Connection info header) instead of stacked above it.
+  inline?: boolean;
 }
 
 export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
@@ -61,6 +63,7 @@ export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
   filter,
   disabled,
   label,
+  inline,
 }: ConnectionSelectProps) => {
   const { t } = useTranslation();
   const connections = useAppStore((state) => state.connections);
@@ -79,7 +82,7 @@ export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
   // A single eligible connection (or an explicitly disabled form) still shows the engine, but cannot be changed.
   const locked = disabled || items.length <= 1;
   return (
-    <FormGroup className="ConnectionSelect" label={label ?? t("Connection")}>
+    <FormGroup className="ConnectionSelect" label={label ?? t("Connection")} inline={inline}>
       <Select<Connection>
         fill
         filterable={items.length > 6}

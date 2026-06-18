@@ -27,7 +27,7 @@ export const ManageConnectionDrawer: React.FC<ManageConnectionDrawerProps> = (pr
       size={DrawerSize.SMALL}
       onClose={props.onClose}
       hasBackdrop={true}
-      position={props.mode === "create" ? Position.LEFT : Position.RIGHT}
+      position={Position.RIGHT}
       formId={formId}
     >
       <div className={Classes.DRAWER_BODY}>

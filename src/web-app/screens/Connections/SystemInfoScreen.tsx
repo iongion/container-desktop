@@ -13,7 +13,7 @@ import "./SystemInfoScreen.css";
 
 interface ScreenProps extends AppScreenProps {}
 
-export const ID = "settings.system-info";
+export const ID = "connections.system-info";
 export const View = "system-info";
 export const Title = "System info";
 
@@ -55,7 +55,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/settings/${View}`,
+  Path: `/screens/connections/${View}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,

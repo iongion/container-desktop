@@ -7,6 +7,11 @@
     <a href="{{ site.repo }}">GitHub</a>
   </nav>
   <div class="nav-cta">
+    <div class="theme-swatches" role="group" aria-label="Color theme">
+      {%- for t in site.themes %}
+      <button type="button" class="theme-swatch{% if t.id == site.defaultTheme %} is-active{% endif %}" data-theme-id="{{ t.id }}" data-shots="{{ t.shots }}" data-replay="{{ t.replay }}" data-poster="{{ t.poster }}" style="--sw:{{ t.swatch }}" title="{{ t.label }} theme" aria-label="{{ t.label }} theme" aria-pressed="{% if t.id == site.defaultTheme %}true{% else %}false{% endif %}"></button>
+      {%- endfor %}
+    </div>
     <span class="gh-star"><a class="github-button" href="{{ site.repo }}" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star {{ site.repoSlug }} on GitHub">Star</a></span>
     <a class="btn btn-primary" href="/#download">Download</a>
   </div>

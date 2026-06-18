@@ -1,6 +1,8 @@
 export const SCREENSHOT_VIEWPORT = { width: 1068, height: 718 };
 
-export const SCREENSHOT_ENGINES = ["podman", "docker"];
+// "unified" boots both system engines connected (CONTAINER_DESKTOP_MOCK=unified) → the merged
+// workspace; per-item `*ByEngine` maps below carry its selectors where they differ from podman.
+export const SCREENSHOT_ENGINES = ["podman", "docker", "unified"];
 
 export const STALE_FLAT_SCREENSHOTS = [
   "000-CrossPlatform.png",
@@ -43,7 +45,8 @@ export const screenshotManifest = [
     file: "Images.png",
     route: "/screens/images",
     waitFor: "[data-image]",
-    minCountByEngine: { podman: 4, docker: 5 },
+    // unified merges both engines' images, so it has at least docker's count.
+    minCountByEngine: { podman: 4, docker: 5, unified: 5 },
   },
   {
     file: "Pods.png",
@@ -51,8 +54,10 @@ export const screenshotManifest = [
     waitForByEngine: {
       podman: "[data-pod]",
       docker: '[data-screen="pods"]',
+      // Pods are Podman-only; in the merged view they come from the podman connection.
+      unified: "[data-pod]",
     },
-    minCountByEngine: { podman: 12, docker: 1 },
+    minCountByEngine: { podman: 12, docker: 1, unified: 12 },
   },
   {
     file: "SystemInfo.png",
@@ -67,6 +72,8 @@ export const screenshotManifest = [
         'tr[data-connection-id="mock.podman.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
       docker:
         'tr[data-connection-id="mock.docker.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
+      // Merged view: podman is the primary/default; both system rows are connected.
+      unified: 'tr[data-connection-id="mock.docker.system"][data-connection-is-connected="yes"]',
     },
   },
   {
@@ -92,6 +99,8 @@ export const screenshotManifest = [
     routeByEngine: {
       podman: "/screens/secrets/$secretId/inspect",
       docker: "/screens/secrets",
+      // Merged list view (secrets from every connected engine).
+      unified: "/screens/secrets",
     },
     resolveByEngine: {
       podman: {
@@ -101,6 +110,7 @@ export const screenshotManifest = [
     waitForByEngine: {
       podman: '[data-screen="secret.inspect"]',
       docker: '[data-screen="secrets"]',
+      unified: '[data-screen="secrets"]',
     },
   },
   {

@@ -19,6 +19,7 @@ interface AppScreenHeaderProps {
   titleIcon?: any;
   leftContent?: React.ReactNode;
   rightContent?: any; // React.ReactNode;
+  centerContent?: React.ReactNode;
   listRoutePath?: string;
   listRouteIcon?: IconName;
   children?: React.ReactNode;
@@ -35,6 +36,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   titleText,
   titleIcon,
   rightContent,
+  centerContent,
   listRoutePath,
   listRouteIcon,
   children,
@@ -115,7 +117,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
           {children}
         </div>
         <div className="NavbarCenter" data-with-back="yes">
-          <div className="NavbarCenterContent">{titleWidget}</div>
+          <div className="NavbarCenterContent">{centerContent ?? titleWidget}</div>
         </div>
         {rightWidget}
       </Navbar>

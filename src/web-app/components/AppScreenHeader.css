@@ -2,3 +2,8 @@
   border-top-right-radius: 15px;
   border-bottom-right-radius: 15px;
 }
+/* Vertically center the left header slot (back/search buttons, tab bars) like the right group already is. */
+.AppScreenHeader .NavbarLeft {
+  display: flex;
+  align-items: center;
+}

@@ -1,4 +1,4 @@
-import { Navbar, NavbarDivider, NavbarHeading } from "@blueprintjs/core";
+import { Intent, Navbar, NavbarDivider, NavbarHeading, Tag } from "@blueprintjs/core";
 import i18n from "@/web-app/App.i18n";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
@@ -22,16 +22,20 @@ export const AppFooter = () => {
     <div className="AppFooter">
       <Navbar className="AppFooterNavbar">
         <NavbarHeading>
-          <div className="AppFooterCurrentConnectorStatus" data-connected={isConnected ? "yes" : "no"}></div>
+          <Tag
+            className="AppFooterCurrentConnectorBadge"
+            round
+            intent={isConnected ? Intent.SUCCESS : Intent.DANGER}
+            data-connected={isConnected ? "yes" : "no"}
+            htmlTitle={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
+          >
+            {connectedCount}
+          </Tag>
           <div
             className="AppFooterCurrentConnector"
             title={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
           >
-            {!isConnected
-              ? t("Disconnected")
-              : connectedCount === 1
-                ? t("1 engine connected")
-                : t("{{count}} engines connected", { count: connectedCount })}
+            {isConnected ? t("Connected") : t("Disconnected")}
           </div>
         </NavbarHeading>
         {expandSidebar || !isConnected ? null : (

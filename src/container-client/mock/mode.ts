@@ -4,13 +4,18 @@
 //
 // Switched on by the `CONTAINER_DESKTOP_MOCK` env var (read from process.env in main/preload, and
 // from the contextBridge-exposed global in the renderer). Values: "podman" | "docker" boot that
-// engine as the current connection; "1"/"true"/"yes" default to podman. ALWAYS inert in production
-// builds — the value is ignored when ENVIRONMENT === "production" — so a stray flag can never make a
-// shipped app serve fixtures.
+// single engine as the current connection; "unified" | "all" | "both" | "1" | "true" | "yes" boot
+// BOTH system engines connected → the merged/unified workspace. ALWAYS inert in production builds —
+// the value is ignored when ENVIRONMENT === "production" — so a stray flag can never make a shipped
+// app serve fixtures.
 
 import { ContainerEngine } from "@/env/Types";
 
 export type MockEngine = ContainerEngine.PODMAN | ContainerEngine.DOCKER;
+
+// Values that boot the multi-engine (merged) workspace. "1"/"true"/"yes" are kept for back-compat
+// (historically documented as "boots Podman+Docker mocks") and now alias the explicit "unified".
+const MULTI_ENGINE_FLAGS = new Set(["1", "true", "yes", "unified", "all", "both"]);
 
 function rawFlag(): string {
   // Production is never mockable, regardless of the env var (compile-time constant — lets the
@@ -30,10 +35,35 @@ function rawFlag(): string {
 /** True when the app should serve fixtures instead of talking to a real engine. */
 export function isMockMode(): boolean {
   const value = rawFlag().toLowerCase();
-  return value === "1" || value === "true" || value === "yes" || value === "podman" || value === "docker";
+  return MULTI_ENGINE_FLAGS.has(value) || value === "podman" || value === "docker";
 }
 
-/** Which engine the mock app boots into (the default current connection). Defaults to podman. */
+/**
+ * The engines the mock boots as auto-start (connected) connections: a single engine for
+ * "podman"/"docker", or both for the multi-engine flags ("unified" etc.). Drives which system
+ * connections auto-start at boot (see ./connections) — and therefore whether the app lands in the
+ * single-engine or the merged/unified workspace. Empty when not in mock mode.
+ */
+export function getMockEngines(): MockEngine[] {
+  const value = rawFlag().toLowerCase();
+  if (value === "docker") {
+    return [ContainerEngine.DOCKER];
+  }
+  if (value === "podman") {
+    return [ContainerEngine.PODMAN];
+  }
+  if (MULTI_ENGINE_FLAGS.has(value)) {
+    return [ContainerEngine.PODMAN, ContainerEngine.DOCKER];
+  }
+  return [];
+}
+
+/** True when the mock boots more than one engine — i.e. the merged/unified workspace. */
+export function isUnifiedMock(): boolean {
+  return getMockEngines().length > 1;
+}
+
+/** The primary engine (the default current connection). Defaults to podman. */
 export function getMockEngine(): MockEngine {
-  return rawFlag().toLowerCase() === "docker" ? ContainerEngine.DOCKER : ContainerEngine.PODMAN;
+  return getMockEngines()[0] ?? ContainerEngine.PODMAN;
 }

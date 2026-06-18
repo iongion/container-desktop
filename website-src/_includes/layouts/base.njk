@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-version="{{ site.version }}">
+<html lang="en" data-version="{{ site.version }}" data-theme="{{ site.defaultTheme }}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem("cd-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>{{ title or (site.name + " — " + site.tagline) }}</title>
 <meta name="description" content="{{ description or site.description }}" />
 <link rel="canonical" href="{{ site.url }}{{ page.url }}" />
@@ -63,6 +64,7 @@
 {% endif %}
   <script src="/assets/js/os-detect.js?v={{ site.version }}"></script>
   <script src="/assets/js/manual-nav.js?v={{ site.version }}"></script>
+  <script src="/assets/js/theme-switcher.js?v={{ site.version }}"></script>
 {% if demoReplay %}
   <script src="/assets/js/demo-replay.js?v={{ site.version }}"></script>
 {% endif %}

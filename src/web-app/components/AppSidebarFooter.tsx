@@ -57,7 +57,7 @@ export function AppSidebarFooter() {
   }
   const versionString = `v${PROJECT_VERSION}`;
   const programString = programInfo.version ? `${programInfo.name} ${programInfo.version}` : "";
-  // Settings cog → user settings (mirrors the titlebar's cog); replaces the old version-info popover button.
+  // Settings cog → user settings (the titlebar button now opens the Connections screen); replaces the old version-info popover button.
   const rightContent = pending ? (
     <div className="AppSidebarFooterPendingIndicator">
       <Spinner intent={Intent.PRIMARY} size={SpinnerSize.SMALL} />
