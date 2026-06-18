@@ -12,9 +12,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getActiveHostClient } from "@/container-client/adapters/shared";
 import type { PodmanMachine } from "@/env/Types";
 import type { BulkAction } from "@/web-app/components/Bulk";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { machineKeys } from "./queries";
 
 // Mirrors Machine/ActionsMenu.tsx: a machine is running when its State is "running" or the Running flag is set.
@@ -27,6 +27,14 @@ export const machineCanRestart = (_machine: PodmanMachine) => true;
 // Remove mirrors the per-row guard, which is always enabled.
 export const machineCanRemove = (_machine: PodmanMachine) => true;
 
+async function resolveMachineHost(connId: string) {
+  const host = await resolveConnectionHost(connId);
+  if (!host) {
+    throw new Error("No active engine connection");
+  }
+  return host;
+}
+
 export function useMachineBulkActions(connId: string): {
   actions: BulkAction<PodmanMachine>[];
   getId: (item: PodmanMachine) => string;
@@ -35,7 +43,6 @@ export function useMachineBulkActions(connId: string): {
   const { t } = useTranslation();
   const qc = useQueryClient();
   return useMemo(() => {
-    const host = getActiveHostClient();
     const refresh = async () => {
       qc.invalidateQueries({ queryKey: machineKeys.list(connId) });
     };
@@ -45,14 +52,14 @@ export function useMachineBulkActions(connId: string): {
         label: t("Stop"),
         icon: IconNames.STOP,
         eligible: (m) => machineCanStop(m),
-        run: (m) => host.stopPodmanMachine(m.Name),
+        run: async (m) => (await resolveMachineHost(connId)).stopPodmanMachine(m.Name),
       },
       {
         key: "restart",
         label: t("Restart"),
         icon: IconNames.RESET,
         eligible: (m) => machineCanRestart(m),
-        run: (m) => host.restartPodmanMachine(m.Name),
+        run: async (m) => (await resolveMachineHost(connId)).restartPodmanMachine(m.Name),
       },
       {
         key: "remove",
@@ -61,7 +68,7 @@ export function useMachineBulkActions(connId: string): {
         intent: Intent.DANGER,
         destructive: true,
         eligible: (m) => machineCanRemove(m),
-        run: (m) => host.removePodmanMachine(m.Name),
+        run: async (m) => (await resolveMachineHost(connId)).removePodmanMachine(m.Name),
       },
     ];
     return { actions, getId: (item: PodmanMachine) => item.Name, refresh };

@@ -28,7 +28,7 @@ import type {
   ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import type { Connection, GlobalUserSettings } from "@/env/Types";
+import type { Connection, ConnectorCapabilities, GlobalUserSettings } from "@/env/Types";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
 export type { AppRuntimeSnapshot, ConnectionPhase } from "@/container-client/resourceSyncProtocol";
@@ -43,18 +43,25 @@ const RECONNECT_STABLE_MS = 30000;
 // Per-connection resource state: each domain holds the LIST of its items (ResourceItemsByDomain[D] is singular).
 type ResourceState = { [D in ResourceDomain]: ResourceItemsByDomain[D][] };
 
-type ConnectionDescriptor = { id: string; name: string; engine: string; host?: string };
+type ConnectionDescriptor = { id: string; name: string; engine: string; host?: string; capabilities?: ConnectorCapabilities };
 
 function emptyResourceState(): ResourceState {
   return Object.fromEntries(RESOURCE_DOMAINS.map((domain) => [domain, []])) as unknown as ResourceState;
 }
 
-function descriptorOf(connection: { id: string; name: string; engine: unknown; host?: unknown }): ConnectionDescriptor {
+function descriptorOf(connection: {
+  id: string;
+  name: string;
+  engine: unknown;
+  host?: unknown;
+  capabilities?: ConnectorCapabilities;
+}): ConnectionDescriptor {
   return {
     id: connection.id,
     name: connection.name,
     engine: `${connection.engine}`,
     host: connection.host ? `${connection.host}` : undefined,
+    capabilities: connection.capabilities,
   };
 }
 
@@ -145,7 +152,13 @@ export class EngineDataService {
       running,
       osType: `${CURRENT_OS_TYPE}`,
       currentConnector: primary
-        ? { id: primary.id, name: primary.name, engine: primary.engine, host: primary.host }
+        ? {
+            id: primary.id,
+            name: primary.name,
+            engine: primary.engine,
+            host: primary.host,
+            capabilities: primary.capabilities,
+          }
         : undefined,
       connections: this.connectionsList,
       active,
@@ -262,6 +275,7 @@ export class EngineDataService {
         this.hostByConnection.set(id, host);
         this.runtimeByConnection.set(id, {
           ...desc,
+          capabilities: host.capabilities,
           phase: "ready",
           running: true,
           version: engineVersionOf(connection, host),
@@ -419,8 +433,10 @@ export class EngineDataService {
     }
     this.reconnectAttempts.set(id, attempt);
     const delay = this.backoffDelay(attempt, policy);
+    const previousCapabilities = this.runtimeByConnection.get(id)?.capabilities;
     this.runtimeByConnection.set(id, {
       ...desc,
+      capabilities: previousCapabilities,
       phase: "reconnecting",
       running: false,
       error: reason,

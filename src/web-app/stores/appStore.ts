@@ -255,9 +255,10 @@ export const useAppStore = create<AppStore>()((set, get) => {
           : AppBootstrapPhase.READY;
         const next: Partial<AppState> = { phase, running, provisioned: true };
         // Hydrate the PRIMARY connector (create/pull target, header, theme) from the merged snapshot — only
-        // when the primary actually changes, so we don't re-render every consumer on each resource snapshot.
+        // when the primary actually changes, or when the ready snapshot adds capabilities after a starting
+        // snapshot. Those capabilities drive Podman-only sidebar/screens.
         const primaryId = runtime.currentConnector?.id;
-        if (primaryId && primaryId !== state.currentConnector?.id) {
+        if (primaryId && (primaryId !== state.currentConnector?.id || !!runtime.currentConnector?.capabilities)) {
           const conn = state.connections.find((c) => c.id === primaryId);
           const connector = state.connectors.find((c) => c.id === primaryId || c.connectionId === primaryId);
           if (conn || connector) {
@@ -265,6 +266,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
               {} as Connector,
               (connector as Connector) ?? ({} as Connector),
               (conn as unknown as Connector) ?? ({} as Connector),
+              (runtime.currentConnector as unknown as Connector) ?? ({} as Connector),
             );
             // A primary synthesized from a configured Connection has no availability matrix. Ensure a
             // well-formed one (api tracks the primary's runtime) so the connection-manager callout reads the

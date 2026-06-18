@@ -8,6 +8,7 @@ import { ActionsMenu } from "./ActionsMenu";
 
 interface ScreenHeaderProps {
   machine: PodmanMachine | PodmanMachineInspect;
+  connectionId?: string;
   currentScreen: string;
   listRoutePath?: string;
   listRouteIcon?: IconName;
@@ -15,6 +16,7 @@ interface ScreenHeaderProps {
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   machine,
+  connectionId,
   currentScreen,
   listRoutePath,
   listRouteIcon,
@@ -31,7 +33,14 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.BOX}
       titleText={machine.Name}
-      rightContent={<ActionsMenu machine={machine} expand isActive={(input) => input === currentScreen} />}
+      rightContent={
+        <ActionsMenu
+          machine={machine}
+          connectionId={connectionId}
+          expand
+          isActive={(input) => input === currentScreen}
+        />
+      }
     />
   );
 };

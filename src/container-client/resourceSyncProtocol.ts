@@ -3,6 +3,7 @@
 // both processes import it without pulling in Zustand/Electron.
 
 import type { ResourceDomain } from "./resourceDomains";
+import type { ConnectorCapabilities } from "@/env/Types";
 
 export type ConnectionPhase = "idle" | "starting" | "ready" | "failed" | "reconnecting";
 
@@ -12,6 +13,7 @@ export interface ConnectionRuntimeInfo {
   name: string;
   engine: string;
   host?: string;
+  capabilities?: ConnectorCapabilities;
   phase: ConnectionPhase;
   running: boolean;
   error?: string;
@@ -35,8 +37,8 @@ export interface AppRuntimeSnapshot {
   phase: ConnectionPhase;
   running: boolean;
   osType: string;
-  currentConnector?: { id: string; name: string; engine: string; host?: string };
-  connections: Array<{ id: string; name: string; engine: string; host?: string }>;
+  currentConnector?: { id: string; name: string; engine: string; host?: string; capabilities?: ConnectorCapabilities };
+  connections: Array<{ id: string; name: string; engine: string; host?: string; capabilities?: ConnectorCapabilities }>;
   active?: ConnectionRuntimeInfo[];
 }
 

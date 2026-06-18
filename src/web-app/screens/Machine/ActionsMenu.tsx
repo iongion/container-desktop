@@ -18,6 +18,7 @@ import { useConnectMachine, useRemoveMachine, useRestartMachine, useStopMachine 
 
 interface ActionsMenuProps {
   machine?: PodmanMachineInspect | PodmanMachine;
+  connectionId?: string;
   withoutCreate?: boolean;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
@@ -31,18 +32,23 @@ interface PerformActionOptions {
   };
 }
 
-export const ActionsMenu: React.FC<ActionsMenuProps> = ({ machine, withoutCreate, onReload }: ActionsMenuProps) => {
+export const ActionsMenu: React.FC<ActionsMenuProps> = ({
+  machine,
+  connectionId: connectionIdProp,
+  withoutCreate,
+  onReload,
+}: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
   const [withCreate, setWithCreate] = useState(false);
   const currentConnector = useAppStore((state) => state.currentConnector);
   const isNative = useAppStore((state) => state.native);
-  const connectionId = currentConnector?.id || "";
+  const connectionId = connectionIdProp || currentConnector?.id || "";
   const isRunning = ((machine as any)?.State || "").toLowerCase() === "running" || (machine as any)?.Running;
   const machineRemove = useRemoveMachine(connectionId);
   const machineStop = useStopMachine(connectionId);
   const machineRestart = useRestartMachine(connectionId);
-  const machineConnect = useConnectMachine();
+  const machineConnect = useConnectMachine(connectionId);
   const performActionCommand = useCallback(
     async (
       action: string,

@@ -60,6 +60,49 @@ async function runCli(launcher: string, args: string[]): Promise<CommandExecutio
       }),
     });
   }
+  if (flat[0] === "machine") {
+    const fx = await loadEngineFixtures(engine);
+    if (engine !== ContainerEngine.PODMAN) {
+      return okResult({ stdout: "[]" });
+    }
+    if (flat[1] === "list") {
+      return okResult({ stdout: JSON.stringify(fx.machines) });
+    }
+    if (flat[1] === "inspect") {
+      const name = flat[2];
+      const machines = (fx.machines as any[]).filter((machine) => !name || machine.Name === name);
+      return okResult({
+        stdout: JSON.stringify(
+          machines.map((machine) => ({
+            Name: machine.Name,
+            ConfigDir: { Path: `/home/mock/.config/containers/podman/machine/${machine.Name}` },
+            ConnectionInfo: {
+              PodmanSocket: { Path: `/run/user/1000/podman/${machine.Name}.sock` },
+              PodmanPipe: { Path: null },
+            },
+            Created: machine.Created,
+            LastUp: machine.LastUp,
+            Resources: {
+              CPUs: machine.CPUs,
+              DiskSize: machine.DiskSize,
+              Memory: machine.Memory,
+              USBs: [],
+            },
+            SSHConfig: {
+              IdentityPath: `/home/mock/.ssh/${machine.Name}`,
+              Port: machine.Running ? 2222 : 0,
+              RemoteUsername: "core",
+            },
+            State: machine.Running ? "running" : "stopped",
+            UserModeNetworking: true,
+            Rootful: false,
+            Rosetta: false,
+          })),
+        ),
+      });
+    }
+    return okResult();
+  }
   // `<engine> system info --format json` → the SystemInfo JSON the dialect parses from stdout.
   if (flat.includes("info")) {
     const fx = await loadEngineFixtures(engine);

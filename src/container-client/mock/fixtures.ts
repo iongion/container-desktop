@@ -22,6 +22,7 @@ import podmanExtras from "../../../tests/fixtures/podman/extras.json";
 import podmanImageInspect from "../../../tests/fixtures/podman/image-inspect.json";
 import podmanImages from "../../../tests/fixtures/podman/images.json";
 import podmanInfo from "../../../tests/fixtures/podman/info.json";
+import podmanMachines from "../../../tests/fixtures/podman/machines.json";
 import podmanNetworks from "../../../tests/fixtures/podman/networks.json";
 import podmanPods from "../../../tests/fixtures/podman/pods.json";
 import podmanSecrets from "../../../tests/fixtures/podman/secrets.json";
@@ -47,6 +48,7 @@ export interface EngineFixtures {
   networks: unknown[];
   pods: unknown[];
   secrets: unknown[];
+  machines: unknown[];
   extras: MockExtras;
 }
 
@@ -62,6 +64,7 @@ const FIXTURES: Record<ContainerEngine, EngineFixtures> = {
     networks: podmanNetworks as unknown[],
     pods: podmanPods as unknown[],
     secrets: podmanSecrets as unknown[],
+    machines: podmanMachines as unknown[],
     extras: podmanExtras as MockExtras,
   },
   [ContainerEngine.DOCKER]: {
@@ -75,6 +78,7 @@ const FIXTURES: Record<ContainerEngine, EngineFixtures> = {
     networks: dockerNetworks as unknown[],
     pods: dockerPods as unknown[],
     secrets: dockerSecrets as unknown[],
+    machines: [],
     extras: dockerExtras as MockExtras,
   },
 };

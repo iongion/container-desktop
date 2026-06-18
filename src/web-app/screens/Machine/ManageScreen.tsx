@@ -13,6 +13,7 @@ import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/c
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
@@ -52,12 +53,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
-  const connectionId = currentConnector?.id || "";
-  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(
-    ID,
-    currentConnector?.capabilities?.sort,
+  const activeRuntime = useResourceStore((state) => state.activeRuntime);
+  const machineRuntime = useMemo(
+    () =>
+      currentConnector?.capabilities?.extensions.machines
+        ? { id: currentConnector.id, capabilities: currentConnector.capabilities }
+        : activeRuntime.find((info) => info.running && info.capabilities?.extensions?.machines === true),
+    [activeRuntime, currentConnector],
   );
-  const machinesQuery = useMachinesList(connectionId, currentConnector?.capabilities?.extensions.machines === true);
+  const connectionId = machineRuntime?.id || "";
+  const { clientSort, getColumnSortDirection, toggleColumnSort } = useColumnSort(ID, machineRuntime?.capabilities?.sort);
+  const machinesQuery = useMachinesList(connectionId, machineRuntime?.capabilities?.extensions.machines === true);
   const machineSnapshot = machinesQuery.data || EMPTY_MACHINES;
   const machines = useMemo(() => {
     const items = searchTerm ? machineSnapshot.filter(createMachineSearchFilter(searchTerm)) : machineSnapshot;
@@ -91,7 +97,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <Divider />
               </>
             ) : null}
-            <ActionsMenu onReload={onReload} />
+            <ActionsMenu connectionId={connectionId} onReload={onReload} />
           </>
         }
       />
@@ -181,7 +187,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         className="InspectMachineButton"
                         variant="minimal"
                         size="small"
-                        href={getMachineUrl(machine.Name, "inspect")}
+                        href={getMachineUrl(machine.Name, "inspect", connectionId)}
                         intent={Intent.PRIMARY}
                         icon={IconNames.EYE_OPEN}
                       >
@@ -205,7 +211,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{dayjs(machine.LastUp).format("DD MMM YYYY HH:mm")}</td>
                     <td>{dayjs(machine.Created).format("DD MMM YYYY HH:mm")}</td>
                     <td>
-                      <ActionsMenu withoutCreate machine={machine} />
+                      <ActionsMenu withoutCreate machine={machine} connectionId={connectionId} />
                     </td>
                     <td className="BulkSelectColumn">
                       <SelectionCheckbox

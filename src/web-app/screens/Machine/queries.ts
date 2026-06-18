@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getActiveHostClient } from "@/container-client/adapters/shared";
 import type { CreateMachineOptions, PodmanMachine, PodmanMachineInspect } from "@/env/Types";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 
 export const machineKeys = {
   all: ["machines"] as const,
@@ -12,10 +12,18 @@ export const machineKeys = {
   detail: (connId: string, name: string) => [...machineKeys.details(), connId, name] as const,
 };
 
+async function resolveMachineHost(connId: string) {
+  const host = await resolveConnectionHost(connId);
+  if (!host) {
+    throw new Error("No active engine connection");
+  }
+  return host;
+}
+
 export const useMachinesList = (connId: string, enabled = true) =>
   useQuery({
     queryKey: machineKeys.list(connId),
-    queryFn: () => getActiveHostClient().getPodmanMachines(),
+    queryFn: async () => (await resolveMachineHost(connId)).getPodmanMachines(),
     enabled: enabled && !!connId,
     ...liveQueryOptions(),
   });
@@ -24,7 +32,7 @@ export const useMachine = (connId: string, name?: string) => {
   const qc = useQueryClient();
   return useQuery({
     queryKey: machineKeys.detail(connId, name ?? ""),
-    queryFn: () => getActiveHostClient().getPodmanMachineInspect(name!),
+    queryFn: async () => (await resolveMachineHost(connId)).getPodmanMachineInspect(name!),
     enabled: !!connId && !!name,
     placeholderData: () => {
       for (const [, data] of qc.getQueriesData<PodmanMachine[]>({ queryKey: machineKeys.list(connId) })) {
@@ -47,7 +55,7 @@ const invalidateMachine = (qc: ReturnType<typeof useQueryClient>, connId: string
 export const useCreateMachine = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (opts: CreateMachineOptions) => getActiveHostClient().createPodmanMachine(opts),
+    mutationFn: async (opts: CreateMachineOptions) => (await resolveMachineHost(connId)).createPodmanMachine(opts),
     onSuccess: () => invalidateMachine(qc, connId),
   });
 };
@@ -55,7 +63,7 @@ export const useCreateMachine = (connId: string) => {
 export const useRemoveMachine = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => getActiveHostClient().removePodmanMachine(name),
+    mutationFn: async (name: string) => (await resolveMachineHost(connId)).removePodmanMachine(name),
     onSuccess: (_result, name) => {
       qc.removeQueries({ queryKey: machineKeys.detail(connId, name) });
       qc.invalidateQueries({ queryKey: machineKeys.list(connId) });
@@ -66,7 +74,7 @@ export const useRemoveMachine = (connId: string) => {
 export const useStopMachine = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => getActiveHostClient().stopPodmanMachine(name),
+    mutationFn: async (name: string) => (await resolveMachineHost(connId)).stopPodmanMachine(name),
     onSuccess: (_result, name) => invalidateMachine(qc, connId, name),
   });
 };
@@ -74,7 +82,7 @@ export const useStopMachine = (connId: string) => {
 export const useStartMachine = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => getActiveHostClient().startPodmanMachine(name),
+    mutationFn: async (name: string) => (await resolveMachineHost(connId)).startPodmanMachine(name),
     onSuccess: (_result, name) => invalidateMachine(qc, connId, name),
   });
 };
@@ -82,12 +90,12 @@ export const useStartMachine = (connId: string) => {
 export const useRestartMachine = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => getActiveHostClient().restartPodmanMachine(name),
+    mutationFn: async (name: string) => (await resolveMachineHost(connId)).restartPodmanMachine(name),
     onSuccess: (_result, name) => invalidateMachine(qc, connId, name),
   });
 };
 
-export const useConnectMachine = () =>
+export const useConnectMachine = (connId: string) =>
   useMutation({
-    mutationFn: (name: string) => getActiveHostClient().connectToPodmanMachine(name),
+    mutationFn: async (name: string) => (await resolveMachineHost(connId)).connectToPodmanMachine(name),
   });

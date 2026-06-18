@@ -1,9 +1,11 @@
 import { Alignment, AnchorButton, Button, ButtonGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import type { Connector, ConnectorCapabilities } from "@/env/Types";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen } from "@/web-app/Types";
 import { AppSidebarFooter } from "./AppSidebarFooter";
 
@@ -19,9 +21,53 @@ interface AppSidebarProps {
 export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, currentScreen }: AppSidebarProps) => {
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
+  const activeRuntime = useResourceStore((state) => state.activeRuntime);
   const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
   const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
   const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
+  const availabilityConnector = useMemo(() => {
+    const running = activeRuntime.filter((info) => info.running && info.capabilities);
+    if (running.length <= 1) {
+      return currentConnector;
+    }
+    const capabilities = running.reduce<ConnectorCapabilities>(
+      (acc, info) => ({
+        resources: {
+          pods: acc.resources.pods || info.capabilities?.resources?.pods === true,
+          secrets: acc.resources.secrets || info.capabilities?.resources?.secrets === true,
+        },
+        events: acc.events || info.capabilities?.events === true,
+        sort: { ...acc.sort, ...(info.capabilities?.sort ?? {}) },
+        extensions: {
+          machines: acc.extensions.machines || info.capabilities?.extensions?.machines === true,
+          kube: acc.extensions.kube || info.capabilities?.extensions?.kube === true,
+          contexts: acc.extensions.contexts || info.capabilities?.extensions?.contexts === true,
+          swarm: acc.extensions.swarm || info.capabilities?.extensions?.swarm === true,
+          builders: acc.extensions.builders || info.capabilities?.extensions?.builders === true,
+          compose: acc.extensions.compose || info.capabilities?.extensions?.compose === true,
+          registries: acc.extensions.registries || info.capabilities?.extensions?.registries === true,
+          controllerVersion:
+            acc.extensions.controllerVersion || info.capabilities?.extensions?.controllerVersion === true,
+        },
+      }),
+      {
+        resources: { pods: false, secrets: false },
+        events: false,
+        sort: {},
+        extensions: {
+          machines: false,
+          kube: false,
+          contexts: false,
+          swarm: false,
+          builders: false,
+          compose: false,
+          registries: false,
+          controllerVersion: false,
+        },
+      },
+    );
+    return { ...(currentConnector ?? ({} as Connector)), capabilities } as Connector;
+  }, [activeRuntime, currentConnector]);
   const onExpandCollapseSidebarClick = useCallback(() => {
     setGlobalUserSettings({ expandSidebar: !expandSidebar });
   }, [expandSidebar, setGlobalUserSettings]);
@@ -48,7 +94,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
       <div className="AppSidebarActions">
         <ButtonGroup vertical>
           {sidebarScreens.map((Screen) => {
-            const isDisabled = Screen.isAvailable ? !Screen.isAvailable(currentConnector) : false;
+            const isDisabled = Screen.isAvailable ? !Screen.isAvailable(availabilityConnector) : false;
             return (
               <AnchorButton
                 disabled={disabled || isDisabled}
