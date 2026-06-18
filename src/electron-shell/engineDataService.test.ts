@@ -74,6 +74,55 @@ describe("EngineDataService.connect", () => {
     expect(typeof snap.osType).toBe("string");
     expect(Array.isArray(snap.connections)).toBe(true);
   });
+
+  it("publishes the engine version resolved by the connected host", async () => {
+    const service = new EngineDataService();
+    const capabilities = {
+      resources: { pods: false, secrets: false },
+      events: false,
+      sort: {},
+      extensions: {
+        machines: false,
+        kube: false,
+        contexts: false,
+        swarm: false,
+        builders: false,
+        compose: false,
+        registries: false,
+        controllerVersion: false,
+      },
+    };
+    const host = {
+      capabilities,
+      getSettings: async () => ({
+        api: { baseURL: "http://localhost", connection: { uri: "", relay: "" }, autoStart: true },
+        program: { name: "docker", path: "/usr/bin/docker", version: "27.3.1" },
+        rootfull: false,
+        mode: "mode.automatic",
+      }),
+    } as unknown as HostClientFacade;
+    (service as any).ensureApp = () => ({
+      setup: async () => undefined,
+      connectHostClient: async () => ({ host, availability: { api: true } }),
+    });
+    (service as any).refreshAll = async () => undefined;
+    (service as any).loadMachines = async () => [];
+
+    await service.connectOne({
+      id: "system-default.docker",
+      name: "System Docker",
+      engine: ContainerEngine.DOCKER,
+      host: "docker.native",
+      settings: {
+        api: { baseURL: "http://localhost", connection: { uri: "", relay: "" }, autoStart: true },
+        program: { name: "docker", path: "", version: "" },
+        rootfull: false,
+        mode: "mode.automatic",
+      },
+    } as any);
+
+    expect(service.getAppRuntimeSnapshot().active?.[0]?.version).toBe("27.3.1");
+  });
 });
 
 describe("EngineDataService.performAction", () => {

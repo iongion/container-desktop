@@ -25,9 +25,9 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
-  useIsUnifiedMode,
   useMergedResources,
   useResourceReload,
+  useShowEngineColumn,
 } from "@/web-app/hooks/useMergedResources";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -56,8 +56,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     ID,
     currentConnector?.capabilities?.sort,
   );
-  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
-  const unified = useIsUnifiedMode();
+  const showEngineColumn = useShowEngineColumn();
   const merged = useMergedResources("containers");
   // Group WITHIN each connection so identically-named groups on different engines never merge.
   const groups = useMemo(() => {
@@ -182,7 +181,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
-                <EngineColumnHeader unified={unified} />
+                <EngineColumnHeader visible={showEngineColumn} />
               </tr>
             </thead>
             <tbody>
@@ -260,7 +259,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                               />
                             </td>
                             <EngineColumnCell
-                              unified={unified}
+                              visible={showEngineColumn}
                               engine={containers[0].engine}
                               connectionName={containers[0].connectionName}
                             />
@@ -324,7 +323,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <tr
                             data-prefix-group={isPartOfGroup ? groupName : undefined}
                             data-container={container.Id}
-                            data-engine-row={unified ? container.engine : undefined}
+                            data-engine-row={showEngineColumn ? container.engine : undefined}
                             data-state={container.Computed.DecodedState}
                             onFocus={onContainerFocus}
                             onBlur={onContainerBlur}
@@ -362,7 +361,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                               />
                             </td>
                             <EngineColumnCell
-                              unified={unified}
+                              visible={showEngineColumn}
                               engine={container.engine}
                               connectionName={container.connectionName}
                             />

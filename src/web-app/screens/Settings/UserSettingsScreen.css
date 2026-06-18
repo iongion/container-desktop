@@ -96,6 +96,7 @@
   padding-top: 10px;
 }
 .AppSettingsForm[data-form="flags"],
+.AppSettingsForm[data-form="appearance"],
 .AppSettingsForm[data-form="font"],
 .AppSettingsForm[data-form="logging"] {
   display: flex;
@@ -106,8 +107,19 @@
   padding-left: 4px;
 }
 .AppSettingsForm[data-form="flags"] .bp6-form-group:first-child,
+.AppSettingsForm[data-form="appearance"] .bp6-form-group:first-child,
 .AppSettingsForm[data-form="logging"] .bp6-form-group:first-child {
   flex: 1;
+}
+.AppSettingsForm[data-form="appearance"] {
+  padding-bottom: 10px;
+}
+.AppSettingsAppearanceControls {
+  align-items: center;
+  column-gap: 12px;
+}
+.AppSettingsAppearanceControls .bp6-control {
+  margin-bottom: 0;
 }
 .AppSettingsForm[data-form="logging"] {
   padding-top: 10px;

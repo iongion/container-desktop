@@ -16,9 +16,9 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
-  useIsUnifiedMode,
   useMergedResources,
   useResourceReload,
+  useShowEngineColumn,
 } from "@/web-app/hooks/useMergedResources";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -78,8 +78,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const visibleIds = useMemo(() => secrets.map(getRowId), [secrets, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useSecretBulkActions();
-  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
-  const unified = useIsUnifiedMode();
+  const showEngineColumn = useShowEngineColumn();
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("secrets");
 
@@ -148,14 +147,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
-                <EngineColumnHeader unified={unified} />
+                <EngineColumnHeader visible={showEngineColumn} />
               </tr>
             </thead>
             <tbody>
               {secrets.map((secret) => {
                 const rowId = getRowId(secret);
                 return (
-                  <tr key={rowId} data-engine-row={unified ? secret.engine : undefined}>
+                  <tr key={rowId} data-engine-row={showEngineColumn ? secret.engine : undefined}>
                     <td>
                       <AnchorButton
                         className="PodDetailsButton"
@@ -181,7 +180,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         onChange={() => selection.toggle(rowId)}
                       />
                     </td>
-                    <EngineColumnCell unified={unified} engine={secret.engine} connectionName={secret.connectionName} />
+                    <EngineColumnCell
+                      visible={showEngineColumn}
+                      engine={secret.engine}
+                      connectionName={secret.connectionName}
+                    />
                   </tr>
                 );
               })}

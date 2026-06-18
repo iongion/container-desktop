@@ -131,6 +131,9 @@ export const createDefine = (mode) => {
     "import.meta.env.PROJECT_TITLE": JSON.stringify(pkg.title),
     "import.meta.env.PROJECT_DESCRIPTION": JSON.stringify(pkg.description),
     "import.meta.env.ONLINE_API": JSON.stringify(process.env.ONLINE_API),
+    "import.meta.env.CONTAINER_DESKTOP_BOOTSTRAP_PREVIEW_DELAY": JSON.stringify(
+      process.env.CONTAINER_DESKTOP_BOOTSTRAP_PREVIEW_DELAY === "true",
+    ),
     // Bugs
     "process.env.NODE_DEBUG": JSON.stringify(false),
   };

@@ -24,6 +24,7 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
   const { t } = useTranslation();
   const connections = useAppStore((state) => state.connections);
   const defaultId = useAppStore((state) => state.userSettings?.connector?.default);
+  const pending = useAppStore((state) => state.pending);
   const connectOne = useAppStore((state) => state.connectOne);
   const disconnectOne = useAppStore((state) => state.disconnectOne);
   const makePrimary = useAppStore((state) => state.makePrimary);
@@ -75,7 +76,13 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
                 </span>
               }
               // Clicking an idle row connects it; connected rows expose disconnect/primary as explicit buttons.
-              onClick={running ? undefined : () => connectOne(connection.id)}
+              onClick={
+                running || pending
+                  ? undefined
+                  : () => {
+                      void connectOne(connection.id);
+                    }
+              }
               labelElement={
                 <ButtonGroup variant="minimal" className="ConnectionsMenuActions">
                   {running && !isPrimary ? (
@@ -83,9 +90,10 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
                       size="small"
                       icon={primaryIcon}
                       title={t("Make primary")}
+                      disabled={pending}
                       onClick={(e) => {
                         e.stopPropagation();
-                        makePrimary(connection.id);
+                        void makePrimary(connection.id);
                       }}
                     />
                   ) : null}
@@ -95,9 +103,10 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
                       intent={statusIntent}
                       icon={disconnectIcon}
                       title={t("Disconnect")}
+                      disabled={pending}
                       onClick={(e) => {
                         e.stopPropagation();
-                        disconnectOne(connection.id);
+                        void disconnectOne(connection.id);
                       }}
                     />
                   ) : (
@@ -106,9 +115,10 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
                       intent={statusIntent}
                       icon={connectIcon}
                       title={t("Connect")}
+                      disabled={pending}
                       onClick={(e) => {
                         e.stopPropagation();
-                        connectOne(connection.id);
+                        void connectOne(connection.id);
                       }}
                     />
                   )}

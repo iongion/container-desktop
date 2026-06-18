@@ -16,9 +16,9 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
-  useIsUnifiedMode,
   useMergedResources,
   useResourcesReload,
+  useShowEngineColumn,
 } from "@/web-app/hooks/useMergedResources";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -61,8 +61,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     ID,
     currentConnector?.capabilities?.sort,
   );
-  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
-  const unified = useIsUnifiedMode();
+  const showEngineColumn = useShowEngineColumn();
   const podSnapshot = useMergedResources("pods");
   const pods = useMemo(() => {
     const items = searchTerm ? podSnapshot.filter(createPodSearchFilter(searchTerm)) : podSnapshot;
@@ -155,7 +154,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
-                <EngineColumnHeader unified={unified} />
+                <EngineColumnHeader visible={showEngineColumn} />
               </tr>
             </thead>
             <tbody>
@@ -180,7 +179,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <tr
                     key={getRowId(pod)}
                     data-pod={pod.Id}
-                    data-engine-row={unified ? pod.engine : undefined}
+                    data-engine-row={showEngineColumn ? pod.engine : undefined}
                     data-state={pod.Status}
                   >
                     <td>{podDetailsButton}</td>
@@ -203,7 +202,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         onChange={() => selection.toggle(getRowId(pod))}
                       />
                     </td>
-                    <EngineColumnCell unified={unified} engine={pod.engine} connectionName={pod.connectionName} />
+                    <EngineColumnCell visible={showEngineColumn} engine={pod.engine} connectionName={pod.connectionName} />
                   </tr>
                 );
               })}

@@ -45,6 +45,23 @@ import { useUIStore } from "@/web-app/stores/uiStore";
 export const DEFAULT_SYSTEM_CONNECTION_ID = "system-default.podman";
 
 let checkForUpdatePerformed = false;
+const BOOTSTRAP_PREVIEW_DELAY_MS = import.meta.env.CONTAINER_DESKTOP_BOOTSTRAP_PREVIEW_DELAY ? 2000 : 0;
+
+async function delayBootstrapPreview(): Promise<void> {
+  if (!BOOTSTRAP_PREVIEW_DELAY_MS) {
+    return;
+  }
+  systemNotifier.transmit("startup.phase", { trace: "Development bootstrap preview delay" });
+  await new Promise((resolve) => setTimeout(resolve, BOOTSTRAP_PREVIEW_DELAY_MS));
+}
+
+async function waitForPendingPaint(): Promise<void> {
+  if (typeof requestAnimationFrame === "function") {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 function delayCheckUpdate(osType: OperatingSystem) {
   setTimeout(async () => {
@@ -146,7 +163,7 @@ interface AppActions {
   applyAppRuntime: (runtime: AppRuntimeSnapshot) => void;
   // async — bootstrap / settings
   initialize: () => Promise<void>;
-  reset: () => Promise<void>;
+  reset: (options?: { preserveBootstrapPhases?: boolean }) => Promise<void>;
   startApplication: (options?: ConnectOptions) => Promise<boolean>;
   stopApplication: (options?: DisconnectOptions) => Promise<boolean>;
   getGlobalUserSettings: () => Promise<GlobalUserSettings>;
@@ -293,6 +310,10 @@ export const useAppStore = create<AppStore>()((set, get) => {
 
     // ── async: bootstrap / settings ──
     initialize: async () => {
+      get().resetBootstrapPhases();
+      get().setPending(true);
+      get().setPhase(AppBootstrapPhase.STARTING);
+      systemNotifier.transmit("startup.phase", { trace: "Loading user settings" });
       await waitForPreload();
       registerTraySwitchListener(get);
       subscribeConnectProgress();
@@ -300,27 +321,34 @@ export const useAppStore = create<AppStore>()((set, get) => {
       const settings = await instance.getGlobalUserSettings();
       instance.setLogLevel(settings?.logging.level || "debug");
       get().syncGlobalUserSettings(settings);
+      systemNotifier.transmit("startup.phase", { trace: "User settings loaded" });
     },
-    reset: async () => {
+    reset: async (options = {}) => {
       // Post-migration there are no screen sub-models to wipe (§B): drop the server cache and UI state.
       await resourceEvents.stopAll();
-      get().resetBootstrapPhases();
+      if (!options.preserveBootstrapPhases) {
+        get().resetBootstrapPhases();
+      }
       queryClient.clear();
       useResourceStore.getState().resetAll();
       useUIStore.getState().reset();
     },
     startApplication: async () => {
       await waitForPreload();
-      get().resetBootstrapPhases();
+      if (get().phase !== AppBootstrapPhase.STARTING) {
+        get().resetBootstrapPhases();
+      }
       return runPending(async () => {
         const instance = Application.getInstance();
-        systemNotifier.transmit("startup.phase", { trace: "Starting setup" });
-        await instance.setup();
-        systemNotifier.transmit("startup.phase", { trace: "Setup ready" });
-        const userSettings = await instance.getGlobalUserSettings();
+        let userSettings = get().userSettings;
+        get().setPhase(AppBootstrapPhase.STARTING);
         try {
-          get().setPhase(AppBootstrapPhase.STARTING);
-          await get().reset();
+          systemNotifier.transmit("startup.phase", { trace: "Starting setup" });
+          await delayBootstrapPreview();
+          await instance.setup();
+          systemNotifier.transmit("startup.phase", { trace: "Setup ready" });
+          userSettings = await instance.getGlobalUserSettings();
+          await get().reset({ preserveBootstrapPhases: true });
           if (!userSettings?.connector?.default) {
             userSettings.connector = { default: DEFAULT_SYSTEM_CONNECTION_ID };
           }
@@ -368,7 +396,6 @@ export const useAppStore = create<AppStore>()((set, get) => {
           get().setPhase(AppBootstrapPhase.READY);
         } finally {
           systemNotifier.transmit("startup.phase", { trace: "Startup finished" });
-          instance.notify("ready", get().userSettings || userSettings);
         }
         return get().phase === AppBootstrapPhase.READY;
       });
@@ -504,21 +531,25 @@ export const useAppStore = create<AppStore>()((set, get) => {
     // ── async: per-connection lifecycle (always-merged workspace — additive, no global reset) ──
     // connect/disconnect a SINGLE connection via main; main re-pushes a merged snapshot, so the runtime
     // store + merged lists update without a full bootstrap. Used by the header connection manager + Settings.
-    connectOne: async (connectionId) => {
-      try {
-        await window.MessageBus.invoke(RESOURCE_SYNC.ensureConnected, { connectionId });
-      } catch (error: any) {
-        console.error("Unable to connect engine", connectionId, error);
-        Notification.show({ message: t("Unable to establish connection"), intent: Intent.DANGER });
-      }
-    },
-    disconnectOne: async (connectionId) => {
-      try {
-        await window.MessageBus.invoke(RESOURCE_SYNC.disconnect, { connectionId });
-      } catch (error: any) {
-        console.error("Unable to disconnect engine", connectionId, error);
-      }
-    },
+    connectOne: async (connectionId) =>
+      runPending(async () => {
+        try {
+          await waitForPendingPaint();
+          await window.MessageBus.invoke(RESOURCE_SYNC.ensureConnected, { connectionId });
+        } catch (error: any) {
+          console.error("Unable to connect engine", connectionId, error);
+          Notification.show({ message: t("Unable to establish connection"), intent: Intent.DANGER });
+        }
+      }),
+    disconnectOne: async (connectionId) =>
+      runPending(async () => {
+        try {
+          await waitForPendingPaint();
+          await window.MessageBus.invoke(RESOURCE_SYNC.disconnect, { connectionId });
+        } catch (error: any) {
+          console.error("Unable to disconnect engine", connectionId, error);
+        }
+      }),
     // "Primary" = the default create/pull target (persisted, renderer-owned) — no engine restart.
     makePrimary: async (connectionId) => {
       await get().setGlobalUserSettings({ connector: { default: connectionId } });

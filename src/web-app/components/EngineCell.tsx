@@ -33,27 +33,24 @@ export function EngineCell({ engine, connectionName }: EngineCellProps) {
 }
 
 // Trailing Engine column for the merged resource tables. Centralized so its placement/appearance is changed
-// once, not per screen: render <EngineColumnHeader unified={unified}/> as the LAST <th> and
-// <EngineColumnCell unified={unified} engine connectionName/> as the LAST <td> of each row. Both collapse to
-// nothing outside unified mode (single connection), and the header is intentionally unlabeled — the marker
-// speaks for itself. Width is pinned to the minimum via [data-column="engine"] in EngineCell.css.
-export function EngineColumnHeader({ unified }: { unified: boolean }) {
-  if (!unified) {
+// once, not per screen. The column is opt-in because unified mode can still stay visually quiet.
+export function EngineColumnHeader({ visible }: { visible: boolean }) {
+  if (!visible) {
     return null;
   }
   return <th data-column="engine">&nbsp;</th>;
 }
 
 export function EngineColumnCell({
-  unified,
+  visible,
   engine,
   connectionName,
 }: {
-  unified: boolean;
+  visible: boolean;
   engine: string;
   connectionName?: string;
 }) {
-  if (!unified) {
+  if (!visible) {
     return null;
   }
   return (

@@ -32,11 +32,21 @@ export function getConnectedConnectionIds(): string[] {
 
 /**
  * "Unified mode" — the workspace is showing more than one connection at once. Derived from the count of
- * connected connections (no stored flag, so it can't drift); reveals the per-row engine marker + Engine
- * column and (Phase 4) the neutral unified chrome. A single connection renders exactly as before.
+ * connected connections (no stored flag, so it can't drift). A single connection renders exactly as before;
+ * engine-column visibility is a separate user preference.
  */
 export function useIsUnifiedMode(): boolean {
   return useResourceStore((state) => Object.keys(state.byConnection).length > 1);
+}
+
+export function resolveShowEngineColumn(isUnifiedMode: boolean, showEngineColumn: boolean | undefined): boolean {
+  return isUnifiedMode && showEngineColumn === true;
+}
+
+export function useShowEngineColumn(): boolean {
+  const isUnifiedMode = useIsUnifiedMode();
+  const showEngineColumn = useAppStore((state) => state.userSettings.showEngineColumn ?? false);
+  return resolveShowEngineColumn(isUnifiedMode, showEngineColumn);
 }
 
 /**

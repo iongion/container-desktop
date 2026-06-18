@@ -16,7 +16,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OnlineApi } from "@/container-client/Api.clients";
 import { Application } from "@/container-client/Application";
-import { type GlobalUserSettingsOptions, OperatingSystem } from "@/env/Types";
+import {
+  ContainerEngine,
+  type EngineThemePreference,
+  type GlobalUserSettingsOptions,
+  OperatingSystem,
+} from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { LOGGING_LEVELS, PROJECT_VERSION } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
@@ -70,6 +75,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
         level: e.currentTarget.value,
       };
       await setGlobalUserSettings(configuration);
+    },
+    [setGlobalUserSettings],
+  );
+  const onEngineThemeChange = useCallback(
+    async (e) => {
+      await setGlobalUserSettings({
+        engineTheme: e.currentTarget.value as EngineThemePreference,
+      });
+    },
+    [setGlobalUserSettings],
+  );
+  const onShowEngineColumnChange = useCallback(
+    async (e) => {
+      await setGlobalUserSettings({
+        showEngineColumn: !!e.currentTarget.checked,
+      });
     },
     [setGlobalUserSettings],
   );
@@ -238,6 +259,29 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 label={t("Automatically reconnect dropped connections")}
                 checked={userSettings.reconnect?.enabled ?? true}
                 onChange={onAutoReconnect}
+              />
+            </ControlGroup>
+          </FormGroup>
+        </div>
+        <div className="AppSettingsForm" data-form="appearance">
+          <FormGroup label={t("Appearance")} labelFor="engineTheme">
+            <ControlGroup className="AppSettingsAppearanceControls">
+              <HTMLSelect
+                id="engineTheme"
+                title={t("Engine theme")}
+                value={userSettings.engineTheme || "auto"}
+                onChange={onEngineThemeChange}
+              >
+                <option value="auto">{t("Automatic engine theme")}</option>
+                <option value="unified">{t("Teal")}</option>
+                <option value={ContainerEngine.PODMAN}>{t("Amethyst")}</option>
+                <option value={ContainerEngine.DOCKER}>{t("Navy")}</option>
+              </HTMLSelect>
+              <Checkbox
+                id="showEngineColumn"
+                label={t("Show engine column in resource lists")}
+                checked={!!userSettings.showEngineColumn}
+                onChange={onShowEngineColumnChange}
               />
             </ControlGroup>
           </FormGroup>

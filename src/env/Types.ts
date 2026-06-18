@@ -97,8 +97,12 @@ export interface ProxyServiceOptions {
   keepAlive?: boolean;
 }
 
+export type EngineThemePreference = "auto" | "unified" | "podman" | "docker";
+
 export interface GlobalUserSettings {
   theme: string;
+  engineTheme: EngineThemePreference;
+  showEngineColumn: boolean;
   expandSidebar: boolean;
   startApi: boolean;
   minimizeToSystemTray: boolean;

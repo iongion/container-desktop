@@ -9,9 +9,24 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import "./AppFooter.css";
 
-export const AppFooter = () => {
+interface AppFooterProps {
+  variant?: "workspace" | "bootstrap";
+}
+
+function visibleVersion(version?: string): string | undefined {
+  const value = version?.trim();
+  return value && value !== "current" ? value : undefined;
+}
+
+function normalizeFooterTheme(theme?: string): AppTheme {
+  return theme === "light" || theme === AppTheme.LIGHT ? AppTheme.LIGHT : AppTheme.DARK;
+}
+
+export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
   const { t } = i18n;
-  const theme = useAppStore((state) => state.userSettings.theme);
+  const theme = useAppStore((state) => normalizeFooterTheme(state.userSettings.theme));
+  const connections = useAppStore((state) => state.connections);
+  const connectors = useAppStore((state) => state.connectors);
   const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
   const onThemeToggleClick = useCallback(() => {
     setGlobalUserSettings({ theme: theme === AppTheme.DARK ? AppTheme.LIGHT : AppTheme.DARK });
@@ -22,56 +37,89 @@ export const AppFooter = () => {
   const connected = activeRuntime.filter((info) => info.running);
   const connectedCount = connected.length;
   const isConnected = connectedCount > 0;
-  const engines = connected.map((info) => ({
-    id: info.id,
-    name: info.name,
-    label: info.version ? `${info.engine} ${info.version}` : info.engine,
-  }));
+  const engines = connected.map((info) => {
+    const connection = connections.find((item) => item.id === info.id);
+    const connector = connectors.find((item) => item.id === info.id || item.connectionId === info.id);
+    const usesControllerVersion =
+      info.capabilities?.extensions?.controllerVersion ??
+      connector?.capabilities?.extensions?.controllerVersion ??
+      false;
+    const candidates = usesControllerVersion
+      ? [
+          info.version,
+          connector?.settings?.controller?.version,
+          connection?.settings?.controller?.version,
+          connector?.settings?.program?.version,
+          connection?.settings?.program?.version,
+        ]
+      : [
+          info.version,
+          connector?.settings?.program?.version,
+          connection?.settings?.program?.version,
+          connector?.settings?.controller?.version,
+          connection?.settings?.controller?.version,
+        ];
+    const version = candidates.map(visibleVersion).find(Boolean);
+    return {
+      id: info.id,
+      name: info.name,
+      label: version ? `${info.engine} ${version}` : info.engine,
+    };
+  });
+  const showConnectionStatus = variant === "workspace";
   return (
-    <div className="AppFooter">
+    <div className="AppFooter" data-variant={variant}>
       <Navbar className="AppFooterNavbar">
-        <NavbarHeading className="AppFooterStatus">
-          {/* Engine glyph (moved here from the sidebar footer) sits IN FRONT OF — not inside — the
-              connections status button; themed per engine via CSS, scaled to match the count badge. */}
-          <span className="AppFooterEngineIcon" aria-hidden="true" />
-          {/* Single entry point for connections: this status button opens the connect/disconnect menu
-              (the caret-up end icon hints the popover opens upward). */}
-          <ConnectionsMenu>
-            <Button
-              className="AppFooterConnectionsButton"
-              variant="minimal"
-              size="small"
-              data-connected={isConnected ? "yes" : "no"}
-              endIcon={IconNames.CARET_UP}
-              aria-label={t("Connections")}
-              title={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
-            >
-              <Tag
-                className="AppFooterCurrentConnectorBadge"
-                round
-                intent={isConnected ? Intent.SUCCESS : Intent.DANGER}
-                data-connected={isConnected ? "yes" : "no"}
-              >
-                {connectedCount}
-              </Tag>
-              <span className="AppFooterCurrentConnector">{isConnected ? t("Connected") : t("Disconnected")}</span>
-            </Button>
-          </ConnectionsMenu>
-        </NavbarHeading>
-        {!isConnected ? null : (
+        {showConnectionStatus ? (
           <>
-            <NavbarDivider />
-            <NavbarHeading className="AppFooterEngineVersions">
-              <div className="AppFooterCurrentProgram" title={t("Container host engines")}>
-                {engines.map((engine, index) => (
-                  <span key={engine.id} className="AppFooterEngineVersion" title={engine.name}>
-                    {index > 0 ? <span className="AppFooterEngineVersionSep"> · </span> : null}
-                    {engine.label}
-                  </span>
-                ))}
-              </div>
+            <NavbarHeading className="AppFooterStatus">
+              {/* Engine glyph (moved here from the sidebar footer) sits IN FRONT OF — not inside — the
+                  connections status button; themed per engine via CSS, scaled to match the count badge. */}
+              <span className="AppFooterEngineIcon" aria-hidden="true" />
+              {/* Single entry point for connections: this status button opens the connect/disconnect menu
+                  (the caret-up end icon hints the popover opens upward). */}
+              <ConnectionsMenu>
+                <Button
+                  className="AppFooterConnectionsButton"
+                  variant="minimal"
+                  size="small"
+                  data-connected={isConnected ? "yes" : "no"}
+                  endIcon={IconNames.CARET_UP}
+                  aria-label={t("Connections")}
+                  title={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
+                >
+                  <Tag
+                    className="AppFooterCurrentConnectorBadge"
+                    round
+                    intent={isConnected ? Intent.SUCCESS : Intent.DANGER}
+                    data-connected={isConnected ? "yes" : "no"}
+                  >
+                    {connectedCount}
+                  </Tag>
+                  <span className="AppFooterCurrentConnector">{isConnected ? t("Connected") : t("Disconnected")}</span>
+                </Button>
+              </ConnectionsMenu>
             </NavbarHeading>
+            {!isConnected ? null : (
+              <>
+                <NavbarDivider />
+                <NavbarHeading className="AppFooterEngineVersions">
+                  <div className="AppFooterCurrentProgram" title={t("Container host engines")}>
+                    {engines.map((engine, index) => (
+                      <span key={engine.id} className="AppFooterEngineVersion" title={engine.name}>
+                        {index > 0 ? <span className="AppFooterEngineVersionSep"> · </span> : null}
+                        {engine.label}
+                      </span>
+                    ))}
+                  </div>
+                </NavbarHeading>
+              </>
+            )}
           </>
+        ) : (
+          <NavbarHeading className="AppFooterBootstrapEngine">
+            <span className="AppFooterEngineIcon" aria-hidden="true" />
+          </NavbarHeading>
         )}
         <NavbarGroup align={Alignment.END} className="AppFooterActions">
           <Button

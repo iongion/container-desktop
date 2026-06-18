@@ -27,6 +27,7 @@ import {
   type DisconnectOptions,
   type EngineConnectorAvailability,
   type EngineConnectorSettings,
+  type EngineThemePreference,
   type GlobalUserSettings,
   type ILogger,
   type OpenFileSelectorOptions,
@@ -78,6 +79,17 @@ const PROPOSED_REGISTRIES = [
     engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER],
   },
 ];
+
+function normalizeTheme(theme: string | undefined): "bp6-dark" | "bp6-light" {
+  if (theme === "light" || theme === "bp6-light") {
+    return "bp6-light";
+  }
+  return "bp6-dark";
+}
+
+function normalizeEngineThemePreference(value: string | undefined): EngineThemePreference {
+  return value === "podman" || value === "docker" || value === "unified" ? value : "auto";
+}
 
 export const normalizeAndSortSearchResults = (items: any[]) => {
   let output = items.map((it) => {
@@ -291,7 +303,9 @@ export class Application {
   async getGlobalUserSettings() {
     // const version = await this.userConfiguration.getKey<string>("version", "");
     const settings = {
-      theme: await this.userConfiguration.getKey("theme", "bp6-dark"),
+      theme: normalizeTheme(await this.userConfiguration.getKey<string>("theme", "bp6-dark")),
+      engineTheme: normalizeEngineThemePreference(await this.userConfiguration.getKey<string>("engineTheme", "auto")),
+      showEngineColumn: await this.userConfiguration.getKey("showEngineColumn", false),
       expandSidebar: await this.userConfiguration.getKey("expandSidebar", true),
       startApi: await this.userConfiguration.getKey("startApi", false),
       minimizeToSystemTray: await this.userConfiguration.getKey("minimizeToSystemTray", false),

@@ -14,12 +14,10 @@ import { useCallback, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine } from "@/env/Types";
 import { DEFAULT_THEME } from "@/web-app/App.config";
-import { useIsUnifiedMode } from "@/web-app/hooks/useMergedResources";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
-import { AppBootstrapPhase } from "@/web-app/App.types";
+import { AppBootstrapPhase, AppTheme } from "@/web-app/App.types";
 import AppErrorBoundary from "@/web-app/components/AppErrorBoundary";
 import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
@@ -27,7 +25,9 @@ import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
 import { FindHost } from "@/web-app/components/Find/FindHost";
 import { NotificationCenterHost } from "@/web-app/components/NotificationCenter/NotificationCenterHost";
+import { resolveEngineTheme } from "@/web-app/domain/engineTheme";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
+import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
 import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
@@ -61,6 +61,7 @@ import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Tro
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 
 const Screens = [
   DashboardScreen,
@@ -138,6 +139,10 @@ function useCurrentScreen() {
   return Screens.find((screen) => screen.Route.Path === fullPath);
 }
 
+function normalizeAppTheme(theme: string | undefined): AppTheme {
+  return theme === "light" || theme === AppTheme.LIGHT ? AppTheme.LIGHT : AppTheme.DARK;
+}
+
 function NotFoundScreen() {
   const { t } = useTranslation();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -153,6 +158,35 @@ function NotFoundScreen() {
       }
     />
   );
+}
+
+function AppBootstrapReadySignal() {
+  const phase = useAppStore((state) => state.phase);
+  const signaledRef = useRef(false);
+
+  useEffect(() => {
+    if (phase !== AppBootstrapPhase.STARTING || signaledRef.current) {
+      return;
+    }
+    let cancelled = false;
+    signaledRef.current = true;
+    waitForPreload()
+      .then(() => {
+        if (cancelled) {
+          return;
+        }
+        window.MessageBus.send("notify", { message: "ready", payload: useAppStore.getState().userSettings });
+      })
+      .catch((error: any) => {
+        signaledRef.current = false;
+        console.error("Unable to notify main window readiness", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [phase]);
+
+  return null;
 }
 
 // Root layout route: the persistent chrome (header + sidebar + footer) around the routed <Outlet />.
@@ -201,10 +235,19 @@ function AppLayout() {
     prevRunningRef.current = !!running;
   }, [ready, running, currentScreen]);
 
-  const content: React.ReactNode = booting ? <AppLoading /> : <Outlet />;
+  const content: React.ReactNode = booting ? (
+    <div className="AppScreenViewport">
+      <AppLoading />
+      <AppFooter variant="bootstrap" />
+    </div>
+  ) : (
+    <Outlet />
+  );
+  const sidebarCurrentScreen = currentScreen ?? DashboardScreen;
 
   return (
     <>
+      <AppBootstrapReadySignal />
       <AppHeader
         osType={osType}
         program={program}
@@ -220,9 +263,9 @@ function AppLayout() {
         suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
       >
         <div className="AppContent">
-          {booting || !currentScreen ? null : (
-            <AppSidebar disabled={!ready} screens={Screens} currentScreen={currentScreen} />
-          )}
+          {booting || currentScreen ? (
+            <AppSidebar disabled={!ready} screens={Screens} currentScreen={sidebarCurrentScreen} />
+          ) : null}
           <div className="AppContentDocument">
             {content}
             <FindHost />
@@ -243,15 +286,15 @@ export function AppMainScreen() {
   const osType = useAppStore((state) => state.osType);
   const currentConnector = useAppStore((state) => state.currentConnector);
   const nextConnection = useAppStore((state) => state.nextConnection);
-  const theme = useAppStore((state) => state.userSettings.theme || DEFAULT_THEME);
+  const theme = useAppStore((state) => normalizeAppTheme(state.userSettings.theme || DEFAULT_THEME));
+  const engineTheme = useAppStore((state) => state.userSettings.engineTheme);
+  const connectors = useAppStore((state) => state.connectors);
+  const activeRuntime = useResourceStore((state) => state.activeRuntime);
   const font = useAppStore((state) => state.userSettings.font);
   const initialize = useAppStore((state) => state.initialize);
   const startApplication = useAppStore((state) => state.startApplication);
 
-  // Merged workspace: when more than one connection is up the chrome uses the neutral `unified` theme;
-  // a single connection keeps its own engine theme. Per-row markers still carry each engine's own accent.
-  const unified = useIsUnifiedMode();
-  const engine = unified ? "unified" : nextConnection?.engine || currentConnector?.engine || ContainerEngine.PODMAN;
+  const engine = resolveEngineTheme({ preference: engineTheme, activeRuntime, connectors });
   const host = nextConnection?.host || currentConnector?.host || undefined;
 
   useEffect(() => {
@@ -300,7 +343,7 @@ export function AppMainScreen() {
           data-provisioned={provisioned ? "yes" : "no"}
           lang="en"
         />
-        <body className={theme === "dark" ? `bp6-${theme}` : theme} data-engine={engine} />
+        <body className={theme} data-engine={engine} />
       </Helmet>
       <RouterProvider router={router} />
     </div>

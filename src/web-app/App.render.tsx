@@ -9,7 +9,7 @@ import { createRoot } from "react-dom/client";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 
 import { isMockMode } from "@/container-client/mock/mode";
-import { ContainerEngine, Environments } from "@/env/Types";
+import { Environments } from "@/env/Types";
 
 import { App } from "./App";
 import { I18nContextProvider } from "./App.i18n";
@@ -27,7 +27,7 @@ export function renderApplication() {
       <I18nContextProvider>
         <HelmetProvider>
           <Helmet>
-            <body className="bp6-dark" data-engine={ContainerEngine.PODMAN} />
+            <body className="bp6-dark" data-engine="unified" />
           </Helmet>
           <App />
           {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}

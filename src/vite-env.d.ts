@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly PROJECT_TITLE: string;
   readonly PROJECT_DESCRIPTION: string;
   readonly ONLINE_API: string;
+  readonly CONTAINER_DESKTOP_BOOTSTRAP_PREVIEW_DELAY: boolean;
   readonly HOST: string;
   readonly PORT: string;
   readonly VITE_DEV_SERVER_URL: string;

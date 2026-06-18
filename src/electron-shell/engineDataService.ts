@@ -29,6 +29,7 @@ import type {
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import type { Connection, ConnectorCapabilities, GlobalUserSettings } from "@/env/Types";
+import { deepMerge } from "@/utils";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
 export type { AppRuntimeSnapshot, ConnectionPhase } from "@/container-client/resourceSyncProtocol";
@@ -278,6 +279,8 @@ export class EngineDataService {
       });
       const running = availability?.api ?? false;
       if (host && running) {
+        const resolvedSettings = await host.getSettings();
+        connection.settings = deepMerge({}, connection.settings, resolvedSettings);
         this.hostByConnection.set(id, host);
         this.runtimeByConnection.set(id, {
           ...desc,

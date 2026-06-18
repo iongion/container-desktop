@@ -17,9 +17,9 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
-  useIsUnifiedMode,
   useMergedResources,
   useResourceReload,
+  useShowEngineColumn,
 } from "@/web-app/hooks/useMergedResources";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -75,8 +75,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const visibleIds = useMemo(() => images.map(getRowId), [images, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useImageBulkActions();
-  // The per-row engine marker + Engine column appear only when more than one connection is up (unified mode).
-  const unified = useIsUnifiedMode();
+  const showEngineColumn = useShowEngineColumn();
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("images");
 
@@ -163,7 +162,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
-                <EngineColumnHeader unified={unified} />
+                <EngineColumnHeader visible={showEngineColumn} />
               </tr>
             </thead>
             <tbody>
@@ -180,7 +179,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   />
                 );
                 return (
-                  <tr key={rowId} data-image={image.Id} data-engine-row={unified ? image.engine : undefined}>
+                  <tr key={rowId} data-image={image.Id} data-engine-row={showEngineColumn ? image.engine : undefined}>
                     <td>{imageLayersButton}</td>
                     <td>{image.Registry}</td>
                     <td>{image.Tag}</td>
@@ -201,7 +200,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         onChange={() => selection.toggle(rowId)}
                       />
                     </td>
-                    <EngineColumnCell unified={unified} engine={image.engine} connectionName={image.connectionName} />
+                    <EngineColumnCell
+                      visible={showEngineColumn}
+                      engine={image.engine}
+                      connectionName={image.connectionName}
+                    />
                   </tr>
                 );
               })}

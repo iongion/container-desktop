@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Fixed
+
+- Startup timing and window display
+
 ## [5.3.3] - 2026-06-18
 
 ## Added
