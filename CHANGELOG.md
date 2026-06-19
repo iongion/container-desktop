@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- Apple Container reuses the unified theme — removed its separate green accent and the "Green" theme option; only its brand logo keeps its color.
+- Website: dropped the Apple Container swatch, screenshots and demo (Podman, Docker and unified only); the homepage no longer shows the "experimental" badge (kept in the manual), lists platforms as Linux · macOS · Windows, and the tagline reads "Container desktop companion".
+
 ## [5.3.5] - 2026-06-19
 
 ## Added
