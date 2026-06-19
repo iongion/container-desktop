@@ -26,7 +26,23 @@ interface ManagedLogger extends ILogger {
 const loggers: ManagedLogger[] = [];
 
 function getEnvironmentLogLevel(): string | undefined {
-  return (globalThis as any).process?.env?.CONTAINER_DESKTOP_LOG_LEVEL;
+  // Main/preload: process.env — the live, shipped value.
+  const fromProcess = (globalThis as any).process?.env?.CONTAINER_DESKTOP_LOG_LEVEL;
+  if (fromProcess) {
+    return fromProcess;
+  }
+  // Renderer (contextIsolation, no process): the preload bridge exposes the live main-process value, so the
+  // level set at RUNTIME (e.g. CONTAINER_DESKTOP_LOG_LEVEL=debug ./app) takes effect without a rebuild.
+  const fromBridge = (globalThis as any).CONTAINER_DESKTOP_LOG_LEVEL;
+  if (fromBridge) {
+    return fromBridge;
+  }
+  // Fallback: the vite build-time define (covers any logging before the preload bridge is installed).
+  try {
+    return (import.meta as any).env?.CONTAINER_DESKTOP_LOG_LEVEL;
+  } catch {
+    return undefined;
+  }
 }
 
 export function normalizeLogLevel(level?: string): LogLevel {

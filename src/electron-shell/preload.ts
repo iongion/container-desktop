@@ -41,6 +41,10 @@ function main() {
   contextBridge.exposeInMainWorld("TrayBus", TrayBus);
   contextBridge.exposeInMainWorld("ResourceBus", ResourceBus);
   contextBridge.exposeInMainWorld("CONTAINER_DESKTOP_MOCK", process.env.CONTAINER_DESKTOP_MOCK ?? "");
+  // The renderer has no `process`, so hand it the LIVE log level (preload runs before renderer scripts).
+  // This lets CONTAINER_DESKTOP_LOG_LEVEL change the renderer level at launch without a rebuild — the
+  // build-time vite define is only a fallback. See logger/index.ts → getEnvironmentLogLevel.
+  contextBridge.exposeInMainWorld("CONTAINER_DESKTOP_LOG_LEVEL", process.env.CONTAINER_DESKTOP_LOG_LEVEL ?? "");
   // Dev-only: the renderer has no `process`, so hand it the parsed env-driven remote connections to seed
   // (see container-client/remote-env.ts → resolveRemoteEnvConnections).
   contextBridge.exposeInMainWorld(

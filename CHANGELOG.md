@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.6] - 2026-06-19
+
+## Fixed
+
+- Packaged app no longer hangs at startup (blank window → 20s recovery dialog) when the GPU compositor is degraded. The Blueprint toaster is now created lazily on first use instead of at module scope with a top-level await that deadlocked the renderer boot chain.
+
 ## Changed
 
 - Apple Container reuses the unified theme — removed its separate green accent and the "Green" theme option; only its brand logo keeps its color.

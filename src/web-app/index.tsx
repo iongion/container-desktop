@@ -12,9 +12,26 @@ import "./themes/light.css";
 import "./themes/docker.css";
 import "./themes/podman.css";
 
+const rootEl = document.getElementById("root");
+
 async function boot() {
   const { renderApplication } = await import("./App.render");
   renderApplication();
 }
 
-boot();
+boot().catch((error) => {
+  console.error("Render entry bootstrap failure", error);
+  if (!rootEl) {
+    return;
+  }
+  // Build the fallback via the DOM with textContent (never innerHTML) so an error message/stack can't inject markup.
+  const container = document.createElement("div");
+  container.style.cssText = "padding:2rem;font-family:system-ui;color:#cd4246;background:#1a051c;min-height:100vh;";
+  const heading = document.createElement("h2");
+  heading.textContent = "Application failed to start";
+  const details = document.createElement("pre");
+  details.style.cssText = "white-space:pre-wrap;word-break:break-word;";
+  details.textContent = String(error?.stack || error);
+  container.append(heading, details);
+  rootEl.replaceChildren(container);
+});
