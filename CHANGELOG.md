@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.5] - 2026-06-19
+
 ## Added
 
 - **Container engine (macOS):** Manage Apple Container engines locally or over SSH through Socktainer.
