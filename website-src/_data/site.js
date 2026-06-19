@@ -47,7 +47,7 @@ const themes = [
     id: "container",
     label: "Apple&trade; Container",
     swatch: "#34c759",
-    tagline: "Apple&trade; Container desktop companion",
+    tagline: "Container desktop companion",
     shots: "container",
     replay: "/replays/container.json",
     poster: "/videos/container.png",
