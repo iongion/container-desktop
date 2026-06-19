@@ -53,7 +53,7 @@ export default {
   name: "Container Desktop",
   tagline: "Podman Desktop Companion",
   description:
-    "A familiar desktop interface for the free, open container managers — Podman, Docker and Apple&trade; Container. Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux.",
+    "A familiar desktop interface for the free, open container managers — Podman, Docker and Apple™ Container. Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux.",
   url: "https://container-desktop.com",
   repo: "https://github.com/iongion/container-desktop",
   repoSlug: "iongion/container-desktop",

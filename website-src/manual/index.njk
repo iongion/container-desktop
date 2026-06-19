@@ -1,14 +1,14 @@
 ---
 layout: layouts/base.njk
 active: manual
-title: "The Manual — Container Desktop setup guides for Podman, Docker & Apple&trade; Container"
-description: "Set up Podman, Docker and Apple&trade; Container on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready."
+title: "The Manual — Container Desktop setup guides for Podman, Docker & Apple™ Container"
+description: "Set up Podman, Docker and Apple™ Container on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready."
 ---
 <div class="wrap">
   <div class="mhero">
     <div class="eyebrow">Handbook · bring your own engine</div>
     <h1>The Manual</h1>
-    <p>Set up Podman, Docker and Apple&trade; Container on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
+    <p>Set up Podman, Docker and Apple™ Container on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
     <div class="osjump">
       {%- for g in collections.guides %}<a href="#{{ g.data.os }}"><i class="{{ g.data.iconClass or 'fab' }} {{ g.data.osIcon }}"></i> {{ g.data.osLabel }}</a>{% endfor %}
     </div>

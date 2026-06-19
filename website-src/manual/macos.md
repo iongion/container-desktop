@@ -20,7 +20,7 @@ sections:
 
 <div class="note req">
 
-On macOS, virtualization (via Lima or colima) is required for the Podman and Docker engines — they run inside a Linux VM. Apple&trade; Container is a third option: a native Apple-silicon runtime that needs no VM (experimental; see section 5 below). Homebrew is seriously recommended to simplify provisioning and setup. Due to high cost, Container Desktop does not currently afford an Apple subscription to digitally sign applications, nor a digital certificate.
+On macOS, virtualization (via Lima or colima) is required for the Podman and Docker engines — they run inside a Linux VM. Apple™ Container is a third option: a native Apple-silicon runtime that needs no VM (experimental; see section 5 below). Homebrew is seriously recommended to simplify provisioning and setup. Due to high cost, Container Desktop does not currently afford an Apple subscription to digitally sign applications, nor a digital certificate.
 
 </div>
 
@@ -188,9 +188,9 @@ Apple's [`container`](https://github.com/apple/container) engine is a native mac
 - Apple's `container` CLI installed from the [official GitHub releases](https://github.com/apple/container/releases).
 - A compatible `socktainer` installation to expose a Docker Engine API socket.
 
-#### Install Apple&trade; Container
+#### Install Apple™ Container
 
-Download the signed installer package from the [Apple container releases](https://github.com/apple/container/releases), verify it, install it, then start the system service. The example below pins Apple&trade; Container `1.0.0`; if you choose a newer release, use that release's package name and checksum instead.
+Download the signed installer package from the [Apple container releases](https://github.com/apple/container/releases), verify it, install it, then start the system service. The example below pins Apple™ Container `1.0.0`; if you choose a newer release, use that release's package name and checksum instead.
 
 ```bash
 mkdir -p ~/Downloads/container-desktop-provision
