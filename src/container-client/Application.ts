@@ -90,7 +90,9 @@ function normalizeTheme(theme: string | undefined): "bp6-dark" | "bp6-light" {
 }
 
 function normalizeEngineThemePreference(value: string | undefined): EngineThemePreference {
-  return value === "podman" || value === "docker" || value === "unified" || value === "container" ? value : "auto";
+  // Apple Container is an engine, not a selectable theme: a stale stored "container" preference
+  // normalizes to "auto" and resolves to the unified theme via engineTheme.ts.
+  return value === "podman" || value === "docker" || value === "unified" ? value : "auto";
 }
 
 // Format the raw, verbatim detail of a connection failure for the Activity Center: the SSH preflight steps

@@ -268,14 +268,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <HTMLSelect
                 id="engineTheme"
                 title={t("Engine theme")}
-                value={userSettings.engineTheme || "auto"}
+                // Apple Container is an engine, not a selectable theme — keep the value on a valid
+                // option so a stale stored "container" preference displays as "auto" (it resolves to
+                // the unified theme anyway, see engineTheme.ts).
+                value={
+                  ["auto", "unified", ContainerEngine.PODMAN, ContainerEngine.DOCKER].includes(userSettings.engineTheme)
+                    ? userSettings.engineTheme
+                    : "auto"
+                }
                 onChange={onEngineThemeChange}
               >
                 <option value="auto">{t("Automatic engine theme")}</option>
                 <option value="unified">{t("Teal")}</option>
                 <option value={ContainerEngine.PODMAN}>{t("Amethyst")}</option>
                 <option value={ContainerEngine.DOCKER}>{t("Navy")}</option>
-                <option value={ContainerEngine.APPLE}>{t("Green")}</option>
               </HTMLSelect>
               <Checkbox
                 id="showEngineColumn"

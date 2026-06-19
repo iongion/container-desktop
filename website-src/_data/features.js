@@ -17,7 +17,7 @@ export default {
     {
       eyebrow: "Bring your own engine",
       title: "Podman, Docker <i>and</i> Apple&trade; Container, your way",
-      copy: "Connect to a native engine on Linux, a virtualized one anywhere, LIMA on macOS, or WSL on Windows — plus Apple&trade; Container on Apple silicon (experimental). Switch engines and connections from one manager.",
+      copy: "Connect to a native engine on Linux, a virtualized one anywhere, LIMA on macOS, or WSL on Windows — plus Apple&trade; Container on Apple silicon. Switch engines and connections from one manager.",
       chips: ["PODMAN", "DOCKER", "APPLE", "LIMA", "WSL", "SSH"],
       img: "/img/podman/ConnectionManager.png",
       alt: "Connection Manager",

@@ -319,17 +319,3 @@ html[data-theme="unified"]{
   --shot-bg:#0d131e; --code-bg:#151d2a; --code-fg:#cdd9ec; --pre-bg:#0b0f18;
   --bg-grad-a:#0f1521; --bg-grad-b:#131a28; --bg-grad-c:#0c111b;
 }
-/* Apple Container mirrors the app's green engine theme (container-engine.svg, #34c759):
-   a dark graphite chrome with Apple-green accents. */
-html[data-theme="container"]{
-  --bg:#0a1410; --bg2:#0e1a14; --panel:#11221a; --panel2:#173026;
-  --magenta:#1f8f4e; --purple:#0e3a24; --purple-l:#5fd98a;
-  --cyan:#34c759; --teal:#2f9d7d;
-  --ink-soft:#d3ecdd; --muted:#8fb0a0; --faint:#6a8576;
-  --accent-rgb:31,143,78; --accent-l-rgb:95,217,138; --cyan-rgb:52,199,89; --teal-rgb:47,157,125;
-  --surface-rgb:17,34,26; --surface-2-rgb:23,48,38; --chrome-rgb:9,18,14; --footer-rgb:6,14,10;
-  --panel-grad-a-rgb:20,40,30; --panel-grad-b-rgb:10,22,16;
-  --grad-1:#9fe6c0; --grad-2:#5cd98a; --accent-deep:#063a22;
-  --shot-bg:#0b1812; --code-bg:#0f2418; --code-fg:#d2f0dd; --pre-bg:#06120c;
-  --bg-grad-a:#0a1410; --bg-grad-b:#0e1c16; --bg-grad-c:#08110c;
-}

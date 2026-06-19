@@ -203,74 +203,11 @@ html[data-theme="bp6-light"][data-engine="podman"] {
   --app-text-muted: #6a5b75;
 }
 
-/* ── GREEN · DARK — a slight variation of the UNIFIED slate theme: same neutral surfaces (no green
- *    wash — that read too bright), differing only in a distinct green accent instead of unified's teal. ── */
-html[data-theme="bp6-dark"][data-engine="container"] {
-  --app-accent: #2f9e46;
-  --app-accent-hover: #2a8d3e;
-  --app-accent-active: #247c36;
-  --app-accent-fg: #ffffff;
-  --app-accent-text: #82cf90;
-  --app-intent-success-rest: #34d399;
-  --app-intent-success-hover: #10b981;
-  --app-intent-success-active: #059669;
-  --app-intent-success-fg: #052e1a;
-  --app-intent-success-text: #86efac;
-  --app-intent-warning-rest: #f59e0b;
-  --app-intent-warning-hover: #d97706;
-  --app-intent-warning-active: #b45309;
-  --app-intent-warning-fg: #1f1300;
-  --app-intent-warning-text: #fbbf24;
-  --app-intent-danger-rest: #f43f5e;
-  --app-intent-danger-hover: #e11d48;
-  --app-intent-danger-active: #be123c;
-  --app-intent-danger-fg: #ffffff;
-  --app-intent-danger-text: #fda4af;
-  --app-bg: #171c26;
-  --app-chrome: #11151d;
-  --app-surface: #1f2733;
-  --app-surface-strong: #2b3543;
-  --app-group-bg: #1b222e;
-  --app-border: rgba(148, 163, 184, 0.16);
-  --app-text: #cbd5e1;
-  --app-text-muted: #8a93a0;
-}
-
-/* ── GREEN · LIGHT — unified's neutral gray base with a deeper green accent for AA contrast on white. ── */
-html[data-theme="bp6-light"][data-engine="container"] {
-  --app-accent: #1f883c;
-  --app-accent-hover: #19752f;
-  --app-accent-active: #146328;
-  --app-accent-fg: #ffffff;
-  --app-accent-text: #15803d;
-  --app-intent-success-rest: #15803d;
-  --app-intent-success-hover: #166534;
-  --app-intent-success-active: #14532d;
-  --app-intent-success-fg: #ffffff;
-  --app-intent-success-text: #166534;
-  --app-intent-warning-rest: #b45309;
-  --app-intent-warning-hover: #92400e;
-  --app-intent-warning-active: #78350f;
-  --app-intent-warning-fg: #ffffff;
-  --app-intent-warning-text: #92400e;
-  --app-intent-danger-rest: #be123c;
-  --app-intent-danger-hover: #9f1239;
-  --app-intent-danger-active: #881337;
-  --app-intent-danger-fg: #ffffff;
-  --app-intent-danger-text: #be123c;
-  --app-bg: #f4f6f8;
-  --app-chrome: #ffffff;
-  --app-surface: #ffffff;
-  --app-surface-strong: #eceff3;
-  --app-group-bg: #eef1f4;
-  --app-border: #e2e6ec;
-  --app-text: #1b2430;
-  --app-text-muted: #5b6675;
-}
-
 /* ── UNIFIED · DARK — neutral slate + teal accent. The merged, multi-engine chrome (data-engine="unified",
- *    set when >1 connection is up); per-row engine markers still carry each engine's own accent. ── */
-html[data-theme="bp6-dark"][data-engine="unified"] {
+ *    set when >1 connection is up); per-row engine markers still carry each engine's own accent. Apple
+ *    Container (data-engine="container") reuses this theme by definition — only its brand logo stays green. ── */
+html[data-theme="bp6-dark"][data-engine="unified"],
+html[data-theme="bp6-dark"][data-engine="container"] {
   --app-accent: #14b8a6;
   --app-accent-hover: #0d9488;
   --app-accent-active: #0f766e;
@@ -302,8 +239,9 @@ html[data-theme="bp6-dark"][data-engine="unified"] {
   --app-text-muted: #8a93a0;
 }
 
-/* ── UNIFIED · LIGHT — neutral gray + teal accent ── */
-html[data-theme="bp6-light"][data-engine="unified"] {
+/* ── UNIFIED · LIGHT — neutral gray + teal accent (Apple Container reuses this; only its logo stays green) ── */
+html[data-theme="bp6-light"][data-engine="unified"],
+html[data-theme="bp6-light"][data-engine="container"] {
   --app-accent: #0d9488;
   --app-accent-hover: #0f766e;
   --app-accent-active: #115e59;
@@ -454,16 +392,7 @@ html[data-theme="bp6-light"][data-engine="unified"] {
   --bp-intent-default-hover: #786a96;
   --bp-intent-default-active: #5e5179;
 }
-[data-engine="container"] {
-  --app-intent-default-rest: #4b5563;
-  --app-intent-default-hover: #586271;
-  --app-intent-default-active: #404853;
-  --app-intent-default-fg: #ffffff;
-  --app-intent-default-text: var(--app-text);
-  --bp-intent-default-rest: #4b5563;
-  --bp-intent-default-hover: #586271;
-  --bp-intent-default-active: #404853;
-}
+[data-engine="container"],
 [data-engine="unified"] {
   --app-intent-default-rest: #4b5563;
   --app-intent-default-hover: #586271;

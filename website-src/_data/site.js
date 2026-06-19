@@ -20,7 +20,7 @@ const themes = [
     id: "unified",
     label: "Unified",
     swatch: "#0a5f50",
-    tagline: "Containers desktop companion",
+    tagline: "Container desktop companion",
     shots: "unified",
     replay: "/replays/unified.json",
     poster: "/videos/unified.png",
@@ -43,15 +43,6 @@ const themes = [
     replay: "/replays/docker.json",
     poster: "/videos/docker.png",
   },
-  {
-    id: "container",
-    label: "Apple&trade; Container",
-    swatch: "#34c759",
-    tagline: "Container desktop companion",
-    shots: "container",
-    replay: "/replays/container.json",
-    poster: "/videos/container.png",
-  },
 ];
 const defaultTheme = "unified";
 // Baked into the nav brand so the default theme's tagline shows before JS runs (no flash);
@@ -62,7 +53,7 @@ export default {
   name: "Container Desktop",
   tagline: "Podman Desktop Companion",
   description:
-    "A familiar desktop interface for the free, open container managers — Podman, Docker and Apple&trade; Container (experimental). Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux.",
+    "A familiar desktop interface for the free, open container managers — Podman, Docker and Apple&trade; Container. Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux.",
   url: "https://container-desktop.com",
   repo: "https://github.com/iongion/container-desktop",
   repoSlug: "iongion/container-desktop",

@@ -2,7 +2,7 @@ export const SCREENSHOT_VIEWPORT = { width: 1068, height: 718 };
 
 // "unified" boots all system engines connected (CONTAINER_DESKTOP_MOCK=unified) → the merged
 // workspace; per-item `*ByEngine` maps below carry selectors where they differ from podman.
-export const SCREENSHOT_ENGINES = ["podman", "docker", "container", "unified"];
+export const SCREENSHOT_ENGINES = ["podman", "docker", "unified"];
 
 export const STALE_FLAT_SCREENSHOTS = [
   "000-CrossPlatform.png",
@@ -46,7 +46,7 @@ export const screenshotManifest = [
     route: "/screens/images",
     waitFor: "[data-image]",
     // unified merges all engines' images, so it has at least docker/container's count.
-    minCountByEngine: { podman: 4, docker: 5, container: 5, unified: 5 },
+    minCountByEngine: { podman: 4, docker: 5, unified: 5 },
   },
   {
     file: "Pods.png",
@@ -54,11 +54,10 @@ export const screenshotManifest = [
     waitForByEngine: {
       podman: "[data-pod]",
       docker: '[data-screen="pods"]',
-      container: '[data-screen="pods"]',
       // Pods are Podman-only; in the merged view they come from the podman connection.
       unified: "[data-pod]",
     },
-    minCountByEngine: { podman: 12, docker: 1, container: 1, unified: 12 },
+    minCountByEngine: { podman: 12, docker: 1, unified: 12 },
   },
   {
     file: "UserSettings.png",
@@ -78,8 +77,6 @@ export const screenshotManifest = [
         'tr[data-connection-id="mock.podman.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
       docker:
         'tr[data-connection-id="mock.docker.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
-      container:
-        'tr[data-connection-id="mock.container.system"][data-connection-is-default="yes"][data-connection-is-current="yes"][data-connection-is-connected="yes"]',
       // Merged view: podman is the primary/default/current (is-connected tracks the current
       // connection only — see ManageScreen isConnected); all system rows are listed.
       unified:
@@ -109,7 +106,6 @@ export const screenshotManifest = [
     routeByEngine: {
       podman: "/screens/secrets/$secretId/inspect",
       docker: "/screens/secrets",
-      container: "/screens/secrets",
       // Merged list view (secrets from every connected engine).
       unified: "/screens/secrets",
     },
@@ -121,7 +117,6 @@ export const screenshotManifest = [
     waitForByEngine: {
       podman: '[data-screen="secret.inspect"]',
       docker: '[data-screen="secrets"]',
-      container: '[data-screen="secrets"]',
       unified: '[data-screen="secrets"]',
     },
   },

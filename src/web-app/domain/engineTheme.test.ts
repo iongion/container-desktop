@@ -205,13 +205,15 @@ describe("resolveEngineTheme", () => {
     ).toBe("unified");
   });
 
-  it("honors explicit container override", () => {
+  // Apple Container is an engine, not a selectable theme: a stale stored "container" preference is
+  // ignored and the theme resolves from the active engine (here Podman), not forced to container.
+  it("ignores a stale container preference (not a selectable theme)", () => {
     expect(
       resolveEngineTheme({
         preference: "container",
         activeRuntime: [runtime(ContainerEngine.PODMAN)],
         connectors: [],
       }),
-    ).toBe(ContainerEngine.APPLE);
+    ).toBe(ContainerEngine.PODMAN);
   });
 });

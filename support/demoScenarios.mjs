@@ -3,10 +3,9 @@
 // a replay JSON + poster PNG that the site swaps with the color swatch (see website-src/_data/site.js).
 //
 // - podman: the original hand-tuned walkthrough (kept verbatim, with its existing asset paths).
-// - docker / container / unified: derived tours that share podman's timing but use generic,
-//   engine-agnostic selectors (first matching row) so they work against any fixture set; docker
-//   and container drop the Podman-only Pods chapter, unified keeps it (the merged view surfaces pods
-//   from podman).
+// - docker / unified: derived tours that share podman's timing but use generic, engine-agnostic
+//   selectors (first matching row) so they work against any fixture set; docker drops the
+//   Podman-only Pods chapter, unified keeps it (the merged view surfaces pods from podman).
 
 import { demoScenario } from "./demoScenario.mjs";
 
@@ -145,22 +144,6 @@ const docker = {
   }),
 };
 
-const container = {
-  ...baseConfig,
-  id: "container-desktop-demo-container",
-  title: "Container Desktop — Apple Container walkthrough",
-  engine: "container",
-  output: "website-src/static/replays/container.json",
-  poster: "website-src/static/videos/container.png",
-  steps: buildTourSteps({
-    introText: "Container Desktop starts cleanly and auto-detects the mock Apple Container engine",
-    pods: false,
-    connectionRowId: "mock.container.system",
-    actionText: "using Docker-compatible container actions against Apple Container",
-    connectionsText: "managing native and SSH Apple Container endpoints from one place",
-  }),
-};
-
 const unified = {
   ...baseConfig,
   id: "container-desktop-demo-unified",
@@ -177,4 +160,4 @@ const unified = {
   }),
 };
 
-export const demoScenarios = [podman, docker, container, unified];
+export const demoScenarios = [podman, docker, unified];

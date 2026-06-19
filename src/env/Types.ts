@@ -97,7 +97,9 @@ export interface ProxyServiceOptions {
   keepAlive?: boolean;
 }
 
-export type EngineThemePreference = "auto" | "unified" | "podman" | "docker" | "container";
+// Apple Container is an engine, not a user-selectable theme — it renders the unified theme by
+// definition (see engineTheme.ts / tokens.css). So "container" is intentionally absent here.
+export type EngineThemePreference = "auto" | "unified" | "podman" | "docker";
 
 export interface GlobalUserSettings {
   theme: string;

@@ -3,15 +3,16 @@ import { type Connection, type Connector, ContainerEngine, type EngineThemePrefe
 
 export type ResolvedEngineTheme = "unified" | ContainerEngine.PODMAN | ContainerEngine.DOCKER | ContainerEngine.APPLE;
 
-const ENGINE_THEME_VALUES = new Set<string>([
-  "unified",
-  ContainerEngine.PODMAN,
-  ContainerEngine.DOCKER,
-  ContainerEngine.APPLE,
-]);
+// User-selectable theme preferences we honor as an explicit override. Apple Container is an engine,
+// not a selectable theme: it is intentionally absent, so a stale stored "container" preference falls
+// through to engine auto-detection (which still renders the container engine as unified + green logo
+// via resolveSingleEngine below).
+const SELECTABLE_THEME_PREFERENCES = new Set<string>(["unified", ContainerEngine.PODMAN, ContainerEngine.DOCKER]);
 
-function isResolvedEngineTheme(value: string | undefined): value is ResolvedEngineTheme {
-  return !!value && ENGINE_THEME_VALUES.has(value);
+function isSelectableThemePreference(
+  value: string | undefined,
+): value is "unified" | ContainerEngine.PODMAN | ContainerEngine.DOCKER {
+  return !!value && SELECTABLE_THEME_PREFERENCES.has(value);
 }
 
 function resolveSingleEngine(engines: Iterable<string | undefined>): ResolvedEngineTheme | undefined {
@@ -49,7 +50,7 @@ export function resolveEngineTheme({
   connectors: Connector[];
   connections?: Connection[];
 }): ResolvedEngineTheme {
-  if (isResolvedEngineTheme(preference)) {
+  if (isSelectableThemePreference(preference)) {
     return preference;
   }
 
