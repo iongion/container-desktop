@@ -18,14 +18,14 @@ export const registryKeys = {
 export const useRegistriesMap = (connId: string) =>
   useQuery({
     queryKey: registryKeys.map(connId),
-    queryFn: () => new RegistriesAdapter().getRegistriesMap(),
+    queryFn: async () => new RegistriesAdapter(await resolveConnectionHost(connId)).getRegistriesMap(),
     enabled: !!connId,
   });
 
 export const useCreateRegistry = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (it: Registry) => new RegistriesAdapter().createRegistry(it),
+    mutationFn: async (it: Registry) => new RegistriesAdapter(await resolveConnectionHost(connId)).createRegistry(it),
     onSuccess: () => qc.invalidateQueries({ queryKey: registryKeys.map(connId) }),
   });
 };
@@ -33,7 +33,7 @@ export const useCreateRegistry = (connId: string) => {
 export const useRemoveRegistry = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => new RegistriesAdapter().removeRegistry(name),
+    mutationFn: async (name: string) => new RegistriesAdapter(await resolveConnectionHost(connId)).removeRegistry(name),
     onSuccess: () => qc.invalidateQueries({ queryKey: registryKeys.map(connId) }),
   });
 };

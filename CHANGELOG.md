@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Fixed
 
 - Startup timing and window display
+- The Registries screen loads its sources again instead of failing with an *Error fetching data* notification when engines are connected through the unified workspace.
+- Data-fetch error notifications now name the failing resource and include the underlying error, instead of a bare *Error fetching data*.
+- The app no longer flickers through a single-engine look (e.g. Docker) while engines finish connecting at startup — the theme stays settled until all configured engines report in.
 
 ## [5.3.3] - 2026-06-18
 

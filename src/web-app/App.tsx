@@ -289,12 +289,13 @@ export function AppMainScreen() {
   const theme = useAppStore((state) => normalizeAppTheme(state.userSettings.theme || DEFAULT_THEME));
   const engineTheme = useAppStore((state) => state.userSettings.engineTheme);
   const connectors = useAppStore((state) => state.connectors);
+  const connections = useAppStore((state) => state.connections);
   const activeRuntime = useResourceStore((state) => state.activeRuntime);
   const font = useAppStore((state) => state.userSettings.font);
   const initialize = useAppStore((state) => state.initialize);
   const startApplication = useAppStore((state) => state.startApplication);
 
-  const engine = resolveEngineTheme({ preference: engineTheme, activeRuntime, connectors });
+  const engine = resolveEngineTheme({ preference: engineTheme, activeRuntime, connectors, connections });
   const host = nextConnection?.host || currentConnector?.host || undefined;
 
   useEffect(() => {

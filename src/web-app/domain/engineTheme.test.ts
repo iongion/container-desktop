@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import { type Connector, ContainerEngine } from "@/env/Types";
+import { type Connection, type Connector, ContainerEngine } from "@/env/Types";
 import { resolveEngineTheme } from "./engineTheme";
 
 function runtime(engine: ContainerEngine, id: string = engine, running = true): ConnectionRuntimeInfo {
@@ -12,6 +12,23 @@ function runtime(engine: ContainerEngine, id: string = engine, running = true): 
     phase: running ? "ready" : "failed",
     running,
   };
+}
+
+function starting(engine: ContainerEngine, id: string = engine): ConnectionRuntimeInfo {
+  return { id, name: id, engine, phase: "starting", running: false };
+}
+
+function conn(engine: ContainerEngine, opts: { autoStart?: boolean; disabled?: boolean } = {}): Connection {
+  const { autoStart = true, disabled = false } = opts;
+  return {
+    id: `connection.${engine}`,
+    name: engine,
+    label: engine,
+    engine,
+    host: `${engine}.native` as Connection["host"],
+    disabled,
+    settings: { api: { autoStart } } as Connection["settings"],
+  } as Connection;
 }
 
 function connector(engine: ContainerEngine, available: boolean): Connector {
@@ -98,5 +115,62 @@ describe("resolveEngineTheme", () => {
         connectors: [connector(ContainerEngine.DOCKER, true), connector(ContainerEngine.PODMAN, true)],
       }),
     ).toBe("unified");
+  });
+
+  // Bootstrap settling: connectAll brings engines up one at a time, so the running set is briefly partial.
+  // The theme must reflect the predicted steady state (from the connections being brought up), not flicker.
+  it("stays unified while a second engine is still starting (no docker flash during connectAll)", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [runtime(ContainerEngine.DOCKER), starting(ContainerEngine.PODMAN)],
+        connectors: [],
+        connections: [conn(ContainerEngine.DOCKER), conn(ContainerEngine.PODMAN)],
+      }),
+    ).toBe("unified");
+  });
+
+  it("predicts unified before the second engine even appears in runtime (connect-order race)", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [starting(ContainerEngine.DOCKER)],
+        connectors: [],
+        connections: [conn(ContainerEngine.DOCKER), conn(ContainerEngine.PODMAN)],
+      }),
+    ).toBe("unified");
+  });
+
+  it("keeps a single configured engine stable while it is still starting (no unified flash)", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [starting(ContainerEngine.DOCKER)],
+        connectors: [],
+        connections: [conn(ContainerEngine.DOCKER)],
+      }),
+    ).toBe(ContainerEngine.DOCKER);
+  });
+
+  it("ignores disabled / non-autostart connections when predicting during settling", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [starting(ContainerEngine.DOCKER)],
+        connectors: [],
+        connections: [conn(ContainerEngine.DOCKER), conn(ContainerEngine.PODMAN, { disabled: true })],
+      }),
+    ).toBe(ContainerEngine.DOCKER);
+  });
+
+  it("falls back to the surviving engine once a second engine has settled as failed", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [runtime(ContainerEngine.DOCKER), runtime(ContainerEngine.PODMAN, "podman", false)],
+        connectors: [],
+        connections: [conn(ContainerEngine.DOCKER), conn(ContainerEngine.PODMAN)],
+      }),
+    ).toBe(ContainerEngine.DOCKER);
   });
 });

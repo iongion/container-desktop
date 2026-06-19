@@ -19,24 +19,24 @@ export class RegistriesAdapter {
   constructor(private readonly host?: HostClientFacade) {}
 
   async getRegistriesMap(): Promise<RegistriesMap> {
-    return Application.getInstance().getRegistriesMap();
+    return Application.getInstance().getRegistriesMap({ host: this.host });
   }
 
   async removeRegistry(name: string): Promise<RegistriesMap> {
     const instance = Application.getInstance();
-    const items = await instance.getRegistriesMap();
+    const items = await instance.getRegistriesMap({ host: this.host });
     const pos = items.custom.findIndex((it) => it.name === name);
     if (pos !== -1) {
       items.custom.splice(pos, 1);
     }
-    return await instance.setRegistriesMap(items);
+    return await instance.setRegistriesMap(items, { host: this.host });
   }
 
   async createRegistry(it: Registry): Promise<Registry> {
     const instance = Application.getInstance();
-    const items = await instance.getRegistriesMap();
+    const items = await instance.getRegistriesMap({ host: this.host });
     items.custom.push(it);
-    await instance.setRegistriesMap(items);
+    await instance.setRegistriesMap(items, { host: this.host });
     return it;
   }
 

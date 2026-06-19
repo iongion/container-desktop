@@ -1,5 +1,5 @@
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import { type Connector, ContainerEngine, type EngineThemePreference } from "@/env/Types";
+import { type Connection, type Connector, ContainerEngine, type EngineThemePreference } from "@/env/Types";
 
 export type ResolvedEngineTheme = "unified" | ContainerEngine.PODMAN | ContainerEngine.DOCKER;
 
@@ -27,17 +27,39 @@ function connectorIsAvailable(connector: Connector): boolean {
   );
 }
 
+// Connections connectAll will actually bring up (mirrors engineDataService.connectAll's filter). Known
+// before any connection completes, so it predicts the steady-state engine set without a connect-order race.
+function autoConnectEngines(connections: Connection[]): string[] {
+  return connections.filter((c) => !c.disabled && c.settings?.api?.autoStart).map((c) => c.engine);
+}
+
 export function resolveEngineTheme({
   preference,
   activeRuntime,
   connectors,
+  connections = [],
 }: {
   preference?: EngineThemePreference | string;
   activeRuntime: ConnectionRuntimeInfo[];
   connectors: Connector[];
+  connections?: Connection[];
 }): ResolvedEngineTheme {
   if (isResolvedEngineTheme(preference)) {
     return preference;
+  }
+
+  // While any connection is still idle/starting, the running set is only partial — resolving the theme from
+  // it makes the look flicker (unified → docker → unified) as engines connect one at a time during boot.
+  // Until detection settles, predict the steady state from every engine family in play: those already
+  // running/pending PLUS the connections connectAll is bringing up (known up-front). Only collapse to a
+  // single-engine look when that whole set is one family.
+  const settling = activeRuntime.some((runtime) => runtime.phase === "starting" || runtime.phase === "idle");
+  if (settling) {
+    const inPlay = resolveSingleEngine([
+      ...activeRuntime.filter((runtime) => runtime.phase !== "failed").map((runtime) => runtime.engine),
+      ...autoConnectEngines(connections),
+    ]);
+    return inPlay ?? "unified";
   }
 
   const runningEngine = resolveSingleEngine(

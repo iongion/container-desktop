@@ -768,9 +768,12 @@ export class Application {
   }
 
   // registry
-  async getRegistriesMap() {
-    const host = this._currentContainerEngineHostClient as HostClientFacade;
-    const isPodman = host.ENGINE === ContainerEngine.PODMAN;
+  async getRegistriesMap(opts?: { host?: HostClientFacade }) {
+    // In the always-merged workspace connectAll never sets the singular _currentContainerEngineHostClient
+    // (it caches per-connection hosts only), so callers pass the row's host explicitly. Optional-chain the
+    // engine so a missing host degrades to "not podman" (system registry hidden) instead of throwing.
+    const host = opts?.host || (this._currentContainerEngineHostClient as HostClientFacade | undefined);
+    const isPodman = host?.ENGINE === ContainerEngine.PODMAN;
     const customRegistriesPath = await Path.join(await this.userConfiguration.getStoragePath(), "registries.json");
     const registriesMap = {
       default: AUTOMATIC_REGISTRIES.map((it) => (it.id === "system" && !isPodman ? { ...it, enabled: false } : it)),
@@ -785,10 +788,10 @@ export class Application {
     return registriesMap;
   }
 
-  async setRegistriesMap(registries: RegistriesMap) {
+  async setRegistriesMap(registries: RegistriesMap, opts?: { host?: HostClientFacade }) {
     const customRegistriesPath = await Path.join(await this.userConfiguration.getStoragePath(), "registries.json");
     await FS.writeTextFile(customRegistriesPath, JSON.stringify(registries.custom));
-    return await this.getRegistriesMap();
+    return await this.getRegistriesMap(opts);
   }
 
   async searchRegistry(opts: RegistrySearchOptions & { host?: HostClientFacade }) {
