@@ -77,6 +77,7 @@ let trayController: TrayController;
 let commandProxyBroker: CommandProxyBroker;
 type IconEngine = "docker" | "podman" | "unified";
 let currentIconEngine: IconEngine = "podman";
+let shellRefreshQueued = false;
 
 function detectIconEngine(): IconEngine | undefined {
   const snapshot = engineDataService.getAppRuntimeSnapshot();
@@ -106,6 +107,20 @@ function getIconEngine(): IconEngine {
   currentIconEngine = detectIconEngine() ?? currentIconEngine;
   runtime.setIconEngine(currentIconEngine);
   return currentIconEngine;
+}
+
+function queueShellRefresh(): void {
+  if (shellRefreshQueued) {
+    return;
+  }
+  shellRefreshQueued = true;
+  queueMicrotask(() => {
+    shellRefreshQueued = false;
+    const iconEngine = getIconEngine();
+    trayController.refreshMenu();
+    trayController.refreshIcon();
+    windowManager.setIcon(runtime.appIconPath(iconEngine));
+  });
 }
 
 const recovery = createRecoveryService({
@@ -186,13 +201,8 @@ trayController = new TrayController({
   },
 });
 
-// Rebuild the tray menu and engine-colored shell icons whenever main's data changes.
-engineDataService.subscribe(() => {
-  const iconEngine = getIconEngine();
-  trayController.refreshMenu();
-  trayController.refreshIcon();
-  windowManager.setIcon(runtime.appIconPath(iconEngine));
-});
+// Rebuild the tray menu and engine-colored shell icons after main's data changes settle for this tick.
+engineDataService.subscribe(() => queueShellRefresh());
 
 // Main-owned data layer: pushes resource snapshots to the main window, answers its snapshot pull + a refresh
 // nudge + an awaitable ensure-connected. Reads + writes are main-window-only.

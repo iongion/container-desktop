@@ -13,7 +13,6 @@ import { dockerNormalizers } from "@/container-client/normalizers/docker";
 import { podmanNormalizers } from "@/container-client/normalizers/podman";
 import type { EngineNormalizers } from "@/container-client/normalizers/shared";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import { ContainerEngine } from "@/env/Types";
 
 /** libpod (Podman) compat root — byte-for-byte from Api.clients.ts (e.g. :808). */
 export const LIBPOD_BASE_URL = "http://d/v4.0.0/libpod";
@@ -37,23 +36,23 @@ export abstract class ResourceAdapter {
     return this.driverPromise;
   }
 
-  protected get isDocker(): boolean {
-    return this.host.ENGINE === ContainerEngine.DOCKER;
+  /** True when the host speaks the Docker REST surface (Docker-native or Docker-compatible like Apple-socktainer). */
+  protected get usesDockerApi(): boolean {
+    return this.host.apiSurface === "docker";
   }
 
   /**
    * Per-call baseURL for resources that explicitly target the libpod-compat vs docker root (volumes,
-   * secrets, networks, pods, container/pod creation). Unifies the monolith's two equivalent engine
-   * checks — `connection.host.startsWith("docker")` and `connection.engine === ContainerEngine.DOCKER`
-   * — onto the single `ENGINE` field. Behavior-preserving: every docker ContainerEngineHost is "docker.*".
+   * secrets, networks, pods, container/pod creation). Keyed on apiSurface, not engine identity —
+   * Apple (apiSurface "docker") gets DOCKER_BASE_URL, same as Docker itself.
    */
   protected get baseURL(): string {
-    return this.isDocker ? DOCKER_BASE_URL : LIBPOD_BASE_URL;
+    return this.usesDockerApi ? DOCKER_BASE_URL : LIBPOD_BASE_URL;
   }
 
   /** The per-engine normalizer set for the active host (symmetric — both engines implement the full surface). */
   protected get normalizers(): EngineNormalizers {
-    return this.isDocker ? dockerNormalizers : podmanNormalizers;
+    return this.usesDockerApi ? dockerNormalizers : podmanNormalizers;
   }
 
   /** 2xx check — lifted from Api.clients.ts:206 (the monolith keeps its copy until the Phase 5 cutover). */

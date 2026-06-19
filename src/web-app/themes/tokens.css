@@ -24,6 +24,27 @@
   --app-accent-active: var(--bp-intent-primary-active, #184a90);
   --app-accent-fg: #ffffff;
   --app-accent-text: var(--app-accent);
+  --app-accent-disabled: color-mix(in srgb, var(--app-accent) 48%, var(--app-surface-strong));
+  --app-intent-default-rest: #5f6b7c;
+  --app-intent-default-hover: #404854;
+  --app-intent-default-active: #383e47;
+  --app-intent-default-fg: #ffffff;
+  --app-intent-default-text: var(--app-text);
+  --app-intent-success-rest: #238551;
+  --app-intent-success-hover: #1c6e42;
+  --app-intent-success-active: #165a36;
+  --app-intent-success-fg: #ffffff;
+  --app-intent-success-text: var(--app-intent-success-hover);
+  --app-intent-warning-rest: #c87619;
+  --app-intent-warning-hover: #935610;
+  --app-intent-warning-active: #77450d;
+  --app-intent-warning-fg: #111418;
+  --app-intent-warning-text: var(--app-intent-warning-hover);
+  --app-intent-danger-rest: #cd4246;
+  --app-intent-danger-hover: #ac2f33;
+  --app-intent-danger-active: #8e292c;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: var(--app-intent-danger-hover);
   --app-bg: var(--bp-surface-background-color-default-rest, #1c2127);
   --app-chrome: var(--app-bg);
   --app-surface: var(--app-bg);
@@ -32,6 +53,9 @@
   --app-border: var(--bp-surface-border-color-default, rgba(255, 255, 255, 0.16));
   --app-text: inherit;
   --app-text-muted: var(--bp-typography-color-muted, #8a93a0);
+  --app-scrollbar-track: var(--app-bg);
+  --app-scrollbar-thumb: color-mix(in srgb, var(--app-text-muted) 56%, var(--app-surface-strong));
+  --app-scrollbar-thumb-hover: color-mix(in srgb, var(--app-accent) 46%, var(--app-text-muted));
 }
 
 /* ── PER-ENGINE ROW ACCENTS — standalone, theme-scoped tokens for the always-merged lists.
@@ -41,10 +65,12 @@
 :root {
   --engine-accent-docker: #2f7df0;
   --engine-accent-podman: #a855c9;
+  --engine-accent-container: #2f9e46;
 }
 html[data-theme="bp6-light"] {
   --engine-accent-docker: #2563eb;
   --engine-accent-podman: #8e3aa8;
+  --engine-accent-container: #248a3d;
 }
 
 /* ── DOCKER · DARK (deep blue) ────────────────────────────────────────────── */
@@ -54,6 +80,21 @@ html[data-theme="bp6-dark"][data-engine="docker"] {
   --app-accent-active: #1d56b8;
   --app-accent-fg: #ffffff;
   --app-accent-text: #6fb2ff;
+  --app-intent-success-rest: #2dd4bf;
+  --app-intent-success-hover: #20b8a7;
+  --app-intent-success-active: #169688;
+  --app-intent-success-fg: #042f2e;
+  --app-intent-success-text: #7ddfd5;
+  --app-intent-warning-rest: #f59e0b;
+  --app-intent-warning-hover: #d97706;
+  --app-intent-warning-active: #b45309;
+  --app-intent-warning-fg: #1f1300;
+  --app-intent-warning-text: #fbbf24;
+  --app-intent-danger-rest: #f43f5e;
+  --app-intent-danger-hover: #e11d48;
+  --app-intent-danger-active: #be123c;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #fda4af;
   --app-bg: #0d1834;
   --app-chrome: #0a1228;
   --app-surface: #16264f;
@@ -73,6 +114,21 @@ html[data-theme="bp6-light"][data-engine="docker"] {
   --app-accent-active: #1a46a8;
   --app-accent-fg: #ffffff;
   --app-accent-text: #1f59cf;
+  --app-intent-success-rest: #0f766e;
+  --app-intent-success-hover: #0d665f;
+  --app-intent-success-active: #115e59;
+  --app-intent-success-fg: #ffffff;
+  --app-intent-success-text: #0f766e;
+  --app-intent-warning-rest: #b45309;
+  --app-intent-warning-hover: #92400e;
+  --app-intent-warning-active: #78350f;
+  --app-intent-warning-fg: #ffffff;
+  --app-intent-warning-text: #92400e;
+  --app-intent-danger-rest: #be123c;
+  --app-intent-danger-hover: #9f1239;
+  --app-intent-danger-active: #881337;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #be123c;
   --app-bg: #f4f6f9; /* content backdrop — soft cool gray so white surfaces lift off it */
   --app-chrome: #ffffff; /* header + sidebar — white app frame */
   --app-surface: #ffffff; /* cards, menus, drawers, screen-header bar */
@@ -90,6 +146,21 @@ html[data-theme="bp6-dark"][data-engine="podman"] {
   --app-accent-active: #7b3398;
   --app-accent-fg: #ffffff;
   --app-accent-text: #d98fe8;
+  --app-intent-success-rest: #9cc66d;
+  --app-intent-success-hover: #82ad56;
+  --app-intent-success-active: #668d42;
+  --app-intent-success-fg: #102006;
+  --app-intent-success-text: #c8e391;
+  --app-intent-warning-rest: #d79a3b;
+  --app-intent-warning-hover: #bc7f24;
+  --app-intent-warning-active: #9c6518;
+  --app-intent-warning-fg: #1d1205;
+  --app-intent-warning-text: #f0c36b;
+  --app-intent-danger-rest: #d75f8f;
+  --app-intent-danger-hover: #c04478;
+  --app-intent-danger-active: #9f365f;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #f2a1c4;
   --app-bg: #211333;
   --app-chrome: #170a20;
   --app-surface: #321a44;
@@ -107,6 +178,21 @@ html[data-theme="bp6-light"][data-engine="podman"] {
   --app-accent-active: #66277a;
   --app-accent-fg: #ffffff;
   --app-accent-text: #82309c;
+  --app-intent-success-rest: #5f8f3f;
+  --app-intent-success-hover: #4f7a35;
+  --app-intent-success-active: #42652c;
+  --app-intent-success-fg: #ffffff;
+  --app-intent-success-text: #4f7a35;
+  --app-intent-warning-rest: #a16207;
+  --app-intent-warning-hover: #854d0e;
+  --app-intent-warning-active: #713f12;
+  --app-intent-warning-fg: #ffffff;
+  --app-intent-warning-text: #854d0e;
+  --app-intent-danger-rest: #b83270;
+  --app-intent-danger-hover: #9f2a62;
+  --app-intent-danger-active: #842052;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #9f2a62;
   --app-bg: #f5f6f8; /* neutral light gray content backdrop — no purple wash */
   --app-chrome: #ffffff; /* white app frame (header + sidebar) */
   --app-surface: #ffffff; /* cards, menus, drawers */
@@ -115,6 +201,71 @@ html[data-theme="bp6-light"][data-engine="podman"] {
   --app-border: #e4e2e7; /* neutral hairline */
   --app-text: #241a2c;
   --app-text-muted: #6a5b75;
+}
+
+/* ── GREEN · DARK — a slight variation of the UNIFIED slate theme: same neutral surfaces (no green
+ *    wash — that read too bright), differing only in a distinct green accent instead of unified's teal. ── */
+html[data-theme="bp6-dark"][data-engine="container"] {
+  --app-accent: #2f9e46;
+  --app-accent-hover: #2a8d3e;
+  --app-accent-active: #247c36;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #82cf90;
+  --app-intent-success-rest: #34d399;
+  --app-intent-success-hover: #10b981;
+  --app-intent-success-active: #059669;
+  --app-intent-success-fg: #052e1a;
+  --app-intent-success-text: #86efac;
+  --app-intent-warning-rest: #f59e0b;
+  --app-intent-warning-hover: #d97706;
+  --app-intent-warning-active: #b45309;
+  --app-intent-warning-fg: #1f1300;
+  --app-intent-warning-text: #fbbf24;
+  --app-intent-danger-rest: #f43f5e;
+  --app-intent-danger-hover: #e11d48;
+  --app-intent-danger-active: #be123c;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #fda4af;
+  --app-bg: #171c26;
+  --app-chrome: #11151d;
+  --app-surface: #1f2733;
+  --app-surface-strong: #2b3543;
+  --app-group-bg: #1b222e;
+  --app-border: rgba(148, 163, 184, 0.16);
+  --app-text: #cbd5e1;
+  --app-text-muted: #8a93a0;
+}
+
+/* ── GREEN · LIGHT — unified's neutral gray base with a deeper green accent for AA contrast on white. ── */
+html[data-theme="bp6-light"][data-engine="container"] {
+  --app-accent: #1f883c;
+  --app-accent-hover: #19752f;
+  --app-accent-active: #146328;
+  --app-accent-fg: #ffffff;
+  --app-accent-text: #15803d;
+  --app-intent-success-rest: #15803d;
+  --app-intent-success-hover: #166534;
+  --app-intent-success-active: #14532d;
+  --app-intent-success-fg: #ffffff;
+  --app-intent-success-text: #166534;
+  --app-intent-warning-rest: #b45309;
+  --app-intent-warning-hover: #92400e;
+  --app-intent-warning-active: #78350f;
+  --app-intent-warning-fg: #ffffff;
+  --app-intent-warning-text: #92400e;
+  --app-intent-danger-rest: #be123c;
+  --app-intent-danger-hover: #9f1239;
+  --app-intent-danger-active: #881337;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #be123c;
+  --app-bg: #f4f6f8;
+  --app-chrome: #ffffff;
+  --app-surface: #ffffff;
+  --app-surface-strong: #eceff3;
+  --app-group-bg: #eef1f4;
+  --app-border: #e2e6ec;
+  --app-text: #1b2430;
+  --app-text-muted: #5b6675;
 }
 
 /* ── UNIFIED · DARK — neutral slate + teal accent. The merged, multi-engine chrome (data-engine="unified",
@@ -126,6 +277,21 @@ html[data-theme="bp6-dark"][data-engine="unified"] {
   /* Dark fg on the bright teal accent: white-on-#14b8a6 is ~2.2:1 (unreadable); this dark teal is ~7.7:1. */
   --app-accent-fg: #04312c;
   --app-accent-text: #5eead4;
+  --app-intent-success-rest: #34d399;
+  --app-intent-success-hover: #10b981;
+  --app-intent-success-active: #059669;
+  --app-intent-success-fg: #052e1a;
+  --app-intent-success-text: #86efac;
+  --app-intent-warning-rest: #f59e0b;
+  --app-intent-warning-hover: #d97706;
+  --app-intent-warning-active: #b45309;
+  --app-intent-warning-fg: #1f1300;
+  --app-intent-warning-text: #fbbf24;
+  --app-intent-danger-rest: #f43f5e;
+  --app-intent-danger-hover: #e11d48;
+  --app-intent-danger-active: #be123c;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #fda4af;
   --app-bg: #171c26;
   --app-chrome: #11151d;
   --app-surface: #1f2733;
@@ -143,6 +309,21 @@ html[data-theme="bp6-light"][data-engine="unified"] {
   --app-accent-active: #115e59;
   --app-accent-fg: #ffffff;
   --app-accent-text: #0f766e;
+  --app-intent-success-rest: #15803d;
+  --app-intent-success-hover: #166534;
+  --app-intent-success-active: #14532d;
+  --app-intent-success-fg: #ffffff;
+  --app-intent-success-text: #166534;
+  --app-intent-warning-rest: #b45309;
+  --app-intent-warning-hover: #92400e;
+  --app-intent-warning-active: #78350f;
+  --app-intent-warning-fg: #ffffff;
+  --app-intent-warning-text: #92400e;
+  --app-intent-danger-rest: #be123c;
+  --app-intent-danger-hover: #9f1239;
+  --app-intent-danger-active: #881337;
+  --app-intent-danger-fg: #ffffff;
+  --app-intent-danger-text: #be123c;
   --app-bg: #f4f6f8;
   --app-chrome: #ffffff;
   --app-surface: #ffffff;
@@ -161,10 +342,31 @@ html[data-theme="bp6-light"][data-engine="unified"] {
  *    buttons go subtly engine-tinted by moving ONE token — no per-component CSS, no
  *    :not() variant-fighting. */
 [data-engine] {
+  --bp-intent-default-rest: var(--app-intent-default-rest);
+  --bp-intent-default-hover: var(--app-intent-default-hover);
+  --bp-intent-default-active: var(--app-intent-default-active);
+  --bp-intent-default-disabled: color-mix(in srgb, var(--app-intent-default-rest) 48%, var(--app-surface-strong));
+  --bp-intent-default-foreground: var(--app-intent-default-fg);
   --bp-intent-primary-rest: var(--app-accent);
   --bp-intent-primary-hover: var(--app-accent-hover);
   --bp-intent-primary-active: var(--app-accent-active);
   --bp-intent-primary-foreground: var(--app-accent-fg);
+  --bp-intent-primary-disabled: var(--app-accent-disabled);
+  --bp-intent-success-rest: var(--app-intent-success-rest);
+  --bp-intent-success-hover: var(--app-intent-success-hover);
+  --bp-intent-success-active: var(--app-intent-success-active);
+  --bp-intent-success-disabled: color-mix(in srgb, var(--app-intent-success-rest) 48%, var(--app-surface-strong));
+  --bp-intent-success-foreground: var(--app-intent-success-fg);
+  --bp-intent-warning-rest: var(--app-intent-warning-rest);
+  --bp-intent-warning-hover: var(--app-intent-warning-hover);
+  --bp-intent-warning-active: var(--app-intent-warning-active);
+  --bp-intent-warning-disabled: color-mix(in srgb, var(--app-intent-warning-rest) 48%, var(--app-surface-strong));
+  --bp-intent-warning-foreground: var(--app-intent-warning-fg);
+  --bp-intent-danger-rest: var(--app-intent-danger-rest);
+  --bp-intent-danger-hover: var(--app-intent-danger-hover);
+  --bp-intent-danger-active: var(--app-intent-danger-active);
+  --bp-intent-danger-disabled: color-mix(in srgb, var(--app-intent-danger-rest) 48%, var(--app-surface-strong));
+  --bp-intent-danger-foreground: var(--app-intent-danger-fg);
   /* Blueprint drives input focus rings, primary surfaces and primary text from
      SEPARATE token families (not intent-primary). Bridge them too, or focus rings
      and links stay stock blue under podman. Verified via computed box-shadow:
@@ -172,25 +374,139 @@ html[data-theme="bp6-light"][data-engine="unified"] {
   --bp-surface-background-color-primary-rest: var(--app-accent);
   --bp-surface-background-color-primary-hover: var(--app-accent-hover);
   --bp-surface-background-color-primary-active: var(--app-accent-active);
+  --bp-surface-background-color-primary-disabled: var(--app-accent-disabled);
+  --bp-surface-background-color-success-rest: var(--app-intent-success-rest);
+  --bp-surface-background-color-success-hover: var(--app-intent-success-hover);
+  --bp-surface-background-color-success-active: var(--app-intent-success-active);
+  --bp-surface-background-color-success-disabled: var(--bp-intent-success-disabled);
+  --bp-surface-background-color-warning-rest: var(--app-intent-warning-rest);
+  --bp-surface-background-color-warning-hover: var(--app-intent-warning-hover);
+  --bp-surface-background-color-warning-active: var(--app-intent-warning-active);
+  --bp-surface-background-color-warning-disabled: var(--bp-intent-warning-disabled);
+  --bp-surface-background-color-danger-rest: var(--app-intent-danger-rest);
+  --bp-surface-background-color-danger-hover: var(--app-intent-danger-hover);
+  --bp-surface-background-color-danger-active: var(--app-intent-danger-active);
+  --bp-surface-background-color-danger-disabled: var(--bp-intent-danger-disabled);
+  --bp-surface-layer-color-primary: oklch(from var(--app-accent) l c h / var(--bp-surface-layer-opacity));
+  --bp-surface-layer-color-success: oklch(from var(--app-intent-success-rest) l c h / var(--bp-surface-layer-opacity));
+  --bp-surface-layer-color-warning: oklch(from var(--app-intent-warning-rest) l c h / var(--bp-surface-layer-opacity));
+  --bp-surface-layer-color-danger: oklch(from var(--app-intent-danger-rest) l c h / var(--bp-surface-layer-opacity));
+  --bp-surface-layer-primary: linear-gradient(
+    oklch(from var(--app-accent) l c h / var(--bp-surface-layer-opacity)) 0 0
+  );
+  --bp-surface-layer-success: linear-gradient(
+    oklch(from var(--app-intent-success-rest) l c h / var(--bp-surface-layer-opacity)) 0 0
+  );
+  --bp-surface-layer-warning: linear-gradient(
+    oklch(from var(--app-intent-warning-rest) l c h / var(--bp-surface-layer-opacity)) 0 0
+  );
+  --bp-surface-layer-danger: linear-gradient(
+    oklch(from var(--app-intent-danger-rest) l c h / var(--bp-surface-layer-opacity)) 0 0
+  );
   --bp-emphasis-focus-color: var(--app-accent);
   --bp-typography-color-primary-rest: var(--app-accent-text);
   --bp-typography-color-primary-hover: var(--app-accent-hover);
   --bp-typography-color-primary-active: var(--app-accent-active);
+  --bp-typography-color-primary-disabled: color-mix(in srgb, var(--app-accent-text) 48%, var(--app-text-muted));
+  --bp-typography-color-success-rest: var(--app-intent-success-text);
+  --bp-typography-color-success-hover: var(--app-intent-success-hover);
+  --bp-typography-color-success-active: var(--app-intent-success-active);
+  --bp-typography-color-success-disabled: color-mix(in srgb, var(--app-intent-success-text) 48%, var(--app-text-muted));
+  --bp-typography-color-warning-rest: var(--app-intent-warning-text);
+  --bp-typography-color-warning-hover: var(--app-intent-warning-hover);
+  --bp-typography-color-warning-active: var(--app-intent-warning-active);
+  --bp-typography-color-warning-disabled: color-mix(in srgb, var(--app-intent-warning-text) 48%, var(--app-text-muted));
+  --bp-typography-color-danger-rest: var(--app-intent-danger-text);
+  --bp-typography-color-danger-hover: var(--app-intent-danger-hover);
+  --bp-typography-color-danger-active: var(--app-intent-danger-active);
+  --bp-typography-color-danger-disabled: color-mix(in srgb, var(--app-intent-danger-text) 48%, var(--app-text-muted));
+  --bp-palette-blue-4: var(--app-accent-text);
+  --bp-palette-blue-5: var(--app-accent);
+  --bp-palette-blue-6: var(--app-accent-hover);
+  --bp-palette-green-4: var(--app-intent-success-text);
+  --bp-palette-green-5: var(--app-intent-success-rest);
+  --bp-palette-green-6: var(--app-intent-success-hover);
+  --bp-palette-orange-4: var(--app-intent-warning-text);
+  --bp-palette-orange-5: var(--app-intent-warning-rest);
+  --bp-palette-orange-6: var(--app-intent-warning-hover);
+  --bp-palette-red-4: var(--app-intent-danger-text);
+  --bp-palette-red-5: var(--app-intent-danger-rest);
+  --bp-palette-red-6: var(--app-intent-danger-hover);
+  --bp6-button-warning-rest: var(--app-intent-warning-rest);
 }
 [data-engine="docker"] {
+  --app-intent-default-rest: #556a90;
+  --app-intent-default-hover: #62769c;
+  --app-intent-default-active: #4c5f83;
+  --app-intent-default-fg: #ffffff;
+  --app-intent-default-text: var(--app-text);
   --bp-intent-default-rest: #556a90;
   --bp-intent-default-hover: #62769c;
   --bp-intent-default-active: #4c5f83;
 }
 [data-engine="podman"] {
+  --app-intent-default-rest: #6b5c88;
+  --app-intent-default-hover: #786a96;
+  --app-intent-default-active: #5e5179;
+  --app-intent-default-fg: #ffffff;
+  --app-intent-default-text: var(--app-text);
   --bp-intent-default-rest: #6b5c88;
   --bp-intent-default-hover: #786a96;
   --bp-intent-default-active: #5e5179;
 }
-[data-engine="unified"] {
+[data-engine="container"] {
+  --app-intent-default-rest: #4b5563;
+  --app-intent-default-hover: #586271;
+  --app-intent-default-active: #404853;
+  --app-intent-default-fg: #ffffff;
+  --app-intent-default-text: var(--app-text);
   --bp-intent-default-rest: #4b5563;
   --bp-intent-default-hover: #586271;
   --bp-intent-default-active: #404853;
+}
+[data-engine="unified"] {
+  --app-intent-default-rest: #4b5563;
+  --app-intent-default-hover: #586271;
+  --app-intent-default-active: #404853;
+  --app-intent-default-fg: #ffffff;
+  --app-intent-default-text: var(--app-text);
+  --bp-intent-default-rest: #4b5563;
+  --bp-intent-default-hover: #586271;
+  --bp-intent-default-active: #404853;
+}
+
+html[data-theme][data-engine],
+html[data-theme][data-engine] * {
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+html[data-theme][data-engine]::-webkit-scrollbar,
+html[data-theme][data-engine] *::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+html[data-theme][data-engine]::-webkit-scrollbar-track,
+html[data-theme][data-engine] *::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+}
+
+html[data-theme][data-engine]::-webkit-scrollbar-thumb,
+html[data-theme][data-engine] *::-webkit-scrollbar-thumb {
+  background-color: var(--app-scrollbar-thumb);
+  border: 3px solid var(--app-scrollbar-track);
+  border-radius: 999px;
+}
+
+html[data-theme][data-engine]::-webkit-scrollbar-thumb:hover,
+html[data-theme][data-engine] *::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-scrollbar-thumb-hover);
+}
+
+html[data-theme][data-engine]::-webkit-scrollbar-corner,
+html[data-theme][data-engine] *::-webkit-scrollbar-corner {
+  background: var(--app-scrollbar-track);
 }
 
 /* ── SHARED STRUCTURE — one rule per surface, engine/mode-agnostic, reads tokens.
@@ -224,6 +540,25 @@ body[data-engine] .AppDrawer {
 body[data-engine] .bp6-popover-content .bp6-menu {
   background-color: var(--app-surface);
 }
+body[data-engine] .bp6-popover,
+body[data-engine] .bp6-tooltip,
+body[data-engine] .bp6-submenu.bp6-popover {
+  box-shadow: 0 0 0 1px var(--app-border) !important;
+  filter: none !important;
+}
+body[data-engine] .bp6-popover .bp6-popover-arrow::before,
+body[data-engine] .bp6-tooltip .bp6-popover-arrow::before {
+  box-shadow: none !important;
+}
+body[data-engine] .bp6-popover .bp6-popover-arrow-border,
+body[data-engine] .bp6-tooltip .bp6-popover-arrow-border {
+  fill: var(--app-border);
+  fill-opacity: 1;
+}
+body[data-engine] .bp6-overlay-backdrop.bp6-popover-backdrop {
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
 body[data-engine] .bp6-popover-arrow-fill {
   fill: var(--app-surface);
 }
@@ -255,6 +590,740 @@ body[data-engine] [data-actions-menu="container"] .ItemActionsOverlayMenuActions
 body[data-engine] .NotificationCenterSwitch .bp6-button.bp6-active,
 body[data-engine] .NotificationCenterSwitch .bp6-button.bp6-active:hover {
   background-color: var(--app-accent);
+  color: var(--app-accent-fg);
+}
+
+/* Blueprint intent hardcoded paths — keep these centralized. Buttons/tags mostly read
+   Blueprint's tokens, bridged above; icons, callouts, controls, toasts, tooltips and
+   several meters/rings are compiled with literal palette colors, so they need one
+   semantic override layer that still uses the normal Blueprint intent classes. */
+body[data-engine] .bp6-intent-primary {
+  --app-current-intent-rest: var(--app-accent);
+  --app-current-intent-hover: var(--app-accent-hover);
+  --app-current-intent-active: var(--app-accent-active);
+  --app-current-intent-fg: var(--app-accent-fg);
+  --app-current-intent-text: var(--app-accent-text);
+}
+body[data-engine] .bp6-intent-success {
+  --app-current-intent-rest: var(--app-intent-success-rest);
+  --app-current-intent-hover: var(--app-intent-success-hover);
+  --app-current-intent-active: var(--app-intent-success-active);
+  --app-current-intent-fg: var(--app-intent-success-fg);
+  --app-current-intent-text: var(--app-intent-success-text);
+}
+body[data-engine] .bp6-intent-warning {
+  --app-current-intent-rest: var(--app-intent-warning-rest);
+  --app-current-intent-hover: var(--app-intent-warning-hover);
+  --app-current-intent-active: var(--app-intent-warning-active);
+  --app-current-intent-fg: var(--app-intent-warning-fg);
+  --app-current-intent-text: var(--app-intent-warning-text);
+}
+body[data-engine] .bp6-intent-danger {
+  --app-current-intent-rest: var(--app-intent-danger-rest);
+  --app-current-intent-hover: var(--app-intent-danger-hover);
+  --app-current-intent-active: var(--app-intent-danger-active);
+  --app-current-intent-fg: var(--app-intent-danger-fg);
+  --app-current-intent-text: var(--app-intent-danger-text);
+}
+body[data-engine] :is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  --app-current-intent-soft: color-mix(in srgb, var(--app-current-intent-rest) 12%, transparent);
+  --app-current-intent-soft-dark: color-mix(in srgb, var(--app-current-intent-rest) 22%, transparent);
+}
+
+body[data-engine]
+  :is(.bp6-icon, .bp6-icon-standard, .bp6-icon-large):is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ),
+body[data-engine]
+  :is(.bp6-tree, .bp6-tooltip)
+  :is(.bp6-icon, .bp6-icon-standard, .bp6-icon-large):is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ) {
+  color: var(--app-current-intent-text);
+}
+
+body[data-engine]
+  :is(.bp6-callout, .bp6-toast, .bp6-tooltip, .bp6-progress-bar, .bp6-slider-progress, .bp6-spinner):is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ) {
+  --app-current-intent-soft: color-mix(in srgb, var(--app-current-intent-rest) 12%, transparent);
+  --app-current-intent-soft-dark: color-mix(in srgb, var(--app-current-intent-rest) 22%, transparent);
+}
+
+body[data-engine] .bp6-callout:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  color: var(--app-current-intent-text);
+}
+body[data-engine]
+  .bp6-callout:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):not(.bp6-minimal) {
+  background-color: var(--app-current-intent-soft);
+}
+body.bp6-dark[data-engine]
+  .bp6-callout:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):not(.bp6-minimal) {
+  background-color: var(--app-current-intent-soft-dark);
+}
+body[data-engine]
+  .bp6-callout:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  )[class*="bp6-icon-"]::before,
+body[data-engine]
+  .bp6-callout:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  > .bp6-icon:first-child,
+body[data-engine]
+  .bp6-callout:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-heading {
+  color: var(--app-current-intent-text);
+}
+body[data-engine] .bp6-callout.bp6-intent-primary a:hover {
+  color: var(--app-current-intent-active);
+}
+
+body[data-engine] .bp6-menu-item.bp6-active {
+  background-color: color-mix(in srgb, var(--app-accent) 12%, transparent);
+  color: var(--app-accent-text);
+}
+body.bp6-dark[data-engine] .bp6-menu-item.bp6-active {
+  background-color: color-mix(in srgb, var(--app-accent) 22%, transparent);
+}
+body[data-engine] .bp6-menu-item.bp6-active::before,
+body[data-engine] .bp6-menu-item.bp6-active .bp6-menu-item-icon,
+body[data-engine] .bp6-menu-item.bp6-active .bp6-menu-item-selected-icon,
+body[data-engine] .bp6-menu-item.bp6-active .bp6-submenu-icon {
+  color: var(--app-accent-text);
+}
+
+body[data-engine] .bp6-link:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger),
+body[data-engine] .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger),
+body[data-engine]
+  .bp6-menu-item.bp6-active:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  color: var(--app-current-intent-text);
+}
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):hover,
+body[data-engine]
+  .bp6-menu-item.bp6-active:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger),
+body[data-engine]
+  .bp6-submenu
+  .bp6-popover-target.bp6-popover-open
+  > .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  background-color: var(--app-current-intent-soft);
+  color: var(--app-current-intent-text);
+}
+body.bp6-dark[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):hover,
+body.bp6-dark[data-engine]
+  .bp6-menu-item.bp6-active:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger),
+body.bp6-dark[data-engine]
+  .bp6-submenu
+  .bp6-popover-target.bp6-popover-open
+  > .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  background-color: var(--app-current-intent-soft-dark);
+}
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):active,
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger).bp6-active {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest) 20%, transparent);
+  color: var(--app-current-intent-active);
+}
+body.bp6-dark[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):active,
+body.bp6-dark[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger).bp6-active {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest) 30%, transparent);
+  color: var(--app-current-intent-text);
+}
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)::before,
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-menu-item-icon,
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-menu-item-selected-icon,
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-submenu-icon,
+body[data-engine]
+  .bp6-menu-item:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-menu-item-label {
+  color: inherit;
+}
+
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined) {
+  background-color: var(--app-intent-default-rest);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 70%, transparent);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined):hover {
+  background-color: var(--app-intent-default-hover);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 85%, transparent);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined):active,
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined).bp6-active {
+  background-color: var(--app-intent-default-active);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 100%, transparent);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined):disabled,
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined).bp6-disabled {
+  background-color: color-mix(in srgb, var(--app-intent-default-rest) 42%, transparent);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--app-intent-default-fg) 56%, transparent);
+}
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]) .bp6-icon,
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]) > svg {
+  color: currentColor;
+}
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]) .bp6-icon svg,
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]) > svg,
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]) svg path {
+  fill: currentColor;
+}
+
+/* ButtonGroup carries `variant="minimal|outlined"` on the group, not on each child.
+   Mirror Blueprint's variant state model here so our filled Intent.NONE override above
+   cannot leak into icon-only group actions. Element-level `.bp6-button.bp6-minimal`
+   and `.bp6-button.bp6-outlined` are left to Blueprint's own selectors and bridged tokens. */
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]),
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]) {
+  background: none;
+  box-shadow: none;
+  color: var(--app-intent-default-text);
+}
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):hover,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):hover {
+  background-color: color-mix(in srgb, var(--bp-intent-default-hover) 8%, transparent);
+  box-shadow: none;
+  color: var(--bp-typography-color-default-rest);
+  text-decoration: none;
+}
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):active,
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]).bp6-active,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):active,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-active {
+  background-color: color-mix(in srgb, var(--bp-intent-default-active) 16%, transparent);
+  box-shadow: none;
+  color: var(--bp-typography-color-default-rest);
+}
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):disabled,
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):disabled:hover,
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]).bp6-disabled,
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]).bp6-disabled:hover,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):disabled,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):disabled:hover,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-disabled,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-disabled:hover {
+  background: none;
+  box-shadow: none;
+  color: var(--bp-typography-color-default-disabled);
+  cursor: not-allowed;
+}
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):disabled.bp6-active,
+body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]).bp6-disabled.bp6-active,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):disabled.bp6-active,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-disabled.bp6-active {
+  background-color: color-mix(in srgb, var(--bp-intent-default-disabled) 30%, transparent);
+}
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]),
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]) {
+  background: none;
+  box-shadow: none;
+  color: var(--app-intent-default-text);
+}
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):hover,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):hover {
+  background-color: color-mix(in srgb, var(--bp-intent-default-rest) 24%, transparent);
+  box-shadow: none;
+  color: var(--app-text);
+}
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):active,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]).bp6-active,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):active,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-active {
+  background-color: color-mix(in srgb, var(--bp-intent-default-rest) 49%, transparent);
+  color: var(--app-text);
+}
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):disabled,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]):disabled:hover,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]).bp6-disabled,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]).bp6-disabled:hover,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):disabled,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):disabled:hover,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-disabled,
+body.bp6-dark[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-disabled:hover {
+  background: none;
+  color: var(--bp-typography-color-default-disabled);
+}
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]) {
+  border-color: color-mix(in srgb, var(--app-intent-default-rest) 60%, var(--app-border));
+}
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]):disabled,
+body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]).bp6-disabled {
+  border-color: var(--bp-surface-border-color-default);
+}
+
+body[data-engine] :is(.bp6-tag, .bp6-compound-tag):not([class*="bp6-intent-"]) {
+  --app-current-intent-rest: var(--app-intent-default-rest);
+  --app-current-intent-hover: var(--app-intent-default-hover);
+  --app-current-intent-active: var(--app-intent-default-active);
+  --app-current-intent-fg: var(--app-intent-default-fg);
+  --app-current-intent-text: var(--app-intent-default-text);
+}
+body[data-engine] .bp6-tag {
+  outline-color: color-mix(in srgb, var(--app-accent) 75%, transparent);
+}
+body[data-engine] .bp6-tag:not([class*="bp6-intent-"]) {
+  background: var(--app-intent-default-rest);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-tag:not([class*="bp6-intent-"]).bp6-interactive:hover {
+  background: var(--app-intent-default-hover);
+}
+body[data-engine] .bp6-tag:not([class*="bp6-intent-"]).bp6-interactive:active,
+body[data-engine] .bp6-tag:not([class*="bp6-intent-"]).bp6-interactive.bp6-active {
+  background: var(--app-intent-default-active);
+}
+body[data-engine] .bp6-tag:not([class*="bp6-intent-"]) > .bp6-icon,
+body[data-engine] .bp6-tag:not([class*="bp6-intent-"]) .bp6-icon-standard,
+body[data-engine] .bp6-tag:not([class*="bp6-intent-"]) .bp6-icon-large {
+  fill: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-tag.bp6-minimal:not([class*="bp6-intent-"]) {
+  background-color: color-mix(in srgb, var(--app-intent-default-rest) 16%, transparent);
+  color: var(--app-intent-default-text);
+}
+body[data-engine] .bp6-tag.bp6-minimal:not([class*="bp6-intent-"]).bp6-interactive:hover {
+  background-color: color-mix(in srgb, var(--app-intent-default-rest) 24%, transparent);
+  color: var(--app-text);
+}
+body[data-engine] .bp6-tag.bp6-minimal:not([class*="bp6-intent-"]).bp6-interactive:active,
+body[data-engine] .bp6-tag.bp6-minimal:not([class*="bp6-intent-"]).bp6-interactive.bp6-active {
+  background-color: color-mix(in srgb, var(--app-intent-default-rest) 32%, transparent);
+  color: var(--app-text);
+}
+body[data-engine] .bp6-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  background: var(--app-current-intent-rest);
+  color: var(--app-current-intent-fg);
+}
+body[data-engine]
+  .bp6-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger).bp6-interactive:hover {
+  background-color: var(--app-current-intent-hover);
+}
+body[data-engine]
+  .bp6-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger).bp6-interactive:active,
+body[data-engine]
+  .bp6-tag:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ).bp6-interactive.bp6-active {
+  background-color: var(--app-current-intent-active);
+}
+body[data-engine]
+  .bp6-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-tag-remove {
+  color: color-mix(in srgb, var(--app-current-intent-fg) 72%, transparent);
+}
+body[data-engine]
+  .bp6-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-tag-remove:hover,
+body[data-engine]
+  .bp6-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-tag-remove:active {
+  color: var(--app-current-intent-fg);
+}
+body[data-engine]
+  .bp6-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest) 12%, transparent);
+  color: var(--app-current-intent-text);
+}
+body.bp6-dark[data-engine]
+  .bp6-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest) 22%, transparent);
+}
+body[data-engine]
+  .bp6-tag.bp6-minimal:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ).bp6-interactive:hover {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest) 24%, transparent);
+  color: var(--app-current-intent-active);
+}
+body.bp6-dark[data-engine]
+  .bp6-tag.bp6-minimal:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ).bp6-interactive:hover {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest) 30%, transparent);
+  color: var(--app-current-intent-text);
+}
+body[data-engine]
+  .bp6-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  > .bp6-icon,
+body[data-engine]
+  .bp6-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-icon-standard,
+body[data-engine]
+  .bp6-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-icon-large,
+body[data-engine]
+  .bp6-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-tag-remove {
+  color: var(--app-current-intent-text);
+  fill: var(--app-current-intent-text);
+}
+
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]) .bp6-compound-tag-left {
+  background-color: color-mix(in srgb, var(--app-intent-default-rest) 78%, var(--app-surface));
+}
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]) .bp6-compound-tag-right {
+  background-color: var(--app-intent-default-rest);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]).bp6-interactive:hover .bp6-compound-tag-left {
+  background-color: color-mix(in srgb, var(--app-intent-default-hover) 78%, var(--app-surface));
+}
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]).bp6-interactive:hover .bp6-compound-tag-right {
+  background-color: var(--app-intent-default-hover);
+}
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]).bp6-interactive:active .bp6-compound-tag-left,
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]).bp6-interactive.bp6-active .bp6-compound-tag-left {
+  background-color: color-mix(in srgb, var(--app-intent-default-active) 78%, var(--app-surface));
+}
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]).bp6-interactive:active .bp6-compound-tag-right,
+body[data-engine] .bp6-compound-tag:not([class*="bp6-intent-"]).bp6-interactive.bp6-active .bp6-compound-tag-right {
+  background-color: var(--app-intent-default-active);
+}
+body[data-engine]
+  .bp6-compound-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-compound-tag-left {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest) 78%, var(--app-surface));
+}
+body[data-engine]
+  .bp6-compound-tag:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-compound-tag-right {
+  background-color: var(--app-current-intent-rest);
+  color: var(--app-current-intent-fg);
+}
+body[data-engine]
+  .bp6-compound-tag:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ).bp6-interactive:hover
+  .bp6-compound-tag-left {
+  background-color: color-mix(in srgb, var(--app-current-intent-hover) 78%, var(--app-surface));
+}
+body[data-engine]
+  .bp6-compound-tag:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ).bp6-interactive:hover
+  .bp6-compound-tag-right {
+  background-color: var(--app-current-intent-hover);
+}
+body[data-engine]
+  .bp6-compound-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-compound-tag-left,
+body[data-engine] .bp6-compound-tag.bp6-minimal:not([class*="bp6-intent-"]) .bp6-compound-tag-left {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest, var(--app-intent-default-rest)) 24%, transparent);
+}
+body[data-engine]
+  .bp6-compound-tag.bp6-minimal:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-compound-tag-right,
+body[data-engine] .bp6-compound-tag.bp6-minimal:not([class*="bp6-intent-"]) .bp6-compound-tag-right {
+  background-color: color-mix(in srgb, var(--app-current-intent-rest, var(--app-intent-default-rest)) 12%, transparent);
+  color: var(--app-current-intent-text, var(--app-intent-default-text));
+}
+
+body[data-engine] .bp6-tooltip:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  color: var(--app-current-intent-fg);
+}
+body[data-engine]
+  .bp6-tooltip:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-popover-content {
+  background-color: var(--app-current-intent-rest);
+  color: var(--app-current-intent-fg);
+}
+body[data-engine]
+  .bp6-tooltip:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-popover-arrow-fill {
+  fill: var(--app-current-intent-rest);
+}
+
+body[data-engine]
+  .bp6-progress-bar:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-progress-meter,
+body[data-engine]
+  .bp6-slider-progress:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  background-color: var(--app-current-intent-rest);
+}
+body[data-engine]
+  .bp6-spinner:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-spinner-head {
+  stroke: var(--app-current-intent-rest);
+}
+
+body[data-engine] .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  background-color: var(--app-current-intent-rest);
+  color: var(--app-current-intent-fg);
+}
+body[data-engine] .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) a,
+body[data-engine]
+  .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  > .bp6-icon,
+body[data-engine]
+  .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-icon:first-child,
+body[data-engine]
+  .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-button:last-child
+  > .bp6-icon-cross {
+  color: color-mix(in srgb, var(--app-current-intent-fg) 74%, transparent) !important;
+}
+body[data-engine]
+  .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  a:hover {
+  color: var(--app-current-intent-fg);
+}
+body[data-engine]
+  .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-button {
+  background-color: var(--app-current-intent-rest) !important;
+  color: var(--app-current-intent-fg) !important;
+}
+body[data-engine]
+  .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-button:hover {
+  background-color: var(--app-current-intent-hover) !important;
+  color: var(--app-current-intent-fg) !important;
+}
+body[data-engine]
+  .bp6-toast:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-button:active {
+  background-color: var(--app-current-intent-active) !important;
+  color: var(--app-current-intent-fg) !important;
+}
+
+body[data-engine] .bp6-input:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger),
+body[data-engine]
+  .bp6-input-group:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-input {
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--app-current-intent-rest) 0%, transparent),
+    0 0 0 0 color-mix(in srgb, var(--app-current-intent-rest) 0%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 82%, transparent),
+    inset 0 0 0 1px rgba(17, 20, 24, 0.2),
+    inset 0 1px 1px rgba(17, 20, 24, 0.3);
+}
+body.bp6-dark[data-engine]
+  .bp6-input:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger),
+body.bp6-dark[data-engine]
+  .bp6-input-group:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-input {
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--app-current-intent-rest) 0%, transparent),
+    0 0 0 0 color-mix(in srgb, var(--app-current-intent-rest) 0%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 82%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+body[data-engine]
+  .bp6-input:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):focus,
+body[data-engine]
+  .bp6-input:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger).bp6-active,
+body[data-engine]
+  .bp6-input-group:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-input:focus {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    inset 0 1px 1px rgba(17, 20, 24, 0.2);
+}
+body.bp6-dark[data-engine]
+  .bp6-input:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger):focus,
+body.bp6-dark[data-engine]
+  .bp6-input:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger).bp6-active,
+body.bp6-dark[data-engine]
+  .bp6-input-group:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-input:focus {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+body[data-engine]
+  .bp6-input:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)[readonly],
+body[data-engine]
+  .bp6-input-group:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-input[readonly] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 82%, transparent);
+}
+body[data-engine]
+  .bp6-input-group:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  > .bp6-icon {
+  color: var(--app-current-intent-text);
+}
+
+body[data-engine]
+  .bp6-editable-text:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-editable-text-content,
+body[data-engine]
+  .bp6-editable-text:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-editable-text-input,
+body[data-engine]
+  .bp6-editable-text:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger)
+  .bp6-editable-text-input::placeholder {
+  color: var(--app-current-intent-text);
+}
+body[data-engine]
+  .bp6-editable-text:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ):hover::before {
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--app-current-intent-rest) 0%, transparent),
+    0 0 0 0 color-mix(in srgb, var(--app-current-intent-rest) 0%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 40%, transparent);
+}
+body[data-engine]
+  .bp6-editable-text:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ).bp6-editable-text-editing::before {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    inset 0 1px 1px rgba(17, 20, 24, 0.2);
+}
+body.bp6-dark[data-engine]
+  .bp6-editable-text:is(
+    .bp6-intent-primary,
+    .bp6-intent-success,
+    .bp6-intent-warning,
+    .bp6-intent-danger
+  ).bp6-editable-text-editing::before {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+body[data-engine] .bp6-tag-input.bp6-active {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent),
+    inset 0 1px 1px rgba(17, 20, 24, 0.2);
+}
+body.bp6-dark[data-engine] .bp6-tag-input.bp6-active {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 75%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+body[data-engine]
+  .bp6-tag-input.bp6-active:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    inset 0 1px 1px rgba(17, 20, 24, 0.2);
+}
+body.bp6-dark[data-engine]
+  .bp6-tag-input.bp6-active:is(.bp6-intent-primary, .bp6-intent-success, .bp6-intent-warning, .bp6-intent-danger) {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-current-intent-rest) 75%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+body[data-engine] .bp6-control input:focus ~ .bp6-control-indicator {
+  outline-color: color-mix(in srgb, var(--app-accent) 75%, transparent);
+}
+body[data-engine] .bp6-control input:checked ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-checkbox input:indeterminate ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-switch input:checked ~ .bp6-control-indicator {
+  background: var(--app-accent);
+  background-color: var(--app-accent);
+  color: var(--app-accent-fg);
+}
+body[data-engine] .bp6-control:hover input:checked ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-checkbox:hover input:indeterminate ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-switch:hover input:checked ~ .bp6-control-indicator {
+  background: var(--app-accent-hover);
+  background-color: var(--app-accent-hover);
+}
+body[data-engine] .bp6-control input:not(:disabled):active:checked ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-checkbox input:not(:disabled):active:indeterminate ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-switch input:checked:not(:disabled):active ~ .bp6-control-indicator {
+  background: var(--app-accent-active);
+  background-color: var(--app-accent-active);
+}
+body[data-engine] .bp6-control input:disabled:checked ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-checkbox input:disabled:indeterminate ~ .bp6-control-indicator,
+body[data-engine] .bp6-control.bp6-switch input:checked:disabled ~ .bp6-control-indicator {
+  background: color-mix(in srgb, var(--app-accent) 50%, transparent);
+  background-color: color-mix(in srgb, var(--app-accent) 50%, transparent);
+  color: color-mix(in srgb, var(--app-accent-fg) 60%, transparent);
+}
+
+body[data-engine] .bp6-active.bp6-dialog-step-viewed .bp6-dialog-step-icon {
+  background-color: var(--app-accent);
+  color: var(--app-accent-fg);
+}
+body[data-engine] .bp6-active.bp6-dialog-step-viewed .bp6-dialog-step-title {
+  color: var(--app-accent-text);
+}
+
+body[data-engine] .bp6-tab[aria-selected="true"] {
+  box-shadow: inset 0 -3px 0 var(--app-accent-text);
+}
+body[data-engine] .bp6-tab[aria-selected="true"],
+body[data-engine] .bp6-tab:not([aria-disabled="true"]):hover {
+  color: var(--app-accent-text);
+}
+body[data-engine] .bp6-tabs.bp6-vertical > .bp6-tab-list .bp6-tab[aria-selected="true"],
+body[data-engine] .bp6-tabs.bp6-vertical > .bp6-tab-list .bp6-tab-indicator-wrapper .bp6-tab-indicator {
+  background-color: color-mix(in srgb, var(--app-accent) 20%, transparent);
+}
+body[data-engine] .bp6-tab-indicator-wrapper .bp6-tab-indicator {
+  background-color: var(--app-accent-text);
+}
+body[data-engine] .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content {
+  background-color: var(--app-accent);
+}
+body[data-engine] .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content,
+body[data-engine] .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content .bp6-icon,
+body[data-engine] .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content .bp6-icon-standard,
+body[data-engine] .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content .bp6-icon-large {
   color: var(--app-accent-fg);
 }
 

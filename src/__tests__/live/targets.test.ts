@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
-import { isConfigured, parseTestTargets, selectTargets } from "./targets";
+import type { RemoteEnvConnection } from "@/container-client/remote-env";
+import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { isConfigured, parseTestTargets, remoteEnvToTargets, selectTargets } from "./targets";
 
 const ENV: Record<string, string> = {
   CDT_TARGET_LINUXVM_ENABLED: "true",
@@ -60,6 +61,36 @@ describe("selectTargets", () => {
 
   it("returns an explicitly selected target by id even if disabled (case-insensitive)", () => {
     expect(selectTargets(parseTestTargets(ENV), "WINVM").map((t) => t.id)).toEqual(["winvm"]);
+  });
+});
+
+describe("remoteEnvToTargets", () => {
+  it("maps env remote connections to enabled SSH targets for the current OS", () => {
+    const parsed: RemoteEnvConnection[] = [
+      {
+        id: "mac",
+        engines: [ContainerEngine.PODMAN, ContainerEngine.DOCKER],
+        sshHost: "my-mac",
+        sshPort: 2222,
+        sshUser: "ion",
+        sshKey: "~/.ssh/id_ed25519",
+        sockets: {},
+        autoStart: true,
+      },
+    ];
+    expect(remoteEnvToTargets(parsed, OperatingSystem.Linux)).toEqual([
+      {
+        id: "mac",
+        enabled: true,
+        os: OperatingSystem.Linux,
+        hosts: [ContainerEngineHost.PODMAN_REMOTE, ContainerEngineHost.DOCKER_REMOTE],
+        ssh: { host: "my-mac", port: 2222, user: "ion", keyPath: "~/.ssh/id_ed25519" },
+      },
+    ]);
+  });
+
+  it("returns [] when there are no entries", () => {
+    expect(remoteEnvToTargets([], OperatingSystem.Linux)).toEqual([]);
   });
 });
 

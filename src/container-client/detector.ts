@@ -66,7 +66,7 @@ export const findProgramPath = async (
     }
     // Use registry based search for programs that are not in PATH
     if (!programPath) {
-      logger.warn(`Unable to detect ${lookupProgram} cli program path with powershell - using registry`);
+      logger.debug(`Unable to detect ${lookupProgram} cli program path with powershell - using registry`);
       if (lookupProgram.startsWith("docker")) {
         programPath = await findWindowsProgramByRegistryKey(
           lookupProgram,
@@ -84,7 +84,7 @@ export const findProgramPath = async (
       if (result.success) {
         programPath = result.stdout || "";
       } else {
-        logger.warn(`Unable to detect ${lookupProgram} cli program path - using which`, result);
+        logger.debug(`Unable to detect ${lookupProgram} cli program path - using which`, result);
       }
     }
     if (!programPath) {
@@ -94,12 +94,12 @@ export const findProgramPath = async (
       if (result.success && output) {
         programPath = output.split(" ")?.[1] || "";
       } else {
-        logger.warn(`Unable to detect ${lookupProgram} cli program path - using whereis`, result);
+        logger.debug(`Unable to detect ${lookupProgram} cli program path - using whereis`, result);
       }
     }
   }
   if (!programPath) {
-    logger.error(`Unable to detect ${lookupProgram} cli program path with any strategy`);
+    logger.debug(`Unable to detect ${lookupProgram} cli program path with any strategy`);
   }
   if (typeof programPath === "undefined") {
     return undefined;

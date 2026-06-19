@@ -30,6 +30,7 @@ export interface NotificationEntry extends ActivityEntryBase {
   kind: "notification";
   message: string;
   intent: string; // Blueprint Intent ("success" | "primary" | "warning" | "danger" | "none")
+  detail?: string; // raw multi-line failure detail (what it tried / what happened / SSH preflight) — expandable
 }
 
 export interface ApiEntry extends ActivityEntryBase {

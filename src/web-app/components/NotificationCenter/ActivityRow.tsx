@@ -44,6 +44,9 @@ function isExpandable(entry: ActivityEntry): boolean {
   if (entry.kind === "api" || entry.kind === "cli") {
     return true;
   }
+  if (entry.kind === "notification") {
+    return !!entry.detail;
+  }
   return entry.kind === "system" && entry.data != null;
 }
 
@@ -208,6 +211,9 @@ export function ActivityRow({ entry, count = 1 }: { entry: ActivityEntry; count?
                   action={copyAction("cmd", entry.commandLine)}
                 />
               )
+            ) : null}
+            {entry.kind === "notification" && entry.detail ? (
+              <DetailBlock label={t("Details")} value={entry.detail} action={copyAction("detail", entry.detail)} />
             ) : null}
             {entry.kind === "system" ? <DetailBlock label={entry.eventType} value={safeJson(entry.data)} /> : null}
           </div>

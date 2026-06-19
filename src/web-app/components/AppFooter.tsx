@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import i18n from "@/web-app/App.i18n";
 import { AppTheme } from "@/web-app/App.types";
 import { ConnectionsMenu } from "@/web-app/components/ConnectionsMenu";
+import { buildEngineInventory, EngineVersionsMenu } from "@/web-app/components/EngineVersionsMenu";
 import { NotificationBell } from "@/web-app/components/NotificationCenter/NotificationBell";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
@@ -11,11 +12,6 @@ import "./AppFooter.css";
 
 interface AppFooterProps {
   variant?: "workspace" | "bootstrap";
-}
-
-function visibleVersion(version?: string): string | undefined {
-  const value = version?.trim();
-  return value && value !== "current" ? value : undefined;
 }
 
 function normalizeFooterTheme(theme?: string): AppTheme {
@@ -37,35 +33,7 @@ export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
   const connected = activeRuntime.filter((info) => info.running);
   const connectedCount = connected.length;
   const isConnected = connectedCount > 0;
-  const engines = connected.map((info) => {
-    const connection = connections.find((item) => item.id === info.id);
-    const connector = connectors.find((item) => item.id === info.id || item.connectionId === info.id);
-    const usesControllerVersion =
-      info.capabilities?.extensions?.controllerVersion ??
-      connector?.capabilities?.extensions?.controllerVersion ??
-      false;
-    const candidates = usesControllerVersion
-      ? [
-          info.version,
-          connector?.settings?.controller?.version,
-          connection?.settings?.controller?.version,
-          connector?.settings?.program?.version,
-          connection?.settings?.program?.version,
-        ]
-      : [
-          info.version,
-          connector?.settings?.program?.version,
-          connection?.settings?.program?.version,
-          connector?.settings?.controller?.version,
-          connection?.settings?.controller?.version,
-        ];
-    const version = candidates.map(visibleVersion).find(Boolean);
-    return {
-      id: info.id,
-      name: info.name,
-      label: version ? `${info.engine} ${version}` : info.engine,
-    };
-  });
+  const engineInventory = buildEngineInventory(connections, connectors, activeRuntime);
   const showConnectionStatus = variant === "workspace";
   return (
     <div className="AppFooter" data-variant={variant}>
@@ -100,18 +68,11 @@ export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
                 </Button>
               </ConnectionsMenu>
             </NavbarHeading>
-            {!isConnected ? null : (
+            {engineInventory.engineCount === 0 ? null : (
               <>
                 <NavbarDivider />
                 <NavbarHeading className="AppFooterEngineVersions">
-                  <div className="AppFooterCurrentProgram" title={t("Container host engines")}>
-                    {engines.map((engine, index) => (
-                      <span key={engine.id} className="AppFooterEngineVersion" title={engine.name}>
-                        {index > 0 ? <span className="AppFooterEngineVersionSep"> · </span> : null}
-                        {engine.label}
-                      </span>
-                    ))}
-                  </div>
+                  <EngineVersionsMenu inventory={engineInventory} />
                 </NavbarHeading>
               </>
             )}

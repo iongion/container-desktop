@@ -9,6 +9,7 @@ declare global {
     HostName: string;
     User: string;
     IdentityFile: string;
+    ConfigHost?: string;
   }
 
   export interface ICommand {
@@ -33,6 +34,7 @@ declare global {
     isFlatpak(): Promise<boolean>;
     getUserDataPath(): Promise<string>;
     getOsType(): Promise<OperatingSystem>;
+    getOsArch(): Promise<string>;
     getSSHConfig(): Promise<SSHHost[]>;
     launchTerminal(
       commandLauncher:
@@ -94,6 +96,7 @@ declare global {
   var Path: IPath;
   var FS: IFileSystem;
   var CURRENT_OS_TYPE: OperatingSystem;
+  var CURRENT_DARWIN_MAJOR: number | undefined;
   var MessageBus: IMessageBus;
   var ActivityBus: IActivityBus;
   var TrayBus: ITrayBus;
@@ -106,6 +109,7 @@ declare global {
     Path: IPath;
     FS: IFileSystem;
     CURRENT_OS_TYPE: any;
+    CURRENT_DARWIN_MAJOR: number | undefined;
     MessageBus: IMessageBus;
     ActivityBus: IActivityBus;
     TrayBus: ITrayBus;

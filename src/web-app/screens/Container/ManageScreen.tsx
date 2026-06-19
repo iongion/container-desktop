@@ -1,20 +1,11 @@
-import {
-  AnchorButton,
-  Button,
-  ButtonGroup,
-  Code,
-  Divider,
-  HTMLTable,
-  Icon,
-  Intent,
-  NonIdealState,
-} from "@blueprintjs/core";
+import { Button, ButtonGroup, Code, Divider, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type Container, ContainerStateList } from "@/env/Types";
+import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -28,10 +19,12 @@ import {
   useMergedResources,
   useResourceReload,
   useShowEngineColumn,
+  useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
-import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import type { AppScreen, AppScreenProps, ContainerGroup } from "@/web-app/Types";
 import { ActionsMenu } from ".";
 import { useContainerBulkActions } from "./bulkActions";
 import { groupContainers } from "./grouping";
@@ -43,6 +36,10 @@ export const ID = "containers";
 
 // Always-merged: rows from every connected engine, each carrying its engine/connection.
 type MergedContainer = MergedResource<Container>;
+
+function renderedRowCount(group: Pick<ContainerGroup, "Items">): number {
+  return group.Items.length + (group.Items.length > 1 ? 1 : 0);
+}
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const [containerOverlay, setContainerOverlay] = useState<string | undefined>();
@@ -57,6 +54,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     currentConnector?.capabilities?.sort,
   );
   const showEngineColumn = useShowEngineColumn();
+  const showEngineRowAccent = useShowEngineRowAccent();
   const merged = useMergedResources("containers");
   // Group WITHIN each connection so identically-named groups on different engines never merge.
   const groups = useMemo(() => {
@@ -71,6 +69,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     }
     return [...byConnection.values()].flatMap((list) => groupContainers(list, searchTerm, clientSort));
   }, [merged, searchTerm, clientSort]);
+  const renderedGroups = useProgressiveTableRows(groups, renderedRowCount);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((container: MergedContainer) => mergedKey(container, container.Id), []);
   const visibleItems = useMemo(() => groups.flatMap((group) => group.Items) as MergedContainer[], [groups]);
@@ -78,12 +77,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useContainerBulkActions();
   const onReload = useResourceReload("containers");
+  const actionsTitle = t("Actions");
   const onGroupToggleClick = useCallback((e) => {
     const groupName = e.currentTarget.getAttribute("data-prefix-group");
     setCollapse((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
   }, []);
   const onContainerFocus = useCallback((e) => {
-    const container = e.currentTarget.getAttribute("data-container");
+    const container = e.currentTarget.getAttribute("data-container-key");
     setContainerOverlay(container || undefined);
   }, []);
   const onContainerBlur = useCallback((e) => {
@@ -97,15 +97,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onGroupMouseOver = useCallback((e) => {
     setContainerOverlay(undefined);
   }, []);
-  const onContainerRequestOverlay = useCallback(
-    (e) => {
-      const container = e.currentTarget.getAttribute("data-container");
-      if (containerOverlay !== container) {
-        setContainerOverlay(container);
-      }
-    },
-    [containerOverlay],
-  );
+  const onContainerRequestOverlay = useCallback((e) => {
+    const container = e.currentTarget.getAttribute("data-container-key") || undefined;
+    setContainerOverlay((current) => (current === container ? current : container));
+  }, []);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -185,7 +180,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {groups.map((group) => {
+              {renderedGroups.map((group) => {
                 const containers = group.Items as MergedContainer[];
                 const isPartOfGroup = group.Items.length > 1;
                 const groupIds = containers.map(getRowId);
@@ -198,6 +193,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 return (
                   <React.Fragment key={`${connId}:${group.Name || group.Id}`}>
                     {containers.map((container, index) => {
+                      const rowId = getRowId(container);
                       const renderKey = `containerRowKey-${connId}-${group.Name || group.Id}-${container.Id}`;
                       const groupName = container.Computed.Group;
                       const isCollapsed = groupName && !!collapse[groupName];
@@ -207,6 +203,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <tr
                             key={containerGroupItemKey}
                             className="AppDataTableGroupRow"
+                            data-engine-row={showEngineRowAccent ? containers[0].engine : undefined}
                             onFocus={onContainerFocus}
                             onMouseOver={onGroupMouseOver}
                           >
@@ -275,32 +272,29 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         const nameText =
                           (isPartOfGroup ? container.Computed.NameInGroup : container.Computed.Name) || t("- n/a -");
                         const containerLogsButton = (
-                          <AnchorButton
+                          <AppDataTableLink
                             key={`${renderKey}-logs`}
                             className="ContainerLogsButton"
-                            variant="minimal"
-                            size="small"
+                            fillCell
                             href={pathTo(`/screens/container/${encodeURIComponent(container.Id)}/logs`, undefined, {
                               connId: container.connectionId,
                             })}
                             text={nameText.startsWith("/") ? nameText.slice(1) : nameText}
                             intent={Intent.SUCCESS}
-                            icon={IconNames.ALIGN_JUSTIFY}
+                            iconName={IconNames.ALIGN_JUSTIFY}
                             title={t("Container logs")}
                           />
                         );
                         const containerLayersButton = (
-                          <AnchorButton
+                          <AppDataTableLink
                             key={`${renderKey}-layers`}
                             className="ContainerLayersButton"
-                            variant="minimal"
-                            size="small"
                             href={pathTo(`/screens/image/${encodeURIComponent(container.ImageID)}/layers`, undefined, {
                               connId: container.connectionId,
                             })}
                             text={image.split("@")[0]}
                             intent={Intent.PRIMARY}
-                            icon={IconNames.LAYERS}
+                            iconName={IconNames.LAYERS}
                             title={t("Image layers history")}
                           />
                         );
@@ -323,7 +317,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           <tr
                             data-prefix-group={isPartOfGroup ? groupName : undefined}
                             data-container={container.Id}
-                            data-engine-row={showEngineColumn ? container.engine : undefined}
+                            data-container-key={rowId}
+                            data-engine-row={showEngineRowAccent ? container.engine : undefined}
                             data-state={container.Computed.DecodedState}
                             onFocus={onContainerFocus}
                             onBlur={onContainerBlur}
@@ -347,17 +342,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
                               <Code>{container.Id.substring(0, 12)}</Code>
                             </td>
                             <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
-                            <td>
-                              <ActionsMenu
-                                container={container}
-                                connectionId={container.connectionId}
-                                withOverlay={containerOverlay === container.Id}
-                              />
+                            <td data-column="Actions">
+                              {containerOverlay === rowId ? (
+                                <ActionsMenu container={container} connectionId={container.connectionId} withOverlay />
+                              ) : (
+                                <ButtonGroup
+                                  className="ItemActionsMenu ResourceItemInlineActionsMenu"
+                                  data-actions-menu="container"
+                                >
+                                  <Button variant="minimal" size="small" icon={IconNames.MORE} title={actionsTitle} />
+                                </ButtonGroup>
+                              )}
                             </td>
                             <td className="BulkSelectColumn">
                               <SelectionCheckbox
-                                checked={selection.isSelected(getRowId(container))}
-                                onChange={() => selection.toggle(getRowId(container))}
+                                checked={selection.isSelected(rowId)}
+                                onChange={() => selection.toggle(rowId)}
                               />
                             </td>
                             <EngineColumnCell
@@ -369,7 +369,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         );
                       }
                       const row = (
-                        <React.Fragment key={getRowId(container)}>
+                        <React.Fragment key={rowId}>
                           {containerGroupRow}
                           {containerGroupData}
                         </React.Fragment>

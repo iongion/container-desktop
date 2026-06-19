@@ -23,6 +23,9 @@ import { useTranslation } from "react-i18next";
 
 import "./AppDrawer.css";
 
+export const APP_DRAWER_PORTAL_CLASS = "AppDrawerPortal";
+export const APP_DRAWER_BACKDROP_CLASS = "AppDrawerBackdrop";
+
 export interface AppDrawerProps {
   title: React.ReactNode;
   icon?: IconName | MaybeElement;
@@ -68,6 +71,8 @@ export const AppDrawer: React.FC<AppDrawerProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       usePortal={usePortal}
+      portalClassName={APP_DRAWER_PORTAL_CLASS}
+      backdropClassName={APP_DRAWER_BACKDROP_CLASS}
       hasBackdrop={hasBackdrop}
       size={size}
       position={position}

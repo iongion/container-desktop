@@ -3,21 +3,28 @@
 // a replay JSON + poster PNG that the site swaps with the color swatch (see website-src/_data/site.js).
 //
 // - podman: the original hand-tuned walkthrough (kept verbatim, with its existing asset paths).
-// - docker / unified: derived tours that share podman's timing but use generic, engine-agnostic
-//   selectors (first matching row) so they work against either fixture set; docker drops the
-//   Podman-only Pods chapter, unified keeps it (the merged view surfaces pods from podman).
+// - docker / container / unified: derived tours that share podman's timing but use generic,
+//   engine-agnostic selectors (first matching row) so they work against any fixture set; docker
+//   and container drop the Podman-only Pods chapter, unified keeps it (the merged view surfaces pods
+//   from podman).
 
 import { demoScenario } from "./demoScenario.mjs";
 
 const { steps: _baseSteps, ...baseConfig } = demoScenario;
 
 // Engine-agnostic walkthrough using first-row selectors so it is fixture-independent.
-function buildTourSteps({ introEngine, pods, connectionRowId }) {
+function buildTourSteps({
+  introText,
+  pods,
+  connectionRowId,
+  actionText = "using the action menu Docker users expect, without giving up Podman",
+  connectionsText = "managing local, SSH, WSL and LIMA connections for Podman and Docker from one place",
+}) {
   const steps = [
     {
       keyword: "Given",
       label: "Auto-detect",
-      text: `Container Desktop starts cleanly and auto-detects the mock ${introEngine} engine`,
+      text: introText,
       actions: [
         { type: "waitReady" },
         { type: "waitFor", selector: '[data-screen="dashboard"]' },
@@ -47,7 +54,7 @@ function buildTourSteps({ introEngine, pods, connectionRowId }) {
     {
       keyword: "And",
       label: "Fast actions",
-      text: "using the action menu Docker users expect, without giving up Podman",
+      text: actionText,
       actions: [{ type: "pre", pre: [{ action: "openRowActions", rowSelector: "[data-container]" }] }],
       hold: 6000,
     },
@@ -102,7 +109,7 @@ function buildTourSteps({ introEngine, pods, connectionRowId }) {
   steps.push({
     keyword: "Then",
     label: "Any endpoint",
-    text: "managing local, SSH, WSL and LIMA connections for Podman and Docker from one place",
+    text: connectionsText,
     actions: [
       {
         type: "navigate",
@@ -131,17 +138,43 @@ const docker = {
   engine: "docker",
   output: "website-src/static/replays/docker.json",
   poster: "website-src/static/videos/docker.png",
-  steps: buildTourSteps({ introEngine: "Docker", pods: false, connectionRowId: "mock.docker.system" }),
+  steps: buildTourSteps({
+    introText: "Container Desktop starts cleanly and auto-detects the mock Docker engine",
+    pods: false,
+    connectionRowId: "mock.docker.system",
+  }),
+};
+
+const container = {
+  ...baseConfig,
+  id: "container-desktop-demo-container",
+  title: "Container Desktop — Apple Container walkthrough",
+  engine: "container",
+  output: "website-src/static/replays/container.json",
+  poster: "website-src/static/videos/container.png",
+  steps: buildTourSteps({
+    introText: "Container Desktop starts cleanly and auto-detects the mock Apple Container engine",
+    pods: false,
+    connectionRowId: "mock.container.system",
+    actionText: "using Docker-compatible container actions against Apple Container",
+    connectionsText: "managing native and SSH Apple Container endpoints from one place",
+  }),
 };
 
 const unified = {
   ...baseConfig,
   id: "container-desktop-demo-unified",
-  title: "Container Desktop — merged Podman + Docker walkthrough",
+  title: "Container Desktop — merged Podman + Docker + Apple Container walkthrough",
   engine: "unified",
   output: "website-src/static/replays/unified.json",
   poster: "website-src/static/videos/unified.png",
-  steps: buildTourSteps({ introEngine: "Podman and Docker", pods: true, connectionRowId: "mock.podman.system" }),
+  steps: buildTourSteps({
+    introText: "Container Desktop starts cleanly and auto-detects the mock Podman, Docker, and Apple Container engines",
+    pods: true,
+    connectionRowId: "mock.podman.system",
+    actionText: "using familiar actions across Podman and Docker-compatible workloads",
+    connectionsText: "managing local, SSH, WSL, LIMA, and Apple native endpoints from one place",
+  }),
 };
 
-export const demoScenarios = [podman, docker, unified];
+export const demoScenarios = [podman, docker, container, unified];

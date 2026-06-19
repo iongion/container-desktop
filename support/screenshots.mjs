@@ -88,6 +88,7 @@ function electronEnv(engine, port) {
   env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT = `${port}`;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN = `http://localhost:${port}`;
+  env.CONTAINER_DESKTOP_CAPTURE_OFFSCREEN = "1";
   env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN = "1";
   env.ENVIRONMENT = "development";
   env.NODE_ENV = "development";
@@ -267,7 +268,7 @@ async function cleanOutputDirectories(engines, only) {
     for (const file of STALE_FLAT_SCREENSHOTS) {
       await rm(path.join(OUT_DIR, file), { force: true });
     }
-    for (const engine of SCREENSHOT_ENGINES) {
+    for (const engine of engines) {
       const engineOutDir = path.join(OUT_DIR, engine);
       await rm(engineOutDir, { recursive: true, force: true });
       mkdirSync(engineOutDir, { recursive: true });
@@ -325,6 +326,5 @@ async function main() {
 
 main().catch(async (error) => {
   console.error(error);
-  await killStray();
   process.exit(1);
 });

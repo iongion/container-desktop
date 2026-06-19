@@ -7,6 +7,23 @@
   display: flex;
   align-items: center;
 }
+
+.AppScreenHeader > .bp6-navbar,
+.AppScreenHeader .bp6-navbar-group,
+.AppScreenHeader .NavbarCenter,
+.AppScreenHeader .NavbarCenterContent {
+  align-items: center;
+}
+
+.AppScreenHeader .NavbarCenterContent {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.AppScreenHeader .bp6-button-group {
+  align-items: center;
+}
+
 /* Flexible spacer: drop it before a header widget (e.g. the connection picker) to push that widget to the
    end of the bar. Lives in the center slot, which already spans full width between the tabs and the edge. */
 .AppScreenHeader .ScreenHeaderSpacer {

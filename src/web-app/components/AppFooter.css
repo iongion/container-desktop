@@ -1,9 +1,11 @@
+:root {
+  --app-footer-popover-max-height: 50vh;
+}
+
 .AppFooter {
-  height: 32px;
+  height: var(--app-footer-height, 32px);
   display: flex;
   overflow: hidden;
-  padding-left: 5px;
-  padding-right: 5px;
 }
 .AppFooterNavbar {
   display: flex;
@@ -11,11 +13,11 @@
   margin: 0;
   padding: 0;
   box-shadow: none !important;
-  height: 32px;
+  height: var(--app-footer-height, 32px);
   align-items: center;
 }
 .AppFooter .bp6-navbar-group {
-  height: 32px;
+  height: var(--app-footer-height, 32px);
 }
 .AppFooter .bp6-navbar-heading {
   font-size: 12px;
@@ -38,6 +40,10 @@
   height: 24px;
   background: url("../images/unified-engine.svg") no-repeat center / contain;
   transform: scale(0.8);
+}
+
+[data-engine="container"] .AppFooterEngineIcon {
+  background-image: url("../images/container-engine.svg");
 }
 /* Connection count badge (green = N connected, red = disconnected) — replaces the old status dot.
    Scaled to 80% so the pill reads as a compact marker next to the label. */
@@ -76,15 +82,43 @@
 .AppFooterCurrentConnector {
   text-transform: lowercase;
 }
-/* The per-engine "engine version" list (no icons) shown when engines are connected. */
-.AppFooterEngineVersionSep {
-  opacity: 0.5;
-}
 .AppFooterEngineVersions {
   min-width: 0;
+  max-width: min(460px, 45vw);
   overflow: hidden;
 }
-.AppFooterCurrentProgram {
+
+.AppFooterEnginesButton.bp6-button {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: inherit;
+}
+
+.AppFooterEnginesButton.bp6-button:focus,
+.AppFooterEnginesButton.bp6-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.AppFooterEnginesButton.bp6-button .bp6-button-text {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.AppFooterEnginesButton .bp6-icon {
+  flex: 0 0 auto;
+  opacity: 0.65;
+  margin-left: 4px;
+}
+
+.AppFooterEnginesLabel {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

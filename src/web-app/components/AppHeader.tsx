@@ -99,8 +99,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   }
 
   const disabledHeaderActions = !(provisioned && running);
-  const rightSideActions = (
-    <>
+  const utilityActions = (
+    <ButtonGroup variant="minimal" className="AppHeaderUtilityActions">
       <AnchorButton
         className="AppHeaderActionButton"
         href={pathTo("/screens/connections/manage")}
@@ -116,9 +116,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         title={t("Troubleshoot")}
         aria-label={t("Troubleshoot")}
       />
-      {osType === OperatingSystem.MacOS ? null : <Divider />}
-    </>
+    </ButtonGroup>
   );
+  const headerActionDivider = osType === OperatingSystem.MacOS ? null : <Divider />;
   const screenTitle = provisioned ? currentScreen?.Title : t("Your attention is needed");
 
   useEffect(() => {
@@ -148,10 +148,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <span>{screenTitle}</span>
         </NavbarGroup>
         <NavbarGroup>
-          <ButtonGroup variant="minimal" className="AppHeaderActions">
-            {rightSideActions}
-            {rightSideControls}
-          </ButtonGroup>
+          <div className="AppHeaderActions">
+            {utilityActions}
+            {headerActionDivider}
+            {rightSideControls ? (
+              <ButtonGroup variant="minimal" className="AppHeaderWindowActions">
+                {rightSideControls}
+              </ButtonGroup>
+            ) : null}
+          </div>
         </NavbarGroup>
       </Navbar>
     </div>

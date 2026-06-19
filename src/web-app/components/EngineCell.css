@@ -28,6 +28,10 @@
   background-image: url("../images/podman-engine.svg");
 }
 
+.EngineCell[data-engine-marker="container"] .EngineCellIcon {
+  background-image: url("../images/container-engine.svg");
+}
+
 .EngineCell .EngineCellLabel {
   text-transform: capitalize;
 }
@@ -52,6 +56,10 @@
 
 .AppDataTable tbody tr[data-engine-row="podman"] > td:first-child::before {
   background: var(--engine-accent-podman);
+}
+
+.AppDataTable tbody tr[data-engine-row="container"] > td:first-child::before {
+  background: var(--engine-accent-container);
 }
 
 /* Engine column = minimum width always (the icon marker), never wrapping or stretching. The 1px width is

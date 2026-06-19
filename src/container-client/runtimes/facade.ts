@@ -50,8 +50,10 @@ export type EngineExtension =
   | "registries"
   | "controllerVersion";
 
+export type ApiSurface = "docker" | "libpod";
+
 export interface CapabilityDescriptor {
-  resources: { pods: boolean; secrets: boolean };
+  resources: { pods: boolean; secrets: boolean; networks: boolean };
   events: boolean;
   /** Per-field sort capability; REST list endpoints are explicit "client" entries until an API exposes sorting. */
   sort: Record<string, SortMode>;
@@ -129,6 +131,8 @@ export interface HostClientFacade
   logger: ILogger;
   /** Capability matrix (host-adjusted); gates real-vs-no-op extensions + engine-specific UI. */
   capabilities: CapabilityDescriptor;
+  /** The REST API shape this host speaks ("docker" or "libpod"); used by adapters for baseURL/normalizers. */
+  apiSurface: ApiSurface;
 
   // lifecycle / API
   startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions): Promise<boolean>;

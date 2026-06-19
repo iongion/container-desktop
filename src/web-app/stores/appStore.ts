@@ -110,21 +110,58 @@ function registerTraySwitchListener(get: () => AppStore): void {
 // One-time (main window only): stream main's per-connection connect/reconnect progress lines into the
 // bootstrap phase box while the splash is up, labeled per engine so multiple engines interleave.
 let connectProgressSubscribed = false;
+const notifiedConnectionFailureById = new Map<string, string>();
+
+function notifyConnectionFailure(progress: ResourceConnectProgress, opts?: { silent?: boolean }): void {
+  const reason = progress.trace.replace(/^(failed|unavailable):\s*/i, "").trim();
+  const message = `${progress.name}: ${reason || t("connection failed")}`;
+  // The raw "what it tried / what happened" + SSH preflight/stderr/stack, surfaced expandably in the
+  // Activity Center so a real failure is never reduced to a one-line placeholder.
+  const detail = progress.detail;
+  if (opts?.silent) {
+    // Boot / auto-start failures (engine simply not installed or not running at launch) are routine: record
+    // them in the Notification Center history, but never as a toast. Intentionally skip the toast-dedup map so
+    // a later explicit user retry with the same reason still pops a toast.
+    Notification.show({ message, intent: Intent.DANGER, timeout: 6000, silent: true, detail });
+    return;
+  }
+  if (notifiedConnectionFailureById.get(progress.connectionId) === message) {
+    return;
+  }
+  notifiedConnectionFailureById.set(progress.connectionId, message);
+  Notification.show({
+    message,
+    intent: Intent.DANGER,
+    timeout: 6000,
+    detail,
+  });
+}
+
 function subscribeConnectProgress(): void {
   if (connectProgressSubscribed || typeof window === "undefined" || !window.ResourceBus) {
     return;
   }
   connectProgressSubscribed = true;
   window.ResourceBus.subscribe(RESOURCE_SYNC.progress, (progress: ResourceConnectProgress) => {
-    if (useAppStore.getState().phase !== AppBootstrapPhase.STARTING) {
+    const phase = useAppStore.getState().phase;
+    if (phase === AppBootstrapPhase.STARTING) {
+      useAppStore.getState().insertBootstrapPhase({
+        guid: `${progress.connectionId}:${progress.ts}`,
+        type: "engine.connect",
+        date: new Date(progress.ts),
+        data: { trace: `${progress.name}: ${progress.trace}` },
+      });
       return;
     }
-    useAppStore.getState().insertBootstrapPhase({
-      guid: `${progress.connectionId}:${progress.ts}`,
-      type: "engine.connect",
-      date: new Date(progress.ts),
-      data: { trace: `${progress.name}: ${progress.trace}` },
-    });
+    // After the splash, route a failure by who triggered it: a "bootstrap" auto-start failure (engine not
+    // installed/running at launch) goes to the Notification Center only — no toast burst — while an explicit
+    // user connect or an auto-reconnect drop still pops a DANGER toast (also teed into the history).
+    if (progress.phase === "failed") {
+      notifyConnectionFailure(progress, { silent: progress.origin === "bootstrap" });
+    }
+    if (progress.phase === "ready") {
+      notifiedConnectionFailureById.delete(progress.connectionId);
+    }
   });
 }
 
@@ -177,8 +214,8 @@ interface AppActions {
   updateConnection: (payload: { id: string; connection: Partial<Connection> }) => Promise<Connection>;
   removeConnection: (id: string) => Promise<boolean>;
   // per-connection lifecycle (always-merged workspace; no global reset)
-  connectOne: (connectionId: string) => Promise<void>;
-  disconnectOne: (connectionId: string) => Promise<void>;
+  connectOne: (connectionId: string, options?: { trackGlobalPending?: boolean }) => Promise<void>;
+  disconnectOne: (connectionId: string, options?: { trackGlobalPending?: boolean }) => Promise<void>;
   makePrimary: (connectionId: string) => Promise<void>;
 }
 
@@ -262,9 +299,9 @@ export const useAppStore = create<AppStore>()((set, get) => {
       set((state) => {
         const running = !!runtime.running;
         const booting = state.phase === AppBootstrapPhase.INITIAL || state.phase === AppBootstrapPhase.STARTING;
-        // The shell blocks on the splash ONLY while booting, and only until the first engine reports ready
-        // (or startApplication ends the splash after connectAll settles). Once in the workspace we never
-        // re-enter the splash for per-connection churn — failures / reconnects render inline.
+        // During bootstrap, the first ready engine releases the workspace. Global `pending` can remain true
+        // while the rest of connectAll settles, which keeps the sidebar spinner visible as the background
+        // startup signal. After bootstrap, per-connection churn never re-enters the splash.
         const phase = booting
           ? runtime.phase === "ready"
             ? AppBootstrapPhase.READY
@@ -319,7 +356,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
       subscribeConnectProgress();
       const instance = Application.getInstance();
       const settings = await instance.getGlobalUserSettings();
-      instance.setLogLevel(settings?.logging.level || "debug");
+      instance.setLogLevel(settings?.logging.level || "warn");
       get().syncGlobalUserSettings(settings);
       systemNotifier.transmit("startup.phase", { trace: "User settings loaded" });
     },
@@ -367,13 +404,11 @@ export const useAppStore = create<AppStore>()((set, get) => {
             provisioned: true,
             userSettings,
           });
-          // Mirror main's pushed snapshots BEFORE connecting so no early snapshot/progress is missed; the
-          // mirror feeds resourceStore (lists + per-connection runtime) AND projects appRuntime → the shell
-          // phase via applyAppRuntime. This is what makes auto-connect AND the Connect button visibly work.
+          // Mirror main's pushed snapshots BEFORE connecting so no early snapshot/progress is missed. During
+          // bootstrap, progress remains on the boot screen; after startup, snapshots update the workspace.
           startResourceMirror();
           // Multi-connection bootstrap: bring up every auto-start connection IN PARALLEL via main (isolated
-          // failures — one offline engine never blocks the others or the app). The shell flips to READY as
-          // soon as the first engine reports running (applyAppRuntime); a slow/failing engine never blocks it.
+          // failures — one offline engine never blocks the others once SSH/process timeouts have fired).
           systemNotifier.transmit("startup.phase", { trace: "Connecting engines" });
           await window.MessageBus.invoke(RESOURCE_SYNC.connectAll);
           // Backstop: settle from a direct snapshot in case a push raced our subscription.
@@ -452,7 +487,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
       runPending(async () => {
         try {
           const instance = Application.getInstance();
-          instance.setLogLevel(options.logging?.level || "debug");
+          instance.setLogLevel(options.logging?.level || "warn");
           const userSettings = await instance.setGlobalUserSettings(options);
           get().syncGlobalUserSettings(userSettings);
           // §B single-home: when the settings import carries a `connections` blob, refresh the
@@ -531,8 +566,8 @@ export const useAppStore = create<AppStore>()((set, get) => {
     // ── async: per-connection lifecycle (always-merged workspace — additive, no global reset) ──
     // connect/disconnect a SINGLE connection via main; main re-pushes a merged snapshot, so the runtime
     // store + merged lists update without a full bootstrap. Used by the header connection manager + Settings.
-    connectOne: async (connectionId) =>
-      runPending(async () => {
+    connectOne: async (connectionId, options = {}) => {
+      const run = async () => {
         try {
           await waitForPendingPaint();
           await window.MessageBus.invoke(RESOURCE_SYNC.ensureConnected, { connectionId });
@@ -540,16 +575,26 @@ export const useAppStore = create<AppStore>()((set, get) => {
           console.error("Unable to connect engine", connectionId, error);
           Notification.show({ message: t("Unable to establish connection"), intent: Intent.DANGER });
         }
-      }),
-    disconnectOne: async (connectionId) =>
-      runPending(async () => {
+      };
+      if (options.trackGlobalPending === false) {
+        return run();
+      }
+      return runPending(run);
+    },
+    disconnectOne: async (connectionId, options = {}) => {
+      const run = async () => {
         try {
           await waitForPendingPaint();
           await window.MessageBus.invoke(RESOURCE_SYNC.disconnect, { connectionId });
         } catch (error: any) {
           console.error("Unable to disconnect engine", connectionId, error);
         }
-      }),
+      };
+      if (options.trackGlobalPending === false) {
+        return run();
+      }
+      return runPending(run);
+    },
     // "Primary" = the default create/pull target (persisted, renderer-owned) — no engine restart.
     makePrimary: async (connectionId) => {
       await get().setGlobalUserSettings({ connector: { default: connectionId } });

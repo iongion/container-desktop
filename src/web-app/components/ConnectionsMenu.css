@@ -3,6 +3,9 @@
 .ConnectionsMenu {
   min-width: 300px;
   max-width: 420px;
+  max-height: var(--app-footer-popover-max-height, 50vh);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 /* Connection name + inline "primary" tag (kept compact; Menu handles row layout/hover). */
 .ConnectionsMenuName {

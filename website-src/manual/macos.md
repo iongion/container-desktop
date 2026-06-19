@@ -10,7 +10,8 @@ sections:
   - { id: macos-best, label: "2 · Best experience" }
   - { id: macos-podman-docker, label: "3 · Podman as Docker" }
   - { id: macos-dd-alt, label: "4 · Docker Desktop alternative" }
-  - { id: macos-share, label: "5 · Sharing connection" }
+  - { id: macos-apple-container, label: "5 · Container" }
+  - { id: macos-share, label: "6 · Sharing connection" }
 ---
 
 <section class="guide-sec" id="macos-req">
@@ -19,7 +20,7 @@ sections:
 
 <div class="note req">
 
-On macOS, virtualization is required to support both docker and podman container engines. Homebrew is seriously recommended to simplify provisioning and setup. Due to high cost, Container Desktop does not currently afford an Apple subscription to digitally sign applications, nor a digital certificate.
+On macOS, virtualization (via Lima or colima) is required for the Podman and Docker engines — they run inside a Linux VM. Apple&trade; Container is a third option: a native Apple-silicon runtime that needs no VM (experimental; see section 5 below). Homebrew is seriously recommended to simplify provisioning and setup. Due to high cost, Container Desktop does not currently afford an Apple subscription to digitally sign applications, nor a digital certificate.
 
 </div>
 
@@ -76,6 +77,17 @@ This does not install Docker Desktop — only the command line tools that will u
 ```
 
 After all of the above you should have a completely compatible docker engine running on your Mac.
+
+<div class="note tip">
+
+If the `docker` command is **not found** after the install, Homebrew placed the formula in its Cellar without creating the `docker` symlink (it was left **unlinked**, so it is missing from your shell entirely — not a `PATH` problem). Link it explicitly:
+
+</div>
+
+```bash
+brew link docker
+docker --version   # confirms the CLI is now available
+```
 
 #### Allow the unsigned app to run (optional)
 
@@ -159,9 +171,103 @@ Not recommended due to complexity. Latest docker CLI and plugin binaries can be 
 
 </section>
 
+<section class="guide-sec" id="macos-apple-container">
+
+### <span class="n">05</span> Container <span class="exp-label">Experimental</span>
+
+<div class="note info">
+
+Apple's [`container`](https://github.com/apple/container) engine is a native macOS container runtime for Apple silicon. Container Desktop support is experimental: the app targets the Docker-compatible API exposed by [`socktainer`](https://github.com/socktainer/socktainer), not Apple's private XPC service directly.
+
+</div>
+
+#### Requirements
+
+- Apple silicon Mac.
+- macOS 26 Tahoe recommended. macOS 15 can run Apple `container`, but networking is degraded and some network commands are unavailable.
+- Apple's `container` CLI installed from the [official GitHub releases](https://github.com/apple/container/releases).
+- A compatible `socktainer` installation to expose a Docker Engine API socket.
+
+#### Install Apple&trade; Container
+
+Download the signed installer package from the [Apple container releases](https://github.com/apple/container/releases), verify it, install it, then start the system service. The example below pins Apple&trade; Container `1.0.0`; if you choose a newer release, use that release's package name and checksum instead.
+
+```bash
+mkdir -p ~/Downloads/container-desktop-provision
+cd ~/Downloads/container-desktop-provision
+
+curl -L -o container-1.0.0-installer-signed.pkg \
+  https://github.com/apple/container/releases/download/1.0.0/container-1.0.0-installer-signed.pkg
+
+shasum -a 256 container-1.0.0-installer-signed.pkg
+# expect: 13f45f26da94c354adcbefe1e8f7631e7f126e93c5d4dd6a5a538aa66b4f479d
+
+sudo installer -pkg container-1.0.0-installer-signed.pkg -target /
+
+container system start
+```
+
+#### Install socktainer
+
+Install the Docker-compatible API bridge:
+
+```bash
+brew tap socktainer/tap
+brew install socktainer
+```
+
+Start `socktainer` in the background and confirm that it exposes the Docker-compatible Unix socket:
+
+```bash
+mkdir -p ~/.socktainer
+nohup socktainer > ~/.socktainer/socktainer.log 2>&1 &
+
+sleep 2
+test -S "$HOME/.socktainer/container.sock" && echo "socktainer socket OK"
+```
+
+Verify the socket with the Docker Engine API endpoints Container Desktop uses:
+
+```bash
+curl --unix-socket "$HOME/.socktainer/container.sock" http://localhost/_ping
+curl --unix-socket "$HOME/.socktainer/container.sock" http://localhost/version
+```
+
+Homebrew also prints a service-mode option after installing `socktainer`. In that mode, `socktainer` runs with a Homebrew-owned `HOME`, so the socket is not under your user home. Use this if you want `socktainer` to start at login:
+
+```bash
+brew services start socktainer
+
+SOCKTAINER_HOME="$(brew --prefix)/var/run/socktainer"
+export DOCKER_HOST="unix://$SOCKTAINER_HOME/.socktainer/container.sock"
+
+curl --unix-socket "$SOCKTAINER_HOME/.socktainer/container.sock" http://localhost/_ping
+```
+
+Or run the same service-style command manually without registering a login service:
+
+```bash
+SOCKTAINER_HOME="$(brew --prefix)/var/run/socktainer"
+HOME="$SOCKTAINER_HOME" "$(brew --prefix)/opt/socktainer/bin/socktainer"
+```
+
+If you use Homebrew service mode with a remote Mac connection, configure Container Desktop to use the service socket path explicitly: `$(brew --prefix)/var/run/socktainer/.socktainer/container.sock`. For development env-seeded connections, that is `CONTAINER_DESKTOP_REMOTE_<ID>_APPLE_SOCKET`, for example:
+
+```bash
+CONTAINER_DESKTOP_REMOTE_MAC_APPLE_SOCKET=/opt/homebrew/var/run/socktainer/.socktainer/container.sock
+```
+
+Socktainer can also register a Docker context named `socktainer`, so the official Docker CLI can use Apple containers without changing Container Desktop's resource model.
+
+#### Remote Mac over SSH
+
+Because `socktainer` exposes a Unix socket, it can be forwarded over SSH in the same style as remote Docker or Podman sockets. With the per-user launch above, Container Desktop auto-detects `$HOME/.socktainer/container.sock`. With Homebrew service mode, use the explicit service socket path from the previous section. The remote host still has to be an Apple silicon Mac with Apple `container` and `socktainer` running; the client machine only needs SSH access to that Mac.
+
+</section>
+
 <section class="guide-sec" id="macos-share">
 
-### <span class="n">05</span> Sharing connection with Container Desktop
+### <span class="n">06</span> Sharing connection with Container Desktop
 
 The `DOCKER_HOST` environment variable must be set to the same value Container Desktop is using when connected. The exact value is under **Connection info** in the **Settings** section.
 

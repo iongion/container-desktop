@@ -9,6 +9,7 @@ import { readFile } from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
+import path from "node:path";
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import httpAdapter from "axios/unsafe/adapters/http.js";
 import { EventEmitter } from "eventemitter3";
@@ -32,6 +33,94 @@ const logger = createLogger("shared");
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
 const DEFAULT_RETRIES_COUNT = 10;
+const DIRECT_API_HOSTS = new Set<ContainerEngineHost>([
+  ContainerEngineHost.PODMAN_NATIVE,
+  ContainerEngineHost.DOCKER_NATIVE,
+  ContainerEngineHost.APPLE_NATIVE,
+  ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
+  ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
+  ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+  ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
+]);
+const WSL_API_HOSTS = new Set<ContainerEngineHost>([
+  ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+  ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
+]);
+const SSH_API_HOSTS = new Set<ContainerEngineHost>([
+  ContainerEngineHost.PODMAN_REMOTE,
+  ContainerEngineHost.DOCKER_REMOTE,
+  ContainerEngineHost.APPLE_REMOTE,
+]);
+
+export type ProxyRequestRoute = "direct" | "wsl" | "ssh" | "unsupported";
+
+export function getProxyRequestRoute(host: ContainerEngineHost): ProxyRequestRoute {
+  if (DIRECT_API_HOSTS.has(host)) {
+    return "direct";
+  }
+  if (WSL_API_HOSTS.has(host)) {
+    return "wsl";
+  }
+  if (SSH_API_HOSTS.has(host)) {
+    return "ssh";
+  }
+  return "unsupported";
+}
+
+function socketLabel(socketPath?: string | null): string | undefined {
+  return socketPath ? path.basename(socketPath) || socketPath : undefined;
+}
+
+function connectionSummary(connection?: Partial<Connection>) {
+  if (!connection) {
+    return undefined;
+  }
+  return {
+    id: connection.id,
+    name: connection.name,
+    engine: connection.engine,
+    host: connection.host,
+  };
+}
+
+function requestSummary(request: Partial<AxiosRequestConfig>) {
+  return {
+    method: `${request.method ?? "GET"}`.toUpperCase(),
+    url: request.url,
+    responseType: request.responseType,
+    timeout: request.timeout,
+    baseURL: request.baseURL,
+    socket: socketLabel(request.socketPath),
+    params: request.params,
+  };
+}
+
+function responseSummary(response?: AxiosResponse<any, any>) {
+  return {
+    status: response?.status,
+    statusText: response?.statusText,
+  };
+}
+
+function errorSummary(error: any) {
+  return {
+    message: `${error?.message ?? error}`,
+    code: error?.code,
+    status: error?.response?.status,
+    statusText: error?.response?.statusText,
+  };
+}
+
+export function applyProxyRequestDefaults(
+  request: Partial<AxiosRequestConfig>,
+  config: ApiDriverConfig,
+  fallback: { timeout: number; baseURL: string },
+): Partial<AxiosRequestConfig> {
+  request.headers = deepMerge({}, config.headers || {}, request.headers || {});
+  request.timeout = request.timeout ?? config.timeout ?? fallback.timeout;
+  request.baseURL = request.baseURL || config.baseURL || fallback.baseURL;
+  return request;
+}
 
 /**
  * Test-only: clear the module-global connection caches between cases/targets. `StopConnectionServices`
@@ -183,7 +272,7 @@ export class WSLRelayServer {
   protected relayProcesses: { [key: string]: ChildProcessWithoutNullStreams } = {};
 
   protected socketPath?: string;
-  protected logLevel = "debug";
+  protected logLevel = "warn";
 
   constructor(opts: { logLevel: string }) {
     this.isStarted = false;
@@ -455,10 +544,11 @@ export interface WrapperOpts extends SpawnOptionsWithoutStdio {
 }
 
 export function createNodeJSApiDriver(config: AxiosRequestConfig) {
+  const timeout = config.timeout ?? 3000;
   const httpAgent = new http.Agent({
     keepAlive: true,
     keepAliveMsecs: 10,
-    timeout: config.timeout || 3000,
+    timeout,
   });
   httpAgent.maxSockets = 1;
   const configuration = {
@@ -468,9 +558,8 @@ export function createNodeJSApiDriver(config: AxiosRequestConfig) {
     httpsAgent: httpAgent,
     baseURL: config.baseURL || "http://d",
   };
-  logger.debug("Creating NodeJS API driver", configuration);
+  logger.debug("Creating NodeJS API driver", requestSummary(configuration));
   const driver = axios.create(configuration);
-  logger.debug("Created NodeJS API driver", configuration);
   return driver;
 }
 
@@ -524,15 +613,15 @@ export async function proxyRequestToWSLDistribution(
 ) {
   return await new Promise<AxiosResponse<any, any> | undefined>((resolve, reject) => {
     //
-    withWSLRelayServer(connection, { logLevel: connection.logLevel || "debug" }, async (server) => {
+    withWSLRelayServer(connection, { logLevel: connection.logLevel || "warn" }, async (server) => {
       // Make actual request to the temporary socket server created above
       let resolved = false;
       try {
         const abort = new AbortController();
-        console.warn("WSL Relay server starting", connection);
+        logger.debug("WSL relay starting", connectionSummary(connection));
         const pipePath = connection?.settings?.api?.connection?.uri || "";
         if (isEmpty(pipePath)) {
-          console.error("Named pipe path not set for current connection", connection);
+          logger.error("Named pipe path not set for current connection", connectionSummary(connection));
           throw new Error("Named pipe path not set for current connection");
         }
         const { started, socketPath } = await server.start(
@@ -561,20 +650,20 @@ export async function proxyRequestToWSLDistribution(
         );
         if (started) {
           try {
-            request.headers = deepMerge({}, config.headers || {}, request.headers || {});
-            request.timeout = request.timeout || config.timeout || 1000;
-            request.baseURL = request.baseURL || "http://d";
+            applyProxyRequestDefaults(request, config, { timeout: 1000, baseURL: "http://d" });
             request.socketPath = socketPath;
-            logger.debug(">> WSL Relay request", request, {
-              socketPath,
+            logger.debug("WSL relay request", {
+              connection: connectionSummary(connection),
+              request: requestSummary(request),
+              socket: socketLabel(socketPath),
             });
             const driver = await createNodeJSApiDriver(request);
             const response = await driver.request(request);
-            logger.debug("<< WSL Relay response", response);
+            logger.debug("WSL relay response", responseSummary(response));
             resolved = true;
             resolve(response);
           } catch (error: any) {
-            logger.error("<< WSL Relay response", error);
+            logger.error("WSL relay response failed", errorSummary(error));
             if (!resolved) {
               resolved = true;
               reject(error);
@@ -606,12 +695,19 @@ export async function proxyRequestToSSHConnection(
   const remoteAddress = connection.settings.api.connection.relay ?? "";
   const localAddress = connection.settings.api.connection.uri ?? "";
   if (SSH_TUNNELS_CACHE[remoteAddress]) {
-    logger.debug("Reusing SSH tunnel", remoteAddress, SSH_TUNNELS_CACHE[remoteAddress]);
+    logger.debug("Reusing SSH tunnel", {
+      remote: socketLabel(remoteAddress),
+      local: socketLabel(SSH_TUNNELS_CACHE[remoteAddress]),
+    });
   } else {
-    logger.debug("Creating SSH tunnel", remoteAddress);
+    logger.debug("Creating SSH tunnel", { remote: socketLabel(remoteAddress), local: socketLabel(localAddress) });
     const sshConnection: ISSHClient = await context.getSSHConnection();
     if (!remoteAddress) {
-      throw new Error("Remote address must be set");
+      // The remote engine socket could not be resolved — usually the engine isn't installed/running on
+      // the remote host, or its CLI isn't on the non-interactive SSH PATH (so socket auto-detection failed).
+      throw new Error(
+        "Remote engine socket could not be determined — is the container engine installed and running on the remote host (and reachable on a non-interactive SSH PATH)?",
+      );
     }
     let em: EventEmitter | undefined;
     em = await sshConnection.startTunnel({
@@ -631,11 +727,14 @@ export async function proxyRequestToSSHConnection(
     }
   }
   if (SSH_TUNNELS_CACHE[remoteAddress]) {
-    logger.debug("Proxying request to SSH tunnel", remoteAddress, "=>", localAddress, { connection, config, request });
-    request.headers = deepMerge({}, config.headers || {}, request.headers || {});
-    request.timeout = request.timeout || config.timeout || 5000;
-    request.baseURL = request.baseURL || config.baseURL || "http://d";
+    applyProxyRequestDefaults(request, config, { timeout: 5000, baseURL: "http://d" });
     request.socketPath = localAddress;
+    logger.debug("Proxying request to SSH tunnel", {
+      connection: connectionSummary(connection),
+      remote: socketLabel(remoteAddress),
+      local: socketLabel(localAddress),
+      request: requestSummary(request),
+    });
     const driver = createNodeJSApiDriver(request);
     const response = await driver.request(request);
     return response;
@@ -710,6 +809,7 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
 
 export async function exec_launcher_async(launcher: string, launcherArgs: string[], opts?: WrapperOpts) {
   // const env = merge({}, { PODMAN_IGNORE_CGROUPSV1_WARNING: "true" }, opts?.env || {});
+  const timeoutMs = typeof opts?.timeout === "number" && opts.timeout > 0 ? opts.timeout : undefined;
   const spawnOpts: any = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
@@ -732,25 +832,40 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
           command: "", // Decorated by child process
         };
         const command = (child as any).command;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
         const processResolve = (from, data) => {
           if (resolved) {
-            logger.error(command, "spawning already resolved", { from, data });
-          } else {
-            result.pid = child.pid as any;
-            result.code = from === "spawn" ? 0 : (child.exitCode as any);
-            result.stderr = result.stderr || "";
-            result.success = from === "spawn" ? true : child.exitCode === 0;
-            result.command = command;
-            resolved = true;
-            logger.debug("[SC.A][<]", {
-              pid: result.pid,
-              code: result.code,
-              success: result.success,
-              command,
-            });
-            resolve(result);
+            return;
           }
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+          result.pid = child.pid as any;
+          result.code = from === "spawn" ? 0 : from === "timeout" ? null : (data as any);
+          result.stderr = result.stderr || "";
+          result.success = from === "spawn" ? true : from === "exit" && data === 0;
+          result.command = command;
+          resolved = true;
+          logger.debug("[SC.A][<]", {
+            pid: result.pid,
+            code: result.code,
+            success: result.success,
+            command,
+          });
+          resolve(result);
         };
+        if (timeoutMs) {
+          timeout = setTimeout(() => {
+            result.stderr = `${result.stderr || ""}${result.stderr ? "\n" : ""}Command timed out after ${timeoutMs}ms`;
+            try {
+              child.kill("SIGTERM");
+            } catch (error: any) {
+              logger.warn(command, "timeout kill failed", error?.message ?? error);
+            }
+            processResolve("timeout", null);
+          }, timeoutMs);
+          timeout.unref?.();
+        }
         if (spawnOpts.detached) {
           child.on("spawn", () => {
             child.unref();
@@ -771,7 +886,6 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
           result.stdout += `${data}`;
         });
         child.stderr?.on("data", (data) => {
-          logger.warn(command, data);
           result.stderr += `${data}`;
         });
       })
@@ -839,7 +953,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
     if (opts?.onSpawn) {
       opts?.onSpawn(wrap_process(proc, child));
     }
-    em.emit("ready", wrap_process(proc, child));
+    setTimeout(() => em.emit("ready", wrap_process(proc, child)), 0);
   } else {
     // Handle
     const onProcessError = (child, error) => {
@@ -967,10 +1081,7 @@ export const Command: ICommand = {
 
   async StartSSHConnection(host: SSHHost, opts?: Partial<ServiceOpts>) {
     const homeDir = await Platform.getHomeDir();
-    let privateKeyPath = await Path.join(homeDir, ".ssh/id_rsa");
-    if (host.IdentityFile) {
-      privateKeyPath = expandHome(host.IdentityFile, homeDir);
-    }
+    const privateKeyPath = host.IdentityFile ? expandHome(host.IdentityFile, homeDir) : "";
     host.IdentityFile = privateKeyPath;
     const isWindows = (os.type() as OperatingSystem) === OperatingSystem.Windows;
     const sshRelayProgramCLI = isWindows
@@ -1031,10 +1142,11 @@ export const Command: ICommand = {
         reject(wrapped);
       });
       const credentials = {
-        host: host.HostName,
+        host: host.HostName || host.Host || host.Name,
         port: host.Port || 22,
-        username: host.User,
-        privateKeyPath: privateKeyPath,
+        username: host.User || "",
+        privateKeyPath,
+        configHost: host.ConfigHost,
       };
       logger.debug("Connecting to SSH server using", credentials, "from host", host);
       connection.connect(credentials);
@@ -1050,13 +1162,8 @@ export const Command: ICommand = {
 
   async ProxyRequest(request: Partial<AxiosRequestConfig>, connection: Connection, context?: any) {
     let response: AxiosResponse<any, any> | undefined;
-    switch (connection.host) {
-      case ContainerEngineHost.PODMAN_NATIVE:
-      case ContainerEngineHost.DOCKER_NATIVE:
-      case ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR:
-      case ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR:
-      case ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA:
-      case ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA:
+    switch (getProxyRequestRoute(connection.host)) {
+      case "direct":
         {
           const config = await getApiConfig(
             connection.settings.api,
@@ -1072,25 +1179,31 @@ export const Command: ICommand = {
               socketPath,
             }) as string;
           } catch (error: any) {
-            logger.warn("Error converting axios config to CURL", error);
+            logger.debug("Unable to build proxy CURL preview", {
+              connection: connectionSummary(connection),
+              error: errorSummary(error),
+              request: requestSummary(request),
+            });
           }
           logger.debug("Proxying request to host", {
-            connection,
-            config,
-            request,
+            connection: connectionSummary(connection),
+            config: {
+              baseURL: config.baseURL,
+              socket: socketLabel(config.socketPath),
+              timeout: config.timeout,
+            },
+            request: requestSummary(request),
             curl,
           });
           const driver = await createNodeJSApiDriver(config);
           response = await driver.request(request);
           logger.debug("Proxy response", {
-            data: response?.data,
-            status: response?.status,
-            statusText: response?.statusText,
+            request: requestSummary(request),
+            response: responseSummary(response),
           });
         }
         break;
-      case ContainerEngineHost.PODMAN_VIRTUALIZED_WSL:
-      case ContainerEngineHost.DOCKER_VIRTUALIZED_WSL:
+      case "wsl":
         {
           const config = await getApiConfig(
             connection.settings.api,
@@ -1099,15 +1212,18 @@ export const Command: ICommand = {
           );
           config.socketPath = connection.settings.api.connection.relay;
           logger.debug("Proxying request to WSL distribution", {
-            connection,
-            config,
-            request,
+            connection: connectionSummary(connection),
+            config: {
+              baseURL: config.baseURL,
+              socket: socketLabel(config.socketPath),
+              timeout: config.timeout,
+            },
+            request: requestSummary(request),
           });
           response = await proxyRequestToWSLDistribution(connection, config, request);
         }
         break;
-      case ContainerEngineHost.PODMAN_REMOTE:
-      case ContainerEngineHost.DOCKER_REMOTE:
+      case "ssh":
         {
           const config = await getApiConfig(
             connection.settings.api,
@@ -1116,8 +1232,13 @@ export const Command: ICommand = {
           );
           config.socketPath = connection.settings.api.connection.uri;
           logger.debug("Proxying request to SSH connection", {
-            connection,
-            config,
+            connection: connectionSummary(connection),
+            config: {
+              baseURL: config.baseURL,
+              socket: socketLabel(config.socketPath),
+              timeout: config.timeout,
+            },
+            request: requestSummary(request),
           });
           response = await proxyRequestToSSHConnection(connection, config, request, context);
         }

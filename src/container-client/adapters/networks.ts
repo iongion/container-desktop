@@ -18,7 +18,7 @@ export class NetworksAdapter extends ResourceAdapter {
   async list(): Promise<Network[]> {
     const driver = await this.driver();
     try {
-      if (this.isDocker) {
+      if (this.usesDockerApi) {
         const result = await driver.get<any[]>("/networks", { baseURL: DOCKER_BASE_URL });
         return (result.data as any[]).map((it) => this.normalizers.normalizeNetwork(it));
       }
@@ -32,7 +32,7 @@ export class NetworksAdapter extends ResourceAdapter {
 
   async get(name: string): Promise<Network> {
     const driver = await this.driver();
-    const serviceUrl = this.isDocker
+    const serviceUrl = this.usesDockerApi
       ? `/networks/${encodeURIComponent(name)}`
       : `/networks/${encodeURIComponent(name)}/json`;
     const result = await driver.get<any>(serviceUrl, { baseURL: this.baseURL });
@@ -41,7 +41,7 @@ export class NetworksAdapter extends ResourceAdapter {
 
   async create(opts: CreateNetworkOptions): Promise<Network> {
     const driver = await this.driver();
-    if (this.isDocker) {
+    if (this.usesDockerApi) {
       const creatorDocker = {
         Name: opts.name,
         Driver: opts.driver,

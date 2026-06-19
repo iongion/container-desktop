@@ -30,6 +30,7 @@ export const Title = "Connections";
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
   const [editedConnection, setEditedConnection] = useState<Connection | undefined>();
+  const [reloadingConnections, setReloadingConnections] = useState(false);
   const provisioned = useAppStore((state) => state.provisioned);
   const running = useAppStore((state) => state.running);
   const currentConnector = useAppStore((state) => state.currentConnector);
@@ -56,7 +57,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, []);
 
   const onReloadConnectionsClick = useCallback(async () => {
-    refreshConnections();
+    setReloadingConnections(true);
+    try {
+      await refreshConnections();
+    } finally {
+      setReloadingConnections(false);
+    }
   }, [refreshConnections]);
 
   const onConnectionsExportClick = useCallback(async () => {
@@ -227,8 +233,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
           title={t("Reload connections")}
           icon={IconNames.REFRESH}
           intent={Intent.NONE}
-          disabled={pending}
-          loading={pending}
+          disabled={pending || reloadingConnections}
+          loading={reloadingConnections}
           onClick={onReloadConnectionsClick}
         />
         {isAutoDetectEnabled ? (

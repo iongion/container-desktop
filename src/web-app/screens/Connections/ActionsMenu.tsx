@@ -27,7 +27,7 @@ interface PerformActionOptions {
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
-  const [isStarting, setIsStarting] = useState(false);
+  const [pendingLifecycleAction, setPendingLifecycleAction] = useState<"connect" | "disconnect" | undefined>();
   const connectOne = useAppStore((state) => state.connectOne);
   const disconnectOne = useAppStore((state) => state.disconnectOne);
   const removeConnection = useAppStore((state) => state.removeConnection);
@@ -56,7 +56,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
           default:
             break;
         }
-        console.debug("Command executed", action, result);
         if (confirm?.success) {
           Notification.show({
             message: t("Command completed"),
@@ -81,18 +80,23 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
     onEdit?.(connection);
   }, [onEdit, connection]);
   const onConnectClick = useCallback(async () => {
-    setIsStarting(true);
+    setPendingLifecycleAction("connect");
     try {
       // Per-connection connect (always-merged): bring up just this engine via main — no global bootstrap reset.
-      await connectOne(connection.id);
+      await connectOne(connection.id, { trackGlobalPending: false });
     } catch (error: any) {
       console.error("Unable to connect", error);
     } finally {
-      setIsStarting(false);
+      setPendingLifecycleAction(undefined);
     }
   }, [connectOne, connection]);
   const onDisconnectClick = useCallback(async () => {
-    await disconnectOne(connection.id);
+    setPendingLifecycleAction("disconnect");
+    try {
+      await disconnectOne(connection.id, { trackGlobalPending: false });
+    } finally {
+      setPendingLifecycleAction(undefined);
+    }
   }, [disconnectOne, connection]);
 
   const onRemove = useCallback(
@@ -104,7 +108,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
     [performActionCommand],
   );
   const onMakeDefault = useCallback(() => {
-    console.debug("Make default connection", connection.id);
     setGlobalUserSettings({
       connector: {
         default: connection.id,
@@ -113,13 +116,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   }, [setGlobalUserSettings, connection]);
   const isConnected = !!runtime?.running;
   const unavailableReason = runtime?.error;
+  const lifecyclePending = !!pendingLifecycleAction;
 
   const removeWidget = connection ? (
     <ConfirmMenu
       onConfirm={onRemove}
       tag={connection.id}
       title={isConnected ? t("A connected connection cannot be removed") : null}
-      disabled={connection.readonly || isStarting || isConnected || disabledAction === "connection.remove"}
+      disabled={connection.readonly || lifecyclePending || isConnected || disabledAction === "connection.remove"}
     >
       <MenuItem icon={IconNames.TARGET} text={t("Make default")} intent={Intent.NONE} onClick={onMakeDefault} />
       <MenuDivider />
@@ -131,7 +135,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
         <Button
           className="ConnectionToggle"
           size="small"
-          disabled={isStarting}
+          disabled={lifecyclePending}
+          loading={lifecyclePending}
           icon={isConnected ? <DisconnectIcon /> : <ConnectIcon />}
           intent={isConnected ? Intent.SUCCESS : Intent.NONE}
           text={isConnected ? t("Disconnect") : t("Connect")}
@@ -142,7 +147,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
       &nbsp;
       <ButtonGroup variant="minimal">
         <Button
-          disabled={connection.readonly || isStarting}
+          disabled={connection.readonly || lifecyclePending}
           size="small"
           icon={IconNames.EDIT}
           title={connection.readonly ? t("This is a system default connection and cannot be changed") : t("Edit")}

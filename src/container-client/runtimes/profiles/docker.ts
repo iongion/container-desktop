@@ -23,7 +23,7 @@ async function dockerVendorAutomaticSettings(
   host: HostContext,
   settings: EngineConnectorSettings,
 ): Promise<EngineConnectorSettings> {
-  host.logger.warn(host.id, "Settings are in automatic mode - fetching");
+  host.logger.debug(host.id, "Settings are in automatic mode - fetching");
   try {
     // 1.0 - detect program
     if (host.isScoped()) {

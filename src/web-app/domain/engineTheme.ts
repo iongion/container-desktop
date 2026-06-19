@@ -1,9 +1,14 @@
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
 import { type Connection, type Connector, ContainerEngine, type EngineThemePreference } from "@/env/Types";
 
-export type ResolvedEngineTheme = "unified" | ContainerEngine.PODMAN | ContainerEngine.DOCKER;
+export type ResolvedEngineTheme = "unified" | ContainerEngine.PODMAN | ContainerEngine.DOCKER | ContainerEngine.APPLE;
 
-const ENGINE_THEME_VALUES = new Set<string>(["unified", ContainerEngine.PODMAN, ContainerEngine.DOCKER]);
+const ENGINE_THEME_VALUES = new Set<string>([
+  "unified",
+  ContainerEngine.PODMAN,
+  ContainerEngine.DOCKER,
+  ContainerEngine.APPLE,
+]);
 
 function isResolvedEngineTheme(value: string | undefined): value is ResolvedEngineTheme {
   return !!value && ENGINE_THEME_VALUES.has(value);
@@ -12,8 +17,8 @@ function isResolvedEngineTheme(value: string | undefined): value is ResolvedEngi
 function resolveSingleEngine(engines: Iterable<string | undefined>): ResolvedEngineTheme | undefined {
   const detected = new Set<ResolvedEngineTheme>();
   for (const engine of engines) {
-    if (engine === ContainerEngine.PODMAN || engine === ContainerEngine.DOCKER) {
-      detected.add(engine);
+    if (engine === ContainerEngine.PODMAN || engine === ContainerEngine.DOCKER || engine === ContainerEngine.APPLE) {
+      detected.add(engine as ResolvedEngineTheme);
     }
   }
   return detected.size === 1 ? Array.from(detected)[0] : undefined;

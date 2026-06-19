@@ -218,6 +218,12 @@ button.ActivityRowHeader:hover {
 .NotificationBell .NotificationBellIcon--unread path {
   fill: var(--app-accent);
 }
+/* Danger: any recorded error (notification or activity) turns the bell red so a failure can't be missed. */
+.NotificationBell .NotificationBellIcon--error,
+.NotificationBell .NotificationBellIcon--error svg,
+.NotificationBell .NotificationBellIcon--error path {
+  fill: var(--app-intent-danger-rest, #f43f5e);
+}
 .NotificationBell .NotificationBellBadge {
   position: absolute;
   top: -2px;

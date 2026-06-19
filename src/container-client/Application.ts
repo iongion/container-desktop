@@ -7,12 +7,14 @@ import {
 import { UserConfiguration } from "@/container-client/config";
 import {
   buildMockConnections,
+  MOCK_CONTAINER_SYSTEM_ID,
   MOCK_DOCKER_SYSTEM_ID,
   MOCK_PODMAN_SYSTEM_ID,
   mockAvailability,
 } from "@/container-client/mock/connections";
 import { getMockEngine, isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
+import { buildRemoteConnectionsFromEnv, resolveRemoteEnvConnections } from "@/container-client/remote-env";
 import {
   type ApplicationEnvironment,
   type CommandExecutionResult,
@@ -54,7 +56,7 @@ const AUTOMATIC_REGISTRIES: Registry[] = [
     isRemovable: false,
     isSystem: true,
     enabled: true,
-    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER],
+    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER, ContainerEngine.APPLE],
   },
 ];
 const PROPOSED_REGISTRIES = [
@@ -76,7 +78,7 @@ const PROPOSED_REGISTRIES = [
     isRemovable: true,
     isSystem: false,
     enabled: true,
-    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER],
+    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER, ContainerEngine.APPLE],
   },
 ];
 
@@ -88,7 +90,26 @@ function normalizeTheme(theme: string | undefined): "bp6-dark" | "bp6-light" {
 }
 
 function normalizeEngineThemePreference(value: string | undefined): EngineThemePreference {
-  return value === "podman" || value === "docker" || value === "unified" ? value : "auto";
+  return value === "podman" || value === "docker" || value === "unified" || value === "container" ? value : "auto";
+}
+
+// Format the raw, verbatim detail of a connection failure for the Activity Center: the SSH preflight steps
+// when present (what was attempted, step by step), else the error stack, else the bare message. Never lossy —
+// the whole point is that startup / connection-establishment failures keep their real cause.
+function describeConnectError(error: any): string | undefined {
+  const steps = error?.report?.steps;
+  if (Array.isArray(steps) && steps.length > 0) {
+    const lines = steps.map((step: any) => {
+      const mark = step?.skipped ? "·" : step?.ok ? "✓" : "✗";
+      const id = step?.id ?? step?.label ?? "step";
+      return step?.details ? `  ${mark} ${id} — ${step.details}` : `  ${mark} ${id}`;
+    });
+    return ["SSH preflight:", ...lines].join("\n");
+  }
+  if (typeof error?.stack === "string" && error.stack.trim()) {
+    return error.stack;
+  }
+  return error?.message ? `${error.message}` : undefined;
 }
 
 export const normalizeAndSortSearchResults = (items: any[]) => {
@@ -134,7 +155,7 @@ export function detectOperatingSystem() {
 export class Application {
   private static instance: Application;
 
-  protected logLevel = "debug";
+  protected logLevel = "warn";
   protected logger!: ILogger;
   protected messageBus!: IMessageBus;
   protected userConfiguration!: UserConfiguration;
@@ -178,14 +199,14 @@ export class Application {
   }
 
   setLogLevel(level: string) {
-    console.debug("Setting application log level", level);
+    this.logger?.debug("Setting application log level", level);
     try {
       const currentApi = this.getCurrentEngineConnectionApi<HostClientFacade>();
       if (currentApi) {
         currentApi.setLogLevel(level);
       }
     } catch (error: any) {
-      console.error("Unable to set log level", error);
+      this.logger?.error("Unable to set log level", error);
     }
     this.logLevel = level;
   }
@@ -317,7 +338,12 @@ export class Application {
       },
       connector: isMockMode()
         ? {
-            default: getMockEngine() === ContainerEngine.DOCKER ? MOCK_DOCKER_SYSTEM_ID : MOCK_PODMAN_SYSTEM_ID,
+            default:
+              getMockEngine() === ContainerEngine.DOCKER
+                ? MOCK_DOCKER_SYSTEM_ID
+                : getMockEngine() === ContainerEngine.APPLE
+                  ? MOCK_CONTAINER_SYSTEM_ID
+                  : MOCK_PODMAN_SYSTEM_ID,
           }
         : await this.userConfiguration.getKey("connector"),
       connections: await this.getConnectionsFromConfiguration(),
@@ -597,6 +623,9 @@ export class Application {
       firstDocker.settings.mode = "mode.automatic";
       connections.push(firstDocker);
     }
+    // Dev-only: seed env-driven remote connections (CONTAINER_DESKTOP_REMOTE_*). Readonly and regenerated
+    // each run, so they appear and auto-start without ever being persisted to user-settings.json.
+    connections.push(...buildRemoteConnectionsFromEnv(resolveRemoteEnvConnections(), this.osType));
     return connections || [];
   }
 
@@ -807,6 +836,7 @@ export class Application {
     const programArgs = ["search"];
     const isPodman = host.ENGINE === ContainerEngine.PODMAN;
     const isDocker = host.ENGINE === ContainerEngine.DOCKER;
+    const isApple = host.ENGINE === ContainerEngine.APPLE;
     if (isPodman) {
       // Search using API
       if (registry?.id === "system") {
@@ -846,6 +876,28 @@ export class Application {
       }
       programArgs.push(...filtersList);
       programArgs.push(...[term]);
+    } else if (isApple) {
+      // Apple speaks Docker REST via socktainer — use the API search endpoint (like Podman system-API).
+      // No `container` CLI search; socktainer /images/search is the single verify-live endpoint.
+      const driver = await host.getApiDriver();
+      const searchParams = new URLSearchParams();
+      searchParams.set("term", term || "");
+      if (filters?.isOfficial) {
+        searchParams.set("is-official", "true");
+      }
+      const request = {
+        method: "GET",
+        url: `/images/search?${searchParams.toString()}`,
+      };
+      this.logger.debug("Proxying Apple search request", request);
+      try {
+        const response = await driver.request(request);
+        items = response.data || [];
+        return normalizeAndSortSearchResults(items);
+      } catch {
+        // If socktainer 404s /images/search, degrade to no results (not an error).
+        return [];
+      }
     }
     let result: CommandExecutionResult;
     if (host.isScoped()) {
@@ -967,6 +1019,27 @@ export class Application {
 
   protected startupStatus: StartupStatus = StartupStatus.STOPPED;
 
+  // Remote SSH hosts need a LOCAL forward-socket address for the `ssh -NL local:remote` tunnel; automatic
+  // detection leaves it empty on Linux/macOS (the engine socket is remote, resolveScopeURI returns ""), so
+  // derive a stable local endpoint. Shared by start() and the connect/autostart path so both behave the
+  // same — otherwise the latter fails with "Local address not provided".
+  protected async ensureRemoteForwardAddress(connection: Connection, settings: EngineConnectorSettings): Promise<void> {
+    if (settings.api?.connection?.uri) {
+      return;
+    }
+    if (
+      connection.host !== ContainerEngineHost.PODMAN_REMOTE &&
+      connection.host !== ContainerEngineHost.DOCKER_REMOTE &&
+      connection.host !== ContainerEngineHost.APPLE_REMOTE
+    ) {
+      return;
+    }
+    settings.api.connection.uri =
+      this.osType === OperatingSystem.Windows
+        ? getWindowsPipePath(connection.id)
+        : await Path.join(await Platform.getUserDataPath(), `container-desktop-ssh-relay-${connection.id}`);
+  }
+
   async createConnectorContainerEngineHostClient(
     connector: Connector,
     opts?: ConnectOptions,
@@ -994,6 +1067,10 @@ export class Application {
           defaults: connector.settings,
           settings: settings,
         });
+        // Ensure remote SSH hosts have a local forward-socket address BEFORE detection — automatic settings
+        // preserve a pre-set uri (sshApiConnection falls back to it) but leave it empty otherwise, which
+        // would later fail the tunnel with "Local address not provided".
+        await this.ensureRemoteForwardAddress(connector, settings);
         host.setLogLevel(this.logLevel);
         await host.setSettings(settings);
         if (isMockMode()) {
@@ -1002,7 +1079,7 @@ export class Application {
         if (settings.mode === "mode.automatic") {
           const scope = settings.controller?.scope || "";
           if (opts?.skipAvailabilityCheck) {
-            this.logger.warn(connector.id, "Skipping automatic settings - availability check disabled");
+            this.logger.debug(connector.id, "Skipping automatic settings - availability check disabled");
           } else {
             systemNotifier.transmit("startup.phase", {
               trace: "Performing automatic connection detection",
@@ -1020,7 +1097,29 @@ export class Application {
               this.startupStatus = await host.startScopeByName(scope);
             }
             const automaticSettings = await host.getAutomaticSettings();
-            this.logger.warn("Using automatic settings", automaticSettings);
+            this.logger.debug(connector.id, "Using automatic settings", {
+              api: {
+                baseURL: automaticSettings.api.baseURL,
+                uri: automaticSettings.api.connection.uri,
+                relay: automaticSettings.api.connection.relay,
+              },
+              controller: automaticSettings.controller
+                ? {
+                    name: automaticSettings.controller.name,
+                    path: automaticSettings.controller.path,
+                    scope: automaticSettings.controller.scope,
+                    version: automaticSettings.controller.version,
+                  }
+                : undefined,
+              engine: connector.engine,
+              host: connector.host,
+              mode: automaticSettings.mode,
+              program: {
+                name: automaticSettings.program.name,
+                path: automaticSettings.program.path,
+                version: automaticSettings.program.version,
+              },
+            });
             await host.setSettings(automaticSettings);
           }
         }
@@ -1040,7 +1139,7 @@ export class Application {
         this.logger.debug(connector.id, ">> Reading host availability");
         try {
           if (opts?.skipAvailabilityCheck) {
-            this.logger.warn(connector.id, "Skipping availability check");
+            this.logger.debug(connector.id, "Skipping availability check");
           } else {
             systemNotifier.transmit("startup.phase", {
               trace: "Performing availability checks",
@@ -1065,6 +1164,17 @@ export class Application {
       }
     } catch (error: any) {
       this.logger.error(connector.id, "Connector host api creation error", error);
+      // Don't let a real failure (e.g. "ssh: … No route to host") leak out as the "Not checked" placeholder:
+      // fold the actual reason + its raw detail (SSH preflight steps / stack) into availability so the whole
+      // chain — connectOne → progress → Activity Center — can show WHY, never a terse nothing.
+      const reason = `${error?.message ?? error}`.trim() || "Engine connection failed";
+      if (availability) {
+        availability = {
+          ...availability,
+          api: false,
+          report: { ...availability.report, api: reason, detail: describeConnectError(error) },
+        };
+      }
     }
     this.logger.debug(connector.id, "<< Creating connector host api", {
       host,
@@ -1127,24 +1237,7 @@ export class Application {
         connector.settings = deepMerge({}, opts.connection.settings);
         connector.logLevel = this.logLevel;
         currentOpts.connection.settings = connector.settings;
-        if (!connector.settings?.api?.connection?.uri) {
-          switch (opts.connection?.host) {
-            case ContainerEngineHost.PODMAN_REMOTE:
-            case ContainerEngineHost.DOCKER_REMOTE:
-              if (this.osType === OperatingSystem.Windows) {
-                connector.settings.api.connection.uri = getWindowsPipePath(connector.id);
-              } else {
-                const userData = await Platform.getUserDataPath();
-                connector.settings.api.connection.uri = await Path.join(
-                  userData,
-                  `container-desktop-ssh-relay-${connector.id}`,
-                );
-              }
-              break;
-            default:
-              break;
-          }
-        }
+        await this.ensureRemoteForwardAddress(connector, connector.settings);
         if (!connector) {
           this.logger.error("Bridge startup - no connector found", currentOpts);
           throw new Error("No connector found");
@@ -1162,7 +1255,11 @@ export class Application {
           connector.availability = availability;
           connector.capabilities = host.capabilities;
           this._currentContainerEngineHostClient = host;
-          console.debug("> Host settings are", { host: engineSettings, connector: connector.settings });
+          this.logger.debug("Host settings resolved", {
+            id: connector.id,
+            engine: connector.engine,
+            host: connector.host,
+          });
           systemNotifier.transmit("startup.phase", {
             trace: "Creating connector host completed",
           });

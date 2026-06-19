@@ -11,6 +11,7 @@ import {
   type CommandExecutionResult,
   type Connection,
   ContainerEngine,
+  ContainerEngineHost,
   type ContextInspect,
   type EngineConnectorSettings,
   StartupStatus,
@@ -19,6 +20,16 @@ import {
 import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 import { DOCKER_SORT_CAPABILITIES } from "../sort-capabilities";
+import {
+  expandScopedSocketPath,
+  findSocketPathCandidate,
+  isScopedMacOS,
+  parseJSON,
+  readScopedHome,
+  runScopedSocketCommand,
+} from "./shared";
+
+const DEFAULT_DOCKER_SOCKETS = new Set(["/var/run/docker.sock", "/run/docker.sock"]);
 
 /** A failed command result used by the no-op Podman-domain extensions on Docker. */
 function noopCommandResult(): CommandExecutionResult {
@@ -64,11 +75,48 @@ async function getContextInspect(
   return info;
 }
 
+async function readColimaDockerSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
+  for (const args of [["status", "--json"], ["status"]]) {
+    const output = await runScopedSocketCommand(host, settings, "colima", args);
+    if (!output.success) {
+      continue;
+    }
+    const parsed = parseJSON(output.stdout || "");
+    const socket =
+      findSocketPathCandidate(parsed, "docker.sock") || findSocketPathCandidate(output.stdout || "", "docker.sock");
+    if (socket) {
+      return await expandScopedSocketPath(host, settings, socket);
+    }
+    const home = await readScopedHome(host, settings);
+    return home ? `${home}/.colima/default/docker.sock` : "";
+  }
+  return "";
+}
+
+async function resolveDockerSSHSocket(
+  host: HostContext,
+  settings: EngineConnectorSettings,
+  contextHost: string,
+): Promise<string> {
+  const contextSocket = await expandScopedSocketPath(host, settings, contextHost);
+  if (host.HOST !== ContainerEngineHost.DOCKER_REMOTE) {
+    return contextSocket;
+  }
+  if (contextSocket && !DEFAULT_DOCKER_SOCKETS.has(contextSocket)) {
+    return contextSocket;
+  }
+  if (await isScopedMacOS(host, settings)) {
+    return (await readColimaDockerSocket(host, settings)) || contextSocket;
+  }
+  return contextSocket;
+}
+
 export const dockerDialect: EngineDialect = {
   ENGINE: ContainerEngine.DOCKER,
+  apiSurface: "docker",
 
   capabilitiesBase: {
-    resources: { pods: false, secrets: false },
+    resources: { pods: false, secrets: false, networks: true },
     events: true,
     sort: DOCKER_SORT_CAPABILITIES,
     extensions: {
@@ -85,7 +133,7 @@ export const dockerDialect: EngineDialect = {
 
   async readEngineSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
     const info = await getContextInspect(host, undefined, settings);
-    return info?.Endpoints?.docker?.Host || "";
+    return await resolveDockerSSHSocket(host, settings, info?.Endpoints?.docker?.Host || "");
   },
 
   async resolveNativeURISeed(): Promise<string> {

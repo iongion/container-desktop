@@ -17,6 +17,7 @@ interface ActionsMenuProps {
   image?: ContainerImage;
   connectionId?: string;
   withoutStart?: boolean;
+  iconOnly?: boolean;
   expand?: boolean;
   isActive?: (screen: string) => boolean;
   onReload?: () => void;
@@ -27,6 +28,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   image,
   connectionId: connectionIdProp,
   withoutStart,
+  iconOnly,
   isActive,
   onReload,
 }: ActionsMenuProps) => {
@@ -107,8 +109,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     <Button
       size="small"
       variant="minimal"
-      intent={Intent.SUCCESS}
-      text={t("Start")}
+      text={iconOnly ? undefined : t("Start")}
+      title={t("Start")}
       icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />}
       onClick={onCreateClick}
     />

@@ -133,6 +133,12 @@ export function selectUnreadCount(state: ActivityState): number {
   return count;
 }
 
+// True when ANY recorded entry (notification OR activity) is an error — drives the bell's danger state so a
+// failure is impossible to miss. Persists until the stream is cleared (errors are never silently dropped).
+export function selectHasError(state: ActivityState): boolean {
+  return state.entries.some((entry) => entry.severity === "error");
+}
+
 // ── Ingestion: system events (reused systemNotifier bus) ──────────────────────────────
 // These run at module load — coexisting with the existing appStore listeners (eventemitter3
 // supports multiple listeners per event). The drawer/header import this module, so the
@@ -176,6 +182,7 @@ export function intentToSeverity(intent: string | undefined): ActivitySeverity {
 function toNotificationEntry(event: SystemNotification): NotificationEntry {
   const message = `${event?.data?.message ?? ""}`;
   const intent = typeof event?.data?.intent === "string" ? event.data.intent : "none";
+  const detail = typeof event?.data?.detail === "string" ? event.data.detail : undefined;
   return {
     guid: event?.guid ?? crypto.randomUUID(),
     date: event?.date instanceof Date ? event.date.getTime() : Date.now(),
@@ -184,6 +191,7 @@ function toNotificationEntry(event: SystemNotification): NotificationEntry {
     title: message,
     message,
     intent,
+    detail,
   };
 }
 

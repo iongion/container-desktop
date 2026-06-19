@@ -29,6 +29,8 @@ export interface TrayControllerOptions {
 // setContextMenu is the documented way to update a tray menu and is required on Linux.
 export class TrayController {
   private tray: Tray | null = null;
+  private lastMenuDataSignature: string | undefined;
+  private lastTrayIconPath: string | undefined;
   // show()/popup can fire activation twice in quick succession on some platforms — debounce it.
   private readonly activateGuard = { last: 0 };
 
@@ -49,8 +51,12 @@ export class TrayController {
     }
     try {
       const trayIconPath = this.getIcon();
+      if (this.lastTrayIconPath === trayIconPath) {
+        return;
+      }
       this.options.logger.debug("Set tray icon from", trayIconPath);
       this.tray.setImage(this.loadIcon(trayIconPath));
+      this.lastTrayIconPath = trayIconPath;
     } catch (error: any) {
       this.options.logger.error("Unable to set sys-tray icon", error);
     }
@@ -61,7 +67,10 @@ export class TrayController {
       this.options.logger.debug("Creating system tray - skipped - already present");
       return this.tray;
     }
-    this.tray = new Tray(this.loadIcon(this.getIcon()));
+    const trayIconPath = this.getIcon();
+    this.tray = new Tray(this.loadIcon(trayIconPath));
+    this.lastTrayIconPath = trayIconPath;
+    this.lastMenuDataSignature = undefined;
     this.tray.setToolTip("Container Desktop");
     this.refreshMenu();
     // Left-click pops the menu where the OS emits a click (macOS/Windows). On Linux the
@@ -78,7 +87,12 @@ export class TrayController {
       return;
     }
     try {
-      const template = buildTrayMenuTemplate(this.options.getMenuData(), {
+      const menuData = this.options.getMenuData();
+      const signature = JSON.stringify(menuData);
+      if (this.lastMenuDataSignature === signature) {
+        return;
+      }
+      const template = buildTrayMenuTemplate(menuData, {
         onAction: (kind, id, connectionId) =>
           void this.options
             .performAction({ kind, id, connectionId })
@@ -87,6 +101,7 @@ export class TrayController {
         onQuit: () => this.options.quitApplication(),
       });
       this.tray.setContextMenu(Menu.buildFromTemplate(template));
+      this.lastMenuDataSignature = signature;
     } catch (error: any) {
       this.options.logger.error("Unable to build tray menu", error);
     }
@@ -116,6 +131,8 @@ export class TrayController {
       this.options.logger.error("Unable to destroy system tray", error);
     } finally {
       this.tray = null;
+      this.lastTrayIconPath = undefined;
+      this.lastMenuDataSignature = undefined;
     }
   }
 }

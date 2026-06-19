@@ -9,6 +9,20 @@
   padding-left: initial;
   min-width: 1px;
 }
+.AppDataTable[data-table="images"] th[data-column="tag"],
+.AppDataTable[data-table="images"] td[data-column="tag"] {
+  min-width: 140px;
+  max-width: 140px;
+  width: 140px;
+}
+
+.AppDataTable[data-table="images"] .ContainerImageTag {
+  display: block;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .ActionMenuItemConfirm {
   margin: 0;

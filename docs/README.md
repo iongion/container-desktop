@@ -7,8 +7,9 @@ jump to the source. It does **not** restate APIs line by line.
 The app has two pillars, and the docs are organized around them:
 
 - **Backend** — the engine/connection support: how the app models container
-  engines (Podman/Docker) and reaches them across local, SSH-remote, WSL, Lima,
-  and machine/vendor hosts.
+  engines (Podman, Docker, and Apple Container) and reaches them across local,
+  SSH-remote, WSL, Lima, and machine/vendor hosts. (Apple Container is
+  macOS/Apple-silicon only — native + SSH-remote, no WSL/Lima/vendor.)
 - **Frontend** — the React renderer: UI, state, navigation, and the bridge that
   lets it drive the backend.
 
@@ -39,7 +40,9 @@ renders them inline, no tooling required. They follow the
 > **Naming clash, read carefully:** in C4 a **"container"** means a _runnable
 > unit_ (a process / deployable), **not** an OS/Linux container. This app manages
 > OS containers, so to avoid confusion the docs say **"process"** or **"world"**
-> for the C4 sense and reserve "container" for the Podman/Docker kind.
+> for the C4 sense and reserve "container" for the OS-container kind (Podman,
+> Docker, Apple Container). Apple's engine is, confusingly, literally named
+> `container` — an extra reason to keep the C4 sense spelled "process".
 
 ### Visual legend
 

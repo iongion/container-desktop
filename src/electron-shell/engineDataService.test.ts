@@ -1,7 +1,9 @@
+import { EventEmitter } from "eventemitter3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type FakeCommandHandle, installFakeCommand } from "@/__tests__/setup/fakeCommand";
 import { Application } from "@/container-client/Application";
+import type { ResourceConnectProgress } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { ContainerEngine } from "@/env/Types";
 import { EngineDataService } from "./engineDataService";
@@ -18,6 +20,16 @@ describe("EngineDataService state", () => {
     unsub();
     service.setResourceItems("conn-1", "containers", []);
     expect(seen.length).toBe(1); // no longer notified after unsub
+  });
+
+  it("does not notify subscribers for unchanged resource snapshots", () => {
+    const service = new EngineDataService();
+    const seen: number[] = [];
+    service.subscribe(() => seen.push(1));
+    service.setResourceItems("conn-1", "containers", [{ Id: "a" } as any]);
+    service.setResourceItems("conn-1", "containers", [{ Id: "a" } as any]);
+    service.setResourceItems("conn-1", "containers", [{ Id: "b" } as any]);
+    expect(seen).toHaveLength(2);
   });
 });
 
@@ -38,9 +50,27 @@ describe("EngineDataService.refresh", () => {
     expect(containers).toHaveLength(1);
     expect((containers[0] as any).Computed?.Name).toBe("web-1"); // normalizer ran
   });
+
+  it("skips unsupported domains for the target host", async () => {
+    const fakeHost = {
+      capabilities: { resources: { pods: false, secrets: false } },
+      getApiDriver: vi.fn(),
+    } as unknown as HostClientFacade;
+    const service = new EngineDataService();
+    await service.refresh("conn-1", "pods", fakeHost);
+    expect((fakeHost as any).getApiDriver).not.toHaveBeenCalled();
+    expect(service.getResourceState("conn-1").pods).toEqual([]);
+  });
 });
 
 describe("EngineDataService.onEngineEvent", () => {
+  const hostWithPods = (pods: boolean) =>
+    ({
+      capabilities: {
+        resources: { pods, secrets: false },
+      },
+    }) as unknown as HostClientFacade;
+
   it("debounces and refreshes containers + pods for a container event", async () => {
     vi.useFakeTimers();
     const service = new EngineDataService();
@@ -48,10 +78,25 @@ describe("EngineDataService.onEngineEvent", () => {
     (service as any).refresh = async (_c: string, d: string) => {
       refreshed.push(d);
     };
+    (service as any).hostByConnection.set("conn-1", hostWithPods(true));
     service.onEngineEvent("conn-1", { Type: "container", Action: "die" });
     service.onEngineEvent("conn-1", { Type: "container", Action: "die" }); // coalesced
     await vi.advanceTimersByTimeAsync(600);
     expect(refreshed.sort()).toEqual(["containers", "pods"]);
+    vi.useRealTimers();
+  });
+
+  it("does not refresh Podman-only pods for Docker container events", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    const refreshed: string[] = [];
+    (service as any).refresh = async (_c: string, d: string) => {
+      refreshed.push(d);
+    };
+    (service as any).hostByConnection.set("conn-1", hostWithPods(false));
+    service.onEngineEvent("conn-1", { Type: "container", Action: "die" });
+    await vi.advanceTimersByTimeAsync(600);
+    expect(refreshed).toEqual(["containers"]);
     vi.useRealTimers();
   });
 });
@@ -122,6 +167,178 @@ describe("EngineDataService.connect", () => {
     } as any);
 
     expect(service.getAppRuntimeSnapshot().active?.[0]?.version).toBe("27.3.1");
+  });
+
+  it("connectAll starts boot connections concurrently and settles after the slowest one", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    const connection = (id: string) =>
+      ({
+        id,
+        name: id,
+        engine: ContainerEngine.DOCKER,
+        host: "docker.native",
+        settings: { api: { autoStart: true } },
+      }) as any;
+    const fast = connection("fast");
+    const slow = connection("slow");
+    let slowFinished = false;
+    (service as any).ensureApp = () => ({
+      setup: async () => undefined,
+      getSystemConnections: async () => [fast, slow],
+      getConnections: async () => [],
+      getGlobalUserSettings: async () => ({ connector: { default: "fast" } }),
+    });
+    (service as any).connectOne = async (target: any) => {
+      if (target.id === "slow") {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        slowFinished = true;
+      }
+      (service as any).runtimeByConnection.set(target.id, {
+        id: target.id,
+        name: target.name,
+        engine: target.engine,
+        phase: "ready",
+        running: true,
+      });
+    };
+
+    let settled = false;
+    const connecting = service.connectAll().then(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    expect(settled).toBe(false);
+    expect(slowFinished).toBe(false);
+    expect(service.getAppRuntimeSnapshot().active?.some((runtime) => runtime.id === "fast" && runtime.running)).toBe(
+      true,
+    );
+    await vi.advanceTimersByTimeAsync(1000);
+    await connecting;
+    expect(settled).toBe(true);
+    expect(slowFinished).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("does not block a ready connection forever on resource warmup", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    const capabilities = {
+      resources: { pods: false, secrets: false, networks: true },
+      events: false,
+      sort: {},
+      extensions: {
+        machines: false,
+        kube: false,
+        contexts: false,
+        swarm: false,
+        builders: false,
+        compose: false,
+        registries: false,
+        controllerVersion: false,
+      },
+    };
+    const host = {
+      capabilities,
+      getSettings: async () => ({
+        api: { baseURL: "http://localhost", connection: { uri: "", relay: "" }, autoStart: true },
+        program: { name: "docker", path: "/usr/bin/docker", version: "27.3.1" },
+        rootfull: false,
+        mode: "mode.automatic",
+      }),
+    } as unknown as HostClientFacade;
+    (service as any).ensureApp = () => ({
+      setup: async () => undefined,
+      connectHostClient: async () => ({ host, availability: { api: true } }),
+    });
+    (service as any).refreshAll = async () => new Promise<never>(() => undefined);
+
+    const connecting = service.connectOne({
+      id: "slow-resources",
+      name: "slow-resources",
+      engine: ContainerEngine.DOCKER,
+      host: "docker.native",
+      settings: {
+        api: { baseURL: "http://localhost", connection: { uri: "", relay: "" }, autoStart: true },
+        program: { name: "docker", path: "", version: "" },
+        rootfull: false,
+        mode: "mode.automatic",
+      },
+    } as any);
+    await vi.advanceTimersByTimeAsync(5000);
+    await connecting;
+
+    const runtime = service.getAppRuntimeSnapshot().active?.find((item) => item.id === "slow-resources");
+    expect(runtime?.phase).toBe("ready");
+    expect(runtime?.running).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("tags a boot/auto-start failure 'bootstrap' and surfaces the REAL reason + detail (not 'Not checked')", async () => {
+    const service = new EngineDataService();
+    const unavailable = {
+      id: "system-env.mac.container",
+      name: "MacOS (container)",
+      engine: ContainerEngine.APPLE,
+      host: "container.remote",
+      settings: { api: { autoStart: true }, controller: { scope: "MacOS" } },
+    } as any;
+    // connectHostClient no longer swallows the SSH failure: it folds the real reason + raw preflight detail
+    // into availability.report (api + detail). connectOne must surface those, not the "Not checked" placeholder.
+    (service as any).ensureApp = () => ({
+      setup: async () => undefined,
+      connectHostClient: async () => ({
+        host: undefined,
+        availability: {
+          api: false,
+          report: {
+            api: "ssh: connect to host 192.168.0.33 port 22: No route to host",
+            detail: "SSH preflight:\n  ✗ host reachable — No route to host",
+          },
+        },
+      }),
+    });
+    const progress: ResourceConnectProgress[] = [];
+    service.subscribeProgress((p) => progress.push(p));
+    await service.connectOne(unavailable); // default origin = bootstrap (the connectAll path)
+    const failed = progress.find((p) => p.phase === "failed");
+    expect(failed?.origin).toBe("bootstrap");
+    expect(failed?.trace).toContain("No route to host"); // the REAL reason, never the placeholder
+    expect(failed?.detail).toContain("What it tried:"); // what was attempted
+    expect(failed?.detail).toContain("via SSH (MacOS)");
+    expect(failed?.detail).toContain("No route to host"); // what happened
+  });
+
+  it("tags an explicit user connect failure 'user' and carries the real reason + detail", async () => {
+    const service = new EngineDataService();
+    const target = {
+      id: "system-default.docker",
+      name: "MacOS (docker)",
+      engine: ContainerEngine.DOCKER,
+      host: "docker.native",
+      settings: { api: { autoStart: true } },
+    } as any;
+    (service as any).ensureApp = () => ({
+      setup: async () => undefined,
+      getGlobalUserSettings: async () => ({ connector: { default: target.id } }),
+      connectHostClient: async () => ({
+        host: undefined,
+        availability: {
+          api: false,
+          report: { api: "Cannot connect to the Docker daemon at unix:///var/run/docker.sock" },
+        },
+      }),
+    });
+    (service as any).loadConnections = async () => [target];
+    const progress: ResourceConnectProgress[] = [];
+    service.subscribeProgress((p) => progress.push(p));
+    await service.ensureConnected(target.id); // explicit connect intent
+    const failed = progress.find((p) => p.phase === "failed");
+    expect(failed?.origin).toBe("user");
+    expect(failed?.trace).toContain("Cannot connect to the Docker daemon");
+    expect(failed?.detail).toContain("What it tried:");
   });
 });
 
@@ -195,6 +412,61 @@ describe("EngineDataService auto-reconnect", () => {
     expect(service.getAppRuntimeSnapshot().active?.find((r) => r.id === "c1")?.phase).toBe("reconnecting");
     await vi.advanceTimersByTimeAsync(30000); // exceed the (jittered, ≤1s) attempt-1 delay
     expect(connectCalls).toEqual(["c1"]);
+    vi.useRealTimers();
+  });
+
+  it("keeps a connection ready when only the events stream aborts and the API is still reachable", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    const firstStream = new EventEmitter();
+    const secondStream = new EventEmitter();
+    const streams = [firstStream, secondStream];
+    const getEventsStream = vi.fn(async () => streams.shift());
+    const host = {
+      getEventsStream,
+      isApiRunning: vi.fn(async () => ({ success: true, details: "Api is reachable" })),
+    } as unknown as HostClientFacade;
+    const reconnect = vi.fn();
+    (service as any).scheduleReconnect = reconnect;
+    (service as any).connectionById.set("c1", conn("c1"));
+    (service as any).hostByConnection.set("c1", host);
+    (service as any).runtimeByConnection.set("c1", {
+      id: "c1",
+      name: "c1",
+      engine: ContainerEngine.DOCKER,
+      phase: "ready",
+      running: true,
+    });
+
+    const stop = await (service as any).connectEvents("c1", host);
+    (service as any).stopEventsByConnection.set("c1", stop);
+    await vi.advanceTimersByTimeAsync(2000);
+    firstStream.emit("error", new Error("aborted"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const runtime = service.getAppRuntimeSnapshot().active?.find((r) => r.id === "c1");
+    expect(getEventsStream).toHaveBeenCalledTimes(2);
+    expect(runtime?.phase).toBe("ready");
+    expect(runtime?.running).toBe(true);
+    expect(reconnect).not.toHaveBeenCalled();
+    expect((service as any).hostByConnection.get("c1")).toBe(host);
+    vi.useRealTimers();
+  });
+
+  it("does not block connection startup when an events stream never opens", async () => {
+    vi.useFakeTimers();
+    const service = new EngineDataService();
+    const getEventsStream = vi.fn(() => new Promise<never>(() => undefined));
+    const host = { getEventsStream } as unknown as HostClientFacade;
+
+    const opening = (service as any).connectEvents("c1", host);
+    await vi.advanceTimersByTimeAsync(4000);
+    const stop = await opening;
+
+    expect(typeof stop).toBe("function");
+    expect(getEventsStream).toHaveBeenCalledWith(expect.objectContaining({ attachTimeoutMs: 3000 }));
     vi.useRealTimers();
   });
 

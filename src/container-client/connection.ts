@@ -13,6 +13,9 @@ import { deepMerge } from "@/utils";
 export const PODMAN_PROGRAM = "podman";
 export const DOCKER_PROGRAM = "docker";
 
+export const APPLE_PROGRAM = "container";
+export const SOCKTAINER_PROGRAM = "socktainer";
+
 // WSL - common
 export const WSL_PROGRAM = "wsl";
 export const WSL_VERSION = "2";
@@ -37,6 +40,11 @@ export const ContainerEngineOptions: ContainerEngineOption[] = [
   {
     engine: ContainerEngine.DOCKER,
     label: "Docker",
+    present: Presence.UNKNOWN,
+  },
+  {
+    engine: ContainerEngine.APPLE,
+    label: "Container",
     present: Presence.UNKNOWN,
   },
 ];
@@ -74,7 +82,7 @@ export function createConnectorSettings({
   };
   if (programName.startsWith(PODMAN_PROGRAM)) {
     settings.api.baseURL = "http://d";
-  } else if (programName.startsWith(DOCKER_PROGRAM)) {
+  } else if (programName.startsWith(DOCKER_PROGRAM) || programName.startsWith(APPLE_PROGRAM)) {
     settings.api.baseURL = "http://localhost";
   }
   if (controllerName) {
@@ -398,6 +406,65 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         },
       }),
     },
+    // Apple
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_NATIVE,
+      id: createConnectorId("default", ContainerEngineHost.APPLE_NATIVE),
+      label: "Native",
+      description: "",
+      notes: "Apple Container native is only available on macOS (Apple Silicon)",
+      availability: {
+        enabled: osType === OperatingSystem.MacOS,
+        api: false,
+        host: false,
+        program: false,
+        report: {
+          host: "Not checked",
+          program: "Not checked",
+          api: "Not checked",
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.APPLE_NATIVE,
+        programName: APPLE_PROGRAM,
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_REMOTE,
+      id: createConnectorId("default", ContainerEngineHost.APPLE_REMOTE),
+      label: "Remote SSH connection",
+      description: "",
+      notes: "",
+      availability: {
+        enabled: true,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: "Not checked",
+          program: "Not checked",
+          api: "Not checked",
+          controller: "Not checked",
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.APPLE_REMOTE,
+        programName: APPLE_PROGRAM,
+        controllerName: SSH_PROGRAM,
+        overrides: {
+          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION },
+        },
+      }),
+    },
   ];
   // console.debug(">> connectors", { osType }, connectors);
   return connectors;
@@ -411,9 +478,7 @@ export async function createConnectorBy(
 ) {
   const canUseNativeEngine = osType === OperatingSystem.Linux;
   let currentEngineHost: ContainerEngineHost = host!;
-  if (currentEngineHost) {
-    console.debug("Using custom host", { host });
-  } else {
+  if (!currentEngineHost) {
     if (engine === ContainerEngine.PODMAN) {
       currentEngineHost = canUseNativeEngine
         ? ContainerEngineHost.PODMAN_NATIVE
@@ -422,6 +487,9 @@ export async function createConnectorBy(
       currentEngineHost = canUseNativeEngine
         ? ContainerEngineHost.DOCKER_NATIVE
         : ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;
+    } else if (engine === ContainerEngine.APPLE) {
+      currentEngineHost =
+        osType === OperatingSystem.MacOS ? ContainerEngineHost.APPLE_NATIVE : ContainerEngineHost.APPLE_REMOTE;
     }
   }
   const connectors = getDefaultConnectors(osType);

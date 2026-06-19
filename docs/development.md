@@ -103,6 +103,32 @@ ssh -nNT -L /tmp/podman.sock:/run/user/1000/podman/podman.sock \
 export DOCKER_HOST='unix:///tmp/podman.sock'
 ```
 
+## Remote engines via `.env` (dev)
+
+Seed `podman.remote` / `docker.remote` connections from the multi-stage `.env` chain so `yarn dev`
+develops against a remote engine and `yarn test:live` exercises the same hosts — one scheme, both.
+Put real values in `.env.development.local` (gitignored); the committed `.env.development` carries the
+commented reference. **Dev only:** a packaged build never loads `.env` at runtime, so production
+connections still come from `user-settings.json` / the UI.
+
+Each `<ID>` is one remote host (`CONTAINER_DESKTOP_REMOTE_<ID>_*`):
+
+```sh
+CONTAINER_DESKTOP_REMOTE_MAC_ENGINE=podman,docker     # podman | docker | podman,docker
+CONTAINER_DESKTOP_REMOTE_MAC_SSH_HOST=my-mac          # a Host alias from ~/.ssh/config
+CONTAINER_DESKTOP_REMOTE_MAC_SSH_USER=ion             # test:live only (app reads it from ssh config)
+CONTAINER_DESKTOP_REMOTE_MAC_SSH_KEY=~/.ssh/id_ed25519  # test:live only
+CONTAINER_DESKTOP_REMOTE_MAC_DOCKER_SOCKET=/var/run/docker.sock   # optional relay fallback
+```
+
+- The **app** reads the SSH host's user/port/key from `~/.ssh/config` (so `SSH_HOST` must be a Host
+  alias). It seeds **readonly** connections regenerated each run (never written to `user-settings.json`),
+  so editing a var and reloading adds/removes them; `AUTOSTART` (default true) connects on launch.
+- The **socket** is optional — `mode.automatic` auto-detects it over SSH; a `*_SOCKET` value is only a
+  fallback. For the live test it is unused (the bounded SSH pre-flight runs `podman info` / `docker info`
+  over SSH; `SSH_USER`/`SSH_KEY` are required there because the pre-flight does not read `~/.ssh/config`).
+- Run a configured host: `CONTAINER_DESKTOP_TEST_TARGETS=mac yarn test:live` (id = the lowercased `<ID>`).
+
 ## See also
 
 - [Architecture overview](architecture/overview.md) — system context & processes

@@ -15,7 +15,7 @@
   var initial;
   var initialActive;
   swatches.forEach((s) => {
-    shotsFor[s.dataset.themeId] = s.dataset.shots || "podman";
+    shotsFor[s.dataset.themeId] = s.dataset.shots || "unified";
     replayFor[s.dataset.themeId] = { replay: s.dataset.replay || "", poster: s.dataset.poster || "" };
     taglineFor[s.dataset.themeId] = s.dataset.tagline || "";
   });
@@ -38,14 +38,14 @@
   var engineFolderRe = new RegExp(`/img/(?:${shotFolders.join("|")})/`);
 
   function applyEngineImage(img, src, folder) {
-    // Until an engine's screenshots are captured its folder is empty; fall back to podman's set so
-    // the page never shows broken images. Podman is the base and never falls back.
-    if (folder === "podman") {
+    // Until an engine's screenshots are captured its folder is empty; fall back to unified's set so
+    // the page never shows broken images. Unified is the base and never falls back.
+    if (folder === "unified") {
       img.onerror = null;
     } else {
       img.onerror = () => {
         img.onerror = null;
-        img.setAttribute("src", src.replace(/\/img\/[^/]+\//, "/img/podman/"));
+        img.setAttribute("src", src.replace(/\/img\/[^/]+\//, "/img/unified/"));
       };
     }
     img.setAttribute("src", src);
@@ -90,7 +90,7 @@
 
   function updateReplay(id) {
     var assets = replayFor[id];
-    var fallback = replayFor.podman || {};
+    var fallback = replayFor.unified || {};
     var mounts;
     var mount;
     var poster;

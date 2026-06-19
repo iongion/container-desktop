@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- **Container engine (macOS):** Manage Apple Container engines locally or over SSH through Socktainer.
+- **Remote engines from `.env` (dev):** `CONTAINER_DESKTOP_REMOTE_<ID>_*` variables seed readonly Podman, Docker and Container SSH connections in `yarn dev`. Inert in production builds.
+- Manual setup steps for macOS Container + Socktainer.
+
+## Changed
+
+- Apple Container is labeled **Container** in the app and docs.
+- SSH remotes now follow OpenSSH host aliases, ssh-agent and default identities; `IdentityFile` is optional.
+
+## Fixed
+
+- Startup opens on the first available engine while remaining engines keep connecting in the background.
+- Slow or stuck SSH/event/resource probes no longer leave the boot screen or sidebar spinner running forever.
+
 ## [5.3.4] - 2026-06-19
 
 ## Fixed

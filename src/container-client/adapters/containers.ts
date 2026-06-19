@@ -234,7 +234,7 @@ export class ContainersAdapter extends ResourceAdapter {
       }),
     };
     let baseURL = LIBPOD_BASE_URL;
-    if (this.isDocker) {
+    if (this.usesDockerApi) {
       baseURL = DOCKER_BASE_URL;
       creator = {
         Image: opts.ImageId,

@@ -1,4 +1,4 @@
-import { AnchorButton, Code, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { Code, Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiDns, mdiEthernet, mdiInfinity, mdiNetwork, mdiScrewdriver } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -7,6 +7,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Network } from "@/env/Types";
+import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -21,7 +22,9 @@ import {
   useMergedResources,
   useResourceReload,
   useShowEngineColumn,
+  useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -75,12 +78,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, networkSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.name, b.name));
   }, [clientSort, networkSnapshot, searchTerm]);
+  const renderedNetworks = useProgressiveTableRows(networks);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((network: MergedNetwork) => mergedKey(network, network.id), []);
   const visibleIds = useMemo(() => networks.map(getRowId), [networks, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useNetworkBulkActions();
   const showEngineColumn = useShowEngineColumn();
+  const showEngineRowAccent = useShowEngineRowAccent();
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("networks");
 
@@ -175,7 +180,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {(networks || []).map((network) => {
+              {renderedNetworks.map((network) => {
                 const rowId = getRowId(network);
                 const creationDate =
                   typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
@@ -183,19 +188,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <tr
                     key={rowId}
                     data-network={network.id}
-                    data-engine-row={showEngineColumn ? network.engine : undefined}
+                    data-engine-row={showEngineRowAccent ? network.engine : undefined}
                   >
                     <td>
-                      <AnchorButton
+                      <AppDataTableLink
                         className="InspectNetworkButton"
-                        variant="minimal"
-                        size="small"
+                        fillCell
                         href={getNetworkUrl(network.id, "inspect", network.connectionId)}
-                        intent={Intent.PRIMARY}
-                        icon={IconNames.EYE_OPEN}
-                      >
-                        <span>{network.name}</span>
-                      </AnchorButton>
+                        iconName={IconNames.EYE_OPEN}
+                        text={network.name}
+                      />
                     </td>
                     <td>
                       <Code title={network.id}>{network.id?.substring(0, 16)}</Code>
@@ -207,7 +209,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{network.internal ? t("Yes") : t("No")}</td>
                     <td>{network.dns_enabled ? t("Yes") : t("No")}</td>
                     <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
-                    <td>
+                    <td data-column="Actions">
                       <ActionsMenu withoutCreate network={network} connectionId={network.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">

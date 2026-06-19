@@ -300,12 +300,10 @@ export function AppMainScreen() {
 
   useEffect(() => {
     if (startRef.current) {
-      console.debug("Initial start skipped - already started");
-    } else {
-      console.debug("Initial start has been triggered");
-      startRef.current = true;
-      initialize().then(() => startApplication());
+      return;
     }
+    startRef.current = true;
+    initialize().then(() => startApplication());
   }, [initialize, startApplication]);
 
   // Apply the user's monospace font override as CSS variables (removing them falls back to the

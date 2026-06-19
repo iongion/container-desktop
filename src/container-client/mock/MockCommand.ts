@@ -24,6 +24,9 @@ function engineForLauncher(launcher: string): ContainerEngine {
   if (normalized.includes("podman")) {
     return ContainerEngine.PODMAN;
   }
+  if (normalized.includes("container")) {
+    return ContainerEngine.APPLE;
+  }
   return getMockEngine();
 }
 

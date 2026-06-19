@@ -4,26 +4,26 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script>try{var t=localStorage.getItem("cd-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
-<title>The Manual — Container Desktop setup guides for Podman &amp; Docker</title>
-<meta name="description" content="Set up Podman and Docker on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
+<title>The Manual — Container Desktop setup guides for Podman, Docker &amp; Apple Container</title>
+<meta name="description" content="Set up Podman, Docker and Apple Container on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
 <link rel="canonical" href="https://container-desktop.com/manual/" />
 <link rel="icon" href="/favicon.ico?v=5.3.4" type="image/x-icon" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=5.3.4" />
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=5.3.4" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5.3.4" />
+<link rel="container-touch-icon" href="/container-touch-icon.png?v=5.3.4" />
 <link rel="mask-icon" href="/safari-pinned-tab.svg?v=5.3.4" color="#a01986" />
 <link rel="manifest" href="/site.webmanifest" />
 <meta name="theme-color" content="#0f0014" />
 <meta name="msapplication-config" content="/browserconfig.xml" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Container Desktop" />
-<meta property="og:title" content="The Manual — Container Desktop setup guides for Podman &amp; Docker" />
-<meta property="og:description" content="Set up Podman and Docker on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
+<meta property="og:title" content="The Manual — Container Desktop setup guides for Podman, Docker &amp; Apple Container" />
+<meta property="og:description" content="Set up Podman, Docker and Apple Container on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
 <meta property="og:url" content="https://container-desktop.com/manual/" />
 <meta property="og:image" content="https://container-desktop.com/img/podman/001-Dashboard.png" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="The Manual — Container Desktop setup guides for Podman &amp; Docker" />
-<meta name="twitter:description" content="Set up Podman and Docker on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
+<meta name="twitter:title" content="The Manual — Container Desktop setup guides for Podman, Docker &amp; Apple Container" />
+<meta name="twitter:description" content="Set up Podman, Docker and Apple Container on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
 <meta name="twitter:image" content="https://container-desktop.com/img/podman/001-Dashboard.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -43,12 +43,12 @@
   "url": "https://container-desktop.com",
   "downloadUrl": "https://github.com/iongion/container-desktop/releases",
   "screenshot": "https://container-desktop.com/img/podman/001-Dashboard.png",
-  "description": "A familiar desktop interface for the free, open container managers — Podman and Docker. Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux."
+  "description": "A familiar desktop interface for the free, open container managers — Podman, Docker and Apple Container (experimental). Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux."
 }
 </script>
 </head>
 <body>
-  <div class="announce"><span class="mono">★ v5.3.4</span><span>Open-source desktop UI for Podman &amp; Docker —</span><a href="/#download">download free →</a></div>
+  <div class="announce"><span class="mono">★ v5.3.4</span><span>Open-source desktop UI for Podman, Docker &amp; Apple Container —</span><a href="/#download">download free →</a></div>
   <header class="nav"><div class="wrap">
   <a class="brand" href="/"><span class="mark">cd</span><span>Container Desktop<small class="brand-tagline">Containers desktop companion</small></span></a>
   <nav class="nav-links">
@@ -62,6 +62,7 @@
       <button type="button" class="engine-swatch is-active" data-theme-id="unified" data-shots="unified" data-replay="/replays/unified.json" data-poster="/videos/unified.png" data-tagline="Containers desktop companion" style="--sw:#0a5f50" title="Unified" aria-label="Unified engine" aria-pressed="true"></button>
       <button type="button" class="engine-swatch" data-theme-id="podman" data-shots="podman" data-replay="/replays/podman.json" data-poster="/videos/podman.png" data-tagline="Podman desktop companion" style="--sw:#a01986" title="Podman" aria-label="Podman engine" aria-pressed="false"></button>
       <button type="button" class="engine-swatch" data-theme-id="docker" data-shots="docker" data-replay="/replays/docker.json" data-poster="/videos/docker.png" data-tagline="Docker desktop companion" style="--sw:#163d8a" title="Docker" aria-label="Docker engine" aria-pressed="false"></button>
+      <button type="button" class="engine-swatch" data-theme-id="container" data-shots="container" data-replay="/replays/container.json" data-poster="/videos/container.png" data-tagline="Apple Container desktop companion" style="--sw:#34c759" title="Apple Container" aria-label="Apple Container engine" aria-pressed="false"></button>
     </div>
     <span class="gh-star"><a class="github-button" href="https://github.com/iongion/container-desktop" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star iongion/container-desktop on GitHub">Star</a></span>
     <a class="btn btn-primary" href="/#download">Download</a>
@@ -72,15 +73,15 @@
   <div class="mhero">
     <div class="eyebrow">Handbook · bring your own engine</div>
     <h1>The Manual</h1>
-    <p>Set up Podman and Docker on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
-    <div class="osjump"><a href="#linux"><i class="fab fa-linux"></i> Linux</a><a href="#macos"><i class="fab fa-apple"></i> macOS</a><a href="#windows"><i class="fab fa-windows"></i> Windows</a><a href="#using"><i class="fas fa-book-open"></i> Using the app</a><a href="#shortcuts"><i class="fas fa-keyboard"></i> Keyboard shortcuts</a>
+    <p>Set up Podman, Docker and Apple Container on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
+    <div class="osjump"><a href="#linux"><i class="fab fa-linux"></i> Linux</a><a href="#macos"><i class="fab fa-container"></i> macOS</a><a href="#windows"><i class="fab fa-windows"></i> Windows</a><a href="#using"><i class="fas fa-book-open"></i> Using the app</a><a href="#shortcuts"><i class="fas fa-keyboard"></i> Keyboard shortcuts</a>
     </div>
   </div>
 
   <div class="shell">
     <aside class="side">
       <div class="grp"><i class="fab fa-linux"></i> Linux</div><a href="#linux-req">Requirements</a><a href="#linux-quick">1 · Quick guide</a><a href="#linux-podman-docker">2 · Podman as Docker</a><a href="#linux-dd-alt">3 · Docker Desktop alternative</a><a href="#linux-share">4 · Sharing connection</a>
-      <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-share">5 · Sharing connection</a>
+      <div class="grp"><i class="fab fa-container"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-container-container">5 · Container</a><a href="#macos-share">6 · Sharing connection</a>
       <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
       <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-logs">Live container logs</a><a href="#using-fonts">Font settings</a>
       <div class="grp"><i class="fas fa-keyboard"></i> Keyboard shortcuts</div><a href="#shortcuts-find">Find</a><a href="#shortcuts-all">All shortcuts</a>
@@ -144,11 +145,11 @@ podman system service --time=0 unix://${DOCKER_HOST} --log-level=debug
 <p>The <code>DOCKER_HOST</code> environment variable must be set to the same value Container Desktop is using when connected. The exact value is under <strong>Connection info</strong> in the <strong>Settings</strong> section.</p>
 </section>
 
-      <div class="guide-os" id="macos"><i class="fab fa-apple"></i><h2>macOS</h2></div>
+      <div class="guide-os" id="macos"><i class="fab fa-container"></i><h2>macOS</h2></div>
       <section class="guide-sec" id="macos-req">
 <h3>Requirements</h3>
 <div class="note req">
-<p>On macOS, virtualization is required to support both docker and podman container engines. Homebrew is seriously recommended to simplify provisioning and setup. Due to high cost, Container Desktop does not currently afford an Apple subscription to digitally sign applications, nor a digital certificate.</p>
+<p>On macOS, virtualization (via Lima or colima) is required for the Podman and Docker engines — they run inside a Linux VM. Apple Container is a third option: a native Apple-silicon runtime that needs no VM (experimental; see section 5 below). Homebrew is seriously recommended to simplify provisioning and setup. Due to high cost, Container Desktop does not currently afford an Apple subscription to digitally sign applications, nor a digital certificate.</p>
 </div>
 <h4>Install <a href="https://brew.sh/">homebrew</a> (as a non-administrator user)</h4>
 <pre><code class="language-bash">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;
@@ -179,9 +180,15 @@ brew upgrade
 ]
 </code></pre>
 <p>After all of the above you should have a completely compatible docker engine running on your Mac.</p>
+<div class="note tip">
+<p>If the <code>docker</code> command is <strong>not found</strong> after the install, Homebrew placed the formula in its Cellar without creating the <code>docker</code> symlink (it was left <strong>unlinked</strong>, so it is missing from your shell entirely — not a <code>PATH</code> problem). Link it explicitly:</p>
+</div>
+<pre><code class="language-bash">brew link docker
+docker --version   # confirms the CLI is now available
+</code></pre>
 <h4>Allow the unsigned app to run (optional)</h4>
 <p>If you downloaded and installed Container Desktop for macOS, allow it to run despite the missing digital signature:</p>
-<pre><code class="language-bash">xattr -d com.apple.quarantine /Applications/Container\ Desktop.app
+<pre><code class="language-bash">xattr -d com.container.quarantine /Applications/Container\ Desktop.app
 </code></pre>
 <h4>Open Container Desktop</h4>
 <p>Connect to the <strong>System Docker</strong> default connection and all should work.</p>
@@ -226,8 +233,70 @@ limactl shell docker   # login to the docker VM
 <li>Intel CPUs — <a href="https://download.docker.com/mac/static/stable/x86_64/">download.docker.com/mac/static/stable/x86_64</a></li>
 </ul>
 </section>
+<section class="guide-sec" id="macos-container-container">
+<h3><span class="n">05</span> Container <span class="exp-label">Experimental</span></h3>
+<div class="note info">
+<p>Apple's <a href="https://github.com/container/container"><code>container</code></a> engine is a native macOS container runtime for Apple silicon. Container Desktop support is experimental: the app targets the Docker-compatible API exposed by <a href="https://github.com/socktainer/socktainer"><code>socktainer</code></a>, not Apple's private XPC service directly.</p>
+</div>
+<h4>Requirements</h4>
+<ul>
+<li>Apple silicon Mac.</li>
+<li>macOS 26 Tahoe recommended. macOS 15 can run Apple <code>container</code>, but networking is degraded and some network commands are unavailable.</li>
+<li>Apple's <code>container</code> CLI installed from the <a href="https://github.com/container/container/releases">official GitHub releases</a>.</li>
+<li>A compatible <code>socktainer</code> installation to expose a Docker Engine API socket.</li>
+</ul>
+<h4>Install Apple Container</h4>
+<p>Download the signed installer package from the <a href="https://github.com/container/container/releases">Apple container releases</a>, verify it, install it, then start the system service. The example below pins Apple Container <code>1.0.0</code>; if you choose a newer release, use that release's package name and checksum instead.</p>
+<pre><code class="language-bash">mkdir -p ~/Downloads/container-desktop-provision
+cd ~/Downloads/container-desktop-provision
+
+curl -L -o container-1.0.0-installer-signed.pkg \
+  https://github.com/container/container/releases/download/1.0.0/container-1.0.0-installer-signed.pkg
+
+shasum -a 256 container-1.0.0-installer-signed.pkg
+# expect: 13f45f26da94c354adcbefe1e8f7631e7f126e93c5d4dd6a5a538aa66b4f479d
+
+sudo installer -pkg container-1.0.0-installer-signed.pkg -target /
+
+container system start
+</code></pre>
+<h4>Install socktainer</h4>
+<p>Install the Docker-compatible API bridge:</p>
+<pre><code class="language-bash">brew tap socktainer/tap
+brew install socktainer
+</code></pre>
+<p>Start <code>socktainer</code> in the background and confirm that it exposes the Docker-compatible Unix socket:</p>
+<pre><code class="language-bash">mkdir -p ~/.socktainer
+nohup socktainer &gt; ~/.socktainer/socktainer.log 2&gt;&amp;1 &amp;
+
+sleep 2
+test -S &quot;$HOME/.socktainer/container.sock&quot; &amp;&amp; echo &quot;socktainer socket OK&quot;
+</code></pre>
+<p>Verify the socket with the Docker Engine API endpoints Container Desktop uses:</p>
+<pre><code class="language-bash">curl --unix-socket &quot;$HOME/.socktainer/container.sock&quot; http://localhost/_ping
+curl --unix-socket &quot;$HOME/.socktainer/container.sock&quot; http://localhost/version
+</code></pre>
+<p>Homebrew also prints a service-mode option after installing <code>socktainer</code>. In that mode, <code>socktainer</code> runs with a Homebrew-owned <code>HOME</code>, so the socket is not under your user home. Use this if you want <code>socktainer</code> to start at login:</p>
+<pre><code class="language-bash">brew services start socktainer
+
+SOCKTAINER_HOME=&quot;$(brew --prefix)/var/run/socktainer&quot;
+export DOCKER_HOST=&quot;unix://$SOCKTAINER_HOME/.socktainer/container.sock&quot;
+
+curl --unix-socket &quot;$SOCKTAINER_HOME/.socktainer/container.sock&quot; http://localhost/_ping
+</code></pre>
+<p>Or run the same service-style command manually without registering a login service:</p>
+<pre><code class="language-bash">SOCKTAINER_HOME=&quot;$(brew --prefix)/var/run/socktainer&quot;
+HOME=&quot;$SOCKTAINER_HOME&quot; &quot;$(brew --prefix)/opt/socktainer/bin/socktainer&quot;
+</code></pre>
+<p>If you use Homebrew service mode with a remote Mac connection, configure Container Desktop to use the service socket path explicitly: <code>$(brew --prefix)/var/run/socktainer/.socktainer/container.sock</code>. For development env-seeded connections, that is <code>CONTAINER_DESKTOP_REMOTE_&lt;ID&gt;_APPLE_SOCKET</code>, for example:</p>
+<pre><code class="language-bash">CONTAINER_DESKTOP_REMOTE_MAC_APPLE_SOCKET=/opt/homebrew/var/run/socktainer/.socktainer/container.sock
+</code></pre>
+<p>Socktainer can also register a Docker context named <code>socktainer</code>, so the official Docker CLI can use Apple containers without changing Container Desktop's resource model.</p>
+<h4>Remote Mac over SSH</h4>
+<p>Because <code>socktainer</code> exposes a Unix socket, it can be forwarded over SSH in the same style as remote Docker or Podman sockets. With the per-user launch above, Container Desktop auto-detects <code>$HOME/.socktainer/container.sock</code>. With Homebrew service mode, use the explicit service socket path from the previous section. The remote host still has to be an Apple silicon Mac with Apple <code>container</code> and <code>socktainer</code> running; the client machine only needs SSH access to that Mac.</p>
+</section>
 <section class="guide-sec" id="macos-share">
-<h3><span class="n">05</span> Sharing connection with Container Desktop</h3>
+<h3><span class="n">06</span> Sharing connection with Container Desktop</h3>
 <p>The <code>DOCKER_HOST</code> environment variable must be set to the same value Container Desktop is using when connected. The exact value is under <strong>Connection info</strong> in the <strong>Settings</strong> section.</p>
 </section>
 
@@ -425,7 +494,7 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
   <div class="fgrid">
     <div class="fbrand">
       <a class="brand" href="/"><span class="mark">cd</span><span>Container Desktop</span></a>
-      <p>A familiar desktop UI for Podman &amp; Docker. Free, open source, MIT licensed.</p>
+      <p>A familiar desktop UI for Podman, Docker &amp; Apple Container. Free, open source, MIT licensed.</p>
     </div>
     <div class="fcol"><h5>Product</h5><a href="/#features">Features</a><a href="/#download">Download</a><a href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct">Microsoft Store</a><a href="https://github.com/iongion/container-desktop/releases">Releases</a></div>
     <div class="fcol"><h5>Manual</h5><a href="/manual/#linux">Linux</a><a href="/manual/#macos">macOS</a><a href="/manual/#windows">Windows</a><a href="/manual/">Full handbook</a></div>

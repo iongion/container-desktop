@@ -5,11 +5,13 @@
 // singletons. createComposedHostClient builds the HostClient that drives a connection.
 
 import { type Connection, ContainerEngine, ContainerEngineHost, type OperatingSystem } from "@/env/Types";
-import { DOCKER_PROGRAM, LIMA_PROGRAM, PODMAN_PROGRAM, SSH_PROGRAM, WSL_PROGRAM } from "../connection";
+import { APPLE_PROGRAM, DOCKER_PROGRAM, LIMA_PROGRAM, PODMAN_PROGRAM, SSH_PROGRAM, WSL_PROGRAM } from "../connection";
 import type { EngineDialect, HostProfile, Transport } from "./composition";
+import { containerDialect } from "./dialects/container";
 import { dockerDialect } from "./dialects/docker";
 import { podmanDialect } from "./dialects/podman";
 import { HostClient, type HostClientComposition } from "./host-client";
+import { appleNativeProfile, appleSSHProfile } from "./profiles/container";
 import {
   dockerLIMAProfile,
   dockerNativeProfile,
@@ -136,6 +138,25 @@ export const HOST_CLIENT_REGISTRY: HostClientRegistryEntry[] = [
     createTransport: () => new SSHTransport(),
     dialect: dockerDialect,
     profile: dockerSSHProfile,
+  },
+  // Apple
+  {
+    engine: ContainerEngine.APPLE,
+    host: ContainerEngineHost.APPLE_NATIVE,
+    PROGRAM: APPLE_PROGRAM,
+    CONTROLLER: APPLE_PROGRAM,
+    createTransport: () => new NativeTransport(),
+    dialect: containerDialect,
+    profile: appleNativeProfile,
+  },
+  {
+    engine: ContainerEngine.APPLE,
+    host: ContainerEngineHost.APPLE_REMOTE,
+    PROGRAM: APPLE_PROGRAM,
+    CONTROLLER: SSH_PROGRAM,
+    createTransport: () => new SSHTransport(),
+    dialect: containerDialect,
+    profile: appleSSHProfile,
   },
 ];
 

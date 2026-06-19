@@ -14,6 +14,10 @@
 [data-engine="unified"] .AppLoadingSplashLogo {
   background: url("../images/unified-engine.svg") no-repeat center / contain;
 }
+
+[data-engine="container"] .AppLoadingSplashLogo {
+  background: url("../images/container-engine.svg") no-repeat center / contain;
+}
 .AppLoadingSplashContent {
   display: flex;
   width: 100%;

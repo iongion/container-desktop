@@ -2,8 +2,8 @@
 
 This is the most intricate flow in the app, and the one most worth understanding.
 When container-desktop boots (or when you switch connections), it has to take a
-**Connection** — *"Podman over SSH"*, *"Docker in WSL"*, *"Podman native"* — and
-turn it into a live, pingable engine API. The steps differ per host type, but the
+**Connection** — *"Podman over SSH"*, *"Docker in WSL"*, *"Podman native"*, *"Apple
+Container native"* — and turn it into a live, pingable engine API. The steps differ per host type, but the
 **ordering is always the same**:
 
 > **start the scope → detect settings → start the API → check availability**
@@ -121,6 +121,9 @@ Notes per host:
 - **native** ([`native.ts`](../../src/container-client/runtimes/transports/native.ts)) —
   no scope; for Podman, `startApi` spawns `podman system service … unix://<sock>`;
   Docker native has no managed service (the daemon is started outside the app).
+  Apple Container (native + SSH-remote, macOS/Apple-silicon) likewise has no managed
+  service — the user runs `container system start` + **socktainer**, whose
+  `~/.socktainer/container.sock` is the Docker-compatible socket the app reaches.
 - **machine / vendor** ([`podman-machine.ts`](../../src/container-client/runtimes/transports/podman-machine.ts)) —
   Podman machine VM; the socket comes from the machine. *(Docker's vendor host —
   Docker Desktop / Colima — is **unscoped** and uses the Native transport.)*

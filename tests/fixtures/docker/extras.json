@@ -66,8 +66,8 @@
         "Class": "os-pkgs",
         "Type": "alpine",
         "Vulnerabilities": [
-          { "VulnerabilityID": "CVE-2024-1001", "PkgName": "libcrypto3", "InstalledVersion": "3.3.0-r1", "FixedVersion": "3.3.0-r2", "Severity": "HIGH", "Title": "openssl: example overflow", "Description": "Mock libcrypto package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-1001", "Published": "2024-09-12T12:00:00Z" },
-          { "VulnerabilityID": "CVE-2024-1002", "PkgName": "musl", "InstalledVersion": "1.2.5-r0", "FixedVersion": "1.2.5-r1", "Severity": "MEDIUM", "Title": "musl: example resolver issue", "Description": "Mock musl package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-1002", "Published": "2024-08-24T09:30:00Z" }
+          { "VulnerabilityID": "CVE-2024-1001", "PkgName": "libcrypto3", "InstalledVersion": "3.3.0-r1", "FixedVersion": "3.3.0-r2", "Severity": "HIGH", "Title": "openssl: example overflow", "Description": "Mock libcrypto package vulnerability used for deterministic screenshots. The description intentionally resembles a long Trivy advisory so the security table proves that advisory text wraps inside the Vulnerability ID column, clamps after three lines, and does not stretch the whole report horizontally.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-1001", "Published": "2024-09-12T12:00:00Z" },
+          { "VulnerabilityID": "CVE-2024-1002", "PkgName": "musl", "InstalledVersion": "1.2.5-r0", "FixedVersion": "1.2.5-r1", "Severity": "HIGH", "Title": "musl: example resolver issue", "Description": "Mock musl package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-1002", "Published": "2024-08-24T09:30:00Z" }
         ]
       }
     ]

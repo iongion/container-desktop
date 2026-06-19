@@ -1,4 +1,4 @@
-import { AnchorButton, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiScrewdriver } from "@mdi/js";
 import dayjs from "dayjs";
@@ -6,6 +6,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Volume } from "@/env/Types";
+import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -20,7 +21,9 @@ import {
   useMergedResources,
   useResourceReload,
   useShowEngineColumn,
+  useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -68,12 +71,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, volumeSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, volumeSnapshot, searchTerm]);
+  const renderedVolumes = useProgressiveTableRows(volumes);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((volume: MergedVolume) => mergedKey(volume, volume.Name), []);
   const visibleIds = useMemo(() => volumes.map(getRowId), [volumes, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useVolumeBulkActions();
   const showEngineColumn = useShowEngineColumn();
+  const showEngineRowAccent = useShowEngineRowAccent();
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("volumes");
 
@@ -143,25 +148,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {volumes.map((volume) => {
+              {renderedVolumes.map((volume) => {
                 const rowId = getRowId(volume);
                 return (
-                  <tr key={rowId} data-engine-row={showEngineColumn ? volume.engine : undefined}>
+                  <tr key={rowId} data-engine-row={showEngineRowAccent ? volume.engine : undefined}>
                     <td>
-                      <AnchorButton
+                      <AppDataTableLink
                         className="PodDetailsButton"
-                        variant="minimal"
-                        size="small"
+                        fillCell
                         href={getVolumeUrl(volume.Name, "inspect", volume.connectionId)}
                         text={volume.Name}
-                        intent={Intent.PRIMARY}
-                        icon={IconNames.EYE_OPEN}
+                        iconName={IconNames.EYE_OPEN}
                         title={volume.Mountpoint}
                       />
                     </td>
                     <td>{volume.Driver}</td>
                     <td>{(dayjs(volume.CreatedAt) as any).fromNow()}</td>
-                    <td>
+                    <td data-column="Actions">
                       <VolumeActionsMenu withoutCreate volume={volume} connectionId={volume.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">

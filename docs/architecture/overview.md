@@ -1,8 +1,8 @@
 # Overview — System Context & Containers (C4 L1 + L2)
 
 container-desktop is a cross-platform Electron desktop app for managing container
-engines (Podman / Docker), whether they run locally, inside a VM, inside WSL, or
-on a remote host over SSH. This page is the big picture; [backend.md](backend.md)
+engines (Podman, Docker, and Apple Container), whether they run locally, inside a
+VM, inside WSL, or on a remote host over SSH. This page is the big picture; [backend.md](backend.md)
 and [frontend.md](frontend.md) zoom in.
 
 ## C4 L1 — System Context
@@ -17,6 +17,7 @@ flowchart TB
 
   podman[(Podman engine<br/>API socket)]:::external
   docker[(Docker engine<br/>API socket)]:::external
+  container[(Apple Container engine<br/>socktainer socket · macOS)]:::external
   ssh[(Remote host<br/>over SSH)]:::external
   wsl[(WSL distribution<br/>Windows)]:::external
   vm[(Podman machine / Lima VM)]:::external
@@ -25,6 +26,7 @@ flowchart TB
   dev -->|views and controls<br/>containers, images, volumes…| cd
   cd -.->|HTTP over unix socket / npipe| podman
   cd -.->|HTTP over unix socket / npipe| docker
+  cd -.->|HTTP over socktainer socket| container
   cd -.->|SSH tunnel → engine socket| ssh
   cd -.->|wsl.exe + pipe/socket relay| wsl
   cd -.->|machine/limactl → VM socket| vm
@@ -36,8 +38,9 @@ flowchart TB
 ```
 
 The app is a **client** of engine API sockets. It never reimplements the engine —
-it discovers, starts, and proxies to the engine's REST API (the Podman/libpod or
-Docker socket), then renders the results.
+it discovers, starts, and proxies to the engine's REST API (the Podman/libpod,
+Docker, or Apple Container socket — the last exposed by **socktainer**), then
+renders the results.
 
 ## C4 L2 — Containers (runnable pieces)
 
@@ -68,7 +71,7 @@ flowchart TB
     relay["Go relay<br/>(support/container-desktop-relay)<br/>SSH ↔ unix-socket / named-pipe bridge"]:::container
   end
 
-  engines[(Container engine sockets:<br/>Podman / Docker · local · VM ·<br/>WSL · remote SSH)]:::external
+  engines[(Container engine sockets:<br/>Podman / Docker / Apple Container · local · VM ·<br/>WSL · remote SSH)]:::external
 
   dev -->|interacts| web
   web -->|"window.Command / FS / Platform / Path<br/>(contextBridge, in-process)"| preload
@@ -103,8 +106,9 @@ flowchart TB
   Windows named pipe to a Unix socket — inside **WSL** via a stdio bridge (no SSH server in
   the distro), or to a **remote host over SSH** on Windows. Linux/macOS remote SSH uses the
   native `ssh` client instead. See [connection-startup.md](connection-startup.md).
-- **External engines** — Podman/Docker REST sockets, reachable directly (native),
-  through a VM (machine/Lima), through WSL, or across SSH.
+- **External engines** — Podman/Docker REST sockets, plus Apple Container's
+  Docker-compatible socket exposed by **socktainer** (macOS/Apple-silicon),
+  reachable directly (native), through a VM (machine/Lima), through WSL, or across SSH.
 
 ### Build/runtime note (don't relearn the hard way)
 

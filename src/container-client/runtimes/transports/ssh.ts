@@ -71,10 +71,10 @@ export class SSHTransport implements Transport {
     return undefined;
   }
 
-  async startScope(_host: HostContext, scope: ControllerScope): Promise<StartupStatus> {
+  async startScope(host: HostContext, scope: ControllerScope): Promise<StartupStatus> {
     return await this.startSSHConnection(scope as SSHHost, {
       onStatusCheck: (status) => {
-        console.debug("SSH connection status check", status);
+        host.logger.debug(host.id, "SSH connection status check", status);
       },
     });
   }
@@ -88,7 +88,7 @@ export class SSHTransport implements Transport {
     const scope = scopes.find((s) => s.Name === name);
     return await this.startSSHConnection(scope as SSHHost, {
       onStatusCheck: (status) => {
-        console.debug("SSH connection status check", status);
+        host.logger.debug(host.id, "SSH connection status check", status);
       },
     });
   }
@@ -149,7 +149,7 @@ export class SSHTransport implements Transport {
           },
         });
         if (status === StartupStatus.RUNNING || status === StartupStatus.STARTED) {
-          console.debug("Returning connection", host, scope);
+          host.logger.debug(host.id, "Returning SSH connection", { scope: scope?.Name });
           systemNotifier.transmit("engine.availability", {
             trace: "SSH connection has been established",
           });
@@ -158,7 +158,7 @@ export class SSHTransport implements Transport {
         systemNotifier.transmit("engine.availability", {
           trace: "SSH connection has failed",
         });
-        console.error("SSH connection is not established", host, scope, status);
+        host.logger.error(host.id, "SSH connection is not established", { scope: scope?.Name, status });
         throw new Error("SSH connection is not established");
       },
     });

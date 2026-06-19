@@ -8,6 +8,24 @@ import { type CommandExecutionResult, ControllerScopeType, OperatingSystem, type
 
 export const CURRENT_OS_TYPE = os.type();
 
+// Darwin kernel major from os.release() (e.g. "24.3.0" → 24). macOS 15 Sequoia = Darwin 24; macOS 26
+// Tahoe = Darwin 25. Used to gate Apple Container networks (full only on macOS 26 / Darwin ≥ 25).
+// undefined off Darwin or when the release string can't be parsed.
+export const CURRENT_DARWIN_MAJOR: number | undefined =
+  os.type() === "Darwin" ? Number.parseInt(`${os.release()}`.split(".")[0], 10) || undefined : undefined;
+
+function configValue(config: any[], param: string): string {
+  const value = config.find((item: any) => `${item?.param ?? ""}`.toLowerCase() === param.toLowerCase())?.value;
+  return typeof value === "string" ? value.trim() : `${value ?? ""}`.trim();
+}
+
+function concreteHostPatterns(value: string): string[] {
+  return value
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter((item) => item && item !== "*" && !item.startsWith("!") && !/[?*]/.test(item));
+}
+
 export interface TerminalLaunchOptions {
   launcher?: string;
   commandLauncher?: string;
@@ -198,6 +216,10 @@ export const Platform: IPlatform = {
     return osType as OperatingSystem;
   },
 
+  async getOsArch(): Promise<string> {
+    return os.arch();
+  },
+
   async getSSHConfig() {
     const config: SSHHost[] = [];
     const homeDir = await Platform.getHomeDir();
@@ -209,27 +231,27 @@ export const Platform: IPlatform = {
       for (const item of parsed) {
         if (item.type === 1 && item.param === "Host" && item.value !== "*") {
           const itemConfig = (item as any).config || [];
-          const matchHost = itemConfig.find((c: any) => c.param === "HostName");
-          const matchPort = itemConfig.find((c: any) => c.param === "Port");
-          const matchUser = itemConfig.find((c: any) => c.param === "User");
-          const matchIdentityFile = itemConfig.find((c: any) => c.param === "IdentityFile");
-          const port = matchPort?.value ? Number(matchPort?.value) : 22;
-          const host: SSHHost = {
-            Name: `${item.value}`,
-            Host: `${item.value}`,
-            Port: Number.isNaN(port) ? 22 : port,
-            HostName: `${matchHost.value}`,
-            User: `${matchUser.value}`,
-            Type: ControllerScopeType.SSHConnection,
-            IdentityFile: `${matchIdentityFile?.value || ""}`,
-            Connected: false,
-            Usable: false,
-          };
-          config.push(host);
+          const hostName = configValue(itemConfig, "HostName");
+          const port = Number(configValue(itemConfig, "Port") || "22");
+          const user = configValue(itemConfig, "User");
+          const identityFile = configValue(itemConfig, "IdentityFile");
+          for (const alias of concreteHostPatterns(`${item.value}`)) {
+            const host: SSHHost = {
+              Name: alias,
+              Host: alias,
+              Port: Number.isNaN(port) ? 22 : port,
+              HostName: hostName || alias,
+              User: user,
+              Type: ControllerScopeType.SSHConnection,
+              IdentityFile: identityFile,
+              ConfigHost: alias,
+              Connected: false,
+              Usable: false,
+            };
+            config.push(host);
+          }
         }
       }
-    } else {
-      console.debug("Config file not found", pathToSSHConfig);
     }
     return config;
   },
@@ -244,7 +266,6 @@ export const Platform: IPlatform = {
       params: commandParams,
       title,
     } = normalizeTerminalLaunch(commandLauncherOrOptions, params, opts);
-    console.debug("Launching terminal", commandLauncher, commandParams);
     const args = [commandLauncher].concat(commandParams || []).join(" ");
     let status: CommandExecutionResult;
     if (os.type() === OperatingSystem.MacOS) {
@@ -296,7 +317,6 @@ export const FS: IFileSystem = {
   },
 
   async mkdir(location: string, options?: any) {
-    console.debug("Creating directory", { location });
     const lastCreated = await fs.mkdirSync(location, options);
     const created = !!lastCreated;
     const exists = await fs.existsSync(location);

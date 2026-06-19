@@ -7,7 +7,6 @@ export async function waitForPreload(retries = 10): Promise<boolean> {
     if ((window as any).Preloaded) {
       resolve(true);
     } else {
-      console.debug("Waiting for preload script to load", retries);
       setTimeout(() => {
         waitForPreload(retries - 1)
           .then(resolve)

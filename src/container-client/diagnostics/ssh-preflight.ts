@@ -27,7 +27,8 @@ export interface SSHPreflightTarget {
   hostName: string;
   port: number;
   user: string;
-  identityFile: string;
+  identityFile?: string;
+  configHost?: string;
 }
 
 export interface SSHPreflightOptions {
@@ -65,9 +66,16 @@ export async function runSSHPreflight(
   const ssh = options.sshProgram || "ssh";
   const isWindows = options.osType === OperatingSystem.Windows;
   const connectTimeoutSeconds = options.connectTimeoutSeconds ?? 15;
+  const commandTimeoutMs = (connectTimeoutSeconds + 5) * 1000;
   const homeDir = await deps.getHomeDir();
-  const keyPath = expandHome(target.identityFile || "", homeDir);
-  const sshParams = { host: target.hostName, port: target.port, username: target.user, privateKeyPath: keyPath };
+  const keyPath = target.identityFile ? expandHome(target.identityFile, homeDir) : "";
+  const sshParams = {
+    host: target.hostName,
+    port: target.port,
+    username: target.user,
+    privateKeyPath: keyPath,
+    configHost: target.configHost,
+  };
 
   const steps: SSHPreflightStep[] = [];
   const pass = (id: SSHPreflightStepId, details: string) => steps.push({ id, ok: true, skipped: false, details });
@@ -85,7 +93,7 @@ export async function runSSHPreflight(
   };
 
   // 1 — ssh client present and runnable
-  const version = await deps.execute(ssh, ["-V"]);
+  const version = await deps.execute(ssh, ["-V"], { timeout: 5000 });
   if (!version.success) {
     fail("ssh-binary", `SSH client not found or not runnable: ${ssh}`);
     skipRest(["key-file", "key-perms", "host-reachable", "remote-engine"]);
@@ -93,33 +101,35 @@ export async function runSSHPreflight(
   }
   pass("ssh-binary", firstLine(version.stderr) || firstLine(version.stdout) || "ssh present");
 
-  // 2 — identity file present (after ~ / $HOME expansion, shared with the real connect)
+  // 2 — optional identity file. No IdentityFile is valid: OpenSSH will use ssh_config defaults,
+  //     ssh-agent, and standard identity discovery just like an interactive terminal.
   if (!keyPath) {
-    fail("key-file", "No identity file is configured for this SSH host");
-    skipRest(["key-perms", "host-reachable", "remote-engine"]);
-    return finalize();
-  }
-  if (!(await deps.isFilePresent(keyPath))) {
-    fail("key-file", `Identity file not found: ${keyPath}`);
-    skipRest(["key-perms", "host-reachable", "remote-engine"]);
-    return finalize();
-  }
-  pass("key-file", `Identity file present: ${keyPath}`);
-
-  // 3 — key permissions (POSIX only; Windows ACLs differ). Group/other bits must be zero or ssh
-  //     silently ignores the key.
-  if (isWindows) {
-    skip("key-perms", "Skipped on Windows");
+    skip("key-file", "No IdentityFile configured; using OpenSSH agent/default identities");
+    skip("key-perms", "Skipped; no IdentityFile configured");
   } else {
-    const stat = await deps.execute("stat", ["-c", "%a", keyPath]);
-    const mode = (stat.stdout || "").trim();
-    const groupOtherBits = mode.length >= 2 ? mode.slice(-2) : mode;
-    if (stat.success && groupOtherBits === "00") {
-      pass("key-perms", `Key permissions ${mode}`);
-    } else {
-      fail("key-perms", `Key permissions too open (${mode || "unknown"}; expected 600 or 400 — ssh will ignore it)`);
-      skipRest(["host-reachable", "remote-engine"]);
+    if (!(await deps.isFilePresent(keyPath))) {
+      fail("key-file", `Identity file not found: ${keyPath}`);
+      skipRest(["key-perms", "host-reachable", "remote-engine"]);
       return finalize();
+    }
+    pass("key-file", `Identity file present: ${keyPath}`);
+
+    // 3 — key permissions (POSIX only; Windows ACLs differ). Group/other bits must be zero or ssh
+    //     silently ignores the key.
+    if (isWindows) {
+      skip("key-perms", "Skipped on Windows");
+    } else {
+      const stat = await deps.execute("stat", ["-c", "%a", keyPath]);
+      const mode = (stat.stdout || "").trim();
+      const groupOtherBits = mode.length >= 2 ? mode.slice(-2) : mode;
+      if (stat.success && groupOtherBits === "00") {
+        pass("key-perms", `Key permissions ${mode}`);
+      } else {
+        const detail = mode || firstLine(stat.stderr) || "unknown";
+        fail("key-perms", `Key permissions too open (${detail}; expected 600 or 400 — ssh will ignore it)`);
+        skipRest(["host-reachable", "remote-engine"]);
+        return finalize();
+      }
     }
   }
 
@@ -128,6 +138,7 @@ export async function runSSHPreflight(
   const probe = await deps.execute(
     ssh,
     buildSSHArgs(sshParams, ["echo", PREFLIGHT_SENTINEL], { connectTimeoutSeconds }),
+    { timeout: commandTimeoutMs },
   );
   if (!(probe.success && (probe.stdout || "").includes(PREFLIGHT_SENTINEL))) {
     fail(
@@ -144,6 +155,7 @@ export async function runSSHPreflight(
     const info = await deps.execute(
       ssh,
       buildSSHArgs(sshParams, [options.engineProgram, "info"], { connectTimeoutSeconds }),
+      { timeout: commandTimeoutMs },
     );
     if (info.success) {
       pass("remote-engine", `Remote ${options.engineProgram} responded`);

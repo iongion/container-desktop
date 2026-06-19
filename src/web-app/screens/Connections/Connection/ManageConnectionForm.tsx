@@ -231,7 +231,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       let updated = connector as Connector;
       try {
         setPending(true);
-        console.debug(">> Detecting controller scopes", connector);
         const instance = Application.getInstance();
         const result = await instance.getControllerScopes(connector, true);
         updated = deepMerge<Connector>({}, connector);
@@ -257,7 +256,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         setPending(false);
       }
       if (!skipReset) {
-        console.debug("<< Detected controller scopes", updated);
         resetFormData(updated);
       }
       return updated;
@@ -303,7 +301,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       if (mode === "create") {
         await createConnection(data);
       } else {
-        console.debug(">> Updating connection", data);
         await updateConnection({ id: data.id, connection: data });
       }
       onClose();
@@ -327,7 +324,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       try {
         setPending(true);
         setContainerEngineHostOptions(connectors.filter((it) => it.engine === engine));
-        console.debug("Detecting container engine", engine);
       } catch (error: any) {
         console.error("Error during container engine detection", error);
         Notification.show({
@@ -345,7 +341,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       try {
         setPending(true);
         setContainerEngineHostOptions(connectors.filter((it) => it.engine === engine));
-        console.debug("Detecting container engine", engine);
         const updated = await createConnectorBy(osType, engine);
         resetFormData(updated);
       } catch (error: any) {
@@ -360,7 +355,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
     async (host: ContainerEngineHost) => {
       try {
         setPending(true);
-        console.debug("Detecting container host", host);
       } catch (error: any) {
         console.error("Unable to detect host", error);
         Notification.show({
@@ -377,7 +371,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
     async (host: ContainerEngineHost) => {
       try {
         setPending(true);
-        console.debug("Detecting container host", host);
         const connector = await createConnectorBy(osType, engine, host);
         const updated = await fetchControllerScopes(connector, true);
         if (engine === ContainerEngine.PODMAN) {
@@ -408,7 +401,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
     async (scope: ControllerScope) => {
       try {
         setPending(true);
-        console.debug(">> Starting", scope);
         const performed = await startControllerScope(scope);
         if (performed) {
           Notification.show({
@@ -437,7 +429,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
     async (scope: ControllerScope) => {
       try {
         setPending(true);
-        console.debug(">> Stopping", scope);
         const performed = await stopControllerScope(scope);
         if (performed) {
           Notification.show({
@@ -477,14 +468,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       try {
         setPending(true);
         const connector = getValues();
-        console.debug(">> Controller scope selected", JSON.parse(JSON.stringify(scope)));
         const updated = deepMerge<Connector>({}, connector);
         updated.settings.program.path = ""; // clear path on scope change
         updated.settings.program.version = ""; // clear version on scope change
         if (updated.settings.controller) {
           updated.settings.controller.scope = scope.Name;
         }
-        console.debug("<< Controller scope updated", JSON.parse(JSON.stringify(updated)));
         resetFormData(updated);
       } catch (error: any) {
         console.error("Error during controller scope change", error);
@@ -501,14 +490,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   const onApiConnectionUriDetectClick = useCallback(async () => {
     const connection = getValues();
     try {
-      console.debug(">> Detecting API connection URI", connection);
       setPending(true);
       const instance = Application.getInstance();
       const connectionApi = await instance.getConnectionApi<HostClientFacade>(connection, false);
       const apiConnection = await connectionApi.getApiConnection();
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);
-      console.debug("<< Detecting API connection URI", connection);
     } catch (error: any) {
       console.error("<< Detecting API connection URI", error);
       Notification.show({
@@ -522,14 +509,12 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   const onApiConnectionRelayDetectClick = useCallback(async () => {
     const connection = getValues();
     try {
-      console.debug(">> Detecting API connection relay", connection);
       setPending(true);
       const instance = Application.getInstance();
       const connectionApi = await instance.getConnectionApi<HostClientFacade>(connection, false);
       const apiConnection = await connectionApi.getApiConnection();
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);
-      console.debug("<< Detecting API connection relay", connection);
     } catch (error: any) {
       console.error("<< Detecting API connection relay", error);
       Notification.show({
@@ -552,10 +537,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   const onExecutableSelectClick = useCallback(
     async (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const detectTarget = (e.currentTarget.getAttribute("data-target") || "program") as DetectTarget;
-      console.debug("Select executable", {
-        target: detectTarget,
-        values: getValues(),
-      });
       try {
         setPending(true);
         const instance = Application.getInstance();
@@ -567,7 +548,6 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
           },
         });
         if (result.filePaths.length === 0) {
-          console.debug("No executable selected");
           return;
         }
         const filePath = result.filePaths[0];
@@ -650,9 +630,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         const lookupProgram = connector.settings[detectTarget] as Program;
         lookupProgram.path = "";
         lookupProgram.version = "";
-        console.debug("> Detecting program", lookupProgram);
         const foundProgram = await instance.findProgram(connector, lookupProgram, insideScope);
-        console.debug("< Detecting program", foundProgram);
         inspected.settings[detectTarget] = deepMerge<Program>({}, lookupProgram, foundProgram);
         if (!insideScope) {
           inspected = await fetchControllerScopes(inspected, true);

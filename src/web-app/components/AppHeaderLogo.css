@@ -73,6 +73,7 @@ body.bp6-light[data-engine="docker"] .AppHeaderLogo {
 }
 
 body[data-engine="unified"] .AppHeaderLogoTagline--unified,
+body[data-engine="container"] .AppHeaderLogoTagline--unified,
 body[data-engine="podman"] .AppHeaderLogoTagline--podman,
 body[data-engine="docker"] .AppHeaderLogoTagline--docker {
   display: inline;

@@ -24,25 +24,15 @@
 }
 [data-table="containers"] .ContainerLogsButton,
 [data-table="containers"] .ContainerLayersButton {
+  font-size: 12px;
+}
+
+[data-table="containers"] .ContainerLayersButton {
   max-width: 240px;
-  font-size: 12px;
 }
-[data-table="containers"] .ContainerLogsButton,
-[data-table="containers"] .ContainerLayersButton .bp6-button-text {
-  max-width: 100%;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  display: inline-block;
-  white-space: nowrap;
-}
+
 [data-table="containers"] .ContainerLogsButton {
-  padding-top: 4px;
-  font-size: 12px;
-  min-width: 140px;
-  text-align: left;
-}
-[data-table="containers"] .ContainerLogsButton .bp6-button-text {
-  text-align: left;
+  min-width: 0;
 }
 [data-table="containers"] .ContainerState {
   border-radius: 6px;
