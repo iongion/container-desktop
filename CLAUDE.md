@@ -6,7 +6,8 @@
 ## What this is
 
 Cross-platform **Electron desktop app** for managing container engines
-(Podman / Docker) — local, remote over SSH, and WSL. One repo, three runtimes:
+(Podman, Docker, and Apple Container — the last is **experimental**, macOS /
+Apple-silicon only) — local, remote over SSH, and WSL. One repo, three runtimes:
 
 - **Node / TypeScript** app — Electron main + preload + React renderer
 - **Go** SSH/vsock relay — `support/container-desktop-relay/`

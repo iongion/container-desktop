@@ -1,10 +1,11 @@
-import { AnchorButton, Code, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { Code, Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Connector, Pod } from "@/env/Types";
+import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -19,7 +20,9 @@ import {
   useMergedResources,
   useResourcesReload,
   useShowEngineColumn,
+  useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -62,6 +65,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     currentConnector?.capabilities?.sort,
   );
   const showEngineColumn = useShowEngineColumn();
+  const showEngineRowAccent = useShowEngineRowAccent();
   const podSnapshot = useMergedResources("pods");
   const pods = useMemo(() => {
     const items = searchTerm ? podSnapshot.filter(createPodSearchFilter(searchTerm)) : podSnapshot;
@@ -69,6 +73,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, podSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, podSnapshot, searchTerm]);
+  const renderedPods = useProgressiveTableRows(pods);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((pod: MergedPod) => mergedKey(pod, pod.Id), []);
   const visibleIds = useMemo(() => pods.map(getRowId), [pods, getRowId]);
@@ -158,18 +163,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {pods.map((pod) => {
+              {renderedPods.map((pod) => {
+                const rowId = getRowId(pod);
                 const podDetailsButton = (
-                  <AnchorButton
+                  <AppDataTableLink
                     className="PodDetailsButton"
-                    variant="minimal"
-                    size="small"
+                    fillCell
                     href={pathTo(`/screens/pod/${encodeURIComponent(pod.Id)}/processes`, undefined, {
                       connId: pod.connectionId,
                     })}
                     text={pod.Name}
-                    intent={Intent.PRIMARY}
-                    icon={IconNames.LIST_COLUMNS}
+                    iconName={IconNames.LIST_COLUMNS}
                     title={t("Pod processes")}
                   />
                 );
@@ -177,9 +181,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   typeof pod.Created === "string" ? dayjs(pod.Created) : dayjs(Number(pod.Created) * 1000);
                 return (
                   <tr
-                    key={getRowId(pod)}
+                    key={rowId}
                     data-pod={pod.Id}
-                    data-engine-row={showEngineColumn ? pod.engine : undefined}
+                    data-engine-row={showEngineRowAccent ? pod.engine : undefined}
                     data-state={pod.Status}
                   >
                     <td>{podDetailsButton}</td>
@@ -193,13 +197,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <Code>{pod.Id.substring(0, 12)}</Code>
                     </td>
                     <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
-                    <td>
+                    <td data-column="Actions">
                       <ItemActionsMenu pod={pod} connectionId={pod.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">
                       <SelectionCheckbox
-                        checked={selection.isSelected(getRowId(pod))}
-                        onChange={() => selection.toggle(getRowId(pod))}
+                        checked={selection.isSelected(rowId)}
+                        onChange={() => selection.toggle(rowId)}
                       />
                     </td>
                     <EngineColumnCell

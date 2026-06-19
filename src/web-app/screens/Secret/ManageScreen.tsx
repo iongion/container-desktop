@@ -1,10 +1,11 @@
-import { AnchorButton, Code, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { Code, Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Connector, Secret } from "@/env/Types";
+import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -19,7 +20,9 @@ import {
   useMergedResources,
   useResourceReload,
   useShowEngineColumn,
+  useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -73,12 +76,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, secretSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Spec?.Name || "", b.Spec?.Name || ""));
   }, [clientSort, secretSnapshot, searchTerm]);
+  const renderedSecrets = useProgressiveTableRows(secrets);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((s: MergedSecret) => mergedKey(s, s.ID), []);
   const visibleIds = useMemo(() => secrets.map(getRowId), [secrets, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useSecretBulkActions();
   const showEngineColumn = useShowEngineColumn();
+  const showEngineRowAccent = useShowEngineRowAccent();
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("secrets");
 
@@ -151,19 +156,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {secrets.map((secret) => {
+              {renderedSecrets.map((secret) => {
                 const rowId = getRowId(secret);
                 return (
-                  <tr key={rowId} data-engine-row={showEngineColumn ? secret.engine : undefined}>
+                  <tr key={rowId} data-engine-row={showEngineRowAccent ? secret.engine : undefined}>
                     <td>
-                      <AnchorButton
+                      <AppDataTableLink
                         className="PodDetailsButton"
-                        variant="minimal"
-                        size="small"
+                        fillCell
                         href={getSecretUrl(secret.ID, "inspect", secret.connectionId)}
                         text={secret.Spec.Name}
-                        intent={Intent.PRIMARY}
-                        icon={IconNames.EYE_OPEN}
+                        iconName={IconNames.EYE_OPEN}
                       />
                     </td>
                     <td>
@@ -171,7 +174,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </td>
                     <td>{(dayjs(secret.CreatedAt) as any).fromNow()}</td>
                     <td>{(dayjs(secret.CreatedAt) as any).fromNow()}</td>
-                    <td>
+                    <td data-column="Actions">
                       <SecretActionsMenu withoutCreate secret={secret} connectionId={secret.connectionId} />
                     </td>
                     <td className="BulkSelectColumn">

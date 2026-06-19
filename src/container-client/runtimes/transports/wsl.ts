@@ -100,7 +100,7 @@ export class WSLTransport implements Transport {
     opts?: ApiStartOptions,
   ): Promise<boolean> {
     const running = await host.isApiRunning();
-    const logLevel = opts?.logLevel || "debug";
+    const logLevel = opts?.logLevel || "warn";
     host.logger.debug(host.id, ">> Starting API", { logLevel });
     if (running.success) {
       host.logger.debug(host.id, "<< Starting API skipped - API is already running");

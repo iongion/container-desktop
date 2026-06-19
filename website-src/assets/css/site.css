@@ -263,6 +263,7 @@ footer{border-top:1px solid var(--border);padding:60px 0 36px;background:rgba(va
 .guide-sec{scroll-margin-top:80px;padding:28px 0;border-bottom:1px solid rgba(var(--accent-l-rgb),.08)}
 .guide-sec>h3{font-size:23px;font-weight:600;margin-bottom:4px;display:flex;align-items:baseline;gap:10px}
 .guide-sec>h3 .n{font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--purple-l)}
+.exp-label{display:inline-flex;align-items:center;align-self:center;border:1px solid rgba(var(--cyan-rgb),.38);border-radius:999px;padding:2px 8px;background:rgba(var(--cyan-rgb),.1);color:var(--cyan);font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
 .guide-sec h4{font-size:15.5px;font-weight:600;color:#fff;margin:20px 0 8px}
 .guide-sec p{color:var(--ink-soft);font-weight:300;font-size:14.5px;margin:8px 0}
 .guide-sec ul,.guide-sec ol{margin:10px 0 10px 22px;color:var(--ink-soft);font-weight:300;font-size:14px}
@@ -317,4 +318,18 @@ html[data-theme="unified"]{
   --grad-1:#9fe6d6; --grad-2:#76c8e0; --accent-deep:#053229;
   --shot-bg:#0d131e; --code-bg:#151d2a; --code-fg:#cdd9ec; --pre-bg:#0b0f18;
   --bg-grad-a:#0f1521; --bg-grad-b:#131a28; --bg-grad-c:#0c111b;
+}
+/* Apple Container mirrors the app's green engine theme (container-engine.svg, #34c759):
+   a dark graphite chrome with Apple-green accents. */
+html[data-theme="container"]{
+  --bg:#0a1410; --bg2:#0e1a14; --panel:#11221a; --panel2:#173026;
+  --magenta:#1f8f4e; --purple:#0e3a24; --purple-l:#5fd98a;
+  --cyan:#34c759; --teal:#2f9d7d;
+  --ink-soft:#d3ecdd; --muted:#8fb0a0; --faint:#6a8576;
+  --accent-rgb:31,143,78; --accent-l-rgb:95,217,138; --cyan-rgb:52,199,89; --teal-rgb:47,157,125;
+  --surface-rgb:17,34,26; --surface-2-rgb:23,48,38; --chrome-rgb:9,18,14; --footer-rgb:6,14,10;
+  --panel-grad-a-rgb:20,40,30; --panel-grad-b-rgb:10,22,16;
+  --grad-1:#9fe6c0; --grad-2:#5cd98a; --accent-deep:#063a22;
+  --shot-bg:#0b1812; --code-bg:#0f2418; --code-fg:#d2f0dd; --pre-bg:#06120c;
+  --bg-grad-a:#0a1410; --bg-grad-b:#0e1c16; --bg-grad-c:#08110c;
 }

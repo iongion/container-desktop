@@ -14,16 +14,10 @@
 }
 
 [data-table="pods"] .PodDetailsButton {
-  max-width: 240px;
+  min-width: 0;
 }
 [data-table="pods"] .PodDetailsButton .bp6-button-text {
-  max-width: 100%;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  display: inline-block;
-  white-space: nowrap;
-  text-align: left;
-  min-width: 120px;
+  min-width: 0;
 }
 [data-table="pods"] .PodState {
   border-radius: 6px;

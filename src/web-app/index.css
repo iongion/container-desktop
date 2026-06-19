@@ -16,6 +16,10 @@ body {
   -webkit-font-smoothing: subpixel-antialiased;
 }
 
+a {
+  -webkit-user-drag: none;
+}
+
 :focus {
   outline: rgba(19, 124, 189, 0.404) solid 1px;
   outline-offset: 1px;

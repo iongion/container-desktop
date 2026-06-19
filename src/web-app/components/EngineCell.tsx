@@ -15,6 +15,7 @@ export interface EngineCellProps {
 const ENGINE_LABELS: Record<string, string> = {
   podman: "Podman",
   docker: "Docker",
+  container: "Container", // Apple Container
 };
 
 export function engineLabel(engine: string): string {
@@ -33,7 +34,7 @@ export function EngineCell({ engine, connectionName }: EngineCellProps) {
 }
 
 // Trailing Engine column for the merged resource tables. Centralized so its placement/appearance is changed
-// once, not per screen. The column is opt-in because unified mode can still stay visually quiet.
+// once, not per screen. This is independent from row accents, which always show in unified mode.
 export function EngineColumnHeader({ visible }: { visible: boolean }) {
   if (!visible) {
     return null;

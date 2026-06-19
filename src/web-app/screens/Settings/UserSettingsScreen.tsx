@@ -102,7 +102,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     setIsChecking(true);
     try {
       const check = await new OnlineApi(import.meta.env.ONLINE_API).checkLatestVersion(osType);
-      console.debug("Checking for new version", check);
       if (check.hasUpdate) {
         Notification.show({
           message: t("A newer version {{latest}} has been found", check),
@@ -276,6 +275,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <option value="unified">{t("Teal")}</option>
                 <option value={ContainerEngine.PODMAN}>{t("Amethyst")}</option>
                 <option value={ContainerEngine.DOCKER}>{t("Navy")}</option>
+                <option value={ContainerEngine.APPLE}>{t("Green")}</option>
               </HTMLSelect>
               <Checkbox
                 id="showEngineColumn"

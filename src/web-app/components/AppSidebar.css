@@ -12,7 +12,7 @@
 }
 .AppSidebar .AppSidebarExpandButton.bp6-button.bp6-minimal {
   position: absolute;
-  top: 50%;
+  bottom: 30px;
   right: -8px;
   z-index: 2;
   width: 18px;

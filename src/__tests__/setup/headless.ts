@@ -6,13 +6,14 @@
 // It deliberately wires only the SAFE globals (Platform/Path/FS are pure-Node reads). It does NOT
 // install a spawning `Command`: hermetic tests install a recording fake (see fakeCommand.ts), and
 // live tests opt into the real executor via installRealCommand().
-import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
+import { CURRENT_DARWIN_MAJOR, CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 
 const g = globalThis as unknown as Record<string, unknown>;
 g.Platform = Platform;
 g.Path = Path;
 g.FS = FS;
 g.CURRENT_OS_TYPE = CURRENT_OS_TYPE;
+g.CURRENT_DARWIN_MAJOR = CURRENT_DARWIN_MAJOR;
 process.env.APP_PATH ??= process.cwd();
 
 /** Live tests only: wire the real Node executor as the global `Command` (spawns real processes). */

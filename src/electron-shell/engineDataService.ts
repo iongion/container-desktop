@@ -14,6 +14,7 @@ import { PodsAdapter } from "@/container-client/adapters/pods";
 import { SecretsAdapter } from "@/container-client/adapters/secrets";
 import { getActiveHostClient } from "@/container-client/adapters/shared";
 import { VolumesAdapter } from "@/container-client/adapters/volumes";
+import { resolveConnectionVersion } from "@/container-client/connection-display";
 import {
   normalizeResourceEventDomains,
   RESOURCE_DOMAINS,
@@ -23,12 +24,13 @@ import {
 import type {
   AppRuntimeSnapshot,
   ConnectionRuntimeInfo,
+  ConnectOrigin,
   ResourceConnectProgress,
   ResourceSnapshotByConnection,
   ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import type { Connection, ConnectorCapabilities, GlobalUserSettings } from "@/env/Types";
+import type { Connection, ConnectorCapabilities, EngineConnectorAvailability, GlobalUserSettings } from "@/env/Types";
 import { deepMerge } from "@/utils";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
@@ -38,6 +40,9 @@ const EVENT_REFRESH_DEBOUNCE_MS = 500;
 // A /events stream that closes within this window of opening never really established (an engine/mock with no
 // working /events endpoint) — treat it as "no live events", NOT a drop to reconnect.
 const EVENTS_MIN_UPTIME_MS = 1500;
+const EVENTS_ATTACH_TIMEOUT_MS = 3000;
+const RESOURCE_WARMUP_TIMEOUT_MS = 5000;
+const MACHINES_LOAD_TIMEOUT_MS = 3000;
 // Ready at least this long ⇒ the connection proved stable, so the NEXT drop restarts back-off from scratch.
 const RECONNECT_STABLE_MS = 30000;
 
@@ -72,21 +77,70 @@ function descriptorOf(connection: {
   };
 }
 
-// The user-facing engine version for a connection: the controller version when the engine reports one
-// (e.g. a Podman machine), else the program version. Read from the connection's detected settings so the
-// renderer (footer/connection manager) always has the REAL per-connection version, not just the primary's.
-function engineVersionOf(connection: Connection, host: HostClientFacade): string | undefined {
-  const program = connection.settings?.program;
-  const controller = connection.settings?.controller;
-  if (host.capabilities?.extensions?.controllerVersion && controller?.version) {
-    return controller.version;
+// First availability-check message that is a REAL reason (not the "Not checked" placeholder). Order mirrors
+// the connect sequence: host → controller → program → api. Lets a swallowed failure that connectHostClient
+// folded into report.api ("ssh: … No route to host") reach the user instead of the placeholder.
+function firstRealReason(report: EngineConnectorAvailability["report"] | undefined): string | undefined {
+  for (const value of [report?.host, report?.controller, report?.program, report?.api]) {
+    if (value && value !== "Not checked") {
+      return value;
+    }
   }
-  return program?.version || controller?.version || undefined;
+  return undefined;
+}
+
+// Concise description of the connection being established: engine + transport + target. Answers
+// "what was it trying to do?" for the Activity Center.
+function describeConnectionAttempt(connection: Connection): string {
+  const engine = `${connection.engine}`;
+  const host = `${connection.host ?? ""}`;
+  const scope = connection.settings?.controller?.scope;
+  const uri = connection.settings?.api?.connection?.uri;
+  let transport = "native";
+  if (host.endsWith(".remote")) {
+    transport = scope ? `SSH (${scope})` : "SSH";
+  } else if (host.includes(".wsl")) {
+    transport = scope ? `WSL (${scope})` : "WSL";
+  } else if (host.includes(".lima")) {
+    transport = scope ? `Lima (${scope})` : "Lima";
+  } else if (host.includes(".vendor")) {
+    transport = "vendor (Desktop / machine)";
+  }
+  const target = transport === "native" && uri ? ` at ${uri}` : "";
+  return `connect the ${engine} engine via ${transport}${target}`;
+}
+
+// "What it tried / what happened" + the raw detail, for the Activity Center — the two questions a user asks
+// of any failure, with nothing discarded.
+function buildFailureDetail(connection: Connection, reason: string, raw: string | undefined): string {
+  const lines = [`What it tried: ${describeConnectionAttempt(connection)}`, `What happened: ${reason}`];
+  const rawTrimmed = raw?.trim();
+  if (rawTrimmed && rawTrimmed !== reason.trim()) {
+    lines.push("", rawTrimmed);
+  }
+  return lines.join("\n");
+}
+
+async function settleWithin<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return await new Promise<T | undefined>((resolve) => {
+    timeout = setTimeout(() => resolve(undefined), timeoutMs);
+    timeout.unref?.();
+    promise
+      .then((value) => resolve(value))
+      .catch(() => resolve(undefined))
+      .finally(() => {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+      });
+  });
 }
 
 export class EngineDataService {
   private readonly emitter = new EventEmitter();
   private readonly resourceByConnection = new Map<string, ResourceState>();
+  private readonly resourceSignatures = new Map<string, string>();
   private readonly refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private app?: Application;
   // Multi-connection: a host client, /events stop-handle, machine cache and runtime status PER connection id.
@@ -186,10 +240,16 @@ export class EngineDataService {
   }
 
   setResourceItems<D extends ResourceDomain>(connectionId: string, domain: D, items: ResourceItemsByDomain[D][]): void {
+    const key = `${connectionId}:${domain}`;
+    const signature = JSON.stringify(items);
+    if (this.resourceSignatures.get(key) === signature) {
+      return;
+    }
     const state = this.resourceByConnection.get(connectionId) ?? emptyResourceState();
     // Cast through a loose record: a generic D can't be proven against the mapped type's per-key union.
     (state as Record<ResourceDomain, unknown[]>)[domain] = items;
     this.resourceByConnection.set(connectionId, state);
+    this.resourceSignatures.set(key, signature);
     this.emitChange();
   }
 
@@ -198,20 +258,28 @@ export class EngineDataService {
     domain: D,
     host: HostClientFacade = this.hostByConnection.get(connectionId) ?? getActiveHostClient(),
   ): Promise<void> {
+    if (!this.supportsDomain(host, domain)) {
+      return;
+    }
     const items = await this.loadDomain(host, domain);
     this.setResourceItems(connectionId, domain, items);
   }
 
+  private supportsDomain(host: HostClientFacade, domain: ResourceDomain): boolean {
+    if (domain === "pods") {
+      return host.capabilities.resources.pods;
+    }
+    if (domain === "secrets") {
+      return host.capabilities.resources.secrets;
+    }
+    if (domain === "networks") {
+      return host.capabilities.resources.networks;
+    }
+    return true;
+  }
+
   private supportedDomains(host: HostClientFacade): ResourceDomain[] {
-    return RESOURCE_DOMAINS.filter((domain) => {
-      if (domain === "pods") {
-        return host.capabilities.resources.pods;
-      }
-      if (domain === "secrets") {
-        return host.capabilities.resources.secrets;
-      }
-      return true;
-    });
+    return RESOURCE_DOMAINS.filter((domain) => this.supportsDomain(host, domain));
   }
 
   async refreshAll(
@@ -244,21 +312,29 @@ export class EngineDataService {
     const userSettings = await app.getGlobalUserSettings();
     const def = userSettings?.connector?.default;
     this.primaryId = def && connections.some((c) => c.id === def) ? def : connections[0]?.id;
-    const autoConnect = connections.filter((c) => !c.disabled && c.settings?.api?.autoStart);
-    await Promise.allSettled(autoConnect.map((connection) => this.connectOne(connection)));
-    // Ensure the primary is up even if it was not flagged auto-start.
-    if (this.primaryId && !this.hostByConnection.has(this.primaryId)) {
+    const targetsById = new Map<string, Connection>();
+    for (const connection of connections.filter((c) => !c.disabled && c.settings?.api?.autoStart)) {
+      targetsById.set(connection.id, connection);
+    }
+    // Ensure the primary is included even if it was not flagged auto-start.
+    if (this.primaryId && !targetsById.has(this.primaryId)) {
       const primary = connections.find((c) => c.id === this.primaryId);
       if (primary) {
-        await this.connectOne(primary);
+        targetsById.set(primary.id, primary);
       }
     }
+    const jobs = Array.from(targetsById.values()).map((connection) =>
+      this.connectOne(connection)
+        .then(() => !!this.runtimeByConnection.get(connection.id)?.running)
+        .catch(() => false),
+    );
+    await Promise.allSettled(jobs);
     this.emitChange();
   }
 
   // Bring up ONE connection: build its host (cached by id, no shared "current" mutation), load its lists,
   // attach its /events stream. Records per-connection runtime; never tears down other connections' streams.
-  async connectOne(connection: Connection): Promise<void> {
+  async connectOne(connection: Connection, origin: ConnectOrigin = "bootstrap"): Promise<void> {
     const id = connection.id;
     const desc = descriptorOf(connection);
     this.connectionById.set(id, connection); // remembered so a drop can rebuild this host without a disk read
@@ -269,6 +345,7 @@ export class EngineDataService {
       name: desc.name,
       trace: "connecting",
       phase: "starting",
+      origin,
     });
     this.emitChange();
     try {
@@ -287,11 +364,11 @@ export class EngineDataService {
           capabilities: host.capabilities,
           phase: "ready",
           running: true,
-          version: engineVersionOf(connection, host),
+          version: resolveConnectionVersion(connection, { capabilities: host.capabilities }),
         });
         this.markConnected(id); // arm the stability timer; cancels any pending retry (no tight back-off reset)
-        await this.refreshAll(id, host);
-        const machines = await this.loadMachines(host);
+        await settleWithin(this.refreshAll(id, host), RESOURCE_WARMUP_TIMEOUT_MS);
+        const machines = (await settleWithin(this.loadMachines(host), MACHINES_LOAD_TIMEOUT_MS)) ?? [];
         this.machinesByConnection.set(id, machines);
         if (id === this.primaryId) {
           this.machines = machines;
@@ -304,20 +381,36 @@ export class EngineDataService {
         if (host.capabilities.events) {
           this.stopEventsByConnection.set(id, await this.connectEvents(id, host));
         }
-        this.emitProgress({ connectionId: id, engine: desc.engine, name: desc.name, trace: "ready", phase: "ready" });
-      } else {
-        this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false });
         this.emitProgress({
           connectionId: id,
           engine: desc.engine,
           name: desc.name,
-          trace: "unavailable",
-          phase: "failed",
+          trace: "ready",
+          phase: "ready",
+          origin,
         });
-        this.maybeContinueReconnect(connection, "engine unavailable");
+      } else {
+        // Surface WHY. Prefer the first check with a REAL message — skipping the "Not checked" placeholder so
+        // a swallowed failure (SSH "No route to host", folded into report.api by connectHostClient) reaches
+        // the user, not a terse nothing. Carry the raw detail (preflight steps) to the Activity Center too.
+        const report = availability?.report;
+        const reason = firstRealReason(report) || "engine unavailable";
+        const detail = buildFailureDetail(connection, reason, report?.detail);
+        this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false, error: reason });
+        this.emitProgress({
+          connectionId: id,
+          engine: desc.engine,
+          name: desc.name,
+          trace: `unavailable: ${reason}`,
+          phase: "failed",
+          origin,
+          detail,
+        });
+        this.maybeContinueReconnect(connection, reason);
       }
     } catch (error: any) {
       const reason = `${error?.message ?? error}`;
+      const detail = buildFailureDetail(connection, reason, typeof error?.stack === "string" ? error.stack : undefined);
       this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false, error: reason });
       this.emitProgress({
         connectionId: id,
@@ -325,6 +418,8 @@ export class EngineDataService {
         name: desc.name,
         trace: `failed: ${reason}`,
         phase: "failed",
+        origin,
+        detail,
       });
       this.maybeContinueReconnect(connection, reason);
     }
@@ -347,11 +442,18 @@ export class EngineDataService {
     this.machinesByConnection.delete(connectionId);
     this.runtimeByConnection.delete(connectionId);
     this.resourceByConnection.delete(connectionId);
+    this.clearResourceSignatures(connectionId);
     if (this.primaryId === connectionId) {
       this.primaryId = Array.from(this.runtimeByConnection.values()).find((r) => r.running)?.id;
       this.machines = (this.primaryId && this.machinesByConnection.get(this.primaryId)) || [];
     }
     this.emitChange();
+  }
+
+  private clearResourceSignatures(connectionId: string): void {
+    for (const domain of RESOURCE_DOMAINS) {
+      this.resourceSignatures.delete(`${connectionId}:${domain}`);
+    }
   }
 
   // Connect a specific connection if it isn't up yet (idempotent). Used by the command proxy before it
@@ -373,7 +475,7 @@ export class EngineDataService {
     }
     // Explicit (re)connect intent re-arms auto-reconnect for this connection.
     this.userDisconnected.delete(target.id);
-    await this.connectOne(target);
+    await this.connectOne(target, "user");
   }
 
   // Back-compat: the single-connection entry point (tests + idempotent boot). Ensures the target (or the
@@ -407,6 +509,23 @@ export class EngineDataService {
     void this.scheduleReconnect(connection, reason);
   }
 
+  private async handleEventsDrop(connectionId: string, host: HostClientFacade, reason: string): Promise<void> {
+    if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
+      return;
+    }
+    const api = await host.isApiRunning().catch(() => ({ success: false }));
+    if (!api.success) {
+      this.handleDrop(connectionId, reason);
+      return;
+    }
+    const stop = await this.connectEvents(connectionId, host);
+    if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
+      stop();
+      return;
+    }
+    this.stopEventsByConnection.set(connectionId, stop);
+  }
+
   // Continue an in-progress back-off cycle when a reconnect attempt itself fails. A FIRST-time connect
   // failure (no cycle in flight) is left as "failed" and not retried — only drops of a live connection
   // auto-reconnect.
@@ -436,6 +555,7 @@ export class EngineDataService {
         name: desc.name,
         trace: policy.enabled ? "reconnect gave up" : `connection lost: ${reason}`,
         phase: "failed",
+        origin: "reconnect",
       });
       this.emitChange();
       return;
@@ -459,6 +579,7 @@ export class EngineDataService {
       name: desc.name,
       trace: `reconnecting in ${Math.max(1, Math.round(delay / 1000))}s (attempt ${attempt})`,
       phase: "reconnecting",
+      origin: "reconnect",
     });
     this.emitChange();
     const existing = this.reconnectTimers.get(id);
@@ -470,7 +591,7 @@ export class EngineDataService {
       setTimeout(() => {
         this.reconnectTimers.delete(id);
         if (!this.userDisconnected.has(id)) {
-          void this.connectOne(connection);
+          void this.connectOne(connection, "reconnect");
         }
       }, delay),
     );
@@ -547,7 +668,13 @@ export class EngineDataService {
   // intentional teardown is never mistaken for a drop.
   private async connectEvents(connectionId: string, host: HostClientFacade): Promise<() => void> {
     try {
-      const stream = (await host.getEventsStream({ since: `${Math.floor(Date.now() / 1000)}` })) as
+      const stream = (await settleWithin(
+        host.getEventsStream({
+          since: `${Math.floor(Date.now() / 1000)}`,
+          attachTimeoutMs: EVENTS_ATTACH_TIMEOUT_MS,
+        }),
+        EVENTS_ATTACH_TIMEOUT_MS + 500,
+      )) as
         | { on?: (e: string, l: (...args: any[]) => void) => unknown; destroy?: () => void; close?: () => void }
         | undefined;
       if (!stream?.on) {
@@ -584,7 +711,7 @@ export class EngineDataService {
         if (Date.now() - openedAt < EVENTS_MIN_UPTIME_MS) {
           return;
         }
-        this.handleDrop(connectionId, reason);
+        void this.handleEventsDrop(connectionId, host, reason);
       };
       stream.on("end", () => onDropped("connection ended"));
       stream.on("error", (error: any) => onDropped(`connection error: ${error?.message ?? error}`));
@@ -609,7 +736,14 @@ export class EngineDataService {
 
   // Engine /events → per-domain debounced refresh (ported from the renderer ResourceEventManager).
   onEngineEvent(connectionId: string, event: Record<string, any>): void {
+    const host = this.hostByConnection.get(connectionId);
+    if (!host) {
+      return;
+    }
     for (const domain of normalizeResourceEventDomains(event)) {
+      if (!this.supportsDomain(host, domain)) {
+        continue;
+      }
       const key = `${connectionId}:${domain}`;
       const existing = this.refreshTimers.get(key);
       if (existing) {
@@ -619,7 +753,7 @@ export class EngineDataService {
         key,
         setTimeout(() => {
           this.refreshTimers.delete(key);
-          void this.refresh(connectionId, domain);
+          void this.refresh(connectionId, domain, host).catch(() => undefined);
         }, EVENT_REFRESH_DEBOUNCE_MS),
       );
     }

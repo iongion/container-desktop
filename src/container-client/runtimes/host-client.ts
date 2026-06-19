@@ -38,7 +38,7 @@ import { createLogger } from "@/logger";
 import { deepMerge, isEmpty } from "@/utils";
 import { findProgramPath, findProgramVersion } from "../detector";
 import type { EngineDialect, HostContext, HostProfile, Transport } from "./composition";
-import type { CapabilityDescriptor, HostClientFacade } from "./facade";
+import type { ApiSurface, CapabilityDescriptor, HostClientFacade } from "./facade";
 
 /**
  * The per-(engine,host) composition the registry resolves: the three units plus the identity constants that
@@ -66,6 +66,9 @@ export class HostClient implements HostContext {
   // capability matrix (host-adjusted): dialect.capabilitiesBase -> profile.adjustCapabilities (Finding B)
   public capabilities: CapabilityDescriptor;
 
+  // REST API shape ("docker" or "libpod") — set from the dialect, used by adapters for baseURL/normalizers.
+  public apiSurface: ApiSurface;
+
   // composition units + collaborators (the HostContext surface)
   public readonly osType: OperatingSystem;
   public readonly transport: Transport;
@@ -74,7 +77,7 @@ export class HostClient implements HostContext {
   public runner!: Runner;
 
   // state
-  protected logLevel = "debug";
+  protected logLevel = "warn";
   protected settings: EngineConnectorSettings;
   protected cachedDriver?: AxiosInstance;
 
@@ -116,6 +119,7 @@ export class HostClient implements HostContext {
     this.PROGRAM = composition.PROGRAM;
     this.CONTROLLER = composition.CONTROLLER;
     this.capabilities = composition.profile.adjustCapabilities(composition.dialect.capabilitiesBase);
+    this.apiSurface = composition.dialect.apiSurface;
     this.settings = {
       api: {
         baseURL: "",
@@ -152,7 +156,7 @@ export class HostClient implements HostContext {
   // ── identity / logging ──
 
   setLogLevel(level: string): void {
-    console.debug("Setting container engine host client log level", level);
+    this.logger?.debug(this.id, "Setting container engine host client log level", level);
     this.logLevel = level;
   }
 
@@ -274,14 +278,41 @@ export class HostClient implements HostContext {
   async isProgramAvailable(settings: EngineConnectorSettings): Promise<AvailabilityCheck> {
     const result: AvailabilityCheck = { success: false, details: undefined };
     const currentSettings = settings || (await this.getSettings());
-    const programPath = currentSettings.program.path || currentSettings.program.name;
-    // Native path to program
-    if (!programPath) {
-      result.details = "Path not set";
+    const programName = currentSettings.program.name || this.PROGRAM;
+    const programPath = currentSettings.program.path || programName;
+    if (!programName) {
+      result.details = "Engine program is not configured";
       return result;
     }
-    if (!(await FS.isFilePresent(programPath))) {
-      result.details = "Not present in path";
+    if (this.isScoped()) {
+      // Scoped hosts (SSH / WSL / LIMA) run the engine INSIDE the scope — the binary lives on the
+      // remote/VM, so presence must be verified IN THE HOST, not against the local filesystem (mirrors
+      // isApiAvailable's !isScoped guard). The scope is already started by the time getAvailability runs
+      // (Application.connectHostClient), so runScopeCommand is live.
+      try {
+        const probe = await this.runScopeCommand(
+          "which",
+          [currentSettings.program.name],
+          currentSettings.controller?.scope || "",
+          currentSettings,
+        );
+        if (!probe.success) {
+          result.details = `Program "${programName}" was not found`;
+          return result;
+        }
+      } catch (error: any) {
+        this.logger.error(this.id, "Scoped program availability check failed", error);
+        const scope = currentSettings.controller?.scope;
+        result.details = scope
+          ? `Program "${programName}" could not be checked in ${scope}`
+          : `Program "${programName}" could not be checked in the remote host`;
+        return result;
+      }
+    } else if (!(await FS.isFilePresent(programPath))) {
+      result.details =
+        programPath === programName
+          ? `Program "${programName}" was not detected on this machine`
+          : `Program "${programName}" was not found at ${programPath}`;
       return result;
     }
     result.success = true;
@@ -436,12 +467,13 @@ export class HostClient implements HostContext {
 
   async getEventsStream(opts?: SubscriptionOptions) {
     try {
+      const { attachTimeoutMs, ...params } = opts ?? {};
       this.logger.debug(this.id, "Subscribing to connection events - creating api client", opts);
       const driver = await this.getApiDriver();
       this.logger.debug(this.id, "Subscribing to connection events - issuing request");
       const response = await driver.get("/events", {
-        params: opts,
-        timeout: 0,
+        params,
+        timeout: attachTimeoutMs ?? 0,
         responseType: "stream",
       });
       return response.data as EventEmitter;
@@ -463,16 +495,19 @@ export class HostClient implements HostContext {
   async isControllerAvailable(settings: EngineConnectorSettings) {
     let success = false;
     let details: string | undefined;
-    const controllerPath = settings.controller?.path;
+    const controllerName = settings.controller?.name || this.CONTROLLER;
+    const controllerPath = settings.controller?.path || "";
     if (controllerPath) {
       if (await FS.isFilePresent(controllerPath)) {
         success = true;
         details = "Controller is available";
       } else {
-        details = "Not present in path";
+        details = `Controller "${controllerName}" was not found at ${controllerPath}`;
       }
     } else {
-      details = "Path not set";
+      details = controllerName
+        ? `Controller "${controllerName}" was not detected on this machine`
+        : "Controller program is not configured";
     }
     return { success, details };
   }
@@ -557,6 +592,19 @@ export class HostClient implements HostContext {
       availability.api = false;
       // Preserve the specific reason (e.g. "No socket at …") rather than a generic message.
       availability.report.api = api.details || "API is not running";
+    }
+    // Optional API-bridge note (e.g. Apple/socktainer presence/version) folded into the api report line,
+    // so a missing/lagging bridge is visible — not just logged. No-op for Docker/Podman (native REST).
+    if (this.dialect.describeApiBridge) {
+      try {
+        const note = await this.dialect.describeApiBridge(this, settings);
+        if (note) {
+          availability.report.api = availability.report.api ? `${availability.report.api} · ${note}` : note;
+          this.logger.info(this.id, "API bridge", note);
+        }
+      } catch (error: any) {
+        this.logger.warn(this.id, "Unable to describe API bridge", error);
+      }
     }
     systemNotifier.transmit("engine.availability", {
       trace: "Availability check complete",

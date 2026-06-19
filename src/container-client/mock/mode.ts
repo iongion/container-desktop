@@ -3,15 +3,16 @@
 // the documentation screenshots and to run hermetic UI integration tests (no podman/docker needed).
 //
 // Switched on by the `CONTAINER_DESKTOP_MOCK` env var (read from process.env in main/preload, and
-// from the contextBridge-exposed global in the renderer). Values: "podman" | "docker" boot that
-// single engine as the current connection; "unified" | "all" | "both" | "1" | "true" | "yes" boot
-// BOTH system engines connected → the merged/unified workspace. ALWAYS inert in production builds —
+// from the contextBridge-exposed global in the renderer). Values: "podman" | "docker" | "container"
+// boot that single engine as the current connection; "unified" | "all" | "both" | "1" | "true" |
+// "yes" boot ALL system engines connected → the merged/unified workspace. ALWAYS inert in production
+// builds —
 // the value is ignored when ENVIRONMENT === "production" — so a stray flag can never make a shipped
 // app serve fixtures.
 
 import { ContainerEngine } from "@/env/Types";
 
-export type MockEngine = ContainerEngine.PODMAN | ContainerEngine.DOCKER;
+export type MockEngine = ContainerEngine.PODMAN | ContainerEngine.DOCKER | ContainerEngine.APPLE;
 
 // Values that boot the multi-engine (merged) workspace. "1"/"true"/"yes" are kept for back-compat
 // (historically documented as "boots Podman+Docker mocks") and now alias the explicit "unified".
@@ -35,7 +36,7 @@ function rawFlag(): string {
 /** True when the app should serve fixtures instead of talking to a real engine. */
 export function isMockMode(): boolean {
   const value = rawFlag().toLowerCase();
-  return MULTI_ENGINE_FLAGS.has(value) || value === "podman" || value === "docker";
+  return MULTI_ENGINE_FLAGS.has(value) || value === "podman" || value === "docker" || value === "container";
 }
 
 /**
@@ -52,8 +53,11 @@ export function getMockEngines(): MockEngine[] {
   if (value === "podman") {
     return [ContainerEngine.PODMAN];
   }
+  if (value === "container") {
+    return [ContainerEngine.APPLE];
+  }
   if (MULTI_ENGINE_FLAGS.has(value)) {
-    return [ContainerEngine.PODMAN, ContainerEngine.DOCKER];
+    return [ContainerEngine.PODMAN, ContainerEngine.DOCKER, ContainerEngine.APPLE];
   }
   return [];
 }

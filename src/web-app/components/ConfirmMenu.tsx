@@ -123,6 +123,16 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
     },
     [onConfirm, tag],
   );
+  const onOpen = useCallback((e) => {
+    e.stopPropagation();
+    setIsOpen(true);
+  }, []);
+  const triggerButton = (
+    <Button variant="minimal" size="small" icon={IconNames.MORE} onClick={isOpen ? undefined : onOpen} />
+  );
+  if (!isOpen) {
+    return triggerButton;
+  }
   const menuContent = (
     <Menu>
       {children}
@@ -144,7 +154,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
       content={menuContent}
       placement="bottom-start"
     >
-      <Button variant="minimal" size="small" icon={IconNames.MORE} />
+      {triggerButton}
     </PopoverNext>
   );
 };

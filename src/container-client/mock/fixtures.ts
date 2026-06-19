@@ -81,8 +81,25 @@ const FIXTURES: Record<ContainerEngine, EngineFixtures> = {
     machines: [],
     extras: dockerExtras as MockExtras,
   },
+  // Apple reuses Docker fixtures — same REST API surface via socktainer.
+  [ContainerEngine.APPLE]: {
+    info: dockerInfo,
+    version: dockerVersion,
+    containers: dockerContainers as unknown[],
+    containerInspect: dockerContainerInspect as Record<string, unknown>,
+    images: dockerImages as unknown[],
+    imageInspect: dockerImageInspect as Record<string, unknown>,
+    volumes: dockerVolumes,
+    networks: dockerNetworks as unknown[],
+    pods: dockerPods as unknown[],
+    secrets: dockerSecrets as unknown[],
+    machines: [],
+    extras: dockerExtras as MockExtras,
+  },
 };
 
 export function getEngineFixtures(engine: ContainerEngine): EngineFixtures {
-  return FIXTURES[engine] ?? FIXTURES[ContainerEngine.PODMAN];
+  // Apple reuses Docker fixtures — same REST API surface via socktainer.
+  const key = engine === ContainerEngine.APPLE ? ContainerEngine.DOCKER : engine;
+  return FIXTURES[key] ?? FIXTURES[ContainerEngine.PODMAN];
 }

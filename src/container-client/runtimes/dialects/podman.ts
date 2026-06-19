@@ -23,6 +23,13 @@ import { getAvailablePodmanMachines, normalizePodmanMachines } from "../../share
 import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 import { PODMAN_SORT_CAPABILITIES } from "../sort-capabilities";
+import {
+  expandScopedSocketPath,
+  isScopedMacOS,
+  normalizeUnixSocketPath,
+  parseJSON,
+  runScopedSocketCommand,
+} from "./shared";
 
 /** Resolve the program used to drive machine commands: the controller when scoped, else the engine program. */
 async function getControllerLauncherPath(host: HostContext): Promise<string> {
@@ -58,11 +65,34 @@ async function getControllerLauncherPath(host: HostContext): Promise<string> {
   return programLauncher;
 }
 
+function pickPodmanMachineSocket(value: unknown): string {
+  const items = Array.isArray(value) ? value : value ? [value] : [];
+  const running = items.find((item: any) => item?.State === "running");
+  const item: any = running || items[0];
+  return normalizeUnixSocketPath(item?.ConnectionInfo?.PodmanSocket?.Path);
+}
+
+async function readPodmanRemoteMachineSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
+  if (host.HOST !== ContainerEngineHost.PODMAN_REMOTE) {
+    return "";
+  }
+  if (!(await isScopedMacOS(host, settings))) {
+    return "";
+  }
+  const program = settings.program.path || settings.program.name || host.PROGRAM;
+  const output = await runScopedSocketCommand(host, settings, program, ["machine", "inspect"]);
+  if (!output.success) {
+    return "";
+  }
+  return await expandScopedSocketPath(host, settings, pickPodmanMachineSocket(parseJSON(output.stdout || "")));
+}
+
 export const podmanDialect: EngineDialect = {
   ENGINE: ContainerEngine.PODMAN,
+  apiSurface: "libpod",
 
   capabilitiesBase: {
-    resources: { pods: true, secrets: true },
+    resources: { pods: true, secrets: true, networks: true },
     events: true,
     sort: PODMAN_SORT_CAPABILITIES,
     extensions: {
@@ -78,6 +108,10 @@ export const podmanDialect: EngineDialect = {
   } satisfies CapabilityDescriptor,
 
   async readEngineSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
+    const remoteMachineSocket = await readPodmanRemoteMachineSocket(host, settings);
+    if (remoteMachineSocket) {
+      return remoteMachineSocket;
+    }
     const info = await host.getSystemInfo(undefined, undefined, settings);
     return info?.host?.remoteSocket?.path || "";
   },

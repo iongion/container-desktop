@@ -35,6 +35,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
         resources: {
           pods: acc.resources.pods || info.capabilities?.resources?.pods === true,
           secrets: acc.resources.secrets || info.capabilities?.resources?.secrets === true,
+          networks: acc.resources.networks || info.capabilities?.resources?.networks === true,
         },
         events: acc.events || info.capabilities?.events === true,
         sort: { ...acc.sort, ...(info.capabilities?.sort ?? {}) },
@@ -51,7 +52,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
         },
       }),
       {
-        resources: { pods: false, secrets: false },
+        resources: { pods: false, secrets: false, networks: false },
         events: false,
         sort: {},
         extensions: {

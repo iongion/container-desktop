@@ -10,6 +10,7 @@ const snap: ResourceSyncSnapshot = {
 
 function makeDeps() {
   let changeCb = () => {};
+  let currentSnapshot = snap;
   const invokeHandlers = new Map<string, (event: any, payload: any) => unknown>();
   const messageHandlers = new Map<string, (event: any, payload: any) => void>();
   const broadcasts: Array<{ channel: string; payload: unknown }> = [];
@@ -17,7 +18,7 @@ function makeDeps() {
   const ensured: Array<string | undefined> = [];
   return {
     service: {
-      getSyncSnapshot: () => snap,
+      getSyncSnapshot: () => currentSnapshot,
       subscribe: (cb: () => void) => {
         changeCb = cb;
         return () => {};
@@ -34,6 +35,9 @@ function makeDeps() {
     broadcast: (channel: string, payload: unknown) => broadcasts.push({ channel, payload }),
     isAllowedSender: (event: any) => event?.allowed === true,
     _fireChange: () => changeCb(),
+    _setSnapshot: (next: ResourceSyncSnapshot) => {
+      currentSnapshot = next;
+    },
     _invoke: (channel: string, event: any, payload?: any) => invokeHandlers.get(channel)?.(event, payload),
     _message: (channel: string, event: any, payload: any) => messageHandlers.get(channel)?.(event, payload),
     _broadcasts: () => broadcasts,
@@ -42,12 +46,41 @@ function makeDeps() {
   };
 }
 
+async function flushSnapshotQueue() {
+  await Promise.resolve();
+}
+
 describe("ResourceSyncBroker", () => {
-  it("pushes a snapshot to all windows when the service changes", () => {
+  it("pushes a snapshot to all windows when the service changes", async () => {
     const deps = makeDeps();
     new ResourceSyncBroker(deps).register();
     deps._fireChange();
+    expect(deps._broadcasts()).toEqual([]);
+    await flushSnapshotQueue();
     expect(deps._broadcasts()).toEqual([{ channel: RESOURCE_SYNC.snapshot, payload: snap }]);
+  });
+
+  it("coalesces duplicate snapshot pushes", async () => {
+    const deps = makeDeps();
+    new ResourceSyncBroker(deps).register();
+
+    deps._fireChange();
+    deps._fireChange();
+    await flushSnapshotQueue();
+    expect(deps._broadcasts()).toHaveLength(1);
+
+    deps._fireChange();
+    await flushSnapshotQueue();
+    expect(deps._broadcasts()).toHaveLength(1);
+
+    const next = { ...snap, appRuntime: { ...snap.appRuntime, phase: "failed" as const, running: false } };
+    deps._setSnapshot(next);
+    deps._fireChange();
+    await flushSnapshotQueue();
+    expect(deps._broadcasts()).toEqual([
+      { channel: RESOURCE_SYNC.snapshot, payload: snap },
+      { channel: RESOURCE_SYNC.snapshot, payload: next },
+    ]);
   });
 
   it("answers get-snapshot for an allowed sender and rejects others", () => {

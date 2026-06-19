@@ -61,12 +61,14 @@ body.bp6-light[data-engine="podman"] {
   --find-widget-border: #dcdcdc;
 }
 
-/* UNIFIED (merged multi-engine) — engine-agnostic teal, matching the unified chrome accent. Without these the
-   find widget falls back to the docker-blue :root defaults under the unified theme. */
+/* CONTAINER/GREEN + UNIFIED share the same find-widget palette. The app chrome differs by accent,
+   but this floating utility should read like the neutral unified surface instead of a green panel. */
+body[data-engine="container"],
 body[data-engine="unified"] {
   --find-term-match: #1d5a52;
   --find-term-active: #14b8a6;
 }
+body.bp6-dark[data-engine="container"],
 body.bp6-dark[data-engine="unified"] {
   --find-accent: #14b8a6;
   --find-hl-bg: rgba(20, 184, 166, 0.3);
@@ -76,6 +78,7 @@ body.bp6-dark[data-engine="unified"] {
   --find-widget-fg: #f6f7f9;
   --find-widget-border: #1d5a52;
 }
+body.bp6-light[data-engine="container"],
 body.bp6-light[data-engine="unified"] {
   --find-accent: #0d9488;
   --find-hl-bg: rgba(13, 148, 136, 0.22);
@@ -113,6 +116,13 @@ body.bp6-light[data-engine="unified"] {
 }
 .ContainerFindWidget .bp6-input {
   font-size: 12px;
+}
+.ContainerFindWidget .bp6-input:focus,
+.ContainerFindWidget .bp6-input.bp6-active,
+.ContainerFindWidget .bp6-input[readonly]:focus {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--find-accent) 75%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--find-accent) 75%, transparent);
 }
 .ContainerFindWidgetCount {
   min-width: 52px;

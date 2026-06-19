@@ -26,7 +26,7 @@ import type {
   StartupStatus,
   SystemInfo,
 } from "@/env/Types";
-import type { CapabilityDescriptor, HostClientFacade } from "./facade";
+import type { ApiSurface, CapabilityDescriptor, HostClientFacade } from "./facade";
 
 /**
  * The composed host surface that Transport / EngineDialect / HostProfile methods receive — the HostClient
@@ -115,6 +115,8 @@ export interface Transport {
 /** EngineDialect — engine commands/endpoints + extension implementations. One per engine: Podman / Docker. */
 export interface EngineDialect {
   readonly ENGINE: ContainerEngine;
+  /** The REST API shape this dialect speaks ("docker" for Docker/Apple-socktainer, "libpod" for Podman). */
+  readonly apiSurface: ApiSurface;
   /** Base capabilities for the engine; the HostProfile host-adjusts these (Finding B). */
   readonly capabilitiesBase: CapabilityDescriptor;
   /** Engine socket read: Podman `system info`→`remoteSocket.path` / Docker `context inspect`→`Endpoints.docker.Host`. */
@@ -132,6 +134,12 @@ export interface EngineDialect {
   ): Promise<SystemInfo>;
   /** The 23 engine-extension methods bound to this host (real on this engine, no-op on the other). */
   bindExtensions(host: HostContext): EngineExtensionMethods;
+  /**
+   * Optional: a human note about the engine's API bridge/transport health (e.g. Apple's socktainer
+   * presence/version) — folded into availability.report.api by getAvailability. Engines with a native
+   * REST API (Docker/Podman) omit it.
+   */
+  describeApiBridge?(host: HostContext, settings: EngineConnectorSettings): Promise<string | undefined>;
 }
 
 /** HostProfile — the thin per-(engine,host) glue (one per leaf). Holds only what genuinely varies per host. */

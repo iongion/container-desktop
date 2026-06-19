@@ -56,7 +56,6 @@ export const I18nContextProvider: React.FC<{ children?: React.ReactNode }> = ({ 
       value={{
         currentLanguage,
         setCurrentLanguage: (lang: any) => {
-          console.debug("Changing locale to", lang);
           localStorage.setItem("i18nextLng", lang);
           (i18n as any).changeLanguage(lang);
           setCurrentLanguage(lang);

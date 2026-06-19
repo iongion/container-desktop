@@ -36,8 +36,8 @@
         "Class": "os-pkgs",
         "Type": "alpine",
         "Vulnerabilities": [
-          { "VulnerabilityID": "CVE-2024-0001", "PkgName": "libssl3", "InstalledVersion": "3.3.0-r1", "FixedVersion": "3.3.0-r2", "Severity": "HIGH", "Title": "openssl: example denial of service", "Description": "Mock OpenSSL package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-0001", "Published": "2024-09-10T12:00:00Z" },
-          { "VulnerabilityID": "CVE-2024-0002", "PkgName": "busybox", "InstalledVersion": "1.36.1-r0", "FixedVersion": "1.36.1-r1", "Severity": "MEDIUM", "Title": "busybox: example out-of-bounds read", "Description": "Mock BusyBox package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-0002", "Published": "2024-08-22T09:30:00Z" }
+          { "VulnerabilityID": "CVE-2024-0001", "PkgName": "libssl3", "InstalledVersion": "3.3.0-r1", "FixedVersion": "3.3.0-r2", "Severity": "HIGH", "Title": "openssl: example denial of service", "Description": "Mock OpenSSL package vulnerability used for deterministic screenshots. The description intentionally resembles a long Trivy advisory so the security table proves that advisory text wraps inside the Vulnerability ID column, clamps after three lines, and does not stretch the whole report horizontally.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-0001", "Published": "2024-09-10T12:00:00Z" },
+          { "VulnerabilityID": "CVE-2024-0002", "PkgName": "busybox", "InstalledVersion": "1.36.1-r0", "FixedVersion": "1.36.1-r1", "Severity": "HIGH", "Title": "busybox: example out-of-bounds read", "Description": "Mock BusyBox package vulnerability used for deterministic screenshots.", "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-0002", "Published": "2024-08-22T09:30:00Z" }
         ]
       }
     ]

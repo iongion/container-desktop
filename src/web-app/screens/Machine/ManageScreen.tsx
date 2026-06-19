@@ -1,4 +1,4 @@
-import { AnchorButton, Divider, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
@@ -6,12 +6,14 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Connector, PodmanMachine } from "@/env/Types";
+import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -72,6 +74,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const items = searchTerm ? machineSnapshot.filter(createMachineSearchFilter(searchTerm)) : machineSnapshot;
     return sortByField(items, clientSort, machineSortSelectors);
   }, [clientSort, machineSnapshot, searchTerm]);
+  const renderedMachines = useProgressiveTableRows(machines);
   const visibleIds = useMemo(() => machines.map((m) => m.Name), [machines]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useMachineBulkActions(connectionId || "");
@@ -182,20 +185,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {machines.map((machine) => {
+              {renderedMachines.map((machine) => {
                 return (
                   <tr key={machine.Name}>
                     <td>
-                      <AnchorButton
+                      <AppDataTableLink
                         className="InspectMachineButton"
-                        variant="minimal"
-                        size="small"
+                        fillCell
                         href={getMachineUrl(machine.Name, "inspect", connectionId)}
-                        intent={Intent.PRIMARY}
-                        icon={IconNames.EYE_OPEN}
-                      >
-                        <span>{machine.Name}</span>
-                      </AnchorButton>
+                        iconName={IconNames.EYE_OPEN}
+                        text={machine.Name}
+                      />
                     </td>
                     <td>{machine.VMType}</td>
                     <td>{machine.CPUs || "-"}</td>
@@ -213,7 +213,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <td>{machine.Running ? t("Yes") : t("No")}</td>
                     <td>{dayjs(machine.LastUp).format("DD MMM YYYY HH:mm")}</td>
                     <td>{dayjs(machine.Created).format("DD MMM YYYY HH:mm")}</td>
-                    <td>
+                    <td data-column="Actions">
                       <ActionsMenu withoutCreate machine={machine} connectionId={connectionId} />
                     </td>
                     <td className="BulkSelectColumn">

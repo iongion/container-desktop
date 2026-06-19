@@ -70,7 +70,6 @@ export function axiosConfigToCURL(
   },
 ) {
   if (!config?.baseURL || !config.socketPath) {
-    console.error("Request config is not valid", config);
     throw new Error("Unable to construct curl from config");
   }
   let requestUrl = `${config.baseURL}${config.url}`;

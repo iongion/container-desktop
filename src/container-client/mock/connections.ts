@@ -14,9 +14,11 @@ import { getMockEngines } from "./mode";
 
 export const MOCK_PODMAN_SYSTEM_ID = "mock.podman.system";
 export const MOCK_DOCKER_SYSTEM_ID = "mock.docker.system";
+export const MOCK_CONTAINER_SYSTEM_ID = "mock.container.system";
 
 const MOCK_PODMAN_VERSION = "5.3.1";
 const MOCK_DOCKER_VERSION = "27.3.1";
+const MOCK_APPLE_VERSION = "1.0.0";
 
 /** Forced-ready availability — bypasses program/socket detection (which would fail with no real engine). */
 export function mockAvailability(): EngineConnectorAvailability {
@@ -54,6 +56,8 @@ function mockSettings(
   controller?: Controller,
 ): EngineConnectorSettings {
   const isPodman = engine === ContainerEngine.PODMAN;
+  const isApple = engine === ContainerEngine.APPLE;
+  const programName = isPodman ? "podman" : isApple ? "container" : "docker";
   return {
     api: {
       baseURL: isPodman ? "http://d" : "http://localhost",
@@ -61,9 +65,9 @@ function mockSettings(
       autoStart,
     },
     program: {
-      name: isPodman ? "podman" : "docker",
-      path: isPodman ? "/usr/bin/podman" : "/usr/bin/docker",
-      version: isPodman ? MOCK_PODMAN_VERSION : MOCK_DOCKER_VERSION,
+      name: programName,
+      path: isApple ? "/usr/local/bin/container" : `/usr/bin/${programName}`,
+      version: isPodman ? MOCK_PODMAN_VERSION : isApple ? MOCK_APPLE_VERSION : MOCK_DOCKER_VERSION,
     },
     controller,
     rootfull: false,
@@ -179,6 +183,26 @@ export function buildMockConnections(): Connection[] {
       uri: "unix:///Users/demo/.lima/docker/sock/docker.sock",
       autoStart: false,
       controller: controller("limactl", "docker-lima"),
+    }),
+    // Container mock connections
+    mockConnection({
+      id: MOCK_CONTAINER_SYSTEM_ID,
+      name: "System Container",
+      label: "Container", // Apple Container
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_NATIVE,
+      uri: "/Users/demo/.socktainer/container.sock",
+      autoStart: engines.includes(ContainerEngine.APPLE),
+    }),
+    mockConnection({
+      id: "mock.container.ssh",
+      name: "Container SSH remote",
+      label: "Remote SSH connection",
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_REMOTE,
+      uri: "ssh://demo@container.example.test/Users/demo/.socktainer/container.sock",
+      autoStart: false,
+      controller: controller("ssh", "container-demo"),
     }),
   ];
 }

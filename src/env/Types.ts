@@ -97,7 +97,7 @@ export interface ProxyServiceOptions {
   keepAlive?: boolean;
 }
 
-export type EngineThemePreference = "auto" | "unified" | "podman" | "docker";
+export type EngineThemePreference = "auto" | "unified" | "podman" | "docker" | "container";
 
 export interface GlobalUserSettings {
   theme: string;
@@ -303,6 +303,7 @@ export interface SSHHost {
   HostName: string;
   User: string;
   IdentityFile: string;
+  ConfigHost?: string;
 }
 
 export type ControllerScope = PodmanMachine | WSLDistribution | LIMAInstance | SSHHost;
@@ -318,6 +319,9 @@ export interface ProgramTestResult extends TestResult {
 export enum ContainerEngine {
   PODMAN = "podman",
   DOCKER = "docker",
+  // Apple's `container` runtime. The enum member stays APPLE; the wire value is "container" (Apple's own
+  // name for the tool/CLI — github.com/apple/container), matching APPLE_PROGRAM.
+  APPLE = "container",
 }
 
 export enum ContainerEngineHost {
@@ -333,6 +337,9 @@ export enum ContainerEngineHost {
   DOCKER_VIRTUALIZED_LIMA = "docker.virtualized.lima",
   DOCKER_VIRTUALIZED_VENDOR = "docker.virtualized.vendor",
   DOCKER_REMOTE = "docker.remote",
+  // Apple (engine wire value is "container"; members stay APPLE_*)
+  APPLE_NATIVE = "container.native",
+  APPLE_REMOTE = "container.remote",
 }
 
 export enum Presence {
@@ -366,6 +373,9 @@ export interface EngineConnectorAvailability {
     program: string;
     controller?: string;
     controllerScope?: string;
+    // Raw, verbatim failure detail (SSH preflight steps / stderr / stack). Surfaced unabridged in the
+    // Activity Center so a real connection failure is never reduced to a terse "Not checked" placeholder.
+    detail?: string;
   };
 }
 
@@ -388,6 +398,7 @@ export interface ConnectorCapabilities {
   resources: {
     pods: boolean;
     secrets: boolean;
+    networks: boolean;
   };
   events: boolean;
   sort: Record<string, "client" | "server">;
@@ -849,6 +860,7 @@ export interface SubscriptionOptions {
   until?: string;
   filters?: { [key: string]: string };
   reports?: { type: string; action: string }[];
+  attachTimeoutMs?: number;
 }
 
 export interface GenerateKubeOptions {

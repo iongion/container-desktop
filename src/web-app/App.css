@@ -1,3 +1,20 @@
+:root {
+  --app-header-height: 50px;
+  --app-footer-height: 32px;
+  --app-drawer-top-offset: var(--app-header-height);
+  --app-drawer-bottom-offset: var(--app-footer-height);
+}
+
+.App {
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
 .bp6-navbar {
   box-shadow: none !important;
 }
@@ -55,15 +72,6 @@ pre,
   font-variant-ligatures: none;
 }
 
-.App {
-  font-family: sans-serif;
-  display: flex;
-  flex-direction: column;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-}
 .AppContent {
   display: flex;
   flex: 1;
@@ -87,7 +95,7 @@ pre,
   display: flex;
   flex: 1;
   width: 100%;
-  height: calc(100% - 32px);
+  height: calc(100% - var(--app-footer-height, 32px));
   min-width: 0;
   min-height: 0;
   padding: 10px;
@@ -169,6 +177,29 @@ pre,
   min-width: 420px;
   box-shadow: none;
 }
+.bp6-drawer.AppDrawer.bp6-position-left {
+  border-right: 1px solid var(--app-border, rgba(138, 155, 168, 0.35));
+}
+.bp6-drawer.AppDrawer.bp6-position-right {
+  border-left: 1px solid var(--app-border, rgba(138, 155, 168, 0.35));
+}
+.AppDrawerPortal .bp6-overlay.bp6-overlay-container,
+.AppDrawerPortal .bp6-overlay.bp6-overlay-scroll-container,
+.AppDrawerPortal .bp6-overlay-backdrop.AppDrawerBackdrop,
+.bp6-drawer.AppDrawer.bp6-position-left,
+.bp6-drawer.AppDrawer.bp6-position-right {
+  top: var(--app-drawer-top-offset);
+  bottom: var(--app-drawer-bottom-offset);
+  height: auto;
+}
+.bp6-drawer.AppDrawer.bp6-position-top {
+  top: var(--app-drawer-top-offset);
+  max-height: calc(100vh - var(--app-drawer-top-offset) - var(--app-drawer-bottom-offset));
+}
+.bp6-drawer.AppDrawer.bp6-position-bottom {
+  bottom: var(--app-drawer-bottom-offset);
+  max-height: calc(100vh - var(--app-drawer-top-offset) - var(--app-drawer-bottom-offset));
+}
 .AppDrawer .bp6-drawer-header {
   -webkit-app-region: none;
 }
@@ -205,18 +236,37 @@ pre,
   width: auto;
   text-align: left;
 }
+.AppDataTable:is(
+    [data-table="containers"],
+    [data-table="images"],
+    [data-table="machines"],
+    [data-table="networks"],
+    [data-table="pods"],
+    [data-table="secrets"],
+    [data-table="volumes"]
+  )
+  thead
+  th[data-column="name"],
+.AppDataTable:is(
+    [data-table="containers"],
+    [data-table="images"],
+    [data-table="machines"],
+    [data-table="networks"],
+    [data-table="pods"],
+    [data-table="secrets"],
+    [data-table="volumes"]
+  )
+  tbody
+  td:first-child {
+  width: 100%;
+  min-width: 180px;
+}
 .AppDataTable thead th:last-child,
 .AppDataTable tbody td:last-child {
   width: 1px !important;
 }
-/* When a bulk selection column is present (always the last column), the row Actions column moves to
-   second-to-last. Keep it shrink-to-fit for BOTH header and cells (the global :last-child rule above now
-   sizes the selection column instead). */
-.AppDataTable thead th:has(+ th.BulkSelectColumn),
-.AppDataTable tbody td:has(+ td.BulkSelectColumn) {
-  width: 1px !important;
-}
-.AppDataTable thead th[data-column="Actions"] {
+.AppDataTable thead th[data-column="Actions"],
+.AppDataTable tbody td[data-column="Actions"] {
   width: 1px;
 }
 .AppDataTable thead th[data-column="Created"],

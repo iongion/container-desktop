@@ -67,7 +67,7 @@ function segments(path: string): string[] {
 }
 
 export async function mockApiAdapter(request: any, connection: any): Promise<MockApiResponse> {
-  const engine = connection?.engine === ContainerEngine.DOCKER ? ContainerEngine.DOCKER : ContainerEngine.PODMAN;
+  const engine = connection?.engine ?? ContainerEngine.PODMAN;
   const fx = await loadEngineFixtures(engine);
   const method = `${request?.method || "GET"}`.toUpperCase();
   const rawUrl = `${request?.url || ""}`;

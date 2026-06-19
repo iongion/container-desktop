@@ -10,6 +10,7 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -52,10 +53,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     () => sortByField(searchResults, searchSort.clientSort, registrySearchSortSelectors),
     [searchResults, searchSort.clientSort],
   );
+  const renderedSearchResults = useProgressiveTableRows(sortedSearchResults);
   const sortedRegistries = useMemo(
     () => sortByField(registries, sourceSort.clientSort, registrySourceSortSelectors),
     [registries, sourceSort.clientSort],
   );
+  const renderedRegistries = useProgressiveTableRows(sortedRegistries);
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
   const firstEnabledRegistry = useMemo(
     () =>
@@ -157,7 +160,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {sortedSearchResults.map((it) => {
+              {renderedSearchResults.map((it) => {
                 return (
                   <tr key={`${it.Index}_${it.Name}_${it.Tag}`} data-registry={it.Name}>
                     <td>
@@ -219,7 +222,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {(sortedRegistries || []).map((registry) => {
+              {renderedRegistries.map((registry) => {
                 let title = "";
                 if (registry.id === "system") {
                   title = registry.enabled
@@ -240,7 +243,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         disabled={!registry.enabled || !isUsable}
                       />
                     </td>
-                    <td>
+                    <td data-column="Actions">
                       <ActionsMenu withoutCreate registry={registry} />
                     </td>
                   </tr>

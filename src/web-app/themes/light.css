@@ -81,6 +81,11 @@ body.bp6-light .AppLabelIcon {
   color: #5f6b7c;
 }
 
+body.bp6-light .AppDataTableGroupLinkVertical,
+body.bp6-light .AppDataTableGroupLinkHorizontal {
+  filter: invert(1);
+}
+
 /* ── Container volume mappings + image layer history (theme-only) — consolidated from screen CSS. ── */
 [data-theme="bp6-light"] .ContainerVolumeMapping li strong {
   color: var(--app-text);

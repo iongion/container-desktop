@@ -5,6 +5,7 @@
 // Used by every resource ManageScreen in the always-merged workspace.
 
 import { useCallback, useMemo } from "react";
+import { useStoreWithEqualityFn } from "zustand/traditional";
 
 import type { ContainerEngine } from "@/env/Types";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -43,10 +44,18 @@ export function resolveShowEngineColumn(isUnifiedMode: boolean, showEngineColumn
   return isUnifiedMode && showEngineColumn === true;
 }
 
+export function resolveShowEngineRowAccent(isUnifiedMode: boolean): boolean {
+  return isUnifiedMode;
+}
+
 export function useShowEngineColumn(): boolean {
   const isUnifiedMode = useIsUnifiedMode();
   const showEngineColumn = useAppStore((state) => state.userSettings.showEngineColumn ?? false);
   return resolveShowEngineColumn(isUnifiedMode, showEngineColumn);
+}
+
+export function useShowEngineRowAccent(): boolean {
+  return resolveShowEngineRowAccent(useIsUnifiedMode());
 }
 
 /**
@@ -71,15 +80,34 @@ export function useResourceReload(domain: ResourceDomain): () => void {
   return useResourcesReload(domain);
 }
 
+type DomainItemsEntry<D extends ResourceDomain = ResourceDomain> = {
+  connectionId: string;
+  items: ResourceItemsByDomain[D][];
+};
+
+export function sameDomainItems(a: DomainItemsEntry[], b: DomainItemsEntry[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((entry, index) => entry.connectionId === b[index]?.connectionId && entry.items === b[index]?.items)
+  );
+}
+
 export function useMergedResources<D extends ResourceDomain>(domain: D): MergedResource<ResourceItemsByDomain[D]>[] {
-  const byConnection = useResourceStore((state) => state.byConnection);
+  const domainEntries = useStoreWithEqualityFn(
+    useResourceStore,
+    (state) =>
+      Object.entries(state.byConnection).map(([connectionId, snapshot]) => ({
+        connectionId,
+        items: snapshot[domain].items,
+      })),
+    sameDomainItems,
+  );
   const connections = useAppStore((state) => state.connections);
   return useMemo(() => {
     const meta = new Map(connections.map((connection) => [connection.id, connection]));
     const merged: MergedResource<ResourceItemsByDomain[D]>[] = [];
-    for (const [connectionId, snapshot] of Object.entries(byConnection)) {
+    for (const { connectionId, items } of domainEntries) {
       const connection = meta.get(connectionId);
-      const items = (snapshot?.[domain]?.items ?? []) as ResourceItemsByDomain[D][];
       for (const item of items) {
         merged.push({
           ...(item as object),
@@ -90,5 +118,5 @@ export function useMergedResources<D extends ResourceDomain>(domain: D): MergedR
       }
     }
     return merged;
-  }, [byConnection, connections, domain]);
+  }, [connections, domainEntries]);
 }

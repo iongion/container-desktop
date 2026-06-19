@@ -1,4 +1,4 @@
-import { AnchorButton, Code, Divider, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
+import { Code, Divider, HTMLTable, Icon, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import dayjs from "dayjs";
@@ -7,6 +7,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ContainerImage } from "@/env/Types";
+import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
@@ -20,7 +21,9 @@ import {
   useMergedResources,
   useResourceReload,
   useShowEngineColumn,
+  useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
+import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -70,12 +73,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const items = searchTerm ? imageSnapshot.filter(createImageSearchFilter(searchTerm)) : imageSnapshot;
     return sortByField(items, clientSort, imageSortSelectors);
   }, [clientSort, imageSnapshot, searchTerm]);
+  const renderedImages = useProgressiveTableRows(images);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((image: MergedImage) => mergedKey(image, image.Id), []);
   const visibleIds = useMemo(() => images.map(getRowId), [images, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useImageBulkActions();
   const showEngineColumn = useShowEngineColumn();
+  const showEngineRowAccent = useShowEngineRowAccent();
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("images");
 
@@ -166,23 +171,30 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {images.map((image) => {
+              {renderedImages.map((image) => {
                 const rowId = getRowId(image);
                 const imageLayersButton = (
-                  <AnchorButton
-                    variant="minimal"
-                    size="small"
+                  <AppDataTableLink
+                    fillCell
                     href={getImageUrl(image.Id, "layers", image.connectionId)}
                     text={image.Name}
-                    intent={Intent.PRIMARY}
-                    icon={IconNames.LAYERS}
+                    iconName={IconNames.LAYERS}
                   />
                 );
                 return (
-                  <tr key={rowId} data-image={image.Id} data-engine-row={showEngineColumn ? image.engine : undefined}>
+                  <tr
+                    key={rowId}
+                    data-image={image.Id}
+                    data-image-key={rowId}
+                    data-engine-row={showEngineRowAccent ? image.engine : undefined}
+                  >
                     <td>{imageLayersButton}</td>
                     <td>{image.Registry}</td>
-                    <td>{image.Tag}</td>
+                    <td data-column="tag">
+                      <span className="ContainerImageTag" title={image.Tag}>
+                        {image.Tag}
+                      </span>
+                    </td>
                     <td>
                       <Code>{image.Id.substring(0, 12)}</Code>
                     </td>
@@ -191,8 +203,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <Code>{image.Containers}</Code>
                     </td>
                     <td>{(dayjs(image.Created * 1000) as any).format("DD MMM YYYY HH:mm")}</td>
-                    <td>
-                      <ActionsMenu image={image} connectionId={image.connectionId} />
+                    <td data-column="Actions">
+                      <ActionsMenu image={image} connectionId={image.connectionId} iconOnly />
                     </td>
                     <td className="BulkSelectColumn">
                       <SelectionCheckbox

@@ -38,10 +38,14 @@ export interface ResourceSyncBrokerDeps {
 export class ResourceSyncBroker {
   private unsubscribe: (() => void) | null = null;
   private progressUnsubscribe: (() => void) | null = null;
+  private disposed = false;
+  private snapshotQueued = false;
+  private lastSnapshotSignature = "";
 
   constructor(private readonly deps: ResourceSyncBrokerDeps) {}
 
   register(): void {
+    this.disposed = false;
     this.deps.onInvoke(RESOURCE_SYNC.getSnapshot, (event) =>
       this.deps.isAllowedSender(event) ? this.deps.service.getSyncSnapshot() : null,
     );
@@ -78,9 +82,7 @@ export class ResourceSyncBroker {
       await this.deps.service.disconnectOne?.(payload.connectionId);
       return true;
     });
-    this.unsubscribe = this.deps.service.subscribe(() => {
-      this.deps.broadcast(RESOURCE_SYNC.snapshot, this.deps.service.getSyncSnapshot());
-    });
+    this.unsubscribe = this.deps.service.subscribe(() => this.queueSnapshotBroadcast());
     // Per-connection connect/reconnect progress lines: pushed on their own channel (decoupled from the
     // coarse snapshot cadence) so the renderer's bootstrap phase box can stream them interleaved per engine.
     this.progressUnsubscribe =
@@ -89,9 +91,30 @@ export class ResourceSyncBroker {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.unsubscribe?.();
     this.unsubscribe = null;
     this.progressUnsubscribe?.();
     this.progressUnsubscribe = null;
+  }
+
+  private queueSnapshotBroadcast(): void {
+    if (this.snapshotQueued) {
+      return;
+    }
+    this.snapshotQueued = true;
+    queueMicrotask(() => {
+      this.snapshotQueued = false;
+      if (this.disposed) {
+        return;
+      }
+      const snapshot = this.deps.service.getSyncSnapshot();
+      const signature = JSON.stringify(snapshot);
+      if (signature === this.lastSnapshotSignature) {
+        return;
+      }
+      this.lastSnapshotSignature = signature;
+      this.deps.broadcast(RESOURCE_SYNC.snapshot, snapshot);
+    });
   }
 }

@@ -22,10 +22,12 @@ export async function getApiConfig(
       [
         ContainerEngineHost.PODMAN_NATIVE,
         ContainerEngineHost.DOCKER_NATIVE,
+        ContainerEngineHost.APPLE_NATIVE,
         ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
         ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
         ContainerEngineHost.PODMAN_REMOTE,
         ContainerEngineHost.DOCKER_REMOTE,
+        ContainerEngineHost.APPLE_REMOTE,
       ].includes(host)
     ) {
       if (socketPath.startsWith("/run/user")) {
@@ -33,7 +35,6 @@ export async function getApiConfig(
       } else {
         socketPath = await Path.join("/var/run/host", socketPath);
       }
-      console.debug("(flatpak) environment detected - mapped socket path to", socketPath);
     }
   }
   const config: ApiDriverConfig = {

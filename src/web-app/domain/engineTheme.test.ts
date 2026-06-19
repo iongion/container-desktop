@@ -173,4 +173,45 @@ describe("resolveEngineTheme", () => {
       }),
     ).toBe(ContainerEngine.DOCKER);
   });
+
+  // Apple theme tests
+  it("container-only → own theme", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [runtime(ContainerEngine.APPLE)],
+        connectors: [],
+      }),
+    ).toBe(ContainerEngine.APPLE);
+  });
+
+  it("container + docker → unified (mixed)", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [runtime(ContainerEngine.APPLE), runtime(ContainerEngine.DOCKER)],
+        connectors: [],
+      }),
+    ).toBe("unified");
+  });
+
+  it("container + podman → unified (mixed)", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "auto",
+        activeRuntime: [runtime(ContainerEngine.APPLE), runtime(ContainerEngine.PODMAN)],
+        connectors: [],
+      }),
+    ).toBe("unified");
+  });
+
+  it("honors explicit container override", () => {
+    expect(
+      resolveEngineTheme({
+        preference: "container",
+        activeRuntime: [runtime(ContainerEngine.PODMAN)],
+        connectors: [],
+      }),
+    ).toBe(ContainerEngine.APPLE);
+  });
 });

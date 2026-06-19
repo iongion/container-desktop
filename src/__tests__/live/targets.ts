@@ -5,7 +5,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as dotenvConfig } from "dotenv";
+import { parseRemoteConnectionsEnv, type RemoteEnvConnection } from "@/container-client/remote-env";
 import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { CURRENT_OS_TYPE } from "@/platform/node";
 
 export interface TestTarget {
   id: string;
@@ -113,6 +115,21 @@ export function parseTestTargets(env: Record<string, string | undefined>): TestT
   return targets.sort((a, b) => a.id.localeCompare(b.id));
 }
 
+/** Map the app's env-driven remote connections (CONTAINER_DESKTOP_REMOTE_*) to live SSH targets, so a host
+ *  configured once in the `.env` chain is exercised by the matrix. The client OS is the machine running the
+ *  suite; a configured entry is enabled (it was opted into by being present). */
+export function remoteEnvToTargets(parsed: RemoteEnvConnection[], osType: OperatingSystem): TestTarget[] {
+  return parsed.map((entry) => ({
+    id: entry.id,
+    enabled: true,
+    os: osType,
+    hosts: entry.engines.map((engine) =>
+      engine === ContainerEngine.PODMAN ? ContainerEngineHost.PODMAN_REMOTE : ContainerEngineHost.DOCKER_REMOTE,
+    ),
+    ssh: { host: entry.sshHost, port: entry.sshPort, user: entry.sshUser, keyPath: entry.sshKey },
+  }));
+}
+
 /** No selection → every enabled target. An explicit comma list of ids → exactly those (overrides enabled). */
 export function selectTargets(targets: TestTarget[], selection?: string): TestTarget[] {
   const ids = (selection ?? "")
@@ -129,9 +146,25 @@ export function isConfigured(target: TestTarget, host: ContainerEngineHost): boo
   return target.enabled && target.hosts.includes(host);
 }
 
-/** Load the gitignored targets.env (if present), overlaid by process.env (env vars win). */
+/** Load targets from the app's multi-stage `.env` chain (same precedence as vite's sourceEnv) and the
+ *  gitignored targets.env, overlaid by process.env (real env vars win). Yields both the explicit
+ *  `CDT_TARGET_*` targets and the `CONTAINER_DESKTOP_REMOTE_*` connections mapped to SSH targets. */
 export function loadTestTargets(): TestTarget[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const fileEnv = dotenvConfig({ path: path.join(here, "targets.env"), processEnv: {} }).parsed ?? {};
-  return parseTestTargets({ ...fileEnv, ...process.env });
+  const projectHome = path.resolve(here, "../../..");
+  // Match the app's sourceEnv stage selection (ENVIRONMENT), not vitest's MODE (which is "test").
+  const env = process.env.ENVIRONMENT || "development";
+  const read = (file: string) => dotenvConfig({ path: file, processEnv: {} }).parsed ?? {};
+  const bag: Record<string, string | undefined> = {
+    ...read(path.join(projectHome, ".env")),
+    ...read(path.join(projectHome, ".env.local")),
+    ...read(path.join(projectHome, `.env.${env}`)),
+    ...read(path.join(projectHome, `.env.${env}.local`)),
+    ...read(path.join(here, "targets.env")),
+    ...process.env,
+  };
+  return [
+    ...parseTestTargets(bag),
+    ...remoteEnvToTargets(parseRemoteConnectionsEnv(bag), CURRENT_OS_TYPE as OperatingSystem),
+  ];
 }

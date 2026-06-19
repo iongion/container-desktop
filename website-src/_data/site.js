@@ -12,7 +12,7 @@ const { WINDOWS_INSTALLER_VERSION } = require("../../support/build-matrix.cjs");
 // is the nav dot; `tagline` is the brand sub-line under the logo; `shots` is the screenshot folder
 // under static/img/; `replay`/`poster` are the tutorial pseudo-video + its first frame. Capture
 // writes per-engine media to /replays/<id>.json and /videos/<id>.png (see support/screenshots.mjs +
-// support/demoReplay.mjs); until an engine has its own, point it at podman's. Add an engine = one
+// support/demoReplay.mjs); until an engine has its own, point it at unified's. Add an engine = one
 // entry here + one [data-theme] block in site.css; the nav loop, theme-switcher.js and
 // demo-replay.js pick it up automatically.
 const themes = [
@@ -43,6 +43,15 @@ const themes = [
     replay: "/replays/docker.json",
     poster: "/videos/docker.png",
   },
+  {
+    id: "container",
+    label: "Apple&trade; Container",
+    swatch: "#34c759",
+    tagline: "Apple&trade; Container desktop companion",
+    shots: "container",
+    replay: "/replays/container.json",
+    poster: "/videos/container.png",
+  },
 ];
 const defaultTheme = "unified";
 // Baked into the nav brand so the default theme's tagline shows before JS runs (no flash);
@@ -53,7 +62,7 @@ export default {
   name: "Container Desktop",
   tagline: "Podman Desktop Companion",
   description:
-    "A familiar desktop interface for the free, open container managers — Podman and Docker. Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux.",
+    "A familiar desktop interface for the free, open container managers — Podman, Docker and Apple&trade; Container (experimental). Local, remote over SSH, and WSL. Same UI on Windows, macOS and Linux.",
   url: "https://container-desktop.com",
   repo: "https://github.com/iongion/container-desktop",
   repoSlug: "iongion/container-desktop",

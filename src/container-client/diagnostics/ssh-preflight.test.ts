@@ -101,6 +101,57 @@ describe("runSSHPreflight", () => {
     expect(step(report, "key-perms")?.skipped).toBe(true);
   });
 
+  it("does not require IdentityFile and lets OpenSSH use agent/default identities", async () => {
+    const seen: string[][] = [];
+    let keyFileChecked = false;
+    const report = await runSSHPreflight({ ...target, identityFile: "" }, options, {
+      execute: async (launcher: string, args: string[]) => {
+        seen.push(args);
+        return {
+          pid: 1,
+          code: 0,
+          success: true,
+          stdout: "",
+          stderr: "",
+          ...allGood(launcher, args),
+        };
+      },
+      isFilePresent: async () => {
+        keyFileChecked = true;
+        return true;
+      },
+      getHomeDir: async () => "/home/ion",
+    });
+
+    const probe = seen.find((a) => a.includes(PREFLIGHT_SENTINEL))!;
+    expect(report.ok).toBe(true);
+    expect(step(report, "key-file")?.skipped).toBe(true);
+    expect(step(report, "key-perms")?.skipped).toBe(true);
+    expect(step(report, "host-reachable")?.ok).toBe(true);
+    expect(probe).not.toContain("-i");
+    expect(keyFileChecked).toBe(false);
+  });
+
+  it("uses the SSH config host alias for the reachability probe when available", async () => {
+    const seen: string[][] = [];
+    const report = await runSSHPreflight(
+      { ...target, configHost: "MacOS" },
+      options,
+      deps({
+        exec: (launcher, args) => {
+          seen.push(args);
+          return allGood(launcher, args);
+        },
+      }),
+    );
+
+    const probe = seen.find((a) => a.includes(PREFLIGHT_SENTINEL))!;
+    expect(report.ok).toBe(true);
+    expect(probe).toContain("MacOS");
+    expect(probe).not.toContain("-p");
+    expect(probe).not.toContain("-i");
+  });
+
   it("flags world/group-readable key permissions as too open", async () => {
     const report = await runSSHPreflight(
       target,

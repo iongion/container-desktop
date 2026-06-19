@@ -11,14 +11,16 @@ the API, and proxy requests to it.
 
 ## The core idea: one HostClient = Dialect × Transport × Profile
 
-There are two engines (Podman, Docker) and five host types (native, machine/
-vendor, WSL, Lima, SSH-remote) — ten combinations. Rather than ten inheritance
-leaves, each combination is **composed** from three single-purpose units:
+There are three engines (Podman, Docker, Apple Container). Podman and Docker each
+support five host types (native, machine/vendor, WSL, Lima, SSH-remote); Apple
+Container supports two (native, SSH-remote) — twelve combinations. Rather than
+twelve inheritance leaves, each combination is **composed** from three
+single-purpose units:
 
 | Unit              | Varies by      | Answers                                                                                                        | Source                                                                                                           |
 | ----------------- | -------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **EngineDialect** | engine         | "How do I speak to _this engine_?" — read its socket, build its service command, get system info               | [`runtimes/dialects/{podman,docker}.ts`](../../src/container-client/runtimes/dialects/)                          |
-| **HostProfile**   | (engine, host) | the thin glue — OS availability gate, automatic-settings detection, the per-host API-connection resolver       | [`runtimes/profiles/{podman,docker}.ts`](../../src/container-client/runtimes/profiles/)                          |
+| **EngineDialect** | engine         | "How do I speak to _this engine_?" — read its socket, build its service command, get system info               | [`runtimes/dialects/{podman,docker,container}.ts`](../../src/container-client/runtimes/dialects/)                          |
+| **HostProfile**   | (engine, host) | the thin glue — OS availability gate, automatic-settings detection, the per-host API-connection resolver       | [`runtimes/profiles/{podman,docker,container}.ts`](../../src/container-client/runtimes/profiles/)                          |
 | **Transport**     | host type      | "How do I reach a host of _this kind_?" — start/stop a scope, shape the API URI, run the API, build the driver | [`runtimes/transports/{native,ssh,wsl,lima,podman-machine}.ts`](../../src/container-client/runtimes/transports/) |
 
 A **registry** maps each `(engine, host)` pair to its three units; a factory
@@ -37,9 +39,9 @@ flowchart TB
     hc["HostClient<br/>(runtimes/host-client.ts)<br/>= HostContext, implements facade"]:::component
     facade["HostClientFacade<br/>(runtimes/facade.ts)<br/>~50 container/image/volume/pod ops"]:::component
 
-    dia["EngineDialect<br/>podman.ts / docker.ts"]:::component
+    dia["EngineDialect<br/>podman.ts / docker.ts / container.ts"]:::component
     tra["Transport<br/>native·ssh·wsl·lima·podman-machine"]:::component
-    pro["HostProfile<br/>podman.ts / docker.ts"]:::component
+    pro["HostProfile<br/>podman.ts / docker.ts / container.ts"]:::component
 
     api["Api.clients<br/>(Api.clients.ts)<br/>axios over Command.ProxyRequest"]:::component
     cfg["userConfiguration<br/>(config.ts)<br/>connections, settings"]:::component
@@ -72,7 +74,7 @@ flowchart TB
   connection CRUD, settings, and one-off engine actions (machines, kube, registries,
   security scans). It holds the active `HostClient` per connection id.
 - **registry** — [`registry.ts`](../../src/container-client/runtimes/registry.ts).
-  The ten-entry table `HOST_CLIENT_REGISTRY` and `createComposedHostClient()`.
+  The twelve-entry table `HOST_CLIENT_REGISTRY` and `createComposedHostClient()`.
   Stateless dialects/profiles are shared singletons; transports are created
   per-host (SSH/WSL/machine keep per-connection state). See
   [engine-matrix.md](engine-matrix.md) for the full table.
@@ -87,6 +89,10 @@ flowchart TB
 - **EngineDialect / Transport / HostProfile** — the three units above. Their
   contracts are defined once in [`composition.ts`](../../src/container-client/runtimes/composition.ts);
   Native's scope operations are intentional no-ops (symmetry over special-casing).
+  The **Apple Container** dialect has no native REST API, so it sets
+  `apiSurface: "docker"` and speaks the Docker API through the **socktainer**
+  bridge; its `describeApiBridge` folds socktainer's presence/version into the
+  availability report.
 - **Api.clients** — [`Api.clients.ts`](../../src/container-client/Api.clients.ts).
   `createApplicationApiDriver()` returns an Axios instance whose every request is
   routed through `Command.ProxyRequest(req, connection)` — i.e. HTTP spoken over a
@@ -140,9 +146,9 @@ menu is acting on its own.
 
 All in [`src/env/Types.ts`](../../src/env/Types.ts):
 
-- `ContainerEngine` — `PODMAN | DOCKER`.
-- `ContainerEngineHost` — the ten `engine.host` values (e.g. `podman.native`,
-  `docker.virtualized.wsl`).
+- `ContainerEngine` — `PODMAN | DOCKER | APPLE`.
+- `ContainerEngineHost` — the twelve `engine.host` values (e.g. `podman.native`,
+  `docker.virtualized.wsl`, `container.native`, `container.remote`).
 - `ControllerScopeType` — `PodmanMachine | WSLDistribution | LIMAInstance |
   SSHConnection` (the kind of scope a non-native host runs in).
 - `Connection` — a named, identified `(engine, host, settings)` the user picks.
@@ -171,6 +177,6 @@ availability — is the subject of its own page:
 | Operations facade             | [`runtimes/facade.ts`](../../src/container-client/runtimes/facade.ts)           |
 | Orchestrator                  | [`Application.ts`](../../src/container-client/Application.ts)                   |
 | Profiles                      | [`runtimes/profiles/`](../../src/container-client/runtimes/profiles/)           |
-| Registry (10 entries)         | [`runtimes/registry.ts`](../../src/container-client/runtimes/registry.ts)       |
+| Registry (12 entries)         | [`runtimes/registry.ts`](../../src/container-client/runtimes/registry.ts)       |
 | Transports                    | [`runtimes/transports/`](../../src/container-client/runtimes/transports/)       |
 | Types                         | [`src/env/Types.ts`](../../src/env/Types.ts)                                    |

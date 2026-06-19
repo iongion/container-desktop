@@ -4,7 +4,7 @@
 // the two bootstraps in sync; the platform primitives come from `@/platform/node`, which is itself
 // shell-neutral, so nothing here depends on Electron.
 
-import { CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
+import { CURRENT_DARWIN_MAJOR, CURRENT_OS_TYPE, FS, Path, Platform } from "@/platform/node";
 
 export interface PlatformGlobalsOptions {
   command: ICommand;
@@ -20,6 +20,7 @@ export function installPlatformGlobals(target: any, options: PlatformGlobalsOpti
   target.Path = Path;
   target.FS = FS;
   target.CURRENT_OS_TYPE = CURRENT_OS_TYPE;
+  target.CURRENT_DARWIN_MAJOR = CURRENT_DARWIN_MAJOR;
   target.MessageBus = options.messageBus;
   for (const [key, value] of Object.entries(options.extras ?? {})) {
     target[key] = value;

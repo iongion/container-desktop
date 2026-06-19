@@ -7,6 +7,11 @@ import type { ResourceDomain } from "./resourceDomains";
 
 export type ConnectionPhase = "idle" | "starting" | "ready" | "failed" | "reconnecting";
 
+// Who triggered a connection attempt. The renderer routes connection FAILURES by this: "user" (explicit
+// Connect click) and "reconnect" (auto drop-recovery of a previously-live connection) pop a DANGER toast;
+// "bootstrap" (connect-all / auto-start at launch) is routine noise — logged to the Notification Center only.
+export type ConnectOrigin = "bootstrap" | "user" | "reconnect";
+
 // Per-connection runtime for a connection main has attempted to bring up (multi-connection: several at once).
 export interface ConnectionRuntimeInfo {
   id: string;
@@ -61,6 +66,11 @@ export interface ResourceConnectProgress {
   trace: string;
   phase: ConnectionPhase;
   ts: number;
+  // Who triggered this attempt (see ConnectOrigin). Drives the renderer's toast-vs-log routing for failures.
+  origin?: ConnectOrigin;
+  // Raw, multi-line failure detail for `phase: "failed"` — "what it tried / what happened" plus the SSH
+  // preflight steps / stderr / stack. Shown verbatim and expandable in the Activity Center; never truncated.
+  detail?: string;
 }
 
 export const RESOURCE_SYNC = {

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ensureCliBusSubscribed, type ActivityTab as TabId, useActivityStore } from "@/web-app/stores/activityStore";
+import { APP_DRAWER_BACKDROP_CLASS, APP_DRAWER_PORTAL_CLASS } from "../AppDrawer";
 import { ActivityTab } from "./ActivityTab";
 import { NotificationsTab } from "./NotificationsTab";
 import "./NotificationCenter.css";
@@ -49,6 +50,8 @@ export function NotificationCenterHost() {
       size={DrawerSize.SMALL}
       hasBackdrop={false}
       usePortal
+      portalClassName={APP_DRAWER_PORTAL_CLASS}
+      backdropClassName={APP_DRAWER_BACKDROP_CLASS}
       isOpen={isOpen}
       onClose={closeDrawer}
       icon={IconNames.NOTIFICATIONS}

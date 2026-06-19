@@ -128,12 +128,32 @@ const MATRIX: MatrixRow[] = [
     machines: false,
     osType: Linux,
   },
+  {
+    engine: ContainerEngine.APPLE,
+    host: ContainerEngineHost.APPLE_NATIVE,
+    program: "container",
+    controller: "container",
+    transport: NativeTransport,
+    scoped: false,
+    machines: false,
+    osType: MacOS,
+  },
+  {
+    engine: ContainerEngine.APPLE,
+    host: ContainerEngineHost.APPLE_REMOTE,
+    program: "container",
+    controller: "ssh",
+    transport: SSHTransport,
+    scoped: true,
+    machines: false,
+    osType: MacOS,
+  },
 ];
 
 describe("host client registry — the engine × host matrix", () => {
-  it("covers exactly the 10 known host types", () => {
-    expect(MATRIX).toHaveLength(10);
-    expect(new Set(MATRIX.map((r) => r.host)).size).toBe(10);
+  it("covers exactly the 12 known host types", () => {
+    expect(MATRIX).toHaveLength(12);
+    expect(new Set(MATRIX.map((r) => r.host)).size).toBe(12);
   });
 
   for (const row of MATRIX) {
@@ -159,5 +179,20 @@ describe("host client registry — the engine × host matrix", () => {
     expect(() => resolveHostClientRegistryEntry(ContainerEngine.DOCKER, "docker.bogus" as ContainerEngineHost)).toThrow(
       /No host client registered/,
     );
+  });
+
+  it("Apple dialect has apiSurface docker", async () => {
+    const entry = resolveHostClientRegistryEntry(ContainerEngine.APPLE, ContainerEngineHost.APPLE_NATIVE);
+    expect(entry.dialect.apiSurface).toBe("docker");
+  });
+
+  it("Podman dialect has apiSurface libpod", async () => {
+    const entry = resolveHostClientRegistryEntry(ContainerEngine.PODMAN, ContainerEngineHost.PODMAN_NATIVE);
+    expect(entry.dialect.apiSurface).toBe("libpod");
+  });
+
+  it("Docker dialect has apiSurface docker", async () => {
+    const entry = resolveHostClientRegistryEntry(ContainerEngine.DOCKER, ContainerEngineHost.DOCKER_NATIVE);
+    expect(entry.dialect.apiSurface).toBe("docker");
   });
 });

@@ -43,6 +43,14 @@ export function withControllerVersion(base: CapabilityDescriptor, controllerVers
   return { ...base, extensions: { ...base.extensions, controllerVersion } };
 }
 
+/**
+ * Returns a COPY of the descriptor with resources.networks overridden. Copy (not in-place) so the per-host
+ * capability object never aliases the shared dialect singleton — callers may later mutate it per connection.
+ */
+export function withNetworks(base: CapabilityDescriptor, networks: boolean): CapabilityDescriptor {
+  return { ...base, resources: { ...base.resources, networks } };
+}
+
 // ── shared getApiConnection bodies (engine-agnostic; the socket read is the dialect's) ──
 
 /** LIMA: the API socket is ~/.lima/<scope>/sock/<scope>.sock (podman-lima + docker-lima are identical). */
@@ -93,7 +101,7 @@ export async function defaultGetAutomaticSettings(
   host: HostContext,
   settings: EngineConnectorSettings,
 ): Promise<EngineConnectorSettings> {
-  host.logger.warn(host.id, "Settings are in automatic mode - fetching");
+  host.logger.debug(host.id, "Settings are in automatic mode - fetching");
   try {
     // 1.0 - detect program
     if (host.isScoped()) {
@@ -103,7 +111,7 @@ export async function defaultGetAutomaticSettings(
       settings.controller.scope = existingScope;
       if (isEmpty(existingScope)) {
         const defaultScope = await host.getControllerDefaultScope(settings);
-        host.logger.warn(host.id, "Default scope is", defaultScope);
+        host.logger.debug(host.id, "Default scope is", defaultScope);
         if (defaultScope) {
           settings.controller.scope = defaultScope.Name;
           if (defaultScope.Usable) {

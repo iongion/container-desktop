@@ -44,7 +44,7 @@ export class Runner {
 
   // API connectivity and startup
   async startApi(opts?: ApiStartOptions, starter?: RunnerStarterOptions) {
-    this.logger.warn(">> Starting API - begin");
+    this.logger.debug(">> Starting API - begin");
     if (this.started) {
       this.logger.debug("<< Starting API - already started");
       systemNotifier.transmit("startup.phase", {

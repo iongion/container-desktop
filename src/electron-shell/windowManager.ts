@@ -18,6 +18,16 @@ interface WindowManagerLogger {
   error: (...args: any[]) => void;
 }
 
+function isMockMode(): boolean {
+  return Boolean(process.env.CONTAINER_DESKTOP_MOCK);
+}
+
+function isCaptureOffscreenMode(): boolean {
+  return (
+    process.env.CONTAINER_DESKTOP_CAPTURE_OFFSCREEN === "1" || process.env.CONTAINER_DESKTOP_CAPTURE_HIDDEN === "1"
+  );
+}
+
 export interface WindowManagerDeps {
   logger: WindowManagerLogger;
   runtime: Runtime;
@@ -37,6 +47,7 @@ export interface WindowManagerDeps {
 
 export class WindowManager {
   private window: BrowserWindow | null = null;
+  private currentIconPath: string | undefined;
   private revealMainWindow: (() => void) | null = null;
 
   constructor(private readonly deps: WindowManagerDeps) {}
@@ -104,15 +115,22 @@ export class WindowManager {
   }
 
   setIcon(iconPath: string): void {
+    if (this.currentIconPath === iconPath) {
+      return;
+    }
     try {
       const icon = this.loadIcon(iconPath);
       if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
         app.dock?.setIcon(icon);
       }
       if (!this.hasLiveWindow()) {
+        if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
+          this.currentIconPath = iconPath;
+        }
         return;
       }
       (this.window as BrowserWindow).setIcon(icon);
+      this.currentIconPath = iconPath;
       this.deps.logger.debug("Updated application icon", iconPath);
     } catch (error: any) {
       this.deps.logger.error("Unable to update application icon", error);
@@ -121,6 +139,9 @@ export class WindowManager {
 
   // Full reveal from the tray: restore taskbar entry + dock.
   showMainWindow(): void {
+    if (isCaptureOffscreenMode()) {
+      return;
+    }
     if (!this.hasLiveWindow()) {
       return;
     }
@@ -200,6 +221,7 @@ export class WindowManager {
     }
     this.deps.logger.debug("Creating application window");
     const { runtime } = this.deps;
+    const captureOffscreen = isCaptureOffscreenMode();
     const preloadURL = runtime.preloadPath();
     const appURL = runtime.rendererURL();
     const iconPath = runtime.appIconPath();
@@ -223,6 +245,8 @@ export class WindowManager {
         contextIsolation: true,
         sandbox: false, // Sandbox disabled because the preload script depends on the Node.js api
         webviewTag: false,
+        backgroundThrottling: !captureOffscreen,
+        offscreen: captureOffscreen,
         preload: preloadURL,
       },
       icon: this.loadIcon(iconPath),
@@ -271,7 +295,14 @@ export class WindowManager {
     };
     const win = new BrowserWindow(windowOptions);
     this.window = win;
+    this.currentIconPath = iconPath;
     win.setMinimumSize(960, 718);
+    if (captureOffscreen) {
+      win.webContents.setFrameRate(60);
+      if (CURRENT_OS_TYPE === OperatingSystem.MacOS) {
+        app.dock?.hide();
+      }
+    }
     // Reap any forwarded engine streams this window opened if its renderer goes away (reload/crash/quit), so
     // a destroyed log view never leaks a live engine stream in main.
     const mainWebContentsId = win.webContents.id;
@@ -307,8 +338,12 @@ export class WindowManager {
         readyWatchdog = undefined;
       }
       windowShown = true;
-      win.show();
-      if ((windowConfigOptions as any)?.isMaximized) {
+      if (captureOffscreen) {
+        this.deps.logger.debug("Capture mode keeps the main window in offscreen rendering");
+      } else {
+        win.show();
+      }
+      if (!captureOffscreen && (windowConfigOptions as any)?.isMaximized) {
         win.maximize();
       }
     };
@@ -416,7 +451,7 @@ export class WindowManager {
         }
       }
     }
-    if (runtime.isDevelopment() || runtime.isDebug) {
+    if ((runtime.isDevelopment() || runtime.isDebug) && !isMockMode() && !captureOffscreen) {
       this.deps.logger.debug("Showing dev tools");
       win.webContents.openDevTools({ mode: "detach" });
     }
