@@ -26,8 +26,11 @@ Python ≥ 3.12 via `uv`.
 - `src/web-app/` — React renderer: `App.tsx`, `stores/` (Zustand state),
   `domain/` (TanStack Query client), `screens/`, `components/`, `hooks/`,
   `Native.ts`, `Environment.ts`
-- `src/container-client/` — engine API clients/adapters · `src/platform/` ·
-  `src/logger/` · `src/utils/` · `src/env/`
+- `src/container-client/` — engine API clients/adapters · `src/logger/` ·
+  `src/utils/` · `src/env/`
+- `src/platform/` — Node `Command` primitives: `node-executor.ts` (facade) over
+  `exec/` impl modules (process-utils, api-driver, commander, ssh-transport,
+  wsl-relay, proxy-request); `node.ts` = `Platform`/`Path`
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · `tasks.py` / `Makefile`
 - **`website-src/`** — Eleventy sources for the public site (container-desktop.com),
