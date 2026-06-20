@@ -9,13 +9,13 @@
 // createProxyStreamBridge's on/off/destroy surface. CJS-safe: no web-app imports.
 
 import { ipcRenderer } from "electron";
-import { EventEmitter } from "eventemitter3";
 
 import {
   COMMAND_PROXY,
   type CommandProxyResult,
   type CommandProxyStreamEvent,
 } from "@/container-client/commandProxyProtocol";
+import { createEmitterStream } from "@/utils/streamEmitter";
 
 // Only forward the fields the engine API needs; the axios config can otherwise carry non-cloneable bits
 // (the SSH `getSSHConnection` closure in `context`, interceptors, …) that must never cross IPC.
@@ -35,9 +35,18 @@ function pickSerializableRequest(request: any): Record<string, unknown> {
 
 // Rebuild the on/off/destroy emitter Api.clients consumes from main's pushed chunk events for this stream.
 function createForwardedStream(streamId: string) {
-  const emitter = new EventEmitter();
-  let closed = false;
-  const listener = (_event: unknown, evt: CommandProxyStreamEvent) => {
+  let listener: (event: unknown, evt: CommandProxyStreamEvent) => void = () => {};
+  const { emitter, api } = createEmitterStream({
+    onDestroy: () => {
+      ipcRenderer.removeListener(COMMAND_PROXY.streamEvent, listener);
+      try {
+        ipcRenderer.send(COMMAND_PROXY.streamDestroy, { streamId });
+      } catch {
+        // best-effort teardown
+      }
+    },
+  });
+  listener = (_event: unknown, evt: CommandProxyStreamEvent) => {
     if (!evt || evt.streamId !== streamId) {
       return;
     }
@@ -50,34 +59,6 @@ function createForwardedStream(streamId: string) {
     }
   };
   ipcRenderer.on(COMMAND_PROXY.streamEvent, listener);
-  const api: any = {
-    on: (event: string, fn: (...args: any[]) => void) => {
-      emitter.on(event, fn);
-      return api;
-    },
-    off: (event: string, fn: (...args: any[]) => void) => {
-      emitter.off(event, fn);
-      return api;
-    },
-    removeListener: (event: string, fn: (...args: any[]) => void) => {
-      emitter.removeListener(event, fn);
-      return api;
-    },
-    destroy: () => {
-      if (closed) {
-        return;
-      }
-      closed = true;
-      ipcRenderer.removeListener(COMMAND_PROXY.streamEvent, listener);
-      try {
-        ipcRenderer.send(COMMAND_PROXY.streamDestroy, { streamId });
-      } catch {
-        // best-effort teardown
-      }
-      emitter.removeAllListeners();
-    },
-    close: () => api.destroy(),
-  };
   return api;
 }
 

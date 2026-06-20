@@ -124,7 +124,7 @@ here.
 | --- | --- |
 | Main process | [`src/electron-shell/main.ts`](../../src/electron-shell/main.ts) |
 | Preload bridge | [`src/electron-shell/preload.ts`](../../src/electron-shell/preload.ts) |
-| Node primitives (`Command`) | [`src/platform/node-executor.ts`](../../src/platform/node-executor.ts) · [`src/platform/node.ts`](../../src/platform/node.ts) |
+| Node primitives (`Command`) | [`node-executor.ts`](../../src/platform/node-executor.ts) facade + [`platform/exec/`](../../src/platform/exec/) impl modules · [`src/platform/node.ts`](../../src/platform/node.ts) |
 | IPC bus | [`src/electron-shell/shared.ts`](../../src/electron-shell/shared.ts) |
 | Engine logic (backend) | [`src/container-client/`](../../src/container-client/) |
 | React renderer (frontend) | [`src/web-app/`](../../src/web-app/) |

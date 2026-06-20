@@ -170,7 +170,7 @@ where the socket lives. **No SSH server runs inside WSL, and host keys are verif
 `:20022` sshd / `InsecureIgnoreHostKey` design is gone).
 
 - **WSL (Windows)** — the app's `WSLRelayServer`
-  ([`node-executor.ts`](../../src/platform/node-executor.ts)) listens on a Windows **named
+  ([`exec/wsl-relay.ts`](../../src/platform/exec/wsl-relay.ts)) listens on a Windows **named
   pipe** and, per connection, runs the **Linux bridge**
   ([`container-desktop-relay`](../../support/container-desktop-relay/main_linux.go),
   `--mode bridge --socket <sock>`) inside the distro via `wsl.exe --exec`: named pipe ↔
@@ -189,7 +189,7 @@ where the socket lives. **No SSH server runs inside WSL, and host keys are verif
 flowchart LR
   client["Engine API client<br/>(container-client)"]:::component
   pipe["Windows named pipe"]:::external
-  server["WSLRelayServer<br/>(node-executor.ts)"]:::container
+  server["WSLRelayServer<br/>(exec/wsl-relay.ts)"]:::container
   bridge["container-desktop-relay<br/>(linux · mode=bridge)"]:::container
   sock["/run/.../podman.sock"]:::external
 

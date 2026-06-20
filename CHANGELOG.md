@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- Refactored the internal engine-communication layer into smaller, single-responsibility modules — no functional change.
+
 ## Fixed
 
 - Connection info shows the real socket address (DOCKER_HOST) for every connection instead of a blank `unix://` — the per-connection socket resolved by the main process is now carried to the renderer in the runtime snapshot, and a live settings refresh can no longer erase a configured socket with an empty one.
