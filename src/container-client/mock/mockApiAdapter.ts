@@ -4,9 +4,8 @@
 // and handles the streaming endpoints (container logs, /events) by returning an EventEmitter the
 // adapters/EngineDataService consume. MockCommand.ProxyRequest delegates here.
 
-import { EventEmitter } from "eventemitter3";
-
 import { ContainerEngine } from "@/env/Types";
+import { createEmitterStream } from "@/utils/streamEmitter";
 import { loadEngineFixtures } from "./fixturesLoader";
 
 interface MockApiResponse {
@@ -29,23 +28,7 @@ function fail(status: number, message: string): never {
 
 /** on/off/destroy emitter matching what the adapters + commandProxyClient consume for streams. */
 function createMockStream(chunks: Uint8Array[]): any {
-  const emitter = new EventEmitter();
-  const api: any = {
-    on: (event: string, fn: (...args: any[]) => void) => {
-      emitter.on(event, fn);
-      return api;
-    },
-    off: (event: string, fn: (...args: any[]) => void) => {
-      emitter.off(event, fn);
-      return api;
-    },
-    removeListener: (event: string, fn: (...args: any[]) => void) => {
-      emitter.removeListener(event, fn);
-      return api;
-    },
-    destroy: () => emitter.removeAllListeners(),
-    close: () => emitter.removeAllListeners(),
-  };
+  const { emitter, api } = createEmitterStream();
   // Emit on a macrotask so the caller registers its listeners first (see fakeCommand.ts rationale).
   setTimeout(() => {
     for (const chunk of chunks) {
