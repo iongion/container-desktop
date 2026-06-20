@@ -88,6 +88,42 @@ export async function waitForSelectorCount(page, selector, minCount = 1, timeout
   );
 }
 
+// After landing on a screen, wait for the route transition to FULLY settle before capturing or
+// recording: the previous screen must unmount and the new one must render its data and paint.
+// Without this a frame (or an rrweb pause) can land mid-transition where the old screen still overlaps
+// the new one. Waits until DOM mutations go quiet for `quietMs` (bounded by `maxWaitMs` so a steadily
+// polling screen can't hang it), then two animation frames so the settled tree has actually painted.
+export async function settleOnScreen(page, quietMs = 350, maxWaitMs = 4000) {
+  if (!quietMs || quietMs <= 0) {
+    return;
+  }
+  await waitReady(page).catch(() => undefined);
+  await page.evaluate(
+    ([quiet, maxWait]) =>
+      new Promise((resolve) => {
+        const start = performance.now();
+        let timer;
+        const done = () => {
+          clearTimeout(timer);
+          observer.disconnect();
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        };
+        const bump = () => {
+          clearTimeout(timer);
+          if (performance.now() - start >= maxWait) {
+            done();
+            return;
+          }
+          timer = setTimeout(done, quiet);
+        };
+        const observer = new MutationObserver(bump);
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+        bump();
+      }),
+    [quietMs, maxWaitMs],
+  );
+}
+
 export async function setSidebarExpanded(page, expanded) {
   await page.locator(".AppSidebar").waitFor({ timeout: 30_000 });
   const desired = expanded ? "yes" : "no";

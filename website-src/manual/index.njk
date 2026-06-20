@@ -18,7 +18,7 @@ description: "Set up Podman, Docker and Apple™ Container on Linux, macOS and W
     <aside class="side">
       {%- for g in collections.guides %}
       <div class="grp"><i class="{{ g.data.iconClass or 'fab' }} {{ g.data.osIcon }}"></i> {{ g.data.osLabel }}</div>
-      {%- for s in g.data.sections %}<a href="#{{ s.id }}">{{ s.label }}</a>{% endfor %}
+      {%- for s in g.data.sections %}<a href="#{{ s.id }}">{{ s.label }}{% if s.experimental %} <span class="exp-label">Experimental</span>{% endif %}</a>{% endfor %}
       {%- endfor %}
     </aside>
 

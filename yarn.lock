@@ -4192,7 +4192,7 @@ rrweb-snapshot@^2.0.1:
   dependencies:
     postcss "^8.4.38"
 
-rrweb@^2.0.1:
+rrweb@2.0.1, rrweb@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/rrweb/-/rrweb-2.0.1.tgz#7f6e79705260d12f405c44ad6c0ab29e35c404f4"
   integrity sha512-MQYzOtI7aZft9ffDMT6rmRSAj6hO4W6T7iA4eB9Mtcuiv3M7DbnnxDMrcPW0sQXepgYN46YhfSKe75d/mlUHrQ==

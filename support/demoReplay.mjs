@@ -14,6 +14,7 @@ import {
   resolveRoute,
   runPreActions,
   setSidebarExpanded,
+  settleOnScreen,
   waitForSelectorCount,
   waitReady,
 } from "./screenshotActions.mjs";
@@ -338,6 +339,8 @@ async function clickSelector(page, action, context) {
   if (action.waitFor) {
     await waitForSelectorCount(page, action.waitFor, action.minCount || 1);
   }
+  // A click can trigger a screen change (sidebar nav, row → detail); let it settle before the hold.
+  await settleOnScreen(page, action.settleMs ?? context.actionSettleMs);
   await addReplayPause(page, context.pauses, action.resultMs ?? context.actionResultMs);
 }
 
@@ -353,6 +356,9 @@ async function runAction(page, action, context) {
     if (action.waitFor) {
       await waitForSelectorCount(page, action.waitFor, action.minCount || 1);
     }
+    // Let the previous screen unmount and the new one render+paint before recording the hold, so the
+    // rrweb pause never freezes on a mid-transition frame.
+    await settleOnScreen(page, action.settleMs ?? context.navigationSettleMs);
     await addReplayPause(page, context.pauses, action.resultMs ?? context.navigationResultMs);
     return;
   }
@@ -420,8 +426,10 @@ async function runScenario(page, scenario) {
     actionFocusMs: scenario.actionFocusMs ?? 1600,
     actionPulseMs: scenario.actionPulseMs ?? 700,
     actionResultMs: scenario.actionResultMs ?? 2200,
+    actionSettleMs: scenario.actionSettleMs ?? 250,
     navigationFocusMs: scenario.navigationFocusMs ?? 1800,
     navigationResultMs: scenario.navigationResultMs ?? 2600,
+    navigationSettleMs: scenario.navigationSettleMs ?? 400,
   };
   await waitReady(page);
   await page.waitForTimeout(scenario.recordingSettleMs ?? 1000);

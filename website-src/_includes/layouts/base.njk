@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" referrerpolicy="no-referrer" />
 {% if demoReplay %}
-<link rel="stylesheet" href="https://cdn.rrweb.com/replay/current/dist/style.css" />
+<link rel="stylesheet" href="/vendor/rrweb/rrweb.css?v={{ site.version }}" />
 {% endif %}
 <link rel="stylesheet" href="/assets/css/site.css?v={{ site.version }}" />
 <script type="application/ld+json">
@@ -56,9 +56,9 @@
   {% include "partials/footer.njk" %}
   <script async defer src="https://buttons.github.io/buttons.js"></script>
 {% if demoReplay %}
-  <script type="module">
-    import { Replayer } from "https://cdn.rrweb.com/replay/current/dist/replay.js";
-    window.rrwebReplayer = Replayer;
+  <script src="/vendor/rrweb/rrweb.umd.min.js?v={{ site.version }}"></script>
+  <script>
+    window.rrwebReplayer = window.rrweb && window.rrweb.Replayer;
     window.dispatchEvent(new Event("rrweb-replay-ready"));
   </script>
 {% endif %}

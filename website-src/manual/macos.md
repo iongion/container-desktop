@@ -10,7 +10,7 @@ sections:
   - { id: macos-best, label: "2 · Best experience" }
   - { id: macos-podman-docker, label: "3 · Podman as Docker" }
   - { id: macos-dd-alt, label: "4 · Docker Desktop alternative" }
-  - { id: macos-apple-container, label: "5 · Container" }
+  - { id: macos-apple-container, label: "5 · Apple™ Container", experimental: true }
   - { id: macos-share, label: "6 · Sharing connection" }
 ---
 
@@ -173,7 +173,7 @@ Not recommended due to complexity. Latest docker CLI and plugin binaries can be 
 
 <section class="guide-sec" id="macos-apple-container">
 
-### <span class="n">05</span> Container <span class="exp-label">Experimental</span>
+### <span class="n">05</span> Apple™ Container <span class="exp-label">Experimental</span>
 
 <div class="note info">
 
