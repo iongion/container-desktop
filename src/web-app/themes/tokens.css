@@ -250,9 +250,10 @@ body.bp6-dark[data-engine="container"] {
   --app-intent-default-rest: #1e252f;
   --app-intent-default-hover: #323c4a;
   --app-intent-default-active: #161c24;
-  --bp-intent-default-rest: var(--app-intent-default-rest);
-  --bp-intent-default-hover: var(--app-intent-default-hover);
-  --bp-intent-default-active: var(--app-intent-default-active);
+  /* Darken ONLY the filled tokens: solid `.bp6-button` + HTMLSelect read `--app-intent-default-*`. Leave the
+     Blueprint `--bp-intent-default-*` at the engine default on purpose — minimal/outlined buttons (e.g.
+     "Versions") build their hover/active/pressed/disabled tints from those at low opacity (8–16%), so
+     darkening them to near-background would erase the highlight. Respect Blueprint's variant state model. */
 }
 
 /* ── UNIFIED · LIGHT — neutral gray + teal accent (Apple Container reuses this; only its logo stays green) ── */
