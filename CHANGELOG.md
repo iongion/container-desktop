@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Fixed
+
+- Connection info shows the real socket address (DOCKER_HOST) for every connection instead of a blank `unix://` — the per-connection socket resolved by the main process is now carried to the renderer in the runtime snapshot, and a live settings refresh can no longer erase a configured socket with an empty one.
+- Live container logs no longer crash with "Cannot read properties of undefined (reading 'getApiDriver')" — the log stream now targets the container's own connection rather than an undefined global "current" engine; adapters built without a connection now fail with a clear message.
+- Settings: the monospace-font picker keeps its filter input at the top (not the bottom) and caps the list to a compact height; the "Check for new versions" buttons now share the same size and render at equal height.
+
 ## [5.3.6] - 2026-06-19
 
 ## Fixed

@@ -239,6 +239,22 @@ html[data-theme="bp6-dark"][data-engine="container"] {
   --app-text-muted: #8a93a0;
 }
 
+/* Darker default-intent (#1e252f) for unified/container DARK mode. Must cover BOTH <html> — where the derived
+   `--bp-surface-*` tokens read it (HTMLSelects) — AND <body>: the per-engine `[data-engine="unified"]` block
+   carries data-engine onto <body> too, so without the body scope it shadows this for everything inside body
+   (the default buttons read body's value). Light mode keeps the #4b5563 default. Hover lifts, active presses. */
+html[data-theme="bp6-dark"][data-engine="unified"],
+html[data-theme="bp6-dark"][data-engine="container"],
+body.bp6-dark[data-engine="unified"],
+body.bp6-dark[data-engine="container"] {
+  --app-intent-default-rest: #1e252f;
+  --app-intent-default-hover: #323c4a;
+  --app-intent-default-active: #161c24;
+  --bp-intent-default-rest: var(--app-intent-default-rest);
+  --bp-intent-default-hover: var(--app-intent-default-hover);
+  --bp-intent-default-active: var(--app-intent-default-active);
+}
+
 /* ── UNIFIED · LIGHT — neutral gray + teal accent (Apple Container reuses this; only its logo stays green) ── */
 html[data-theme="bp6-light"][data-engine="unified"],
 html[data-theme="bp6-light"][data-engine="container"] {
@@ -720,6 +736,34 @@ body[data-engine] .bp6-button:not([class*="bp6-intent-"]) .bp6-icon svg,
 body[data-engine] .bp6-button:not([class*="bp6-intent-"]) > svg,
 body[data-engine] .bp6-button:not([class*="bp6-intent-"]) svg path {
   fill: currentColor;
+}
+
+/* HTMLSelect (`.bp6-html-select select`) mirrors the filled default-button look — same intent-default tokens,
+   border and states — so dropdowns and default buttons match exactly (Blueprint otherwise gives selects a
+   derived surface gray). Same `body[data-engine]` scope, so it tracks the per-theme default-intent. */
+body[data-engine] .bp6-html-select select {
+  background-color: var(--app-intent-default-rest);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 70%, transparent);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-html-select select:hover {
+  background-color: var(--app-intent-default-hover);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 85%, transparent);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-html-select select:active {
+  background-color: var(--app-intent-default-active);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 100%, transparent);
+  color: var(--app-intent-default-fg);
+}
+body[data-engine] .bp6-html-select select:disabled,
+body[data-engine] .bp6-html-select.bp6-disabled select {
+  background-color: color-mix(in srgb, var(--app-intent-default-rest) 42%, transparent);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--app-intent-default-fg) 56%, transparent);
+}
+body[data-engine] .bp6-html-select .bp6-icon {
+  color: var(--app-intent-default-fg);
 }
 
 /* ButtonGroup carries `variant="minimal|outlined"` on the group, not on each child.

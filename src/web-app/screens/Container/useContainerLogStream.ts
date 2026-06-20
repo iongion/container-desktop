@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type ContainerLogsStream, ContainersAdapter } from "@/container-client/adapters/containers";
 import { createContainerLogDecoder } from "@/container-client/logs";
 import type { TerminalHandle } from "@/web-app/components/Terminal";
+import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 
 export type ContainerLogStreamStatus = "idle" | "connecting" | "live" | "ended" | "error";
 
@@ -67,8 +68,11 @@ export function useContainerLogStream(connectionId: string, containerId: string 
     setError(undefined);
 
     void reloadGeneration;
-    new ContainersAdapter()
-      .logsStream(containerId, { tail: 200 })
+    // Bind the adapter to THIS connection's host (mirrors queries.ts / bulkActions.ts). Without it the
+    // adapter falls back to the global "current" host — undefined in the always-merged workspace — and the
+    // stream crashes with "Cannot read properties of undefined (reading 'getApiDriver')".
+    resolveConnectionHost(connectionId)
+      .then((host) => new ContainersAdapter(host).logsStream(containerId, { tail: 200 }))
       .then((nextStream) => {
         if (cancelled) {
           nextStream.destroy?.();

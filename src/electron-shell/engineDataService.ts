@@ -357,7 +357,17 @@ export class EngineDataService {
       const running = availability?.api ?? false;
       if (host && running) {
         const resolvedSettings = await host.getSettings();
+        const configured = connection.settings;
         connection.settings = deepMerge({}, connection.settings, resolvedSettings);
+        // A live settings refresh must not ERASE a configured socket address with an empty one: when the host
+        // can't resolve api.connection.uri/relay (some vendor/virtualized hosts don't), deepMerge would
+        // overwrite the configured value with "", blanking the Connection Info DOCKER_HOST. Keep the configured
+        // socket as the fallback (a non-empty resolved value still wins).
+        const merged = connection.settings.api?.connection;
+        if (merged) {
+          merged.uri = merged.uri || configured.api?.connection?.uri || merged.uri;
+          merged.relay = merged.relay || configured.api?.connection?.relay || merged.relay;
+        }
         this.hostByConnection.set(id, host);
         this.runtimeByConnection.set(id, {
           ...desc,
@@ -365,6 +375,11 @@ export class EngineDataService {
           phase: "ready",
           running: true,
           version: resolveConnectionVersion(connection, { capabilities: host.capabilities }),
+          // Ship the resolved socket coordinates so the renderer's Connection Info screen can render the REAL
+          // DOCKER_HOST for this connection (read from the merged settings — same source the screen expects).
+          uri: connection.settings.api?.connection?.uri,
+          relay: connection.settings.api?.connection?.relay,
+          scope: connection.settings.controller?.scope,
         });
         this.markConnected(id); // arm the stability timer; cancels any pending retry (no tight back-off reset)
         await settleWithin(this.refreshAll(id, host), RESOURCE_WARMUP_TIMEOUT_MS);

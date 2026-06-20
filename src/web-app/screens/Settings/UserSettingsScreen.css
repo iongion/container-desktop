@@ -26,15 +26,17 @@
   column-gap: 0;
   width: auto;
 }
-.AppSettingsHeaderVersionCheck .bp6-label {
+/* Out-specifies Blueprint's own `.bp6-form-group.bp6-inline label.bp6-label` (0,3,1), which pins
+   line-height:30px (sized for medium buttons) + margin:0 12px. Match the small (24px) action buttons so the
+   label box and buttons are the same height and the row centers cleanly. */
+.AppSettingsHeaderVersionCheck.bp6-form-group.bp6-inline label.bp6-label {
   display: inline-flex;
-  margin: 0;
+  align-items: center;
+  margin: 0 6px 0 0;
   font-size: 12px;
-  line-height: 30px;
+  line-height: 24px;
   white-space: nowrap;
-}
-.AppSettingsHeaderVersionCheck.bp6-inline .bp6-label {
-  margin-right: 6px;
+  pointer-events: none;
 }
 .AppSettingsHeaderVersionCheck .bp6-form-content {
   flex: 0 0 230px;
@@ -138,17 +140,17 @@
 }
 
 /* Monospace font-family Select popover: wider than the trigger (to show full font names), the
-   250+ item list capped to <50vh, denser items without icon indentation, and the filter input
-   moved to the bottom. */
+   filter input kept at the top (Blueprint default), and the 250+ item list capped to a compact
+   height with denser items without icon indentation. */
 .AppMonospaceFontPopover .bp6-popover-content {
   min-width: 320px;
 }
 .AppMonospaceFontPopover .bp6-popover-content > div {
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
 }
 .AppMonospaceFontPopover .bp6-menu {
-  max-height: 45vh;
+  max-height: 240px;
   overflow-y: auto;
 }
 .AppMonospaceFontPopover .bp6-menu-item {

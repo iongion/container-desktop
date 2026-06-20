@@ -111,7 +111,7 @@ export function buildMockConnections(): Connection[] {
       label: "Podman machine virtualization",
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
-      uri: "",
+      uri: "unix:///run/user/1000/podman/podman-machine-default-api.sock",
       autoStart: engines.includes(ContainerEngine.PODMAN),
       controller: controller("podman", "podman-machine-default", MOCK_PODMAN_VERSION),
     }),
@@ -121,7 +121,7 @@ export function buildMockConnections(): Connection[] {
       label: "Docker virtualization",
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
-      uri: "",
+      uri: "unix:///var/run/docker.sock",
       autoStart: engines.includes(ContainerEngine.DOCKER),
     }),
     mockConnection({

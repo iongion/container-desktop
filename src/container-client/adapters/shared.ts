@@ -32,6 +32,13 @@ export abstract class ResourceAdapter {
 
   /** The active host's raw Axios driver — one instance per adapter, created on first use. */
   protected driver(): Promise<AxiosInstance> {
+    // The host can be undefined when an adapter was built without a connection and no global "current" host
+    // is set (the always-merged workspace has none). Fail with a legible message instead of the cryptic
+    // "Cannot read properties of undefined (reading 'getApiDriver')" — callers must pass a resolved host
+    // (resolveConnectionHost) for the row's connection.
+    if (!this.host) {
+      throw new Error("No container engine connection is active for this request (host client unavailable)");
+    }
     this.driverPromise ??= this.host.getApiDriver();
     return this.driverPromise;
   }

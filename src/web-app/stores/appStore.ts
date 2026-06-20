@@ -13,6 +13,7 @@ import { Application } from "@/container-client/Application";
 import { systemNotifier } from "@/container-client/notifier";
 import {
   type AppRuntimeSnapshot,
+  type ConnectionRuntimeInfo,
   RESOURCE_SYNC,
   type ResourceConnectProgress,
 } from "@/container-client/resourceSyncProtocol";
@@ -165,6 +166,50 @@ function subscribeConnectProgress(): void {
   });
 }
 
+// Merge each connected runtime's resolved socket coordinates (uri/relay/scope, shipped by main in the
+// snapshot's `active[]`) into the matching configured connection's settings. The runtime snapshot is the only
+// per-connection channel that carries resolved settings to the renderer, so this is what lets screens reading
+// `connection.settings` — the Connection Info DOCKER_HOST rows + code example — show the REAL socket for EVERY
+// connection, not just the primary. Returns the SAME array reference when nothing changed so a steady stream
+// of resource snapshots never churns `connections` (and the components that read it). Only fields main
+// actually shipped are written, so a configured value is never clobbered by an absent runtime field.
+function mergeRuntimeSockets(connections: Connection[], active?: ConnectionRuntimeInfo[]): Connection[] {
+  if (!active?.length) {
+    return connections;
+  }
+  const runtimeById = new Map(active.map((runtime) => [runtime.id, runtime]));
+  let changed = false;
+  const next = connections.map((conn) => {
+    const runtime = runtimeById.get(conn.id);
+    if (!runtime) {
+      return conn;
+    }
+    const uriSame = runtime.uri === undefined || runtime.uri === conn.settings?.api?.connection?.uri;
+    const relaySame = runtime.relay === undefined || runtime.relay === conn.settings?.api?.connection?.relay;
+    const scopeSame = runtime.scope === undefined || runtime.scope === conn.settings?.controller?.scope;
+    if (uriSame && relaySame && scopeSame) {
+      return conn;
+    }
+    changed = true;
+    const connectionPatch: Record<string, string> = {};
+    if (runtime.uri !== undefined) {
+      connectionPatch.uri = runtime.uri;
+    }
+    if (runtime.relay !== undefined) {
+      connectionPatch.relay = runtime.relay;
+    }
+    const settingsPatch: any = {};
+    if (Object.keys(connectionPatch).length) {
+      settingsPatch.api = { connection: connectionPatch };
+    }
+    if (runtime.scope !== undefined) {
+      settingsPatch.controller = { scope: runtime.scope };
+    }
+    return deepMerge<Connection>({} as Connection, conn, { settings: settingsPatch } as Partial<Connection>);
+  });
+  return changed ? next : connections;
+}
+
 interface AppState {
   phase: AppBootstrapPhase;
   pending: boolean;
@@ -308,12 +353,19 @@ export const useAppStore = create<AppStore>()((set, get) => {
             : AppBootstrapPhase.STARTING
           : AppBootstrapPhase.READY;
         const next: Partial<AppState> = { phase, running, provisioned: true };
+        // Fold main's resolved per-connection socket coordinates (uri/relay/scope) into the configured
+        // connections so the Connection Info screen shows the REAL DOCKER_HOST for every connection. Keeps the
+        // same reference when unchanged; the primary connector below then reads the ALREADY-merged `conn`.
+        const connections = mergeRuntimeSockets(state.connections, runtime.active);
+        if (connections !== state.connections) {
+          next.connections = connections;
+        }
         // Hydrate the PRIMARY connector (create/pull target, header, theme) from the merged snapshot — only
         // when the primary actually changes, or when the ready snapshot adds capabilities after a starting
         // snapshot. Those capabilities drive Podman-only sidebar/screens.
         const primaryId = runtime.currentConnector?.id;
         if (primaryId && (primaryId !== state.currentConnector?.id || !!runtime.currentConnector?.capabilities)) {
-          const conn = state.connections.find((c) => c.id === primaryId);
+          const conn = connections.find((c) => c.id === primaryId);
           const connector = state.connectors.find((c) => c.id === primaryId || c.connectionId === primaryId);
           if (conn || connector) {
             const merged = deepMerge<Connector>(

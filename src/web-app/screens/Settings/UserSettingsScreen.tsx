@@ -181,6 +181,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         <ButtonGroup className="AppSettingsFormVersionCheckActions">
           <AnchorButton
             className="AppSettingsFormVersionCheckStore"
+            size="small"
             title={t("Check latest version")}
             href="https://apps.microsoft.com/detail/9mtg4qx6d3ks?mode=direct"
             target="_blank"
@@ -208,6 +209,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
       >
         <ButtonGroup fill className="AppSettingsFormVersionCheckActions">
           <AnchorButton
+            size="small"
+            variant="outlined"
             icon={IconNames.DOWNLOAD}
             text={t("Versions")}
             href="https://github.com/iongion/container-desktop/releases"

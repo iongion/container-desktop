@@ -26,6 +26,13 @@ export interface ConnectionRuntimeInfo {
   // version), populated by main when the connection comes up. Lets the renderer show the REAL version of
   // EVERY connected engine, not just the primary.
   version?: string;
+  // Resolved socket coordinates, read from the connected host's settings on connect (same provenance as
+  // `version`): the engine's API socket URI, the in-guest relay path, and the controller scope. The runtime
+  // snapshot is the only per-connection channel carrying resolved settings to the renderer, so these let the
+  // Connection Info screen show the REAL DOCKER_HOST for EVERY connection, not just the primary.
+  uri?: string;
+  relay?: string;
+  scope?: string;
   // Auto-reconnect bookkeeping: main schedules a back-off retry when a live connection drops (engine stop,
   // SSH broken, internet down). Surfaced so the connection manager / footer can render "Reconnecting… (N)"
   // and the next attempt time, without a separate channel.
