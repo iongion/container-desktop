@@ -1,77 +1,121 @@
 .AppHeaderLogo {
   display: block;
   width: 200px;
-  height: 50px;
-  color: var(--app-logo-title, var(--app-text-muted));
+  height: auto;
   overflow: visible;
+  /* stacked-layers icon tones (dark defaults; per-engine + light overrides below) */
+  --app-logo-bright: var(--app-accent);
   --app-logo-accent: var(--app-accent);
-  --app-logo-accent-strong: var(--app-accent-hover);
-  --app-logo-letter-secondary: #9ca3af;
-  --app-logo-title: var(--app-text-muted);
+  --app-logo-deep: var(--app-accent-hover);
+  /* "Container Desktop" wordmark gradient — mirrors the website `.grad` (white → grad-1 → grad-2) */
+  --app-logo-grad-0: #ffffff;
+  --app-logo-grad-1: #9fe6d6;
+  --app-logo-grad-2: #76c8e0;
   --app-logo-tagline: color-mix(in srgb, var(--app-text-muted) 88%, var(--app-accent) 12%);
 }
 
-body.bp6-light .AppHeaderLogo {
-  --app-logo-letter-secondary: #6b7280;
-}
-
-body[data-engine="unified"] .AppHeaderLogo {
+/* ---- per-engine (dark): icon tri-tone + wordmark gradient. container (Apple) reuses unified ---- */
+body[data-engine="unified"] .AppHeaderLogo,
+body[data-engine="container"] .AppHeaderLogo {
+  --app-logo-bright: #2dd4bf;
   --app-logo-accent: #14b8a6;
-  --app-logo-accent-strong: #0d9488;
-}
-
-body.bp6-light[data-engine="unified"] .AppHeaderLogo {
-  --app-logo-accent: #0d9488;
-  --app-logo-accent-strong: #0f766e;
+  --app-logo-deep: #0d9488;
+  --app-logo-grad-1: #9fe6d6;
+  --app-logo-grad-2: #76c8e0;
 }
 
 body[data-engine="podman"] .AppHeaderLogo {
+  --app-logo-bright: #d98fe8;
   --app-logo-accent: #a855c9;
-  --app-logo-accent-strong: #7b3398;
-}
-
-body.bp6-light[data-engine="podman"] .AppHeaderLogo {
-  --app-logo-accent: #8e3aa8;
-  --app-logo-accent-strong: #66277a;
+  --app-logo-deep: #7b3398;
+  --app-logo-grad-1: #d9b8ff;
+  --app-logo-grad-2: #5cc6ff;
 }
 
 body[data-engine="docker"] .AppHeaderLogo {
-  --app-logo-accent: #1d56b8;
-  --app-logo-accent-strong: #163d8a;
+  --app-logo-bright: #6fb2ff;
+  --app-logo-accent: #2f7df0;
+  --app-logo-deep: #1d56b8;
+  --app-logo-grad-1: #bcd9ff;
+  --app-logo-grad-2: #5cc6ff;
+}
+
+/* ---- light mode: a white start would vanish on the light header, so the wordmark runs
+        dark-ink → accent (still per-engine), and the icon uses the light-theme accents ---- */
+body.bp6-light .AppHeaderLogo {
+  --app-logo-grad-0: #1f2937;
+}
+
+body.bp6-light[data-engine="unified"] .AppHeaderLogo,
+body.bp6-light[data-engine="container"] .AppHeaderLogo {
+  --app-logo-bright: #14b8a6;
+  --app-logo-accent: #0d9488;
+  --app-logo-deep: #0f766e;
+  --app-logo-grad-1: #0f766e;
+  --app-logo-grad-2: #0d9488;
+}
+
+body.bp6-light[data-engine="podman"] .AppHeaderLogo {
+  --app-logo-bright: #a855c9;
+  --app-logo-accent: #8e3aa8;
+  --app-logo-deep: #66277a;
+  --app-logo-grad-1: #66277a;
+  --app-logo-grad-2: #8e3aa8;
 }
 
 body.bp6-light[data-engine="docker"] .AppHeaderLogo {
+  --app-logo-bright: #2f7df0;
   --app-logo-accent: #1f59cf;
-  --app-logo-accent-strong: #1a46a8;
+  --app-logo-deep: #163d8a;
+  --app-logo-grad-1: #163d8a;
+  --app-logo-grad-2: #1f59cf;
 }
 
-.AppHeaderLogoMarkC {
-  fill: var(--app-logo-accent);
+/* ---- wordmark gradient stops ---- */
+.AppHeaderLogoGradStop0 {
+  stop-color: var(--app-logo-grad-0);
+}
+.AppHeaderLogoGradStop1 {
+  stop-color: var(--app-logo-grad-1);
+}
+.AppHeaderLogoGradStop2 {
+  stop-color: var(--app-logo-grad-2);
 }
 
-.AppHeaderLogoMarkD {
-  fill: var(--app-logo-letter-secondary);
-}
-
-.AppHeaderLogoMarkOutline {
-  fill: none;
-  stroke: var(--app-logo-accent-strong);
-  stroke-dasharray: none;
-  stroke-linecap: round;
+/* ---- stacked-layers icon ---- */
+.AppHeaderLogoPlate {
+  stroke-width: 16;
   stroke-linejoin: round;
-  stroke-miterlimit: 4;
-  stroke-width: 1.05833;
+}
+.AppHeaderLogoPlate--deep {
+  fill: var(--app-logo-deep);
+  stroke: var(--app-logo-deep);
+}
+.AppHeaderLogoPlate--accent {
+  fill: var(--app-logo-accent);
+  stroke: var(--app-logo-accent);
+}
+.AppHeaderLogoPlate--bright {
+  fill: var(--app-logo-bright);
+  stroke: var(--app-logo-bright);
 }
 
+/* ---- wordmark + tagline (bundled Montserrat, see themes/shared.css) ---- */
 .AppHeaderLogoTitle {
-  fill: var(--app-logo-title);
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 800;
+  font-size: 56px;
+  letter-spacing: -1.8px;
+  fill: url(#AppHeaderLogoGrad);
 }
-
 .AppHeaderLogoTagline {
   display: none;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: 0.2px;
   fill: var(--app-logo-tagline);
 }
-
 body[data-engine="unified"] .AppHeaderLogoTagline--unified,
 body[data-engine="container"] .AppHeaderLogoTagline--unified,
 body[data-engine="podman"] .AppHeaderLogoTagline--podman,
