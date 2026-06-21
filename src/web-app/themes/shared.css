@@ -17,6 +17,20 @@
   font-display: swap;
   src: url("./fonts/JetBrainsMono-Bold.woff2") format("woff2");
 }
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/Montserrat-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./fonts/Montserrat-800.woff2") format("woff2");
+}
 
 :root {
   --app-data-table-items-padding: 10px;
