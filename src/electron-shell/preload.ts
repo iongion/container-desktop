@@ -1,5 +1,6 @@
 import { contextBridge } from "electron";
-
+import { AIBus } from "@/ai-system/adapters/electron/preload/aiBus";
+import { AIClient } from "@/ai-system/adapters/electron/preload/aiClient";
 import { createMockCommand } from "@/container-client/mock/MockCommand";
 import { isMockMode } from "@/container-client/mock/mode";
 import { parseRemoteConnectionsEnv } from "@/container-client/remote-env";
@@ -26,7 +27,7 @@ const ForwardingCommand: ICommand = isMockMode()
 installPlatformGlobals(global, {
   command: ForwardingCommand,
   messageBus: MessageBus,
-  extras: { TrayBus, ResourceBus },
+  extras: { TrayBus, ResourceBus, AI: AIClient, AIBus },
 });
 
 function main() {
@@ -40,6 +41,8 @@ function main() {
   contextBridge.exposeInMainWorld("ActivityBus", ActivityBus);
   contextBridge.exposeInMainWorld("TrayBus", TrayBus);
   contextBridge.exposeInMainWorld("ResourceBus", ResourceBus);
+  contextBridge.exposeInMainWorld("AI", AIClient);
+  contextBridge.exposeInMainWorld("AIBus", AIBus);
   contextBridge.exposeInMainWorld("CONTAINER_DESKTOP_MOCK", process.env.CONTAINER_DESKTOP_MOCK ?? "");
   // The renderer has no `process`, so hand it the LIVE log level (preload runs before renderer scripts).
   // This lets CONTAINER_DESKTOP_LOG_LEVEL change the renderer level at launch without a rebuild — the

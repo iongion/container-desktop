@@ -6,6 +6,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": new URL("./src", import.meta.url).pathname,
+      "@/ai-system": new URL("./src/ai-system", import.meta.url).pathname,
     },
   },
   test: {

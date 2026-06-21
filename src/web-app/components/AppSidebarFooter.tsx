@@ -19,7 +19,7 @@ export function AppSidebarFooter() {
       className="AppSidebarSettingsButton"
       variant="minimal"
       icon={IconNames.COG}
-      href={pathTo("/screens/settings/user-settings")}
+      href={pathTo("/screens/settings/user-settings", undefined, { category: "config" })}
       title={t("Settings")}
       aria-label={t("Settings")}
     />

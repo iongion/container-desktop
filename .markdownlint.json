@@ -9,5 +9,8 @@
   "MD046": {
     "style": "fenced"
   },
-  "MD051": false
+  "MD051": false,
+  "ignores": [
+    "src/ai-system/prompt/templates/*.md"
+  ]
 }

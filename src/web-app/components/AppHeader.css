@@ -19,8 +19,9 @@
 .App-companyLogoBrand {
   display: flex;
   align-items: center;
-  width: 200px;
+  width: 250px;
   height: 100%;
+  padding-left: 6px;
   box-sizing: border-box;
 }
 [data-os="MacOS"] .App-projectBrand,
@@ -39,20 +40,12 @@
   display: inline-flex;
   align-items: center;
 }
+.AppHeaderAIActions,
 .AppHeaderUtilityActions,
 .AppHeaderWindowActions {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
-}
-.AppHeaderActions .AppHeaderActionButton.bp6-button {
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  min-height: 30px;
-  padding: 0;
-  align-items: center;
-  justify-content: center;
 }
 /* The connections button uses a Blueprint icon (DATA_CONNECTION). Blueprint paints button icons with its own
    MUTED gray (`.bp6-dark .bp6-button:not([class*="bp6-intent-"]) .bp6-icon`, specificity 0,5,0), so beside the
@@ -65,6 +58,23 @@ body.bp6-dark .AppHeaderActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-i
 }
 body.bp6-light .AppHeaderActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
   color: #5f6b7c;
+}
+/* AI split-button: tinted with the CURRENT theme accent (var(--app-accent), set per theme×engine on
+   <html>) so it unifies with the active theme; button sizing is left to match the sibling header
+   buttons. The flush caret needs display:flex — the Blueprint Popover target is inline-block by default. */
+.AppHeaderAIActions {
+  border: 1px solid color-mix(in srgb, var(--app-accent) 55%, transparent);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-right: 6px;
+}
+.AppHeaderAIActions .bp6-popover-target {
+  display: flex;
+}
+/* The body.bp6-* prefix lifts specificity above the muted header-icon rule (0,5,1) so the accent wins. */
+body.bp6-dark .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon,
+body.bp6-light .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
+  color: var(--app-accent);
 }
 .App-projectNameVersion {
   display: flex;

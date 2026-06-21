@@ -3,10 +3,6 @@
    Podman tokens. Status colors, security severity, and the Podman-only container-inspect
    zebra striping live here. */
 
-/* ── Dark — surface-ish specifics ── */
-body.bp6-dark[data-engine="podman"] .AppSettingUserConfigurationPath {
-  background: var(--app-chrome);
-}
 /* Status colors */
 body.bp6-dark[data-engine="podman"] [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #8b104c;
@@ -48,9 +44,6 @@ body.bp6-dark[data-engine="podman"]
 }
 
 /* ── Light — surface-ish specifics ── */
-body.bp6-light[data-engine="podman"] .AppSettingUserConfigurationPath {
-  background: var(--app-surface-strong);
-}
 body.bp6-light[data-engine="podman"] .AppSettingsForm[data-form="host"] .AppSettingsFieldActive {
   background: var(--app-surface-strong);
 }

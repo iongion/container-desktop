@@ -14,6 +14,10 @@ temp/
 ContainerDesktop.pfx
 src/container_desktop_tools.egg-info
 
+# Worktrees
+.claude/worktrees/
+.worktrees/
+
 # Logs
 logs
 *.log

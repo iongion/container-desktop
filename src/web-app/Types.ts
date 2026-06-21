@@ -25,6 +25,9 @@ export interface AppScreenMetadata {
   RightIcon: any;
   RequiresProvisioning: boolean;
   RequiresConnection: boolean;
+  // AI screens (issue #232) opt in with this flag. They are hidden from the sidebar and surfaced in
+  // the header's AI menu instead (see screenVisibility.ts). AI is always on — this is not an access gate.
+  RequiresAI: boolean;
 }
 export type AppScreen<AppScreenProps> = React.FunctionComponent<AppScreenProps> & {
   ID: string;

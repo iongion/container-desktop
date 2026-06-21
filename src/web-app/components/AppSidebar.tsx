@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { Connector, ConnectorCapabilities } from "@/env/Types";
 import { pathTo } from "@/web-app/Navigator";
+import { visibleSidebarScreens } from "@/web-app/screenVisibility";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen } from "@/web-app/Types";
@@ -24,7 +25,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
   const activeRuntime = useResourceStore((state) => state.activeRuntime);
   const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
   const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
-  const sidebarScreens = screens.filter((screen) => !screen.Metadata?.ExcludeFromSidebar);
+  const sidebarScreens = visibleSidebarScreens(screens);
   const availabilityConnector = useMemo(() => {
     const running = activeRuntime.filter((info) => info.running && info.capabilities);
     if (running.length <= 1) {

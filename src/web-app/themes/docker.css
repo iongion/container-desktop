@@ -1,9 +1,6 @@
 /* Dark — structural surfaces (header/sidebar/content/menus/drawers/tables) now come
    from tokens.css. Only Docker-specific, non-structural rules remain; surface-ish bits
    read the Docker dark tokens so they stay in tune with the palette. */
-body.bp6-dark[data-engine="docker"] .AppSettingUserConfigurationPath {
-  background: var(--app-chrome);
-}
 body.bp6-dark[data-engine="docker"] .SecurityDetails {
   background: var(--app-surface);
 }
@@ -52,12 +49,6 @@ body.bp6-dark[data-engine="docker"]
 }
 
 /* ── Light — surface-ish specifics only; structural surfaces come from tokens.css. ── */
-body.bp6-light[data-engine="docker"] .AppSettingUserConfigurationPath {
-  background: var(--app-surface-strong);
-}
-body.bp6-light[data-engine="docker"] .AppSettingUserConfigurationPath strong {
-  color: var(--app-text);
-}
 body.bp6-light[data-engine="docker"] .AppSettingsForm[data-form="host"] .AppSettingsFieldActive {
   background: var(--app-surface-strong);
 }

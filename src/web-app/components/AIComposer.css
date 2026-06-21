@@ -1,0 +1,56 @@
+/* Shared AI composer — one rounded box that owns the input + a toolbar. Used by every AI screen so the
+   interaction is identical everywhere (see AIComposer.tsx). */
+.AIComposer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+  background: var(--code-bg, rgba(0, 0, 0, 0.18));
+}
+.AIComposerHint {
+  font-size: 12px;
+  opacity: 0.8;
+}
+/* Borderless, transparent textarea — the rounded box provides the frame. */
+.AIComposerInput.AIComposerInput {
+  border: none;
+  box-shadow: none !important;
+  background: transparent;
+  resize: none;
+  min-height: 44px;
+  max-height: 200px;
+  padding: 2px 2px 0;
+  font-size: 13px;
+}
+.AIComposerToolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.AIComposerSpacer {
+  flex: 1;
+}
+/* Footer-minimal leading actions (e.g. the Assistant's New chat button). */
+.AIComposerToolbar .AIComposerTool {
+  font-size: 12px;
+}
+/* "Press ESC to stop" label, sits just left of the Stop button while the model streams. */
+.AIComposerStopHint {
+  font-size: 12px;
+  color: var(--app-text-muted);
+}
+/* Circular send / stop button. */
+.AIComposerSend.AIComposerSend {
+  border-radius: 50%;
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

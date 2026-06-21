@@ -110,6 +110,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
           "@/rpc": path.resolve(__dirname, "src/rpc"),
           "@/utils": path.resolve(__dirname, "src/utils"),
           "@/web-app": path.resolve(__dirname, "src/web-app"),
+          "@/ai-system": path.resolve(__dirname, "src/ai-system"),
         },
       },
       resolve ?? {},

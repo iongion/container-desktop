@@ -21,6 +21,8 @@ export interface CodeEditorProps {
   theme?: string;
   headerTitle?: any;
   withoutLineNumbers?: boolean;
+  readOnly?: boolean;
+  onChange?: (value: string) => void;
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -29,6 +31,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   mode,
   theme,
   headerTitle,
+  readOnly,
+  onChange,
 }: CodeEditorProps) => {
   const userTheme = useAppStore((state) => state.userSettings.theme);
   const [currentTheme, setCurrentTheme] = useState(theme || (userTheme === AppTheme.LIGHT ? LIGHT_THEME : DARK_THEME));
@@ -71,11 +75,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         language={mode || "json"}
         value={value}
         theme={currentTheme}
+        onChange={(next) => onChange?.(next ?? "")}
         onMount={(editor) => {
           editorRef.current = editor;
         }}
         options={{
-          readOnly: true,
+          readOnly: readOnly ?? true,
           automaticLayout: true,
           minimap: {
             enabled: false,

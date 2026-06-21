@@ -58,49 +58,13 @@
   flex: 1;
   width: 100%;
 }
-.AppSettingUserConfigurationPath {
-  width: 100%;
-  display: flex;
-  text-align: right;
-  text-align: center;
-  vertical-align: middle;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 2px;
-  padding-left: 8px;
-  overflow: hidden;
-  background: #111;
-  line-height: 27px;
-}
-.AppSettingUserConfigurationPath strong {
-  font-size: 12px;
-  font-weight: normal;
-  display: block;
-  color: #ccc;
-  padding-left: 10px;
-  padding-right: 10px;
-  cursor: default;
-  user-select: none;
-}
-.AppSettingUserConfigurationPath input {
-  background: #000;
-  font-size: 11px;
-  border: 1px solid #333;
-  padding: 4px;
-  display: flex;
-  flex: 1;
-  color: #fff;
-  font-family: var(--monospace-font);
-  border-radius: 4px;
-}
 .AppSettingsForm[data-form="flags"] {
   padding-bottom: 10px;
   padding-top: 10px;
 }
 .AppSettingsForm[data-form="flags"],
 .AppSettingsForm[data-form="appearance"],
-.AppSettingsForm[data-form="font"],
-.AppSettingsForm[data-form="logging"] {
+.AppSettingsForm[data-form="font"] {
   display: flex;
   flex-direction: row;
   width: 100%;
@@ -109,8 +73,7 @@
   padding-left: 4px;
 }
 .AppSettingsForm[data-form="flags"] .bp6-form-group:first-child,
-.AppSettingsForm[data-form="appearance"] .bp6-form-group:first-child,
-.AppSettingsForm[data-form="logging"] .bp6-form-group:first-child {
+.AppSettingsForm[data-form="appearance"] .bp6-form-group:first-child {
   flex: 1;
 }
 .AppSettingsForm[data-form="appearance"] {
@@ -123,8 +86,55 @@
 .AppSettingsAppearanceControls .bp6-control {
   margin-bottom: 0;
 }
-.AppSettingsForm[data-form="logging"] {
-  padding-top: 10px;
+/* Configuration + Logging categories: vertical stacks (like the AI panel), never horizontal rows. */
+.AppSettingsForm[data-form="configuration"],
+.AppSettingsForm[data-form="logging"],
+.AppSettingsForm[data-form="network"] {
+  display: flex;
+  flex-direction: column;
+  row-gap: 12px;
+  width: 100%;
+  padding: 10px 4px;
+}
+.AppSettingsNetworkMode,
+.AppSettingsNetworkEndpoint,
+.AppSettingsNetworkCredentials {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 8px;
+}
+.AppSettingsNetworkMode {
+  justify-content: space-between;
+}
+.AppSettingsNetworkEndpoint .bp6-form-group:nth-child(2) {
+  flex: 1 1 260px;
+}
+.AppSettingsNetworkCredentials .bp6-form-group {
+  flex: 1 1 220px;
+}
+.AppSettingsForm[data-form="network"] textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+.AppSettingsNetworkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+/* File-logging sub-controls: size + files + actions on one tidy row, greyed out until enabled. */
+.AppSettingsLoggingFileControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 16px;
+  row-gap: 8px;
+  margin-top: 8px;
+}
+.AppSettingsLoggingFileControls[data-enabled="no"] {
+  opacity: 0.5;
 }
 [data-screen="settings-settings"] .NavbarLeft {
   display: flex;
@@ -160,4 +170,103 @@
 /* Match the native size/weight selects' text size to the family Select button (12px). */
 .AppSettingsFontForm select {
   font-size: 12px;
+}
+
+/* AI assistant (issue #232): the other sections are horizontal rows; this one is a vertical stack of
+   controls. Keep their 4px side / 10px top-bottom padding, with even gaps between controls. The base
+   rule `.AppSettingsForm .bp6-form-group { margin: 0 }` zeroes FormGroup margins, so spacing is the
+   container's row-gap. */
+.AppSettingsForm[data-form="ai"] {
+  display: flex;
+  flex-direction: column;
+  row-gap: 8px;
+  width: 100%;
+  padding: 10px 4px;
+}
+.AppSettingsForm[data-form="ai"] .AppSettingsAIPrivacy,
+.AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded {
+  margin: 0;
+}
+.AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded .bp6-control {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+.AppSettingsAIConsents,
+.AppSettingsAIKeys {
+  display: flex;
+  flex-direction: column;
+  row-gap: 6px;
+}
+.AppSettingsAIConsents .bp6-control {
+  margin-bottom: 0;
+}
+/* Blueprint/normalize give <p> a default 8px margin-bottom; drop it on the trailing paragraph so the
+   callout has no dangling gap (the first privacy line keeps its margin to separate the two lines). */
+.AppSettingsForm[data-form="ai"] .AppSettingsAIPrivacy p:last-child,
+.AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded p {
+  margin-bottom: 0;
+}
+/* Default-provider segmented buttons: icon-color the choices by reach — local stays on-device
+   (green), cloud leaves the machine (amber). The selected button uses its Blueprint intent fill.
+   With 8 providers a single fill row would truncate labels, so allow wrapping to a second row while
+   each button still grows to fill its row (min-width keeps "GLM (Zhipu)" / "OpenRouter" readable). */
+.AppSettingsAIProviders {
+  width: 100%;
+  flex-wrap: wrap;
+}
+.AppSettingsAIProviders.bp6-fill .bp6-button {
+  flex: 1 1 auto;
+  min-width: 116px;
+}
+.AppSettingsAIProviders .AppSettingsAIProviderLocal:not(.bp6-active) .bp6-icon {
+  color: #2e9e5b;
+}
+.AppSettingsAIProviders .AppSettingsAIProviderCloud:not(.bp6-active) .bp6-icon {
+  color: #d98324;
+}
+
+/* Categorized settings (issue #232): a left vertical category rail + a scrollable panel pane, below the
+   screen header. Overrides the default column AppScreenContent with a row split (only the panel scrolls).
+   Colors/borders read the shared theme tokens (themes/tokens.css) so the rail tracks every engine/mode and
+   matches the app chrome — it recedes like the main AppSidebar (--app-chrome, darker than the content). */
+.AppScreenContent.SettingsContent {
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 0;
+}
+.SettingsRail {
+  flex: 0 0 auto;
+  width: 188px;
+  min-width: 188px;
+  overflow-y: auto;
+  padding: 8px;
+  background-color: var(--app-chrome);
+  border-right: 1px solid var(--app-border);
+}
+.SettingsRail .bp6-button-group {
+  width: 100%;
+}
+.SettingsRail .SettingsRailItem.bp6-button {
+  margin-bottom: 2px;
+  border-radius: 4px;
+}
+/* The panel owns a generous outer margin so its content matches the app's content rhythm and never sits
+   flush against the top/left edge; row-gap separates the forms (e.g. the two Appearance forms). Each form's
+   own top/bottom padding is neutralized so every category starts at the same offset. */
+.SettingsPanel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  padding-top: 10px;
+  padding-left: 5px;
+  padding-right: 0;
+  padding-bottom: 0;
+  row-gap: 10px;
+}
+.SettingsPanel > .AppSettingsForm {
+  padding-top: 0;
+  padding-bottom: 0;
 }

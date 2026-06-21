@@ -132,12 +132,3 @@ body.bp6-light .NotificationCenterDrawer .ActivityDetailPre {
 body.bp6-light .NotificationCenterDrawer button.ActivityRowHeader:hover {
   background: rgba(17, 20, 24, 0.05);
 }
-/* Settings storage-path code box — light readability (a light box, not a black terminal). */
-body.bp6-light .AppSettingUserConfigurationPath input {
-  background: #ffffff;
-  border-color: #d6dae1;
-  color: #1b2430;
-}
-body.bp6-light .AppSettingUserConfigurationPath strong {
-  color: #5b6675;
-}

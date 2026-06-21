@@ -19,6 +19,10 @@ export interface AppControlIpcDeps {
   showWindow: () => void;
   openFileSelector: (options: any) => Promise<unknown>;
   openTerminal: (options: any) => Promise<boolean>;
+  /** Open the app's storage/config directory (userData) in the OS file manager. Main resolves the path. */
+  openStorageFolder: () => void;
+  applyProxy?: (options: any) => Promise<unknown> | unknown;
+  testProxy?: (options: any) => Promise<unknown> | unknown;
   registerQuit: (options: any) => void;
   logger: { debug: (...args: unknown[]) => void };
 }
@@ -62,6 +66,10 @@ export function registerAppControlIpc(deps: AppControlIpcDeps): void {
     gated(() => deps.openDevTools()),
   );
   deps.onMessage(
+    "openStorageFolder",
+    gated(() => deps.openStorageFolder()),
+  );
+  deps.onMessage(
     "notify",
     gated((_event, arg) => {
       if (arg && arg.message === "ready") {
@@ -88,5 +96,17 @@ export function registerAppControlIpc(deps: AppControlIpcDeps): void {
       return false;
     }
     return deps.openTerminal(options);
+  });
+  deps.onInvoke("proxy.apply", (event, options) => {
+    if (!deps.isAllowedSender(event)) {
+      return { ok: false };
+    }
+    return deps.applyProxy?.(options) ?? { ok: false };
+  });
+  deps.onInvoke("proxy.test", (event, options) => {
+    if (!deps.isAllowedSender(event)) {
+      return { ok: false };
+    }
+    return deps.testProxy?.(options) ?? { ok: false };
   });
 }

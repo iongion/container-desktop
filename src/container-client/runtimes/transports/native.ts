@@ -107,6 +107,7 @@ export class NativeTransport implements Transport {
     const started = await host.runner.startApi(opts, {
       path: programPath,
       args: serviceArgs,
+      proxyEnv: true,
     });
     host.logger.debug("Start API complete", started);
     return started;

@@ -1,6 +1,7 @@
 import { Alignment, Button, Intent, Navbar, NavbarDivider, NavbarGroup, NavbarHeading, Tag } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
+import { Application } from "@/container-client/Application";
 import i18n from "@/web-app/App.i18n";
 import { AppTheme } from "@/web-app/App.types";
 import { ConnectionsMenu } from "@/web-app/components/ConnectionsMenu";
@@ -27,6 +28,9 @@ export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
   const onThemeToggleClick = useCallback(() => {
     setGlobalUserSettings({ theme: theme === AppTheme.DARK ? AppTheme.LIGHT : AppTheme.DARK });
   }, [theme, setGlobalUserSettings]);
+  const onOpenDevToolsClick = useCallback(() => {
+    Application.getInstance().openDevTools();
+  }, []);
   // Always-merged workspace: the footer reflects EVERY connected engine, not just the primary. The per-
   // connection runtime (mirrored from main) carries each engine's REAL detected version.
   const activeRuntime = useResourceStore((state) => state.activeRuntime);
@@ -92,6 +96,14 @@ export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
             aria-label={t("Toggle theme")}
           />
           <NavbarDivider />
+          <Button
+            className="AppFooterActionButton"
+            variant="minimal"
+            icon={IconNames.CONSOLE}
+            onClick={onOpenDevToolsClick}
+            title={t("Open developer tools")}
+            aria-label={t("Open developer tools")}
+          />
           <NotificationBell />
         </NavbarGroup>
       </Navbar>

@@ -26,9 +26,10 @@ export default class AppErrorBoundary extends React.Component<
   }
 
   onReconnectClick = () => {
-    if (this.props.onReconnect) {
-      window.location.href = "/";
-    }
+    // Raw, full window reload — deliberately NOT a code-driven re-bootstrap (which can carry the bad
+    // state forward). The hash router keeps the current route in window.location, so reloading reboots
+    // the app and restores the very screen that failed.
+    window.location.reload();
   };
 
   componentDidCatch(error: any, errorInfo: any) {

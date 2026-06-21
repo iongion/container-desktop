@@ -16,6 +16,7 @@ export interface ServiceOpts {
   retry?: { count: number; wait: number };
   cwd?: string;
   env?: any;
+  proxyEnv?: boolean;
 }
 
 export enum StartupStatus {
@@ -101,6 +102,24 @@ export interface ProxyServiceOptions {
 // definition (see engineTheme.ts / tokens.css). So "container" is intentionally absent here.
 export type EngineThemePreference = "auto" | "unified" | "podman" | "docker";
 
+import type { AIProviderSettings, AISettings } from "@/ai-system/core";
+import type { ProxyConfig } from "@/container-client/proxy";
+
+// ── AI subsystem (issue #232) ──────────────────────────────────────────────
+// Re-exported from @/ai-system/core — the canonical home. Kept here so existing
+// consumers (GlobalUserSettings.ai, etc.) don't break.
+export type { AIProviderSettings, AISettings };
+
+// Local-only file logging (opt-in, OFF by default). The log file lives under the app's userData
+// directory; rotation is size-based with a bounded number of kept files. NEVER a remote/cloud sink.
+export interface LoggingFileSettings {
+  enabled: boolean;
+  // Max size of the active log file before it rotates, in megabytes.
+  maxSizeMb: number;
+  // How many rotated files to keep (older ones are deleted). Disk use ≈ maxSizeMb * (maxFiles + 1).
+  maxFiles: number;
+}
+
 export interface GlobalUserSettings {
   theme: string;
   engineTheme: EngineThemePreference;
@@ -117,6 +136,9 @@ export interface GlobalUserSettings {
   };
   logging: {
     level: string;
+    // File-logging policy (rotation + size caps). Optional for back-compat with older configs;
+    // Application.getGlobalUserSettings always populates it via normalizeLoggingFileSettings.
+    file?: LoggingFileSettings;
   };
   connections: Connection[];
   connector: {
@@ -133,6 +155,11 @@ export interface GlobalUserSettings {
     maxRetries?: number;
   };
   registries: Registry[];
+  // AI subsystem settings (issue #232). Always populated at runtime by normalizeAISettings()
+  // in Application.getGlobalUserSettings — opt-in, off by default, local-first.
+  ai: AISettings;
+  // Global app proxy. Optional for older configs; absence normalizes to disabled at runtime.
+  proxy?: ProxyConfig;
 }
 
 export interface GlobalUserSettingsOptions extends GlobalUserSettings {
@@ -1027,6 +1054,7 @@ export interface ApiStartOptions {
 export interface RunnerStarterOptions extends ApiStartOptions {
   path?: string;
   args?: string[];
+  proxyEnv?: boolean;
 }
 
 export interface RunnerStopperOptions {

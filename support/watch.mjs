@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { unlinkSync, writeFileSync } from "node:fs";
+import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import electronPath from "electron";
@@ -19,9 +22,48 @@ const logLevel = "warn";
 // `--in-process-gpu` + a disabled compositor cause a GPU "context lost" crash/restart
 // spin-loop that pegs CPU and can freeze the whole machine. Gate them behind an env var.
 const isHeadless = ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTOP_HEADLESS || ""}`.toLowerCase());
-const remoteDebuggingPort = process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT || "9222";
+
+// CDP debug port. Prefer the configured/default port, but if it is already taken — e.g. a podman
+// rootless port-forward squatting 9222 — auto-fall back to an OS-assigned free port so `yarn dev`
+// never loses the race and comes up without a DevTools endpoint. The resolved endpoint is written to
+// a temp handshake file that support/cdp.mjs auto-discovers, so no port is hardcoded on either side.
+const CDP_ENDPOINT_FILE = path.join(os.tmpdir(), "container-desktop-cdp.json");
+const probePortFree = (port) =>
+  new Promise((resolve) => {
+    const srv = net.createServer();
+    srv.once("error", () => resolve(false));
+    srv.once("listening", () => srv.close(() => resolve(true)));
+    srv.listen(port, "127.0.0.1");
+  });
+const pickFreePort = () =>
+  new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+const preferredDebuggingPort = Number(process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT || "9222");
+const remoteDebuggingPort = String(
+  (await probePortFree(preferredDebuggingPort)) ? preferredDebuggingPort : await pickFreePort(),
+);
 const remoteDebuggingOrigin =
   process.env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN || `http://localhost:${remoteDebuggingPort}`;
+if (remoteDebuggingPort !== String(preferredDebuggingPort)) {
+  console.log(
+    `[container-desktop] CDP port ${preferredDebuggingPort} is busy — using free port ${remoteDebuggingPort}`,
+  );
+}
+try {
+  writeFileSync(
+    CDP_ENDPOINT_FILE,
+    JSON.stringify({ cdpUrl: `http://localhost:${remoteDebuggingPort}`, port: Number(remoteDebuggingPort) }),
+  );
+} catch {
+  /* non-fatal: cdp.mjs falls back to $CDP_URL then :9222 */
+}
+console.log(`[container-desktop] CDP endpoint: http://localhost:${remoteDebuggingPort} (cdp.mjs auto-discovers it)`);
 // When set to a port, expose the Electron main-process V8 inspector so an IDE (the
 // VS Code "Debug All" launch) can attach a Node debugger and hit breakpoints in the
 // real TypeScript sources. Empty by default so a normal `yarn dev` is unchanged.
@@ -44,7 +86,15 @@ function buildElectronArgs() {
     args.unshift(`--inspect=${inspectPort}`);
   }
   if (isHeadless) {
-    args.push("--disable-gpu", "--disable-gpu-sandbox", "--in-process-gpu", "--no-zygote", "--disable-features=VizDisplayCompositor", "--disable-dev-shm-usage", "--disable-web-security");
+    args.push(
+      "--disable-gpu",
+      "--disable-gpu-sandbox",
+      "--in-process-gpu",
+      "--no-zygote",
+      "--disable-features=VizDisplayCompositor",
+      "--disable-dev-shm-usage",
+      "--disable-web-security",
+    );
   }
   return args;
 }
@@ -53,8 +103,17 @@ function buildElectronArgs() {
 let electronApp = null;
 let relaunching = false;
 
+function cleanupCdpEndpoint() {
+  try {
+    unlinkSync(CDP_ENDPOINT_FILE);
+  } catch {
+    /* already gone */
+  }
+}
+
 /** Stops the watch script when the application has been quit. */
 function onElectronExit() {
+  cleanupCdpEndpoint();
   process.exit(0);
 }
 
@@ -120,6 +179,7 @@ const shutdown = (signal) => {
       /* already gone */
     }
   }
+  cleanupCdpEndpoint();
   process.exit(0);
 };
 process.once("SIGINT", () => shutdown("SIGINT"));

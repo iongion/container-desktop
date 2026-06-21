@@ -266,7 +266,7 @@ export class HostClient implements HostContext {
       this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
     const commandLine = [commandLauncher].concat(args || []).join(" ");
     this.logger.debug(this.id, ">> Running host command", commandLine);
-    const result = await Command.Execute(commandLauncher, args || []);
+    const result = await Command.Execute(commandLauncher, args || [], this.isScoped() ? undefined : { proxyEnv: true });
     this.logger.debug(this.id, "<< Running host command", commandLine, {
       success: result.success,
       code: result.code,

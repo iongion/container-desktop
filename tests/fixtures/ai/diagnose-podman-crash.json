@@ -1,0 +1,141 @@
+[
+  {
+    "type": "delta",
+    "text": "I'll investigate your Podman setup.\n\n"
+  },
+  {
+    "type": "tool",
+    "event": {
+      "type": "command",
+      "program": "podman",
+      "args": [
+        "version",
+        "--format",
+        "json"
+      ]
+    }
+  },
+  {
+    "type": "tool",
+    "event": {
+      "type": "command-result",
+      "program": "podman",
+      "args": [
+        "version",
+        "--format",
+        "json"
+      ],
+      "ok": true,
+      "stdout": "{\n  \"Client\": { \"Version\": \"5.4.1\" },\n  \"Server\": { \"Version\": \"5.4.1\" }\n}",
+      "stderr": ""
+    }
+  },
+  {
+    "type": "delta",
+    "text": "Podman 5.4.1 is installed and reachable. "
+  },
+  {
+    "type": "tool",
+    "event": {
+      "type": "command",
+      "program": "podman",
+      "args": [
+        "ps",
+        "-a"
+      ]
+    }
+  },
+  {
+    "type": "tool",
+    "event": {
+      "type": "command-result",
+      "program": "podman",
+      "args": [
+        "ps",
+        "-a"
+      ],
+      "ok": true,
+      "stdout": "CONTAINER ID  IMAGE       STATUS                    NAMES\na1b2c3d4e5f6  nginx:1.27  Exited (1) 2 hours ago    web\nf6e5d4c3b2a1  redis:7     Up 30 minutes              cache",
+      "stderr": ""
+    }
+  },
+  {
+    "type": "delta",
+    "text": "Found two containers:\n\n"
+  },
+  {
+    "type": "delta",
+    "text": "- **web** (nginx) — exited 2 hours ago\n"
+  },
+  {
+    "type": "delta",
+    "text": "- **cache** (redis) — running\n\n"
+  },
+  {
+    "type": "delta",
+    "text": "The web container crashed. Let me check the logs.\n\n"
+  },
+  {
+    "type": "tool",
+    "event": {
+      "type": "command",
+      "program": "podman",
+      "args": [
+        "logs",
+        "--tail",
+        "20",
+        "web"
+      ]
+    }
+  },
+  {
+    "type": "tool",
+    "event": {
+      "type": "command-result",
+      "program": "podman",
+      "args": [
+        "logs",
+        "--tail",
+        "20",
+        "web"
+      ],
+      "ok": true,
+      "stdout": "nginx: [emerg] bind() to 0.0.0.0:80 failed (98: Address already in use)",
+      "stderr": ""
+    }
+  },
+  {
+    "type": "delta",
+    "text": "Port 80 is already in use — that's why nginx can't start. "
+  },
+  {
+    "type": "delta",
+    "text": "Find what's on port 80 (`ss -tlnp`) "
+  },
+  {
+    "type": "delta",
+    "text": "and either stop it or change nginx's port.\n\n"
+  },
+  {
+    "type": "delta",
+    "text": "**Recommendation:** stop the conflicting process, then restart web.\n\n"
+  },
+  {
+    "type": "tool",
+    "event": {
+      "type": "approval-request",
+      "actionId": "mock-act-1",
+      "kind": "command",
+      "program": "podman",
+      "args": [
+        "restart",
+        "web"
+      ],
+      "reason": "The web container needs to be restarted to recover from the bind failure."
+    }
+  },
+  {
+    "type": "done",
+    "reason": "stop"
+  }
+]

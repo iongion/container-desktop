@@ -8,12 +8,27 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import * as url from "node:url";
 // vendors
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, safeStorage, session, shell } from "electron";
+import { createElectronAISystem } from "@/ai-system/adapters/electron/main/createElectronAISystem";
+import { normalizeAISettings, PROVIDER_CATALOG } from "@/ai-system/core";
+import type { AIBroker } from "@/ai-system/host/broker";
+import { collectDevApiKeysFromEnv } from "@/ai-system/runtimes/node/devKeys";
 // project
 import { getActiveHostClient } from "@/container-client/adapters/shared";
+import { userConfiguration } from "@/container-client/config";
 import { createMockCommand } from "@/container-client/mock/MockCommand";
 import { isMockMode } from "@/container-client/mock/mode";
-import { createLogger } from "@/logger";
+import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
+import { createLogger, getLevel, registerLoggerBackend } from "@/logger";
+import {
+  applyElectronLogFileConfig,
+  electronLogMainBackend,
+  getLogFilePath,
+  openLogFile,
+  revealLogFile,
+  setupElectronLogMain,
+} from "@/logger/backends/electronLogMain";
+import { normalizeLoggingFileSettings } from "@/logger/loggingSettings";
 import { Platform } from "@/platform/node";
 import { Command } from "@/platform/node-executor";
 import { createAppConfig } from "./appConfig";
@@ -22,6 +37,8 @@ import { CommandProxyBroker } from "./commandProxyBroker";
 import { createContextMenu } from "./contextMenu";
 import { EngineDataService } from "./engineDataService";
 import { installPlatformGlobals } from "./globals";
+import { registerLoggingIpc } from "./loggingIpc";
+import { applyProxyAtRuntime, applyProxyAtStartup, testProxyConnectivity } from "./proxyBootstrap";
 import { createRecoveryService } from "./recovery";
 import { ResourceSyncBroker } from "./resourceSyncBroker";
 import { createRuntime } from "./runtime";
@@ -75,6 +92,7 @@ const engineDataService = new EngineDataService();
 let windowManager: WindowManager;
 let trayController: TrayController;
 let commandProxyBroker: CommandProxyBroker;
+let aiBroker: AIBroker;
 type IconEngine = "docker" | "podman" | "unified";
 let currentIconEngine: IconEngine = "podman";
 let shellRefreshQueued = false;
@@ -140,7 +158,10 @@ windowManager = new WindowManager({
   urlPolicy: { shouldOpenExternally },
   recovery,
   createContextMenu,
-  onRendererGone: (id) => commandProxyBroker.disposeForSender(id),
+  onRendererGone: (id) => {
+    commandProxyBroker.disposeForSender(id);
+    aiBroker.disposeForSender(id);
+  },
   ensureTray: () => trayController.createSystemTray(),
 });
 
@@ -237,6 +258,37 @@ commandProxyBroker = new CommandProxyBroker({
 });
 commandProxyBroker.register();
 
+// AI subsystem (issue #232): main owns provider keys (encrypted at rest via safeStorage), reads the AI
+// settings, and enforces the main-window sender guard + the stored-API-key gate for cloud on every ai:*
+// handler. Keys are decrypted only here and never returned to the renderer. The whole graph (host broker +
+// Node runtimes, or scripted mocks under CONTAINER_DESKTOP_MOCK) is assembled by the electron-free
+// composition factory; main injects only the Electron surface (ipc / safeStorage / app paths / sender guard).
+//
+// DEVELOPMENT-ONLY: seed provider keys from the environment (e.g. OPENROUTER_API_KEY in
+// .env.development.local) so a non-mock `yarn dev` can reach real clouds without hand-entering keys. Gated
+// to the development environment AND an unpackaged app — never production or the automated testing stage.
+const devApiKeys =
+  !app.isPackaged && import.meta.env.ENVIRONMENT === "development"
+    ? collectDevApiKeysFromEnv(
+        PROVIDER_CATALOG.map((p) => p.id),
+        process.env,
+      )
+    : undefined;
+aiBroker = createElectronAISystem({
+  userDataDir: app.getPath("userData"),
+  safeStorage,
+  platform: process.platform,
+  onInvoke: (channel, handler) => ipcMain.handle(channel, (event, payload) => handler(event, payload)),
+  onMessage: (channel, handler) => ipcMain.on(channel, (event, payload) => handler(event, payload)),
+  send: (event, channel, payload) => event.sender.send(channel, payload),
+  senderId: (event) => event.sender.id,
+  isAllowedSender: (event) => windowManager.isFromMainWindow(event),
+  getAISettings: async () => normalizeAISettings(await userConfiguration.getKey("ai")),
+  mock: isMockMode(),
+  devApiKeys,
+  logger,
+});
+
 // App/window-control IPC (window state, file selector, terminal, quit registry). Quit commands run on
 // before-quit; the registry is owned here and fed by the registrar.
 const quitRegistry: Array<{ command: string[] }> = [];
@@ -254,13 +306,52 @@ registerAppControlIpc({
   showWindow: () => windowManager.show(),
   openFileSelector: (options) => windowManager.openFileSelector(options),
   openTerminal: (options) => Platform.launchTerminal(options),
+  openStorageFolder: () => {
+    void shell.openPath(app.getPath("userData"));
+  },
+  applyProxy: async (options) => {
+    const validation = validateProxy(options);
+    if (!validation.ok) {
+      return { ok: false, errors: validation.errors };
+    }
+    await userConfiguration.setProxyConfig(validation.value);
+    const proxy = await applyProxyAtRuntime(validation.value, { session: session.defaultSession });
+    return { ok: true, proxy };
+  },
+  testProxy: async (options) => {
+    const validation = validateProxy(options);
+    if (!validation.ok) {
+      return { ok: false, errors: validation.errors };
+    }
+    return await testProxyConnectivity(validation.value);
+  },
   registerQuit: (options) => quitRegistry.push(options),
   logger,
+});
+
+// Logging-control IPC (apply file policy / open / reveal the log file). Main owns the rotating LOCAL file
+// via the electron-log adapter; the renderer nudges it after persisting settings. Main-window-only.
+registerLoggingIpc({
+  onInvoke: (channel, handler) => ipcMain.handle(channel, (event, payload) => handler(event, payload)),
+  isAllowedSender: (event) => windowManager.isFromMainWindow(event),
+  applyConfig: async () => {
+    await getLevel(); // re-sync main's façade level from the freshly persisted config (non-persisting)
+    applyElectronLogFileConfig(normalizeLoggingFileSettings((await userConfiguration.getKey<any>("logging"))?.file));
+    return { logFile: getLogFilePath() };
+  },
+  openLogFile: () => openLogFile(),
+  revealLogFile: () => revealLogFile(),
 });
 
 recovery.installProcessGuards({ hasWindow: () => windowManager.hasLiveWindow() });
 
 async function bootstrap() {
+  // Logging backend (Electron adapter): own the rotating LOCAL log file in main + install the
+  // renderer→main bridge BEFORE the first window is created. Console stays with the @/logger façade;
+  // this only adds file persistence (opt-in, off by default), and never a remote/cloud sink.
+  registerLoggerBackend(electronLogMainBackend);
+  setupElectronLogMain();
+  applyElectronLogFileConfig(normalizeLoggingFileSettings((await userConfiguration.getKey<any>("logging"))?.file));
   app.on("before-quit", () => {
     trayController.destroy();
     logger.debug("Calling registered quit", quitRegistry);
@@ -275,11 +366,19 @@ async function bootstrap() {
   });
   logger.debug("Starting main process - user configuration from", app.getPath("userData"));
   app.commandLine.appendSwitch("ignore-certificate-errors");
+  const storedProxy = normalizeProxyConfig(await userConfiguration.getKey("proxy"));
+  const proxyConfig = validateProxy(storedProxy).ok ? storedProxy : normalizeProxyConfig();
+  applyProxyAtStartup(proxyConfig, { commandLine: app.commandLine });
   nativeTheme.on("updated", () => {
     trayController.refreshIcon();
     windowManager.sendToRenderer("theme:change", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   await app.whenReady();
+  try {
+    await applyProxyAtRuntime(proxyConfig, { session: session.defaultSession });
+  } catch (error: any) {
+    logger.error("Unable to apply startup proxy", error);
+  }
   await windowManager.create();
   // Always-on tray for the widget (independent of minimize-to-tray). The native context menu is the reliable
   // cross-platform entry — especially on Linux, where the StatusNotifierItem shows it on activation.

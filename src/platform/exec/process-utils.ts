@@ -7,7 +7,8 @@ const logger = createLogger("shared");
 export const DEFAULT_RETRIES_COUNT = 10;
 
 export interface WrapperOpts extends SpawnOptionsWithoutStdio {
-  wrapper: Wrapper;
+  wrapper?: Wrapper;
+  proxyEnv?: boolean;
 }
 
 export function killProcess(proc: ChildProcessWithoutNullStreams, signal?: NodeJS.Signals | number) {

@@ -164,9 +164,11 @@ export class WindowManager {
     }
   }
 
-  // Toggle dev tools — only in development/debug (the renderer's "openDevTools" request).
+  // Toggle dev tools (the renderer's "openDevTools" request). Available in EVERY build, including
+  // production, so the footer console button always works. webPreferences.devTools is enabled
+  // unconditionally below.
   toggleDevTools(): void {
-    if (!(this.deps.runtime.isDevelopment() || this.deps.runtime.isDebug) || !this.window) {
+    if (!this.window) {
       return;
     }
     try {
@@ -451,8 +453,10 @@ export class WindowManager {
         }
       }
     }
-    if ((runtime.isDevelopment() || runtime.isDebug) && !isMockMode() && !captureOffscreen) {
-      this.deps.logger.debug("Showing dev tools");
+    // Do NOT auto-open dev tools on a plain dev run; only when explicitly debugging
+    // (CONTAINER_DESKTOP_DEBUG). Otherwise the user opens them on demand via the footer console button.
+    if (runtime.isDebug && !isMockMode() && !captureOffscreen) {
+      this.deps.logger.debug("Showing dev tools (debug mode)");
       win.webContents.openDevTools({ mode: "detach" });
     }
     return win;

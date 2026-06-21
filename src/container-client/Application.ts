@@ -1,3 +1,4 @@
+import { normalizeAISettings } from "@/ai-system/core";
 import {
   createComposedHostClient,
   createConnectorBy,
@@ -14,6 +15,7 @@ import {
 } from "@/container-client/mock/connections";
 import { getMockEngine, isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
+import { normalizeProxyConfig, type ProxyConfig } from "@/container-client/proxy";
 import { buildRemoteConnectionsFromEnv, resolveRemoteEnvConnections } from "@/container-client/remote-env";
 import {
   type ApplicationEnvironment,
@@ -44,6 +46,7 @@ import {
   type SubscriptionOptions,
 } from "@/env/Types";
 import { createLogger, getLevel, setLevel } from "@/logger";
+import { normalizeLoggingFileSettings } from "@/logger/loggingSettings";
 import { getWindowsPipePath } from "@/platform";
 import { deepMerge } from "@/utils";
 
@@ -311,6 +314,72 @@ export class Application {
     }
   }
 
+  // logging — the rotating LOCAL log file is owned by main (electron-log adapter); the renderer persists
+  // the policy via setGlobalUserSettings, then nudges main to re-apply it / open the file.
+  //
+  // These failures are reported via the raw console, NEVER this.logger: routing them through the logger
+  // would forward them to the file backend and write "couldn't open the log file" INTO the log file (even
+  // creating it on a failed read). The logging system must never log about itself into its own sink.
+  async applyLogging(): Promise<{ logFile: string }> {
+    try {
+      return (await this.messageBus.invoke("logging:apply")) as { logFile: string };
+    } catch (error: any) {
+      console.error("Unable to apply logging", error);
+      return { logFile: "" };
+    }
+  }
+  async openLogFile(): Promise<{ ok: boolean; reason?: string }> {
+    try {
+      return (await this.messageBus.invoke("logging:open")) as { ok: boolean; reason?: string };
+    } catch (error: any) {
+      console.error("Unable to open log file", error);
+      return { ok: false, reason: "error" };
+    }
+  }
+  async revealLogFile(): Promise<{ ok: boolean; reason?: string }> {
+    try {
+      return (await this.messageBus.invoke("logging:reveal")) as { ok: boolean; reason?: string };
+    } catch (error: any) {
+      console.error("Unable to reveal log file", error);
+      return { ok: false, reason: "error" };
+    }
+  }
+  openStorageFolder() {
+    try {
+      this.messageBus.send("openStorageFolder");
+    } catch (error: any) {
+      this.logger.error("Unable to open storage folder", error);
+    }
+  }
+  async applyProxy(proxy?: Partial<ProxyConfig>): Promise<{ ok: boolean; proxy?: ProxyConfig }> {
+    try {
+      return (await this.messageBus.invoke("proxy.apply", proxy)) as { ok: boolean; proxy?: ProxyConfig };
+    } catch (error: any) {
+      this.logger.error("Unable to apply proxy", error);
+      return { ok: false };
+    }
+  }
+  async testProxyConnectivity(proxy?: Partial<ProxyConfig>): Promise<{
+    ok: boolean;
+    status?: number;
+    url?: string;
+    elapsedMs?: number;
+    error?: string;
+  }> {
+    try {
+      return (await this.messageBus.invoke("proxy.test", proxy)) as {
+        ok: boolean;
+        status?: number;
+        url?: string;
+        elapsedMs?: number;
+        error?: string;
+      };
+    } catch (error: any) {
+      this.logger.error("Unable to test proxy connectivity", error);
+      return { ok: false, error: error?.message ?? `${error}` };
+    }
+  }
+
   // settings
 
   async setGlobalUserSettings(settings: Partial<GlobalUserSettings>) {
@@ -319,7 +388,14 @@ export class Application {
       this.logLevel = settings?.logging?.level;
       await setLevel(settings?.logging?.level);
     }
-    await this.userConfiguration.setSettings(settings);
+    const { proxy, ...rest } = settings;
+    const hasProxy = Object.hasOwn(settings, "proxy");
+    if (Object.keys(rest).length > 0) {
+      await this.userConfiguration.setSettings(rest);
+    }
+    if (hasProxy) {
+      await this.userConfiguration.setProxyConfig(normalizeProxyConfig(proxy));
+    }
     return await this.getGlobalUserSettings();
   }
 
@@ -334,9 +410,12 @@ export class Application {
       minimizeToSystemTray: await this.userConfiguration.getKey("minimizeToSystemTray", false),
       checkLatestVersion: await this.userConfiguration.getKey("checkLatestVersion", false),
       font: await this.userConfiguration.getKey("font", {}),
-      path: await await this.userConfiguration.getStoragePath(),
+      path: await this.userConfiguration.getStoragePath(),
       logging: {
         level: await getLevel(),
+        // Always populate the file policy with safe defaults so older configs never surface `undefined`
+        // to the settings UI or the logging:* IPC (opt-in, OFF by default).
+        file: normalizeLoggingFileSettings((await this.userConfiguration.getKey<any>("logging"))?.file),
       },
       connector: isMockMode()
         ? {
@@ -349,6 +428,10 @@ export class Application {
           }
         : await this.userConfiguration.getKey("connector"),
       connections: await this.getConnectionsFromConfiguration(),
+      // Always populate the AI section with safe defaults so older configs (and any partial
+      // ai blob) never surface `undefined` to the UI or the ai:* IPC handlers (issue #232).
+      ai: normalizeAISettings(await this.userConfiguration.getKey("ai")),
+      proxy: normalizeProxyConfig(await this.userConfiguration.getKey("proxy")),
     } as GlobalUserSettings;
     return settings;
   }
@@ -744,15 +827,15 @@ export class Application {
             }
             if (analysis?.success && analysis.stdout !== "null") {
               const priorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
-              const sorter = (a, b) => {
+              const sorter = (a: { Severity: string }, b: { Severity: string }) => {
                 return priorities.indexOf(b.Severity) - priorities.indexOf(a.Severity);
               };
               try {
                 const data = JSON.parse(analysis.stdout || JSON.stringify({ Results: [] }));
-                data.Results = (data.Results || []).map((it) => {
+                data.Results = (data.Results || []).map((it: any) => {
                   it.guid = crypto.randomUUID();
                   it.Vulnerabilities = (it.Vulnerabilities || [])
-                    .map((v) => {
+                    .map((v: any) => {
                       v.guid = crypto.randomUUID();
                       if (typeof report.counts[v.Severity] === "undefined") {
                         report.counts[v.Severity] = 0;
@@ -927,8 +1010,7 @@ export class Application {
   }
 
   async pullFromRegistry(opts: RegistryPullOptions & { host?: HostClientFacade }) {
-    // biome-ignore lint/correctness/noUnusedVariables: Available for future use
-    const { image, onProgress } = opts;
+    const { image } = opts;
     this.logger.debug("pull from registry", image);
     const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
     if (!host) {

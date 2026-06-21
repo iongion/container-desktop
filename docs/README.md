@@ -23,6 +23,7 @@ The app has two pillars, and the docs are organized around them:
 | [architecture/frontend.md](architecture/frontend.md)                     | React renderer — C4 **Components** (L3): stores, queries, screens, the Native bridge.                    |
 | [architecture/overview.md](architecture/overview.md)                     | The whole system at a glance — C4 **Context** (L1) + **Containers** (L2). Start here.                    |
 | [architecture/system-tray.md](architecture/system-tray.md)               | System tray — a native OS menu built and rebuilt in the main process, so it works with the app window closed. |
+| [architecture/ai-subsystem.md](architecture/ai-subsystem.md)             | AI layer — C4 **Components** (L3): the main-only broker + gates (sender · egress · redaction), the always-agentic assistant and its **permission system** (3 modes · safety floor · user-managed allow/reject record · resolve/resume), key store, providers, and the Dockerfile/Compose generator. **The current reality of the whole feature.** |
 
 ## How to read the diagrams
 

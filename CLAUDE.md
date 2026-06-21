@@ -102,9 +102,12 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   crash-loop that froze the machine. Use `CONTAINER_DESKTOP_HEADLESS=1` only for CI/headless.
 - **Never set `ELECTRON_RUN_AS_NODE`** when launching the app — Electron then runs
   as plain Node, the `electron` API is missing, and startup fails.
-- The renderer is exposed over **CDP at `--remote-debugging-port=9222`**; attach a
-  Playwright MCP via `--cdp-endpoint http://localhost:9222` to drive the real app.
-  Navigating bare `http://localhost:3000` won't work — it needs the preload bridge.
+- The renderer is exposed over **CDP on an auto-selected port**: `yarn dev` prefers
+  `9222` but **falls back to a free port if it's taken** (e.g. a podman rootless
+  port-forward squatting 9222) and writes the live endpoint to
+  `$TMPDIR/container-desktop-cdp.json` (also logged as `CDP endpoint: …`). **Don't assume
+  9222** — read that file. Force a port with `CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT`.
+  Bare `http://localhost:3000` won't work — it needs the preload bridge.
 - **`support/cdp.mjs`** is the headless CDP driver for verification/screenshots — it
   **attaches** to the already-running dev app (never launches/closes it), settles through
   reloads, prints a structured snapshot (theme/engine/route + per-connection counts &
@@ -112,9 +115,12 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   `node support/cdp.mjs /tmp/app.png '#/screens/containers'`. Env: `RELOAD=1` re-runs the
   renderer bootstrap (initialize → connectAll); `EVAL='<expr>'` runs an expression in the
   page and prints its JSON result (use `EVAL="$(cat file.js)"` for multi-line — incl. async
-  IIFEs); `CDP_URL` overrides the endpoint. Multi-engine dev: `CONTAINER_DESKTOP_MOCK=1 yarn dev`
+  IIFEs); it **auto-discovers the port** from that handshake file, and `CDP_URL` overrides
+  it. Multi-engine dev: `CONTAINER_DESKTOP_MOCK=1 yarn dev`
   boots Podman+Docker mocks, then drive with this. (See [memory: Verify Electron app via CDP].)
-- Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`.
+- Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`. **Footgun:** never
+  run `pkill -f <pattern>` from a one-liner whose own command text contains `<pattern>` —
+  it matches and kills its own shell (silent exit 144). Kill by numeric PID instead.
 
 ## Conventions
 
@@ -137,10 +143,33 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   container-client under plain Node via `src/__tests__/setup/` (headless globals + a recording
   `fakeCommand`); `*.live.test.ts` + `installRealCommand()` are reserved for a future real-VM
   suite (no separate config yet). Go relay `go test ./...`; Python `pytest` (`support/`). CI
-  gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md). Still
-  do a manual/CDP smoke for UI changes.
+  gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
+- **UI changes — verify in the running app, never off static checks alone:** `check-types`/
+  `test:run`/`build` don't exercise the renderer; smoke every UI change in
+  `CONTAINER_DESKTOP_MOCK=1 yarn dev` driven by `support/cdp.mjs` before calling it done.
 - Avoid `console.debug` in render/poll hot paths (floods DevTools, grows memory).
   Use `@/logger` (`createLogger`).
+
+## UI conventions (renderer · Blueprint)
+
+The user is a hands-on designer and corrects deviations fast — match these up front:
+
+- **Theme tokens — never hardcode colors/spacing.** Read the `--app-*` vars from
+  `src/web-app/themes/tokens.css` (`--app-chrome` receding nav/sidebar · `--app-bg`
+  content · `--app-surface` cards/header · `--app-surface-strong` table headers ·
+  `--app-border` hairline · `--app-text`/`--app-text-muted` · `--app-accent*`) so UI
+  tracks every engine×mode. A hardcoded `rgba()`/hex (or an invented var) looks foreign.
+  Match the app's content rhythm (`.AppScreen` 10px pad; generous panel padding); a
+  sub-nav rail reuses the `AppSidebar` vertical `ButtonGroup` idiom and recedes via
+  `--app-chrome`.
+- **Confirmations:** reuse `ConfirmMenu` (inline Yes/No popover), never `Alert`/dialogs.
+- **Icons:** must read bright/white in dark theme (muted `#abb3bf` looks disabled); use
+  `Icon`'s `color` prop for state colors.
+- **Tables:** selection checkbox in the **last** column (first breaks the grouped/tree
+  view); trailing columns shrink-to-fit. Selection is **always-on** (action bar shows
+  when ≥1 selected).
+- **CHANGELOG:** terse one-liners. **Activity log:** response bodies + CLI output only
+  for **failed** calls.
 
 ## Working agreements
 

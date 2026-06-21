@@ -5,6 +5,7 @@ import { createLogger } from "@/logger";
 import { Platform } from "@/platform/node";
 import { deepMerge } from "@/utils";
 import { DEFAULT_RETRIES_COUNT, killProcess, type WrapperOpts } from "./process-utils";
+import { getEngineProxyEnv } from "./proxy-env-policy";
 
 const logger = createLogger("shared");
 
@@ -18,6 +19,24 @@ export function applyWrapper(launcher: string, args: string[], opts?: WrapperOpt
   }
   // logger.debug("Applied wrapper", { launcher, args }, ">>>", { launcher: commandLauncher, args: commandArgs });
   return { commandLauncher, commandArgs };
+}
+
+function buildSpawnEnv(opts?: { env?: any; proxyEnv?: boolean }): NodeJS.ProcessEnv | undefined {
+  const proxyEnv = opts?.proxyEnv ? getEngineProxyEnv() : {};
+  if (!opts?.env && Object.keys(proxyEnv).length === 0) {
+    return undefined;
+  }
+  return deepMerge({}, process.env, proxyEnv, opts?.env || {});
+}
+
+// Spawn env values are NEVER logged: they contain the full process.env plus (for engine spawns) the
+// proxy URL with credentials, and may hold other secrets. Log only the env variable NAMES. Exported for test.
+export function logSafeOpts<T>(opts: T): T {
+  const value = opts as any;
+  if (value && typeof value === "object" && value.env && typeof value.env === "object") {
+    return { ...value, env: Object.keys(value.env) } as T;
+  }
+  return opts;
 }
 
 export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], launcherOpts?: Partial<WrapperOpts>) {
@@ -49,7 +68,7 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
     logger.error("[SC.A][>]", command, {
       spawnLauncher,
       spawnArgs,
-      spawnLauncherOpts,
+      spawnLauncherOpts: logSafeOpts(spawnLauncherOpts),
     });
     throw new Error("Launcher path must be set");
   }
@@ -57,14 +76,14 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
     logger.error("[SC.A][>]", command, {
       spawnLauncher,
       spawnArgs,
-      spawnLauncherOpts,
+      spawnLauncherOpts: logSafeOpts(spawnLauncherOpts),
     });
     throw new Error("Launcher path has invalid type");
   }
   logger.debug("[SC.A][>][spawn]", {
     command: spawnLauncher,
     args: spawnArgs,
-    opts: spawnLauncherOpts,
+    opts: logSafeOpts(spawnLauncherOpts),
     commandLine: command,
   });
   const child = spawn(spawnLauncher, spawnArgs, spawnLauncherOpts);
@@ -79,7 +98,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
   const spawnOpts: any = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative
     cwd: opts?.cwd,
-    env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined,
+    env: buildSpawnEnv(opts),
     detached: opts?.detached,
     stdio: opts?.detached ? "ignore" : undefined,
   };
@@ -290,7 +309,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
     const launcherOpts = {
       encoding: "utf-8",
       cwd: opts?.cwd,
-      env: opts?.env ? deepMerge({}, process.env, opts?.env || {}) : undefined,
+      env: buildSpawnEnv(opts),
     };
     child = await wrapSpawnAsync(programPath, programArgs, launcherOpts);
     proc.pid = child.pid!;
@@ -301,7 +320,7 @@ export async function exec_service(programPath: string, programArgs: string[], o
     logger.debug("Child process spawned", child.pid, {
       programPath,
       programArgs,
-      launcherOpts,
+      launcherOpts: logSafeOpts(launcherOpts),
     });
     child.on("exit", (code) => onProcessExit(child, code));
     child.on("close", (code) => onProcessClose(child, code));

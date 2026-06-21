@@ -1,4 +1,14 @@
-import { AnchorButton, Button, ButtonGroup, Divider, Navbar, NavbarGroup } from "@blueprintjs/core";
+import {
+  AnchorButton,
+  Button,
+  ButtonGroup,
+  Divider,
+  Menu,
+  MenuItem,
+  Navbar,
+  NavbarGroup,
+  PopoverNext,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiBug, mdiWindowClose, mdiWindowMaximize, mdiWindowMinimize } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -7,6 +17,7 @@ import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
 import { OperatingSystem, type Program, WindowAction } from "@/env/Types";
+import { aiNavScreens } from "@/web-app/screenVisibility";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
 import type { AppScreen } from "../Types";
@@ -44,6 +55,7 @@ const WINDOW_ACTIONS_MAP = {
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   osType,
+  screens,
   currentScreen,
   program,
   running,
@@ -98,6 +110,40 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     });
   }
 
+  // AI navigation lives here (not the sidebar): a split button — the main button opens the Assistant,
+  // the caret opens a menu of every AI screen. AI is always on, so it is always present.
+  const aiScreens = aiNavScreens(screens ?? []);
+  const aiAssistant = aiScreens.find((s) => s.ID === "ai.assistant") ?? aiScreens[0];
+  const aiActions =
+    aiScreens.length > 0 && aiAssistant ? (
+      <ButtonGroup variant="minimal" className="AppHeaderAIActions">
+        <AnchorButton
+          className="AppHeaderActionButton"
+          href={pathTo(aiAssistant.Route.Path)}
+          icon={IconNames.CHAT}
+          title={t("AI Assistant")}
+          aria-label={t("AI Assistant")}
+        />
+        <PopoverNext
+          placement="bottom-end"
+          content={
+            <Menu>
+              {aiScreens.map((s) => (
+                <MenuItem key={s.ID} icon={s.Metadata?.LeftIcon as any} text={t(s.Title)} href={pathTo(s.Route.Path)} />
+              ))}
+            </Menu>
+          }
+        >
+          <Button
+            className="AppHeaderActionButton"
+            icon={IconNames.CARET_DOWN}
+            title={t("AI tools")}
+            aria-label={t("AI tools")}
+          />
+        </PopoverNext>
+      </ButtonGroup>
+    ) : null;
+
   const disabledHeaderActions = !(provisioned && running);
   const utilityActions = (
     <ButtonGroup variant="minimal" className="AppHeaderUtilityActions">
@@ -149,6 +195,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </NavbarGroup>
         <NavbarGroup>
           <div className="AppHeaderActions">
+            {aiActions}
             {utilityActions}
             {headerActionDivider}
             {rightSideControls ? (

@@ -51,3 +51,22 @@ describe("Application.ensureRemoteForwardAddress", () => {
     expect(settings.api.connection.uri).toBe("/tmp/preset.sock");
   });
 });
+
+describe("Application.getGlobalUserSettings — AI back-compat", () => {
+  it("populates safe, local-first AI defaults when the stored config has no ai section", async () => {
+    const app = appFor(OperatingSystem.Linux);
+    // Simulate an older config: no `ai` key present (and isolate from the host's real config file).
+    app.userConfiguration = {
+      getKey: async (name: string, defaultValue?: any) => (name === "ai" ? undefined : defaultValue),
+      getStoragePath: async () => "/tmp",
+    } as any;
+    app.getConnectionsFromConfiguration = async () => [];
+
+    const settings = await app.getGlobalUserSettings();
+
+    expect(settings.ai).toBeDefined();
+    expect(settings.ai.defaultProvider).toBe("lmstudio");
+    expect(settings.ai.webSearch).toBe(false);
+    expect(settings.ai.providers.llamacpp.baseURL).toBe("http://127.0.0.1:8080/v1");
+  });
+});

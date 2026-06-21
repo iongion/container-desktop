@@ -64,6 +64,7 @@ export class Runner {
     }
     const clientOpts: ServiceOpts = {
       retry: { count: 10, wait: 5000 },
+      proxyEnv: !!starter.proxyEnv,
       onStatusCheck: ({ retries, maxRetries }) => {
         this.logger.debug(">> Starting API - Checking API status", retries, maxRetries);
       },

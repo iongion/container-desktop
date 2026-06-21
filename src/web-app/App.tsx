@@ -29,6 +29,8 @@ import { resolveEngineTheme } from "@/web-app/domain/engineTheme";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
+import { Screen as AIAssistantScreen } from "@/web-app/screens/AI/AssistantScreen";
+import { Screen as AIGeneratorScreen } from "@/web-app/screens/AI/GeneratorScreen";
 import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
 import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
 import { Screen as SystemInfoScreen } from "@/web-app/screens/Connections/SystemInfoScreen";
@@ -65,6 +67,8 @@ import { useResourceStore } from "@/web-app/stores/resourceStore";
 
 const Screens = [
   DashboardScreen,
+  AIAssistantScreen,
+  AIGeneratorScreen,
   ContainersScreen,
   ContainerLogsScreen,
   ContainerInspectScreen,
@@ -106,16 +110,22 @@ const rootRoute = createRootRoute({
   notFoundComponent: NotFoundScreen,
 });
 
+// AI is always on, so there is no access gate — every screen (incl. the AI ones) is reachable. This
+// just wraps the active screen + footer in the viewport.
+function ScreenViewport({ Screen }: { Screen: (typeof Screens)[number] }) {
+  return (
+    <div className="AppScreenViewport">
+      <Screen navigator={window.navigator} />
+      <AppFooter />
+    </div>
+  );
+}
+
 const screenRoutes = Screens.map((Screen) =>
   createRoute({
     getParentRoute: () => rootRoute,
     path: Screen.Route.Path,
-    component: () => (
-      <div className="AppScreenViewport">
-        <Screen navigator={window.navigator} />
-        <AppFooter />
-      </div>
-    ),
+    component: () => <ScreenViewport Screen={Screen} />,
   }),
 );
 

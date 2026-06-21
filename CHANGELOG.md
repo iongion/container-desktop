@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Changed
 
+- Network settings now support a test-before-save global proxy for app traffic and native Podman commands.
+- AI chat composer: pick the inference source → provider → model in a popover with live discovery — LM Studio is the default, OpenRouter lists its models grouped by vendor with search, and the popover sizes to its content.
+- AI Assistant settings is now a two-column provider **connection** configurator — choose a provider, then set its endpoint, authentication and credentials and **Test the connection**. Each provider offers only the auth schemes it supports (clouds: API key; local servers: keyless or an optional API key; user-added gateways can also use Basic or a custom header). Credentials live in the OS keychain — saving an empty secret removes it. Model selection now lives only in the composer; settings no longer drills into models.
+- AI is always on — removed the "enable AI", "local-only" and "allow cloud" toggles. A provider is local (LM Studio / llama.cpp) or cloud by nature, and saving a cloud provider's API key is the consent to use it; loopback local providers keep everything on your device.
+- The AI Assistant is one always-agentic conversation that can run host commands to inspect and fix your container setup, gated by a permission mode chosen in the composer: **Always ask** (approve each command), **Ask and remember** (approve once, then it remembers your allow/reject), or **Always allow** (run everything, full trust). A catastrophic-command floor (destructive/privileged/shell programs, shell metacharacters, path traversal) applies in the first two modes; web search is gated the same way as a single switch.
+- Settings → AI permissions: review and revoke the commands you've allowed or blocked, set the web-search switch, and reveal the on-device file where these decisions are stored.
 - Refactored the internal engine-communication layer into smaller, single-responsibility modules — no functional change.
+- Settings are organized into categories with a left navigation rail — Appearance, Startup & behavior, AI Assistant, Configuration, and Logging.
+- Logs can be saved to a local file on demand, with automatic rotation and a size cap — kept entirely on your device, never uploaded.
 
 ## Fixed
 

@@ -1,6 +1,6 @@
 .AppHeaderLogo {
   display: block;
-  width: 200px;
+  width: 100%;
   height: auto;
   overflow: visible;
   /* stacked-layers icon tones (dark defaults; per-engine + light overrides below) */

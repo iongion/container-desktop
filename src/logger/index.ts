@@ -25,6 +25,27 @@ interface ManagedLogger extends ILogger {
 
 const loggers: ManagedLogger[] = [];
 
+// ── Pluggable persistence backend (the Tauri seam) ───────────────────────────────────────────────
+// The façade ALWAYS writes to the console itself — identical behavior in every shell and in tests. A
+// registered backend ADDS persistence for already level-gated records (e.g. the Electron electron-log
+// adapter writes them to a rotating LOCAL file and forwards renderer records to main). A future Tauri
+// shell registers its own adapter behind the SAME port, with no change to the call sites. Default =
+// no-op (console only — exactly today's behavior). The backend NEVER sees a remote/cloud sink.
+export type LoggerWriteLevel = Exclude<LogLevel, "silent">;
+
+export interface LoggerBackend {
+  write(level: LoggerWriteLevel, scope: string, args: any[]): void;
+}
+
+const noopBackend: LoggerBackend = { write() {} };
+let activeBackend: LoggerBackend = noopBackend;
+
+// Installed by a shell's composition root (Electron main / renderer bootstrap); passing null restores
+// the console-only default (used by tests to stay hermetic).
+export function registerLoggerBackend(backend: LoggerBackend | null | undefined): void {
+  activeBackend = backend ?? noopBackend;
+}
+
 function getEnvironmentLogLevel(): string | undefined {
   // Main/preload: process.env — the live, shipped value.
   const fromProcess = (globalThis as any).process?.env?.CONTAINER_DESKTOP_LOG_LEVEL;
@@ -108,6 +129,8 @@ class ScopedLogger implements ManagedLogger {
     const method = CONSOLE_METHOD[level];
     const target = console[method] ?? console.log;
     target.call(console, `[${this.name}]`, ...args);
+    // Mirror the (already level-gated) record to the persistence backend, if a shell installed one.
+    activeBackend.write(level, this.name, args);
   }
 }
 

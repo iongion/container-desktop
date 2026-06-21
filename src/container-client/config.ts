@@ -1,3 +1,4 @@
+import type { ProxyConfig } from "@/container-client/proxy";
 import type { GlobalUserSettings } from "@/env/Types";
 import { deepMerge } from "@/utils";
 
@@ -78,6 +79,17 @@ export class UserConfiguration {
     }
     settings = deepMerge<GlobalUserSettings>(settings, value);
     return await update(settings);
+  }
+  async setProxyConfig(value: ProxyConfig) {
+    let settings = await read();
+    if (!settings) {
+      settings = {};
+    }
+    return await write({
+      ...settings,
+      proxy: value,
+      version: import.meta.env.PROJECT_VERSION || "latest",
+    });
   }
 }
 

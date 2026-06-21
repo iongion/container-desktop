@@ -1,3 +1,5 @@
+import type { IAI as _IAI, IAIBus as _IAIBus } from "@/ai-system/core";
+
 declare global {
   export interface SSHHost {
     Name: string;
@@ -91,6 +93,12 @@ declare global {
     subscribe: (channel: string, callback: (payload: any) => void) => () => void;
   }
 
+  // Preload-exposed AI bridge — type imported from @/ai-system/core (see electron-shell/aiClient.ts).
+  export type IAI = _IAI;
+
+  // Preload-exposed AI receive bridge — type imported from @/ai-system/core (see electron-shell/aiBus.ts).
+  export type IAIBus = _IAIBus;
+
   var Platform: IPlatform;
   var Command: ICommand;
   var Path: IPath;
@@ -101,6 +109,8 @@ declare global {
   var ActivityBus: IActivityBus;
   var TrayBus: ITrayBus;
   var ResourceBus: IResourceBus;
+  var AI: IAI;
+  var AIBus: IAIBus;
   var CONTAINER_DESKTOP_MOCK: string;
 
   interface Window {
@@ -114,6 +124,8 @@ declare global {
     ActivityBus: IActivityBus;
     TrayBus: ITrayBus;
     ResourceBus: IResourceBus;
+    AI: IAI;
+    AIBus: IAIBus;
     CONTAINER_DESKTOP_MOCK: string;
   }
 }

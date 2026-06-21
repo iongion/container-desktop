@@ -16,15 +16,37 @@
 //   CDP_URL=http://localhost:9222 node support/cdp.mjs               # override the CDP endpoint
 //
 // EVAL may be any JS expression (incl. an async IIFE returning a value); its result is printed as JSON.
+import { existsSync, readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { chromium } from "playwright-core";
 
-const CDP = process.env.CDP_URL || "http://localhost:9222";
+// Endpoint discovery (no hardcoded port): explicit $CDP_URL wins, else the handshake file that
+// support/watch.mjs writes with the actual (possibly auto-fallback) port, else the legacy :9222.
+const CDP_ENDPOINT_FILE = path.join(os.tmpdir(), "container-desktop-cdp.json");
+function discoverCdpUrl() {
+  if (process.env.CDP_URL) {
+    return process.env.CDP_URL;
+  }
+  try {
+    if (existsSync(CDP_ENDPOINT_FILE)) {
+      const { cdpUrl } = JSON.parse(readFileSync(CDP_ENDPOINT_FILE, "utf8"));
+      if (cdpUrl) {
+        return cdpUrl;
+      }
+    }
+  } catch {
+    /* fall through to default */
+  }
+  return "http://localhost:9222";
+}
+const CDP = discoverCdpUrl();
 const shot = process.argv[2] || "/tmp/app.png";
 const route = process.argv[3] || "";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const browser = await chromium.connectOverCDP(CDP).catch((e) => {
-  console.error(`Unable to attach to ${CDP} — is the app running with --remote-debugging-port=9222? (${e.message})`);
+  console.error(`Unable to attach to ${CDP} — is the dev app running (yarn dev)? (${e.message})`);
   process.exit(1);
 });
 const pickPage = async () => {
@@ -77,7 +99,7 @@ const readSnapshot = (page) =>
         primary: snap.appRuntime?.currentConnector?.id || null,
       };
     } catch (e) {
-      return { error: String((e && e.message) || e) };
+      return { error: String(e?.message || e) };
     }
   });
 

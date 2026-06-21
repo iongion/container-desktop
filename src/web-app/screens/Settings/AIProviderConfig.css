@@ -1,0 +1,47 @@
+/* Settings → AI Assistant provider connection config (issue #232): two columns in ONE row — a provider
+   chooser (left) and the selected provider's connection form (right). Theme tokens only.
+
+   The left list sizes to its content but is capped to the visible viewport and scrolls INTERNALLY, so a
+   long list never makes the settings panel (or the app) scroll vertically; a static min-height keeps it
+   usable/visible when short. The right form drives the row height. */
+.AIProviderConfig {
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) 1fr;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+
+.AIProviderConfigSources {
+  min-height: 180px;
+  /* Cap to the visible window so the in-widget list scrolls instead of the whole settings panel. The delta
+     leaves room for the title bar, screen header, the privacy callout above, and the page padding. */
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-surface);
+}
+.AIProviderConfigSources .bp6-menu {
+  background: transparent;
+  min-width: 0;
+}
+.AIProviderConfigSources .bp6-menu-item {
+  font-size: 13px;
+}
+
+.AIProviderConfigForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Form actions on their own row — connection test + save/remove, gapped (distinct actions, not attached). */
+.AIProviderConfigActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}

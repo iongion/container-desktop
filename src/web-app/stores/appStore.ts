@@ -541,6 +541,9 @@ export const useAppStore = create<AppStore>()((set, get) => {
           const instance = Application.getInstance();
           instance.setLogLevel(options.logging?.level || "warn");
           const userSettings = await instance.setGlobalUserSettings(options);
+          if (Object.hasOwn(options, "proxy")) {
+            await instance.applyProxy(userSettings.proxy);
+          }
           get().syncGlobalUserSettings(userSettings);
           // §B single-home: when the settings import carries a `connections` blob, refresh the
           // authoritative appStore.connections so it never drifts from userSettings.connections.

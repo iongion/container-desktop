@@ -81,4 +81,24 @@ describe("HostClient.isProgramAvailable — scoped runs in the host, native runs
     expect(result.success).toBe(false);
     expect(result.details).toBe('Controller "ssh" was not detected on this machine');
   });
+
+  it("marks native engine host commands for engine proxy env", async () => {
+    cmd = installFakeCommand();
+    const { client } = await clientFor(ContainerEngineHost.PODMAN_NATIVE, OperatingSystem.Linux);
+
+    await client.runHostCommand("podman", ["image", "pull", "quay.io/podman/hello"]);
+
+    expect(cmd.calls[0].launcher).toBe("podman");
+    expect(cmd.calls[0].opts?.proxyEnv).toBe(true);
+  });
+
+  it("does not mark scoped controller commands for engine proxy env", async () => {
+    cmd = installFakeCommand();
+    const { client, settings } = await clientFor(ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA, OperatingSystem.MacOS);
+
+    await client.runScopeCommand("podman", ["info"], "default", settings);
+
+    expect(cmd.calls[0].launcher).toBe("limactl");
+    expect(cmd.calls[0].opts?.proxyEnv).toBeUndefined();
+  });
 });

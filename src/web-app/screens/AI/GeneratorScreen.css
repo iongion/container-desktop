@@ -1,0 +1,19 @@
+.AppScreen[data-screen="ai.generator"] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.GeneratorHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+}
+.GeneratorHeader .bp5-html-select {
+  min-width: 120px;
+}
+.GeneratorEditor {
+  flex: 1;
+  min-height: 0;
+}

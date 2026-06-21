@@ -1,0 +1,45 @@
+/* ModelPicker — the chat composer's trigger button + popover shell (issue #232). The drill-down chrome
+   and the sliding stack live in ModelNavigator.css (shared with the Settings selector). Here we only
+   style the compact footer trigger and the popover content's fixed WIDTH — height is content-driven by
+   the navigator (auto-height), so the popover no longer wastes vertical space. No hardcoded colors. */
+
+/* ── Trigger: the compact, borderless footer-button look (mirrors AppFooterEnginesButton) ──────── */
+.ModelPickerTrigger.bp6-button {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: inherit;
+}
+.ModelPickerTrigger.bp6-button:focus,
+.ModelPickerTrigger.bp6-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.ModelPickerTrigger.bp6-button .bp6-button-text {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+}
+.ModelPickerTrigger .ModelPickerTriggerLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ModelPickerTrigger .bp6-icon:last-child {
+  flex: 0 0 auto;
+  opacity: 0.65;
+  margin-left: 4px;
+}
+
+/* ── Popover content: a fixed-WIDTH frame; the navigator inside auto-sizes its height. ──────────── */
+.ModelPicker {
+  box-sizing: border-box;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-surface);
+}

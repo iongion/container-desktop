@@ -1,0 +1,69 @@
+/* Settings → AI permissions (issue #232). Token-driven so it tracks every engine × theme. */
+.AIPermissions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.AIPermissionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.AIPermissionsHeading {
+  font-weight: 600;
+  color: var(--app-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.AIPermissionsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.AIPermissionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.AIPermissionsCommand {
+  font-family: var(--font-family-monospace, monospace);
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AIPermissionsEmpty {
+  color: var(--app-text-muted);
+  font-style: italic;
+}
+
+.AIPermissionsPath {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--app-border);
+}
+
+.AIPermissionsPath code {
+  color: var(--app-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

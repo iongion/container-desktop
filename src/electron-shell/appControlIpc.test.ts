@@ -19,6 +19,7 @@ function makeDeps() {
     showWindow: vi.fn(),
     openFileSelector: vi.fn(async () => ({ canceled: false, filePaths: ["/x"] })),
     openTerminal: vi.fn(async () => true),
+    openStorageFolder: vi.fn(),
     registerQuit: vi.fn(),
     logger: { debug: vi.fn() },
   } satisfies AppControlIpcDeps;

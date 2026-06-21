@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ContainerEngineHost } from "@/env/Types";
+import { setEngineProxyEnv } from "@/platform/exec/proxy-env-policy";
 
 import {
   applyProxyRequestDefaults,
@@ -9,6 +10,37 @@ import {
 } from "./node-executor";
 
 describe("node executor API request defaults", () => {
+  const proxyEnvKeys = [
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+  ];
+  let savedProxyEnv: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    savedProxyEnv = Object.fromEntries(proxyEnvKeys.map((key) => [key, process.env[key]]));
+    for (const key of proxyEnvKeys) {
+      delete process.env[key];
+    }
+    setEngineProxyEnv();
+  });
+
+  afterEach(() => {
+    for (const key of proxyEnvKeys) {
+      if (savedProxyEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = savedProxyEnv[key];
+      }
+    }
+    setEngineProxyEnv();
+  });
+
   it("preserves timeout 0 for long-lived API streams", () => {
     const driver = createNodeJSApiDriver({
       baseURL: "http://localhost",
@@ -55,5 +87,28 @@ describe("node executor API request defaults", () => {
 
     expect(result.success).toBe(false);
     expect(result.stderr).toContain("Command timed out after 10ms");
+  });
+
+  it("keeps generic subprocesses off engine proxy env unless explicitly opted in", async () => {
+    setEngineProxyEnv({ HTTPS_PROXY: "http://proxy.example.com:8080" });
+    const result = await exec_launcher_async(process.execPath, [
+      "-e",
+      "process.stdout.write(process.env.HTTPS_PROXY || '')",
+    ]);
+
+    expect(result.success).toBe(true);
+    expect(result.stdout).toBe("");
+  });
+
+  it("merges engine proxy env for opted-in subprocesses", async () => {
+    setEngineProxyEnv({ HTTPS_PROXY: "http://proxy.example.com:8080" });
+    const result = await exec_launcher_async(
+      process.execPath,
+      ["-e", "process.stdout.write(process.env.HTTPS_PROXY || '')"],
+      { proxyEnv: true } as any,
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.stdout).toBe("http://proxy.example.com:8080");
   });
 });
