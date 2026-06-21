@@ -16,28 +16,30 @@ const OUTPUT_SIZE = 96;
 
 const engines = {
   docker: {
-    accent: "#1d56b8",
-    strong: "#163d8a",
+    bright: "#6fb2ff",
+    accent: "#2f7df0",
+    strong: "#1d56b8",
   },
   podman: {
+    bright: "#d98fe8",
     accent: "#a855c9",
     strong: "#7b3398",
   },
   unified: {
+    bright: "#2dd4bf",
     accent: "#14b8a6",
     strong: "#0d9488",
   },
 };
 
-const letterSecondary = "#9ca3af";
-
+// Recolor the three stacked-layers tones (bright / accent / deep) from the unified template per engine.
 function appIconSvg(engine) {
   const colors = engines[engine];
   return fs
     .readFileSync(TEMPLATE_PATH, "utf8")
+    .replaceAll("#2dd4bf", colors.bright)
     .replaceAll("#14b8a6", colors.accent)
-    .replaceAll("#0d9488", colors.strong)
-    .replaceAll("#ffffff", letterSecondary);
+    .replaceAll("#0d9488", colors.strong);
 }
 
 async function renderPng(page, svg, pngPath) {
