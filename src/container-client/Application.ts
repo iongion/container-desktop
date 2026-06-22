@@ -618,6 +618,21 @@ export class Application {
       firstDocker.settings.mode = "mode.automatic";
       connections.push(firstDocker);
     }
+    // Add system Apple containers as default (macOS only - Apple's native `container` runtime)
+    if (this.osType === OperatingSystem.MacOS) {
+      const firstApple: Connection = getDefaultConnectors(this.osType).find(
+        (it) => it.engine === ContainerEngine.APPLE && it.availability.enabled,
+      ) as Connection;
+      if (firstApple) {
+        firstApple.id = "system-default.container";
+        firstApple.description = "Uses the available system Apple container installation";
+        firstApple.name = "System Containers";
+        firstApple.readonly = true;
+        firstApple.settings.api.autoStart = true;
+        firstApple.settings.mode = "mode.automatic";
+        connections.push(firstApple);
+      }
+    }
     // Dev-only: seed env-driven remote connections (CONTAINER_DESKTOP_REMOTE_*). Readonly and regenerated
     // each run, so they appear and auto-start without ever being persisted to user-settings.json.
     connections.push(...buildRemoteConnectionsFromEnv(resolveRemoteEnvConnections(), this.osType));

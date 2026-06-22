@@ -40,6 +40,11 @@ export interface LinuxTerminalLaunch {
   args: string[];
 }
 
+export interface MacTerminalLaunch {
+  launcher: string;
+  args: string[];
+}
+
 const LINUX_TERMINAL_COMMANDS = [
   "ptyxis",
   "gnome-terminal",
@@ -133,6 +138,20 @@ export function resolveLinuxTerminalLaunch(
     };
   }
   return undefined;
+}
+
+// Terminal.app's AppleScript `do script` takes a single double-quoted string, so backslashes and
+// double quotes inside the command must be escaped or the script breaks (or mis-parses the args).
+function escapeAppleScriptString(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+export function resolveMacTerminalLaunch(commandLauncher: string, params: string[] = []): MacTerminalLaunch {
+  const command = [commandLauncher, ...params].join(" ");
+  return {
+    launcher: "osascript",
+    args: ["-e", `tell app "Terminal" to do script "${escapeAppleScriptString(command)}"`],
+  };
 }
 
 function normalizeTerminalLaunch(
@@ -264,10 +283,10 @@ export const Platform: IPlatform = {
       params: commandParams,
       title,
     } = normalizeTerminalLaunch(commandLauncherOrOptions, params, opts);
-    const args = [commandLauncher].concat(commandParams || []).join(" ");
     let status: CommandExecutionResult;
     if (os.type() === OperatingSystem.MacOS) {
-      status = await Command.Execute("osascript", ["-e", `tell app "Terminal" to do script "${args}"`]);
+      const terminal = resolveMacTerminalLaunch(commandLauncher, commandParams);
+      status = await Command.Execute(terminal.launcher, terminal.args);
     } else if (os.type() === OperatingSystem.Windows) {
       status = await Command.Execute("wt", [
         "-w",

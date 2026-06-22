@@ -74,6 +74,11 @@ const USER_DATA_DIR = process.env.CONTAINER_DESKTOP_USER_DATA_DIR;
 
 if (USER_DATA_DIR) {
   app.setPath("userData", path.isAbsolute(USER_DATA_DIR) ? USER_DATA_DIR : path.resolve(PROJECT_HOME, USER_DATA_DIR));
+} else if (!app.isPackaged) {
+  // Dev runs otherwise share the OS user-data dir (and thus the single-instance lock) with an installed
+  // production build. On macOS the auto-started production app holds that lock, so every `yarn dev` fails
+  // requestSingleInstanceLock() and quits instantly. Isolate dev into its own dir so both run side by side.
+  app.setPath("userData", `${app.getPath("userData")}-dev`);
 }
 
 // Patch the shared platform globals (the same set the preload installs).

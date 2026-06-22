@@ -76,6 +76,10 @@
   padding-top: 5px;
   color: var(--app-text-muted);
 }
+.CopyToClipboardInput.PlatformConnectionUri {
+  margin-top: 5px;
+  max-width: 560px;
+}
 
 [data-connection-is-system="yes"] .PlatformConnectionName {
   font-weight: bold;
