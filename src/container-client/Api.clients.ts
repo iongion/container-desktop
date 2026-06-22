@@ -50,7 +50,7 @@ export async function getApiConfig(
   return config;
 }
 
-// ── Activity Log instrumentation ───────────────────────────────────────────────────────
+// Activity Log instrumentation
 // Every engine API call funnels through createApplicationApiDriver.request(); we emit a
 // "pending" entry immediately and patch a "settled" entry (status + duration) by guid so
 // long calls surface at once. The request body is stringified + truncated for memory; the response

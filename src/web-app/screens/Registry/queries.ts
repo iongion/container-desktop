@@ -1,4 +1,4 @@
-// screens/Registry/queries.ts — co-located TanStack Query layer for registries, over the Phase-2
+// screens/Registry/queries.ts — co-located TanStack Query layer for registries, over the
 // RegistriesAdapter. Registries are config-backed (static query); pulling an image invalidates the
 // images list (cross-resource), since a pull adds a local image.
 

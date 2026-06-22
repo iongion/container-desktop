@@ -1,4 +1,4 @@
-// runtimes/registry.ts — the §4 map: (engine, host) → { transport, dialect, profile } + identity constants.
+// runtimes/registry.ts — the map: (engine, host) → { transport, dialect, profile } + identity constants.
 //
 // This replaces the AbstractEngine.ENGINE_HOST_CLIENTS leaf instantiation. Transports are created per host
 // (a factory) because SSH/WSL/PodmanMachine keep per-connection state; dialects and profiles are stateless
@@ -103,7 +103,7 @@ export const HOST_CLIENT_REGISTRY: HostClientRegistryEntry[] = [
     profile: dockerNativeProfile,
   },
   {
-    // Docker Desktop is unscoped - it uses the Native transport (see §4).
+    // The Docker virtualized-vendor host is unscoped — it uses the Native transport.
     engine: ContainerEngine.DOCKER,
     host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
     PROGRAM: DOCKER_PROGRAM,

@@ -59,7 +59,7 @@ export interface GenerateRequest {
   providerId?: string;
 }
 
-// ── Agent tool timeline ─────────────────────────────────────────────────────────────
+// Agent tool timeline
 // Timeline events the agent's tools emit; streamed into the Assistant transcript and (for
 // command-result) also serve as the model-facing record. Neutral contract shared by renderer + tools.
 // An approval-request carries a broker-generated `actionId` — the renderer echoes it back in a resolve
@@ -101,7 +101,7 @@ export interface AgentStreamEvent {
   payload: { text?: string; finishReason?: string; message?: string; event?: AgentToolEvent };
 }
 
-// ── Preload bridge contracts (IAI / IAIBus) ───────────────────────────────────────────────────
+// Preload bridge contracts (IAI / IAIBus)
 // These are type-only declarations owned by core so global.d.ts can import them rather than
 // re-declaring inline. The concrete implementations live in adapters/electron/preload.
 

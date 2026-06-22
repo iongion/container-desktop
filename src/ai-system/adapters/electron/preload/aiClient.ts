@@ -1,6 +1,6 @@
 // Preload-side forwarder exposed as window.AI. Every method relays to the main AIBroker, which
 // enforces the main-window sender guard + the stored-API-key gate for cloud, and owns the provider
-// keys (never returned here). CJS-safe: no web-app imports. See.
+// keys (never returned here). CJS-safe: no web-app imports.
 import { ipcRenderer } from "electron";
 
 import { AI_CHANNELS, type ChatRequest, type GenerateRequest } from "@/ai-system/core";

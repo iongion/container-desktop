@@ -258,7 +258,7 @@ commandProxyBroker = new CommandProxyBroker({
 });
 commandProxyBroker.register();
 
-// AI subsystem (issue #232): main owns provider keys (encrypted at rest via safeStorage), reads the AI
+// AI subsystem: main owns provider keys (encrypted at rest via safeStorage), reads the AI
 // settings, and enforces the main-window sender guard + the stored-API-key gate for cloud on every ai:*
 // handler. Keys are decrypted only here and never returned to the renderer. The whole graph (host broker +
 // Node runtimes, or scripted mocks under CONTAINER_DESKTOP_MOCK) is assembled by the electron-free

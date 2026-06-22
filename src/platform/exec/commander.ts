@@ -17,7 +17,6 @@ export function applyWrapper(launcher: string, args: string[], opts?: WrapperOpt
     commandLauncher = opts.wrapper.launcher;
     commandArgs = [...opts.wrapper.args, launcher, ...args];
   }
-  // logger.debug("Applied wrapper", { launcher, args }, ">>>", { launcher: commandLauncher, args: commandArgs });
   return { commandLauncher, commandArgs };
 }
 
@@ -93,7 +92,6 @@ export async function wrapSpawnAsync(launcher: string, launcherArgs: string[], l
 }
 
 export async function exec_launcher_async(launcher: string, launcherArgs: string[], opts?: WrapperOpts) {
-  // const env = merge({}, { PODMAN_IGNORE_CGROUPSV1_WARNING: "true" }, opts?.env || {});
   const timeoutMs = typeof opts?.timeout === "number" && opts.timeout > 0 ? opts.timeout : undefined;
   const spawnOpts: any = {
     encoding: "utf-8", // TODO: not working for spawn - find alternative

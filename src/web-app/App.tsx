@@ -101,9 +101,9 @@ const Screens = [
   TroubleshootScreen,
 ];
 
-// ── TanStack Router (hash history, explicit/manual route tree — no plugin/codegen, no data-loaders) ──
+// TanStack Router (hash history, explicit/manual route tree — no plugin/codegen, no data-loaders).
 // Each Screen contributes one route under the shared chrome layout (rootRoute). Screens load their own
-// data via their §3 query hooks on mount — routes are pure navigation.
+// data via their query hooks on mount — routes are pure navigation.
 
 const rootRoute = createRootRoute({
   component: AppLayout,

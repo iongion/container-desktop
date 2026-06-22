@@ -56,7 +56,6 @@ def get_env():
         "NODE_ENV": NODE_ENV,
         "TARGET": TARGET,
         "PUBLIC_URL": ".",
-        # "DEBUG": "electron-builder"
         # Global
         "ENVIRONMENT": ENVIRONMENT,
         "APP_PROJECT_VERSION": APP_PROJECT_VERSION,
@@ -67,7 +66,6 @@ def run_env(ctx, cmd, env=None):
     cmd_env = {**get_env(), **({} if env is None else env)}
     nvm_dir = os.getenv("NVM_DIR", str(Path.home().joinpath(".nvm")))
     nvm_sh = os.path.join(nvm_dir, "nvm.sh")
-    # print("ENVIRONMENT", cmd_env)
     if os.environ.get("CI") != "true" and os.path.exists(nvm_sh):
         with ctx.prefix(f'source "{nvm_dir}/nvm.sh"'):
             nvm_rc = os.path.join(ctx.cwd, ".nvmrc")
@@ -99,14 +97,6 @@ def uninstall_self_signed_appx(ctx):
 
 @task
 def install_self_signed_appx(ctx):
-    # See https://ebourg.github.io for jsign-6.0.jar
-    # See https://gist.github.com/steve981cr/52ca0ae39403dba73a7dbdbe5d231bbf
-    # See https://gist.github.com/steve981cr/4d592c5cc0f4600d2dc11b1b55aa62a7
-    # See https://www.briggsoft.com/signgui.htm
-    # Create self-signed certificate
-    # New-SelfSignedCertificate -Type CodeSigning -Subject "CN=52408AA8-2ECC-4E48-9A2C-6C1F69841C79" -KeyUsage DigitalSignature -FriendlyName "Container Desktop" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
-    # Export without password
-    # $cert = @(Get-ChildItem -Path 'Cert:\CurrentUser\My\821E07AB166C20273197EF17569D4613ACE31E4E')[0]; $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx); [System.IO.File]::WriteAllBytes('ContainerDesktop.pfx', $certBytes)
     # Find if appx is already installed
     uninstall_self_signed_appx(ctx)
     # Generate and import certificate if not found
@@ -114,7 +104,6 @@ def install_self_signed_appx(ctx):
     pfx_path = os.path.join(path, "temp/self-signed.pfx")
     if not os.path.exists(pfx_path):
         print("Certificate not found - generating")
-        # ctx.run(f'powershell.exe -Command "{command_gen_cert} | ConvertTo-Json"')
         cert_config_path = os.path.join(path, "support/openssl.conf")
         private_key_path = os.path.join(path, "temp/self-signed-private.key")
         if not os.path.exists(private_key_path):

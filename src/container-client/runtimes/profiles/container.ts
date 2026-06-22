@@ -18,7 +18,7 @@ import { isScopedMacOS, runScopedSocketCommand } from "../dialects/shared";
 import type { CapabilityDescriptor } from "../facade";
 import { availableAlways, sshApiConnection, withNetworks } from "./shared";
 
-// ── Per-host OS-availability gate (exported for testing) ──
+// Per-host OS-availability gate (exported for testing)
 
 export async function availableOnAppleContainer(host: HostContext): Promise<{ success: boolean; details: string }> {
   if (host.osType !== OperatingSystem.MacOS) {
@@ -35,7 +35,7 @@ export async function availableOnAppleContainer(host: HostContext): Promise<{ su
   return { success: true, details: "Apple Container is available" };
 }
 
-// ── Networks capability gating by macOS version (Apple Container needs macOS 26 / Darwin ≥ 25) ──
+// Networks capability gating by macOS version (Apple Container needs macOS 26 / Darwin ≥ 25)
 
 const APPLE_NETWORKS_MIN_DARWIN = 25; // macOS 26 "Tahoe"; macOS 15 = Darwin 24 (degraded, no `container network`)
 const APPLE_NETWORKS_MIN_MACOS = 26;
@@ -66,7 +66,7 @@ export function parseMacOsProductMajor(productVersion: string): number | undefin
   return Number.isNaN(major) ? undefined : major;
 }
 
-// ── Native automatic-settings (detects the `container` engine binary; socktainer is the dialect's job) ──
+// Native automatic-settings (detects the `container` engine binary; socktainer is the dialect's job)
 
 async function appleNativeDetectSettings(
   host: HostContext,
@@ -85,7 +85,7 @@ async function appleNativeDetectSettings(
   return settings;
 }
 
-// ── Remote automatic-settings (scoped: SSH controller + remote container + macOS/arch verification) ──
+// Remote automatic-settings (scoped: SSH controller + remote container + macOS/arch verification)
 
 async function appleRemoteDetectSettings(
   host: HostContext,
@@ -144,7 +144,7 @@ async function appleRemoteDetectSettings(
   return settings;
 }
 
-// ── Profiles ──
+// Profiles
 
 export const appleNativeProfile: HostProfile = {
   HOST: ContainerEngineHost.APPLE_NATIVE,

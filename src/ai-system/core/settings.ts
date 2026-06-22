@@ -1,4 +1,4 @@
-// ── AI subsystem core settings ──────────────────────────────────
+// AI subsystem core settings
 // OWNED by core. Imports deepmerge directly (no @/utils → avoids the env/Types cycle).
 // The original @/utils.deepMerge wraps the same npm package with arrayMerge +
 // isMergeableObject; here we use a minimal equivalent config.

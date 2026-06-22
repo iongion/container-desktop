@@ -90,7 +90,6 @@ export async function startSSHConnection(host: SSHHost, opts?: Partial<ServiceOp
   const isWindows = (os.type() as OperatingSystem) === OperatingSystem.Windows;
   const sshRelayProgramCLI = isWindows ? await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSH_RELAY) : "ssh";
   return new Promise<ISSHClient>((resolve, reject) => {
-    // function Client() {}
     const connection = new SSHClient({
       osType: os.type() as OperatingSystem,
       cli: isWindows ? "ssh.exe" : "ssh",
@@ -128,9 +127,9 @@ export async function startSSHConnection(host: SSHHost, opts?: Partial<ServiceOp
       } as ISSHClient);
     });
     connection.on("error", (error: any) => {
-      // `error` is either a raw CommandExecutionResult (legacy) or { output, report } from the
-      // preflight. Surface the first concrete failure reason instead of a generic message so the
-      // caller/UI can explain why (#186), and attach the structured report for richer display.
+      // `error` is either a raw CommandExecutionResult or { output, report } from the preflight.
+      // Surface the first concrete failure reason instead of a generic message so the caller/UI
+      // can explain why, and attach the structured report for richer display.
       const report = error?.report;
       const reason =
         report?.steps?.find((step: any) => !step.skipped && !step.ok)?.details ||

@@ -289,7 +289,7 @@ export class EngineDataService {
     await Promise.all(this.supportedDomains(host).map((domain) => this.refresh(connectionId, domain, host)));
   }
 
-  // ── Lifecycle (multi-connection) ───────────────────────────────────────────────────────────────────
+  // Lifecycle (multi-connection)
 
   // Load the configured connection list (system + user) and cache the descriptors for the snapshot.
   private async loadConnections(): Promise<Connection[]> {
@@ -507,7 +507,7 @@ export class EngineDataService {
     await this.ensureConnected(targetConnectionId);
   }
 
-  // ── Auto-reconnect (drop recovery) ──────────────────────────────────────────────────────────────────
+  // Auto-reconnect (drop recovery)
 
   // A live connection dropped: tear down its dead host/stream and start (or continue) a back-off retry,
   // unless the user explicitly disconnected it. Called from the /events stream's end/error/close handlers.
@@ -810,7 +810,7 @@ export class EngineDataService {
     }
   }
 
-  // ── Tray operations — main IS the engine authority, so the tray needs no renderer ──────────────────
+  // Tray operations — main IS the engine authority, so the tray needs no renderer
 
   // Which "<resource>.<op>" kinds the tray may run — an allowlist on the (IPC-sourced) kind, NOT a second
   // implementation: the op name IS the adapter/host method, so we dispatch to the single-sourced operation

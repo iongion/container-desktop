@@ -14,12 +14,12 @@ import { podmanNormalizers } from "@/container-client/normalizers/podman";
 import type { EngineNormalizers } from "@/container-client/normalizers/shared";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 
-/** libpod (Podman) compat root — byte-for-byte from Api.clients.ts (e.g. :808). */
+/** libpod (Podman) compat root. */
 export const LIBPOD_BASE_URL = "http://d/v4.0.0/libpod";
-/** Docker root — byte-for-byte from Api.clients.ts (e.g. :573). */
+/** Docker root. */
 export const DOCKER_BASE_URL = "http://localhost";
 
-/** The active host facade for the current connection (Application.ts:898 — returns HostClientFacade). */
+/** The active host facade for the current connection. */
 export function getActiveHostClient(): HostClientFacade {
   return Application.getInstance().getCurrentEngineConnectionApi();
 }
@@ -62,7 +62,7 @@ export abstract class ResourceAdapter {
     return this.usesDockerApi ? dockerNormalizers : podmanNormalizers;
   }
 
-  /** 2xx check — lifted from Api.clients.ts:206 (the monolith keeps its copy until the Phase 5 cutover). */
+  /** 2xx check. */
   protected isOk(response: AxiosResponse): boolean {
     return response.status >= 200 && response.status < 300;
   }

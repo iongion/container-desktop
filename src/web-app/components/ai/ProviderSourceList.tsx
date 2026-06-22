@@ -2,7 +2,7 @@
 // the Settings AIProviderConfig (select-to-configure) — ONE source of truth for ordering
 // (compareProviderEntries), brand icons (providerIcon) and the Local/Cloud split, so the two surfaces never
 // drift. The behavior differs ONLY by the injected onSelect / renderItemRight (and the optional root
-// search filter the chat popover wires up). No popover/persistence assumptions. (issue #232)
+// search filter the chat popover wires up). No popover/persistence assumptions.
 import { Menu, MenuDivider, MenuItem } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 

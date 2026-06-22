@@ -1,4 +1,4 @@
-// Settings → AI Assistant = PROVIDER CONNECTION CONFIG (issue #232). Two columns, one row: LEFT a provider
+// Settings → AI Assistant = PROVIDER CONNECTION CONFIG. Two columns, one row: LEFT a provider
 // chooser (the SAME shared ProviderSourceList the chat popover uses, but select-to-configure — no model
 // drill), RIGHT the connection form for the selected provider: endpoint + auth scheme (None / Bearer /
 // Basic / Custom header) + the matching credential fields, plus a typed model for llama.cpp. This screen

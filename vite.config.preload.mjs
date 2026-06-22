@@ -21,7 +21,6 @@ export default ({ mode, command }) => {
     entry: "src/electron-shell/preload.ts",
     formats: [outputFormat]
   };
-  // config.build.manifest = true;
   config.build.rollupOptions.external = ["electron"];
   config.build.rollupOptions.preserveEntrySignatures = "exports-only";
   config.build.rollupOptions.output.exports = "auto";

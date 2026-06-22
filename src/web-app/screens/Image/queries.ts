@@ -1,4 +1,4 @@
-// screens/Image/queries.ts — co-located TanStack Query layer for images, over the Phase-2 ImagesAdapter.
+// screens/Image/queries.ts — co-located TanStack Query layer for images, over the ImagesAdapter.
 // Includes the one-shot Trivy security scan (Application.checkSecurity) as a static image sub-query.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

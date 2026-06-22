@@ -1,8 +1,8 @@
 // runtimes/transports/lima.ts — LIMATransport: the engine runs inside a LIMA instance (the scope).
 //
-// Lifts runtimes/abstract/lima.ts. The scoped-exec wrapper is `limactl shell <s> …`; the scope URI is
-// ~/.lima/<scope>/sock/<scope>.sock; start/stop is `limactl start|stop <scope>` (byte-for-byte). startApi is
-// engine-agnostic here (both Podman-LIMA and Docker-LIMA start the instance the same way).
+// The scoped-exec wrapper is `limactl shell <s> …`; the scope URI is ~/.lima/<scope>/sock/<scope>.sock;
+// start/stop is `limactl start|stop <scope>`. startApi is engine-agnostic here (both Podman-LIMA and
+// Docker-LIMA start the instance the same way).
 
 import type { AxiosInstance } from "axios";
 import { LIMA_PROGRAM } from "@/container-client/connection";

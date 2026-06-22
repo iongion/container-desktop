@@ -229,10 +229,7 @@ func startRelayProgram(ctx context.Context) error {
 	}
 	log.Debugf("Starting relay program with args: wsl.exe %s\n", strings.Join(args, " "))
 	relay := exec.CommandContext(ctx, "wsl.exe", args...)
-	relay.SysProcAttr = &syscall.SysProcAttr{
-		// CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
-		// HideWindow: false,
-	}
+	relay.SysProcAttr = &syscall.SysProcAttr{}
 	relay.Stdout = os.Stdout
 	relay.Stderr = os.Stderr
 	if err := relay.Start(); err != nil {

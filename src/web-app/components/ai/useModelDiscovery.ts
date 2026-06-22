@@ -1,4 +1,4 @@
-// Model-discovery state machine for the AI selector (issue #232), lifted out of the picker so its cache
+// Model-discovery state machine for the AI selector, kept separate from the picker so its cache
 // survives a popover open/close and is shared IDENTICALLY by the chat popover (ModelPicker) and the
 // embedded settings selector (ProviderSelector). AI is always on; cloud access is gated by a stored API
 // key — mirrored client-side here as the NO_KEY note so window.AI.listModels never rejects with a raw

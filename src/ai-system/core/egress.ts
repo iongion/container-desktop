@@ -36,7 +36,7 @@ export interface EgressDecision {
   requiresConsent: boolean;
 }
 
-// Off-device CLASSIFIER (enforced in main, in the AI broker). Consent is the stored API key: a cloud
+// Off-device classifier (enforced in main, in the AI broker). Consent is the stored API key: a cloud
 // provider is admitted by saving its key (the broker throws without one), and pointing a local provider
 // at an off-device URL is itself the explicit act. This only reports whether a call leaves the device —
 // loopback is on-device, everything else is off-device but allowed. Redaction (previewOutbound /

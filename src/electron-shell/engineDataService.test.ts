@@ -19,7 +19,7 @@ describe("EngineDataService state", () => {
     expect(seen.length).toBe(1);
     unsub();
     service.setResourceItems("conn-1", "containers", []);
-    expect(seen.length).toBe(1); // no longer notified after unsub
+    expect(seen.length).toBe(1); // not notified after unsub
   });
 
   it("does not notify subscribers for unchanged resource snapshots", () => {
@@ -285,8 +285,8 @@ describe("EngineDataService.connect", () => {
       host: "container.remote",
       settings: { api: { autoStart: true }, controller: { scope: "MacOS" } },
     } as any;
-    // connectHostClient no longer swallows the SSH failure: it folds the real reason + raw preflight detail
-    // into availability.report (api + detail). connectOne must surface those, not the "Not checked" placeholder.
+    // connectHostClient surfaces the SSH failure: it folds the real reason + raw preflight detail into
+    // availability.report (api + detail). connectOne must surface those, not the "Not checked" placeholder.
     (service as any).ensureApp = () => ({
       setup: async () => undefined,
       connectHostClient: async () => ({

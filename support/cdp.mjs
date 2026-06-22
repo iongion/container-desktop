@@ -22,7 +22,7 @@ import path from "node:path";
 import { chromium } from "playwright-core";
 
 // Endpoint discovery (no hardcoded port): explicit $CDP_URL wins, else the handshake file that
-// support/watch.mjs writes with the actual (possibly auto-fallback) port, else the legacy :9222.
+// support/watch.mjs writes with the actual (possibly auto-fallback) port, else the default :9222.
 const CDP_ENDPOINT_FILE = path.join(os.tmpdir(), "container-desktop-cdp.json");
 function discoverCdpUrl() {
   if (process.env.CDP_URL) {

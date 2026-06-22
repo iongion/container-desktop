@@ -1,4 +1,4 @@
-// Persist a chosen model selection (issue #232). Shared by the chat popover (ModelPicker) and the
+// Persist a chosen model selection. Shared by the chat popover (ModelPicker) and the
 // embedded Settings selector (ProviderSelector) so both write IDENTICALLY: the source becomes the sticky
 // default provider and the model is stored per-provider. Reads the store action directly (Zustand vanilla
 // access) so it can be called from event handlers/effects without prop-threading.

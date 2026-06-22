@@ -5,9 +5,6 @@
 // real where the engine/host supports it, no-op ([]/false) where it does not — so there are no optional or
 // absent members, no per-engine facade split, and no missing-method casts. `capabilities` gates real-vs-no-op
 // (the UI renders from it); callers branch on capabilities, never on engine identity.
-//
-// Verified against runtimes/abstract/base.ts + runtimes/podman/base.ts + Application.ts. The byte-for-byte
-// sources (commands/sockets/endpoints) are unchanged; only the surface structure is regularized.
 
 import type { AxiosInstance } from "axios";
 import type EventEmitter from "eventemitter3";
@@ -37,7 +34,7 @@ import type {
   SystemResetReport,
 } from "@/env/Types";
 
-// ── Capabilities (host-adjusted: computed in the HostClient from dialect defaults × transport/host) ──
+// Capabilities (host-adjusted: computed in the HostClient from dialect defaults × transport/host)
 
 export type SortMode = "client" | "server";
 export type EngineExtension =
@@ -61,7 +58,7 @@ export interface CapabilityDescriptor {
   extensions: Record<EngineExtension, boolean>;
 }
 
-// ── Engine-extension groups — declared once, implemented by EVERY host (real or no-op) ──
+// Engine-extension groups — declared once, implemented by EVERY host (real or no-op)
 
 /** `machines` — Podman machine lifecycle (real on Podman native/vendor; no-op elsewhere). */
 export interface MachinesExtension {
@@ -112,7 +109,7 @@ export interface ComposeExtension {
   composeDown(opts?: any): Promise<boolean>;
 }
 
-// ── The single symmetric facade — every host satisfies ALL of it (real or no-op, gated by capabilities) ──
+// The single symmetric facade — every host satisfies ALL of it (real or no-op, gated by capabilities)
 
 export interface HostClientFacade
   extends MachinesExtension,
@@ -191,7 +188,7 @@ export interface HostClientFacade
   getEventsStream(opts?: SubscriptionOptions): Promise<EventEmitter | undefined>;
 }
 
-// ── Capability check — every member is present, so this gates BEHAVIOR (real vs no-op), not type-presence ──
+// Capability check — every member is present, so this gates BEHAVIOR (real vs no-op), not type-presence
 
 export function hasExtension(host: HostClientFacade, extension: EngineExtension): boolean {
   return host.capabilities.extensions[extension] === true;

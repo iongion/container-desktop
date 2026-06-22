@@ -45,8 +45,8 @@ export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
         {showConnectionStatus ? (
           <>
             <NavbarHeading className="AppFooterStatus">
-              {/* Engine glyph (moved here from the sidebar footer) sits IN FRONT OF — not inside — the
-                  connections status button; themed per engine via CSS, scaled to match the count badge. */}
+              {/* Engine glyph sits IN FRONT OF — not inside — the connections status button; themed per
+                  engine via CSS, scaled to match the count badge. */}
               <span className="AppFooterEngineIcon" aria-hidden="true" />
               {/* Single entry point for connections: this status button opens the connect/disconnect menu
                   (the caret-up end icon hints the popover opens upward). */}

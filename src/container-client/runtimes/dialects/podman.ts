@@ -4,8 +4,8 @@
 // (PODMAN_HOST/DOCKER_HOST), the `system service` start args, getSystemInfo (with the vendor-scope branch),
 // and bindExtensions(host): the machine + kube + pod-logs methods are REAL (regularized to ALL Podman hosts
 // per Finding A — they were absent on Podman-WSL/LIMA/SSH and reached by crashing casts), while the
-// Docker-domain groups (contexts/swarm/builders/compose) are no-ops on Podman. The former duplicate machine
-// inspect in podman/shared.ts is folded in here.
+// Docker-domain groups (contexts/swarm/builders/compose) are no-ops on Podman. The machine-inspect helper
+// lives in this file.
 
 import { findProgramPath } from "@/container-client/detector";
 import {
@@ -174,7 +174,7 @@ export const podmanDialect: EngineDialect = {
 
   bindExtensions(host: HostContext): EngineExtensionMethods {
     return {
-      // ── machines (REAL on every Podman host; UI-gated by capabilities.extensions.machines) ──
+      // machines (REAL on every Podman host; UI-gated by capabilities.extensions.machines)
       getPodmanMachineInspect: async (name?: string, customSettings?: EngineConnectorSettings) => {
         const settings = customSettings || (await host.getSettings());
         let inspect: PodmanMachineInspect | undefined;
@@ -334,7 +334,7 @@ export const podmanDialect: EngineDialect = {
         return output.success;
       },
 
-      // ── kube (REAL on Podman) ──
+      // kube (REAL on Podman)
       generateKube: async (entityId?: any) => {
         const { program, controller } = await host.getSettings();
         if (isEmpty(program.path)) {
@@ -357,7 +357,7 @@ export const podmanDialect: EngineDialect = {
         return result;
       },
 
-      // ── pods (REAL on Podman - libpod) ──
+      // pods (REAL on Podman - libpod)
       getPodLogs: async (id?: any, tail?: any) => {
         host.logger.debug("Retrieving pod logs", id, tail);
         const { program, controller } = await host.getSettings();
@@ -379,7 +379,7 @@ export const podmanDialect: EngineDialect = {
         return result;
       },
 
-      // ── Docker-domain groups — no-op on Podman (gated false; UI never calls them) ──
+      // Docker-domain groups — no-op on Podman (gated false; UI never calls them)
       getDockerContexts: async () => [],
       inspectDockerContext: async () => undefined,
       useDockerContext: async () => false,

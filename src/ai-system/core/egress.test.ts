@@ -39,9 +39,9 @@ describe("isOffDeviceURL", () => {
 });
 
 describe("evaluateEgress", () => {
-  // Cloud consent is now expressed by saving the provider's API key (a cloud provider with no key is
+  // Cloud consent is expressed by saving the provider's API key (a cloud provider with no key is
   // blocked by the broker's key check) or by typing an off-device URL for a local provider. So egress is
-  // a pure off-device CLASSIFIER — it no longer gates; loopback stays on-device, everything else is allowed.
+  // a pure off-device classifier — it does not gate; loopback stays on-device, everything else is allowed.
   it("classifies a loopback call as on-device and allowed", () => {
     expect(evaluateEgress({ baseURL: "http://127.0.0.1:8080/v1" })).toEqual({
       offDevice: false,

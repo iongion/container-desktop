@@ -1,4 +1,4 @@
-// screens/Secret/queries.ts — co-located TanStack Query layer for secrets, over the Phase-2 SecretsAdapter.
+// screens/Secret/queries.ts — co-located TanStack Query layer for secrets, over the SecretsAdapter.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 

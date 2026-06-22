@@ -1,8 +1,8 @@
 // runtimes/transports/podman-machine.ts — PodmanMachineTransport: the Podman-machine vendor virtualization.
 //
-// Lifts runtimes/podman/vendor.ts. The scoped-exec wrapper is `podman machine ssh <s> -o LogLevel=ERROR …`;
-// the scope URI is the machine socket/pipe resolved from getPodmanMachineInspect with home-dir fallbacks; the
-// default scope comes from `podman system connection list --format json` (byte-for-byte). Podman-only.
+// The scoped-exec wrapper is `podman machine ssh <s> -o LogLevel=ERROR …`; the scope URI is the machine
+// socket/pipe resolved from getPodmanMachineInspect with home-dir fallbacks; the default scope comes from
+// `podman system connection list --format json`. Podman-only.
 
 import type { AxiosInstance } from "axios";
 

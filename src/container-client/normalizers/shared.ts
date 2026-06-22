@@ -1,10 +1,9 @@
 // normalizers/shared.ts — engine-agnostic canonical transforms shared by both engine normalizers.
 //
-// Lifted byte-for-byte from the legacy Api.clients.ts transforms (110-204). Of the resource shapes, only
-// networks genuinely differ between engines (Docker is PascalCase, libpod is already canonical) — every other
-// transform already handled both engines (e.g. State as object-vs-string is list-vs-inspect, not
-// Podman-vs-Docker), so it stays shared here. The per-engine modules (podman.ts, docker.ts) compose
-// these and override only `normalizeNetwork`.
+// Of the resource shapes, only networks genuinely differ between engines (Docker is PascalCase, libpod is
+// already canonical) — every other transform already handles both engines (e.g. State as object-vs-string
+// is list-vs-inspect, not Podman-vs-Docker), so it stays shared here. The per-engine modules (podman.ts,
+// docker.ts) compose these and override only `normalizeNetwork`.
 
 import type {
   Container,
@@ -18,7 +17,7 @@ import type {
   Volume,
 } from "@/env/Types";
 
-/** New home for the container group separators (Api.clients.ts keeps its copy until the Phase 5 cutover). */
+/** Container group separators. */
 export const CONTAINER_GROUP_SEPARATORS = ["-", "_"];
 
 function normalizeContainerName(name: string): string {
@@ -110,7 +109,7 @@ export const normalizePod = (pod: Pod): Pod => {
     Processes: [],
     Titles: [],
   };
-  // See issue #54 - it returns null on failure
+  // Containers is null on failure — coerce to an array
   pod.Containers = Array.isArray(pod.Containers) ? pod.Containers : [];
   return pod;
 };
@@ -118,7 +117,7 @@ export const normalizePod = (pod: Pod): Pod => {
 /** Volume shape is identical across engines (the Docker `{ Volumes: [...] }` list-envelope is unwrapped in the adapter). */
 export const normalizeVolume = (volume: Volume): Volume => volume;
 
-/** Secret shape is identical across engines (the legacy client returned raw data). */
+/** Secret shape is identical across engines. */
 export const normalizeSecret = (secret: Secret): Secret => secret;
 
 /** registry search result → canonical (seed Index from the searched registry). */

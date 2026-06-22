@@ -64,7 +64,6 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
   const config = {
     clearScreen: false,
     plugins: [
-      // viteCommonjs(),
       checker({
         typescript: true,
       }),

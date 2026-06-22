@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored the internal engine-communication layer into smaller, single-responsibility modules — no functional change.
 - Settings are organized into categories with a left navigation rail — Appearance, Startup & behavior, AI Assistant, Configuration, and Logging.
 - Logs can be saved to a local file on demand, with automatic rotation and a size cap — kept entirely on your device, never uploaded.
+- Cleaned up code comments across the codebase — removed historical/migration notes, commented-out code, an unreachable icon-copy block, and decorative comment dividers (no functional change).
 
 ## Fixed
 

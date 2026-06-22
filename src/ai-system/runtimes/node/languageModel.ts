@@ -21,7 +21,7 @@ export function buildModelAuth(
 
 // Main-only. Turns a resolved provider (+ its decrypted keychain secret) into an AI-SDK LanguageModel. Both
 // local servers (llama.cpp / LM Studio) and OpenAI-compatible clouds go through @ai-sdk/openai-compatible;
-// Anthropic and OpenAI use their dedicated providers. Construction is lazy (no network). See.
+// Anthropic and OpenAI use their dedicated providers. Construction is lazy (no network).
 export function createLanguageModel(resolved: ResolvedProvider, secret?: string): LanguageModel {
   const { apiKey, headers } = buildModelAuth(resolved, secret);
   switch (resolved.kind) {

@@ -1,7 +1,7 @@
 // Main-only provider-key store. API keys are encrypted at rest with Electron's safeStorage
 // (OS keychain) and the plaintext is only ever decrypted in main when making a provider call —
 // it is never returned to the renderer. Dependency-injected (safeStorage + fs) so the policy is
-// unit-testable without a real keychain. See security model.
+// unit-testable without a real keychain.
 
 export interface SafeStorageLike {
   isEncryptionAvailable(): boolean;

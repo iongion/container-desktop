@@ -1,5 +1,5 @@
-// screens/Container/queries.ts — co-located TanStack Query layer for containers (the Phase 3 template).
-// Query/mutation hooks over the Phase-2 ContainersAdapter. Keys carry connectionId; detail seeds from the
+// screens/Container/queries.ts — co-located TanStack Query layer for containers.
+// Query/mutation hooks over the ContainersAdapter. Keys carry connectionId; detail seeds from the
 // list cache for an instant, spinner-free detail. Mutations are invalidate-only (no optimistic writes).
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +25,7 @@ export const containerKeys = {
   sub: (connId: string, id: string, sub: ContainerSubKey) => [...containerKeys.detail(connId, id), sub] as const,
 };
 
-// ── Queries (live) ──
+// Queries (live)
 
 export const useContainer = (
   connId: string,
@@ -92,7 +92,7 @@ export const useContainerKube = (connId: string, id?: string) =>
     enabled: !!connId && !!id,
   });
 
-// ── Mutations (invalidate-only) ──
+// Mutations (invalidate-only)
 
 const refreshContainer = async (qc: ReturnType<typeof useQueryClient>, connId: string, id: string) => {
   await resourceEvents.refresh(connId, "containers");

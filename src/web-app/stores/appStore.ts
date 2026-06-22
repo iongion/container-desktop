@@ -1,6 +1,5 @@
-// web-app/stores/appStore.ts — bootstrap / lifecycle / connections / settings. Folds in `connections`
-// + the connection-CRUD thunks from the old Settings sub-model (§B); `connections` (configured list) is distinct from
-// `connectors` (the derived availability matrix). `reset` is redefined for the post-EP world.
+// web-app/stores/appStore.ts — bootstrap / lifecycle / connections / settings. `connections` (the
+// configured list) is distinct from `connectors` (the derived availability matrix).
 //
 // Preload guard: the bootstrap actions (initialize/startApplication) await waitForPreload() before the
 // first Application.getInstance() — Application captures window.MessageBus at construction.
@@ -222,7 +221,7 @@ interface AppState {
   provisioned?: boolean;
   running?: boolean;
   connectors: Connector[];
-  connections: Connection[]; // configured user+system list (folded from Settings §B) — distinct from connectors
+  connections: Connection[]; // configured user+system list — distinct from connectors
   currentConnector?: Connector;
   nextConnection?: Connection;
   userSettings: GlobalUserSettings;
@@ -292,7 +291,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
     nextConnection: undefined,
     userSettings: {} as GlobalUserSettings,
 
-    // ── sync ──
+    // sync
     setPhase: (phase) =>
       set((state) => ({
         phase,
@@ -397,7 +396,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
         return next;
       }),
 
-    // ── async: bootstrap / settings ──
+    // async: bootstrap / settings
     initialize: async () => {
       get().resetBootstrapPhases();
       get().setPending(true);
@@ -413,7 +412,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
       systemNotifier.transmit("startup.phase", { trace: "User settings loaded" });
     },
     reset: async (options = {}) => {
-      // Post-migration there are no screen sub-models to wipe (§B): drop the server cache and UI state.
+      // No screen sub-models to wipe: drop the server cache and UI state.
       await resourceEvents.stopAll();
       if (!options.preserveBootstrapPhases) {
         get().resetBootstrapPhases();
@@ -545,8 +544,8 @@ export const useAppStore = create<AppStore>()((set, get) => {
             await instance.applyProxy(userSettings.proxy);
           }
           get().syncGlobalUserSettings(userSettings);
-          // §B single-home: when the settings import carries a `connections` blob, refresh the
-          // authoritative appStore.connections so it never drifts from userSettings.connections.
+          // When the settings import carries a `connections` blob, refresh the authoritative
+          // appStore.connections so it never drifts from userSettings.connections.
           if (options.connections) {
             get().setConnections(options.connections);
           }
@@ -586,7 +585,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
         return undefined;
       }),
 
-    // ── async: connection CRUD (folded from Settings/Model) ──
+    // async: connection CRUD
     getConnections: async () =>
       runPending(async () => {
         const instance = Application.getInstance();
@@ -618,7 +617,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
         return info;
       }),
 
-    // ── async: per-connection lifecycle (always-merged workspace — additive, no global reset) ──
+    // async: per-connection lifecycle (always-merged workspace — additive, no global reset)
     // connect/disconnect a SINGLE connection via main; main re-pushes a merged snapshot, so the runtime
     // store + merged lists update without a full bootstrap. Used by the header connection manager + Settings.
     connectOne: async (connectionId, options = {}) => {

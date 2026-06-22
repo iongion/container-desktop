@@ -1,9 +1,9 @@
-// One minimal footer-style button → a drill-down popover (issue #232): AI inference source → provider →
+// One minimal footer-style button → a drill-down popover: AI inference source → provider →
 // model. The popover content is the SHARED <ModelNavigator> (the same drill-down the Settings screen
 // embeds). This wrapper owns only the popover concerns: the trigger button + label, open/close, the
 // discovery cache (held here so it survives open/close), persistence (sticky defaultProvider + the model
-// per provider), and closing on pick. Public props are unchanged ({value, onChange}) so AIComposer needs
-// no change. The trigger label is the selected path joined by " / " ("LM Studio / qwen3.5-9b").
+// per provider), and closing on pick. Props are {value, onChange}; the trigger label is the selected
+// path joined by " / " ("LM Studio / qwen3.5-9b").
 import { Button, PopoverNext } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

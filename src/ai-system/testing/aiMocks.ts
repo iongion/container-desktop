@@ -18,7 +18,7 @@ import type {
   SandboxExecResult,
 } from "@/ai-system/core";
 
-// ── Scenario types ──────────────────────────────────────────────────────────
+// Scenario types
 
 export type ScenarioStep =
   | { type: "delta"; text: string }
@@ -28,7 +28,7 @@ export type ScenarioStep =
 
 export type Scenario = ScenarioStep[];
 
-// ── Script player — turns a scenario into a timed stream ────────────────────
+// Script player — turns a scenario into a timed stream
 
 function playScenario(
   scenario: Scenario,
@@ -69,7 +69,7 @@ function playScenario(
   next();
 }
 
-// ── Agent mock — the ONE always-agentic runner (the crash diagnose scenario for rich output) ───────
+// Agent mock — the ONE always-agentic runner (the crash diagnose scenario for rich output)
 
 // After the user resolves an approval, the broker resumes the turn with the outcome as the latest
 // message. A real model reads that and wraps up; the mock detects it and streams a short closing instead
@@ -89,7 +89,7 @@ export function createMockAgentRunner(): AgentRunner {
   };
 }
 
-// ── Model listing ───────────────────────────────────────────────────────────
+// Model listing
 // Per-source fixtures so CONTAINER_DESKTOP_MOCK=1 yarn dev exercises every shape the ModelPicker renders:
 //   • LM Studio (:1234) — a flat list; the "/" in "unsloth/qwen3.5-9b" is an HF org, NOT a vendor prefix.
 //   • OpenRouter (openrouter.ai) — vendor-prefixed ids, driving the 3-level gateway→provider→model path.
@@ -185,7 +185,7 @@ export function createMockModelLister() {
   };
 }
 
-// ── Provider key store ───────────────────────────────────────────────────────
+// Provider key store
 // Mock mode: every provider reports a stored secret (so cloud catalogs like OpenRouter's vendor-prefixed
 // list are browsable + connection-testable WITHOUT a real key) and writes are no-ops (nothing persisted).
 export function createMockKeyStore(): AIKeyStore {
@@ -198,7 +198,7 @@ export function createMockKeyStore(): AIKeyStore {
   };
 }
 
-// ── Sandbox ─────────────────────────────────────────────────────────────────
+// Sandbox
 
 export function createMockSandboxRunner() {
   return async (cmd: SandboxCommand, _opts?: { enforceFloor?: boolean }): Promise<SandboxExecResult> => {
@@ -264,7 +264,7 @@ export function createMockSandboxRunner() {
   };
 }
 
-// ── Knowledge / web ─────────────────────────────────────────────────────────
+// Knowledge / web
 
 const MOCK_KNOWLEDGE: KnowledgeEntry[] = [
   {
@@ -299,7 +299,7 @@ export function createMockWebSearcher() {
   return async (_query: string): Promise<{ text: string }> => ({ text: "Mock web search not available." });
 }
 
-// ── Full deps factory ───────────────────────────────────────────────────────
+// Full deps factory
 
 export interface MockAIDeps {
   agentRunner: AgentRunner;

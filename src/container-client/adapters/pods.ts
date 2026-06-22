@@ -1,7 +1,6 @@
 // adapters/pods.ts — pod REST operations over the active HostClient driver.
-// Podman-only (libpod) resource — gate calls on `host.capabilities.resources.pods` (Phase 3). All calls
-// target `http://d/v4.0.0/libpod`. Endpoints/params lifted byte-for-byte from Api.clients.ts (805-929).
-// `getPodLogs` (839) stays a HostClientFacade proxy, not a REST method.
+// Podman-only (libpod) resource — gate calls on `host.capabilities.resources.pods`. All calls target
+// `http://d/v4.0.0/libpod`. `getPodLogs` stays a HostClientFacade proxy, not a REST method.
 
 import type { Pod, PodProcessReport } from "@/env/Types";
 

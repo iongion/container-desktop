@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 
 
@@ -129,82 +128,6 @@ def generate_icons():
     generate_tray(monochrome=True)
     generate_icns()
     generate_ico()
-    return
-    shutil.copyfile(os.path.join(OUTPUT_PATH, "96x96.png"), os.path.join(OUTPUT_PATH, "icon.png"))
-    # Generate resources
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "icon.icns"),
-        os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.icns"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "icon.svg"),
-        os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.svg"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "icon.ico"),
-        os.path.join(PROJECT_HOME, "src/resources/icons/favicon.ico"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "96x96.png"),
-        os.path.join(PROJECT_HOME, "src/resources/icons/favicon.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "512x512.png"),
-        os.path.join(PROJECT_HOME, "src/resources/icons/icon.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "96x96.png"),
-        os.path.join(PROJECT_HOME, "src/resources/icons/appIcon.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "trayIcon.png"),
-        os.path.join(PROJECT_HOME, "src/resources/icons/trayIcon.png"),
-    )
-    # Public and docs icons
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "icon.ico"),
-        os.path.join(PROJECT_HOME, "public/favicon.ico"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "96x96.png"),
-        os.path.join(PROJECT_HOME, "public/favicon.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "icon.svg"),
-        os.path.join(PROJECT_HOME, "website-src/static/img/logo.svg"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "icon.ico"),
-        os.path.join(PROJECT_HOME, "website-src/static/favicon.ico"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "16x16.png"),
-        os.path.join(PROJECT_HOME, "website-src/static/favicon-16x16.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "32x32.png"),
-        os.path.join(PROJECT_HOME, "website-src/static/favicon-32x32.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "150x150.png"),
-        os.path.join(PROJECT_HOME, "website-src/static/mstile-150x150.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "180x180.png"),
-        os.path.join(PROJECT_HOME, "website-src/static/apple-touch-icon.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "192x192.png"),
-        os.path.join(PROJECT_HOME, "website-src/static/android-chrome-192x192.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "512x512.png"),
-        os.path.join(PROJECT_HOME, "website-src/static/android-chrome-512x512.png"),
-    )
-    shutil.copyfile(
-        os.path.join(OUTPUT_PATH, "icon.svg"),
-        os.path.join(PROJECT_HOME, "website-src/static/safari-pinned-tab.svg"),
-    )
 
 
 if __name__ == "__main__":

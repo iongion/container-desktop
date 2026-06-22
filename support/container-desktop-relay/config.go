@@ -50,7 +50,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Host:                    "127.0.0.1",
 		Port:                    20022,
-		BufferSize:              8192, // Increased from 4096
+		BufferSize:              8192,
 		MaxConnections:          100,
 		MaxRetries:              5,
 		ConnectTimeout:          5 * time.Second,

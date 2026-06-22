@@ -105,7 +105,7 @@ export type EngineThemePreference = "auto" | "unified" | "podman" | "docker";
 import type { AIProviderSettings, AISettings } from "@/ai-system/core";
 import type { ProxyConfig } from "@/container-client/proxy";
 
-// ── AI subsystem (issue #232) ──────────────────────────────────────────────
+// AI subsystem
 // Re-exported from @/ai-system/core — the canonical home. Kept here so existing
 // consumers (GlobalUserSettings.ai, etc.) don't break.
 export type { AIProviderSettings, AISettings };
@@ -155,7 +155,7 @@ export interface GlobalUserSettings {
     maxRetries?: number;
   };
   registries: Registry[];
-  // AI subsystem settings (issue #232). Always populated at runtime by normalizeAISettings()
+  // AI subsystem settings. Always populated at runtime by normalizeAISettings()
   // in Application.getGlobalUserSettings — opt-in, off by default, local-first.
   ai: AISettings;
   // Global app proxy. Optional for older configs; absence normalizes to disabled at runtime.

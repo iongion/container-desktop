@@ -1,4 +1,4 @@
-// screens/Volume/queries.ts — co-located TanStack Query layer for volumes, over the Phase-2 VolumesAdapter.
+// screens/Volume/queries.ts — co-located TanStack Query layer for volumes, over the VolumesAdapter.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 

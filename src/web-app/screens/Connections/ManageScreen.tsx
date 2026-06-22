@@ -95,7 +95,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               const imported = JSON.parse(data);
               let connections: Connection[] = [];
               if (Array.isArray(imported)) {
-                // old version
+                // older export format: a flat array of connections
                 connections = imported.map((it) => {
                   const host = it.engine;
                   const engine = it.runtime;

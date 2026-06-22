@@ -5,7 +5,7 @@
 // host-command form), and bindExtensions(host): the Podman-domain groups (machines/kube/pods) are no-ops on
 // Docker; contexts are wired to the existing `docker context inspect` command (their capability flag flips on
 // when `docker context ls/use` are added); swarm/builders/compose stay no-op until their CLI is wired. The
-// former docker/shared.ts context-inspect helper is folded in here.
+// context-inspect helper lives in this file.
 
 import {
   type CommandExecutionResult,
@@ -36,7 +36,7 @@ function noopCommandResult(): CommandExecutionResult {
   return { pid: null, code: null, success: false, stdout: "", stderr: "" };
 }
 
-/** `docker context inspect --format json` → the current context (folded in from docker/shared.ts). */
+/** `docker context inspect --format json` → the current context. */
 async function getContextInspect(
   host: HostContext,
   customFormat?: string,
@@ -179,7 +179,7 @@ export const dockerDialect: EngineDialect = {
 
   bindExtensions(host: HostContext): EngineExtensionMethods {
     return {
-      // ── Podman-domain groups — no-op on Docker (gated false) ──
+      // Podman-domain groups — no-op on Docker (gated false)
       getPodmanMachineInspect: async () => undefined,
       getPodmanMachines: async () => [],
       createPodmanMachine: async () => false,
@@ -191,8 +191,8 @@ export const dockerDialect: EngineDialect = {
       generateKube: async () => noopCommandResult(),
       getPodLogs: async () => noopCommandResult(),
 
-      // ── contexts — REAL via the existing `docker context inspect` command; the `docker context ls/use`
-      //    follow-ups (and the capability flag flip) are out of this refactor's critical path. ──
+      // contexts — REAL via `docker context inspect`; the `docker context ls/use` follow-ups (and the
+      // capability flag flip) are not yet wired.
       getDockerContexts: async () => {
         const context = await getContextInspect(host);
         return context?.Name ? [context] : [];
@@ -200,7 +200,7 @@ export const dockerDialect: EngineDialect = {
       inspectDockerContext: async () => await getContextInspect(host),
       useDockerContext: async () => false,
 
-      // ── swarm / builders / compose — net-new CLI, no-op until wired ──
+      // swarm / builders / compose — net-new CLI, no-op until wired
       getSwarmServices: async () => [],
       getSwarmNodes: async () => [],
       getSwarmStacks: async () => [],

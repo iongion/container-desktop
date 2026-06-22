@@ -25,6 +25,5 @@ export const getContainerServiceUrl = (container: Container) => {
       serviceUrl = `http://${hostIp === "0.0.0.0" ? "localhost" : hostIp}:${firstPort[0].HostPort}`;
     }
   }
-  // console.debug("Obtaining container web server URL", container, { serviceUrl, port });
   return serviceUrl;
 };

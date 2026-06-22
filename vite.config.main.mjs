@@ -35,7 +35,6 @@ export default ({ mode, command }) => {
     entry: "src/electron-shell/main.ts",
     formats: [outputFormat]
   };
-  // config.build.manifest = true;
   // Only electron itself is provided by the runtime and must stay external. The
   // electron helper libs are bundled so the bundler applies CJS interop to their
   // `import { ... } from "electron"` (they ship raw ESM that cannot link otherwise).

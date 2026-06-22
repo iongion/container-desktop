@@ -25,7 +25,7 @@ interface ManagedLogger extends ILogger {
 
 const loggers: ManagedLogger[] = [];
 
-// ── Pluggable persistence backend (the Tauri seam) ───────────────────────────────────────────────
+// Pluggable persistence backend (the Tauri seam)
 // The façade ALWAYS writes to the console itself — identical behavior in every shell and in tests. A
 // registered backend ADDS persistence for already level-gated records (e.g. the Electron electron-log
 // adapter writes them to a rotating LOCAL file and forwards renderer records to main). A future Tauri

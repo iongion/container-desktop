@@ -78,7 +78,7 @@ describe("normalizeImage", () => {
 });
 
 describe("normalizePod", () => {
-  it("null Containers → [] (issue #54) and Processes initialized", () => {
+  it("null Containers → [] and Processes initialized", () => {
     const raw: any = { Id: "pod1", Containers: null };
     const out = podmanNormalizers.normalizePod(raw);
     expect(out.Containers).toEqual([]);

@@ -1,4 +1,4 @@
-// ── AI provider connection auth ────────────────────────────────
+// AI provider connection auth
 // Pure and React/Electron/node:* -free — uses the `btoa` global (present in the renderer, Electron main,
 // and the test runner) instead of `node:Buffer`, so core purity holds. Builds request headers for the
 // basic / custom-header schemes ONLY: bearer rides the AI-SDK provider's native apiKey (Anthropic →

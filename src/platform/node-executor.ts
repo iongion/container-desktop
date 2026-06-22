@@ -1,8 +1,7 @@
 // Thin facade over the focused modules in `./exec/`. This file owns ONLY the assembled `Command`
-// object and re-exports the historical public surface, so every existing import of
-// `@/platform/node-executor` keeps resolving byte-for-byte the same symbols. All implementation lives
-// in the single-responsibility modules: process-utils, api-driver, commander, ssh-transport,
-// wsl-relay, proxy-request. (`ICommand`/`SSHHost` are ambient globals — no import.)
+// object and re-exports the public surface, so every import of `@/platform/node-executor` resolves the
+// same symbols. All implementation lives in the single-responsibility modules: process-utils, api-driver,
+// commander, ssh-transport, wsl-relay, proxy-request. (`ICommand`/`SSHHost` are ambient globals — no import.)
 
 import { type ChildProcessWithoutNullStreams, spawnSync } from "node:child_process";
 import type { AxiosRequestConfig } from "axios";

@@ -90,10 +90,10 @@ export interface AIBrokerDeps {
   isAllowedSender: (event: any) => boolean;
   /** Lists models from a provider's server; injected so it can be stubbed in tests. */
   listModels: (baseURL: string, opts?: { auth?: AIAuthSettings; secret?: string }) => Promise<ListedModel[]>;
-  // ── Prompt builders — pure functions, injected so host never imports from runtimes. ──
+  // Prompt builders — pure functions, injected so host never imports from runtimes.
   buildGeneratePrompt: (kind: "dockerfile" | "compose") => string;
   buildAgentPrompt: (bundle?: DiagnosticsBundle) => string;
-  // ── Agentic runner + tools — all injected so the broker stays SDK-free and unit-testable. ──
+  // Agentic runner + tools — all injected so the broker stays SDK-free and unit-testable.
   /** Drives the AI-SDK agent loop (streamText + tools + step cap); also used for one-shot generate (no tools). */
   agentRunner?: AgentRunner;
   /** Executes a command in the main sandbox (scrub + cap + redact; floor enforced unless enforceFloor:false). */
@@ -217,7 +217,7 @@ export class AIBroker {
     return { resolved, secret };
   }
 
-  // ── The one always-agentic conversation ──────────────────────────────────────────────────────
+  // The one always-agentic conversation
   private async handleChat(event: any, payload: any): Promise<{ streamId: string }> {
     const { agentRunner, runSandboxed, buildAgentTools, knowledgeBank } = this.deps;
     if (!agentRunner || !runSandboxed || !buildAgentTools || !knowledgeBank) {
@@ -315,7 +315,7 @@ export class AIBroker {
     return { models: await this.deps.listModels(resolved.baseURL, { auth: resolved.auth, secret }) };
   }
 
-  // ── Permission cache management (broker-owned writes) ─────────────────────────────────────────
+  // Permission cache management (broker-owned writes)
   private async handlePermissionsList(): Promise<PermissionsSnapshot> {
     if (!this.deps.permissionsStore) {
       throw new Error("AI: the permission store is not available");
@@ -340,7 +340,7 @@ export class AIBroker {
     return this.deps.permissionsStore.setWebSearch(verdict);
   }
 
-  // ── Streaming a single runner turn (initial + each human-resolved resume) ─────────────────────
+  // Streaming a single runner turn (initial + each human-resolved resume)
   private startTurn(streamId: string): void {
     const state = this.streams.get(streamId);
     if (!state || !this.deps.agentRunner) {

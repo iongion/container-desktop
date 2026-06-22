@@ -1,6 +1,5 @@
 // adapters/registries.ts — registries are config-backed via Application (NOT REST), except `searchRegistry`
-// which routes through Application's raw `/images/search` driver. Lifted byte-for-byte from Api.clients.ts
-// the legacy API client (1028-1066). The dead `getRegistry` (1032) `{}` stub is dropped.
+// which routes through Application's raw `/images/search` driver.
 // No HostClient driver is involved, so this is a plain class (not a ResourceAdapter).
 
 import { Application } from "@/container-client/Application";

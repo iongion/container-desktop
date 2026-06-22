@@ -2,12 +2,11 @@
 // delegating to exactly one Transport (scope mechanics) × one EngineDialect (engine commands + extensions)
 // × one HostProfile (per-(engine,host) glue). It IS the HostContext passed to those units.
 //
-// The byte-for-byte sources (commands / sockets / endpoints) live in the units; this file holds only the
-// cross-cutting host state + the generic helpers lifted verbatim from the old runtimes/abstract/base.ts.
+// The per-unit sources (commands / sockets / endpoints) live in the units; this file holds only the
+// cross-cutting host state + the generic host helpers.
 //
-// State model (consolidated): settings + runner + cached raw driver + identity + capabilities. The former
-// dual "api started" state (the old host.apiStarted vs Runner.started) is folded into a single source of
-// truth on the Runner (runner.isStarted()); see runner.ts.
+// State model: settings + runner + cached raw driver + identity + capabilities. The "api started" state is
+// a single source of truth on the Runner (runner.isStarted()); see runner.ts.
 
 import type { AxiosInstance } from "axios";
 import type EventEmitter from "eventemitter3";
@@ -153,14 +152,14 @@ export class HostClient implements HostContext {
     this.logger.debug(this.id, "Client host created", this.settings);
   }
 
-  // ── identity / logging ──
+  // identity / logging
 
   setLogLevel(level: string): void {
     this.logger?.debug(this.id, "Setting container engine host client log level", level);
     this.logLevel = level;
   }
 
-  // ── settings ──
+  // settings
 
   async getSettings(): Promise<EngineConnectorSettings> {
     return this.settings;
@@ -174,7 +173,7 @@ export class HostClient implements HostContext {
     return this.profile.getAutomaticSettings(this, this.settings);
   }
 
-  // ── raw API driver (replaces getContainerApiClient(); SSH injects its establishment hook in the transport) ──
+  // raw API driver (replaces getContainerApiClient(); SSH injects its establishment hook in the transport)
 
   async getApiDriver(): Promise<AxiosInstance> {
     if (!this.cachedDriver) {
@@ -183,7 +182,7 @@ export class HostClient implements HostContext {
     return this.cachedDriver;
   }
 
-  // ── lifecycle / API (scope + start/stop delegated to the transport, availability to the profile) ──
+  // lifecycle / API (scope + start/stop delegated to the transport, availability to the profile)
 
   startApi(customSettings?: EngineConnectorSettings, opts?: ApiStartOptions): Promise<boolean> {
     return this.transport.startApi(this, customSettings, opts);
@@ -201,7 +200,7 @@ export class HostClient implements HostContext {
     return this.profile.getApiConnection(this, connection, customSettings);
   }
 
-  // ── scope (controller) — delegated to the transport ──
+  // scope (controller) — delegated to the transport
 
   isScoped(): boolean {
     return this.transport.isScoped;
@@ -243,7 +242,7 @@ export class HostClient implements HostContext {
     return this.transport.runScopeCommand(this, program, args, scope, settings);
   }
 
-  // ── system / events (system info delegated to the dialect; events stream uses the raw driver) ──
+  // system / events (system info delegated to the dialect; events stream uses the raw driver)
 
   getSystemInfo(
     connection?: Connection,
@@ -259,7 +258,7 @@ export class HostClient implements HostContext {
     return Promise.resolve([]);
   }
 
-  // ===== generic helpers lifted verbatim from runtimes/abstract/base.ts =====
+  // Generic host helpers.
 
   async runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings) {
     const commandLauncher =

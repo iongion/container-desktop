@@ -1,4 +1,4 @@
-// ── AI subsystem core types ───────────────────────────────────
+// AI subsystem core types
 // OWNED by core. env/Types re-exports these for existing consumers.
 // No Electron/React/AI-SDK/node:* imports.
 

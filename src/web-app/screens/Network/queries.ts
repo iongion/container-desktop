@@ -1,4 +1,4 @@
-// screens/Network/queries.ts — co-located TanStack Query layer for networks, over the Phase-2 NetworksAdapter.
+// screens/Network/queries.ts — co-located TanStack Query layer for networks, over the NetworksAdapter.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 

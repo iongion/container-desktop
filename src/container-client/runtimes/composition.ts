@@ -3,10 +3,7 @@
 // The HostClient (host-client.ts) implements the symmetric HostClientFacade by composing exactly one
 // Transport (scope mechanics, per host type) × one EngineDialect (engine commands, per engine) × one
 // HostProfile (the thin per-(engine,host) glue). The HostClient IS the HostContext passed to their methods
-// — mirroring the existing getContextInspect(client, ...) / getPodmanMachineInspect(client, ...) helpers.
-//
-// This only factors the 10-leaf inheritance tangle into shared units; the byte-for-byte sources
-// (commands / sockets / endpoints) are unchanged.
+// — mirroring the getContextInspect(client, ...) / getPodmanMachineInspect(client, ...) helpers.
 
 import type { AxiosInstance } from "axios";
 
@@ -30,7 +27,7 @@ import type { ApiSurface, CapabilityDescriptor, HostClientFacade } from "./facad
 
 /**
  * The composed host surface that Transport / EngineDialect / HostProfile methods receive — the HostClient
- * itself: the full public facade plus the collaborators + osType the old leaves reached via `this`.
+ * itself: the full public facade plus the collaborators + osType the unit methods need.
  */
 export interface HostContext extends HostClientFacade {
   readonly osType: OperatingSystem;
@@ -81,7 +78,7 @@ export type EngineExtensionMethods = Pick<
 export interface Transport {
   readonly isScoped: boolean;
   shouldKeepStartedScopeRunning(): boolean;
-  /** Scoped exec — the byte-for-byte wrapper (NativeTransport throws "Scope is not supported in native mode"). */
+  /** Scoped exec — the scope wrapper (NativeTransport throws "Scope is not supported in native mode"). */
   runScopeCommand(
     host: HostContext,
     program: string,

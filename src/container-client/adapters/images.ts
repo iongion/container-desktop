@@ -1,6 +1,5 @@
 // adapters/images.ts — image REST operations over the active HostClient driver.
-// Endpoints/params lifted byte-for-byte from the legacy API client (348-419). Images use the
-// driver's default (per-connection) baseURL — no per-call libpod/docker override, matching the source.
+// Images use the driver's default (per-connection) baseURL — no per-call libpod/docker override.
 
 import type { ContainerImage, ContainerImageHistory } from "@/env/Types";
 
@@ -79,7 +78,7 @@ export class ImagesAdapter extends ResourceAdapter {
         params.destination = opts.destination;
       }
       if (opts.tlsVerify === false) {
-        // NOTE: "tslVerify" is a typo for "tlsVerify" in the source — preserved byte-for-byte; flagged for a deliberate fix.
+        // NOTE: "tslVerify" is a typo for "tlsVerify" in the engine API params — flagged for a deliberate fix.
         params.tslVerify = "false";
       }
     }

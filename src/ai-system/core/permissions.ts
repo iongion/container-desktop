@@ -1,4 +1,4 @@
-// ── AI permission policy ───────────────────────────────────────
+// AI permission policy
 // OWNED by core. Pure decision logic — no node:/Electron/React. The user picks a global mode; the agent
 // is always tool-capable. There is NO auto-run-by-classification: the user (not a heuristic) decides.
 //
@@ -49,7 +49,7 @@ export function resolveToolAction(opts: {
   return "ask";
 }
 
-// ── Permission cache (the user-managed allow/reject record) ──────────────────
+// Permission cache (the user-managed allow/reject record)
 // A dedicated, app-global, versioned file in user-data (see runtimes/node/permissionsStore). Commands are
 // keyed by exact program+args; the internet (web search) is a single switch since queries vary.
 export const AI_PERMISSIONS_VERSION = "1.0.0";
@@ -82,7 +82,7 @@ export function cachedVerdict(cache: Pick<AIPermissionsCache, "allowed" | "block
   return undefined;
 }
 
-// ── Permission store PORT ───────────────────────────────────────
+// Permission store PORT
 // The capability the broker depends on; implemented by runtimes/node/permissionsStore against a file.
 // Read is FAIL-CLOSED — a corrupt/unreadable file surfaces status:"error" with an empty cache so the
 // broker can force "ask" rather than silently dropping the user's blocked rules.

@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { AIPermissions } from "./AIPermissions";
 import { AIProviderConfig } from "./AIProviderConfig";
 
-// Local-first AI settings (issue #232). AI is always on — there is no master switch or cloud/local-only
+// Local-first AI settings. AI is always on — there is no master switch or cloud/local-only
 // checkbox: the privacy callout leads, then the provider CONNECTION configurator (AIProviderConfig) — a
 // provider chooser + that provider's endpoint and auth. MODEL selection lives in the chat composer, not
 // here. Cloud consent IS saving a credential. Secrets live in main; this screen only writes them (never

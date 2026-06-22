@@ -466,7 +466,6 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       }),
     },
   ];
-  // console.debug(">> connectors", { osType }, connectors);
   return connectors;
 }
 

@@ -1,4 +1,4 @@
-// screens/Pod/queries.ts — co-located TanStack Query layer for pods, over the Phase-2 PodsAdapter.
+// screens/Pod/queries.ts — co-located TanStack Query layer for pods, over the PodsAdapter.
 // Pods are Podman-only: gate the call sites on `host.capabilities.resources.pods`. `getPodLogs` is a
 // HostClientFacade proxy (not an adapter method), so its hook goes through the active host directly.
 

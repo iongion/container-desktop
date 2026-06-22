@@ -30,7 +30,7 @@ function noopCommandResult(): CommandExecutionResult {
  */
 async function resolveSocktainerSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
   // Remote (scoped): the remote $HOME via printenv; native: the local home. NEVER raw DOCKER_HOST — on
-  // macOS it commonly points to Docker Desktop / Colima / Podman-compat sockets (a non-Apple daemon).
+  // macOS it commonly points to a non-Apple daemon.
   const home = (await readScopedHome(host, settings)) || (await Platform.getHomeDir());
   return `${home}/.socktainer/${SOCKTAINER_SOCKET_NAME}`;
 }
@@ -106,7 +106,7 @@ export const containerDialect: EngineDialect = {
 
   bindExtensions(_host: HostContext): EngineExtensionMethods {
     return {
-      // ── Podman-domain groups — no-op on Apple ──
+      // Podman-domain groups — no-op on Apple
       getPodmanMachineInspect: async () => undefined,
       getPodmanMachines: async () => [],
       createPodmanMachine: async () => false,
@@ -118,7 +118,7 @@ export const containerDialect: EngineDialect = {
       generateKube: async () => noopCommandResult(),
       getPodLogs: async () => noopCommandResult(),
 
-      // ── Docker-domain groups — no-op on Apple (no contexts/swarm/builders/compose) ──
+      // Docker-domain groups — no-op on Apple (no contexts/swarm/builders/compose)
       getDockerContexts: async () => [],
       inspectDockerContext: async () => undefined,
       useDockerContext: async () => false,

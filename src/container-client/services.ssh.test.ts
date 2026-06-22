@@ -8,10 +8,10 @@ const noIdentityParams = { host: "10.0.0.5", port: 22, username: "ion", privateK
 const configHostParams = { ...params, configHost: "MacOS" };
 
 describe("buildSSHArgs", () => {
-  it("is bounded so a control connection cannot hang (the #171 root cause)", () => {
+  it("is bounded so a control connection cannot hang", () => {
     // BatchMode disables interactive password/host-key prompts; ConnectTimeout +
     // ConnectionAttempts bound the TCP phase. Without these, a wrong key/unreachable host
-    // blocks forever on "Please wait" (#171).
+    // blocks forever on "Please wait".
     const args = buildSSHArgs(params, ["echo", "ok"]);
     expect(args).toContain("-oBatchMode=yes");
     expect(args).toContain("-oConnectTimeout=15");

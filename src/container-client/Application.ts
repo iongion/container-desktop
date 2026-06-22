@@ -400,7 +400,6 @@ export class Application {
   }
 
   async getGlobalUserSettings() {
-    // const version = await this.userConfiguration.getKey<string>("version", "");
     const settings = {
       theme: normalizeTheme(await this.userConfiguration.getKey<string>("theme", "bp6-dark")),
       engineTheme: normalizeEngineThemePreference(await this.userConfiguration.getKey<string>("engineTheme", "auto")),
@@ -429,7 +428,7 @@ export class Application {
         : await this.userConfiguration.getKey("connector"),
       connections: await this.getConnectionsFromConfiguration(),
       // Always populate the AI section with safe defaults so older configs (and any partial
-      // ai blob) never surface `undefined` to the UI or the ai:* IPC handlers (issue #232).
+      // ai blob) never surface `undefined` to the UI or the ai:* IPC handlers.
       ai: normalizeAISettings(await this.userConfiguration.getKey("ai")),
       proxy: normalizeProxyConfig(await this.userConfiguration.getKey("proxy")),
     } as GlobalUserSettings;
@@ -614,7 +613,7 @@ export class Application {
       const it = connections[0] as any;
       if (it.runtime) {
         connections = connections.map((it: any) => {
-          // Migrate to new format
+          // Normalize the older field layout (runtime/engine → engine/host)
           const host = it.engine;
           const engine = it.runtime;
           it.engine = engine;
@@ -623,7 +622,7 @@ export class Application {
           delete it.runtime;
           return it;
         });
-        // Save the new format
+        // Persist the normalized connections
         await this.userConfiguration.setKey("connections", connections);
         this.logger.warn("Migrated connections to new format", connections);
       }
@@ -928,7 +927,6 @@ export class Application {
         const driver = await host.getApiDriver();
         const searchParams = new URLSearchParams();
         searchParams.set("term", term || "");
-        // searchParams.set("listTags", "true");
         if (filters?.isAutomated) {
           searchParams.set("is-automated", "true");
         }
@@ -942,7 +940,6 @@ export class Application {
         this.logger.debug("Proxying request", request);
         const response = await driver.request(request);
         items = response.data || [];
-        // logger.debug("Results are", output);
         return normalizeAndSortSearchResults(items);
       }
       if (filters?.isOfficial) {

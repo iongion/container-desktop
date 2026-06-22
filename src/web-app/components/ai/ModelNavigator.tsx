@@ -1,4 +1,4 @@
-// Reusable AI inference-source → provider → model drill-down (issue #232). The SAME navigation is used
+// Reusable AI inference-source → provider → model drill-down. The SAME navigation is used
 // by the chat composer's popover (ModelPicker) and the embedded Settings selector (ProviderSelector), so
 // "selecting a model" feels identical no matter the end goal. Built on Blueprint's PanelStack: each step
 // is a push/pop slide; the chrome (back · title · combined search + ⟳) is a PERSISTENT bar ABOVE the

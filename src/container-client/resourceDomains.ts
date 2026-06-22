@@ -29,7 +29,7 @@ function uniqueDomains(domains: ResourceDomain[]): ResourceDomain[] {
   return Array.from(new Set(domains));
 }
 
-// Lifted verbatim from resourceEvents.ts so the engine-event → domain mapping has one home that main can use.
+// The engine-event → domain mapping, kept in one home so main can use it.
 export function normalizeResourceEventDomains(event: EngineEvent): ResourceDomain[] {
   const type = normalizeEventValue(event.Type ?? event.type ?? event.scope ?? event.Kind ?? event.kind);
   const action = normalizeEventValue(event.Action ?? event.action ?? event.Status ?? event.status ?? event.Event);

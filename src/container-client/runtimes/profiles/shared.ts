@@ -9,7 +9,7 @@ import { isEmpty } from "@/utils";
 import type { HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 
-// ── availability OS-gates (the leaves' isEngineAvailable bodies) ──
+// availability OS-gates (the leaves' isEngineAvailable bodies)
 
 export function availableAlways(): AvailabilityCheck {
   return { success: true, details: "Engine is available" };
@@ -33,7 +33,7 @@ export function availableUnless(host: HostContext, os: OperatingSystem): Availab
   return result;
 }
 
-// ── capability host-adjustment (Finding B): machines is real only on Podman native/vendor ──
+// capability host-adjustment (Finding B): machines is real only on Podman native/vendor
 
 export function withMachines(base: CapabilityDescriptor, machines: boolean): CapabilityDescriptor {
   return { ...base, extensions: { ...base.extensions, machines } };
@@ -51,7 +51,7 @@ export function withNetworks(base: CapabilityDescriptor, networks: boolean): Cap
   return { ...base, resources: { ...base.resources, networks } };
 }
 
-// ── shared getApiConnection bodies (engine-agnostic; the socket read is the dialect's) ──
+// shared getApiConnection bodies (engine-agnostic; the socket read is the dialect's)
 
 /** LIMA: the API socket is ~/.lima/<scope>/sock/<scope>.sock (podman-lima + docker-lima are identical). */
 export async function limaApiConnection(
@@ -95,7 +95,7 @@ export async function sshApiConnection(
   };
 }
 
-// ── default automatic-settings detection (base.ts:204-249) ──
+// default automatic-settings detection (base.ts:204-249)
 
 export async function defaultGetAutomaticSettings(
   host: HostContext,

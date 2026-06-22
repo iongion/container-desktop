@@ -188,7 +188,7 @@ export interface ResolvedProvider {
 }
 
 // Derived from the catalog (single source). Unknown/user-added providers fall back to a keyless local
-// OpenAI-compatible server, matching the prior hand-maintained behavior.
+// OpenAI-compatible server.
 const KIND_BY_ID: Record<string, ProviderKind> = Object.fromEntries(PROVIDER_CATALOG.map((e) => [e.id, e.kind]));
 const DEFAULT_BASEURL_BY_ID: Record<string, string> = Object.fromEntries(
   PROVIDER_CATALOG.filter((e) => e.defaultBaseURL).map((e) => [e.id, e.defaultBaseURL as string]),
@@ -207,8 +207,8 @@ export function resolveProvider(settings: AISettings, providerId?: string): Reso
   const isCloud = kind !== "local";
   const baseURL = cfg.baseURL || DEFAULT_BASEURL_BY_ID[id] || "";
   // The user's per-provider override wins; else the catalog default (unknown/user-added providers → "none",
-  // matching the prior keyless-local fallback). requiresKey derives from the SCHEME, not isCloud — so a
-  // hardened local can require a key and a cloud set to "none" stays browsable keyless.
+  // i.e. keyless local). requiresKey derives from the SCHEME, not isCloud — so a hardened local can
+  // require a key and a cloud set to "none" stays browsable keyless.
   const auth = cfg.auth ?? { scheme: DEFAULT_AUTH_SCHEME_BY_ID[id] ?? "none" };
   return { id, kind, baseURL, model: cfg.model, isCloud, requiresKey: auth.scheme !== "none", auth };
 }

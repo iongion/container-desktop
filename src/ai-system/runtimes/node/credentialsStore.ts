@@ -1,5 +1,5 @@
 // Main-only JSON file backing for the AI key store. Holds per-provider safeStorage ciphertext
-// (base64) — never plaintext — in ai-credentials.json under userData, mode 0600. See.
+// (base64) — never plaintext — in ai-credentials.json under userData, mode 0600.
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 

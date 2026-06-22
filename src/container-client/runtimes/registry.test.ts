@@ -23,7 +23,7 @@ interface MatrixRow {
 
 const { Linux, Windows, MacOS } = OperatingSystem;
 
-// The full §4 map: every (engine, host) → transport × program × controller, plus the two
+// The full map: every (engine, host) → transport × program × controller, plus the two
 // host-adjusted facts that bite in production — whether the transport is scoped (needs a
 // controller/distro/instance) and whether `machines` is a real capability (Podman native/vendor only).
 const MATRIX: MatrixRow[] = [
@@ -87,7 +87,7 @@ const MATRIX: MatrixRow[] = [
     machines: false,
     osType: Linux,
   },
-  // Docker Desktop is unscoped — it uses the Native transport, not a machine transport.
+  // The Docker virtualized-vendor host is unscoped — it uses the Native transport, not a machine transport.
   {
     engine: ContainerEngine.DOCKER,
     host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,

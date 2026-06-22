@@ -1,8 +1,8 @@
 // runtimes/transports/wsl.ts — WSLTransport: the engine runs inside a WSL distribution (the scope).
 //
-// Lifts runtimes/abstract/wsl.ts + podman/wsl.ts. The scoped-exec wrapper is `wsl --distribution <s> --exec
-// …` (byte-for-byte). startApi is engine-shaped via host.dialect.buildServiceArgs: Podman starts the service
-// inside the distro and ensures the relay socket base dir; Docker manages its own service (no-op).
+// The scoped-exec wrapper is `wsl --distribution <s> --exec …`. startApi is engine-shaped via
+// host.dialect.buildServiceArgs: Podman starts the service inside the distro and ensures the relay socket
+// base dir; Docker manages its own service (no-op).
 
 import type { AxiosInstance } from "axios";
 

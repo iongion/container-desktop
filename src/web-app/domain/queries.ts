@@ -1,5 +1,5 @@
 // web-app/domain/queries.ts — app-level (non-resource) queries. `OnlineApi` is kept as a tiny module
-// singleton behind a static useLatestVersion hook (plan §C).
+// singleton behind a static useLatestVersion hook.
 
 import { useQuery } from "@tanstack/react-query";
 

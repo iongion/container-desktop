@@ -139,7 +139,7 @@ export function selectHasError(state: ActivityState): boolean {
   return state.entries.some((entry) => entry.severity === "error");
 }
 
-// ── Ingestion: system events (reused systemNotifier bus) ──────────────────────────────
+// Ingestion: system events (reused systemNotifier bus)
 // These run at module load — coexisting with the existing appStore listeners (eventemitter3
 // supports multiple listeners per event). The drawer/header import this module, so the
 // subscriptions are registered at app startup, not at component render.
@@ -164,7 +164,7 @@ systemNotifier.on("engine.availability", (event: SystemNotification) => {
   useActivityStore.getState().ingest(toSystemEntry(event));
 });
 
-// ── Ingestion: user notifications (teed from Notification.show) ────────────────────────
+// Ingestion: user notifications (teed from Notification.show)
 
 export function intentToSeverity(intent: string | undefined): ActivitySeverity {
   switch (intent) {
@@ -199,7 +199,7 @@ systemNotifier.on("activity.notification", (event: SystemNotification) => {
   useActivityStore.getState().ingest(toNotificationEntry(event));
 });
 
-// ── Ingestion: engine API calls (from the Api.clients interceptor) ─────────────────────
+// Ingestion: engine API calls (from the Api.clients interceptor)
 // A "pending" event creates the entry; the matching "settled" event (same data.guid)
 // patches in status/duration/bodies/curl so a single row updates in place.
 
@@ -248,7 +248,7 @@ systemNotifier.on("activity.api", (event: SystemNotification) => {
   } as Partial<ApiEntry>);
 });
 
-// ── Ingestion: CLI commands (from the preload ActivityBus over the contextBridge) ───────
+// Ingestion: CLI commands (from the preload ActivityBus over the contextBridge)
 // Subscribed lazily/idempotently — window.ActivityBus may not exist when this module first
 // evaluates (preload race). NotificationCenterHost also calls this on mount; the preload
 // buffers entries emitted before the first subscriber, so startup CLI calls are not lost.

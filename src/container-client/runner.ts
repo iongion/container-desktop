@@ -11,9 +11,8 @@ import type {
 import { createLogger } from "@/logger";
 
 /**
- * Minimal host surface the Runner depends on — only the API health check. Both the legacy
- * AbstractContainerEngineHostClient and the new composed HostClient satisfy it, so the Runner no longer
- * couples to (and circularly imports) the concrete host class.
+ * Minimal host surface the Runner depends on — only the API health check. The composed HostClient satisfies
+ * it, so the Runner doesn't couple to (or circularly import) the concrete host class.
  */
 export interface RunnerHost {
   isApiRunning(): Promise<AvailabilityCheck>;
@@ -33,7 +32,7 @@ export class Runner {
     this.logger = createLogger("container-client.api.Runner");
   }
 
-  /** Single source of truth: was the API service started by us in this process (folds the former host.apiStarted). */
+  /** Single source of truth: was the API service started by us in this process? */
   isStarted() {
     return this.started;
   }
@@ -144,7 +143,7 @@ export class Runner {
       flag = true;
     }
     if (flag) {
-      this.started = false; // single source of truth reset on successful stop (was previously only reset on the host)
+      this.started = false; // single source of truth reset on successful stop
     }
     this.logger.debug("<< Stopping API - complete", { stopped: flag });
     return flag;

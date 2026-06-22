@@ -1,6 +1,6 @@
 import type { AppScreen } from "@/web-app/Types";
 
-// Sidebar / header-menu visibility (issue #232). AI is always on, so Metadata.RequiresAI is purely a
+// Sidebar / header-menu visibility. AI is always on, so Metadata.RequiresAI is purely a
 // "surface this in the header's AI menu" tag — never an access gate. AI screens stay OUT of the sidebar
 // (Metadata.ExcludeFromSidebar) and are reached through the header's AI menu instead. Pure + testable;
 // the sidebar (AppSidebar) and the header (AppHeader) consume these.

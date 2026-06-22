@@ -42,7 +42,7 @@ export interface ConnectionRuntimeInfo {
 }
 
 // Main owns the CONNECTION phase + connection identity; the renderer keeps its own UI-bootstrap phase
-// (preload wait, React mount) and merges the two (spec §6, High-1 refinement). `currentConnector` is the
+// (preload wait, React mount) and merges the two. `currentConnector` is the
 // PRIMARY connection (create/pull target, tray header, back-compat); `active` carries every connection main
 // has brought up (or tried to) so the renderer can render the merged, multi-engine workspace.
 export interface AppRuntimeSnapshot {

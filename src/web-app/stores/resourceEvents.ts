@@ -1,14 +1,13 @@
-// resourceEvents — post-cutover thin client over the main-owned data layer.
+// resourceEvents — thin client over the main-owned data layer.
 //
-// Main now owns the engine `/events` stream and all list fetches; the renderer no longer runs its own
-// event manager. This module keeps the exact interface the screens already call, so none of them change
-// (the seam):
+// Main owns the engine `/events` stream and all list fetches; this module is the renderer-side seam the
+// screens call:
 //   - start()                 → begin mirroring main's pushed snapshots into resourceStore
 //   - refresh()/refreshMany()  → ask main to refresh a domain now (the post-mutation "refresh now" nudge)
 //   - stop()/stopAll()         → no-ops (main owns the connection/stream lifecycle)
 //
-// The engine-event → domain mapping now lives in resourceDomains; it is re-exported here for the few
-// importers (and the test) that still reference it from this module.
+// The engine-event → domain mapping lives in resourceDomains; it is re-exported here for the importers
+// (and the test) that reference it from this module.
 
 import type { ResourceDomain } from "@/container-client/resourceDomains";
 import { RESOURCE_SYNC } from "@/container-client/resourceSyncProtocol";

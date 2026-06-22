@@ -1,4 +1,4 @@
-// ── AI subsystem core ports ─────────────────────────────────────
+// AI subsystem core ports
 // Neutral, framework-agnostic PORT interfaces. No Electron/React/AI-SDK/node:*.
 // Runtime implementations live in runtimes/node/; shell adapters in adapters/electron/.
 
@@ -6,7 +6,7 @@ import type { AIPermissionMode, CachedVerdict } from "./permissions";
 import type { ResolvedProvider } from "./providers";
 import type { AIAuthSettings, ListedModel } from "./types";
 
-// ── Provider key store ───────────────────────────────────────────────────────
+// Provider key store
 export interface EncryptionStatus {
   available: boolean;
   backend?: string;
@@ -21,7 +21,7 @@ export interface AIKeyStore {
   clearKey(provider: string): Promise<void>;
 }
 
-// ── Knowledge bank ──────────────────────────────────────────────────────────
+// Knowledge bank
 export type KnowledgeDomain = "podman" | "docker" | "wsl" | "ssh" | "general";
 
 export interface KnowledgeEntry {
@@ -38,7 +38,7 @@ export interface KnowledgeBankLike {
   search(query: string): Promise<KnowledgeEntry[]>;
 }
 
-// ── Model listing ───────────────────────────────────────────────────────────
+// Model listing
 export type { ListedModel };
 
 export type ModelLister = (
@@ -46,7 +46,7 @@ export type ModelLister = (
   opts?: { auth?: AIAuthSettings; secret?: string; fetchImpl?: typeof fetch; signal?: AbortSignal },
 ) => Promise<ListedModel[]>;
 
-// ── Sandbox ─────────────────────────────────────────────────────────────────
+// Sandbox
 export interface SandboxCommand {
   program: string;
   args: string[];
@@ -72,7 +72,7 @@ export interface SandboxExecResult {
 // timeout, output cap + redaction) still applies.
 export type SandboxRunner = (cmd: SandboxCommand, opts?: { enforceFloor?: boolean }) => Promise<SandboxExecResult>;
 
-// ── Agent ────────────────────────────────────────────────────────────────────
+// Agent
 // Neutral message type for agent runs (the broker uses this; runtimes/node
 // maps to AI-SDK ModelMessage).
 export interface AgentMessage {

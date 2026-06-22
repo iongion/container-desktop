@@ -1,6 +1,6 @@
 // web-app/stores/uiStore.ts — client-only UI state (per-screen search term, collapsed groups, selected
-// rows, overlays) that used to live in component useState / Easy-Peasy. Keyed by an arbitrary scope string
-// (usually the screen id) so each screen keeps its own slice. Reset on connection switch.
+// rows, overlays). Keyed by an arbitrary scope string (usually the screen id) so each screen keeps its
+// own slice. Reset on connection switch.
 
 import { create } from "zustand";
 
