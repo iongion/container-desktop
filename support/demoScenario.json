@@ -40,7 +40,7 @@
           "resultMs": 600
         },
         { "type": "sidebar", "expanded": false, "hold": 300 },
-        { "type": "hover", "selector": "[data-container=\"8a100000000000000000000000000004\"]", "duration": 1300, "hold": 700 }
+        { "type": "hover", "selector": "[data-container]", "duration": 1300, "hold": 700 }
       ],
       "hold": 8500
     },
@@ -54,7 +54,7 @@
           "pre": [
             {
               "action": "openRowActions",
-              "rowSelector": "[data-container=\"8a100000000000000000000000000004\"]"
+              "rowSelector": "[data-container]"
             }
           ]
         }
@@ -67,14 +67,14 @@
       "text": "inspecting container configuration like an operator, not a marketing dashboard",
       "actions": [
         { "type": "key", "key": "Escape", "hold": 300 },
-        { "type": "hover", "selector": "[data-container=\"8a100000000000000000000000000004\"]", "duration": 1000, "hold": 400 },
+        { "type": "hover", "selector": "[data-container]", "duration": 1000, "hold": 400 },
         {
           "type": "navigate",
           "route": "/screens/container/$containerId/inspect",
           "resolve": {
             "containerId": {
               "route": "/screens/containers",
-              "selector": "[data-container=\"8a100000000000000000000000000004\"]",
+              "selector": "[data-container]",
               "attr": "data-container"
             }
           },
