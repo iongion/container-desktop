@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint.mjs";
 import { demoScenarios } from "./demoScenarios.mjs";
 import {
   captureWindow,
@@ -63,7 +64,10 @@ function electronEnv(engine, port, viewport) {
   env.CONTAINER_DESKTOP_MOCK = engine;
   env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
   env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT = `${port}`;
-  env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN = `http://localhost:${port}`;
+  // Don't pin the CDP origin: watch.mjs may fall back from `port` to a free port and would then keep
+  // this stale origin in --remote-allow-origins, rejecting the websocket. Unset lets it derive the
+  // allow-origin from the port it actually bound, so origin and port always agree (see cdpEndpoint.mjs).
+  delete env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN;
   env.CONTAINER_DESKTOP_CAPTURE_OFFSCREEN = "1";
   env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN = "1";
   env.ENVIRONMENT = "development";
@@ -130,8 +134,7 @@ async function findAppPage(browser, timeoutMs) {
   throw new Error("No app page with preload bridge found");
 }
 
-async function waitForApp(port, timeoutMs = 60_000) {
-  const endpoint = `http://localhost:${port}`;
+async function waitForApp(endpoint, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   let lastError;
   while (Date.now() < deadline) {
@@ -194,6 +197,7 @@ async function killStray() {
 
 async function withApp(scenario, mode, port, fn) {
   const spec = commandFor(mode, port);
+  clearCdpEndpointFile();
   const child = spawn(spec.command, spec.args, {
     cwd: ROOT,
     detached: process.platform !== "win32",
@@ -202,7 +206,7 @@ async function withApp(scenario, mode, port, fn) {
   });
   let browser;
   try {
-    const session = await waitForApp(port);
+    const session = await waitForApp(await resolveCdpEndpoint(mode, port));
     browser = session.browser;
     await waitForAppViewport(session.page, scenario.viewport);
     await session.page.waitForLoadState("domcontentloaded").catch(() => undefined);

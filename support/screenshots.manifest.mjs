@@ -61,8 +61,8 @@ export const screenshotManifest = [
   },
   {
     file: "UserSettings.png",
-    route: "/screens/settings/user-settings",
-    waitFor: '[data-screen="settings-settings"] [data-form="flags"]',
+    route: "/screens/settings/user-settings?category=config",
+    waitFor: '[data-screen="settings-settings"] [data-form="configuration"]',
   },
   {
     file: "SystemInfo.png",
