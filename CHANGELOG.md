@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network settings: test-before-save global proxy for app traffic and native Podman commands.
 - Added AI chatbot.
 - Refactored the engine-communication layer into smaller, single-responsibility modules — no functional change.
+- Refactored `Application.ts` — moved the registry catalog/search, security-report and environment helpers into focused `container-client/application/` modules — no functional change.
 - Settings split into categories with a left nav rail: Appearance, Startup & behavior, AI Assistant, Configuration, Logging.
 - Logs can be saved to a local file on demand, with rotation and a size cap — on-device, never uploaded.
 - Cleaned up code comments across the codebase — no functional change.

@@ -5,6 +5,21 @@ import {
   getDefaultConnectors,
   type HostClientFacade,
 } from "@/container-client";
+import {
+  describeConnectError,
+  detectOperatingSystem,
+  normalizeEngineThemePreference,
+  normalizeTheme,
+} from "@/container-client/application/environment";
+import { AUTOMATIC_REGISTRIES, PROPOSED_REGISTRIES } from "@/container-client/application/registries";
+import {
+  buildDockerSearchArgs,
+  buildImageSearchParams,
+  buildPodmanSearchArgs,
+  normalizeAndSortSearchResults,
+  normalizeSearchOutput,
+} from "@/container-client/application/registrySearch";
+import { createSecurityReport, parseTrivyAnalysis, parseTrivyDatabase } from "@/container-client/application/security";
 import { UserConfiguration } from "@/container-client/config";
 import {
   buildMockConnections,
@@ -32,7 +47,6 @@ import {
   type DisconnectOptions,
   type EngineConnectorAvailability,
   type EngineConnectorSettings,
-  type EngineThemePreference,
   type GlobalUserSettings,
   type ILogger,
   type OpenFileSelectorOptions,
@@ -40,7 +54,6 @@ import {
   OperatingSystem,
   type Program,
   type RegistriesMap,
-  type Registry,
   type RegistryPullOptions,
   type RegistrySearchOptions,
   StartupStatus,
@@ -51,112 +64,9 @@ import { normalizeLoggingFileSettings } from "@/logger/loggingSettings";
 import { getWindowsPipePath } from "@/platform";
 import { deepMerge } from "@/utils";
 
-const AUTOMATIC_REGISTRIES: Registry[] = [
-  {
-    id: "system",
-    name: "Configuration",
-    created: new Date().toISOString(),
-    weight: -1,
-    isRemovable: false,
-    isSystem: true,
-    enabled: true,
-    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER, ContainerEngine.APPLE],
-  },
-];
-const PROPOSED_REGISTRIES = [
-  {
-    id: "quay.io",
-    name: "quay.io",
-    created: new Date().toISOString(),
-    weight: 0,
-    isRemovable: true,
-    isSystem: false,
-    enabled: true,
-    engine: [ContainerEngine.PODMAN],
-  },
-  {
-    id: "docker.io",
-    name: "docker.io",
-    created: new Date().toISOString(),
-    weight: 1000,
-    isRemovable: true,
-    isSystem: false,
-    enabled: true,
-    engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER, ContainerEngine.APPLE],
-  },
-];
-
-function normalizeTheme(theme: string | undefined): "bp6-dark" | "bp6-light" {
-  if (theme === "light" || theme === "bp6-light") {
-    return "bp6-light";
-  }
-  return "bp6-dark";
-}
-
-function normalizeEngineThemePreference(value: string | undefined): EngineThemePreference {
-  // Apple Container is an engine, not a selectable theme: a stale stored "container" preference
-  // normalizes to "auto" and resolves to the unified theme via engineTheme.ts.
-  return value === "podman" || value === "docker" || value === "unified" ? value : "auto";
-}
-
-// Format the raw, verbatim detail of a connection failure for the Activity Center: the SSH preflight steps
-// when present (what was attempted, step by step), else the error stack, else the bare message. Never lossy —
-// the whole point is that startup / connection-establishment failures keep their real cause.
-function describeConnectError(error: any): string | undefined {
-  const steps = error?.report?.steps;
-  if (Array.isArray(steps) && steps.length > 0) {
-    const lines = steps.map((step: any) => {
-      const mark = step?.skipped ? "·" : step?.ok ? "✓" : "✗";
-      const id = step?.id ?? step?.label ?? "step";
-      return step?.details ? `  ${mark} ${id} — ${step.details}` : `  ${mark} ${id}`;
-    });
-    return ["SSH preflight:", ...lines].join("\n");
-  }
-  if (typeof error?.stack === "string" && error.stack.trim()) {
-    return error.stack;
-  }
-  return error?.message ? `${error.message}` : undefined;
-}
-
-export const normalizeAndSortSearchResults = (items: any[]) => {
-  let output = items.map((it) => {
-    if (typeof it.Stars === "undefined") {
-      it.Stars = 0;
-      if (typeof it.StarCount !== "undefined") {
-        it.Stars = Number(it.StarCount);
-      }
-    }
-    return it;
-  });
-  // 1st sort by name
-  output = output.sort((a, b) => {
-    return a.Name.localeCompare(b.Name, "en", { numeric: true });
-  });
-  // 2nd sort by stars
-  output = output.sort((a, b) => {
-    return b.Stars - a.Stars;
-  });
-  return output;
-};
-
-export function detectOperatingSystem() {
-  let OSName = "Unknown OS";
-  if (navigator.userAgent.indexOf("Win") !== -1) OSName = "Windows";
-  if (navigator.userAgent.indexOf("Mac") !== -1) OSName = "MacOS";
-  if (navigator.userAgent.indexOf("X11") !== -1) OSName = "UNIX";
-  if (navigator.userAgent.indexOf("Linux") !== -1) OSName = "Linux";
-  switch (OSName) {
-    case "Windows":
-      return OperatingSystem.Windows;
-    case "MacOS":
-      return OperatingSystem.MacOS;
-    case "Linux":
-    case "Unix":
-      return OperatingSystem.Linux;
-    default:
-      return OperatingSystem.Unknown;
-  }
-}
+// Re-export the helpers that moved to ./application/* so Application.ts keeps its historical
+// named exports (detectOperatingSystem, normalizeAndSortSearchResults) byte-for-byte.
+export { detectOperatingSystem, normalizeAndSortSearchResults };
 
 export class Application {
   private static instance: Application;
@@ -741,23 +651,7 @@ export class Application {
 
   async checkSecurity(options: { scanner: string; subject: string; target: string; host?: HostClientFacade }) {
     const currentApi = options.host || this.getCurrentEngineConnectionApi();
-    const report: any = {
-      status: "failure",
-      scanner: {
-        name: options.scanner,
-        path: "",
-        version: undefined,
-        database: undefined,
-      },
-      counts: {
-        CRITICAL: 0,
-        HIGH: 0,
-        MEDIUM: 0,
-        LOW: 0,
-      },
-      result: undefined,
-      fault: undefined,
-    };
+    const report: any = createSecurityReport(options.scanner);
     try {
       if (!currentApi) {
         throw new Error("No active engine connection");
@@ -797,11 +691,10 @@ export class Application {
           result = await currentApi.runHostCommand(programPath, ["--version", "--format", "json"]);
         }
         // Parse database version
-        const parsed = result.stdout || "{}";
         try {
-          const decoded = JSON.parse(parsed);
-          report.scanner.database = decoded || {};
-          report.scanner.version = report.scanner.database.Version || "";
+          const { database, version } = parseTrivyDatabase(result.stdout);
+          report.scanner.database = database;
+          report.scanner.version = version;
         } catch (error: any) {
           console.error("Unable to decode trivy database", error);
         }
@@ -826,27 +719,8 @@ export class Application {
               ]);
             }
             if (analysis?.success && analysis.stdout !== "null") {
-              const priorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
-              const sorter = (a: { Severity: string }, b: { Severity: string }) => {
-                return priorities.indexOf(b.Severity) - priorities.indexOf(a.Severity);
-              };
               try {
-                const data = JSON.parse(analysis.stdout || JSON.stringify({ Results: [] }));
-                data.Results = (data.Results || []).map((it: any) => {
-                  it.guid = crypto.randomUUID();
-                  it.Vulnerabilities = (it.Vulnerabilities || [])
-                    .map((v: any) => {
-                      v.guid = crypto.randomUUID();
-                      if (typeof report.counts[v.Severity] === "undefined") {
-                        report.counts[v.Severity] = 0;
-                      }
-                      report.counts[v.Severity] += 1;
-                      return v;
-                    })
-                    .sort(sorter);
-                  return it;
-                });
-                report.result = data;
+                report.result = parseTrivyAnalysis(analysis.stdout, report.counts);
                 report.status = "success";
               } catch (error: any) {
                 this.logger.error("Error during output parsing", error.message, analysis);
@@ -924,8 +798,7 @@ export class Application {
       throw new Error("No active engine connection");
     }
     const { program } = await host.getSettings();
-    const filtersList: any[] = [];
-    const programArgs = ["search"];
+    let programArgs: string[] = ["search"];
     const isPodman = host.ENGINE === ContainerEngine.PODMAN;
     const isDocker = host.ENGINE === ContainerEngine.DOCKER;
     const isApple = host.ENGINE === ContainerEngine.APPLE;
@@ -933,14 +806,7 @@ export class Application {
       // Search using API
       if (registry?.id === "system") {
         const driver = await host.getApiDriver();
-        const searchParams = new URLSearchParams();
-        searchParams.set("term", term || "");
-        if (filters?.isAutomated) {
-          searchParams.set("is-automated", "true");
-        }
-        if (filters?.isOfficial) {
-          searchParams.set("is-official", "true");
-        }
+        const searchParams = buildImageSearchParams(term, filters, { includeAutomated: true });
         const request = {
           method: "GET",
           url: `/images/search?${searchParams.toString()}`,
@@ -950,31 +816,15 @@ export class Application {
         items = response.data || [];
         return normalizeAndSortSearchResults(items);
       }
-      if (filters?.isOfficial) {
-        filtersList.push("--filter=is-official");
-      }
-      if (filters?.isAutomated) {
-        filtersList.push("--filter=is-automated");
-      }
       // Search using CLI
-      programArgs.push(...filtersList);
-      programArgs.push(...[`${registry.name}/${term}`, "--format", "json"]);
+      programArgs = buildPodmanSearchArgs(registry, term, filters);
     } else if (isDocker) {
-      programArgs.push("--format", "json");
-      if (filters?.isOfficial) {
-        filtersList.push("--filter", "is-official=true");
-      }
-      programArgs.push(...filtersList);
-      programArgs.push(...[term]);
+      programArgs = buildDockerSearchArgs(term, filters);
     } else if (isApple) {
       // Apple speaks Docker REST via socktainer — use the API search endpoint (like Podman system-API).
       // No `container` CLI search; socktainer /images/search is the single verify-live endpoint.
       const driver = await host.getApiDriver();
-      const searchParams = new URLSearchParams();
-      searchParams.set("term", term || "");
-      if (filters?.isOfficial) {
-        searchParams.set("is-official", "true");
-      }
+      const searchParams = buildImageSearchParams(term, filters, { includeAutomated: false });
       const request = {
         method: "GET",
         url: `/images/search?${searchParams.toString()}`,
@@ -1001,7 +851,7 @@ export class Application {
     } else {
       try {
         // Docker outputs multiple JSON lines - not an array of objects
-        const output = isDocker ? `[${(result.stdout || "").trim().split(/\r?\n/).join(",")}]` : result.stdout;
+        const output = normalizeSearchOutput(result.stdout, isDocker);
         if (output) {
           items = JSON.parse(output);
         } else {
