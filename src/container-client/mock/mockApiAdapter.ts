@@ -49,6 +49,28 @@ function segments(path: string): string[] {
   return path.split("/").filter(Boolean);
 }
 
+/** `/images/search?term=…` → RegistrySearchResult[] derived from the generated images (keeps the search drawer alive). */
+function imageSearchResults(images: unknown[], rawUrl: string): unknown[] {
+  const term = (new URLSearchParams(rawUrl.split("?")[1] || "").get("term") || "").toLowerCase();
+  return images
+    .map((image) => {
+      const item = image as { RepoTags?: string[]; Names?: string[] };
+      const ref = item.RepoTags?.[0] || item.Names?.[0] || "";
+      const name = ref.split(":")[0];
+      const official = name.startsWith("library/") || !name.includes("/");
+      return {
+        Index: "docker.io",
+        Name: name,
+        Description: `${name} container image`,
+        Stars: name.length * 13,
+        Official: official ? "[OK]" : "",
+        Automated: "",
+        Tag: "",
+      };
+    })
+    .filter((result) => !term || result.Name.toLowerCase().includes(term));
+}
+
 export async function mockApiAdapter(request: any, connection: any): Promise<MockApiResponse> {
   const engine = connection?.engine ?? ContainerEngine.PODMAN;
   const fx = await loadEngineFixtures(engine);
@@ -100,6 +122,9 @@ export async function mockApiAdapter(request: any, connection: any): Promise<Moc
   if (head === "images") {
     if (parts[1] === "json") {
       return ok(fx.images);
+    }
+    if (parts[1] === "search") {
+      return ok(imageSearchResults(fx.images, rawUrl));
     }
     const id = parts[1];
     const tail = parts[2];

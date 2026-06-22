@@ -13,6 +13,7 @@ import {
   MOCK_PODMAN_SYSTEM_ID,
   mockAvailability,
 } from "@/container-client/mock/connections";
+import { loadEngineFixtures } from "@/container-client/mock/fixturesLoader";
 import { getMockEngine, isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
 import { normalizeProxyConfig, type ProxyConfig } from "@/container-client/proxy";
@@ -881,7 +882,14 @@ export class Application {
   }
 
   // registry
-  async getRegistriesMap(opts?: { host?: HostClientFacade }) {
+  async getRegistriesMap(opts?: { host?: HostClientFacade }): Promise<RegistriesMap> {
+    // Mock mode: serve generated registries. loadEngineFixtures is the production-gated loader, so the
+    // generator (and @faker-js/faker) is still tree-shaken out of shipped builds; isMockMode() is also a
+    // no-op in production, making this branch doubly dead there.
+    if (isMockMode()) {
+      const engine = opts?.host?.ENGINE ?? getMockEngine();
+      return (await loadEngineFixtures(engine)).registries;
+    }
     // In the always-merged workspace connectAll never sets the singular _currentContainerEngineHostClient
     // (it caches per-connection hosts only), so callers pass the row's host explicitly. Optional-chain the
     // engine so a missing host degrades to "not podman" (system registry hidden) instead of throwing.

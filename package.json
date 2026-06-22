@@ -95,6 +95,7 @@
   "devDependencies": {
     "@11ty/eleventy": "3.1.6",
     "@biomejs/biome": "2.5.0",
+    "@faker-js/faker": "10.5.0",
     "@rrweb/record": "2.0.1",
     "@tanstack/react-query-devtools": "5.101.0",
     "@types/node": "24.13.2",

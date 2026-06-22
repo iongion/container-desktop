@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Changed
 
 - Resource list tables (containers, images, volumes, networks, pods, secrets, machines, registries) now render only on-screen rows (virtualization), so large lists scroll and search smoothly. Grouping, connectors, striping, sorting, selection and sticky headers unchanged; the containers Image column is fixed-width with ellipsis so it no longer resizes while scrolling.
+- Mock mode (`CONTAINER_DESKTOP_MOCK`) generates its sample data from a fixed seed instead of static fixtures — deterministic and semantically-sound, scaled for UI stress-testing (60+ containers and 30+ of every other resource per engine, now including registries and machines). Dev/test only; tree-shaken out of production builds.
 - Network settings: test-before-save global proxy for app traffic and native Podman commands.
 - Added AI chatbot.
 - Refactored the engine-communication layer into smaller, single-responsibility modules — no functional change.
