@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.7] - 2026-06-22
+
 ## Changed
 
 - Resource list tables (containers, images, volumes, networks, pods, secrets, machines, registries) now render only on-screen rows (virtualization), so large lists scroll and search smoothly. Grouping, connectors, striping, sorting, selection and sticky headers unchanged; the containers Image column is fixed-width with ellipsis so it no longer resizes while scrolling.
