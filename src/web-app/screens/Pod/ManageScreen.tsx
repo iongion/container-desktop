@@ -12,6 +12,7 @@ import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
@@ -22,7 +23,7 @@ import {
   useShowEngineColumn,
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
-import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
+import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -73,12 +74,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, podSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, podSnapshot, searchTerm]);
-  const renderedPods = useProgressiveTableRows(pods);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((pod: MergedPod) => mergedKey(pod, pod.Id), []);
   const visibleIds = useMemo(() => pods.map(getRowId), [pods, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = usePodBulkActions();
+  const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
+  const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
+    rows: pods,
+    getScrollElement,
+    getRowKey: getRowId,
+    scrollMargin,
+    enabled: pods.length > 0,
+  });
+  const columnCount = 7 + (showEngineColumn ? 1 : 0);
   const onReload = useResourcesReload("pods", "containers");
 
   return (
@@ -106,7 +115,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </>
         }
       />
-      <div className="AppScreenContent">
+      <div className="AppScreenContent" ref={scrollElementRef}>
         {pods.length === 0 ? (
           <NonIdealState
             icon={IconNames.GEOSEARCH}
@@ -114,8 +123,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("There are no pods")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact striped className="AppDataTable" data-table="pods">
-            <thead>
+          <HTMLTable interactive compact className="AppDataTable" data-windowed="true" data-table="pods">
+            <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.CUBE} text={t("Name")} />
@@ -163,8 +172,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {renderedPods.map((pod) => {
-                const rowId = getRowId(pod);
+              <VirtualSpacerRow height={paddingTop} columnCount={columnCount} />
+              {items.map(({ row: pod, index, key }) => {
+                const rowId = key;
                 const podDetailsButton = (
                   <AppDataTableLink
                     className="PodDetailsButton"
@@ -181,7 +191,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   typeof pod.Created === "string" ? dayjs(pod.Created) : dayjs(Number(pod.Created) * 1000);
                 return (
                   <tr
-                    key={rowId}
+                    key={key}
+                    ref={measureRef}
+                    data-index={index}
+                    data-striped={index % 2 === 0 ? "true" : undefined}
                     data-pod={pod.Id}
                     data-engine-row={showEngineRowAccent ? pod.engine : undefined}
                     data-state={pod.Status}
@@ -214,6 +227,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </tr>
                 );
               })}
+              <VirtualSpacerRow height={paddingBottom} columnCount={columnCount} />
             </tbody>
           </HTMLTable>
         )}

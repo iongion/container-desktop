@@ -13,6 +13,13 @@
 [data-table="containers"] thead th:nth-child(2),
 [data-table="containers"] tbody td:nth-child(2) {
   text-align: left;
+  /* Fixed width so windowing can't resize the Image column as rows scroll in/out — only the Name
+     column (first child) is fluid. min-width is the hard floor (a plain width is just a hint under
+     table-layout:auto and the Name 100% column pulls it narrower); content is capped at this width by
+     the layers button's max-width and truncates with an ellipsis (.bp6-button-text). */
+  width: 240px;
+  min-width: 240px;
+  max-width: 240px;
 }
 /* Actions column (second-to-last; selection column is always last) stays shrink-to-fit. */
 [data-table="containers"] thead th:nth-last-child(2),

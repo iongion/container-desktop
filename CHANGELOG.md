@@ -9,22 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Changed
 
-- Network settings now support a test-before-save global proxy for app traffic and native Podman commands.
-- AI chat composer: pick the inference source → provider → model in a popover with live discovery — LM Studio is the default, OpenRouter lists its models grouped by vendor with search, and the popover sizes to its content.
-- AI Assistant settings is now a two-column provider **connection** configurator — choose a provider, then set its endpoint, authentication and credentials and **Test the connection**. Each provider offers only the auth schemes it supports (clouds: API key; local servers: keyless or an optional API key; user-added gateways can also use Basic or a custom header). Credentials live in the OS keychain — saving an empty secret removes it. Model selection now lives only in the composer; settings no longer drills into models.
-- AI is always on — removed the "enable AI", "local-only" and "allow cloud" toggles. A provider is local (LM Studio / llama.cpp) or cloud by nature, and saving a cloud provider's API key is the consent to use it; loopback local providers keep everything on your device.
-- The AI Assistant is one always-agentic conversation that can run host commands to inspect and fix your container setup, gated by a permission mode chosen in the composer: **Always ask** (approve each command), **Ask and remember** (approve once, then it remembers your allow/reject), or **Always allow** (run everything, full trust). A catastrophic-command floor (destructive/privileged/shell programs, shell metacharacters, path traversal) applies in the first two modes; web search is gated the same way as a single switch.
-- Settings → AI permissions: review and revoke the commands you've allowed or blocked, set the web-search switch, and reveal the on-device file where these decisions are stored.
-- Refactored the internal engine-communication layer into smaller, single-responsibility modules — no functional change.
-- Settings are organized into categories with a left navigation rail — Appearance, Startup & behavior, AI Assistant, Configuration, and Logging.
-- Logs can be saved to a local file on demand, with automatic rotation and a size cap — kept entirely on your device, never uploaded.
-- Cleaned up code comments across the codebase — removed historical/migration notes, commented-out code, an unreachable icon-copy block, and decorative comment dividers (no functional change).
+- Resource list tables (containers, images, volumes, networks, pods, secrets, machines, registries) now render only on-screen rows (virtualization), so large lists scroll and search smoothly. Grouping, connectors, striping, sorting, selection and sticky headers unchanged; the containers Image column is fixed-width with ellipsis so it no longer resizes while scrolling.
+- Network settings: test-before-save global proxy for app traffic and native Podman commands.
+- Added AI chatbot.
+- Refactored the engine-communication layer into smaller, single-responsibility modules — no functional change.
+- Settings split into categories with a left nav rail: Appearance, Startup & behavior, AI Assistant, Configuration, Logging.
+- Logs can be saved to a local file on demand, with rotation and a size cap — on-device, never uploaded.
+- Cleaned up code comments across the codebase — no functional change.
 
 ## Fixed
 
-- Connection info shows the real socket address (DOCKER_HOST) for every connection instead of a blank `unix://` — the per-connection socket resolved by the main process is now carried to the renderer in the runtime snapshot, and a live settings refresh can no longer erase a configured socket with an empty one.
-- Live container logs no longer crash with "Cannot read properties of undefined (reading 'getApiDriver')" — the log stream now targets the container's own connection rather than an undefined global "current" engine; adapters built without a connection now fail with a clear message.
-- Settings: the monospace-font picker keeps its filter input at the top (not the bottom) and caps the list to a compact height; the "Check for new versions" buttons now share the same size and render at equal height.
+- Connection info shows the real socket (DOCKER_HOST) instead of a blank `unix://` — the resolved per-connection socket now reaches the renderer, and a settings refresh can't erase it.
+- Live container logs no longer crash on `getApiDriver` of undefined — the stream targets the container's own connection, not an undefined global engine.
+- Settings: the monospace-font picker keeps its filter on top and caps the list height; the "Check for new versions" buttons render at equal size.
 
 ## [5.3.6] - 2026-06-19
 

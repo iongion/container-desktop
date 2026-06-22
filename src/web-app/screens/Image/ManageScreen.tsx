@@ -14,6 +14,7 @@ import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
@@ -23,7 +24,7 @@ import {
   useShowEngineColumn,
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
-import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
+import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -73,7 +74,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const items = searchTerm ? imageSnapshot.filter(createImageSearchFilter(searchTerm)) : imageSnapshot;
     return sortByField(items, clientSort, imageSortSelectors);
   }, [clientSort, imageSnapshot, searchTerm]);
-  const renderedImages = useProgressiveTableRows(images);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((image: MergedImage) => mergedKey(image, image.Id), []);
   const visibleIds = useMemo(() => images.map(getRowId), [images, getRowId]);
@@ -81,6 +81,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { actions: bulkActions, refresh: bulkRefresh } = useImageBulkActions();
   const showEngineColumn = useShowEngineColumn();
   const showEngineRowAccent = useShowEngineRowAccent();
+  const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
+  const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
+    rows: images,
+    getScrollElement,
+    getRowKey: getRowId,
+    scrollMargin,
+    enabled: images.length > 0,
+  });
+  const columnCount = 9 + (showEngineColumn ? 1 : 0);
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("images");
 
@@ -108,7 +117,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </>
         }
       />
-      <div className="AppScreenContent">
+      <div className="AppScreenContent" ref={scrollElementRef}>
         {images.length === 0 ? (
           <NonIdealState
             icon={IconNames.GEOSEARCH}
@@ -116,8 +125,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("There are no images")}</p>}
           />
         ) : (
-          <HTMLTable interactive striped compact className="AppDataTable" data-table="images">
-            <thead>
+          <HTMLTable interactive compact className="AppDataTable" data-windowed="true" data-table="images">
+            <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.BOX} text={t("Name")} />
@@ -171,8 +180,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {renderedImages.map((image) => {
-                const rowId = getRowId(image);
+              <VirtualSpacerRow height={paddingTop} columnCount={columnCount} />
+              {items.map(({ row: image, index, key }) => {
+                const rowId = key;
                 const imageLayersButton = (
                   <AppDataTableLink
                     fillCell
@@ -183,7 +193,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 );
                 return (
                   <tr
-                    key={rowId}
+                    key={key}
+                    ref={measureRef}
+                    data-index={index}
+                    data-striped={index % 2 === 0 ? "true" : undefined}
                     data-image={image.Id}
                     data-image-key={rowId}
                     data-engine-row={showEngineRowAccent ? image.engine : undefined}
@@ -220,6 +233,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </tr>
                 );
               })}
+              <VirtualSpacerRow height={paddingBottom} columnCount={columnCount} />
             </tbody>
           </HTMLTable>
         )}

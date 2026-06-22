@@ -12,8 +12,9 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
-import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
+import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -74,10 +75,19 @@ export const Screen: AppScreen<ScreenProps> = () => {
     const items = searchTerm ? machineSnapshot.filter(createMachineSearchFilter(searchTerm)) : machineSnapshot;
     return sortByField(items, clientSort, machineSortSelectors);
   }, [clientSort, machineSnapshot, searchTerm]);
-  const renderedMachines = useProgressiveTableRows(machines);
-  const visibleIds = useMemo(() => machines.map((m) => m.Name), [machines]);
+  const getRowId = useCallback((machine: PodmanMachine) => machine.Name, []);
+  const visibleIds = useMemo(() => machines.map(getRowId), [machines, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useMachineBulkActions(connectionId || "");
+  const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
+  const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
+    rows: machines,
+    getScrollElement,
+    getRowKey: getRowId,
+    scrollMargin,
+    enabled: machines.length > 0,
+  });
+  const columnCount = 11;
   const onReload = useCallback(() => {
     machinesQuery.refetch();
   }, [machinesQuery]);
@@ -107,7 +117,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </>
         }
       />
-      <div className="AppScreenContent">
+      <div className="AppScreenContent" ref={scrollElementRef}>
         {machines.length === 0 ? (
           <NonIdealState
             icon={IconNames.GEOSEARCH}
@@ -115,8 +125,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("There are no machines")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact striped className="AppDataTable" data-table="machines">
-            <thead>
+          <HTMLTable interactive compact className="AppDataTable" data-windowed="true" data-table="machines">
+            <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.HEAT_GRID} text={t("Name")} />
@@ -185,9 +195,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {renderedMachines.map((machine) => {
+              <VirtualSpacerRow height={paddingTop} columnCount={columnCount} />
+              {items.map(({ row: machine, index, key }) => {
                 return (
-                  <tr key={machine.Name}>
+                  <tr key={key} ref={measureRef} data-index={index} data-striped={index % 2 === 0 ? "true" : undefined}>
                     <td>
                       <AppDataTableLink
                         className="InspectMachineButton"
@@ -225,6 +236,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </tr>
                 );
               })}
+              <VirtualSpacerRow height={paddingBottom} columnCount={columnCount} />
             </tbody>
           </HTMLTable>
         )}

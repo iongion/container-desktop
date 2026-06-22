@@ -9,8 +9,9 @@ import type { Registry, RegistrySearchFilters, RegistrySearchResult } from "@/en
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
-import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
+import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -53,12 +54,27 @@ export const Screen: AppScreen<ScreenProps> = () => {
     () => sortByField(searchResults, searchSort.clientSort, registrySearchSortSelectors),
     [searchResults, searchSort.clientSort],
   );
-  const renderedSearchResults = useProgressiveTableRows(sortedSearchResults);
   const sortedRegistries = useMemo(
     () => sortByField(registries, sourceSort.clientSort, registrySourceSortSelectors),
     [registries, sourceSort.clientSort],
   );
-  const renderedRegistries = useProgressiveTableRows(sortedRegistries);
+  // Two independent scroll containers (left = search results, right = sources), each windowed.
+  const searchScroll = useTableScroll();
+  const sourcesScroll = useTableScroll();
+  const searchWindow = useWindowedRows({
+    rows: sortedSearchResults,
+    getScrollElement: searchScroll.getScrollElement,
+    getRowKey: (result) => `${result.Index}_${result.Name}_${result.Tag}`,
+    scrollMargin: searchScroll.scrollMargin,
+    enabled: sortedSearchResults.length > 0,
+  });
+  const sourcesWindow = useWindowedRows({
+    rows: sortedRegistries,
+    getScrollElement: sourcesScroll.getScrollElement,
+    getRowKey: (registry) => registry.id,
+    scrollMargin: sourcesScroll.scrollMargin,
+    enabled: sortedRegistries.length > 0,
+  });
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
   const firstEnabledRegistry = useMemo(
     () =>
@@ -133,8 +149,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("Nothing could be found matching current filters, refine and retry")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact striped className="AppDataTable" data-table="search.results">
-            <thead>
+          <HTMLTable interactive compact className="AppDataTable" data-windowed="true" data-table="search.results">
+            <thead ref={searchScroll.theadRef}>
               <tr>
                 <SortableColumnHeader
                   field="name"
@@ -160,9 +176,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {renderedSearchResults.map((it) => {
+              <VirtualSpacerRow height={searchWindow.paddingTop} columnCount={3} />
+              {searchWindow.items.map(({ row: it, index, key }) => {
                 return (
-                  <tr key={`${it.Index}_${it.Name}_${it.Tag}`} data-registry={it.Name}>
+                  <tr
+                    key={key}
+                    ref={searchWindow.measureRef}
+                    data-index={index}
+                    data-striped={index % 2 === 0 ? "true" : undefined}
+                    data-registry={it.Name}
+                  >
                     <td>
                       <Button
                         className="RegistrySearchResultButton"
@@ -184,6 +207,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </tr>
                 );
               })}
+              <VirtualSpacerRow height={searchWindow.paddingBottom} columnCount={3} />
             </tbody>
           </HTMLTable>
         );
@@ -202,12 +226,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
         rightContent={<ActionsMenu />}
       />
       <div className="AppScreenContent">
-        <div className="AppScreenContentView" data-column="left">
+        <div className="AppScreenContentView" data-column="left" ref={searchScroll.scrollElementRef}>
           {content}
         </div>
-        <div className="AppScreenContentView" data-column="right">
-          <HTMLTable compact striped className="AppDataTable" data-table="registries">
-            <thead>
+        <div className="AppScreenContentView" data-column="right" ref={sourcesScroll.scrollElementRef}>
+          <HTMLTable compact className="AppDataTable" data-windowed="true" data-table="registries">
+            <thead ref={sourcesScroll.theadRef}>
               <tr>
                 <SortableColumnHeader
                   field="name"
@@ -222,7 +246,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {renderedRegistries.map((registry) => {
+              <VirtualSpacerRow height={sourcesWindow.paddingTop} columnCount={2} />
+              {sourcesWindow.items.map(({ row: registry, index, key }) => {
                 let title = "";
                 if (registry.id === "system") {
                   title = registry.enabled
@@ -231,7 +256,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 }
                 const isUsable = currentConnector?.engine ? registry.engine.includes(currentConnector?.engine) : false;
                 return (
-                  <tr key={registry.id} data-registry={registry.id}>
+                  <tr
+                    key={key}
+                    ref={sourcesWindow.measureRef}
+                    data-index={index}
+                    data-striped={index % 2 === 0 ? "true" : undefined}
+                    data-registry={registry.id}
+                  >
                     <td title={title}>
                       <Radio
                         className="CurrentRegistryRadio"
@@ -249,6 +280,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </tr>
                 );
               })}
+              <VirtualSpacerRow height={sourcesWindow.paddingBottom} columnCount={2} />
             </tbody>
           </HTMLTable>
         </div>

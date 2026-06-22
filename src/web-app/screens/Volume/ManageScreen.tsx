@@ -13,6 +13,7 @@ import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
@@ -23,7 +24,7 @@ import {
   useShowEngineColumn,
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
-import { useProgressiveTableRows } from "@/web-app/hooks/useProgressiveTableRows";
+import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
@@ -71,7 +72,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
       ? sortByField(items, clientSort, volumeSortSelectors)
       : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
   }, [clientSort, volumeSnapshot, searchTerm]);
-  const renderedVolumes = useProgressiveTableRows(volumes);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((volume: MergedVolume) => mergedKey(volume, volume.Name), []);
   const visibleIds = useMemo(() => volumes.map(getRowId), [volumes, getRowId]);
@@ -79,6 +79,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { actions: bulkActions, refresh: bulkRefresh } = useVolumeBulkActions();
   const showEngineColumn = useShowEngineColumn();
   const showEngineRowAccent = useShowEngineRowAccent();
+  const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
+  const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
+    rows: volumes,
+    getScrollElement,
+    getRowKey: getRowId,
+    scrollMargin,
+    enabled: volumes.length > 0,
+  });
+  const columnCount = 5 + (showEngineColumn ? 1 : 0);
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("volumes");
 
@@ -107,7 +116,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </>
         }
       />
-      <div className="AppScreenContent">
+      <div className="AppScreenContent" ref={scrollElementRef}>
         {volumes.length === 0 ? (
           <NonIdealState
             icon={IconNames.GEOSEARCH}
@@ -115,8 +124,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("There are no volumes")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact striped className="AppDataTable" data-table="volumes">
-            <thead>
+          <HTMLTable interactive compact className="AppDataTable" data-windowed="true" data-table="volumes">
+            <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
                   <AppLabel iconName={IconNames.DATABASE} text={t("Name")} />
@@ -148,10 +157,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </tr>
             </thead>
             <tbody>
-              {renderedVolumes.map((volume) => {
-                const rowId = getRowId(volume);
+              <VirtualSpacerRow height={paddingTop} columnCount={columnCount} />
+              {items.map(({ row: volume, index, key }) => {
+                const rowId = key;
                 return (
-                  <tr key={rowId} data-engine-row={showEngineRowAccent ? volume.engine : undefined}>
+                  <tr
+                    key={key}
+                    ref={measureRef}
+                    data-index={index}
+                    data-striped={index % 2 === 0 ? "true" : undefined}
+                    data-engine-row={showEngineRowAccent ? volume.engine : undefined}
+                  >
                     <td>
                       <AppDataTableLink
                         className="PodDetailsButton"
@@ -181,6 +197,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   </tr>
                 );
               })}
+              <VirtualSpacerRow height={paddingBottom} columnCount={columnCount} />
             </tbody>
           </HTMLTable>
         )}

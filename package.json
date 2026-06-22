@@ -57,6 +57,7 @@
     "@monaco-editor/react": "4.7.0",
     "@tanstack/react-query": "5.101.0",
     "@tanstack/react-router": "1.170.16",
+    "@tanstack/react-virtual": "3.14.3",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-search": "0.16.0",
     "@xterm/addon-unicode11": "0.9.0",

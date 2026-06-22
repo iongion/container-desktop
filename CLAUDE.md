@@ -61,6 +61,21 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - Python tooling: `make check` (ruff), `make prepare` (`uv sync --locked --dev --no-install-project`)
 - Linux system deps (one-shot): `bash support/provision-deps.sh`
 
+## Development workflow — TDD + live app, NOT static-checks-at-the-end (non-negotiable)
+
+How you build here, **per change** — not an end-of-task afterthought:
+
+- **Test-first (TDD) for logic.** Failing test → watch it fail for the right reason → minimal
+  code to pass. Covers pure/near-pure units: hook helpers, `normalizers/`, `comparators`,
+  grouping/flatten, reducers, stores. No production logic without a failing test first — tests
+  added after prove nothing. Layout/DOM glue jsdom can't run (virtualizer, ResizeObserver) is
+  exempt: verify it live, don't fake it.
+- **Verify every UI change in the running app, as you go.** Keep `CONTAINER_DESKTOP_MOCK=1 yarn
+  dev` hot-reloading and drive `support/cdp.mjs` (screenshot + `EVAL=` asserts) after each
+  change — never batch to the end. The renderer is the source of truth.
+- **Static checks close out, they aren't the loop.** `check-types`/`lint`/`test:run`/`build`
+  never render the UI; run all four (Commands) only to finish, after the app confirms behavior.
+
 ## Build / runtime model — READ BEFORE TOUCHING THE BUILD
 
 - **Source is ESM/TypeScript, but main & preload are bundled to CommonJS (`.cjs`).**
@@ -144,9 +159,7 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   `fakeCommand`); `*.live.test.ts` + `installRealCommand()` are reserved for a future real-VM
   suite (no separate config yet). Go relay `go test ./...`; Python `pytest` (`support/`). CI
   gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
-- **UI changes — verify in the running app, never off static checks alone:** `check-types`/
-  `test:run`/`build` don't exercise the renderer; smoke every UI change in
-  `CONTAINER_DESKTOP_MOCK=1 yarn dev` driven by `support/cdp.mjs` before calling it done.
+- **UI changes:** verify live in the running app, not off static checks — see Development workflow.
 - Avoid `console.debug` in render/poll hot paths (floods DevTools, grows memory).
   Use `@/logger` (`createLogger`).
 

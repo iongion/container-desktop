@@ -360,6 +360,23 @@ pre,
 .AppDataTableGroupLink[data-link-location="last"] .AppDataTableGroupLinkHorizontal {
   bottom: 0;
 }
+/* Virtualized tables (data-windowed): only the visible rows are in the DOM, between two .AppVirtualSpacer
+   rows (see useWindowedRows). Striping is therefore driven by the row's ABSOLUTE index (data-striped),
+   not :nth-child — which the spacer rows + a windowed subset would scramble. Colors mirror Blueprint's
+   bp6-html-table-striped exactly, so the zebra is identical to the non-windowed tables. */
+.AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] td {
+  background: rgba(143, 153, 168, 0.15);
+}
+body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] td {
+  background: rgba(95, 107, 124, 0.15);
+}
+/* Spacer rows reserve height only — never stripe, pad, border, or take a hover background/cursor. */
+.AppDataTable[data-windowed="true"] tbody tr.AppVirtualSpacer td,
+.AppDataTable[data-windowed="true"] tbody tr.AppVirtualSpacer:hover td {
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+}
 .AppFormFieldMeasureUnit {
   height: 30px;
   background: var(--app-surface-strong);
