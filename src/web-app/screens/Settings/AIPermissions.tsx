@@ -1,5 +1,5 @@
 // Settings → AI permissions. The user-facing view of the broker-owned allow/reject record
-// (a dedicated versioned file): lists the remembered Allowed / Blocked commands (revoke via ConfirmMenu),
+// (a dedicated versioned file): lists the remembered Allowed / Rejected commands (revoke via ConfirmMenu),
 // the Web search switch, the storage path + reveal, and surfaces a corrupt-cache error (fail-closed). All
 // writes go through the broker (window.AI.*) — the renderer only sends the intent.
 import { Button, ButtonGroup, Callout, HTMLSelect, Intent, Tag } from "@blueprintjs/core";
@@ -53,25 +53,38 @@ export const AIPermissions: React.FC = () => {
     [bridge],
   );
 
-  const renderList = (list: PermissionsList, rules: AICommandRule[]) =>
-    rules.length === 0 ? (
-      <div className="AIPermissionsEmpty">{t("None yet")}</div>
-    ) : (
-      <ul className="AIPermissionsList">
-        {rules.map((rule) => (
-          <li className="AIPermissionsRow" key={commandKey(rule.program, rule.args)}>
-            <code className="AIPermissionsCommand">
-              {rule.program} {rule.args.join(" ")}
-            </code>
-            <ConfirmMenu
-              tag={rule}
-              title={t("Revoke")}
-              onConfirm={(r, confirmed) => confirmed && void removeRule(list, r as AICommandRule)}
-            />
-          </li>
-        ))}
-      </ul>
-    );
+  const renderList = (list: PermissionsList, rules: AICommandRule[], emptyTitle: string, emptyHint: string) => (
+    <div className="AIPermissionsListWrap">
+      {rules.length === 0 ? (
+        <div className="AIPermissionsEmpty">
+          <div className="AIPermissionsEmptyTitle">{emptyTitle}</div>
+          <div className="AIPermissionsEmptyHint">{emptyHint}</div>
+        </div>
+      ) : (
+        <ul className="AIPermissionsList">
+          {rules.map((rule) => (
+            <li className="AIPermissionsRow" key={commandKey(rule.program, rule.args)}>
+              <code className="AIPermissionsCommand">
+                {rule.program} {rule.args.join(" ")}
+              </code>
+              <ConfirmMenu
+                tag={rule}
+                title={t("Revoke")}
+                onConfirm={(r, confirmed) => confirmed && void removeRule(list, r as AICommandRule)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+  const webStatus =
+    snap?.webSearch === "allow"
+      ? t("Always allowed")
+      : snap?.webSearch === "block"
+        ? t("Always blocked")
+        : t("Interactive approval");
 
   return (
     <div className="AIPermissions" data-form="ai-permissions">
@@ -83,30 +96,53 @@ export const AIPermissions: React.FC = () => {
         </Callout>
       ) : null}
 
-      <div className="AIPermissionsSection">
-        <div className="AIPermissionsHeading">{t("Web search")}</div>
-        <HTMLSelect
-          value={snap?.webSearch ?? ""}
-          onChange={(e) => void setWeb((e.currentTarget.value || null) as "allow" | "block" | null)}
-        >
-          <option value="">{t("Ask each time")}</option>
-          <option value="allow">{t("Always allow")}</option>
-          <option value="block">{t("Always block")}</option>
-        </HTMLSelect>
-      </div>
-
-      <div className="AIPermissionsSection">
-        <div className="AIPermissionsHeading">
-          {t("Allowed commands")} <Tag minimal>{snap?.allowed.length ?? 0}</Tag>
+      <div className="AIPermissionsGrid">
+        <div className="AIPermissionsCol AIPermissionsCol--web">
+          <div className="AIPermissionsHeading">{t("Web search")}</div>
+          <HTMLSelect
+            fill
+            value={snap?.webSearch ?? ""}
+            onChange={(e) => void setWeb((e.currentTarget.value || null) as "allow" | "block" | null)}
+          >
+            <option value="">{t("Ask each time")}</option>
+            <option value="allow">{t("Always allow")}</option>
+            <option value="block">{t("Always block")}</option>
+          </HTMLSelect>
+          <div className="AIPermissionsStatus">
+            <span className="AIPermissionsStatusLabel">{t("Status")}</span>
+            <span className="AIPermissionsStatusValue">{webStatus}</span>
+          </div>
         </div>
-        {renderList("allowed", snap?.allowed ?? [])}
-      </div>
 
-      <div className="AIPermissionsSection">
-        <div className="AIPermissionsHeading">
-          {t("Blocked commands")} <Tag minimal>{snap?.blocked.length ?? 0}</Tag>
+        <div className="AIPermissionsCol">
+          <div className="AIPermissionsHeading">
+            {t("Allow")}{" "}
+            <Tag minimal round>
+              {snap?.allowed.length ?? 0}
+            </Tag>
+          </div>
+          {renderList(
+            "allowed",
+            snap?.allowed ?? [],
+            t("No allowed commands yet."),
+            t("Commands approved by the user will appear here."),
+          )}
         </div>
-        {renderList("blocked", snap?.blocked ?? [])}
+
+        <div className="AIPermissionsCol">
+          <div className="AIPermissionsHeading">
+            {t("Reject")}{" "}
+            <Tag minimal round>
+              {snap?.blocked.length ?? 0}
+            </Tag>
+          </div>
+          {renderList(
+            "blocked",
+            snap?.blocked ?? [],
+            t("No rejected rules yet."),
+            t("Commands rejected by the user will be blocked automatically."),
+          )}
+        </div>
       </div>
 
       {snap?.path ? (

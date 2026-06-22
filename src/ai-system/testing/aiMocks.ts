@@ -8,14 +8,21 @@ import diagnoseCrashSrc from "../../../tests/fixtures/ai/diagnose-podman-crash.j
 
 const diagnoseCrash: Scenario = diagnoseCrashSrc as Scenario;
 
-import type {
-  AgentRunner,
-  AgentToolEvent,
-  AIKeyStore,
-  KnowledgeEntry,
-  ListedModel,
-  SandboxCommand,
-  SandboxExecResult,
+import {
+  type AgentRunner,
+  type AgentToolEvent,
+  AI_PERMISSIONS_VERSION,
+  type AICommandRule,
+  type AIKeyStore,
+  type AIPermissionsCache,
+  commandKey,
+  type KnowledgeEntry,
+  type ListedModel,
+  type PermissionsList,
+  type PermissionsSnapshot,
+  type PermissionsStoreLike,
+  type SandboxCommand,
+  type SandboxExecResult,
 } from "@/ai-system/core";
 
 // Scenario types
@@ -297,6 +304,58 @@ export function createMockKnowledgeBank() {
 
 export function createMockWebSearcher() {
   return async (_query: string): Promise<{ text: string }> => ({ text: "Mock web search not available." });
+}
+
+// Permission cache
+// Mock mode: an in-memory allow/reject record seeded with realistic commands so the Settings → AI
+// permissions UI shows populated Allow + Reject lists (and is fully interactive) WITHOUT persisting
+// anything to disk. Mirrors the file store's exclusive-verdict logic (a key lives in one list only).
+const MOCK_ALLOWED_COMMANDS: AICommandRule[] = [
+  { program: "podman", args: ["ps", "-a"] },
+  { program: "podman", args: ["images"] },
+  { program: "podman", args: ["logs", "web"] },
+  { program: "docker", args: ["compose", "up", "-d"] },
+];
+const MOCK_BLOCKED_COMMANDS: AICommandRule[] = [
+  { program: "docker", args: ["system", "prune", "-f"] },
+  { program: "podman", args: ["rm", "-f", "web"] },
+  { program: "docker", args: ["volume", "rm", "data"] },
+];
+
+export function createMockPermissionsStore(filePath: string): PermissionsStoreLike {
+  const cache: AIPermissionsCache = {
+    version: AI_PERMISSIONS_VERSION,
+    allowed: MOCK_ALLOWED_COMMANDS.map((r) => ({ ...r, addedAt: "2026-01-01T00:00:00.000Z" })),
+    blocked: MOCK_BLOCKED_COMMANDS.map((r) => ({ ...r, addedAt: "2026-01-01T00:00:00.000Z" })),
+  };
+  const snap = (): PermissionsSnapshot => ({
+    ...cache,
+    allowed: [...cache.allowed],
+    blocked: [...cache.blocked],
+    status: "ok",
+    path: filePath,
+  });
+  return {
+    async load() {
+      return snap();
+    },
+    async addCommand(list: PermissionsList, rule: AICommandRule) {
+      const key = commandKey(rule.program, rule.args);
+      const other: PermissionsList = list === "allowed" ? "blocked" : "allowed";
+      cache[other] = cache[other].filter((r) => commandKey(r.program, r.args) !== key);
+      cache[list] = cache[list].filter((r) => commandKey(r.program, r.args) !== key);
+      cache[list].push({ program: rule.program, args: rule.args, addedAt: "2026-01-01T00:00:00.000Z" });
+      return snap();
+    },
+    async removeCommand(list: PermissionsList, key: string) {
+      cache[list] = cache[list].filter((r) => commandKey(r.program, r.args) !== key);
+      return snap();
+    },
+    async setWebSearch(verdict) {
+      cache.webSearch = verdict || undefined;
+      return snap();
+    },
+  };
 }
 
 // Full deps factory

@@ -182,6 +182,14 @@
   row-gap: 8px;
   width: 100%;
   padding: 10px 4px;
+  /* Fill the panel so the Permissions widget (and its Allow/Reject lists) can stretch to the bottom and
+     scroll internally, instead of the whole settings panel scrolling. Scoped to the AI category only. */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* AI category only: stop the panel itself from scrolling so the in-widget lists own the overflow. */
+.SettingsPanel[data-category="ai"] {
+  overflow: hidden;
 }
 .AppSettingsForm[data-form="ai"] .AppSettingsAIPrivacy,
 .AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded {

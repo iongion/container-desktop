@@ -22,7 +22,7 @@ import { createFileKnowledgeStorage } from "@/ai-system/runtimes/node/knowledgeF
 import { listModels } from "@/ai-system/runtimes/node/localModels";
 import { createPermissionsStore } from "@/ai-system/runtimes/node/permissionsStore";
 import "@/ai-system/prompt/templateRegistry.vite";
-import { createMockAIDeps } from "@/ai-system/testing/aiMocks";
+import { createMockAIDeps, createMockPermissionsStore } from "@/ai-system/testing/aiMocks";
 
 export interface ElectronAISystemDeps {
   /** OS app-data dir (app.getPath("userData")) — where keys + the knowledge bank are persisted. */
@@ -54,9 +54,13 @@ export function createElectronAISystem(deps: ElectronAISystemDeps): AIBroker {
   const mocks = deps.mock ? createMockAIDeps() : null;
 
   const sandboxExec = createSandboxExec();
-  // The user-managed allow/reject record (broker-owned writes). Always real, even in mock mode, so the
-  // Settings → AI permissions UI is exercisable in `CONTAINER_DESKTOP_MOCK=1 yarn dev`.
-  const permissionsStore = createPermissionsStore(path.join(deps.userDataDir, "ai-permissions.json"));
+  // The user-managed allow/reject record (broker-owned writes). In mock mode an in-memory store seeded
+  // with sample Allow + Reject commands (no disk writes) so the Settings → AI permissions UI is fully
+  // populated and exercisable in `CONTAINER_DESKTOP_MOCK=1 yarn dev`; otherwise the real file store.
+  const permissionsPath = path.join(deps.userDataDir, "ai-permissions.json");
+  const permissionsStore = mocks
+    ? createMockPermissionsStore(permissionsPath)
+    : createPermissionsStore(permissionsPath);
   const knowledgeBank = new KnowledgeBank({
     storage: createFileKnowledgeStorage(path.join(deps.userDataDir, "ai-knowledge.json")),
   });

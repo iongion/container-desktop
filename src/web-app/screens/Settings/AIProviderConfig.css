@@ -28,7 +28,9 @@
   min-width: 0;
 }
 .AIProviderConfigSources .bp6-menu-item {
-  font-size: 13px;
+  font-size: 12px;
+  padding: 3px 7px;
+  min-height: 0;
 }
 
 .AIProviderConfigForm {

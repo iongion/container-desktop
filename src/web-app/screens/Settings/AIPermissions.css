@@ -1,67 +1,163 @@
-/* Settings → AI permissions (issue #232). Token-driven so it tracks every engine × theme. */
+/* Settings → AI permissions (issue #232). Token-driven so it tracks every engine × theme.
+   The widget fills the remaining vertical space of the AI form; the Allow/Reject lists scroll
+   internally so the whole settings panel never grows. Compact, minimal styling throughout. */
 .AIPermissions {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 8px;
 }
 
-.AIPermissionsSection {
+/* Three columns: a fixed-ish Web search column + equal-width Allow / Reject lists. The row fills the
+   widget height (flex: 1) and clips, so each column's list owns the scroll instead of the page. */
+.AIPermissionsGrid {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+
+@media (max-width: 920px) {
+  .AIPermissionsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.AIPermissionsCol {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  min-height: 0;
+  gap: 4px;
 }
 
 .AIPermissionsHeading {
-  font-weight: 600;
-  color: var(--app-text);
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text);
+}
+
+.AIPermissionsHeading .bp6-tag {
+  font-size: 10px;
+  min-height: 16px;
+  min-width: 16px;
+  padding: 0 5px;
+}
+
+/* Web search column: select + a compact status line. */
+.AIPermissionsCol--web .bp6-html-select select {
+  font-size: 12px;
+}
+
+.AIPermissionsStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11px;
+}
+
+.AIPermissionsStatusLabel {
+  color: var(--app-text-muted);
+}
+
+.AIPermissionsStatusValue {
+  color: var(--app-text);
+}
+
+/* The scroll region for each list — fills the column height down to the footer and scrolls. */
+.AIPermissionsListWrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
 }
 
 .AIPermissionsList {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 2px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .AIPermissionsRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px;
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: 4px;
+  gap: 6px;
+  padding: 1px 4px;
+  /* Fixed height so the row can't wobble when the revoke control toggles between the bare "..." button
+     and the Popover target wrapper Blueprint injects around it on open (different vertical metrics). */
+  min-height: 24px;
+  border-radius: 3px;
+}
+
+.AIPermissionsRow:hover {
+  background: var(--app-surface-strong);
+}
+
+/* Normalize the injected popover-target wrapper to the same box as the bare trigger button. */
+.AIPermissionsRow .bp6-popover-target {
+  display: inline-flex;
+  align-items: center;
 }
 
 .AIPermissionsCommand {
-  font-family: var(--font-family-monospace, monospace);
+  font-family: var(--monospace-font, monospace);
+  font-size: 11px;
   color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.AIPermissionsRow .bp6-button {
+  min-height: 18px;
+  min-width: 18px;
+  padding: 0 4px;
+}
+
+/* Intentional empty state — centered in the (otherwise full-height) scroll region. */
 .AIPermissionsEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
   color: var(--app-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.AIPermissionsEmptyTitle {
+  color: var(--app-text);
   font-style: italic;
 }
 
+.AIPermissionsEmptyHint {
+  color: var(--app-text-muted);
+}
+
+/* Footer: storage path (truncated) + Refresh/Open, pinned below the grid. */
 .AIPermissionsPath {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-top: 8px;
+  flex: 0 0 auto;
+  padding-top: 6px;
   border-top: 1px solid var(--app-border);
 }
 
 .AIPermissionsPath code {
+  font-size: 11px;
   color: var(--app-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
