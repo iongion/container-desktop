@@ -6,6 +6,7 @@ import { Application } from "@/container-client/Application";
 import type { ResourceConnectProgress } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { ContainerEngine } from "@/env/Types";
+import { __setLoggerLevelForTests, registerLoggerBackend } from "@/logger";
 import { EngineDataService } from "./engineDataService";
 
 describe("EngineDataService state", () => {
@@ -167,6 +168,53 @@ describe("EngineDataService.connect", () => {
     } as any);
 
     expect(service.getAppRuntimeSnapshot().active?.[0]?.version).toBe("27.3.1");
+  });
+
+  it("emits an info shell.engine record when a connection becomes ready", async () => {
+    const records: Array<{ level: string; scope: string; args: any[] }> = [];
+    registerLoggerBackend({ write: (level, scope, args) => records.push({ level, scope, args }) });
+    __setLoggerLevelForTests("debug");
+    try {
+      const service = new EngineDataService();
+      const host = {
+        capabilities: {
+          resources: { pods: false, secrets: false },
+          events: false,
+          sort: {},
+          extensions: { machines: false },
+        },
+        getSettings: async () => ({
+          api: { baseURL: "http://localhost", connection: { uri: "", relay: "" }, autoStart: true },
+          program: { name: "docker", path: "/usr/bin/docker", version: "27.3.1" },
+          rootfull: false,
+          mode: "mode.automatic",
+        }),
+      } as unknown as HostClientFacade;
+      (service as any).ensureApp = () => ({
+        setup: async () => undefined,
+        connectHostClient: async () => ({ host, availability: { api: true } }),
+      });
+      (service as any).refreshAll = async () => undefined;
+      (service as any).loadMachines = async () => [];
+
+      await service.connectOne({
+        id: "system-default.docker",
+        name: "System Docker",
+        engine: ContainerEngine.DOCKER,
+        host: "docker.native",
+        settings: {
+          api: { baseURL: "http://localhost", connection: { uri: "", relay: "" }, autoStart: true },
+          program: { name: "docker", path: "", version: "" },
+          rootfull: false,
+          mode: "mode.automatic",
+        },
+      } as any);
+
+      expect(records.some((r) => r.scope === "shell.engine" && r.level === "info")).toBe(true);
+    } finally {
+      registerLoggerBackend(null);
+      __setLoggerLevelForTests("warn");
+    }
   });
 
   it("connectAll starts boot connections concurrently and settles after the slowest one", async () => {
@@ -339,6 +387,47 @@ describe("EngineDataService.connect", () => {
     expect(failed?.origin).toBe("user");
     expect(failed?.trace).toContain("Cannot connect to the Docker daemon");
     expect(failed?.detail).toContain("What it tried:");
+  });
+
+  it("surfaces the real API failure, not a passing host check's success message", async () => {
+    const service = new EngineDataService();
+    const target = {
+      id: "system-env.mac.container",
+      name: "MacOS (container)",
+      engine: ContainerEngine.APPLE,
+      host: "container.remote",
+      settings: { api: { autoStart: true }, controller: { scope: "MacOS" } },
+    } as any;
+    // Mirrors the real Apple-container case: the host binary is present (host:true / "Engine is available")
+    // but the API daemon isn't serving (api:false). The surfaced reason must be the API failure, NOT the
+    // passing host check's success string.
+    (service as any).ensureApp = () => ({
+      setup: async () => undefined,
+      getGlobalUserSettings: async () => ({ connector: { default: target.id } }),
+      connectHostClient: async () => ({
+        host: undefined,
+        availability: {
+          enabled: true,
+          host: true,
+          controller: false,
+          program: false,
+          api: false,
+          report: {
+            host: "Engine is available",
+            controller: 'Controller "ssh" was not detected on this machine',
+            program: "Not checked - controller scope not available",
+            api: "API is not reachable - start manually or connect",
+          },
+        },
+      }),
+    });
+    (service as any).loadConnections = async () => [target];
+    const progress: ResourceConnectProgress[] = [];
+    service.subscribeProgress((p) => progress.push(p));
+    await service.connectOne(target);
+    const failed = progress.find((p) => p.phase === "failed");
+    expect(failed?.trace).toContain("API is not reachable");
+    expect(failed?.trace).not.toContain("Engine is available");
   });
 });
 

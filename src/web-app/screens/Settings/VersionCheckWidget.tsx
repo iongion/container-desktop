@@ -5,8 +5,11 @@ import { useTranslation } from "react-i18next";
 
 import { OnlineApi } from "@/container-client/Api.clients";
 import { OperatingSystem } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
+
+const logger = createLogger("web.settings");
 
 // The Settings header action: shows the version-update check (Microsoft Store link on Windows, GitHub
 // releases elsewhere) + a "Check now" button. This is a header action, distinct from the
@@ -32,7 +35,7 @@ export const VersionCheckWidget: React.FC = () => {
         });
       }
     } catch (error: any) {
-      console.error("Unable to check latest version", error);
+      logger.error("Unable to check latest version", error);
       Notification.show({
         message: t("Unable to check latest version"),
         intent: Intent.DANGER,

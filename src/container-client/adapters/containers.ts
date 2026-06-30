@@ -9,8 +9,10 @@ import type {
   ContainerStateList,
   ContainerStats,
 } from "@/env/Types";
-
+import { createLogger } from "@/logger";
 import { DOCKER_BASE_URL, LIBPOD_BASE_URL, ResourceAdapter } from "./shared";
+
+const logger = createLogger("client.containers");
 
 export interface FetchContainerOptions {
   Id: string;
@@ -185,7 +187,7 @@ export class ContainersAdapter extends ResourceAdapter {
     try {
       await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`);
     } catch (error: any) {
-      console.error("Failed to stop container", error);
+      logger.error("Failed to stop container", error);
     }
     await new Promise((resolve) => setTimeout(resolve, 3000));
     const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/restart`);

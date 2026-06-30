@@ -136,6 +136,12 @@ export class SSHClient implements ISSHClient {
         remoteAddress: config.remoteAddress,
       });
       return Command.ExecuteAsBackgroundService(spawnCLI, spawnArgs, {
+        // Bound the SSH-tunnel API-readiness probe. A remote whose engine daemon isn't serving (e.g. an
+        // Apple `container`/socktainer that's installed but not running) would otherwise be polled the full
+        // default 10×2s = 20s before failing — the "forever" hang on boot. A healthy remote answers /_ping
+        // on the first check, so this shorter ceiling (5×2s = 10s) only shortens the dead-remote wait; it
+        // never cuts a working connection.
+        retry: { count: 5, wait: 2000 },
         onStatusCheck: ({ retries, maxRetries }) => {
           logger.debug("Checked SSH tunnel status", { retries, maxRetries });
           if (config?.onStatusCheck) {

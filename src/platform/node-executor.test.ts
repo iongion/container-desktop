@@ -75,6 +75,19 @@ describe("node executor API request defaults", () => {
     expect(request.timeout).toBe(3000);
   });
 
+  it("forces streaming requests to run untimed even when a finite timeout is supplied", () => {
+    // A streaming response (/events, container logs) is a long-lived connection. A finite read-timeout aborts
+    // the idle stream after a few seconds → the connection silently degrades into a reconnect-poll loop. The
+    // attach is bounded by the caller, never by the request timeout, so any stream is normalized to 0.
+    const request = applyProxyRequestDefaults(
+      { method: "GET", url: "/events", responseType: "stream", timeout: 3000 },
+      { baseURL: "http://localhost", headers: {}, timeout: 3000 },
+      { baseURL: "http://d", timeout: 5000 },
+    );
+
+    expect(request.timeout).toBe(0);
+  });
+
   it("routes Apple API hosts through the same transports as the other engines", () => {
     expect(getProxyRequestRoute(ContainerEngineHost.APPLE_NATIVE)).toBe("direct");
     expect(getProxyRequestRoute(ContainerEngineHost.APPLE_REMOTE)).toBe("ssh");

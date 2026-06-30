@@ -8,6 +8,9 @@
 // Injected deps keep it unit-testable without Electron (main.ts supplies the real ipc/driver/window wiring).
 
 import { COMMAND_PROXY, type CommandProxyResult } from "@/container-client/commandProxyProtocol";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("shell.proxy");
 
 interface ForwardedStream {
   destroy: () => void;
@@ -72,6 +75,7 @@ export class CommandProxyBroker {
 
   private async handleRequest(event: any, payload: any): Promise<CommandProxyResult> {
     if (!this.deps.isAllowedSender(event)) {
+      logger.warn("rejected forwarded request from unauthorized sender");
       return { stream: false, ok: false, message: "unauthorized" };
     }
     // Route to the connection the renderer addressed (its adapter forwards the owning Connection) so several
@@ -83,8 +87,10 @@ export class CommandProxyBroker {
     if (req.responseType === "stream") {
       return this.openStream(event, driver, req);
     }
+    const startedAt = Date.now();
     try {
       const response = await driver.request(req);
+      logger.debug("proxy", { method: req.method, url: req.url, status: response?.status, ms: Date.now() - startedAt });
       return {
         stream: false,
         ok: true,
@@ -95,6 +101,11 @@ export class CommandProxyBroker {
       };
     } catch (error: any) {
       const response = error?.response;
+      logger.error(
+        "proxy request failed",
+        { method: req.method, url: req.url, status: response?.status },
+        error?.message ?? error,
+      );
       return {
         stream: false,
         ok: false,
@@ -119,6 +130,7 @@ export class CommandProxyBroker {
     }
     this.counter += 1;
     const streamId = `cps-${this.counter}`;
+    logger.debug("proxy stream open", { url: req.url, streamId, status: response?.status });
     const send = (type: "data" | "end" | "error", value?: unknown) =>
       this.deps.send(event, COMMAND_PROXY.streamEvent, { streamId, type, payload: value });
     emitter.on("data", (chunk: any) => send("data", typeof chunk === "string" ? chunk : `${chunk}`));

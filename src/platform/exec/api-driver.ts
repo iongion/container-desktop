@@ -7,7 +7,7 @@ import { createLogger } from "@/logger";
 import { deepMerge } from "@/utils";
 import { createEmitterStream } from "@/utils/streamEmitter";
 
-const logger = createLogger("shared");
+const logger = createLogger("platform.api");
 
 const DIRECT_API_HOSTS = new Set<ContainerEngineHost>([
   ContainerEngineHost.PODMAN_NATIVE,
@@ -95,7 +95,11 @@ export function applyProxyRequestDefaults(
   fallback: { timeout: number; baseURL: string },
 ): Partial<AxiosRequestConfig> {
   request.headers = deepMerge({}, config.headers || {}, request.headers || {});
-  request.timeout = request.timeout ?? config.timeout ?? fallback.timeout;
+  // A streaming response (/events, container logs) is a long-lived connection: a finite read-timeout — the
+  // axios request timeout AND the keep-alive socket agent built from it — aborts the idle stream after a few
+  // seconds, so the "stream" silently degrades into a reconnect-poll loop. Streams ALWAYS run untimed; the
+  // attach (how long to wait for the stream to open) is bounded by the caller, never by the request timeout.
+  request.timeout = request.responseType === "stream" ? 0 : (request.timeout ?? config.timeout ?? fallback.timeout);
   request.baseURL = request.baseURL || config.baseURL || fallback.baseURL;
   return request;
 }

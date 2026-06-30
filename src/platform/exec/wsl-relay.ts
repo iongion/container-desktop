@@ -19,7 +19,7 @@ import {
 import { exec_launcher_async } from "./commander";
 import { killProcess } from "./process-utils";
 
-const logger = createLogger("shared");
+const logger = createLogger("platform.wsl");
 
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
 

@@ -67,7 +67,7 @@ describe("Application.checkSecurity", () => {
 
   it("bad db-version JSON: logs, retains the program version, scan continues", async () => {
     const app = makeApp();
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errSpy = vi.spyOn(app.logger, "error").mockImplementation(() => {});
     const host = hostFor({ versionStdout: "not-json", analysisStdout: JSON.stringify({ Results: [] }) });
 
     const report = await app.checkSecurity({ scanner: "trivy", subject: "image", target: "nginx", host });

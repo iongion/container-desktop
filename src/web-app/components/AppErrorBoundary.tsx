@@ -3,6 +3,9 @@ import { IconNames } from "@blueprintjs/icons";
 import { mdiEmoticonSad } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import React from "react";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.AppErrorBoundary");
 
 export default class AppErrorBoundary extends React.Component<
   {
@@ -33,7 +36,7 @@ export default class AppErrorBoundary extends React.Component<
   };
 
   componentDidCatch(error: any, errorInfo: any) {
-    console.error("UI application error", error.message, error.stack, errorInfo);
+    logger.error("UI application error", error.message, error.stack, errorInfo);
   }
 
   render(): any {

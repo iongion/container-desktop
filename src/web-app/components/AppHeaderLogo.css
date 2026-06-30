@@ -1,3 +1,8 @@
+/* The logo is injected as raw SVG inside this host (see AppHeaderLogo.tsx); display:contents keeps the host
+   out of layout so the SVG remains the direct flex child of .App-companyLogoBrand. */
+.AppHeaderLogoHost {
+  display: contents;
+}
 .AppHeaderLogo {
   display: block;
   width: 100%;

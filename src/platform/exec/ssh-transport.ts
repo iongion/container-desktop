@@ -14,7 +14,7 @@ import {
   socketLabel,
 } from "./api-driver";
 
-const logger = createLogger("shared");
+const logger = createLogger("platform.ssh");
 
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 

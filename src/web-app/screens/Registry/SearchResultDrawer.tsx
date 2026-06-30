@@ -9,6 +9,9 @@ import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
 import { usePullFromRegistry } from "./queries";
 import "./SearchResultDrawer.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.registry");
 
 export interface SearchResultDrawerProps {
   onClose: () => void;
@@ -41,7 +44,7 @@ export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({
         });
       }
     } catch (error: any) {
-      console.error("Error while performing image pull", error);
+      logger.error("Error while performing image pull", error);
       Notification.show({
         message: t("Pull failed - check the logs"),
         intent: Intent.DANGER,

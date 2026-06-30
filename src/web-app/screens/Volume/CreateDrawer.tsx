@@ -12,11 +12,13 @@ import { IconNames } from "@blueprintjs/icons";
 import { memo, useCallback, useId, useState } from "react";
 import isEqual from "react-fast-compare";
 import { useTranslation } from "react-i18next";
-
+import { createLogger } from "@/logger";
 // project
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { useCreateVolume } from "./queries";
+
+const logger = createLogger("web.volume");
 
 // Volume drawer
 export interface CreateDrawerProps {
@@ -53,7 +55,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
         onClose();
       } catch (error: any) {
         setPending(false);
-        console.error("Unable to create volume", error);
+        logger.error("Unable to create volume", error);
       }
     }, [driver, name, onClose, type, volumeCreate]);
     const onNameChange = useCallback((e) => {

@@ -23,7 +23,7 @@ export function createSecurityReport(scanner: string): any {
 }
 
 // Parse `trivy --version --format json` output. Throws on bad JSON so the caller keeps its
-// console.error and the pre-set version/database (matching the original try/catch).
+// error log and the pre-set version/database (matching the original try/catch).
 export function parseTrivyDatabase(stdout: string | undefined): { database: any; version: string } {
   const decoded = JSON.parse(stdout || "{}");
   const database = decoded || {};

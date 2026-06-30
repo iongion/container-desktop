@@ -12,9 +12,11 @@ import { CURRENT_OS_TYPE } from "@/platform/node";
 
 import { fallbackErrorPageURL } from "./recovery";
 import type { Runtime } from "./runtime";
+import { mainStartup } from "./startupTimeline";
 
 interface WindowManagerLogger {
   debug: (...args: any[]) => void;
+  info: (...args: any[]) => void;
   error: (...args: any[]) => void;
 }
 
@@ -232,7 +234,9 @@ export class WindowManager {
     const windowOptions: Electron.BrowserWindowConstructorOptions = {
       // Keep the native window hidden until the renderer explicitly reports that the app chrome is ready.
       show: false,
-      backgroundColor: "#1a051c",
+      // Matches the boot splash + the app's default `unified` dark content bg (tokens.css --app-bg) so the
+      // first native paint, the splash, and the mounted React app are all the same color — no flash/jump.
+      backgroundColor: "#171c26",
       width: 1280,
       height: 800,
       ...(windowConfigOptions ?? {}),
@@ -297,6 +301,7 @@ export class WindowManager {
     };
     const win = new BrowserWindow(windowOptions);
     this.window = win;
+    mainStartup.mark("window-create");
     this.currentIconPath = iconPath;
     win.setMinimumSize(960, 718);
     if (captureOffscreen) {
@@ -340,6 +345,8 @@ export class WindowManager {
         readyWatchdog = undefined;
       }
       windowShown = true;
+      mainStartup.mark("window-shown");
+      this.deps.logger.info(`Main window shown (time-to-visible ${mainStartup.since()}ms)\n${mainStartup.summary()}`);
       if (captureOffscreen) {
         this.deps.logger.debug("Capture mode keeps the main window in offscreen rendering");
       } else {
@@ -361,7 +368,11 @@ export class WindowManager {
     const isLoadAbort = (error: any) =>
       error?.errno === -3 || error?.code === "ERR_ABORTED" || `${error?.message || error}`.includes("ERR_ABORTED");
     win.once("ready-to-show", () => {
-      this.deps.logger.debug("Application render surface is ready; waiting for renderer chrome");
+      // Reveal as soon as the OS render surface can paint the static splash (index.html), instead of
+      // waiting for the renderer's full React chrome. First paint is the splash; React then swaps in.
+      // The renderer's later notify:ready → show() is now an idempotent no-op (windowShown guard).
+      this.deps.logger.debug("Render surface ready; revealing window (splash paints first)");
+      revealWindow();
     });
     // Watchdog: if the renderer never sends its "ready" notification (e.g. it hangs on a never-resolving
     // preload/bootstrap), force the window visible so it is never an invisible, frozen process.
@@ -442,7 +453,13 @@ export class WindowManager {
       );
     } else {
       try {
+        mainStartup.mark("loadURL:start");
         await win.loadURL(targetURL);
+        mainStartup.mark("loadURL:done");
+        // First paint (the static splash in index.html) lands at the load event — measured ~1.5s here vs
+        // Electron's ready-to-show at ~3.1s on a real GPU — so reveal the window NOW. React swaps in behind
+        // the splash; the ready-to-show handler above stays as an idempotent fallback (windowShown guard).
+        revealWindow();
       } catch (error: any) {
         if (isLoadAbort(error)) {
           this.deps.logger.debug("Ignoring aborted application load", error?.message || error);

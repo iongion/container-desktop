@@ -4,13 +4,15 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Registry } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
-
 import { CreateDrawer } from "./CreateDrawer";
 import { useRemoveRegistry } from "./queries";
+
+const logger = createLogger("web.registry");
 
 // Registry actions menu
 
@@ -65,7 +67,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ registry, withoutCreat
           goToScreen("/screens/registries");
         }
       } catch (error: any) {
-        console.error("Command execution failed", error);
+        logger.error("Command execution failed", error);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,

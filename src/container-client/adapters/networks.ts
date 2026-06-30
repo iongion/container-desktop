@@ -5,8 +5,10 @@
 // everywhere; `create`'s Docker re-fetch relies on get() already normalizing (no second pass needed).
 
 import type { Network } from "@/env/Types";
-
+import { createLogger } from "@/logger";
 import { DOCKER_BASE_URL, LIBPOD_BASE_URL, ResourceAdapter } from "./shared";
+
+const logger = createLogger("client.networks");
 
 export type CreateNetworkOptions = Partial<Network>;
 
@@ -21,7 +23,7 @@ export class NetworksAdapter extends ResourceAdapter {
       const result = await driver.get<Network[]>("/networks/json", { baseURL: LIBPOD_BASE_URL });
       return (result.data || []).map((it) => this.normalizers.normalizeNetwork(it));
     } catch (error: any) {
-      console.error("Unable to fetch networks", error);
+      logger.error("Unable to fetch networks", error);
       return [];
     }
   }
@@ -49,7 +51,7 @@ export class NetworksAdapter extends ResourceAdapter {
       if (this.isOk(result)) {
         return await this.get((result.data as any).Id);
       }
-      console.error("Unable to create network", result);
+      logger.error("Unable to create network", result);
       throw new Error("Unable to create network");
     }
     const result = await driver.post<Network>("/networks/create", opts, { baseURL: LIBPOD_BASE_URL });

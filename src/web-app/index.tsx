@@ -1,6 +1,7 @@
 // Renderer entry. A single window loads this bundle: the main app. (The tray is a native OS menu built in
 // the main process — there is no tray renderer.) Global CSS is imported here.
 
+import { bootTimeline } from "./bootTimeline";
 import "./index.css";
 // Cascade order: universal → tokens (semantic palette + Blueprint bridge + shared structure)
 // → theme-only (dark/light) → engine-specific (docker/podman). Specificity rises in the same
@@ -15,7 +16,9 @@ import "./themes/podman.css";
 const rootEl = document.getElementById("root");
 
 async function boot() {
+  bootTimeline.mark("script-start");
   const { renderApplication } = await import("./App.render");
+  bootTimeline.mark("app-render-imported");
   renderApplication();
 }
 
