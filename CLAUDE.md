@@ -160,8 +160,8 @@ How you build here, **per change** — not an end-of-task afterthought:
   suite (no separate config yet). Go relay `go test ./...`; Python `pytest` (`support/`). CI
   gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
 - **UI changes:** verify live in the running app, not off static checks — see Development workflow.
-- Avoid `console.debug` in render/poll hot paths (floods DevTools, grows memory).
-  Use `@/logger` (`createLogger`).
+- **Logging:** use `@/logger` (`createLogger`), never raw `console.*` (except the façade
+  sink + the pre-React fallback in `index.tsx`). Verbosity is controlled solely by log level.
 
 ## UI conventions (renderer · Blueprint)
 

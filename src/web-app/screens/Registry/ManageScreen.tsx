@@ -18,8 +18,11 @@ import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu, ScreenHeader } from ".";
 import "./ManageScreen.css";
+import { createLogger } from "@/logger";
 import { useRegistriesMap, useSearchRegistry } from "./queries";
 import { SearchResultDrawer } from "./SearchResultDrawer";
+
+const logger = createLogger("web.registry");
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -94,10 +97,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
         if (registry) {
           await registrySearch.mutateAsync({ term: searchTerm, registry, filters });
         } else {
-          console.warn("No registry", selectedRegistry);
+          logger.warn("No registry", selectedRegistry);
         }
       } catch (error: any) {
-        console.error("Error looking up", error);
+        logger.error("Error looking up", error);
       } finally {
         setState("state.looked-up");
       }

@@ -16,10 +16,17 @@ import {
 import { proxyRequestToSSHConnection, resetSSHTunnelsCache } from "./ssh-transport";
 import { proxyRequestToWSLDistribution, resetRelayServersCache } from "./wsl-relay";
 
-const logger = createLogger("shared");
+const logger = createLogger("platform.proxy");
 
 export async function proxyRequest(request: Partial<AxiosRequestConfig>, connection: Connection, context?: any) {
   let response: AxiosResponse<any, any> | undefined;
+  // A streaming response is a long-lived connection — never give it a finite read-timeout, or it is aborted
+  // mid-stream and degrades into a reconnect-poll loop. The SSH/WSL transports go through
+  // applyProxyRequestDefaults (which enforces this); the direct path builds the request as-is, so enforce it
+  // here too. The attach is bounded by the caller, not the request timeout.
+  if (request.responseType === "stream") {
+    request.timeout = 0;
+  }
   switch (getProxyRequestRoute(connection.host)) {
     case "direct":
       {

@@ -711,7 +711,7 @@ export class Application {
           report.scanner.database = database;
           report.scanner.version = version;
         } catch (error: any) {
-          console.error("Unable to decode trivy database", error);
+          this.logger.error("Unable to decode trivy database", error);
         }
 
         if (result.success) {

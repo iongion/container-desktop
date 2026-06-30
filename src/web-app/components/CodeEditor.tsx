@@ -1,97 +1,19 @@
-import Editor, { type OnMount, useMonaco } from "@monaco-editor/react";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense } from "react";
 
-import { AppTheme } from "@/web-app/App.types";
-import { useAppStore } from "@/web-app/stores/appStore";
-import { registerFindTarget } from "./Find/findTargets";
-// Bundle Monaco locally (offline) instead of loading it from a CDN — must be
-// imported before <Editor> mounts so loader.config() runs before loader.init().
-import "./monaco-setup";
-import "./CodeEditor.css";
+import type { CodeEditorProps } from "./CodeEditorImpl";
 
-export const DARK_THEME = "vs-dark";
-// Monaco's built-in light theme is "vs" — "vs-light" is not a registered theme, so
-// setTheme() would silently ignore it and leave the editor stuck on the dark theme.
-export const LIGHT_THEME = "vs";
-export const DEFAULT_THEME = DARK_THEME;
+// Monaco (~10 MB — the single biggest passenger in the renderer bundle) is lazy-loaded so it stays OFF
+// the first-paint path. It loads only when a CodeEditor actually mounts (Inspect / Info / Kube / AI
+// screens). The `import type` above is erased at build time, so it does NOT pull the impl into the main
+// chunk — only the dynamic import() below creates the (Monaco) chunk.
+const CodeEditorImpl = lazy(() => import("./CodeEditorImpl"));
 
-export interface CodeEditorProps {
-  value: string;
-  mode?: string;
-  theme?: string;
-  headerTitle?: any;
-  withoutLineNumbers?: boolean;
-  readOnly?: boolean;
-  onChange?: (value: string) => void;
-}
+export type { CodeEditorProps };
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({
-  withoutLineNumbers,
-  value,
-  mode,
-  theme,
-  headerTitle,
-  readOnly,
-  onChange,
-}: CodeEditorProps) => {
-  const userTheme = useAppStore((state) => state.userSettings.theme);
-  const [currentTheme, setCurrentTheme] = useState(theme || (userTheme === AppTheme.LIGHT ? LIGHT_THEME : DARK_THEME));
-  const monaco = useMonaco();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  useEffect(() => {
-    if (!monaco) {
-      console.warn("Monaco editor not ready - theming skipped");
-      return;
-    }
-    if (userTheme === AppTheme.DARK) {
-      monaco.editor.setTheme(DARK_THEME);
-      setCurrentTheme(DARK_THEME);
-    } else if (userTheme === AppTheme.LIGHT) {
-      monaco.editor.setTheme(LIGHT_THEME);
-      setCurrentTheme(LIGHT_THEME);
-    }
-  }, [monaco, userTheme]);
-  // Let the global find host open Monaco's own native find for this editor.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) {
-      return;
-    }
-    return registerFindTarget({
-      type: "monaco",
-      el,
-      openFind: () => {
-        editorRef.current?.focus();
-        editorRef.current?.getAction("actions.find")?.run();
-      },
-    });
-  }, []);
+export function CodeEditor(props: CodeEditorProps) {
   return (
-    <div className="CodeEditor" ref={containerRef}>
-      {headerTitle ? <div className="CodeEditorHeader">{headerTitle}</div> : null}
-      <Editor
-        height="100%"
-        language={mode || "json"}
-        value={value}
-        theme={currentTheme}
-        onChange={(next) => onChange?.(next ?? "")}
-        onMount={(editor) => {
-          editorRef.current = editor;
-        }}
-        options={{
-          readOnly: readOnly ?? true,
-          automaticLayout: true,
-          minimap: {
-            enabled: false,
-          },
-          fontSize: 11,
-          cursorStyle: "block",
-          wordWrap: "on",
-          theme: currentTheme,
-          lineNumbers: withoutLineNumbers ? "off" : "on",
-        }}
-      />
-    </div>
+    <Suspense fallback={<div className="CodeEditor CodeEditorLoading" style={{ height: "100%" }} />}>
+      <CodeEditorImpl {...props} />
+    </Suspense>
   );
-};
+}

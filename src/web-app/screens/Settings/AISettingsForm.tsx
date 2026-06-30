@@ -2,9 +2,11 @@ import { Callout, Checkbox, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { createLogger } from "@/logger";
 import { AIPermissions } from "./AIPermissions";
 import { AIProviderConfig } from "./AIProviderConfig";
+
+const logger = createLogger("web.settings");
 
 // Local-first AI settings. AI is always on — there is no master switch or cloud/local-only
 // checkbox: the privacy callout leads, then the provider CONNECTION configurator (AIProviderConfig) — a
@@ -33,7 +35,7 @@ export const AISettingsForm: React.FC = () => {
           setEncryption(status.encryption);
         }
       } catch (error: any) {
-        console.error("Unable to read AI status", error);
+        logger.error("Unable to read AI status", error);
       }
     })();
     return () => {

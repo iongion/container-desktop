@@ -40,6 +40,9 @@ const codeExample = `// This code example demonstrates how to connect to the con
 import axios from "axios"; // npm install axios
 import httpAdapter from "axios/lib/adapters/http.js";
 import http from "node:http";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.connections");
 
 const driver = axios.create({
   adapter: httpAdapter,
@@ -48,7 +51,7 @@ const driver = axios.create({
   socketPath: process.env.DOCKER_HOST
 });
 const response = await driver.get("/_ping");
-console.debug(response.data);
+logger.debug(response.data);
 `;
 
 function normalizeConnectionString(host: string) {

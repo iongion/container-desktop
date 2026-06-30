@@ -12,6 +12,9 @@ import { Application } from "@/container-client/Application";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 
 import "./AIPermissions.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.settings");
 
 export const AIPermissions: React.FC = () => {
   const { t } = useTranslation();
@@ -25,7 +28,7 @@ export const AIPermissions: React.FC = () => {
     try {
       setSnap(await bridge.listPermissions());
     } catch (error) {
-      console.error("Unable to read AI permissions", error);
+      logger.error("Unable to read AI permissions", error);
     }
   }, [bridge]);
 

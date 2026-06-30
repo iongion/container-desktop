@@ -31,10 +31,13 @@ import type {
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import type { Connection, ConnectorCapabilities, EngineConnectorAvailability, GlobalUserSettings } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { deepMerge } from "@/utils";
 
 // Re-exported for convenience; the canonical home is resourceSyncProtocol (shared with the renderer).
 export type { AppRuntimeSnapshot, ConnectionPhase } from "@/container-client/resourceSyncProtocol";
+
+const logger = createLogger("shell.engine");
 
 const EVENT_REFRESH_DEBOUNCE_MS = 500;
 // A /events stream that closes within this window of opening never really established (an engine/mock with no
@@ -43,6 +46,8 @@ const EVENTS_MIN_UPTIME_MS = 1500;
 const EVENTS_ATTACH_TIMEOUT_MS = 3000;
 const RESOURCE_WARMUP_TIMEOUT_MS = 5000;
 const MACHINES_LOAD_TIMEOUT_MS = 3000;
+// Timeout for individual engine connections — prevents indefinite hangs during startup.
+const CONNECTION_TIMEOUT_MS = 60000;
 // Ready at least this long ⇒ the connection proved stable, so the NEXT drop restarts back-off from scratch.
 const RECONNECT_STABLE_MS = 30000;
 
@@ -77,13 +82,38 @@ function descriptorOf(connection: {
   };
 }
 
-// First availability-check message that is a REAL reason (not the "Not checked" placeholder). Order mirrors
-// the connect sequence: host → controller → program → api. Lets a swallowed failure that connectHostClient
-// folded into report.api ("ssh: … No route to host") reach the user instead of the placeholder.
-function firstRealReason(report: EngineConnectorAvailability["report"] | undefined): string | undefined {
+// The user-facing reason a connection is unavailable. It must reflect a check that actually FAILED — never
+// echo a passing check's success string (the Apple-container bug: host passed with "Engine is available"
+// while the API was the real failure, so the user saw a contradictory "Engine is available"). The API check
+// is the ultimate "can we talk to the engine" gate, so when it fails its message wins; otherwise the first
+// failed check in connect order (host → controller → program → api) is used, skipping passed/"Not checked".
+function firstRealReason(availability: EngineConnectorAvailability | undefined): string | undefined {
+  const report = availability?.report;
+  const real = (message: string | undefined): string | undefined =>
+    message && message !== "Not checked" && !message.startsWith("Not checked") ? message : undefined;
+  if (availability?.api === false) {
+    const apiReason = real(report?.api);
+    if (apiReason) {
+      return apiReason;
+    }
+  }
+  const stages: Array<[boolean | undefined, string | undefined]> = [
+    [availability?.host, report?.host],
+    [availability?.controller, report?.controller],
+    [availability?.program, report?.program],
+    [availability?.api, report?.api],
+  ];
+  for (const [ok, message] of stages) {
+    const reason = real(message);
+    if (ok === false && reason) {
+      return reason;
+    }
+  }
+  // Fallback (legacy): the first real message regardless of pass/fail.
   for (const value of [report?.host, report?.controller, report?.program, report?.api]) {
-    if (value && value !== "Not checked") {
-      return value;
+    const reason = real(value);
+    if (reason) {
+      return reason;
     }
   }
   return undefined;
@@ -135,6 +165,15 @@ async function settleWithin<T>(promise: Promise<T>, timeoutMs: number): Promise<
         }
       });
   });
+}
+
+// Timeout wrapper that rejects with a timeout error after the specified duration.
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  const timeoutId = setTimeout(() => {
+    promise.catch(() => {}); // Ignore pending promise rejections on timeout
+    throw new Error(`Connection timed out after ${timeoutMs}ms`);
+  }, timeoutMs);
+  return promise.finally(() => clearTimeout(timeoutId));
 }
 
 export class EngineDataService {
@@ -323,12 +362,15 @@ export class EngineDataService {
         targetsById.set(primary.id, primary);
       }
     }
+    logger.info("connectAll: starting", { count: targetsById.size, primary: this.primaryId });
     const jobs = Array.from(targetsById.values()).map((connection) =>
       this.connectOne(connection)
         .then(() => !!this.runtimeByConnection.get(connection.id)?.running)
         .catch(() => false),
     );
-    await Promise.allSettled(jobs);
+    const settled = await Promise.allSettled(jobs);
+    const running = settled.filter((r) => r.status === "fulfilled" && r.value).length;
+    logger.info("connectAll: complete", { total: jobs.length, running });
     this.emitChange();
   }
 
@@ -337,6 +379,8 @@ export class EngineDataService {
   async connectOne(connection: Connection, origin: ConnectOrigin = "bootstrap"): Promise<void> {
     const id = connection.id;
     const desc = descriptorOf(connection);
+    const startedAt = Date.now();
+    logger.debug("connectOne: start", { id, engine: desc.engine, name: desc.name, origin });
     this.connectionById.set(id, connection); // remembered so a drop can rebuild this host without a disk read
     this.runtimeByConnection.set(id, { ...desc, phase: "starting", running: false });
     this.emitProgress({
@@ -351,9 +395,13 @@ export class EngineDataService {
     try {
       const app = this.ensureApp();
       await app.setup();
-      const { host, availability } = await app.connectHostClient(connection, {
-        startApi: !!connection.settings?.api?.autoStart,
-      });
+      // Wrap the connection attempt with a timeout to prevent indefinite hangs.
+      const { host, availability } = await withTimeout(
+        app.connectHostClient(connection, {
+          startApi: !!connection.settings?.api?.autoStart,
+        }),
+        CONNECTION_TIMEOUT_MS,
+      );
       const running = availability?.api ?? false;
       if (host && running) {
         const resolvedSettings = await host.getSettings();
@@ -404,12 +452,13 @@ export class EngineDataService {
           phase: "ready",
           origin,
         });
+        logger.info("connection ready", { id, engine: desc.engine, name: desc.name, ms: Date.now() - startedAt });
       } else {
         // Surface WHY. Prefer the first check with a REAL message — skipping the "Not checked" placeholder so
         // a swallowed failure (SSH "No route to host", folded into report.api by connectHostClient) reaches
         // the user, not a terse nothing. Carry the raw detail (preflight steps) to the Activity Center too.
         const report = availability?.report;
-        const reason = firstRealReason(report) || "engine unavailable";
+        const reason = firstRealReason(availability) || "engine unavailable";
         const detail = buildFailureDetail(connection, reason, report?.detail);
         this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false, error: reason });
         this.emitProgress({
@@ -421,21 +470,26 @@ export class EngineDataService {
           origin,
           detail,
         });
+        logger.warn("connection unavailable", { id, engine: desc.engine, reason });
         this.maybeContinueReconnect(connection, reason);
       }
     } catch (error: any) {
-      const reason = `${error?.message ?? error}`;
+      // Timeout errors get a specific message for better UX.
+      const timeoutMatch = error?.message?.match(/timed out after ([\d]+)ms/);
+      const isTimeout = timeoutMatch !== null;
+      const reason = isTimeout ? `connection timed out after ${timeoutMatch[1]}ms` : `${error?.message ?? error}`;
       const detail = buildFailureDetail(connection, reason, typeof error?.stack === "string" ? error.stack : undefined);
       this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false, error: reason });
       this.emitProgress({
         connectionId: id,
         engine: desc.engine,
         name: desc.name,
-        trace: `failed: ${reason}`,
+        trace: isTimeout ? `timed out: ${reason}` : `failed: ${reason}`,
         phase: "failed",
         origin,
         detail,
       });
+      logger.error("connection failed", { id, engine: desc.engine, reason }, error);
       this.maybeContinueReconnect(connection, reason);
     }
     this.emitChange();
@@ -447,6 +501,7 @@ export class EngineDataService {
     // Explicit user disconnect: suppress auto-reconnect and cancel any pending back-off retry. The stream's
     // own close handler is a no-op here (stop() flips the intentional-stop flag before tearing it down).
     this.userDisconnected.add(connectionId);
+    logger.info("disconnect", { id: connectionId });
     this.clearReconnect(connectionId);
     const stop = this.stopEventsByConnection.get(connectionId);
     if (stop) {
@@ -562,6 +617,7 @@ export class EngineDataService {
     const attempt = (this.reconnectAttempts.get(id) ?? 0) + 1;
     const giveUp = !policy.enabled || (policy.maxRetries != null && attempt > policy.maxRetries);
     if (giveUp) {
+      logger.warn("reconnect gave up", { id, enabled: policy.enabled, reason });
       this.reconnectAttempts.delete(id);
       this.runtimeByConnection.set(id, { ...desc, phase: "failed", running: false, error: reason });
       this.emitProgress({

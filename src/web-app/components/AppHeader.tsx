@@ -10,13 +10,14 @@ import {
   PopoverNext,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { mdiBug, mdiWindowClose, mdiWindowMaximize, mdiWindowMinimize } from "@mdi/js";
+import { mdiBug } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import { OperatingSystem, type Program, WindowAction } from "@/env/Types";
+import { OperatingSystem, type Program, type WindowAction } from "@/env/Types";
+import { WINDOW_CONTROLS } from "@/web-app/chrome/appChrome";
 import { aiNavScreens } from "@/web-app/screenVisibility";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
@@ -24,6 +25,9 @@ import type { AppScreen } from "../Types";
 import { AppHeaderLogo } from "./AppHeaderLogo";
 
 import "./AppHeader.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.AppHeader");
 
 interface AppHeaderProps {
   osType: OperatingSystem;
@@ -69,41 +73,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     if (handler) {
       handler();
     } else {
-      console.error("No handler for window action", action);
+      logger.error("No handler for window action", action);
     }
   }, []);
 
   let rightSideControls: React.ReactNode | null = null;
   if (withControls) {
-    const WINDOW_ACTIONS: {
-      action: WindowAction;
-      icon: any;
-      title: string;
-    }[] = [
-      {
-        action: WindowAction.Minimize,
-        icon: <ReactIcon.Icon path={mdiWindowMinimize} size={0.75} />,
-        title: t("Minimize"),
-      },
-      {
-        action: WindowAction.Maximize,
-        icon: <ReactIcon.Icon path={mdiWindowMaximize} size={0.75} />,
-        title: t("Maximize"),
-      },
-      {
-        action: WindowAction.Close,
-        icon: <ReactIcon.Icon path={mdiWindowClose} size={0.75} />,
-        title: t("Close"),
-      },
-    ];
-    rightSideControls = WINDOW_ACTIONS.map((it) => {
+    // Glyphs + IPC channels come from the shared chrome source (appChrome.ts) — the same definitions the
+    // static boot splash renders, so the live header and the pre-React boot controls never drift.
+    rightSideControls = WINDOW_CONTROLS.map((it) => {
       return (
         <Button
-          title={it.title}
+          title={t(it.label)}
           key={it.action}
           data-action={it.action}
           variant="minimal"
-          icon={it.icon as any}
+          icon={(<ReactIcon.Icon path={it.mdiPath} size={0.75} />) as any}
           onClick={onWindowControlClick}
         />
       );

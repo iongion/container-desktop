@@ -9,6 +9,9 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { usePruneSystem, useResetSystem } from "./queries";
 import "./Troubleshoot.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.troubleshoot");
 
 export const ID = "troubleshoot";
 export const Title = "Troubleshoot";
@@ -147,7 +150,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           intent: Intent.SUCCESS,
         });
       } catch (error: any) {
-        console.error("Command execution failed", error.message);
+        logger.error("Command execution failed", error.message);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,

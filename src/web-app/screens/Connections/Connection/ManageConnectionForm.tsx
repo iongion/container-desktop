@@ -38,6 +38,9 @@ import { EngineSelect } from "./EngineSelect";
 import { OSTypeSelect } from "./OSTypeSelect";
 import { ScopeSelect } from "./ScopeSelect";
 import "./ManageConnectionForm.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.connections");
 
 type DetectTarget = "program" | "controller";
 
@@ -247,7 +250,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
           }
         }
       } catch (error: any) {
-        console.error("Unable to detect controller scope", error);
+        logger.error("Unable to detect controller scope", error);
         Notification.show({
           message: t("Error during controller scope detection"),
           intent: Intent.DANGER,
@@ -271,7 +274,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         try {
           await fetchControllerScopes(connector);
         } catch (error: any) {
-          console.error("Unable to fetch scopes", error);
+          logger.error("Unable to fetch scopes", error);
         }
       }
       return flag;
@@ -305,7 +308,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       }
       onClose();
     } catch (error: any) {
-      console.error("Unable to create connection", error);
+      logger.error("Unable to create connection", error);
       Notification.show({
         message: t("Error during connection creation"),
         intent: Intent.DANGER,
@@ -325,7 +328,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         setPending(true);
         setContainerEngineHostOptions(connectors.filter((it) => it.engine === engine));
       } catch (error: any) {
-        console.error("Error during container engine detection", error);
+        logger.error("Error during container engine detection", error);
         Notification.show({
           message: t("Error during engine detection"),
           intent: Intent.DANGER,
@@ -344,7 +347,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         const updated = await createConnectorBy(osType, engine);
         resetFormData(updated);
       } catch (error: any) {
-        console.error("Error during container engine detection", error);
+        logger.error("Error during container engine detection", error);
       } finally {
         setPending(false);
       }
@@ -356,7 +359,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       try {
         setPending(true);
       } catch (error: any) {
-        console.error("Unable to detect host", error);
+        logger.error("Unable to detect host", error);
         Notification.show({
           message: t("Error during engine host detection"),
           intent: Intent.DANGER,
@@ -386,7 +389,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         }
         resetFormData(updated);
       } catch (error: any) {
-        console.error("Unable to create connection", error);
+        logger.error("Unable to create connection", error);
         Notification.show({
           message: t("Error during connector creation"),
           intent: Intent.DANGER,
@@ -414,7 +417,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
           });
         }
       } catch (error: any) {
-        console.error("<< Starting", error);
+        logger.error("<< Starting", error);
         Notification.show({
           message: t("{{Name}} could not be started", scope),
           intent: Intent.DANGER,
@@ -442,7 +445,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
           });
         }
       } catch (error: any) {
-        console.error("<< Stopping", error);
+        logger.error("<< Stopping", error);
         Notification.show({
           message: t("{{Name}} could not be stopped", scope),
           intent: Intent.DANGER,
@@ -476,7 +479,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         }
         resetFormData(updated);
       } catch (error: any) {
-        console.error("Error during controller scope change", error);
+        logger.error("Error during controller scope change", error);
         Notification.show({
           message: t("Error during controller scope change"),
           intent: Intent.DANGER,
@@ -497,7 +500,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);
     } catch (error: any) {
-      console.error("<< Detecting API connection URI", error);
+      logger.error("<< Detecting API connection URI", error);
       Notification.show({
         message: t("Error during API connection URI detection"),
         intent: Intent.DANGER,
@@ -516,7 +519,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       setValue("settings.api.connection.uri", apiConnection.uri);
       setValue("settings.api.connection.relay", apiConnection.relay);
     } catch (error: any) {
-      console.error("<< Detecting API connection relay", error);
+      logger.error("<< Detecting API connection relay", error);
       Notification.show({
         message: t("Error during API connection relay detection"),
         intent: Intent.DANGER,
@@ -583,7 +586,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         }
         resetFormData(inspected);
       } catch (error: any) {
-        console.error("Error during executable selection", error);
+        logger.error("Error during executable selection", error);
         Notification.show({
           message: t("Error during executable selection"),
           intent: Intent.DANGER,
@@ -637,7 +640,7 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
         }
         resetFormData(inspected);
       } catch (error: any) {
-        console.error("Error during executable detection", error);
+        logger.error("Error during executable detection", error);
         Notification.show({
           message: t("Error during executable selection"),
           intent: Intent.DANGER,

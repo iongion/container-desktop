@@ -19,6 +19,9 @@ import {
   useUnpauseContainer,
 } from "./queries";
 import "./ActionsMenu.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.container");
 
 // Actions menu
 interface ActionsMenuProps {
@@ -69,11 +72,11 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       },
     ) => {
       if (!container) {
-        console.error("No container to perform action on");
+        logger.error("No container to perform action on");
         return;
       }
       if (!connectionId) {
-        console.error("No connection to perform container action on");
+        logger.error("No connection to perform container action on");
         return;
       }
       setDisabledAction(action);
@@ -140,7 +143,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           goToScreen("/screens/containers");
         }
       } catch (error: any) {
-        console.error("Command execution failed", error);
+        logger.error("Command execution failed", error);
         const message = t("Command did not complete properly");
         const details: { message: string; guid: string }[] = [
           { message: `${error.message}`, guid: crypto.randomUUID() },

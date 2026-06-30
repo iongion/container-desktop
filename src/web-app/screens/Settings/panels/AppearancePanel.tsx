@@ -5,7 +5,10 @@ import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "rea
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngine, type EngineThemePreference } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { useAppStore } from "@/web-app/stores/appStore";
+
+const logger = createLogger("web.settings");
 
 // Appearance settings: engine theme + the "show engine column" toggle, and the monospace font override.
 export const AppearancePanel: React.FC = () => {
@@ -43,7 +46,7 @@ export const AppearancePanel: React.FC = () => {
           setSystemFonts(families);
         }
       } catch (error: any) {
-        console.error("Unable to enumerate system fonts", error);
+        logger.error("Unable to enumerate system fonts", error);
       }
     })();
   }, []);

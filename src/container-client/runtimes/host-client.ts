@@ -465,15 +465,25 @@ export class HostClient implements HostContext {
   }
 
   async getEventsStream(opts?: SubscriptionOptions) {
+    const { attachTimeoutMs, ...params } = opts ?? {};
+    // The /events response is a LONG-LIVED stream: it must NOT carry a finite read-timeout. A finite axios
+    // `timeout` (and the keep-alive socket agent derived from it) aborts the mostly-idle stream a few seconds
+    // after it opens, so the drop handler re-subscribes — turning an events-first stream into a reconnect
+    // POLL loop. So issue it untimed (timeout: 0), exactly like the container-logs stream. `attachTimeoutMs`
+    // bounds ONLY the attach (how long we wait for the stream to open) via an abort signal we clear the moment
+    // the stream opens — so a slow attach is aborted cleanly instead of orphaning an open stream.
+    const controller = new AbortController();
+    const attachTimer =
+      attachTimeoutMs && attachTimeoutMs > 0 ? setTimeout(() => controller.abort(), attachTimeoutMs) : undefined;
     try {
-      const { attachTimeoutMs, ...params } = opts ?? {};
       this.logger.debug(this.id, "Subscribing to connection events - creating api client", opts);
       const driver = await this.getApiDriver();
       this.logger.debug(this.id, "Subscribing to connection events - issuing request");
       const response = await driver.get("/events", {
         params,
-        timeout: attachTimeoutMs ?? 0,
+        timeout: 0,
         responseType: "stream",
+        signal: controller.signal,
       });
       return response.data as EventEmitter;
     } catch (error: any) {
@@ -488,6 +498,10 @@ export class HostClient implements HostContext {
             }
           : "",
       );
+    } finally {
+      if (attachTimer) {
+        clearTimeout(attachTimer);
+      }
     }
   }
 

@@ -2,8 +2,10 @@
 // Images use the driver's default (per-connection) baseURL — no per-call libpod/docker override.
 
 import type { ContainerImage, ContainerImageHistory } from "@/env/Types";
-
+import { createLogger } from "@/logger";
 import { ResourceAdapter } from "./shared";
+
+const logger = createLogger("client.images");
 
 export interface FetchImageOptions {
   Id: string;
@@ -45,7 +47,7 @@ export class ImagesAdapter extends ResourceAdapter {
         try {
           image.History = await this.history(id);
         } catch (error: any) {
-          console.error("Unable to fetch image history", error);
+          logger.error("Unable to fetch image history", error);
           image.History = [];
         }
       }

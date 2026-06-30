@@ -13,11 +13,13 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useId, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
+import { createLogger } from "@/logger";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
 import { FormLayout } from "@/web-app/components/FormLayout";
 import { useCreateMachine } from "./queries";
+
+const logger = createLogger("web.machine");
 
 // Machine drawer
 export interface CreateDrawerProps {
@@ -50,7 +52,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
       await machineCreate.mutateAsync(creator);
       onClose();
     } catch (error: any) {
-      console.error("Unable to create machine", error);
+      logger.error("Unable to create machine", error);
     } finally {
       setPending(false);
     }

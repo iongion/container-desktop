@@ -9,10 +9,18 @@
   <link rel="shortcut icon" href="<%- PUBLIC_URL %>/favicon.ico?v=<%- PROJECT_VERSION %>" />
   <title><%- PROJECT_TITLE %> <%- PROJECT_VERSION %></title>
   <base href="./" />
+  <style>
+    /* Boot splash + window chrome — single source of truth in src/web-app/chrome/appChrome.ts, injected here
+       at build time (vite.config.common.mjs EJS context) so the static pre-React chrome never drifts from the
+       live React header. Paints with the first frame so the frameless window is revealed early AND stays
+       draggable / minimizable / closable even if the React app hangs before mounting. React replaces #root. */
+    <%- BOOT_CHROME_STYLE %>
+  </style>
 </head>
 
 <body class="bp6-dark">
-  <div id="root"></div>
+  <div id="root"><%- BOOT_CHROME_BODY %></div>
+  <script><%- BOOT_CHROME_SCRIPT %></script>
   <script type="module" src="/src/web-app/index.tsx"></script>
 </body>
 

@@ -139,5 +139,12 @@ export default ({ mode, command }) => {
     },
   };
   config.build.rollupOptions.external = ["electron"];
+  // Renderer-only: enable code-splitting so React.lazy() emits real chunks (Monaco ~10 MB / xterm load
+  // on demand) instead of inlining everything into renderer.mjs and parsing it before first paint.
+  // main/preload stay single-file CJS (their common-config `codeSplitting:false` is untouched). The
+  // chunks load as file:// siblings of renderer.mjs in the packaged app — the same mechanism the bundled
+  // monaco workers (editor.worker.js / json.worker.js) already use.
+  config.build.rollupOptions.output.codeSplitting = true;
+  config.build.rollupOptions.output.chunkFileNames = "chunks/[name]-[hash].mjs";
   return config;
 };

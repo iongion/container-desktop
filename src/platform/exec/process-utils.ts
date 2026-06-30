@@ -2,7 +2,7 @@ import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from "n
 import type { Wrapper } from "@/env/Types";
 import { createLogger } from "@/logger";
 
-const logger = createLogger("shared");
+const logger = createLogger("platform.process");
 
 export const DEFAULT_RETRIES_COUNT = 10;
 

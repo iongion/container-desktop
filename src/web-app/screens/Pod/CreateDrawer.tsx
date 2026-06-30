@@ -12,10 +12,12 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useId, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
+import { createLogger } from "@/logger";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
 import { useCreatePod } from "./queries";
+
+const logger = createLogger("web.pod");
 
 // Pod drawer
 export interface CreateDrawerProps {
@@ -42,7 +44,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
       await podCreate.mutateAsync(creator);
       onClose();
     } catch (error: any) {
-      console.error("Unable to create pod", error);
+      logger.error("Unable to create pod", error);
     } finally {
       setPending(false);
     }

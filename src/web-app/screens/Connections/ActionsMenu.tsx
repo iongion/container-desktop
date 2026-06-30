@@ -11,6 +11,9 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 
 import "./ActionsMenu.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.connections");
 
 interface ActionsMenuProps {
   connection: Connection;
@@ -63,7 +66,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
           });
         }
       } catch (error: any) {
-        console.error("Command execution failed", error);
+        logger.error("Command execution failed", error);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,
@@ -85,7 +88,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
       // Per-connection connect (always-merged): bring up just this engine via main — no global bootstrap reset.
       await connectOne(connection.id, { trackGlobalPending: false });
     } catch (error: any) {
-      console.error("Unable to connect", error);
+      logger.error("Unable to connect", error);
     } finally {
       setPendingLifecycleAction(undefined);
     }

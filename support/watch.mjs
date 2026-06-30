@@ -11,6 +11,13 @@ import { build, createServer } from "vite";
 
 /** @type 'production' | 'development'' */
 const mode = process.env.MODE || "development";
+
+// Dev runs debug-by-default in BOTH processes: the in-process vite `define` fallback and the spawned
+// Electron child's process.env (re-exposed to the renderer by the preload bridge). `||=` keeps an
+// explicit override (e.g. CONTAINER_DESKTOP_LOG_LEVEL=warn yarn dev) winning.
+if (mode === "development") {
+  process.env.CONTAINER_DESKTOP_LOG_LEVEL ||= "debug";
+}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);

@@ -31,9 +31,11 @@ import {
   OperatingSystem,
   type SystemNotification,
 } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { deepMerge, isObject } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { AppBootstrapPhase } from "@/web-app/App.types";
+import { bootTimeline, logBootSummary } from "@/web-app/bootTimeline";
 import { queryClient } from "@/web-app/domain/queryClient";
 import { waitForPreload } from "@/web-app/Native";
 import { Notification } from "@/web-app/Notification";
@@ -41,6 +43,8 @@ import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { applyResourceSyncSnapshot, startResourceMirror } from "@/web-app/stores/resourceMirror";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
+
+const logger = createLogger("web.appStore");
 
 export const DEFAULT_SYSTEM_CONNECTION_ID = "system-default.podman";
 
@@ -74,7 +78,7 @@ function delayCheckUpdate(osType: OperatingSystem) {
         });
       }
     } catch (error: any) {
-      console.error("Unable to read latest version", error);
+      logger.error("Unable to read latest version", error);
     }
   }, 1500);
 }
@@ -225,6 +229,9 @@ interface AppState {
   currentConnector?: Connector;
   nextConnection?: Connection;
   userSettings: GlobalUserSettings;
+  // Track failed connection attempts to prevent duplicate notifications during rapid retries.
+  lastFailedConnectionId?: string;
+  lastFailedReason?: string;
 }
 
 interface AppActions {
@@ -289,6 +296,8 @@ export const useAppStore = create<AppStore>()((set, get) => {
     connections: [],
     currentConnector: undefined,
     nextConnection: undefined,
+    lastFailedConnectionId: undefined,
+    lastFailedReason: undefined,
     userSettings: {} as GlobalUserSettings,
 
     // sync
@@ -352,6 +361,10 @@ export const useAppStore = create<AppStore>()((set, get) => {
             : AppBootstrapPhase.STARTING
           : AppBootstrapPhase.READY;
         const next: Partial<AppState> = { phase, running, provisioned: true };
+        if (phase === AppBootstrapPhase.READY && state.phase !== AppBootstrapPhase.READY) {
+          bootTimeline.mark("first-engine-ready");
+          logBootSummary();
+        }
         // Fold main's resolved per-connection socket coordinates (uri/relay/scope) into the configured
         // connections so the Connection Info screen shows the REAL DOCKER_HOST for every connection. Keeps the
         // same reference when unchanged; the primary connector below then reads the ALREADY-merged `conn`.
@@ -401,8 +414,10 @@ export const useAppStore = create<AppStore>()((set, get) => {
       get().resetBootstrapPhases();
       get().setPending(true);
       get().setPhase(AppBootstrapPhase.STARTING);
+      bootTimeline.mark("phase-starting");
       systemNotifier.transmit("startup.phase", { trace: "Loading user settings" });
       await waitForPreload();
+      bootTimeline.mark("preload-ready");
       registerTraySwitchListener(get);
       subscribeConnectProgress();
       const instance = Application.getInstance();
@@ -461,7 +476,9 @@ export const useAppStore = create<AppStore>()((set, get) => {
           // Multi-connection bootstrap: bring up every auto-start connection IN PARALLEL via main (isolated
           // failures — one offline engine never blocks the others once SSH/process timeouts have fired).
           systemNotifier.transmit("startup.phase", { trace: "Connecting engines" });
+          bootTimeline.mark("connectAll:start");
           await window.MessageBus.invoke(RESOURCE_SYNC.connectAll);
+          bootTimeline.mark("connectAll:done");
           // Backstop: settle from a direct snapshot in case a push raced our subscription.
           const snapshot = await window.MessageBus.invoke(RESOURCE_SYNC.getSnapshot);
           if (snapshot) {
@@ -471,13 +488,15 @@ export const useAppStore = create<AppStore>()((set, get) => {
           // connection manager). applyAppRuntime already set READY if an engine connected.
           if (get().phase === AppBootstrapPhase.STARTING) {
             get().setPhase(AppBootstrapPhase.READY);
+            bootTimeline.mark("READY");
+            logBootSummary();
           }
           if (get()?.userSettings?.checkLatestVersion && !checkForUpdatePerformed) {
             checkForUpdatePerformed = true;
             delayCheckUpdate(get().osType);
           }
         } catch (error: any) {
-          console.error("Error during application startup", error);
+          logger.error("Error during application startup", error);
           // Never trap on the splash — show the workspace; the connection manager handles recovery.
           get().setPhase(AppBootstrapPhase.READY);
         } finally {
@@ -517,7 +536,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
             userSettings,
           });
         } catch (error: any) {
-          console.error("Error during application stopping", error);
+          logger.error("Error during application stopping", error);
         }
         return nextPhase === AppBootstrapPhase.READY;
       });
@@ -530,7 +549,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
           get().syncGlobalUserSettings(userSettings);
           return userSettings;
         } catch (error: any) {
-          console.error("Error during global user preferences update", error);
+          logger.error("Error during global user preferences update", error);
         }
         return {} as GlobalUserSettings;
       }),
@@ -550,7 +569,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
             get().setConnections(options.connections);
           }
         } catch (error: any) {
-          console.error("Error during global user preferences update", error);
+          logger.error("Error during global user preferences update", error);
         }
       }),
     setConnectorSettings: async (options) =>
@@ -561,7 +580,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
           get().syncEngineUserSettings(options);
           return updated;
         } catch (error: any) {
-          console.error("Error during host user preferences update", error);
+          logger.error("Error during host user preferences update", error);
         }
         return undefined;
       }),
@@ -571,7 +590,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
           const instance = Application.getInstance();
           return await instance.findProgram(connection, program, insideScope);
         } catch (error: any) {
-          console.error("Error during connection string test", error);
+          logger.error("Error during connection string test", error);
         }
         return undefined;
       }),
@@ -580,7 +599,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
         try {
           return await Application.getInstance().generateKube(options.entityId);
         } catch (error: any) {
-          console.error("Error during kube generation", error);
+          logger.error("Error during kube generation", error);
         }
         return undefined;
       }),
@@ -625,9 +644,24 @@ export const useAppStore = create<AppStore>()((set, get) => {
         try {
           await waitForPendingPaint();
           await window.MessageBus.invoke(RESOURCE_SYNC.ensureConnected, { connectionId });
+          // Connection succeeded — clear any previous failure tracking.
+          get().lastFailedConnectionId = undefined;
+          get().lastFailedReason = undefined;
         } catch (error: any) {
-          console.error("Unable to connect engine", connectionId, error);
-          Notification.show({ message: t("Unable to establish connection"), intent: Intent.DANGER });
+          logger.error("Unable to connect engine", connectionId, error);
+          const message = t("Unable to establish connection");
+          // Deduplicate notifications during rapid retries by tracking the last failure.
+          if (
+            options.trackGlobalPending !== false &&
+            get().lastFailedConnectionId === connectionId &&
+            get().lastFailedReason === (error?.message || error)
+          ) {
+            return;
+          }
+          // Update failure tracking to prevent duplicate notifications.
+          get().lastFailedConnectionId = connectionId;
+          get().lastFailedReason = error?.message || String(error);
+          Notification.show({ message, intent: Intent.DANGER });
         }
       };
       if (options.trackGlobalPending === false) {
@@ -641,7 +675,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
           await waitForPendingPaint();
           await window.MessageBus.invoke(RESOURCE_SYNC.disconnect, { connectionId });
         } catch (error: any) {
-          console.error("Unable to disconnect engine", connectionId, error);
+          logger.error("Unable to disconnect engine", connectionId, error);
         }
       };
       if (options.trackGlobalPending === false) {

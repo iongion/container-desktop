@@ -4,14 +4,16 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Secret } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
-
 import { CreateDrawer } from "./CreateDrawer";
 import { getSecretUrl } from "./Navigation";
 import { useRemoveSecret } from "./queries";
+
+const logger = createLogger("web.secret");
 
 // Secret actions menu
 
@@ -60,7 +62,7 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
           goToScreen("/screens/secrets");
         }
       } catch (error: any) {
-        console.error("Command execution failed", error, result);
+        logger.error("Command execution failed", error, result);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,

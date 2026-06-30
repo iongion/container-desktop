@@ -5,6 +5,7 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ContainerImage } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
@@ -12,6 +13,8 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { CreateDrawer } from "./CreateDrawer";
 import { getImageUrl } from "./Navigation";
 import { usePullImage, usePushImage, useRemoveImage } from "./queries";
+
+const logger = createLogger("web.image");
 
 interface ActionsMenuProps {
   image?: ContainerImage;
@@ -70,7 +73,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           goToScreen("/screens/images");
         }
       } catch (error: any) {
-        console.error("Command execution failed", error, result);
+        logger.error("Command execution failed", error, result);
         Notification.show({
           message: t("Command did not execute properly - {{message}} {{data}}", {
             message: error.message,

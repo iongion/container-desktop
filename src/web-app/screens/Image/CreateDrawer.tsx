@@ -27,6 +27,9 @@ import { PortMappingsForm } from "./PortMappingsForm";
 import { useImage } from "./queries";
 
 import "./CreateDrawer.css";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("web.image");
 
 export interface CreateFormData {
   amount: number;
@@ -107,7 +110,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({
         });
       }
     } catch (error: any) {
-      console.error("Unable to start container(s) from image", error);
+      logger.error("Unable to start container(s) from image", error);
       Notification.show({
         message: t("Unable to start container(s) from image"),
         intent: Intent.DANGER,

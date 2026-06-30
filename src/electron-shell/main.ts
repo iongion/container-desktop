@@ -43,6 +43,7 @@ import { createRecoveryService } from "./recovery";
 import { ResourceSyncBroker } from "./resourceSyncBroker";
 import { createRuntime } from "./runtime";
 import { MessageBus } from "./shared";
+import { mainStartup } from "./startupTimeline";
 import { TrayController } from "./trayController";
 import { shouldOpenExternally } from "./urlPolicy";
 import { WindowManager } from "./windowManager";
@@ -62,6 +63,7 @@ installBrokenPipeGuard(process.stdout);
 installBrokenPipeGuard(process.stderr);
 
 const logger = createLogger("shell.main");
+mainStartup.mark("module-eval");
 
 // Path roots (entry-level + build-critical): main.cjs lives in build/<version>/, so the repo root (dev) /
 // app root (packaged) is two levels up. APP_PATH is the packaged exe dir, else the app path.
@@ -379,11 +381,14 @@ async function bootstrap() {
     windowManager.sendToRenderer("theme:change", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   await app.whenReady();
+  mainStartup.mark("whenReady");
+  logger.info("App ready; applying runtime proxy and creating window");
   try {
     await applyProxyAtRuntime(proxyConfig, { session: session.defaultSession });
   } catch (error: any) {
     logger.error("Unable to apply startup proxy", error);
   }
+  mainStartup.mark("proxy-applied");
   await windowManager.create();
   // Always-on tray for the widget (independent of minimize-to-tray). The native context menu is the reliable
   // cross-platform entry — especially on Linux, where the StatusNotifierItem shows it on activation.
@@ -394,6 +399,7 @@ async function bootstrap() {
       logger.error("Unable to create system tray", error);
     }
   }
+  mainStartup.mark("tray-created");
 }
 
 const singleInstanceLock = app.requestSingleInstanceLock();

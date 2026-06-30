@@ -5,6 +5,9 @@ import * as path from "node:path";
 import SSHConfigParser from "ssh-config";
 
 import { type CommandExecutionResult, ControllerScopeType, OperatingSystem, type SSHHost } from "@/env/Types";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("platform.node");
 
 export const CURRENT_OS_TYPE = os.type();
 
@@ -199,7 +202,7 @@ export const Platform: IPlatform = {
       const flag = await fs.existsSync("/.flatpak-info");
       return flag;
     } catch (error: any) {
-      console.error("Unable to detect flatpak-info presence", error);
+      logger.error("Unable to detect flatpak-info presence", error);
     }
     return false;
   },
@@ -338,7 +341,7 @@ export const FS: IFileSystem = {
     const created = !!lastCreated;
     const exists = await fs.existsSync(location);
     if (!created || !exists) {
-      console.error("Directory creation failed", location);
+      logger.error("Directory creation failed", location);
     }
     return location;
   },

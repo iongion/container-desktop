@@ -7,7 +7,7 @@ import { deepMerge } from "@/utils";
 import { DEFAULT_RETRIES_COUNT, killProcess, type WrapperOpts } from "./process-utils";
 import { getEngineProxyEnv } from "./proxy-env-policy";
 
-const logger = createLogger("shared");
+const logger = createLogger("platform.exec");
 
 // Commander
 export function applyWrapper(launcher: string, args: string[], opts?: WrapperOpts) {

@@ -14,10 +14,12 @@ import { memo, useId, useState } from "react";
 import isEqual from "react-fast-compare";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
+import { createLogger } from "@/logger";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
 import { useCreateSecret } from "./queries";
+
+const logger = createLogger("web.secret");
 
 // Secret drawer
 export interface CreateDrawerProps {
@@ -43,7 +45,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
         });
         onClose();
       } catch (error: any) {
-        console.error("Unable to create secret", error);
+        logger.error("Unable to create secret", error);
       } finally {
         setPending(false);
       }

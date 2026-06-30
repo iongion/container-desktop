@@ -14,6 +14,9 @@ import {
   type ResourceSwitchRequest,
   type ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
+import { createLogger } from "@/logger";
+
+const logger = createLogger("shell.sync");
 
 export interface ResourceSyncBrokerDeps {
   service: {
@@ -71,6 +74,7 @@ export class ResourceSyncBroker {
       if (!this.deps.isAllowedSender(event)) {
         return false;
       }
+      logger.debug("ipc: connectAll");
       await this.deps.service.connectAll?.();
       return true;
     });
@@ -79,6 +83,7 @@ export class ResourceSyncBroker {
       if (!this.deps.isAllowedSender(event) || !payload?.connectionId) {
         return false;
       }
+      logger.debug("ipc: disconnect", { connectionId: payload.connectionId });
       await this.deps.service.disconnectOne?.(payload.connectionId);
       return true;
     });
@@ -115,6 +120,7 @@ export class ResourceSyncBroker {
       }
       this.lastSnapshotSignature = signature;
       this.deps.broadcast(RESOURCE_SYNC.snapshot, snapshot);
+      logger.debug("snapshot broadcast");
     });
   }
 }

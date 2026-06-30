@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Boot title bar (logo, minimize/maximize/close, drag) paints from the first frame, so the window stays movable and closable even if startup stalls.
+
+## Changed
+
+- Faster startup: a splash paints immediately and the window reveals as soon as it can render; editor and terminal load on demand.
+- Splash and window background match the default theme — no startup color flash.
+- More thorough startup/engine/SSH debug logging; `yarn dev` defaults to debug, level is the only verbosity control.
+
+## Fixed
+
+- Engine event streams (`/events`) now stay open persistently instead of re-subscribing every ~3 s — a finite request timeout was aborting the long-lived stream, degrading events-first updates into a poll loop (thousands of redundant requests). Streams now run untimed; only the attach is bounded.
+- Connection failures show the real reason instead of a misleading "Engine is available".
+- An installed-but-not-running remote (e.g. Apple Container/Socktainer) no longer stalls startup ~20s (now ~10s).
+
 ## [5.3.7] - 2026-06-22
 
 ## Changed

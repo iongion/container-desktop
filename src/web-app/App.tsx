@@ -17,7 +17,9 @@ import { useTranslation } from "react-i18next";
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
+import { createLogger } from "@/logger";
 import { AppBootstrapPhase, AppTheme } from "@/web-app/App.types";
+import { bootTimeline } from "@/web-app/bootTimeline";
 import AppErrorBoundary from "@/web-app/components/AppErrorBoundary";
 import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
@@ -64,6 +66,8 @@ import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectS
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
+
+const logger = createLogger("web.app");
 
 const Screens = [
   DashboardScreen,
@@ -186,10 +190,11 @@ function AppBootstrapReadySignal() {
           return;
         }
         window.MessageBus.send("notify", { message: "ready", payload: useAppStore.getState().userSettings });
+        bootTimeline.mark("notify-ready-sent");
       })
       .catch((error: any) => {
         signaledRef.current = false;
-        console.error("Unable to notify main window readiness", error);
+        logger.error("Unable to notify main window readiness", error);
       });
     return () => {
       cancelled = true;
@@ -315,6 +320,10 @@ export function AppMainScreen() {
     startRef.current = true;
     initialize().then(() => startApplication());
   }, [initialize, startApplication]);
+
+  useEffect(() => {
+    bootTimeline.mark("react-first-commit");
+  }, []);
 
   // Apply the user's monospace font override as CSS variables (removing them falls back to the
   // bundled JetBrains Mono / built-in sizing). Consumed by code/pre/.bp6-code and the terminal.

@@ -8,6 +8,10 @@ import { checker } from "vite-plugin-checker";
 
 // pkg
 import pkg from "./package.json";
+// Single source of truth for the window chrome (logo + window controls), shared with the React header.
+// Injected into index.html's boot splash via the EJS context below so the static, pre-React chrome never
+// drifts from the live one. Dependency-free strings, safe to import at config-load time.
+import { BOOT_CHROME_BODY, BOOT_CHROME_SCRIPT, BOOT_CHROME_STYLE } from "./src/web-app/chrome/appChrome";
 
 // module
 export const ENVIRONMENT = process.env.ENVIRONMENT || "development";
@@ -41,6 +45,10 @@ export function createEJSContext() {
     PROJECT_TITLE: pkg.title,
     PROJECT_DESCRIPTION: pkg.description,
     ENVIRONMENT,
+    // Boot window chrome, injected raw (<%- %>) into index.html — single source shared with the React header.
+    BOOT_CHROME_STYLE,
+    BOOT_CHROME_BODY,
+    BOOT_CHROME_SCRIPT,
   };
 }
 export const sourcemap = ENVIRONMENT === "development";
