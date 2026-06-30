@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Added
 
+- AI assistant now drives the engines through first-class typed tools (list/inspect/logs/start/stop/restart/pause/remove for containers, images, networks, volumes), each permission-gated, rendered as rich generative-UI cards instead of plain text.
 - Boot title bar (logo, minimize/maximize/close, drag) paints from the first frame, so the window stays movable and closable even if startup stalls.
 
 ## Changed

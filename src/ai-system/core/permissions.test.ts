@@ -7,6 +7,7 @@ import {
   commandKey,
   emptyPermissionsCache,
   resolveToolAction,
+  toolKey,
 } from "./permissions";
 
 describe("commandKey", () => {
@@ -16,6 +17,31 @@ describe("commandKey", () => {
 
   it("distinguishes different args", () => {
     expect(commandKey("podman", ["stop", "web"])).not.toBe(commandKey("podman", ["stop", "db"]));
+  });
+});
+
+describe("toolKey — first-class typed tools reuse the commandKey shape", () => {
+  it("keys a tool under a `tool:` prefix with stable-stringified args", () => {
+    expect(toolKey("removeContainer", { id: "abc" })).toBe(
+      commandKey("tool:removeContainer", [JSON.stringify({ id: "abc" })]),
+    );
+  });
+
+  it("is stable across arg key order", () => {
+    expect(toolKey("pullImage", { reference: "nginx", connectionId: "c1" })).toBe(
+      toolKey("pullImage", { connectionId: "c1", reference: "nginx" }),
+    );
+  });
+
+  it("distinguishes tool name and args", () => {
+    expect(toolKey("removeContainer", { id: "a" })).not.toBe(toolKey("removeContainer", { id: "b" }));
+    expect(toolKey("startContainer", { id: "a" })).not.toBe(toolKey("stopContainer", { id: "a" }));
+  });
+
+  it("a verdict persisted as a command rule matches the tool key (cache stays single-sourced)", () => {
+    const key = toolKey("removeContainer", { id: "x" });
+    const blocked: AICommandRule[] = [{ program: "tool:removeContainer", args: [JSON.stringify({ id: "x" })] }];
+    expect(cachedVerdict({ allowed: [], blocked }, key)).toBe("block");
   });
 });
 

@@ -15,6 +15,7 @@ import type { AIPermissionMode } from "@/ai-system/core";
 import { hasPendingApproval, type TranscriptItem } from "@/ai-system/ui/core/transcript";
 import { startAIBus, useAIStore } from "@/ai-system/ui/react/stores/useAIStore";
 import { AIComposer } from "@/web-app/components/AIComposer";
+import { ToolCard } from "@/web-app/components/ai/cards/registry";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
@@ -171,9 +172,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
         return (
           <Card key={item.id} className="AssistantApproval" compact>
             <code className="AssistantCode">
-              {item.cmdKind === "web"
-                ? `${t("Web search")}: ${item.args[0] ?? ""}`
-                : `${item.program} ${item.args.join(" ")}`}
+              {item.cmdKind === "tool"
+                ? (item.title ?? item.program)
+                : item.cmdKind === "web"
+                  ? `${t("Web search")}: ${item.args[0] ?? ""}`
+                  : `${item.program} ${item.args.join(" ")}`}
             </code>
             <span className="AssistantReason">{item.reason}</span>
             {renderApprovalActions(item)}
@@ -185,6 +188,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
             {item.message}
           </Callout>
         );
+      case "tool":
+        // First-class typed tool → generative-UI card (with a generic JSON fallback for un-carded tools).
+        return <ToolCard key={item.id} {...item} />;
       default:
         return null;
     }

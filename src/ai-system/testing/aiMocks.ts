@@ -12,6 +12,7 @@ import type {
   AgentRunner,
   AgentToolEvent,
   AIKeyStore,
+  EngineOps,
   KnowledgeEntry,
   ListedModel,
   SandboxCommand,
@@ -81,12 +82,110 @@ const WRAP_UP: Scenario = [
   { type: "done", reason: "stop" },
 ];
 
+// Fixture resources so CONTAINER_DESKTOP_MOCK=1 yarn dev exercises the typed-tool generative-UI cards (and
+// lets approved mutations resolve) without a real engine. Shapes mirror @/env/Types loosely (cast as any).
+const MOCK_CONTAINERS: any[] = [
+  {
+    Id: "a1b2c3d4e5f6",
+    Image: "docker.io/library/nginx:latest",
+    Names: ["web"],
+    Computed: { Name: "web", DecodedState: "running" },
+    State: "running",
+    Status: "Up 2 hours",
+    Ports: {},
+  },
+  {
+    Id: "f6e5d4c3b2a1",
+    Image: "docker.io/library/redis:7",
+    Names: ["cache"],
+    Computed: { Name: "cache", DecodedState: "exited" },
+    State: "exited",
+    Status: "Exited (0) 5 minutes ago",
+    Ports: {},
+  },
+];
+const MOCK_IMAGES: any[] = [
+  { Id: "sha256:1111", FullName: "docker.io/library/nginx:latest", Name: "nginx", Tag: "latest", Size: 142000000 },
+  { Id: "sha256:2222", FullName: "docker.io/library/redis:7", Name: "redis", Tag: "7", Size: 117000000 },
+];
+const MOCK_NETWORKS: any[] = [
+  { id: "net0001", name: "podman", driver: "bridge", dns_enabled: true, internal: false, subnets: [] },
+  { id: "net0002", name: "frontend", driver: "bridge", dns_enabled: true, internal: false, subnets: [] },
+];
+const MOCK_VOLUMES: any[] = [
+  { Name: "pgdata", Driver: "local", Mountpoint: "/var/lib/containers/storage/volumes/pgdata/_data" },
+  { Name: "cache", Driver: "local", Mountpoint: "/var/lib/containers/storage/volumes/cache/_data" },
+];
+
+function typedToolScenario(tool: string, title: string, result: unknown, prose: string): Scenario {
+  return [
+    { type: "delta", text: "Let me check that for you. " },
+    { type: "tool", event: { type: "tool-call", tool, title, args: {} } },
+    { type: "tool", event: { type: "tool-result", tool, title, ok: true, result } },
+    { type: "delta", text: prose },
+    { type: "done", reason: "stop" },
+  ];
+}
+
+// Map a prompt to a typed-tool demo scenario so "list my containers" renders a ContainersCard, etc.
+function pickTypedScenario(prompt: string): Scenario | null {
+  if (/\bimage/.test(prompt)) {
+    return typedToolScenario("listImages", "List images", MOCK_IMAGES, "These are the images on this engine.");
+  }
+  if (/\bnetwork/.test(prompt)) {
+    return typedToolScenario("listNetworks", "List networks", MOCK_NETWORKS, "Here are the configured networks.");
+  }
+  if (/\bvolume/.test(prompt)) {
+    return typedToolScenario("listVolumes", "List volumes", MOCK_VOLUMES, "Here are the volumes on this engine.");
+  }
+  if (/\bcontainer|\brunning|\bstopped|\blog/.test(prompt)) {
+    return typedToolScenario(
+      "listContainers",
+      "List containers",
+      MOCK_CONTAINERS,
+      "You have one running container (web) and one stopped (cache).",
+    );
+  }
+  return null;
+}
+
 export function createMockAgentRunner(): AgentRunner {
   return (params) => {
     const last = params.messages?.at(-1)?.content ?? "";
-    const scenario = RESUME_MARKER.test(last) ? WRAP_UP : (diagnoseCrash as Scenario);
+    const scenario = RESUME_MARKER.test(last)
+      ? WRAP_UP
+      : (pickTypedScenario(last.toLowerCase()) ?? (diagnoseCrash as Scenario));
     playScenario(scenario, params.signal, params.onDelta, params.onDone, params.onError, params.onToolEvent);
   };
+}
+
+// EngineOps — fixture-backed so the typed tools resolve in mock mode (the scripted runner emits the card
+// events directly; this is used when an approved mutation re-runs through the broker, and for completeness).
+export function createMockEngineOps(): EngineOps {
+  const ok = async () => true;
+  return {
+    listConnections: () => [{ id: "podman", name: "Podman", engine: "podman", running: true }],
+    listContainers: async () => MOCK_CONTAINERS,
+    inspectContainer: async ({ id }) => MOCK_CONTAINERS.find((c) => c.Id.startsWith(id)) ?? MOCK_CONTAINERS[0],
+    getContainerLogs: async () => "2026-06-30T16:12:15 nginx: ready to handle connections\n... (mock logs) ...",
+    getContainerStats: async () => ({ name: "web", memory_stats: { usage: 104857600, limit: 536870912 } }) as any,
+    startContainer: ok,
+    stopContainer: ok,
+    restartContainer: ok,
+    pauseContainer: ok,
+    unpauseContainer: ok,
+    removeContainer: ok,
+    listImages: async () => MOCK_IMAGES,
+    inspectImage: async () => MOCK_IMAGES[0],
+    pullImage: ok,
+    removeImage: ok,
+    listNetworks: async () => MOCK_NETWORKS,
+    inspectNetwork: async () => MOCK_NETWORKS[0],
+    removeNetwork: ok,
+    listVolumes: async () => MOCK_VOLUMES,
+    inspectVolume: async () => MOCK_VOLUMES[0],
+    removeVolume: ok,
+  } as EngineOps;
 }
 
 // Model listing
@@ -308,6 +407,7 @@ export interface MockAIDeps {
   knowledgeBank: { search: (query: string) => Promise<KnowledgeEntry[]> };
   webSearcher: (query: string) => Promise<{ text: string }>;
   keyStore: AIKeyStore;
+  engineOps: EngineOps;
 }
 
 export function createMockAIDeps(): MockAIDeps {
@@ -318,5 +418,6 @@ export function createMockAIDeps(): MockAIDeps {
     knowledgeBank: createMockKnowledgeBank(),
     webSearcher: createMockWebSearcher(),
     keyStore: createMockKeyStore(),
+    engineOps: createMockEngineOps(),
   };
 }

@@ -14,11 +14,25 @@ export type TranscriptItem =
       kind: "approval";
       id: string;
       actionId: string;
-      cmdKind: "command" | "web";
+      cmdKind: "command" | "web" | "tool";
       program: string;
       args: string[];
       reason: string;
       status: ApprovalStatus;
+      /** Friendly one-line summary for a typed-tool approval (cmdKind === "tool"); commands render program+args. */
+      title?: string;
+    }
+  // A first-class typed tool call (e.g. listContainers) + its redacted result, rendered as a generative-UI
+  // card by AssistantScreen's cards registry (with the generic step/output as fallback for un-carded tools).
+  | {
+      kind: "tool";
+      id: string;
+      tool: string;
+      title: string;
+      args: Record<string, unknown>;
+      status: "running" | "complete" | "error";
+      ok?: boolean;
+      result?: unknown;
     }
   | { kind: "error"; id: string; message: string };
 
@@ -101,6 +115,43 @@ export function reduceStreamEvent(
             args: e.args,
             reason: e.reason,
             status: "pending",
+            title: e.title,
+          },
+        ];
+      }
+      if (e.type === "tool-call") {
+        return [
+          ...items,
+          { kind: "tool", id: nextId(), tool: e.tool, title: e.title, args: e.args, status: "running" },
+        ];
+      }
+      if (e.type === "tool-result") {
+        // Fill the most recent still-running call of this tool; else append a completed item (defensive).
+        for (let i = items.length - 1; i >= 0; i -= 1) {
+          const it = items[i];
+          if (it.kind === "tool" && it.tool === e.tool && it.status === "running") {
+            const next = items.slice();
+            next[i] = {
+              ...it,
+              result: e.result,
+              ok: e.ok,
+              status: e.ok ? "complete" : "error",
+              title: e.title || it.title,
+            };
+            return next;
+          }
+        }
+        return [
+          ...items,
+          {
+            kind: "tool",
+            id: nextId(),
+            tool: e.tool,
+            title: e.title,
+            args: {},
+            status: e.ok ? "complete" : "error",
+            ok: e.ok,
+            result: e.result,
           },
         ];
       }

@@ -6,11 +6,12 @@
 
 import path from "node:path";
 
-import type { AISettings } from "@/ai-system/core";
+import type { AISettings, EngineOps } from "@/ai-system/core";
 import { AIBroker } from "@/ai-system/host/broker";
 import { KnowledgeBank } from "@/ai-system/host/knowledgeBank";
 import { buildAgentPrompt, buildGeneratePrompt } from "@/ai-system/prompt/prompts";
 import { createAgentRunner } from "@/ai-system/runtimes/node/agent/agent";
+import { executeContainerTool } from "@/ai-system/runtimes/node/agent/containerTools";
 import { executeSandboxed } from "@/ai-system/runtimes/node/agent/sandbox";
 import { createSandboxExec } from "@/ai-system/runtimes/node/agent/sandboxExec";
 import { createAgentTools } from "@/ai-system/runtimes/node/agent/tools";
@@ -39,6 +40,9 @@ export interface ElectronAISystemDeps {
   isAllowedSender: (event: any) => boolean;
   /** Reads + normalizes the persisted AI settings. */
   getAISettings: () => Promise<AISettings>;
+  /** Typed container operations the assistant's first-class tools call (built over EngineDataService in
+   *  main.ts). Absent ⇒ only the generic command/web/knowledge tools are offered. */
+  engineOps?: EngineOps;
   /** CONTAINER_DESKTOP_MOCK — swap real streamers/runner/stores for scripted mocks. */
   mock?: boolean;
   /** DEVELOPMENT-ONLY: provider API keys seeded from the environment (e.g. OPENROUTER_API_KEY). The main
@@ -77,6 +81,9 @@ export function createElectronAISystem(deps: ElectronAISystemDeps): AIBroker {
       ? withDevApiKeys(baseKeyStore, deps.devApiKeys)
       : baseKeyStore;
 
+  // The typed engine surface the assistant's first-class tools call (and the broker re-runs on approval).
+  const engineOps = mocks ? mocks.engineOps : deps.engineOps;
+
   const broker = new AIBroker({
     keyStore,
     getAISettings: deps.getAISettings,
@@ -93,6 +100,8 @@ export function createElectronAISystem(deps: ElectronAISystemDeps): AIBroker {
       ? (cmd, opts) => mocks.runSandboxed(cmd, opts)
       : (cmd, opts) => executeSandboxed(cmd, { exec: sandboxExec, enforceFloor: opts?.enforceFloor }),
     buildAgentTools: createAgentTools,
+    engineOps,
+    runEngineTool: engineOps ? (name, args) => executeContainerTool(engineOps, name, args) : undefined,
     permissionsStore,
     knowledgeBank: mocks ? mocks.knowledgeBank : knowledgeBank,
     webSearcher: mocks

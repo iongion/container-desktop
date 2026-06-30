@@ -70,13 +70,22 @@ export type AgentToolEvent =
   | {
       type: "approval-request";
       actionId: string;
-      kind: "command" | "web";
+      kind: "command" | "web" | "tool";
       program: string;
       args: string[];
       reason: string;
+      /** Typed first-class tool (kind === "tool"): the engine op + its args, so the broker can re-run it on
+       *  approval, and a friendly one-line summary for the approval card. */
+      tool?: string;
+      toolArgs?: Record<string, unknown>;
+      title?: string;
     }
   | { type: "command-result"; program: string; args: string[]; ok: boolean; stdout: string; stderr: string }
-  | { type: "rejected"; program: string; args: string[]; reason: string };
+  | { type: "rejected"; program: string; args: string[]; reason: string }
+  // First-class typed tools — a call badge then its (redacted) typed result, rendered as a generative-UI
+  // card by the renderer (transcript `tool` item → cards registry). `args`/`result` are already redacted.
+  | { type: "tool-call"; tool: string; title: string; args: Record<string, unknown> }
+  | { type: "tool-result"; tool: string; title: string; ok: boolean; result: unknown };
 
 // Live engine/diagnostics context the RENDERER assembles (activity/resource/engine stores it owns) and
 // attaches to a chat turn. Pre-serialized to strings; main redacts before the model sees it. `resources`

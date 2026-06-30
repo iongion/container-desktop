@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-version="5.3.6" data-theme="unified">
+<html lang="en" data-version="5.3.7" data-theme="unified">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,11 +7,11 @@
 <title>The Manual — Container Desktop setup guides for Podman, Docker &amp; Apple™ Container</title>
 <meta name="description" content="Set up Podman, Docker and Apple™ Container on Linux, macOS and Windows — native, virtualized, colima/LIMA or WSL. Every command, copy-paste ready." />
 <link rel="canonical" href="https://container-desktop.com/manual/" />
-<link rel="icon" href="/favicon.ico?v=5.3.6" type="image/x-icon" />
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=5.3.6" />
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=5.3.6" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5.3.6" />
-<link rel="mask-icon" href="/safari-pinned-tab.svg?v=5.3.6" color="#a01986" />
+<link rel="icon" href="/favicon.ico?v=5.3.7" type="image/x-icon" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=5.3.7" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=5.3.7" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5.3.7" />
+<link rel="mask-icon" href="/safari-pinned-tab.svg?v=5.3.7" color="#a01986" />
 <link rel="manifest" href="/site.webmanifest" />
 <meta name="theme-color" content="#0f0014" />
 <meta name="msapplication-config" content="/browserconfig.xml" />
@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" referrerpolicy="no-referrer" />
 
-<link rel="stylesheet" href="/assets/css/site.css?v=5.3.6" />
+<link rel="stylesheet" href="/assets/css/site.css?v=5.3.7" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -48,7 +48,7 @@
 </script>
 </head>
 <body>
-  <div class="announce"><span class="mono">★ v5.3.6</span><span>Open-source desktop UI for Podman, Docker &amp; Apple™ Container —</span><a href="/#download">download free →</a></div>
+  <div class="announce"><span class="mono">★ v5.3.7</span><span>Open-source desktop UI for Podman, Docker &amp; Apple™ Container —</span><a href="/#download">download free →</a></div>
   <header class="nav"><div class="wrap">
   <a class="brand" href="/"><span class="mark">cd</span><span>Container Desktop<small class="brand-tagline">Container desktop companion</small></span></a>
   <nav class="nav-links">
@@ -73,7 +73,7 @@
     <div class="eyebrow">Handbook · bring your own engine</div>
     <h1>The Manual</h1>
     <p>Set up Podman, Docker and Apple™ Container on any platform — local, virtualized, or WSL. Every command, every engine, copy-paste ready.</p>
-    <div class="osjump"><a href="#linux"><i class="fab fa-linux"></i> Linux</a><a href="#macos"><i class="fab fa-apple"></i> macOS</a><a href="#windows"><i class="fab fa-windows"></i> Windows</a><a href="#using"><i class="fas fa-book-open"></i> Using the app</a><a href="#shortcuts"><i class="fas fa-keyboard"></i> Keyboard shortcuts</a>
+    <div class="osjump"><a href="#linux"><i class="fab fa-linux"></i> Linux</a><a href="#macos"><i class="fab fa-apple"></i> macOS</a><a href="#windows"><i class="fab fa-windows"></i> Windows</a><a href="#assistant"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</a><a href="#using"><i class="fas fa-book-open"></i> Using the app</a><a href="#shortcuts"><i class="fas fa-keyboard"></i> Keyboard shortcuts</a>
     </div>
   </div>
 
@@ -82,6 +82,7 @@
       <div class="grp"><i class="fab fa-linux"></i> Linux</div><a href="#linux-req">Requirements</a><a href="#linux-quick">1 · Quick guide</a><a href="#linux-podman-docker">2 · Podman as Docker</a><a href="#linux-dd-alt">3 · Docker Desktop alternative</a><a href="#linux-share">4 · Sharing connection</a>
       <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-apple-container">5 · Apple™ Container <span class="exp-label">Experimental</span></a><a href="#macos-share">6 · Sharing connection</a>
       <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
+      <div class="grp"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</div><a href="#assistant-what">What it is</a><a href="#assistant-model">Choose your model</a><a href="#assistant-do">What it can do</a><a href="#assistant-privacy">Privacy &amp;amp; permissions</a><a href="#assistant-generator">Dockerfile &amp;amp; Compose generator</a>
       <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-logs">Live container logs</a><a href="#using-fonts">Font settings</a>
       <div class="grp"><i class="fas fa-keyboard"></i> Keyboard shortcuts</div><a href="#shortcuts-find">Find</a><a href="#shortcuts-all">All shortcuts</a>
     </aside>
@@ -405,6 +406,50 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <p>Although possible, <strong>it is not required</strong> to install the Container Desktop application inside WSL.</p>
 </section>
 
+      <div class="guide-os" id="assistant"><i class="fas fa-wand-magic-sparkles"></i><h2>AI Assistant</h2></div>
+      <section class="guide-sec" id="assistant-what">
+<h3>What it is</h3>
+<p>Container Desktop has a built-in <strong>AI assistant</strong> that understands your container setup and can inspect and operate it for you — in plain language. Ask <em>&quot;why did my web container exit?&quot;</em> or <em>&quot;show me the running containers&quot;</em> and it investigates and acts, right inside the app.</p>
+<p>Open it from the <strong>AI menu</strong> in the header (the chat button — the caret beside it lists the Assistant and the generator). It is <strong>local-first</strong>: point it at a model running on your own machine and nothing leaves the device.</p>
+</section>
+<section class="guide-sec" id="assistant-model">
+<h3>Choose your model</h3>
+<p>Pick your inference <strong>source → provider → model</strong> from the selector in the message box. Two kinds of source are supported:</p>
+<ul>
+<li><strong>Local (no API key, runs on your machine):</strong> <strong>LM Studio</strong> and <strong>llama.cpp</strong>. Start the server, and the assistant lists its models — your prompts and container data never leave the device.</li>
+<li><strong>Cloud (needs an API key):</strong> <strong>OpenRouter</strong>, <strong>Anthropic</strong>, <strong>OpenAI</strong>, <strong>DeepSeek</strong>, <strong>GLM</strong> and <strong>MiniMax</strong>. Add a key in <strong>Settings → AI</strong>; OpenRouter exposes many vendors' models behind one key.</li>
+</ul>
+<div class="note info">
+<p>Keys are stored in your operating system's <strong>keychain</strong> (encrypted at rest) and are only ever read in the background process — the interface never shows them back. A cloud model is only reached once you've added its key.</p>
+</div>
+</section>
+<section class="guide-sec" id="assistant-do">
+<h3>What it can do</h3>
+<p>The assistant doesn't just chat — it calls <strong>typed tools</strong> and renders the results as rich <strong>cards</strong> instead of walls of text:</p>
+<ul>
+<li><strong>Look:</strong> list and inspect <strong>containers, images, networks and volumes</strong>, read a container's <strong>logs</strong>, and check its <strong>stats</strong> — shown as sortable tables, a log viewer, and state badges. These read-only actions run freely.</li>
+<li><strong>Act:</strong> <strong>start / stop / restart / pause / remove</strong> a container, <strong>pull</strong> or <strong>remove</strong> an image, <strong>remove</strong> a network or volume. Every state-changing action <strong>asks for your approval first</strong> (see below).</li>
+<li><strong>Escape hatch:</strong> for anything the typed tools don't cover, it can run a host command in a <strong>sandbox</strong> (no shell, scrubbed environment, output capped) — also gated by your approval.</li>
+</ul>
+</section>
+<section class="guide-sec" id="assistant-privacy">
+<h3>Privacy &amp; permissions</h3>
+<p>You decide what the assistant is allowed to run. The mode dropdown in the message box has three settings:</p>
+<ul>
+<li><strong>Always ask</strong> — every state-changing action surfaces an <strong>Allow / Reject</strong> card; nothing is remembered.</li>
+<li><strong>Ask and remember</strong> — approve (or decline) once, and that exact action is remembered so it won't ask again.</li>
+<li><strong>Always allow</strong> — no prompts. Only choose this on a machine you fully trust.</li>
+</ul>
+<p>A reject <strong>never</strong> runs. Review or revoke everything you've remembered — and the web-search switch — under <strong>Settings → AI permissions</strong>.</p>
+<div class="note info">
+<p><strong>Local-first and private by design.</strong> Secrets (API keys, tokens) are <strong>redacted</strong> out of anything the model sees, and out of command output before it's read back. With a local model, your prompts and container details stay on your machine; a cloud model is only contacted after you've explicitly added its key.</p>
+</div>
+</section>
+<section class="guide-sec" id="assistant-generator">
+<h3>Dockerfile &amp; Compose generator</h3>
+<p>A second AI screen (the caret in the header AI menu) <strong>drafts a Dockerfile or a Compose file</strong> from a short description and a starter template, streamed as it writes, ready to copy or save. Same model picker, same privacy rules.</p>
+</section>
+
       <div class="guide-os" id="using"><i class="fas fa-book-open"></i><h2>Using the app</h2></div>
       <section class="guide-sec" id="using-notifications">
 <h3>Notification center &amp; activity log</h3>
@@ -507,9 +552,9 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 
   <script async defer src="https://buttons.github.io/buttons.js"></script>
 
-  <script src="/assets/js/os-detect.js?v=5.3.6"></script>
-  <script src="/assets/js/manual-nav.js?v=5.3.6"></script>
-  <script src="/assets/js/theme-switcher.js?v=5.3.6"></script>
+  <script src="/assets/js/os-detect.js?v=5.3.7"></script>
+  <script src="/assets/js/manual-nav.js?v=5.3.7"></script>
+  <script src="/assets/js/theme-switcher.js?v=5.3.7"></script>
 
 </body>
 </html>

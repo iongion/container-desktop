@@ -23,6 +23,12 @@ export {
   setChatStore,
 } from "./chatStore";
 export { type EgressDecision, evaluateEgress, isLoopbackHost, isOffDeviceURL, previewOutbound } from "./egress";
+export type {
+  EngineConnectionInfo,
+  EngineConnectionRef,
+  EngineEntityRef,
+  EngineOps,
+} from "./engineOps";
 export {
   AI_PERMISSIONS_VERSION,
   type AICommandRule,
@@ -38,6 +44,8 @@ export {
   type PermissionsStoreLike,
   resolveToolAction,
   type ToolAction,
+  toolKey,
+  toolRule,
 } from "./permissions";
 export type {
   AgentMessage,
