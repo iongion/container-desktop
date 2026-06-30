@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.8] - 2026-06-30
+
 ## Added
 
 - AI assistant now drives the engines through first-class typed tools (list/inspect/logs/start/stop/restart/pause/remove for containers, images, networks, volumes), each permission-gated, rendered as rich generative-UI cards instead of plain text.
