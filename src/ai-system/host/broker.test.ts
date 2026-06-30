@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AgentToolDeps, KnowledgeBankLike, KnowledgeEntry, PermissionsSnapshot } from "@/ai-system/core";
-import { AI_CHANNELS, commandKey, normalizeAISettings } from "@/ai-system/core";
+import { AI_CHANNELS, commandKey, normalizeAISettings, toolRule } from "@/ai-system/core";
 import { AIBroker } from "@/ai-system/host/broker";
 import { executeSandboxed } from "@/ai-system/runtimes/node/agent/sandbox";
 import { createAgentTools } from "@/ai-system/runtimes/node/agent/tools";
@@ -55,6 +55,29 @@ function approvalThenResumeRunner(params: any, calls: any[]) {
       program: "podman",
       args: ["stop", "web"],
       reason: "changes state",
+    });
+    params.onDelta("please approve");
+    params.onDone("stop");
+  } else {
+    params.onDelta("resumed");
+    params.onDone("stop");
+  }
+}
+
+// A pending TYPED tool surfaced for approval on the first turn (a gated mutation); later turns stream text.
+// Mirrors what containerTools emits for an "ask" decision.
+function typedApprovalThenResumeRunner(params: any, calls: any[]) {
+  if (calls.length === 1) {
+    params.onToolEvent?.({
+      type: "approval-request",
+      actionId: "act-1",
+      kind: "tool",
+      program: "stopContainer",
+      args: ["web"],
+      reason: "changes state",
+      tool: "stopContainer",
+      toolArgs: { id: "web" },
+      title: "Stop container web",
     });
     params.onDelta("please approve");
     params.onDone("stop");
@@ -125,6 +148,13 @@ function makeBroker(opts?: {
 
   const knowledgeBank: KnowledgeBankLike = { search: async () => [kbEntry()] };
   const webSearcher = vi.fn(async () => ({ text: "web result" }));
+  // Re-runs an approved typed tool (stands in for executeContainerTool bound to engineOps).
+  const runEngineTool = vi.fn(async (_name: string, args: any) => ({
+    ok: true,
+    result: { ok: true, op: "stop", id: args.id },
+    summary: { ok: true, op: "stop", id: args.id },
+    title: `Stop container ${args.id}`,
+  }));
   const broker = new AIBroker({
     keyStore,
     getAISettings: async () => settings,
@@ -145,6 +175,7 @@ function makeBroker(opts?: {
     permissionsStore,
     knowledgeBank,
     webSearcher,
+    runEngineTool,
   });
   broker.register();
   return {
@@ -156,6 +187,7 @@ function makeBroker(opts?: {
     listModelsCalls,
     sandboxExecSpy,
     webSearcher,
+    runEngineTool,
     addCommand,
     removeCommand,
     setWebSearch,
@@ -459,6 +491,45 @@ describe("AIBroker — resolve (run / persist / resume)", () => {
     const { streamId } = await b.invoke(AI_CHANNELS.chat, { sessionId: "s", messages: [userMsg("q")] });
     await b.message(AI_CHANNELS.agentResolve, { streamId, actionId: "act-1", decision: "allow" });
     expect(b.addCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe("AIBroker — resolve a typed first-class tool (approved mutation)", () => {
+  it("runs the engine op once on allow, emits a tool-result, and resumes the turn", async () => {
+    const b = makeBroker({ init: LOCAL_AGENT_SETTINGS, runner: typedApprovalThenResumeRunner });
+    const { streamId } = await b.invoke(AI_CHANNELS.chat, { sessionId: "s", messages: [userMsg("stop web")] });
+    expect(b.agentRunnerCalls).toHaveLength(1);
+    await b.message(AI_CHANNELS.agentResolve, { streamId, actionId: "act-1", decision: "allow" });
+    expect(b.runEngineTool).toHaveBeenCalledWith("stopContainer", { id: "web" });
+    const result = b.sent.find((e) => e.payload.payload?.event?.type === "tool-result");
+    expect(result?.payload.payload.event).toMatchObject({ tool: "stopContainer", ok: true });
+    expect(b.agentRunnerCalls).toHaveLength(2); // resumed
+  });
+
+  it("a reject NEVER runs the engine op and still resumes the turn", async () => {
+    const b = makeBroker({ init: LOCAL_AGENT_SETTINGS, runner: typedApprovalThenResumeRunner });
+    const { streamId } = await b.invoke(AI_CHANNELS.chat, { sessionId: "s", messages: [userMsg("stop web")] });
+    await b.message(AI_CHANNELS.agentResolve, { streamId, actionId: "act-1", decision: "reject" });
+    expect(b.runEngineTool).not.toHaveBeenCalled();
+    expect(b.agentRunnerCalls).toHaveLength(2);
+  });
+
+  it("is one-shot — a replayed actionId does not re-run the op", async () => {
+    const b = makeBroker({ init: LOCAL_AGENT_SETTINGS, runner: typedApprovalThenResumeRunner });
+    const { streamId } = await b.invoke(AI_CHANNELS.chat, { sessionId: "s", messages: [userMsg("stop web")] });
+    await b.message(AI_CHANNELS.agentResolve, { streamId, actionId: "act-1", decision: "allow" });
+    await b.message(AI_CHANNELS.agentResolve, { streamId, actionId: "act-1", decision: "allow" });
+    expect(b.runEngineTool).toHaveBeenCalledTimes(1);
+  });
+
+  it("remember mode persists a tool allow under the toolKey rule", async () => {
+    const b = makeBroker({
+      init: { ...LOCAL_AGENT_SETTINGS, permissionMode: "remember" },
+      runner: typedApprovalThenResumeRunner,
+    });
+    const { streamId } = await b.invoke(AI_CHANNELS.chat, { sessionId: "s", messages: [userMsg("stop web")] });
+    await b.message(AI_CHANNELS.agentResolve, { streamId, actionId: "act-1", decision: "allow" });
+    expect(b.addCommand).toHaveBeenCalledWith("allowed", toolRule("stopContainer", { id: "web" }));
   });
 });
 

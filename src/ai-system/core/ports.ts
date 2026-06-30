@@ -2,6 +2,7 @@
 // Neutral, framework-agnostic PORT interfaces. No Electron/React/AI-SDK/node:*.
 // Runtime implementations live in runtimes/node/; shell adapters in adapters/electron/.
 
+import type { EngineOps } from "./engineOps";
 import type { AIPermissionMode, CachedVerdict } from "./permissions";
 import type { ResolvedProvider } from "./providers";
 import type { AIAuthSettings, ListedModel } from "./types";
@@ -112,6 +113,9 @@ export interface AgentToolDeps {
   cacheLookup?: (key: string) => CachedVerdict;
   /** Remembered verdict for the web-search switch (consulted only in "remember" mode). */
   webVerdict?: CachedVerdict;
+  /** First-class typed container operations (list/inspect/logs/lifecycle/…). When present, createAgentTools
+   *  exposes the typed container toolset; absent ⇒ only the generic runCommand/web/knowledge tools. */
+  engineOps?: EngineOps;
 }
 
 export type BuildAgentTools = (deps: AgentToolDeps) => ToolSet;

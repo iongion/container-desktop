@@ -14,6 +14,7 @@ Full project documentation lives in [`docs/`](docs/):
   - [Overview](docs/architecture/overview.md)
   - [Backend](docs/architecture/backend.md)
   - [Frontend](docs/architecture/frontend.md)
+  - [AI subsystem](docs/architecture/ai-subsystem.md)
   - [Connection startup](docs/architecture/connection-startup.md)
   - [Engine matrix](docs/architecture/engine-matrix.md)
   - [Notes / principles](docs/architecture/notes.md)
@@ -75,3 +76,9 @@ If one wants to add support for docker container engine, the easiest is to insta
 ![Container Actions](website-src/static/img/podman/003-ContainerActions.png?raw=true)
 
 ![Image Actions](website-src/static/img/podman/006-ImageActions.png?raw=true)
+
+## AI assistant — drive your engines in plain language
+
+A built-in, **local-first** AI assistant inspects and operates your containers for you: it calls typed tools and renders the results as rich cards, asks before anything that changes state, and runs on your model — LM Studio or llama.cpp locally, or OpenRouter / Anthropic / OpenAI and more in the cloud. See the [manual](https://container-desktop.com/manual/#assistant).
+
+![AI assistant](website-src/static/img/podman/AIAssistant.png?raw=true)

@@ -24,6 +24,7 @@ import {
   type ChatRequest,
   cachedVerdict,
   type DiagnosticsBundle,
+  type EngineOps,
   evaluateEgress,
   type GenerateRequest,
   type KnowledgeBankLike,
@@ -39,6 +40,7 @@ import {
   resolveProvider,
   type SandboxRunner,
   type ToolSet,
+  toolRule,
 } from "@/ai-system/core";
 
 // Renderer payloads are untrusted. A provider id must be a short, safe identifier so a malformed
@@ -55,9 +57,14 @@ function assertValidProvider(provider: unknown): asserts provider is string {
 // A command/web action the agent SURFACED for approval this stream — keyed by the broker-issued actionId
 // the renderer echoes back. For a web action `args` holds the single query string.
 interface PendingAction {
-  kind: "command" | "web";
+  kind: "command" | "web" | "tool";
   program: string;
   args: string[];
+  // Typed first-class tool (kind === "tool"): the engine op + its args so an approval can be re-run, plus a
+  // friendly label for the resume message. Unused for command/web.
+  tool?: string;
+  toolArgs?: Record<string, unknown>;
+  title?: string;
 }
 
 // Per-stream state. A stream is one user turn and any human-resolved follow-up turns (resume): it
@@ -100,6 +107,15 @@ export interface AIBrokerDeps {
   runSandboxed?: SandboxRunner;
   /** Builds the AI-SDK tool set from tool deps (= createAgentTools); injected to avoid an SDK import here. */
   buildAgentTools?: BuildAgentTools;
+  /** First-class typed container operations the assistant's tools call (and the broker re-runs when the user
+   *  approves a gated mutation). Absent ⇒ only the generic command/web/knowledge tools are offered. */
+  engineOps?: EngineOps;
+  /** Re-runs an APPROVED typed tool (= executeContainerTool bound to engineOps); injected so the broker stays
+   *  SDK-free. Returns the redacted card payload + the model-facing summary. */
+  runEngineTool?: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ ok: boolean; result: unknown; summary: unknown; title: string }>;
   /** The user-managed allow/reject record (a versioned file in userData). Broker-owned writes. */
   permissionsStore?: PermissionsStoreLike;
   /** The seeded troubleshooting knowledge store. */
@@ -261,6 +277,7 @@ export class AIBroker {
       mode,
       cacheLookup: snapshot ? (key) => cachedVerdict(snapshot, key) : undefined,
       webVerdict: snapshot?.webSearch,
+      engineOps: this.deps.engineOps,
     };
 
     this.streams.set(streamId, {
@@ -388,7 +405,14 @@ export class AIBroker {
       return;
     }
     if (e.type === "approval-request") {
-      state.pending.set(e.actionId, { kind: e.kind, program: e.program, args: e.args.map(String) });
+      state.pending.set(e.actionId, {
+        kind: e.kind,
+        program: e.program,
+        args: e.args.map(String),
+        tool: e.tool,
+        toolArgs: e.toolArgs,
+        title: e.title,
+      });
     }
     this.deps.send(state.event, AI_CHANNELS.streamEvent, { streamId, type: "tool", payload: { event: e } });
   }
@@ -415,7 +439,11 @@ export class AIBroker {
     state.pending.delete(actionId);
 
     const label =
-      action.kind === "web" ? `web search "${action.args[0] ?? ""}"` : `${action.program} ${action.args.join(" ")}`;
+      action.kind === "tool"
+        ? (action.title ?? action.tool ?? "the action")
+        : action.kind === "web"
+          ? `web search "${action.args[0] ?? ""}"`
+          : `${action.program} ${action.args.join(" ")}`;
 
     try {
       if (decision === "reject") {
@@ -436,6 +464,21 @@ export class AIBroker {
       if (action.kind === "web") {
         const text = this.deps.webSearcher ? (await this.deps.webSearcher(action.args[0] ?? "")).text : "";
         state.messages.push({ role: "user", content: `Results of ${label}:\n${redactText(text)}` });
+      } else if (action.kind === "tool" && action.tool && this.deps.runEngineTool) {
+        // A first-class typed mutation the user approved: run it MAIN-side via the same execution path the
+        // tool uses, stream the redacted result as a card, and tell the model the outcome so it wraps up.
+        const outcome = await this.deps.runEngineTool(action.tool, action.toolArgs ?? {});
+        this.emitTool(streamId, {
+          type: "tool-result",
+          tool: action.tool,
+          title: label,
+          ok: outcome.ok,
+          result: outcome.result,
+        });
+        state.messages.push({
+          role: "user",
+          content: `I approved and ran ${label}. Result:\n${redactText(JSON.stringify(outcome.summary))}`,
+        });
       } else if (this.deps.runSandboxed) {
         const res = await this.deps.runSandboxed(
           { program: action.program, args: action.args },
@@ -470,6 +513,11 @@ export class AIBroker {
     }
     if (action.kind === "web") {
       await this.deps.permissionsStore.setWebSearch(verdict);
+    } else if (action.kind === "tool" && action.tool) {
+      await this.deps.permissionsStore.addCommand(
+        verdict === "allow" ? "allowed" : "blocked",
+        toolRule(action.tool, action.toolArgs ?? {}),
+      );
     } else {
       await this.deps.permissionsStore.addCommand(verdict === "allow" ? "allowed" : "blocked", {
         program: action.program,

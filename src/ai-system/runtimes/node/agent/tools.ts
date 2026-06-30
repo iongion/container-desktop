@@ -10,6 +10,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { AgentToolDeps, KnowledgeEntry, SandboxCommand } from "@/ai-system/core";
 import { commandKey, resolveToolAction } from "@/ai-system/core";
+import { createContainerTools } from "./containerTools";
 import { isFloorBlocked } from "./sandbox";
 
 export const runCommandInput = z
@@ -127,6 +128,8 @@ export async function webSearchTool(deps: AgentToolDeps, input: { query: string 
 // the shape is exercised by the unit tests and consumed by streamText's ToolSet.
 export function createAgentTools(deps: AgentToolDeps): Record<string, any> {
   const tools: Record<string, any> = {
+    // First-class typed container tools (list/inspect/logs/lifecycle/…) when an engine surface is wired.
+    ...createContainerTools(deps),
     runCommand: tool({
       description:
         "Run a command on the host to inspect or fix the user's container setup. Depending on the user's permission settings the command may run, be surfaced for the user to approve, or be rejected — never assume it ran; use its returned output. Provide a bare program and an args array — no shell, pipes, or redirects.",

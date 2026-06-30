@@ -31,6 +31,7 @@ Python ≥ 3.12 via `uv`.
 - `src/platform/` — Node `Command` primitives: `node-executor.ts` (facade) over
   `exec/` impl modules (process-utils, api-driver, commander, ssh-transport,
   wsl-relay, proxy-request); `node.ts` = `Platform`/`Path`
+- `src/ai-system/` — local-first AI assistant (hexagonal: core/host/adapters/runtimes/ui/prompt): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · `tasks.py` / `Makefile`
 - **`website-src/`** — Eleventy sources for the public site (container-desktop.com),

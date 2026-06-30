@@ -37,6 +37,19 @@ export default {
       flip: false,
     },
     {
+      eyebrow: "AI assistant",
+      title: "An assistant that drives your engines",
+      copy: "Ask in plain language and a built-in, local-first AI inspects and operates your containers — it calls typed tools and renders the results as rich cards, and asks before anything that changes state. Bring your own model: LM Studio or llama.cpp on your machine, or OpenRouter, Anthropic and more in the cloud.",
+      bullets: [
+        "Local-first — your data stays on your machine",
+        "Typed tools rendered as cards, with approvals",
+        "Your model, your keys (stored in the OS keychain)",
+      ],
+      img: "/img/podman/AIAssistant.png",
+      alt: "AI assistant",
+      flip: true,
+    },
+    {
       eyebrow: "Settings",
       title: "Yours to configure, top to bottom",
       copy: "Set the theme and monospace font, decide how it starts and sits in the system tray, pick your log level, and always see exactly where settings and logs are stored.",
@@ -47,7 +60,7 @@ export default {
       ],
       img: "/img/podman/UserSettings.png",
       alt: "Settings",
-      flip: true,
+      flip: false,
     },
   ],
   grid: [

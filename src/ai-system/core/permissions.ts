@@ -22,6 +22,31 @@ export function commandKey(program: string, args: string[]): string {
   return JSON.stringify([program, args]);
 }
 
+// The persisted permission rule for a TYPED first-class tool call (e.g. removeContainer{id}) — a regular
+// command rule under a `tool:` prefix with the args stable-stringified into a single token. Reusing the
+// command-rule shape keeps the broker approval map, the cache, persistVerdict, and the settings UI all
+// single-sourced; `toolKey` is just this rule's commandKey, so cacheLookup(toolKey(...)) finds it.
+export function toolRule(toolName: string, args: unknown): AICommandRule {
+  return { program: `tool:${toolName}`, args: [stableStringify(args)] };
+}
+
+export function toolKey(toolName: string, args: unknown): string {
+  const rule = toolRule(toolName, args);
+  return commandKey(rule.program, rule.args);
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value) ?? "null";
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(record[k])}`).join(",")}}`;
+}
+
 export function resolveToolAction(opts: {
   mode: AIPermissionMode;
   floorBlocked: boolean;

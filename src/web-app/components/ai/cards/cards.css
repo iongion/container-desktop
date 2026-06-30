@@ -1,0 +1,124 @@
+/* Generative-UI tool cards. Themed only with --app-* tokens so they track every engine x light/dark mode. */
+
+.AICard {
+  margin: 6px 0;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  overflow: hidden;
+}
+
+.AICard--running {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--app-text-muted);
+}
+
+.AICardHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+}
+
+.AICardTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.AICardSpacer {
+  flex: 1 1 auto;
+}
+
+/* Tables (containers / images / networks / volumes) */
+.AICardTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.AICardTable th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--app-text-muted);
+  background: var(--app-surface-strong);
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.AICardTable td {
+  font-size: 12px;
+  color: var(--app-text);
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--app-border);
+  vertical-align: middle;
+}
+
+.AICardTable tr:last-child td {
+  border-bottom: none;
+}
+
+.AICardStrong {
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.AICardMuted {
+  color: var(--app-text-muted);
+}
+
+.AICardMono {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.AICardEmpty {
+  padding: 10px 12px;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Logs + generic JSON fallback */
+.AICardLogs,
+.AICardJson {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: 10px 12px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--app-text);
+  background: var(--app-bg);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.AICardLogs::-webkit-scrollbar,
+.AICardJson::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.AICardLogs::-webkit-scrollbar-thumb,
+.AICardJson::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 6px;
+}
+
+.AICardLogs::-webkit-scrollbar-track,
+.AICardJson::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+}

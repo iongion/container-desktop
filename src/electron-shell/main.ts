@@ -36,6 +36,7 @@ import { registerAppControlIpc } from "./appControlIpc";
 import { CommandProxyBroker } from "./commandProxyBroker";
 import { createContextMenu } from "./contextMenu";
 import { EngineDataService } from "./engineDataService";
+import { createEngineOpsAdapter } from "./engineOpsAdapter";
 import { installPlatformGlobals } from "./globals";
 import { registerLoggingIpc } from "./loggingIpc";
 import { applyProxyAtRuntime, applyProxyAtStartup, testProxyConnectivity } from "./proxyBootstrap";
@@ -291,6 +292,7 @@ aiBroker = createElectronAISystem({
   senderId: (event) => event.sender.id,
   isAllowedSender: (event) => windowManager.isFromMainWindow(event),
   getAISettings: async () => normalizeAISettings(await userConfiguration.getKey("ai")),
+  engineOps: createEngineOpsAdapter(engineDataService),
   mock: isMockMode(),
   devApiKeys,
   logger,
