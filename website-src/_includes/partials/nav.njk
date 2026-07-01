@@ -1,5 +1,5 @@
 <header class="nav"><div class="wrap">
-  <a class="brand" href="/"><span class="mark">cd</span><span>{{ site.name }}<small class="brand-tagline">{{ site.defaultTagline or site.tagline }}</small></span></a>
+  <a class="brand" href="/"><span class="mark">{% include "partials/brand-mark.njk" %}</span><span class="brand-word"><span class="brand-name grad">{{ site.name }}</span><small class="brand-tagline">{{ site.defaultTagline or site.tagline }}</small></span></a>
   <nav class="nav-links">
     <a href="/#features">Features</a>
     <a href="/manual/"{% if active == "manual" %} class="on"{% endif %}>Manual</a>

@@ -65,6 +65,15 @@ export const screenshotManifest = [
     waitFor: '[data-screen="settings-settings"] [data-form="configuration"]',
   },
   {
+    // The AI assistant driven into a rendered generative-UI card. Same prompt across engines so the shot is
+    // deterministic; "running containers" resolves to the read-only listContainers typed-tool card (no approval).
+    file: "AIAssistant.png",
+    route: "/screens/ai/assistant",
+    waitFor: '[data-screen="ai.assistant"] .AICard',
+    pre: [{ action: "askAssistant", prompt: "Show me the running containers" }],
+    settleMs: 1500,
+  },
+  {
     file: "SystemInfo.png",
     route: "/screens/connections/system-info",
     waitFor: '[data-screen="connections.system-info"] .CodeEditor .monaco-editor',

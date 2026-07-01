@@ -17,6 +17,23 @@ import {
   sourcemap,
 } from "./vite.config.common.mjs";
 
+// Vite 8 / rolldown 1.1.3 can't follow @popperjs/core's `export * from "./enums.js"` re-export of its
+// computed placement enums (Blueprint imports `placements`), so `vite build` fails with MISSING_EXPORT.
+// Redirect the bare specifier to a shim that re-exports those names explicitly. Build-only: esbuild's dev
+// pre-bundle already handles the wildcard. `enforce: "pre"` so it wins over default resolution; sub-path
+// imports inside the shim aren't the bare specifier, so they resolve normally (no recursion).
+export function popperCoreShim() {
+  const shim = path.resolve(PROJECT_HOME, "support/popper-core-shim.mjs");
+  return {
+    name: "popper-core-shim",
+    enforce: "pre",
+    apply: "build",
+    resolveId(source) {
+      return source === "@popperjs/core" ? shim : null;
+    },
+  };
+}
+
 export function docsServer() {
   return {
     apply: "serve",
@@ -79,6 +96,7 @@ export const createConfig = ({ mode, command, host, port }) => {
     plugins: [
       // All current plugins are extending the Vite configuration
       // Frontend specific
+      popperCoreShim(),
       react(),
       svgrPlugin(),
       ViteEjsPlugin(ejsContext),

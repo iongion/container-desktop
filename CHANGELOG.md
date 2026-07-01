@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- Updated dependencies to latest, including majors: Electron 43, Vercel AI SDK 7 (`ai` + `@ai-sdk/*`), `@types/node` 26, `undici` 8, `vite-plugin-ejs` 2 (plus Blueprint, TanStack, Vite 8.1, Biome point releases).
+
 ## Fixed
 
 - Demo replays now embed the bundled webfonts (Montserrat, JetBrains Mono) so the title-bar logo keeps its brand font on the website — the recorder was stripping `@font-face` rules, dropping the font to a system fallback on playback.

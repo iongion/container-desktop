@@ -4,6 +4,7 @@ import {
   isEmbeddableAssetPathname,
   mimeTypeForPathname,
   sanitizeLocalDevReferences,
+  WORDMARK_REPLAY_FILL,
 } from "../../support/demoSanitize.mjs";
 
 // The demo replays render inside a self-contained rrweb <iframe> on the site, so the app's bundled webfonts
@@ -44,6 +45,23 @@ describe("demo recording sanitizer — fonts travel with the replay", () => {
     expect(out).toContain("data:font/woff2;base64,");
     expect(out).not.toContain("localhost:3000");
     expect(out).not.toContain("data:image/gif");
+  });
+
+  it("flattens the wordmark gradient fill so the logo text renders in the replay iframe", () => {
+    // The "Container Desktop" wordmark is painted with fill: url(#AppHeaderLogoGrad); the gradient's
+    // stop-colors come from CSS custom properties that don't cascade into rrweb's isolated iframe, so the
+    // fragment paint resolves empty and the wordmark disappears (while the solid-fill tagline stays).
+    // The bare inline SVG attribute form must become a solid color:
+    expect(sanitizeLocalDevReferences("url(#AppHeaderLogoGrad)")).toBe(WORDMARK_REPLAY_FILL);
+    const css = ".AppHeaderLogoTitle { fill: url(#AppHeaderLogoGrad); }";
+    expect(sanitizeLocalDevReferences(css)).toBe(`.AppHeaderLogoTitle { fill: ${WORDMARK_REPLAY_FILL}; }`);
+    // rrweb ABSOLUTIZES the CSS url() against the dev origin; that form must be caught HERE (first) so the
+    // local-asset rules don't first degrade it to the transparent-pixel placeholder (which then wins over
+    // the inline attribute via CSS specificity, re-hiding the wordmark).
+    const abs = '.AppHeaderLogoTitle { fill: url("http://localhost:3000/manual/#AppHeaderLogoGrad"); }';
+    expect(sanitizeLocalDevReferences(abs)).toBe(`.AppHeaderLogoTitle { fill: ${WORDMARK_REPLAY_FILL}; }`);
+    expect(sanitizeLocalDevReferences(abs)).not.toContain("data:image/gif");
+    expect(sanitizeLocalDevReferences(abs)).not.toContain("url(");
   });
 
   it("still inlines images and rewrites the dev origin (no regression)", () => {

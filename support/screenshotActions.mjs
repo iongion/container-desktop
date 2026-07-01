@@ -132,9 +132,13 @@ export async function setSidebarExpanded(page, expanded) {
     return;
   }
   await page.locator(".AppSidebarFooterOverlay button").last().click();
-  await page.waitForFunction((value) => document.querySelector(".AppSidebar")?.getAttribute("data-expanded") === value, desired, {
-    timeout: 10_000,
-  });
+  await page.waitForFunction(
+    (value) => document.querySelector(".AppSidebar")?.getAttribute("data-expanded") === value,
+    desired,
+    {
+      timeout: 10_000,
+    },
+  );
 }
 
 export async function resolveFirstId(page, resolver) {
@@ -193,12 +197,36 @@ export async function openNetworkCreate(page) {
   await page.locator('[data-form="network.create"]').waitFor({ timeout: 10_000 });
 }
 
+// Drive the AI assistant into a rendered generative-UI card for the screenshot: type a prompt and send it.
+// In mock mode the ModelPicker auto-selects a model on first discovery (async), so Send stays disabled until
+// then — wait for it to enable before submitting. A read-only "list" prompt (containers/images/…) resolves to
+// a typed-tool card with no approval step, so the transcript settles on prose + the card without interaction.
+export async function askAssistant(page, prompt) {
+  const input = page.locator(".AIComposerInput").first();
+  await input.waitFor({ timeout: 30_000 });
+  await input.click();
+  await input.fill(prompt);
+  await page.waitForFunction(
+    () => {
+      const button = document.querySelector(".AIComposerSend");
+      return !!button && !button.hasAttribute("disabled") && !button.disabled;
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
+  await page.locator(".AIComposerSend").first().click();
+  // Wait for the streamed turn to render its typed-tool card (tool-result) before the frame is captured.
+  await page.locator('[data-screen="ai.assistant"] .AICard').first().waitFor({ timeout: 30_000 });
+}
+
 export async function runPreActions(page, actions = []) {
   for (const action of actions) {
     if (action.action === "openRowActions") {
       await openRowActions(page, action.rowSelector);
     } else if (action.action === "openNetworkCreate") {
       await openNetworkCreate(page);
+    } else if (action.action === "askAssistant") {
+      await askAssistant(page, action.prompt);
     } else if (action.action === "setSidebarExpanded") {
       await setSidebarExpanded(page, action.expanded !== false);
     } else {

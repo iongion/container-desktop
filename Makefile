@@ -5,7 +5,7 @@ UV_VERSION:=0.6.11
 PART?=patch
 
 
-.PHONY: clean prepare-python prepare-node prepare check format build-website demo-replay screenshots release test test-app test-relay test-tooling
+.PHONY: clean prepare-python prepare-node prepare check format build-website demo-record screenshots release test test-app test-relay test-tooling
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -57,7 +57,7 @@ screenshots:
 	fi; \
 	yarn screenshots
 
-demo-replay:
+demo-record:
 	@echo "Regenerating website rrweb demo replay"
 	@# nvm is a shell function — source it (as prepare-node does) so the .nvmrc node is used.
 	@if [ -s "$$NVM_DIR/nvm.sh" ]; then \
@@ -66,16 +66,23 @@ demo-replay:
 	fi; \
 	yarn demo:record
 
-# Cut a release: first run the full local CI test gate, then bump the version
-# (commit + tag + push) and trigger the GitHub CDPipeline for that tag. Unlike
-# `inv release` (which builds/bundles locally), this drives the cloud pipeline
-# that builds every OS target, publishes the GitHub release and — at the end —
-# rebuilds and commits the website. Override the bump size with
-# `make release PART=minor` (default: patch). The bump aborts if CHANGELOG.md
-# [Unreleased] is empty, so document the release first.
+# Cut a release, keeping docs / static site / screenshots / demo videos in sync
+# INSIDE the release commit. Runs the full local CI gate, bumps the version WITHOUT
+# committing, regenerates the deterministic screenshots + demo replay and the static
+# site from the mock backend, then commits/tags/pushes everything as one release
+# commit and triggers the cloud pipeline for that tag. CDPipeline no longer rebuilds
+# or commits the website — it just deploys the website/ committed here. Unlike
+# `inv release` (which builds/bundles locally), this drives the cloud pipeline that
+# builds every OS target and publishes the GitHub release. Override the bump size with
+# `make release PART=minor` (default: patch). Aborts if CHANGELOG.md [Unreleased] is
+# empty, so document the release first.
 release: test
-	@echo "Releasing: bump ($(PART)) then trigger CDPipeline"
-	uv run --locked invoke bump --part=$(PART) --perform
+	@echo "Releasing: bump ($(PART)) → screenshots → demo replay → website → commit → trigger CDPipeline"
+	uv run --locked invoke bump --part=$(PART) --perform --no-commit
+	$(MAKE) screenshots
+	$(MAKE) demo-record
+	$(MAKE) build-website
+	uv run --locked invoke commit-release
 	@V=$$(cat VERSION); echo "Triggering CDPipeline for $$V"; \
 	gh workflow run CDPipeline.yml --ref main \
 		-f git-ref=$$V -f stage=production -f target=all \

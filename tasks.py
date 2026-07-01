@@ -346,17 +346,34 @@ def version_sync(ctx, version=None, perform=False):
     _apply(_synced_targets(version), perform)
 
 
+# The version-source files staged in every release commit. `make release` adds the
+# regenerated site on top (website/ + captured screenshots/replays) via commit-release.
+_VERSION_SOURCE_PATHS = ("package.json", "VERSION", "public/manifest.json", "CHANGELOG.md")
+
+
+def _commit_release(ctx, version, extra_paths=()):
+    """Stage the version-source files (plus any extra paths), commit, tag and push."""
+    paths = " ".join(_quote(path) for path in (*_VERSION_SOURCE_PATHS, *extra_paths))
+    with ctx.cd(PROJECT_HOME):
+        ctx.run(f"git add {paths}")
+        ctx.run(f'git commit -m "Release {version}"')
+        ctx.run(f'git tag -a "{version}" -m "{version}"')
+        ctx.run("git push")
+        ctx.run("git push --tags")
+
+
 @task
-def bump(ctx, part="patch", perform=False):
+def bump(ctx, part="patch", perform=False, commit=True):
     """Bump the version everywhere and (with --perform) commit, tag and push.
 
     Increments package.json by --part (patch|minor|major), updates VERSION and
     the web manifest, and promotes the CHANGELOG [Unreleased] section.
 
     Refuses to run when [Unreleased] is empty -- a release must document
-    something. The static website is intentionally NOT rebuilt here: it is
-    recompiled and committed at the end of CDPipeline, once the release assets
-    exist, so its download links never point at a not-yet-published version.
+    something. Pass --no-commit to write the bumped files but skip git: `make
+    release` uses that to bump first, then regenerate the screenshots, demo
+    replay and website/, and finally commit them together with the version via
+    `commit-release` -- so the tag ships the site, media and version in sync.
     """
     # Refuse to release an empty changelog (extract_changelog_section raises on
     # an empty section body); the same heading regex matches "[Unreleased]".
@@ -372,15 +389,31 @@ def bump(ctx, part="patch", perform=False):
     targets.append(("CHANGELOG.md", promote_changelog(_read_text("CHANGELOG.md"), version, today)))
     _apply(targets, perform)
     if not perform:
-        print("Re-run with --perform to write files, commit, tag and push.")
+        print("Re-run with --perform to write files" + ("" if commit else " (--no-commit writes files only)") + ".")
         return
-    with ctx.cd(PROJECT_HOME):
-        # Stage only version-source files -- never the generated website/.
-        ctx.run("git add package.json VERSION public/manifest.json CHANGELOG.md")
-        ctx.run(f'git commit -m "Release {version}"')
-        ctx.run(f'git tag -a "{version}" -m "{version}"')
-        ctx.run("git push")
-        ctx.run("git push --tags")
+    if not commit:
+        print(f"Wrote bumped files for {version}; skipping git (--no-commit) -- finish with `invoke commit-release`.")
+        return
+    _commit_release(ctx, version)
+
+
+@task(name="commit-release")
+def commit_release(ctx):
+    """Commit an already-bumped release -- version files PLUS the regenerated site
+    (website/, screenshots, demo replay) -- then tag and push, WITHOUT re-bumping.
+
+    This is the git tail of `bump --perform`, but staging the generated content too.
+    `make release` calls it after bumping (--no-commit) and regenerating the
+    screenshots, demo replay and website/, so docs, site, media and version all
+    land in one release commit that CDPipeline then simply deploys.
+    """
+    version = read_source_version()
+    print(f"Commit release {version} (version files + website/ + captured screenshots/replays)")
+    _commit_release(
+        ctx,
+        version,
+        extra_paths=("website", "website-src/static/img", "website-src/static/replays"),
+    )
 
 
 def _latest_release_version(ctx):
@@ -530,6 +563,7 @@ namespace = Collection(
     bundle,
     release,
     bump,
+    commit_release,
     version_sync,
     publish_release,
     publish_meta,

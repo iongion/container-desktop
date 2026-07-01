@@ -149,8 +149,11 @@ jobs:
           node "${args[@]}"
 
   # Deploy the website only AFTER the release assets are published, so the
-  # download links never point at not-yet-uploaded assets. pages.yml still
-  # handles standalone website/doc pushes unrelated to releases.
+  # download links never point at not-yet-uploaded assets. The site is built and
+  # committed LOCALLY by `make release` (screenshots + demo videos + website/ all
+  # land in the release commit), so this job only DEPLOYS what is already committed
+  # on main — it never rebuilds or mutates the repo. pages.yml still handles
+  # standalone website/doc pushes unrelated to releases.
   publish-pages:
     timeout-minutes: 15
     needs: publish-release
@@ -158,10 +161,8 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # Pages deploy needs its own scopes; this overrides the workflow-level perms.
-    # contents:write so the freshly rebuilt website/ can be committed back to main.
+    # Deploy-only: Pages scopes, no contents:write (this job never commits).
     permissions:
-      contents: write
       pages: write
       id-token: write
 
@@ -173,48 +174,18 @@ jobs:
 
     env:
       CI: true
-      UV_VERSION: "0.6.11"
 
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      # Always build from main: the release commit (the bumped version) lives
-      # there, and the regenerated website/ is committed back onto it.
+      # Deploy website/ exactly as committed on main by the release commit (the
+      # bumped version + freshly regenerated site/screenshots/demo videos).
       - name: Clone Repository (main)
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           ref: main
-      - name: Use Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version-file: ".nvmrc"
-          registry-url: "https://npm.pkg.github.com"
-      - name: Use Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        with:
-          python-version-file: ".python-version"
-      - name: Install uv
-        run: python -m pip install --disable-pip-version-check "uv==${{ env.UV_VERSION }}"
-      - name: Prepare app
-        run: uv run --locked invoke prepare
-      - name: Rebuild website for the published release
-        # publish-release has completed, so the per-release assets exist and the
-        # download URLs baked in from package.json are valid. Regenerate the site
-        # and commit it back to main, then deploy the fresh output below.
-        run: |
-          uv run --locked invoke build-website
-          if [ -n "$(git status --porcelain website)" ]; then
-            V=$(cat VERSION)
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add website
-            git commit -m "Rebuild website for $V"
-            git push origin HEAD:main
-          else
-            echo "website/ already up to date"
-          fi
       - name: Configure Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - name: Upload website artifact
