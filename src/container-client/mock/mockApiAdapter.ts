@@ -75,7 +75,9 @@ function imageSearchResults(images: unknown[], rawUrl: string): unknown[] {
 // Docker Swarm mock. Docker-engine only (Apple `container` has apiSurface "docker" but swarm:false).
 // Deterministic seeds live in ./swarmFixtures. Scenario via CONTAINER_DESKTOP_MOCK_SWARM
 // (read main-side from process.env; mockApiAdapter runs in main): "manager" (default) serves data;
-// "none" makes GET /swarm + lists answer the non-swarm 503 so the UI shows the "Initialize Swarm" state.
+// "none" makes GET /swarm + lists answer the non-swarm 503 so the UI shows the "Initialize Swarm" state;
+// "init-error" is "none" plus a failing POST /swarm/init that mirrors the most common real failure
+// (a multi-NIC host that can't choose an advertise address), so the inline init-error UX is exercisable.
 const SWARM_PATHS = new Set(["swarm", "services", "nodes", "tasks", "secrets", "configs"]);
 
 function swarmScenario(): string {
@@ -106,12 +108,20 @@ export async function mockApiAdapter(request: any, connection: any): Promise<Moc
   // Docker Swarm (Docker engine only). Owns /swarm,/services,/nodes,/tasks,/secrets,/configs so the
   // Swarm screens render from fixtures; `none` scenario answers 503 → the "Initialize Swarm" state.
   if (engine === ContainerEngine.DOCKER && SWARM_PATHS.has(head)) {
-    const inSwarm = swarmScenario() !== "none";
+    // "none" and "init-error" both model an engine that is NOT in a swarm (GET /swarm + lists answer 503).
+    const inSwarm = swarmScenario() === "manager";
     const notManager = () => fail(503, "This node is not a swarm manager.");
     if (head === "swarm") {
-      // POST /swarm/init and /swarm/leave always accept (mock is stateless; the action-wired assertion
-      // is enough — real state transitions are covered by the live suite).
+      // POST /swarm/init and /swarm/leave. The mock is stateless, so init/leave normally just accept — except
+      // the "init-error" scenario, where /swarm/init fails exactly like a real multi-NIC host so the inline
+      // init-error UX is exercisable. (Real state transitions are covered by the live suite.)
       if (method === "POST") {
+        if (parts[1] === "init" && swarmScenario() === "init-error") {
+          return fail(
+            500,
+            "could not choose an IP address to advertise since this system has multiple addresses on different interfaces (10.0.2.15 on eth0 and 192.168.64.1 on eth1) - specify one with --advertise-addr",
+          );
+        }
         return ok("mock-node-id");
       }
       return inSwarm ? ok(SWARM_FIXTURE.info) : notManager();

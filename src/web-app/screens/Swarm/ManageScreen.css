@@ -11,3 +11,23 @@
   padding-left: 10px;
   white-space: nowrap;
 }
+
+/* The "not part of a Swarm" explainer + init-failure callout. NonIdealState centres its text column; give it
+   a readable measure and keep the explainer sentences as tight, separate lines (no inter-paragraph gap). */
+.SwarmInitState .bp6-non-ideal-state-text {
+  max-width: 600px;
+}
+.SwarmInitState .bp6-non-ideal-state-description > p {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+/* Left-align the callout — error reasons are long and read badly centred. */
+.SwarmInitState .SwarmInitError {
+  margin-top: 14px;
+  text-align: left;
+}
+/* The engine's raw reason — keep line breaks/spacing from the daemon message legible. */
+.SwarmInitState .SwarmInitErrorReason {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

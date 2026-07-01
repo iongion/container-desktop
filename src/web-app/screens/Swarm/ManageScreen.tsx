@@ -2,6 +2,7 @@ import {
   AnchorButton,
   Button,
   ButtonGroup,
+  Callout,
   HTMLTable,
   Intent,
   Menu,
@@ -211,19 +212,50 @@ export const Screen: AppScreen<ScreenProps> = () => {
   if (infoQuery.isLoading) {
     content = <NonIdealState icon={<Spinner size={28} />} title={t("Loading swarm…")} />;
   } else if (!populated) {
-    // Docker connected but the SELECTED engine is not part of a swarm.
+    // Docker connected but the SELECTED engine is not part of a swarm. Spell out what "Initialize" actually
+    // does (this node becomes the manager; which resources it unlocks; the address it binds) and, on failure,
+    // surface the engine's exact reason inline — a bare toast wasn't enough to act on. The most common real
+    // failure is a multi-NIC host that can't pick an advertise address, so hint at that when we detect it.
+    const initErrorRaw = swarmInit.isError
+      ? `${(swarmInit.error as any)?.response?.data?.message ?? (swarmInit.error as any)?.message ?? swarmInit.error}`
+      : "";
+    const needsAdvertiseAddr = /advertise|multiple addresses|could not choose an ip/i.test(initErrorRaw);
     content = (
       <NonIdealState
         icon={IconNames.LAYERS}
         title={t("This engine is not part of a Swarm")}
+        className="SwarmInitState"
         description={
-          <p>{t("Initialize a Swarm on this Docker engine to manage services, nodes, stacks, secrets and configs.")}</p>
+          <>
+            <div className="SwarmInitAbout">
+              <p>{t("Initializing creates a single-node Swarm and makes this Docker engine its manager.")}</p>
+              <p>{t("You can then manage services, nodes, stacks, secrets and configs from here.")}</p>
+              <p>{t("The manager listens on 0.0.0.0:2377 and this node becomes the leader.")}</p>
+            </div>
+            {swarmInit.isError ? (
+              <Callout
+                className="SwarmInitError"
+                intent={Intent.DANGER}
+                icon={IconNames.ERROR}
+                title={t("Could not initialize the Swarm")}
+              >
+                <p className="SwarmInitErrorReason">{initErrorRaw}</p>
+                {needsAdvertiseAddr ? (
+                  <p>
+                    {t(
+                      "This host has multiple network interfaces, so Docker can't pick which address to advertise. Choose one explicitly from a terminal: docker swarm init --advertise-addr <ip>.",
+                    )}
+                  </p>
+                ) : null}
+              </Callout>
+            ) : null}
+          </>
         }
         action={
           <Button
             intent={Intent.PRIMARY}
             icon={IconNames.PLUS}
-            text={t("Initialize Swarm")}
+            text={swarmInit.isError ? t("Try again") : t("Initialize Swarm")}
             loading={swarmInit.isPending}
             onClick={() => swarmInit.mutate(undefined)}
           />

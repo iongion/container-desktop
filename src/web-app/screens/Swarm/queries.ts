@@ -45,13 +45,37 @@ async function swarmAdapter(connId: string): Promise<SwarmAdapter> {
   return new SwarmAdapter(await resolveSwarmHost(connId));
 }
 
+// A 5xx from a swarm endpoint is DEFINITIVE, not transient: Docker answers 503 "this node is not a swarm
+// manager" when the engine is not in a swarm, and other 5xx mean the daemon is unhealthy — retrying on the
+// spot just amplifies the failure (this, plus the screen's polling, is what produced the endless 503 toast
+// storm). So swarm reads never retry a 5xx (nor the usual auth/not-found); genuinely transient errors (a
+// network blip with no HTTP status) still get the default couple of retries. Status is coerced because it can
+// arrive as a string after the renderer→main IPC proxy re-serialises the error.
+export function swarmRetry(count: number, error: any): boolean {
+  const status = Number(error?.response?.status ?? error?.status);
+  if (status >= 500 || status === 401 || status === 403 || status === 404) {
+    return false;
+  }
+  return count < 2;
+}
+
+// Live-list options for swarm resources that genuinely change while you watch them (services/nodes/tasks/…):
+// poll like the other live screens, but with the swarm retry policy above.
+const swarmListOptions = () => ({ ...liveQueryOptions(), retry: swarmRetry });
+
 export const useSwarmInfo = (connId: string, enabled = true) =>
   useQuery({
     queryKey: swarmKeys.info(connId),
     // TanStack forbids `undefined` as query data — a non-swarm daemon yields undefined, so map to null.
     queryFn: async () => (await (await swarmAdapter(connId)).inspect()) ?? null,
     enabled: enabled && !!connId,
-    ...liveQueryOptions(),
+    // Cache-first PROBE — deliberately NOT polled. On an engine that is not in a swarm this is the query that
+    // would otherwise re-hit /swarm every couple of seconds forever; swarm membership is low-churn, so refresh
+    // on mount, on manual reload and after init/leave (invalidation) instead. The live lists below still poll
+    // while a swarm IS active. retry: swarmRetry so a not-in-a-swarm 503 never triggers on-the-spot retries.
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    retry: swarmRetry,
   });
 
 export const useSwarmServices = (connId: string, enabled = true) =>
@@ -59,7 +83,7 @@ export const useSwarmServices = (connId: string, enabled = true) =>
     queryKey: swarmKeys.services(connId),
     queryFn: async () => (await swarmAdapter(connId)).listServices(),
     enabled: enabled && !!connId,
-    ...liveQueryOptions(),
+    ...swarmListOptions(),
   });
 
 export const useSwarmNodes = (connId: string, enabled = true) =>
@@ -67,7 +91,7 @@ export const useSwarmNodes = (connId: string, enabled = true) =>
     queryKey: swarmKeys.nodes(connId),
     queryFn: async () => (await swarmAdapter(connId)).listNodes(),
     enabled: enabled && !!connId,
-    ...liveQueryOptions(),
+    ...swarmListOptions(),
   });
 
 export const useSwarmStacks = (connId: string, enabled = true) =>
@@ -75,7 +99,7 @@ export const useSwarmStacks = (connId: string, enabled = true) =>
     queryKey: swarmKeys.stacks(connId),
     queryFn: async () => (await swarmAdapter(connId)).listStacks(),
     enabled: enabled && !!connId,
-    ...liveQueryOptions(),
+    ...swarmListOptions(),
   });
 
 export const useSwarmTasks = (connId: string, serviceId?: string, enabled = true) =>
@@ -83,7 +107,7 @@ export const useSwarmTasks = (connId: string, serviceId?: string, enabled = true
     queryKey: swarmKeys.tasks(connId, serviceId),
     queryFn: async () => (await swarmAdapter(connId)).listTasks(serviceId),
     enabled: enabled && !!connId,
-    ...liveQueryOptions(),
+    ...swarmListOptions(),
   });
 
 export const useSwarmSecrets = (connId: string, enabled = true) =>
@@ -91,7 +115,7 @@ export const useSwarmSecrets = (connId: string, enabled = true) =>
     queryKey: swarmKeys.secrets(connId),
     queryFn: async () => (await swarmAdapter(connId)).listSecrets(),
     enabled: enabled && !!connId,
-    ...liveQueryOptions(),
+    ...swarmListOptions(),
   });
 
 export const useSwarmConfigs = (connId: string, enabled = true) =>
@@ -99,7 +123,7 @@ export const useSwarmConfigs = (connId: string, enabled = true) =>
     queryKey: swarmKeys.configs(connId),
     queryFn: async () => (await swarmAdapter(connId)).listConfigs(),
     enabled: enabled && !!connId,
-    ...liveQueryOptions(),
+    ...swarmListOptions(),
   });
 
 export const useSwarmInspect = (connId: string, kind: SwarmInspectKind, id?: string) =>
@@ -120,7 +144,7 @@ export const useSwarmInspect = (connId: string, kind: SwarmInspectKind, id?: str
       }
     },
     enabled: !!connId && !!id,
-    ...liveQueryOptions(),
+    ...swarmListOptions(),
   });
 
 function useSwarmInvalidator() {

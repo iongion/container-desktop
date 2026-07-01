@@ -35,14 +35,27 @@ function isOk(res: any): boolean {
   return res?.status >= 200 && res.status < 300;
 }
 
-/** True only for Docker's "node is not (part of) a swarm manager" signal — NOT for 500/auth/network. */
+/**
+ * True only for Docker's "node is not (part of) a swarm manager" signal (HTTP 503) — NOT for 500/auth/network.
+ *
+ * Recognition must survive the renderer→main IPC proxy, which rebuilds the AxiosError from a re-serialized
+ * subset (commandProxyClient.ts): the numeric status can arrive as a string, and Docker's JSON body can be
+ * dropped, leaving only axios's generic "Request failed with status code 503" message. So we coerce the
+ * status before comparing AND fall back to the message — Docker's own phrase when the body survived, else the
+ * generic "status code 503" (the one string that always survives). Missing this turns the not-in-a-swarm 503
+ * into an endless toast storm, since the swarm queries poll.
+ */
 function isNotSwarmManager(error: any): boolean {
-  const status = error?.response?.status ?? error?.status;
+  const status = Number(error?.response?.status ?? error?.status);
   if (status === 503) {
     return true;
   }
   const message = `${error?.response?.data?.message ?? error?.message ?? ""}`.toLowerCase();
-  return message.includes("not a swarm manager") || message.includes("not part of a swarm");
+  return (
+    message.includes("not a swarm manager") ||
+    message.includes("not part of a swarm") ||
+    message.includes("status code 503")
+  );
 }
 
 /** UTF-8 → base64 that works in both Node (dialect/main) and the browser renderer (SwarmAdapter). */

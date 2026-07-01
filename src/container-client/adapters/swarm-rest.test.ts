@@ -86,6 +86,50 @@ describe("swarm-rest — pure REST logic", () => {
   });
 });
 
+// Real Docker returns HTTP 503 "This node is not a swarm manager." when the engine is not part of a swarm.
+// In production that error crosses the renderer→main IPC proxy, where the rich AxiosError is rebuilt from a
+// serializable subset (commandProxyClient.ts). The numeric status and Docker's JSON body do NOT reliably
+// survive that round-trip — often the ONLY thing left is axios's generic "Request failed with status code
+// 503" message. If recognition depends solely on a strict numeric 503 or the Docker phrase, the signal is
+// missed, readList/readOne rethrow, and the forever-polling swarm queries turn it into an endless toast
+// storm. These lock in that the "not a swarm manager" signal is recognised from what actually survives.
+describe("swarm-rest — recognises the non-swarm 503 across the IPC/transport boundary", () => {
+  // response lost entirely; only axios's generic message remains (shape C)
+  const proxied503MessageOnly = () => {
+    const error: any = new Error("Request failed with status code 503");
+    error.isAxiosError = true;
+    error.response = { status: undefined, statusText: undefined, data: undefined, headers: {} };
+    return error;
+  };
+  // status round-tripped as a string, empty body (shape D)
+  const proxied503StringStatus = () => {
+    const error: any = new Error("Request failed with status code 503");
+    error.isAxiosError = true;
+    error.response = { status: "503", data: "" };
+    return error;
+  };
+
+  it("maps a proxied 503 that kept only the axios message (no status, no body) to empty/undefined", async () => {
+    const driver = fakeDriver({
+      get: async () => {
+        throw proxied503MessageOnly();
+      },
+    });
+    await expect(swarmInspect(driver)).resolves.toBeUndefined();
+    await expect(listServices(driver)).resolves.toEqual([]);
+  });
+
+  it("maps a proxied 503 whose status arrived as the string '503' to empty/undefined", async () => {
+    const driver = fakeDriver({
+      get: async () => {
+        throw proxied503StringStatus();
+      },
+    });
+    await expect(swarmInspect(driver)).resolves.toBeUndefined();
+    await expect(listServices(driver)).resolves.toEqual([]);
+  });
+});
+
 describe("SwarmAdapter — capability gate (not API-shape)", () => {
   it("returns [] WITHOUT touching the driver when extensions.swarm is false (e.g. Apple Container, apiSurface 'docker')", async () => {
     const getApiDriver = vi.fn(async () => fakeDriver({}));
