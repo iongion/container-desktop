@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.11] - 2026-07-01
+
 ### Fixed
 
 - Fixed docker swarm retries in production
