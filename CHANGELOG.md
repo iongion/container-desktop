@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Fixed
+
+- Demo replays now embed the bundled webfonts (Montserrat, JetBrains Mono) so the title-bar logo keeps its brand font on the website — the recorder was stripping `@font-face` rules, dropping the font to a system fallback on playback.
+
 ## [5.3.8] - 2026-06-30
 
 ## Added

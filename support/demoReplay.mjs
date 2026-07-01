@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint.mjs";
+import { dataUrlForLocalAsset, sanitizeLocalDevReferences } from "./demoSanitize.mjs";
 import { demoScenarios } from "./demoScenarios.mjs";
 import {
   captureWindow,
@@ -479,81 +480,6 @@ function replayOffsetAt(timestamp, pauses) {
 
 function isLocalDevUrl(value) {
   return typeof value === "string" && /^https?:\/\/(?:localhost|127\.0\.0\.1):3000(?:\/|$)/.test(value);
-}
-
-function isEmbeddableAssetPathname(pathname) {
-  return /\.(png|jpe?g|gif|webp|svg|ico)$/i.test(pathname);
-}
-
-function mimeTypeForPathname(pathname) {
-  const extension = pathname.toLowerCase().split(".").pop();
-  if (extension === "svg") {
-    return "image/svg+xml";
-  }
-  if (extension === "jpg" || extension === "jpeg") {
-    return "image/jpeg";
-  }
-  if (extension === "ico") {
-    return "image/x-icon";
-  }
-  return `image/${extension}`;
-}
-
-const assetDataUrlCache = new Map();
-const TRANSPARENT_PIXEL_URL = 'url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==")';
-const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-
-function localAssetPathname(value) {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  try {
-    const url = new URL(value);
-    if ((url.hostname === "localhost" || url.hostname === "127.0.0.1") && url.port === "3000") {
-      return decodeURIComponent(url.pathname);
-    }
-  } catch {
-    if (value.startsWith("/")) {
-      return decodeURIComponent(value.split(/[?#]/, 1)[0]);
-    }
-  }
-  return undefined;
-}
-
-function dataUrlForLocalAsset(value) {
-  const pathname = localAssetPathname(value);
-  if (!pathname || !isEmbeddableAssetPathname(pathname)) {
-    return undefined;
-  }
-  if (assetDataUrlCache.has(pathname)) {
-    return assetDataUrlCache.get(pathname);
-  }
-  const filePath = path.join(ROOT, pathname.slice(1));
-  if (!existsSync(filePath)) {
-    return undefined;
-  }
-  const dataUrl = `data:${mimeTypeForPathname(pathname)};base64,${readFileSync(filePath).toString("base64")}`;
-  assetDataUrlCache.set(pathname, dataUrl);
-  return dataUrl;
-}
-
-function sanitizeLocalDevReferences(value) {
-  if (typeof value !== "string") {
-    return value;
-  }
-  return value
-    .replace(/@font-face\s*\{[^{}]*\}/g, "")
-    .replace(/url\((["']?)(https?:\/\/(?:localhost|127\.0\.0\.1):3000[^)"']+)\1\)/g, (_match, _quote, url) => {
-      return `url("${dataUrlForLocalAsset(url) || TRANSPARENT_PIXEL}")`;
-    })
-    .replace(/url\((["']?)(\/(?:src|support)[^)"']+)\1\)/g, (_match, _quote, url) => {
-      return `url("${dataUrlForLocalAsset(url) || TRANSPARENT_PIXEL}")`;
-    })
-    .replace(/url\((["']?)data:,\1\)/g, TRANSPARENT_PIXEL_URL)
-    .replace(/https?:\/\/(?:localhost|127\.0\.0\.1):3000\/(?:src|support)[^"'\s)]+/g, (url) => {
-      return dataUrlForLocalAsset(url) || url;
-    })
-    .replace(/https?:\/\/(?:localhost|127\.0\.0\.1):3000(?=\/|$)/g, "https://container-desktop.com");
 }
 
 function sanitizeNode(node) {
