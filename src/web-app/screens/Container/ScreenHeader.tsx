@@ -6,6 +6,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
+import { getContainerCrumbs } from "./Navigation";
 
 interface ScreenHeaderProps {
   container: Container;
@@ -30,6 +31,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     currentListRoutePath = pathTo("/screens/containers");
   }
   const nameText = container.Name || container.Id || t("- n/a -");
+  const displayName = nameText.startsWith("/") ? nameText.slice(1) : nameText;
   return (
     <AppScreenHeader
       withBack
@@ -37,7 +39,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       listRoutePath={currentListRoutePath}
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.BOX}
-      titleText={nameText.startsWith("/") ? nameText.slice(1) : nameText}
+      titleText={displayName}
+      breadcrumbs={getContainerCrumbs(displayName, container.Id, currentScreen, connId)}
       rightContent={
         <ActionsMenu
           container={container}

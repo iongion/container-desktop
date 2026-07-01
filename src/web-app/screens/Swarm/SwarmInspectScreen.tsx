@@ -11,7 +11,7 @@ import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ServicesTable } from "./ManageScreen";
-import { getSwarmTabUrl, type SwarmInspectSegment } from "./Navigation";
+import { getSwarmCrumbs, getSwarmTabUrl, type SwarmInspectSegment } from "./Navigation";
 import { type SwarmInspectKind, useRemoveService, useScaleService, useSwarmInspect, useSwarmServices } from "./queries";
 
 export const ID = "swarm.inspect";
@@ -67,6 +67,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           listRouteIcon={IconNames.LAYERS}
           titleText={id}
           titleIcon={icon}
+          breadcrumbs={getSwarmCrumbs(kind, id, connectionId)}
         />
         <div className="AppScreenContent">
           {servicesQuery.isLoading ? (
@@ -98,6 +99,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         listRouteIcon={IconNames.LAYERS}
         titleText={title}
         titleIcon={icon}
+        breadcrumbs={getSwarmCrumbs(kind, title, connectionId)}
       />
       <div className="AppScreenContent">
         <CodeEditor value={JSON.stringify(entity, null, 2)} />

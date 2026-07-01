@@ -5,6 +5,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
+import { getMachineCrumbs } from "./Navigation";
 
 interface ScreenHeaderProps {
   machine: PodmanMachine | PodmanMachineInspect;
@@ -33,6 +34,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.BOX}
       titleText={machine.Name}
+      breadcrumbs={getMachineCrumbs(machine.Name, connectionId)}
       rightContent={
         <ActionsMenu
           machine={machine}

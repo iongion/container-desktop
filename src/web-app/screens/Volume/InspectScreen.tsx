@@ -8,6 +8,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { VolumeActionsMenu } from ".";
 import "./InspectScreen.css";
+import { getVolumeCrumbs } from "./Navigation";
 import { useVolume } from "./queries";
 
 export const ID = "volume.inspect";
@@ -31,6 +32,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         withBack
         titleText={volume.Name}
         titleIcon={IconNames.DATABASE}
+        breadcrumbs={getVolumeCrumbs(volume.Name, connectionId)}
         rightContent={<VolumeActionsMenu volume={volume} withoutCreate />}
       />
       <div className="AppScreenContent">

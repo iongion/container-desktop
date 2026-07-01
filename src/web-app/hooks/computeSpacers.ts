@@ -17,7 +17,13 @@ export function computeSpacers(
   scrollMargin: number,
 ): Spacers {
   if (virtualItems.length === 0) {
-    return { paddingTop: 0, paddingBottom: 0 };
+    // The window is empty either because the list is empty (totalSize 0 -> reserve nothing) OR because
+    // the scroll element hasn't been measured yet for a frame after (re)mount. In the latter case we MUST
+    // still reserve the whole content height, so the container stays scrollable to its full extent — if it
+    // collapsed to ~0px here, @tanstack/react-virtual's one-shot `initialOffset` restore would clamp
+    // scrollTop back to 0 and list→detail→back scroll restoration would land at the top. The trailing
+    // spacer carries the full height (origin is `scrollMargin`, consumed by the sticky <thead>).
+    return { paddingTop: 0, paddingBottom: Math.max(0, totalSize - scrollMargin) };
   }
   const first = virtualItems[0];
   const last = virtualItems[virtualItems.length - 1];

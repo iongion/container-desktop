@@ -61,7 +61,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     () => sortByField(registries, sourceSort.clientSort, registrySourceSortSelectors),
     [registries, sourceSort.clientSort],
   );
-  // Two independent scroll containers (left = search results, right = sources), each windowed.
+  // Two independent scroll containers (left = search results, right = sources), each windowed. Distinct
+  // scrollKeys so their remembered scroll offsets don't collide on the shared route.
   const searchScroll = useTableScroll();
   const sourcesScroll = useTableScroll();
   const searchWindow = useWindowedRows({
@@ -70,6 +71,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     getRowKey: (result) => `${result.Index}_${result.Name}_${result.Tag}`,
     scrollMargin: searchScroll.scrollMargin,
     enabled: sortedSearchResults.length > 0,
+    scrollKey: "search",
   });
   const sourcesWindow = useWindowedRows({
     rows: sortedRegistries,
@@ -77,6 +79,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     getRowKey: (registry) => registry.id,
     scrollMargin: sourcesScroll.scrollMargin,
     enabled: sortedRegistries.length > 0,
+    scrollKey: "sources",
   });
   const [state, setState] = useState(searchResults.length ? "state.looked-up" : "state.initial");
   const firstEnabledRegistry = useMemo(

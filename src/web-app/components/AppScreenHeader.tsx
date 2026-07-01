@@ -3,6 +3,8 @@ import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
+import { type AppBreadcrumb, AppBreadcrumbs } from "@/web-app/components/AppBreadcrumbs";
+
 import "./AppScreenHeader.css";
 
 interface AppScreenHeaderProps {
@@ -20,6 +22,9 @@ interface AppScreenHeaderProps {
   leftContent?: React.ReactNode;
   rightContent?: any; // React.ReactNode;
   centerContent?: React.ReactNode;
+  // Canonical trail for nested screens. When present, it renders left (after the back chevron) and takes
+  // over the title's role — the center title and the redundant "jump to list" icon are suppressed.
+  breadcrumbs?: AppBreadcrumb[];
   listRoutePath?: string;
   listRouteIcon?: IconName;
   children?: React.ReactNode;
@@ -37,6 +42,7 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   titleIcon,
   rightContent,
   centerContent,
+  breadcrumbs,
   listRoutePath,
   listRouteIcon,
   children,
@@ -55,7 +61,10 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
   const onGoBackClick = useCallback(() => {
     history.back();
   }, []);
-  const withList = !!listRoutePath;
+  // A non-empty trail takes over the title's role: the root crumb already links to the list, so the
+  // separate "jump to list" icon and the center title are both suppressed while breadcrumbs are shown.
+  const withBreadcrumbs = !!breadcrumbs && breadcrumbs.length > 0;
+  const withList = !!listRoutePath && !withBreadcrumbs;
   const backButton = withBack ? (
     <Navbar.Group align={Alignment.START}>
       <Navbar.Heading>
@@ -113,11 +122,12 @@ export const AppScreenHeader: React.FC<AppScreenHeaderProps> = ({
       <Navbar>
         <div className="NavbarLeft">
           {backButton}
+          {withBreadcrumbs && breadcrumbs ? <AppBreadcrumbs items={breadcrumbs} /> : null}
           {searchWidget}
           {children}
         </div>
         <div className="NavbarCenter" data-with-back="yes">
-          <div className="NavbarCenterContent">{centerContent ?? titleWidget}</div>
+          <div className="NavbarCenterContent">{centerContent ?? (withBreadcrumbs ? null : titleWidget)}</div>
         </div>
         {rightWidget}
       </Navbar>

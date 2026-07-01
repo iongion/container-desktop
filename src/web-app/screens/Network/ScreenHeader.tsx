@@ -2,9 +2,10 @@ import { type IconName, IconNames } from "@blueprintjs/icons";
 
 import type { Network } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { pathTo } from "@/web-app/Navigator";
+import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
+import { getNetworkCrumbs } from "./Navigation";
 
 // Screen header
 
@@ -21,6 +22,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   listRoutePath,
   listRouteIcon,
 }: ScreenHeaderProps) => {
+  // Keep the owning connection while moving between this resource's detail views (ids collide across engines).
+  const { connId } = useRouteSearch<{ connId?: string }>();
   let currentListRoutePath = listRoutePath;
   if (network && !currentListRoutePath) {
     currentListRoutePath = pathTo("/screens/networks");
@@ -33,6 +36,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.GRAPH}
       titleText={network.name || network.id || ""}
+      breadcrumbs={getNetworkCrumbs(network.name || network.id || "", connId)}
       rightContent={<ActionsMenu withoutCreate network={network} />}
     />
   );

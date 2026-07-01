@@ -218,14 +218,29 @@ export async function mockApiAdapter(request: any, connection: any): Promise<Moc
   // Volumes: podman → "/volumes/json" (array); docker → "/volumes" ({ Volumes: [...] }).
   if (head === "volumes") {
     if (method === "GET") {
+      const id = parts[1] ? decodeURIComponent(parts[1]) : "";
+      // Single-get: "/volumes/<name>" (docker) or "/volumes/<name>/json" (podman). The list uses
+      // "/volumes" (undefined) or "/volumes/json" ("json"), so anything else is a single-volume lookup.
+      if (id && id !== "json") {
+        const items = Array.isArray(fx.volumes) ? fx.volumes : ((fx.volumes as any)?.Volumes ?? []);
+        const volume = items.find((item: any) => item.Name === id || item.name === id);
+        return volume ? ok(volume) : fail(404, "no such volume");
+      }
       return ok(fx.volumes);
     }
     return ok("", 204);
   }
 
-  // Networks: podman → "/networks/json" (canonical); docker → "/networks" (PascalCase).
+  // Networks: podman → "/networks/json" (canonical); docker → "/networks" (PascalCase). Both arrays.
   if (head === "networks") {
     if (method === "GET") {
+      const id = parts[1] ? decodeURIComponent(parts[1]) : "";
+      if (id && id !== "json") {
+        const network = (fx.networks as any[]).find(
+          (item: any) => item.Name === id || item.name === id || item.Id === id || item.id === id,
+        );
+        return network ? ok(network) : fail(404, "no such network");
+      }
       return ok(fx.networks);
     }
     return ok("", 204);

@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 
 - Docker swarm support
+- Breadcrumb navigation on nested screens — one consistent, reusable trail (resource root → entity → sub-view) built on Blueprint's Breadcrumbs.
+
+## Fixed
+
+- List scroll position is restored when returning from a detail screen to its list (header back button), including at the very end of long lists, with no drift — via `@tanstack/react-virtual`'s snapshot restoration.
+- Pod logs: the stdout and stderr panes now split vertically instead of stdout being pushed out of view.
 
 ## [5.3.9] - 2026-07-01
 

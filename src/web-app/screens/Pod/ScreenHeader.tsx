@@ -5,6 +5,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 
 import { ItemActionsMenu } from "./ActionsMenu";
+import { getPodCrumbs } from "./Navigation";
 
 // Screen header
 
@@ -35,6 +36,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.CUBE_ADD}
       titleText={pod?.Name || pod?.Id || ""}
+      breadcrumbs={pod ? getPodCrumbs(pod.Name || pod.Id || "", pod.Id, currentScreen, connId) : undefined}
       rightContent={
         pod ? (
           <ItemActionsMenu pod={pod} connectionId={connId} expand isActive={(input) => input === currentScreen} />

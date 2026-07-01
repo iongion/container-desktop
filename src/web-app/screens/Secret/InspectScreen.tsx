@@ -10,6 +10,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { SecretActionsMenu } from ".";
 import "./InspectScreen.css";
+import { getSecretCrumbs } from "./Navigation";
 import { useSecret } from "./queries";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -47,6 +48,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         withBack
         titleText={secret.Spec.Name}
         titleIcon={IconNames.KEY}
+        breadcrumbs={getSecretCrumbs(secret.Spec.Name, connectionId)}
         rightContent={<SecretActionsMenu secret={secret} withoutCreate />}
       />
       <div className="AppScreenContent">

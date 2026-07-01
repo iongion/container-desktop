@@ -3,8 +3,16 @@ import { describe, expect, it } from "vitest";
 import { computeSpacers } from "./computeSpacers";
 
 describe("computeSpacers", () => {
-  it("reserves nothing when no rows are windowed", () => {
+  it("reserves nothing when the list is empty (no total height)", () => {
     expect(computeSpacers([], 0, 0)).toEqual({ paddingTop: 0, paddingBottom: 0 });
+  });
+
+  it("reserves the FULL height when the window is momentarily empty, so scroll restoration can land", () => {
+    // On remount the scroll element isn't measured for a frame, so the virtual window is briefly empty.
+    // The spacer must still reserve the whole content height (minus the sticky header) — otherwise the
+    // table collapses to ~0px and the virtualizer's one-shot initialOffset restore clamps scrollTop to 0.
+    expect(computeSpacers([], 1000, 30)).toEqual({ paddingTop: 0, paddingBottom: 970 });
+    expect(computeSpacers([], 7622, 42)).toEqual({ paddingTop: 0, paddingBottom: 7580 });
   });
 
   it("at the top of the list, the leading spacer cancels the sticky-header margin", () => {
