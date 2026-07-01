@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.9] - 2026-07-01
+
 ## Changed
 
 - Updated dependencies to latest, including majors: Electron 43, Vercel AI SDK 7 (`ai` + `@ai-sdk/*`), `@types/node` 26, `undici` 8, `vite-plugin-ejs` 2 (plus Blueprint, TanStack, Vite 8.1, Biome point releases).
