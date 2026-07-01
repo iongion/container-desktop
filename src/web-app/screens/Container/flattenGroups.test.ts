@@ -36,15 +36,25 @@ describe("flattenGroups", () => {
     expect(rows[3]).toMatchObject({ indexInGroup: 2, isFirst: false, isLast: true });
   });
 
-  it("renders only the header for a collapsed multi-item group", () => {
+  it("renders only the header for a collapsed multi-item group (connection-qualified collapse key)", () => {
     const items = [container("a", "1", "web"), container("a", "2", "web")];
-    const rows = flattenGroups([makeGroup("web", items)], { web: true }, rowKey);
+    const rows = flattenGroups([makeGroup("web", items)], { "a:web": true }, rowKey);
     expect(kinds(rows)).toEqual(["group-header"]);
   });
 
   it("renders nothing for a collapsed single-item group (faithful to current behavior)", () => {
-    const rows = flattenGroups([makeGroup("solo", [container("a", "1", "solo")])], { solo: true }, rowKey);
+    const rows = flattenGroups([makeGroup("solo", [container("a", "1", "solo")])], { "a:solo": true }, rowKey);
     expect(rows).toHaveLength(0);
+  });
+
+  it("collapses same-named groups per connection independently (finding #7)", () => {
+    const g1 = makeGroup("lamp", [container("a", "1", "lamp"), container("a", "2", "lamp")]);
+    const g2 = makeGroup("lamp", [container("b", "1", "lamp"), container("b", "2", "lamp")]);
+    // Collapse only connection a's "lamp" — connection b's "lamp" must stay expanded.
+    const rows = flattenGroups([g1, g2], { "a:lamp": true }, rowKey);
+    expect(kinds(rows)).toEqual(["group-header", "group-header", "container", "container"]);
+    const headers = rows.filter((row) => row.kind === "group-header");
+    expect(headers.map((h) => (h.kind === "group-header" ? h.groupKey : ""))).toEqual(["a:lamp", "b:lamp"]);
   });
 
   it("keeps same-named groups on different connections separate, with unique keys", () => {

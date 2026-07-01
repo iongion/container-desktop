@@ -40,6 +40,31 @@ function splitContainerGroupName(containerName: string) {
   };
 }
 
+// Compose project grouping — Docker Desktop's signature container UX. Works for BOTH engines: docker
+// compose writes `com.docker.compose.*`, podman-compose writes `io.podman.compose.project` (+ the
+// docker.compose.service/container-number labels). Prefer the project label over the name-prefix
+// heuristic; keep NameInGroup per-replica-unique (service-number) so scaled services don't render
+// duplicate row names.
+const COMPOSE_PROJECT_LABELS = ["com.docker.compose.project", "io.podman.compose.project"];
+const COMPOSE_SERVICE_LABEL = "com.docker.compose.service";
+const COMPOSE_CONTAINER_NUMBER_LABEL = "com.docker.compose.container-number";
+
+function computeComposeGroup(
+  labels: { [key: string]: string } | null | undefined,
+): { group: string; nameInGroup: string } | undefined {
+  if (!labels) {
+    return undefined;
+  }
+  const project = COMPOSE_PROJECT_LABELS.map((key) => labels[key]).find(Boolean);
+  if (!project) {
+    return undefined;
+  }
+  const service = labels[COMPOSE_SERVICE_LABEL] || "";
+  const number = labels[COMPOSE_CONTAINER_NUMBER_LABEL] || "";
+  const nameInGroup = service ? (number ? `${service}-${number}` : service) : "";
+  return { group: project, nameInGroup };
+}
+
 /** raw container (list = State string, inspect = State object) → canonical. */
 export const normalizeContainer = (container: Container): Container => {
   if (container.ImageName) {
@@ -62,8 +87,14 @@ export const normalizeContainer = (container: Container): Container => {
   const containerName = normalizeContainerName(`${container.Names?.[0] || container.Name}`);
   if (containerName) {
     container.Computed.Name = containerName;
-    // Compute group name - infra suffix
-    if (containerName.endsWith("-infra")) {
+    const compose = computeComposeGroup(container.Labels);
+    if (compose) {
+      // Compose project grouping wins over the name heuristic; keep the real container name as the
+      // fallback label so a row is never blank.
+      container.Computed.Group = compose.group;
+      container.Computed.NameInGroup = compose.nameInGroup || containerName;
+    } else if (containerName.endsWith("-infra")) {
+      // Compute group name - infra suffix
       container.Computed.Group = "Pod infrastructure";
       container.Computed.NameInGroup = containerName.replace("-infra", "");
     } else {

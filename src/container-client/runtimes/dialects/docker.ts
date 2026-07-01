@@ -4,9 +4,11 @@
 // (DOCKER_HOST), the (absent) service args (Docker manages its own service → null), getSystemInfo (the base
 // host-command form), and bindExtensions(host): the Podman-domain groups (machines/kube/pods) are no-ops on
 // Docker; contexts are wired to the existing `docker context inspect` command (their capability flag flips on
-// when `docker context ls/use` are added); swarm/builders/compose stay no-op until their CLI is wired. The
-// context-inspect helper lives in this file.
+// when `docker context ls/use` are added); swarm is REAL via the Docker REST API (the swarm-rest owner,
+// driven by host.getApiDriver() — no SwarmAdapter/Application import, so no app-singleton cycle);
+// builders/compose stay no-op until their CLI is wired. The context-inspect helper lives in this file.
 
+import * as swarm from "@/container-client/adapters/swarm-rest";
 import {
   type CommandExecutionResult,
   type Connection,
@@ -123,7 +125,9 @@ export const dockerDialect: EngineDialect = {
       machines: false,
       kube: false,
       contexts: false,
-      swarm: false,
+      // Advertised on every Docker host; swarm-rest returns [] / an "Initialize Swarm" empty state when
+      // the daemon is not a swarm manager (503), so the UI degrades gracefully off a single static flag.
+      swarm: true,
       builders: false,
       compose: false,
       registries: false,
@@ -200,12 +204,13 @@ export const dockerDialect: EngineDialect = {
       inspectDockerContext: async () => await getContextInspect(host),
       useDockerContext: async () => false,
 
-      // swarm / builders / compose — net-new CLI, no-op until wired
-      getSwarmServices: async () => [],
-      getSwarmNodes: async () => [],
-      getSwarmStacks: async () => [],
-      swarmInit: async () => false,
-      swarmLeave: async () => false,
+      // swarm — REAL via the Docker REST API (swarm-rest owner, driven by host.getApiDriver()).
+      getSwarmServices: async () => swarm.listServices(await host.getApiDriver()),
+      getSwarmNodes: async () => swarm.listNodes(await host.getApiDriver()),
+      getSwarmStacks: async () => swarm.listStacks(await host.getApiDriver()),
+      swarmInit: async (opts) => swarm.swarmInit(await host.getApiDriver(), opts),
+      swarmLeave: async (opts) => swarm.swarmLeave(await host.getApiDriver(), opts),
+      // builders / compose — net-new CLI, no-op until wired
       getBuilders: async () => [],
       useBuilder: async () => false,
       getComposeProjects: async () => [],

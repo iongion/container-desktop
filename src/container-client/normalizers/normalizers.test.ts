@@ -54,6 +54,61 @@ describe("normalizeContainer", () => {
     expect(out.Computed.Group).toBe("Pod infrastructure");
     expect(out.Computed.NameInGroup).toBe("mypod");
   });
+
+  it("compose project label wins over the name-prefix heuristic (Group=project, NameInGroup=service-number)", () => {
+    const raw: any = {
+      Id: "c1",
+      Names: ["/random_name"],
+      State: "running",
+      Labels: {
+        "com.docker.compose.project": "shop",
+        "com.docker.compose.service": "api",
+        "com.docker.compose.container-number": "2",
+      },
+    };
+    const out = dockerNormalizers.normalizeContainer(raw);
+    expect(out.Computed.Group).toBe("shop");
+    expect(out.Computed.NameInGroup).toBe("api-2");
+  });
+
+  it("scaled compose replicas stay distinct via container-number (no duplicate NameInGroup)", () => {
+    const mk = (n: string): any => ({
+      Id: `web${n}`,
+      Names: [`/shop-web-${n}`],
+      State: "running",
+      Labels: {
+        "com.docker.compose.project": "shop",
+        "com.docker.compose.service": "web",
+        "com.docker.compose.container-number": n,
+      },
+    });
+    const a = dockerNormalizers.normalizeContainer(mk("1"));
+    const b = dockerNormalizers.normalizeContainer(mk("2"));
+    expect(a.Computed.Group).toBe("shop");
+    expect(b.Computed.Group).toBe("shop");
+    expect(a.Computed.NameInGroup).toBe("web-1");
+    expect(b.Computed.NameInGroup).toBe("web-2");
+    expect(a.Computed.NameInGroup).not.toBe(b.Computed.NameInGroup);
+  });
+
+  it("podman compose label variant (io.podman.compose.project) also groups by project", () => {
+    const raw: any = {
+      Id: "c2",
+      Names: ["/svc"],
+      State: "running",
+      Labels: { "io.podman.compose.project": "blog", "com.docker.compose.service": "cache" },
+    };
+    const out = podmanNormalizers.normalizeContainer(raw);
+    expect(out.Computed.Group).toBe("blog");
+    expect(out.Computed.NameInGroup).toBe("cache");
+  });
+
+  it("no compose labels → still uses the name-prefix heuristic", () => {
+    const raw: any = { Id: "c3", Names: ["/plain_thing"], State: "running", Labels: { unrelated: "x" } };
+    const out = dockerNormalizers.normalizeContainer(raw);
+    expect(out.Computed.Group).toBe("plain");
+    expect(out.Computed.NameInGroup).toBe("thing");
+  });
 });
 
 describe("normalizeImage", () => {

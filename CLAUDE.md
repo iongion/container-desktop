@@ -134,6 +134,10 @@ How you build here, **per change** — not an end-of-task afterthought:
   IIFEs); it **auto-discovers the port** from that handshake file, and `CDP_URL` overrides
   it. Multi-engine dev: `CONTAINER_DESKTOP_MOCK=1 yarn dev`
   boots Podman+Docker mocks, then drive with this. (See [memory: Verify Electron app via CDP].)
+- **NEVER `xvfb-run` or spawn a second app instance to verify the UI.** When a dev app is already
+  running (it usually is), **attach** to it via `support/cdp.mjs` on the auto-discovered CDP port — that
+  is the required verification path. Do **not** use `xvfb-run`, `launchApp`, or `yarn test:ui` for local
+  UI verification; the Electron/xvfb UI suite (`yarn test:ui`) is for CI only, never for iterating here.
 - Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`. **Footgun:** never
   run `pkill -f <pattern>` from a one-liner whose own command text contains `<pattern>` —
   it matches and kills its own shell (silent exit 144). Kill by numeric PID instead.

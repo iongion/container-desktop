@@ -7,6 +7,7 @@
 import { ContainerEngine } from "@/env/Types";
 import { createEmitterStream } from "@/utils/streamEmitter";
 import { loadEngineFixtures } from "./fixturesLoader";
+import { SWARM_FIXTURE } from "./swarmFixtures";
 
 interface MockApiResponse {
   status: number;
@@ -71,6 +72,16 @@ function imageSearchResults(images: unknown[], rawUrl: string): unknown[] {
     .filter((result) => !term || result.Name.toLowerCase().includes(term));
 }
 
+// Docker Swarm mock. Docker-engine only (Apple `container` has apiSurface "docker" but swarm:false).
+// Deterministic seeds live in ./swarmFixtures. Scenario via CONTAINER_DESKTOP_MOCK_SWARM
+// (read main-side from process.env; mockApiAdapter runs in main): "manager" (default) serves data;
+// "none" makes GET /swarm + lists answer the non-swarm 503 so the UI shows the "Initialize Swarm" state.
+const SWARM_PATHS = new Set(["swarm", "services", "nodes", "tasks", "secrets", "configs"]);
+
+function swarmScenario(): string {
+  return `${process.env.CONTAINER_DESKTOP_MOCK_SWARM ?? "manager"}`.toLowerCase();
+}
+
 export async function mockApiAdapter(request: any, connection: any): Promise<MockApiResponse> {
   const engine = connection?.engine ?? ContainerEngine.PODMAN;
   const fx = await loadEngineFixtures(engine);
@@ -90,6 +101,68 @@ export async function mockApiAdapter(request: any, connection: any): Promise<Moc
   }
   if (head === "info") {
     return ok(fx.info);
+  }
+
+  // Docker Swarm (Docker engine only). Owns /swarm,/services,/nodes,/tasks,/secrets,/configs so the
+  // Swarm screens render from fixtures; `none` scenario answers 503 → the "Initialize Swarm" state.
+  if (engine === ContainerEngine.DOCKER && SWARM_PATHS.has(head)) {
+    const inSwarm = swarmScenario() !== "none";
+    const notManager = () => fail(503, "This node is not a swarm manager.");
+    if (head === "swarm") {
+      // POST /swarm/init and /swarm/leave always accept (mock is stateless; the action-wired assertion
+      // is enough — real state transitions are covered by the live suite).
+      if (method === "POST") {
+        return ok("mock-node-id");
+      }
+      return inSwarm ? ok(SWARM_FIXTURE.info) : notManager();
+    }
+    if (!inSwarm && method === "GET") {
+      return notManager();
+    }
+    const id = parts[1];
+    if (head === "services") {
+      if (method === "GET") {
+        if (id && id !== "json") {
+          const service = SWARM_FIXTURE.services.find((s) => s.ID === id);
+          return service ? ok(service) : fail(404, "no such service");
+        }
+        return ok(SWARM_FIXTURE.services);
+      }
+      return ok("", 200); // create / update / delete
+    }
+    if (head === "nodes") {
+      if (method === "GET") {
+        if (id) {
+          const node = SWARM_FIXTURE.nodes.find((n) => n.ID === id);
+          return node ? ok(node) : fail(404, "no such node");
+        }
+        return ok(SWARM_FIXTURE.nodes);
+      }
+      return ok("", 200);
+    }
+    if (head === "tasks") {
+      return ok(SWARM_FIXTURE.tasks);
+    }
+    if (head === "secrets") {
+      if (method === "GET") {
+        if (id && id !== "json") {
+          const secret = SWARM_FIXTURE.secrets.find((s) => s.ID === id);
+          return secret ? ok(secret) : fail(404, "no such secret");
+        }
+        return ok(SWARM_FIXTURE.secrets);
+      }
+      return ok("", 201);
+    }
+    if (head === "configs") {
+      if (method === "GET") {
+        if (id && id !== "json") {
+          const config = SWARM_FIXTURE.configs.find((c) => c.ID === id);
+          return config ? ok(config) : fail(404, "no such config");
+        }
+        return ok(SWARM_FIXTURE.configs);
+      }
+      return ok("", 201);
+    }
   }
 
   if (head === "containers") {

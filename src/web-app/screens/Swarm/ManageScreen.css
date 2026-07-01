@@ -1,0 +1,13 @@
+/* Swarm header tabs live in the navbar's right group (content-width, right-aligned, no min-width:0 —
+   unlike the center, which clips 5 labels to "Serv…"). Small gap before the actions menu. */
+.SwarmHeaderTabs {
+  flex: 0 0 auto;
+  margin-right: 8px;
+}
+
+/* Breathing room so the "Docker engine" picker label isn't glued to the search box. Scoped to this screen
+   so the shared ConnectionSelect is untouched elsewhere. */
+[data-screen="swarm"] .ConnectionSelect .bp6-label {
+  padding-left: 10px;
+  white-space: nowrap;
+}

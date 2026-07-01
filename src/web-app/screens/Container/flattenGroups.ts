@@ -10,7 +10,7 @@ import type { ContainerGroup } from "@/web-app/Types";
 export type MergedContainer = MergedResource<Container>;
 
 export type ContainerRowDescriptor =
-  | { kind: "group-header"; key: string; group: ContainerGroup; connId: string }
+  | { kind: "group-header"; key: string; group: ContainerGroup; connId: string; groupKey: string }
   | {
       kind: "container";
       key: string;
@@ -32,13 +32,15 @@ export function flattenGroups(
     const items = group.Items as MergedContainer[];
     const isPartOfGroup = items.length > 1;
     const connId = items[0]?.connectionId ?? "";
-    // All members share one Computed.Group, which is the group's Name and the collapse key.
     const groupName = group.Name ?? group.Id;
-    const isCollapsed = !!collapse[groupName];
+    // Connection-qualified collapse key: identically-named groups on different connections (e.g. two
+    // compose projects both named "web") must collapse independently, not in lockstep.
+    const groupKey = `${connId}:${groupName}`;
+    const isCollapsed = !!collapse[groupKey];
     items.forEach((container, indexInGroup) => {
       // The group-header row is emitted once, before the first member of a multi-item group.
       if (isPartOfGroup && indexInGroup === 0) {
-        rows.push({ kind: "group-header", key: `header:${connId}:${groupName}`, group, connId });
+        rows.push({ kind: "group-header", key: `header:${connId}:${groupName}`, group, connId, groupKey });
       }
       // A collapsed group shows only its header — members are omitted, exactly as today.
       if (isCollapsed) {

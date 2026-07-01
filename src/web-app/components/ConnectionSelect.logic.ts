@@ -32,3 +32,7 @@ export function pickActiveConnection(
 
 // Eligibility predicate for Podman-only domains (pods, secrets, machines).
 export const isPodmanConnection = (connection: Connection): boolean => connection.engine === ContainerEngine.PODMAN;
+
+// Eligibility predicate for Docker-only domains (swarm). Excludes the Apple `container` engine, which has
+// a Docker-compatible API surface but does NOT implement swarm.
+export const isDockerConnection = (connection: Connection): boolean => connection.engine === ContainerEngine.DOCKER;

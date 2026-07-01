@@ -9,8 +9,8 @@ sections:
   - { id: assistant-what, label: "What it is" }
   - { id: assistant-model, label: "Choose your model" }
   - { id: assistant-do, label: "What it can do" }
-  - { id: assistant-privacy, label: "Privacy &amp; permissions" }
-  - { id: assistant-generator, label: "Dockerfile &amp; Compose generator" }
+  - { id: assistant-privacy, label: "Privacy & permissions" }
+  - { id: assistant-generator, label: "Dockerfile & Compose generator" }
 ---
 
 <section class="guide-sec" id="assistant-what">

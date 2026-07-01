@@ -46,11 +46,42 @@ It implements **every** `ICommand` member (availability/tunnel paths call
 and `ProxyRequest` returns `200`/`"OK"` by default. Shape per-call results to simulate failures
 (`{ success: false, stderr }`).
 
-### Live suite (reserved)
+### Live suite (real engines)
 
-`*.live.test.ts` files are excluded from the hermetic run and are meant to drive a **real**
-engine/VM; [`installRealCommand()`](../src/__tests__/setup/headless.ts) wires the real Node
-executor for them. There is no separate live config or script yet — the convention is reserved.
+`*.live.test.ts` files are excluded from the hermetic run and drive a **real** engine/VM;
+[`installRealCommand()`](../src/__tests__/setup/headless.ts) wires the real Node executor for them.
+
+Config: [`vitest.live.config.mts`](../vitest.live.config.mts) (node env, 60s timeouts). Select machines
+via the `CDT_TARGET_*` registry — copy [`src/__tests__/live/targets.example.env`](../src/__tests__/live/targets.example.env)
+to `targets.env` (gitignored) and set `CONTAINER_DESKTOP_TEST_TARGETS=<id>`.
+
+```bash
+yarn test:live                                         # every ENABLED target
+CONTAINER_DESKTOP_TEST_TARGETS=swarm yarn test:live    # just the swarm target
+```
+
+**Docker Swarm** (`swarm.live.test.ts`) runs against a **disposable local sandbox**, never your primary
+daemon — swarm is Docker-only (not Podman/Apple). Bring one up, point the `swarm` target's
+`_DOCKER_SOCKET` at it, run, tear down:
+
+```bash
+support/swarm-sandbox.sh up          # single-node (docker:dind); or `up-multi` for node ops
+CONTAINER_DESKTOP_TEST_TARGETS=swarm yarn test:live
+support/swarm-sandbox.sh down
+```
+
+### UI suite (real Electron over CDP)
+
+Config: [`vitest.ui.config.mts`](../vitest.ui.config.mts). Launches the built app with Playwright
+([`src/__tests__/ui/app-harness.ts`](../src/__tests__/ui/app-harness.ts)) — needs
+`cross-env ENVIRONMENT=production yarn build` first, and a display (or `CONTAINER_DESKTOP_HEADLESS=1`).
+UI tests run against deterministic **mock** fixtures (`CONTAINER_DESKTOP_MOCK=<engine>`); the swarm UI
+test also sets `CONTAINER_DESKTOP_MOCK_SWARM=manager|none` to render the populated vs "Initialize Swarm"
+states — no Docker required.
+
+```bash
+yarn test:ui
+```
 
 ## Go relay
 

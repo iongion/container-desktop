@@ -94,9 +94,25 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onReload = useResourceReload("containers");
   const actionsTitle = t("Actions");
   const onGroupToggleClick = useCallback((e) => {
-    const groupName = e.currentTarget.getAttribute("data-prefix-group");
-    setCollapse((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
+    const groupKey = e.currentTarget.getAttribute("data-prefix-group");
+    setCollapse((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }));
   }, []);
+  // Project-level lifecycle for a container group (compose project or name-prefix group): apply the
+  // existing per-container bulk action across the group's members, then refresh. Reuses the connection
+  // routing + eligibility of useContainerBulkActions — no compose binary. "start" inherits the existing
+  // unpause/restart-for-stopped semantics from bulkActions.
+  const runGroupAction = useCallback(
+    async (actionKey: string, containers: MergedContainer[]) => {
+      const action = bulkActions.find((entry) => entry.key === actionKey);
+      if (!action) {
+        return;
+      }
+      const eligible = action.eligible ?? (() => true);
+      await Promise.allSettled(containers.filter(eligible).map((container) => action.run(container)));
+      await bulkRefresh();
+    },
+    [bulkActions, bulkRefresh],
+  );
   const onContainerFocus = useCallback((e) => {
     const container = e.currentTarget.getAttribute("data-container-key");
     setContainerOverlay(container || undefined);
@@ -206,7 +222,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   const groupChecked = groupIds.length > 0 && groupSelectedCount === groupIds.length;
                   const groupIndeterminate = groupSelectedCount > 0 && groupSelectedCount < groupIds.length;
                   const groupName = containers[0].Computed.Group;
-                  const isCollapsed = groupName && !!collapse[groupName];
+                  const groupKey = descriptor.groupKey;
+                  const isCollapsed = !!collapse[groupKey];
                   return (
                     <tr
                       key={key}
@@ -236,13 +253,27 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             name: groupName,
                           })}
                           onClick={onGroupToggleClick}
-                          data-prefix-group={groupName}
+                          data-prefix-group={groupKey}
                         />
                       </td>
                       <td colSpan={6}>
                         <div className="AppDataTableGroupDetails">
-                          <ButtonGroup variant="minimal">
-                            <Button icon={IconNames.SPLIT_COLUMNS} />
+                          <ButtonGroup variant="minimal" data-actions-menu="container-group">
+                            <Button
+                              icon={IconNames.PLAY}
+                              title={t("Start all in {{name}}", { name: groupName })}
+                              onClick={() => runGroupAction("start", containers)}
+                            />
+                            <Button
+                              icon={IconNames.STOP}
+                              title={t("Stop all in {{name}}", { name: groupName })}
+                              onClick={() => runGroupAction("stop", containers)}
+                            />
+                            <Button
+                              icon={IconNames.RESET}
+                              title={t("Restart all in {{name}}", { name: groupName })}
+                              onClick={() => runGroupAction("restart", containers)}
+                            />
                           </ButtonGroup>
                           <ul className="ContainerReportStateCounts">
                             <li title={t("Total number of containers in this group")}>

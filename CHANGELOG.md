@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Docker swarm support
+
 ## [5.3.9] - 2026-07-01
 
 ## Changed

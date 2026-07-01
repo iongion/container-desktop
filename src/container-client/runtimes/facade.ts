@@ -29,6 +29,11 @@ import type {
   RunnerStopperOptions,
   StartupStatus,
   SubscriptionOptions,
+  SwarmInitOptions,
+  SwarmLeaveOptions,
+  SwarmNode,
+  SwarmService,
+  SwarmStack,
   SystemInfo,
   SystemPruneReport,
   SystemResetReport,
@@ -87,13 +92,14 @@ export interface ContextsExtension {
   useDockerContext(name: string): Promise<boolean>;
 }
 
-/** `swarm` — `docker node/service/stack …` (real on Docker as wired; no-op on Podman). */
+/** `swarm` — Docker Swarm services/nodes/stacks (real on Docker as wired; no-op on Podman/Apple).
+ * Write ops + cluster secrets/configs live on `SwarmAdapter` (Docker-only), not the symmetric facade. */
 export interface SwarmExtension {
-  getSwarmServices(): Promise<any[]>;
-  getSwarmNodes(): Promise<any[]>;
-  getSwarmStacks(): Promise<any[]>;
-  swarmInit(opts?: any): Promise<boolean>;
-  swarmLeave(opts?: any): Promise<boolean>;
+  getSwarmServices(): Promise<SwarmService[]>;
+  getSwarmNodes(): Promise<SwarmNode[]>;
+  getSwarmStacks(): Promise<SwarmStack[]>;
+  swarmInit(opts?: SwarmInitOptions): Promise<boolean>;
+  swarmLeave(opts?: SwarmLeaveOptions): Promise<boolean>;
 }
 
 /** `builders` — `docker buildx ls/use` (real on Docker as wired; no-op on Podman). */

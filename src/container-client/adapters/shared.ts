@@ -13,11 +13,11 @@ import { dockerNormalizers } from "@/container-client/normalizers/docker";
 import { podmanNormalizers } from "@/container-client/normalizers/podman";
 import type { EngineNormalizers } from "@/container-client/normalizers/shared";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
+import { DOCKER_BASE_URL, LIBPOD_BASE_URL } from "./baseUrls";
 
-/** libpod (Podman) compat root. */
-export const LIBPOD_BASE_URL = "http://d/v4.0.0/libpod";
-/** Docker root. */
-export const DOCKER_BASE_URL = "http://localhost";
+// Re-exported from the dependency-free ./baseUrls leaf so existing importers (`import { DOCKER_BASE_URL }
+// from "./shared"`) keep working, while swarm-rest can import them without pulling Application.
+export { DOCKER_BASE_URL, LIBPOD_BASE_URL };
 
 /** The active host facade for the current connection. */
 export function getActiveHostClient(): HostClientFacade {

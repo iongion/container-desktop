@@ -61,6 +61,8 @@ import { Screen as RegistriesScreen } from "@/web-app/screens/Registry/ManageScr
 import { Screen as SecretInspectScreen } from "@/web-app/screens/Secret/InspectScreen";
 import { Screen as SecretsScreen } from "@/web-app/screens/Secret/ManageScreen";
 import { Screen as UserSettingsScreen } from "@/web-app/screens/Settings/UserSettingsScreen";
+import { Screen as SwarmScreen } from "@/web-app/screens/Swarm/ManageScreen";
+import { Screen as SwarmInspectScreen } from "@/web-app/screens/Swarm/SwarmInspectScreen";
 import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Troubleshoot";
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
@@ -92,6 +94,8 @@ const Screens = [
   PodGenerateKubeScreen,
   MachinesScreen,
   MachineInspectScreen,
+  SwarmScreen,
+  SwarmInspectScreen,
   NetworksScreen,
   NetworkInspectScreen,
   SecretsScreen,
