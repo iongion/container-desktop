@@ -1,10 +1,12 @@
 import Editor, { type OnMount, useMonaco } from "@monaco-editor/react";
+import type * as Monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 import { useEffect, useRef, useState } from "react";
 
 import { createLogger } from "@/logger";
 import { AppTheme } from "@/web-app/App.types";
 import { useAppStore } from "@/web-app/stores/appStore";
 
+import { applyModelMarkers } from "./applyModelMarkers";
 import { registerFindTarget } from "./Find/findTargets";
 // Bundle Monaco locally (offline) instead of loading it from a CDN — must be
 // imported before <Editor> mounts so loader.config() runs before loader.init().
@@ -27,6 +29,10 @@ export interface CodeEditorProps {
   withoutLineNumbers?: boolean;
   readOnly?: boolean;
   onChange?: (value: string) => void;
+  markers?: Monaco.editor.IMarkerData[];
+  // Render hover/suggest widgets in a fixed, top-level layer so they escape a clipping/overflow-hidden
+  // ancestor (e.g. the bordered Build Studio panel with a header above the editor).
+  overflowWidgetsFixed?: boolean;
 }
 
 const CodeEditorImpl: React.FC<CodeEditorProps> = ({
@@ -37,12 +43,15 @@ const CodeEditorImpl: React.FC<CodeEditorProps> = ({
   headerTitle,
   readOnly,
   onChange,
+  markers,
+  overflowWidgetsFixed,
 }: CodeEditorProps) => {
   const userTheme = useAppStore((state) => state.userSettings.theme);
   const [currentTheme, setCurrentTheme] = useState(theme || (userTheme === AppTheme.LIGHT ? LIGHT_THEME : DARK_THEME));
   const monaco = useMonaco();
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const [editorInstance, setEditorInstance] = useState<Parameters<OnMount>[0] | null>(null);
   useEffect(() => {
     if (!monaco) {
       logger.warn("Monaco editor not ready - theming skipped");
@@ -56,6 +65,11 @@ const CodeEditorImpl: React.FC<CodeEditorProps> = ({
       setCurrentTheme(LIGHT_THEME);
     }
   }, [monaco, userTheme]);
+  // Re-publish linter markers whenever they (or the editor) change; the model owns them so they persist
+  // across edits and clear when `markers` is emptied.
+  useEffect(() => {
+    applyModelMarkers(monaco, editorInstance, markers);
+  }, [monaco, editorInstance, markers]);
   // Let the global find host open Monaco's own native find for this editor.
   useEffect(() => {
     const el = containerRef.current;
@@ -82,6 +96,7 @@ const CodeEditorImpl: React.FC<CodeEditorProps> = ({
         onChange={(next) => onChange?.(next ?? "")}
         onMount={(editor) => {
           editorRef.current = editor;
+          setEditorInstance(editor);
         }}
         options={{
           readOnly: readOnly ?? true,
@@ -94,6 +109,7 @@ const CodeEditorImpl: React.FC<CodeEditorProps> = ({
           wordWrap: "on",
           theme: currentTheme,
           lineNumbers: withoutLineNumbers ? "off" : "on",
+          fixedOverflowWidgets: overflowWidgetsFixed ?? false,
         }}
       />
     </div>

@@ -7,7 +7,7 @@ import { type ChildProcessWithoutNullStreams, spawnSync } from "node:child_proce
 import type { AxiosRequestConfig } from "axios";
 import type { Connection, EngineConnectorSettings, ServiceOpts } from "@/env/Types";
 import { createNodeJSApiDriver } from "./exec/api-driver";
-import { exec_launcher_async, exec_service } from "./exec/commander";
+import { exec_launcher_async, exec_service, exec_streaming } from "./exec/commander";
 import { killProcess, type WrapperOpts } from "./exec/process-utils";
 import { proxyRequest } from "./exec/proxy-request";
 import { startSSHConnection } from "./exec/ssh-transport";
@@ -32,6 +32,10 @@ export const Command: ICommand = {
 
   async ExecuteAsBackgroundService(launcher: string, args: string[], opts?: Partial<ServiceOpts>) {
     return await exec_service(launcher, args, opts);
+  },
+
+  async ExecuteStreaming(launcher: string, args: string[], opts?: Partial<ServiceOpts>) {
+    return await exec_streaming(launcher, args, opts);
   },
 
   async StartSSHConnection(host: SSHHost, opts?: Partial<ServiceOpts>) {

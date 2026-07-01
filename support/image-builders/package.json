@@ -1,0 +1,10 @@
+{
+  "name": "container-desktop-build-sample",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tiny, self-contained build context used ONLY by the Build Studio in development to exercise a real image build (npm ci + a runnable CMD). Not shipped.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

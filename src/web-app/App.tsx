@@ -33,6 +33,7 @@ import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as AIAssistantScreen } from "@/web-app/screens/AI/AssistantScreen";
 import { Screen as AIGeneratorScreen } from "@/web-app/screens/AI/GeneratorScreen";
+import { Screen as BuildScreen } from "@/web-app/screens/Build/ManageScreen";
 import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
 import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
 import { Screen as SystemInfoScreen } from "@/web-app/screens/Connections/SystemInfoScreen";
@@ -83,6 +84,7 @@ const Screens = [
   ContainerGenerateKubeScreen,
   ContainerTerminalScreen,
   ImagesScreen,
+  BuildScreen,
   ImageLayersScreen,
   ImageInspectScreen,
   ImageSecurityScreen,

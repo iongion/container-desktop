@@ -5,7 +5,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
-import { getImageCrumbs } from "./Navigation";
+import { getImageCrumbs, imageDisplayName } from "./Navigation";
 
 // Screen header
 
@@ -35,8 +35,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       listRoutePath={currentListRoutePath}
       listRouteIcon={listRouteIcon || IconNames.GRID_VIEW}
       titleIcon={IconNames.BOX}
-      titleText={image.Name || image.Id || ""}
-      breadcrumbs={getImageCrumbs(image.Name || image.Id || "", image.Id, currentScreen, connId)}
+      titleText={imageDisplayName(image)}
+      breadcrumbs={getImageCrumbs(imageDisplayName(image), image.Id, currentScreen, connId)}
       rightContent={
         <ActionsMenu image={image} connectionId={connId} expand isActive={(input) => input === currentScreen} />
       }

@@ -134,6 +134,29 @@ export function createMockCommand(): ICommand {
     async CreateNodeJSApiDriver() {
       return { request: async () => ({ status: 200, data: "OK" }) };
     },
+    async ExecuteStreaming(launcher: string, args: string[]) {
+      const emitter = new EventEmitter();
+      const flat = (args || []).map((a) => `${a}`);
+      const isBuild = flat.includes("build");
+      const engine = engineForLauncher(launcher);
+      // Replay engine-shaped build output on a macrotask so the caller's `handle.on(...)` attaches first.
+      setTimeout(async () => {
+        if (isBuild) {
+          const fx = await loadEngineFixtures(engine);
+          for (const chunk of fx.buildOutput ?? []) {
+            emitter.emit("data", chunk);
+          }
+        }
+        emitter.emit("exit", { code: 0 });
+        emitter.emit("close", { code: 0 });
+      }, 0);
+      return {
+        on: (event: string, listener: any) => emitter.on(event as any, listener),
+        off: (event: string, listener: any) => emitter.off(event as any, listener),
+        dispose: () => emitter.removeAllListeners(),
+        kill: () => emitter.emit("exit", { code: null, signal: "SIGTERM" }),
+      } as StreamHandle;
+    },
     async ExecuteAsBackgroundService() {
       const emitter = new EventEmitter();
       // Resolve on a macrotask so the caller's "ready" listener is registered first.

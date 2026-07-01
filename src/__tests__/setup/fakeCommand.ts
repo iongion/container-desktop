@@ -52,6 +52,23 @@ export function installFakeCommand(
     async CreateNodeJSApiDriver() {
       return { request: async () => ({ status: 200, data: "OK" }) };
     },
+    async ExecuteStreaming(launcher: string, args: string[], opts?: any) {
+      record(launcher, args, opts);
+      const emitter = new EventEmitter();
+      // Emit on a macrotask so the caller's `handle.on("exit", …)` registers first (see the
+      // ExecuteAsBackgroundService note below). One stdout chunk then a clean exit.
+      setTimeout(() => {
+        emitter.emit("data", { from: "stdout", data: "" });
+        emitter.emit("exit", { code: 0 });
+        emitter.emit("close", { code: 0 });
+      }, 0);
+      return {
+        on: (event: string, listener: any) => emitter.on(event as any, listener),
+        off: (event: string, listener: any) => emitter.off(event as any, listener),
+        dispose: () => emitter.removeAllListeners(),
+        kill: () => {},
+      };
+    },
     async ExecuteAsBackgroundService(launcher: string, args: string[], opts?: any) {
       record(launcher, args, opts);
       const emitter = new EventEmitter();

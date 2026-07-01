@@ -1,0 +1,343 @@
+/* The header Build/Cancel toggle keeps a fixed min-width so the control doesn't wobble when its label swaps
+   between "Build image" and "Cancel" (the wider "Build image" measures ≈103px). Lives in the screen header,
+   outside .BuildStudio, so this rule is intentionally not nested. */
+.BuildActionButton {
+  min-width: 104px;
+}
+
+/* Build Studio layout — locked to the approved mock. All colours/spacing come from the app --app-* tokens
+   (src/web-app/themes/tokens.css); the mock's ad-hoc --ok/--warn/--input-bg map onto the semantic
+   --app-intent-* tokens here. Everything is scoped under .BuildStudio so the generic class names
+   (.panel/.field/.row/.chip/.tabs…) never leak into the rest of the app. */
+
+/* Fills the space under the header (the parent .AppScreen is a padded flex column). The top padding gives
+   the panels the same 10px breathing room from the header that .AppScreen's padding gives on the sides —
+   without it the editor/config cards sit flush against the screen header. */
+.BuildStudio {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 10px;
+  color: var(--app-text);
+}
+
+/* Studio grid: editor top-left (dominant), config right rail (full height), run panel bottom-left. The
+   outer 10px gap comes from .AppScreen's padding; here we only own the inter-panel gap. */
+.BuildStudio .studio {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-rows: minmax(0, 1fr) minmax(210px, 38%);
+  gap: 10px;
+}
+.BuildStudio .editor-panel {
+  grid-column: 1;
+  grid-row: 1;
+}
+.BuildStudio .run-panel {
+  grid-column: 1;
+  grid-row: 2;
+}
+.BuildStudio .config-panel {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+/* Every panel follows header (flex 0) / body (flex 1, scroll) / footer (flex 0, pinned). */
+.BuildStudio .panel {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.BuildStudio .panel > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--app-border);
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+.BuildStudio .panel > header .sub {
+  font-weight: 400;
+  color: var(--app-text-muted);
+}
+.BuildStudio .panel .body {
+  padding: 12px;
+  overflow: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.BuildStudio .panel .panel-footer {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-top: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 11px;
+  background: var(--app-surface);
+}
+
+/* Editor panel: Monaco fills the body; the lint findings pin to the panel footer. The body itself never
+   scrolls — Monaco and the lint list own their scroll — so no stray scrollbar appears when a Monaco hover
+   widget mounts. The widget escapes this panel via fixedOverflowWidgets (see ContainerfileEditorPane). */
+.BuildStudio .editor-panel .body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.BuildStudio .editor-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+/* The lint list never takes more than a third of the panel — however many findings there are, it scrolls
+   internally so the editor above it always stays visible. */
+.BuildStudio .lint {
+  flex: 0 0 auto;
+  max-height: 34%;
+  overflow: auto;
+  border-top: 1px solid var(--app-border);
+}
+.BuildStudio .lint-row {
+  display: flex;
+  gap: 9px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--app-border);
+  align-items: flex-start;
+  font-size: 12px;
+}
+.BuildStudio .lint-row .where {
+  color: var(--app-text-muted);
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+.BuildStudio .badge {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.BuildStudio .badge.warning {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 22%, transparent);
+  color: var(--app-intent-warning-text);
+}
+.BuildStudio .badge.info {
+  background: color-mix(in srgb, var(--app-accent) 20%, transparent);
+  color: var(--app-accent-text);
+}
+.BuildStudio .badge.error {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 22%, transparent);
+  color: var(--app-intent-danger-text);
+}
+
+/* Config right rail: guided form + redacted command preview. */
+.BuildStudio .field {
+  margin-bottom: 13px;
+}
+.BuildStudio .field > label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+  margin-bottom: 5px;
+}
+.BuildStudio .row {
+  display: flex;
+  gap: 7px;
+}
+.BuildStudio .row > * {
+  flex: 1;
+}
+.BuildStudio .kv {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+.BuildStudio .cmd {
+  margin-top: 10px;
+  background: var(--app-chrome);
+  border: 1px solid var(--app-border);
+  border-radius: 7px;
+  padding: 9px 10px;
+  font-size: 11.5px;
+  word-break: break-all;
+  font-family: "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+/* Match Blueprint's InputGroup text size (TextArea defaults larger) so the two read as one form. */
+.BuildStudio .config-panel textarea {
+  font-size: 12px;
+}
+/* Plain, theme-aware inline note (e.g. the multi-platform hint) — deliberately NOT a loud Callout. */
+.BuildStudio .cfg-note {
+  color: var(--app-text-muted);
+  font-size: 11.5px;
+  margin-bottom: 12px;
+}
+.BuildStudio .cmd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.BuildStudio .cmd code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--app-text);
+}
+.BuildStudio .cmd .flag {
+  color: var(--app-accent-text);
+}
+.BuildStudio .cmd .redacted {
+  color: var(--app-intent-warning-text);
+}
+
+/* Run panel: tabs / scrolling content / pinned footer, plus the cache diagnostics strip. */
+.BuildStudio .run-panel .body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Tabs live at the END of the run panel's header (pushed right). */
+.BuildStudio .tabs {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+.BuildStudio .tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--app-text-muted);
+  font: inherit;
+  font-weight: 600;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.BuildStudio .tabs button.active {
+  color: var(--app-text);
+  border-bottom-color: var(--app-accent);
+}
+.BuildStudio .run-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.BuildStudio .run-scroll.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Raw Log tab hosts an xterm (ANSI colours). It fills the scroll region above the pinned footer; the
+   Terminal component sizes to 100% of this padded box. */
+.BuildStudio .run-terminal {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  padding: 10px;
+}
+
+/* Cache diagnostics — the headline: a fixed strip + per-step badges + the cascade rail. */
+.BuildStudio .cache-strip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--app-border);
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 10%, var(--app-surface));
+}
+.BuildStudio .cache-strip .zap {
+  color: var(--app-intent-warning-text);
+  font-weight: 700;
+}
+.BuildStudio .cache-strip .fix {
+  color: var(--app-text-muted);
+  flex: 1 1 100%;
+}
+.BuildStudio .cbadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.BuildStudio .cbadge.hit {
+  background: color-mix(in srgb, var(--app-intent-success-rest) 20%, transparent);
+  color: var(--app-intent-success-text);
+}
+.BuildStudio .cbadge.miss {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 26%, transparent);
+  color: var(--app-intent-warning-text);
+}
+.BuildStudio .cbadge.rebuilt {
+  background: color-mix(in srgb, var(--app-text-muted) 22%, transparent);
+  color: var(--app-text-muted);
+}
+.BuildStudio .step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--app-border);
+}
+.BuildStudio .step.cascade {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--app-intent-warning-rest) 50%, transparent);
+}
+.BuildStudio .step .st {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--app-text-muted);
+}
+.BuildStudio .step .st.hit {
+  background: var(--app-intent-success-rest);
+}
+.BuildStudio .step .st.miss {
+  background: var(--app-intent-warning-rest);
+}
+.BuildStudio .step .name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+.BuildStudio .step .dur {
+  color: var(--app-text-muted);
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+
+.BuildStudio .muted {
+  color: var(--app-text-muted);
+}
+
+/* Full-height "coming soon" / empty states inside the studio regions. */
+.BuildStudio .panel .body.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}

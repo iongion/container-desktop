@@ -6,6 +6,7 @@
 
 import type { ContainerEngine, RegistriesMap } from "@/env/Types";
 
+import type { BuildStreamChunk } from "./buildFixtures";
 import { generateEngineDataset } from "./generator";
 
 export interface MockExtras {
@@ -30,6 +31,9 @@ export interface EngineFixtures {
   machines: unknown[];
   registries: RegistriesMap;
   extras: MockExtras;
+  // Engine-shaped streamed build output for mock ExecuteStreaming (see ./buildFixtures). Optional so the
+  // seeded serializers stay valid; the generator attaches it per engine.
+  buildOutput?: BuildStreamChunk[];
 }
 
 export function getEngineFixtures(engine: ContainerEngine): EngineFixtures {

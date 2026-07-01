@@ -1,0 +1,76 @@
+/* Layer waterfall styling, scoped to the component so it renders identically inside the Build run panel and
+   as the image LayersScreen body. Colours/spacing from the app --app-* tokens. */
+
+.LayerInspector {
+  display: flex;
+  flex-direction: column;
+}
+/* Sticky table-header carrying the layer count + total size — stays pinned while the list scrolls. Uses the
+   app's table-header surface token so it reads as a header row and hides rows scrolling underneath it. */
+.LayerInspector .layer-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--app-surface-strong);
+  border-bottom: 1px solid var(--app-border);
+  font-weight: 600;
+  color: var(--app-text);
+}
+.LayerInspector .layer-header .col-size {
+  color: var(--app-text-muted);
+}
+.LayerInspector .waterfall {
+  display: flex;
+  flex-direction: column;
+}
+/* The size column is a FIXED width (not `auto`) so every row's grid resolves to the same column widths —
+   otherwise a narrow "—" vs a wide "2.02 GB" changes the fr split per row and the bar's left edge wobbles. */
+.LayerInspector .waterfall .layer {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) 1fr 84px;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--app-border);
+}
+.LayerInspector .waterfall .createdBy {
+  font-family: "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--app-text);
+}
+.LayerInspector .waterfall .bar-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--app-border) 60%, transparent);
+  overflow: hidden;
+}
+/* Neutral bars for every layer — size is read from the bar length. The single heaviest layer's bar is the
+   only ACCENT-coloured one, so the eye lands on it (this replaces the old "largest layer" callout). Both
+   colours are theme tokens, so they track engine × light/dark. */
+.LayerInspector .waterfall .bar {
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--app-text-muted) 40%, transparent);
+}
+.LayerInspector .waterfall .bar.largest {
+  background: var(--app-accent);
+}
+.LayerInspector .waterfall .size {
+  font-variant-numeric: tabular-nums;
+  color: var(--app-text-muted);
+  white-space: nowrap;
+  text-align: right;
+}
+.LayerInspector .layer-total {
+  color: var(--app-text-muted);
+  font-size: 11px;
+  padding-top: 4px;
+}

@@ -6,6 +6,7 @@
 
 import { ContainerEngine } from "@/env/Types";
 
+import { getBuildOutput } from "../buildFixtures";
 import type { EngineFixtures } from "../fixtures";
 import { COUNTS, engineSeed } from "./config";
 import { generateLogicalDataset } from "./model";
@@ -17,7 +18,8 @@ import { serializePodman } from "./serializers/podman";
 export function buildEngineDataset(engine: ContainerEngine, seedOverride?: number): EngineFixtures {
   const faker = buildFaker(engineSeed(engine, seedOverride));
   const dataset = generateLogicalDataset(faker, engine, COUNTS[engine]);
-  return engine === ContainerEngine.PODMAN ? serializePodman(dataset) : serializeDocker(dataset);
+  const serialized = engine === ContainerEngine.PODMAN ? serializePodman(dataset) : serializeDocker(dataset);
+  return { ...serialized, buildOutput: getBuildOutput(engine) };
 }
 
 const CACHE = new Map<string, EngineFixtures>();

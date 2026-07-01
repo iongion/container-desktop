@@ -14,6 +14,9 @@ import "monaco-editor/esm/vs/language/json/monaco.contribution.js";
 // no dedicated worker — unlike the JSON language service above — so the base editor worker is enough.
 import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution.js";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution.js";
+// Dockerfile/Containerfile highlighting for the writable Build Studio editor (same Monarch-tokenizer,
+// main-thread, no dedicated worker path).
+import "monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile.contribution.js";
 
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import JsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";

@@ -51,7 +51,7 @@ export interface CliEntry extends ActivityEntryBase {
   kind: "cli";
   launcher: string;
   args: string[];
-  invocation: "Execute" | "Spawn" | "ExecuteAsBackgroundService";
+  invocation: "Execute" | "Spawn" | "ExecuteAsBackgroundService" | "ExecuteStreaming";
   status: ActivityStatus;
   exitCode?: number | null;
   durationMs?: number;
@@ -76,7 +76,7 @@ export interface CliBusPayload {
   guid: string;
   date: number;
   phase: "pending" | "settled";
-  invocation: "Execute" | "Spawn" | "ExecuteAsBackgroundService";
+  invocation: "Execute" | "Spawn" | "ExecuteAsBackgroundService" | "ExecuteStreaming";
   launcher: string;
   args: string[];
   commandLine: string;

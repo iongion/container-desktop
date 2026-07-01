@@ -14,6 +14,19 @@ declare global {
     ConfigHost?: string;
   }
 
+  // Handle over a finite streamed process (see platform/exec/commander.ts exec_streaming). Unlike the
+  // EventEmitter from ExecuteAsBackgroundService (a readiness/retry loop), this emits raw process events:
+  //   "data"  → { from: "stdout" | "stderr", data: string }
+  //   "exit"  → { code: number | null, signal?: string }
+  //   "close" → { code: number | null }
+  //   "error" → { type: string, error: unknown }
+  export interface StreamHandle {
+    on: (event: "data" | "exit" | "error" | "close", listener: (payload: any) => void) => void;
+    off: (event: string, listener: (...args: any[]) => void) => void;
+    dispose: () => void;
+    kill: (signal?: NodeJS.Signals | number) => void;
+  }
+
   export interface ICommand {
     CreateNodeJSApiDriver: (opts: AxiosRequestConfig<any>) => Promise<any>;
     Spawn: (launcher: string, args: string[], opts?: any) => Promise<CommandExecutionResult>;
@@ -24,6 +37,7 @@ declare global {
       args: string[],
       opts?: Partial<ServiceOpts>,
     ) => Promise<EventEmitter>;
+    ExecuteStreaming: (launcher: string, args: string[], opts?: Partial<ServiceOpts>) => Promise<StreamHandle>;
     StartSSHConnection: (host: SSHHost, opts?: Partial<ServiceOpts>) => Promise<ISSHClient>;
     StopConnectionServices: (connection_id: string, settings: EngineConnectorSettings) => Promise<void>;
     ProxyRequest: (request: any, settings: any, context?: any) => any;

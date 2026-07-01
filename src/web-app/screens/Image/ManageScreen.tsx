@@ -1,4 +1,4 @@
-import { Code, Divider, HTMLTable, Icon, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Code, Divider, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import dayjs from "dayjs";
@@ -12,6 +12,7 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
+import { connectedConnections } from "@/web-app/components/ConnectionSelect";
 import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
@@ -25,7 +26,9 @@ import {
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
 import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
+import { getBuildUrl, isBuildSupported } from "@/web-app/screens/Build/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
@@ -93,6 +96,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("images");
 
+  // "Build image" CTA — the SOLE entry into the Build Studio (no sidebar item). We build images, not
+  // containers, so the action lives here on the Images list. Gated on a native buildable connection.
+  const connections = useAppStore((state) => state.connections);
+  const activeRuntime = useResourceStore((state) => state.activeRuntime);
+  const nativeBuildConnections = useMemo(
+    () => connectedConnections(connections, activeRuntime, isBuildSupported),
+    [connections, activeRuntime],
+  );
+  const buildSupported = nativeBuildConnections.length > 0;
+  const buildConnId = nativeBuildConnections[0]?.id;
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <AppScreenHeader
@@ -113,6 +127,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <Divider />
               </>
             ) : null}
+            <AnchorButton
+              intent={Intent.PRIMARY}
+              icon={IconNames.BUILD}
+              text={t("Build image")}
+              title={buildSupported ? t("Build an image from a Containerfile") : t("Connect a native engine to build")}
+              href={buildSupported ? getBuildUrl(buildConnId) : undefined}
+              disabled={!buildSupported}
+            />
+            <Divider />
             <ActionsMenu withoutStart onReload={onReload} />
           </>
         }

@@ -217,6 +217,42 @@ export function wrap_process(proc: any, child: any) {
   };
 }
 
+// Finite streamed execution. Unlike exec_service (a readiness/retry loop that emits "domain.max-retries"
+// when a long-lived service never reports ready), this spawns a process expected to RUN TO COMPLETION —
+// e.g. an image build — and forwards its raw stdout/stderr chunks and exit as they happen. No checkStatus,
+// no retry timer. The returned StreamHandle owns detach (off), teardown (dispose) and kill.
+export async function exec_streaming(
+  programPath: string,
+  programArgs: string[],
+  opts?: Partial<ServiceOpts>,
+): Promise<StreamHandle> {
+  const em = new EventEmitter();
+  const launcherOpts = {
+    encoding: "utf-8",
+    cwd: opts?.cwd,
+    env: buildSpawnEnv(opts),
+  };
+  const { commandLauncher, commandArgs } = applyWrapper(programPath, programArgs, opts as any);
+  const child = await wrapSpawnAsync(commandLauncher, commandArgs, launcherOpts);
+  const proc: CommandExecutionResult = { pid: child.pid!, code: null, success: false, stdout: "", stderr: "" };
+  if (opts?.onSpawn) {
+    opts.onSpawn(wrap_process(proc, child));
+  }
+  child.stdout?.setEncoding("utf8");
+  child.stderr?.setEncoding("utf8");
+  child.stdout?.on("data", (data) => em.emit("data", { from: "stdout", data: `${data}` }));
+  child.stderr?.on("data", (data) => em.emit("data", { from: "stderr", data: `${data}` }));
+  child.on("error", (error) => em.emit("error", { type: "process.error", error }));
+  child.on("close", (code) => em.emit("close", { code }));
+  child.on("exit", (code, signal) => em.emit("exit", { code, signal }));
+  return {
+    on: (event, listener) => em.on(event, listener),
+    off: (event, listener) => em.off(event, listener),
+    dispose: () => em.removeAllListeners(),
+    kill: (signal) => killProcess(child, signal),
+  };
+}
+
 export async function exec_service(programPath: string, programArgs: string[], opts?: Partial<ServiceOpts>) {
   let isManagedExit = false;
   let child: ChildProcessWithoutNullStreams | undefined;

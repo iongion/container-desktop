@@ -10,10 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 
 - Docker swarm support
+- Image Build Studio — build OCI **images** from a Containerfile on Podman, Docker or Apple Container, launched from a **Build image** action on the Images list (native connections; WSL/Lima/SSH come next). Writable Containerfile editor with live linting (CF001–CF010) and file/context pickers, a capability-aware build-options panel with a redacted command preview, and a streaming build run panel (Timeline / Layers / Log) that can be cancelled.
+- Build Studio cache diagnostics — the step timeline marks each layer **CACHED / CACHE MISS / rebuilt**, summarises hits vs rebuilds, and calls out where caching broke plus the downstream cascade it forced (respecting stage independence).
+- Image layers view — dive-style waterfall with per-layer size bars and the heaviest layer highlighted, replacing the plain history table (reused inside the Build Studio's Layers tab).
 - Breadcrumb navigation on nested screens — one consistent, reusable trail (resource root → entity → sub-view) built on Blueprint's Breadcrumbs.
 
 ## Fixed
 
+- Image detail header shows a readable 12-char short id (e.g. `34166e496672`) for untagged/dangling `<none>` images instead of the full `sha256:` digest.
 - List scroll position is restored when returning from a detail screen to its list (header back button), including at the very end of long lists, with no drift — via `@tanstack/react-virtual`'s snapshot restoration.
 - Pod logs: the stdout and stderr panes now split vertically instead of stdout being pushed out of view.
 

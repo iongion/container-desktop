@@ -156,10 +156,48 @@ export function wrapCommandForActivity(command: ICommand): ICommand {
     return emitter; // returned unwrapped to the caller — the EventEmitter never crosses the bus
   };
 
+  const originalStreaming = command.ExecuteStreaming.bind(command);
+  const wrappedStreaming = async (launcher: string, args: string[], opts?: any) => {
+    const guid = crypto.randomUUID();
+    const startedAt = Date.now();
+    const commandLine = toCommandLine(launcher, args);
+    const base = {
+      guid,
+      invocation: "ExecuteStreaming" as const,
+      launcher,
+      args: args || [],
+      commandLine,
+      background: true,
+    };
+    emit({ ...base, date: startedAt, phase: "pending" });
+    const handle: any = await originalStreaming(launcher, args, opts);
+    let settled = false;
+    const settle = (extra: any) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      emit({ ...base, date: Date.now(), phase: "settled", durationMs: Date.now() - startedAt, ...extra });
+    };
+    try {
+      handle?.on?.("exit", (payload: any) => {
+        const code = typeof payload?.code === "number" ? payload.code : null;
+        settle({ status: code === 0 ? "ok" : "error", exitCode: code });
+      });
+      handle?.on?.("error", (payload: any) =>
+        settle({ status: "error", stderrPreview: preview(payload?.error?.message ?? payload?.error ?? payload) }),
+      );
+    } catch {
+      // Some handles may not expose `on`; the pending entry still records the launch.
+    }
+    return handle; // returned unwrapped — the StreamHandle never crosses the bus
+  };
+
   return {
     ...command,
     Execute: wrapResult("Execute"),
     Spawn: wrapResult("Spawn"),
     ExecuteAsBackgroundService: wrappedBackground,
+    ExecuteStreaming: wrappedStreaming,
   };
 }
