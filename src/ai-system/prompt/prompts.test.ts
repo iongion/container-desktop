@@ -8,7 +8,7 @@ const TEMPLATES = {
     "{% if kind === 'compose' %}",
     "You generate a Docker Compose file (compose.yaml) for a container project, used inside container-desktop.",
     "{% else %}",
-    "You generate a Dockerfile for a container project, used inside container-desktop.",
+    "You generate a Containerfile for a container project, used inside container-desktop.",
     "{% endif %}",
     "Output ONLY the file contents — no prose, no explanation, and no markdown code fences.",
     "Apply best practices: small/pinned base images, good layer caching, a non-root user where sensible,",
@@ -58,7 +58,7 @@ installPromptTemplates(TEMPLATES);
 describe("buildGeneratePrompt — file generator (Nunjucks)", () => {
   it("renders the dockerfile variant", () => {
     const p = buildGeneratePrompt("dockerfile");
-    expect(p).toContain("Dockerfile");
+    expect(p).toContain("Containerfile");
     expect(p).not.toContain("Docker Compose");
     expect(p).toContain("Output ONLY the file contents");
   });
@@ -66,7 +66,7 @@ describe("buildGeneratePrompt — file generator (Nunjucks)", () => {
   it("renders the compose variant", () => {
     const p = buildGeneratePrompt("compose");
     expect(p).toContain("Docker Compose file");
-    expect(p).not.toMatch(/^You generate a Dockerfile/);
+    expect(p).not.toMatch(/^You generate a Containerfile/);
   });
 });
 

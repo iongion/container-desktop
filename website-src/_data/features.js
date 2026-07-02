@@ -62,12 +62,25 @@ export default {
       alt: "Settings",
       flip: false,
     },
+    {
+      eyebrow: "Build images",
+      title: "Build images without leaving the app",
+      copy: "Author a Containerfile with live linting, set your tags, build args and target stage, then build on your native engine and watch a layered timeline — cache hits, misses and durations — before inspecting the finished image's layers.",
+      bullets: [
+        "Monaco editor with live Containerfile linting",
+        "Live build timeline with cache analysis",
+        "Dive-style layer inspector",
+      ],
+      img: "/img/podman/Build.png",
+      alt: "Building an image in the Build Studio",
+      flip: true,
+    },
   ],
   grid: [
     {
       tag: "IMAGES",
       title: "Images",
-      copy: "Pull, build, inspect and spawn containers with custom ports and mounts.",
+      copy: "Pull, inspect and spawn containers with custom ports and mounts.",
       img: "/img/podman/006-ImageActions.png",
     },
     {

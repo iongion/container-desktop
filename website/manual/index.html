@@ -90,8 +90,8 @@
       <div class="grp"><i class="fab fa-linux"></i> Linux</div><a href="#linux-req">Requirements</a><a href="#linux-quick">1 · Quick guide</a><a href="#linux-podman-docker">2 · Podman as Docker</a><a href="#linux-dd-alt">3 · Docker Desktop alternative</a><a href="#linux-share">4 · Sharing connection</a>
       <div class="grp"><i class="fab fa-apple"></i> macOS</div><a href="#macos-req">Requirements</a><a href="#macos-quick">1 · Quick guide</a><a href="#macos-best">2 · Best experience</a><a href="#macos-podman-docker">3 · Podman as Docker</a><a href="#macos-dd-alt">4 · Docker Desktop alternative</a><a href="#macos-apple-container">5 · Apple™ Container</a><a href="#macos-share">6 · Sharing connection</a>
       <div class="grp"><i class="fab fa-windows"></i> Windows</div><a href="#windows-req">Requirements</a><a href="#windows-quick">1 · Quick guide</a><a href="#windows-best">2 · Best experience</a><a href="#windows-podman-docker">3 · Podman as Docker</a><a href="#windows-dd-alt">4 · Docker Desktop alternative</a><a href="#windows-podman-custom">5 · Podman custom install</a><a href="#windows-share">6 · Sharing connection</a><a href="#windows-tips">7 · Tips &amp; tricks</a>
-      <div class="grp"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</div><a href="#assistant-what">What it is</a><a href="#assistant-model">Choose your model</a><a href="#assistant-do">What it can do</a><a href="#assistant-privacy">Privacy &amp; permissions</a><a href="#assistant-generator">Dockerfile &amp; Compose generator</a>
-      <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-logs">Live container logs</a><a href="#using-fonts">Font settings</a>
+      <div class="grp"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</div><a href="#assistant-what">What it is</a><a href="#assistant-model">Choose your model</a><a href="#assistant-do">What it can do</a><a href="#assistant-privacy">Privacy &amp; permissions</a><a href="#assistant-generator">Containerfile &amp; Compose generator</a>
+      <div class="grp"><i class="fas fa-book-open"></i> Using the app</div><a href="#using-notifications">Notification center &amp; activity log</a><a href="#using-build">Building images</a>
       <div class="grp"><i class="fas fa-keyboard"></i> Keyboard shortcuts</div><a href="#shortcuts-find">Find</a><a href="#shortcuts-all">All shortcuts</a>
     </aside>
 
@@ -454,8 +454,8 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 </div>
 </section>
 <section class="guide-sec" id="assistant-generator">
-<h3>Dockerfile &amp; Compose generator</h3>
-<p>A second AI screen (the caret in the header AI menu) <strong>drafts a Dockerfile or a Compose file</strong> from a short description and a starter template, streamed as it writes, ready to copy or save. Same model picker, same privacy rules.</p>
+<h3>Containerfile &amp; Compose generator</h3>
+<p>A second AI screen (the caret in the header AI menu) <strong>drafts a Containerfile or a Compose file</strong> from a short description and a starter template, streamed as it writes, ready to copy or save. Same model picker, same privacy rules.</p>
 </section>
 
       <div class="guide-os" id="using"><i class="fas fa-book-open"></i><h2>Using the app</h2></div>
@@ -471,13 +471,10 @@ kernelCommandLine = ipv6.disable=1 cgroup_no_v1=all
 <p>The Activity tab doubles as a <strong>learning tool</strong> — it shows exactly how Container Desktop drives Podman/Docker, so you can reproduce any action from a terminal.</p>
 </div>
 </section>
-<section class="guide-sec" id="using-logs">
-<h3>Live container logs</h3>
-<p>For a <strong>running</strong> container, logs <strong>stream live</strong> and a status pill shows <strong>LIVE / CONNECTING / ENDED / SNAPSHOT</strong>. Stopped containers load their logs once — refresh to reload. Use <strong>Ctrl / Cmd + F</strong> to search within the log (see <a href="#shortcuts">Keyboard shortcuts</a>).</p>
-</section>
-<section class="guide-sec" id="using-fonts">
-<h3>Font settings</h3>
-<p>Logs, terminals and code views use a monospace font you can change in <strong>Settings</strong>: pick any family installed on your system (type to filter), set the size and weight, or reset to the bundled <strong>JetBrains Mono</strong>. Your choice applies everywhere instantly.</p>
+<section class="guide-sec" id="using-build">
+<h3>Building images</h3>
+<p>Container Desktop builds container images for you — no terminal required. Open the <strong>Build Studio</strong> from the <strong>Build image</strong> button on the <strong>Images</strong> screen: author a Containerfile in the built-in editor (it <strong>lints as you type</strong>), set your tags, build args, target stage and platforms in the configuration panel, then hit <strong>Build image</strong> to run it on a native Podman or Docker engine. The <strong>Build run</strong> panel streams a <strong>Timeline</strong> — every step with a cache <strong>hit / miss</strong> badge and its duration — and, after a successful build, a <strong>Layers</strong> tab with a dive-style waterfall of the image's layers and sizes.</p>
+<img src="/img/podman/Build.png" alt="Building an image in the Build Studio" />
 </section>
 
       <div class="guide-os" id="shortcuts"><i class="fas fa-keyboard"></i><h2>Keyboard shortcuts</h2></div>

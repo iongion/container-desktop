@@ -108,19 +108,22 @@ export function buildMockConnections(): Connection[] {
     mockConnection({
       id: MOCK_PODMAN_SYSTEM_ID,
       name: "System Podman",
-      label: "Podman machine virtualization",
+      label: "Local Podman",
       engine: ContainerEngine.PODMAN,
-      host: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
-      uri: "unix:///run/user/1000/podman/podman-machine-default-api.sock",
+      // Native (local) transport so the Build Studio is reachable in mock mode — Build v1 is gated to native
+      // hosts (see screens/Build/Navigation isBuildSupported). The WSL/LIMA/SSH samples below still cover the
+      // virtualized and remote cases in the Connection Manager.
+      host: ContainerEngineHost.PODMAN_NATIVE,
+      uri: "unix:///run/user/1000/podman/podman.sock",
       autoStart: engines.includes(ContainerEngine.PODMAN),
-      controller: controller("podman", "podman-machine-default", MOCK_PODMAN_VERSION),
     }),
     mockConnection({
       id: MOCK_DOCKER_SYSTEM_ID,
       name: "System Docker",
-      label: "Docker virtualization",
+      label: "Local Docker",
       engine: ContainerEngine.DOCKER,
-      host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
+      // Native (local) transport so the Build Studio is reachable in mock mode (see the podman note above).
+      host: ContainerEngineHost.DOCKER_NATIVE,
       uri: "unix:///var/run/docker.sock",
       autoStart: engines.includes(ContainerEngine.DOCKER),
     }),

@@ -271,6 +271,7 @@ footer{border-top:1px solid var(--border);padding:60px 0 36px;background:rgba(va
 .guide-sec p{color:var(--ink-soft);font-weight:300;font-size:14.5px;margin:8px 0}
 .guide-sec ul,.guide-sec ol{margin:10px 0 10px 22px;color:var(--ink-soft);font-weight:300;font-size:14px}
 .guide-sec li{margin:6px 0}
+.guide-sec img{display:block;width:100%;max-width:820px;margin:18px 0 6px;border-radius:12px;border:1px solid var(--border-2)}
 .guide-sec a{color:var(--cyan)}.guide-sec a:hover{text-decoration:underline}
 .content :not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:var(--code-bg);border:1px solid var(--border);border-radius:5px;padding:2px 7px;color:var(--code-fg);white-space:nowrap}
 .content pre{background:var(--pre-bg);border:1px solid var(--border);border-radius:10px;padding:15px 17px;font-family:"JetBrains Mono",monospace;font-size:12.5px;

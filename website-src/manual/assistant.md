@@ -10,7 +10,7 @@ sections:
   - { id: assistant-model, label: "Choose your model" }
   - { id: assistant-do, label: "What it can do" }
   - { id: assistant-privacy, label: "Privacy & permissions" }
-  - { id: assistant-generator, label: "Dockerfile & Compose generator" }
+  - { id: assistant-generator, label: "Containerfile & Compose generator" }
 ---
 
 <section class="guide-sec" id="assistant-what">
@@ -74,8 +74,8 @@ A reject **never** runs. Review or revoke everything you've remembered — and t
 
 <section class="guide-sec" id="assistant-generator">
 
-### Dockerfile &amp; Compose generator
+### Containerfile &amp; Compose generator
 
-A second AI screen (the caret in the header AI menu) **drafts a Dockerfile or a Compose file** from a short description and a starter template, streamed as it writes, ready to copy or save. Same model picker, same privacy rules.
+A second AI screen (the caret in the header AI menu) **drafts a Containerfile or a Compose file** from a short description and a starter template, streamed as it writes, ready to copy or save. Same model picker, same privacy rules.
 
 </section>

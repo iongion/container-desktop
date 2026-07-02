@@ -66,6 +66,11 @@ demo-record:
 	fi; \
 	yarn demo:record
 
+build-assets:
+	$(MAKE) screenshots
+	$(MAKE) demo-record
+	$(MAKE) build-website
+
 # Cut a release, keeping docs / static site / screenshots / demo videos in sync
 # INSIDE the release commit. Runs the full local CI gate, bumps the version WITHOUT
 # committing, regenerates the deterministic screenshots + demo replay and the static
@@ -77,11 +82,9 @@ demo-record:
 # `make release PART=minor` (default: patch). Aborts if CHANGELOG.md [Unreleased] is
 # empty, so document the release first.
 release: test
-	@echo "Releasing: bump ($(PART)) → screenshots → demo replay → website → commit → trigger CDPipeline"
+	@echo "Releasing: bump ($(PART)) → build-assets → commit → trigger CDPipeline"
 	uv run --locked invoke bump --part=$(PART) --perform --no-commit
-	$(MAKE) screenshots
-	$(MAKE) demo-record
-	$(MAKE) build-website
+	$(MAKE) build-assets
 	uv run --locked invoke commit-release
 	@V=$$(cat VERSION); echo "Triggering CDPipeline for $$V"; \
 	gh workflow run CDPipeline.yml --ref main \

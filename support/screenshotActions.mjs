@@ -219,6 +219,17 @@ export async function askAssistant(page, prompt) {
   await page.locator('[data-screen="ai.assistant"] .AICard').first().waitFor({ timeout: 30_000 });
 }
 
+// Drive the Build Studio into a completed build for the screenshot: click "Build image" and wait for the run
+// to reach the succeeded state. The studio seeds a starter Containerfile and defaults to a native connection,
+// so the button is enabled on load; in mock mode buildFixtures replays engine-shaped output so the timeline
+// fills and the run succeeds without a real engine.
+export async function runBuild(page) {
+  const button = page.locator(".BuildActionButton").first();
+  await button.waitFor({ timeout: 30_000 });
+  await button.click();
+  await page.locator('[data-region="run"][data-build-status="succeeded"]').first().waitFor({ timeout: 60_000 });
+}
+
 export async function runPreActions(page, actions = []) {
   for (const action of actions) {
     if (action.action === "openRowActions") {
@@ -227,6 +238,8 @@ export async function runPreActions(page, actions = []) {
       await openNetworkCreate(page);
     } else if (action.action === "askAssistant") {
       await askAssistant(page, action.prompt);
+    } else if (action.action === "runBuild") {
+      await runBuild(page);
     } else if (action.action === "setSidebarExpanded") {
       await setSidebarExpanded(page, action.expanded !== false);
     } else {

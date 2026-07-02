@@ -1,4 +1,4 @@
-// Dockerfile / Compose generator. Pick a template, edit it in Monaco, then use
+// Containerfile / Compose generator. Pick a template, edit it in Monaco, then use
 // the shared <AIComposer> (same interaction as the Assistant) to stream a fresh/improved file into the
 // editor (window.AI.generate → AIBus by streamId). Gated by Metadata.RequiresAI. Save uses file-saver.
 import { Button, ButtonGroup, HTMLSelect } from "@blueprintjs/core";
@@ -38,7 +38,7 @@ export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
 
-  const [kind, setKind] = useState<"dockerfile" | "compose">("dockerfile");
+  const [kind, setKind] = useState<"containerfile" | "compose">("containerfile");
   const [lang, setLang] = useState(LANGS[0]);
   const [value, setValue] = useState(DOCKERFILE_TEMPLATES[LANGS[0]]);
   const [generating, setGenerating] = useState(false);
@@ -62,7 +62,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     });
   }, []);
 
-  const loadTemplate = (nextKind: "dockerfile" | "compose", nextLang: string) => {
+  const loadTemplate = (nextKind: "containerfile" | "compose", nextLang: string) => {
     setKind(nextKind);
     setLang(nextLang);
     setValue(nextKind === "compose" ? COMPOSE_TEMPLATE : DOCKERFILE_TEMPLATES[nextLang]);
@@ -82,7 +82,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   };
 
   const onSave = () => {
-    const name = kind === "compose" ? "compose.yaml" : "Dockerfile";
+    const name = kind === "compose" ? "compose.yaml" : "Containerfile";
     saveAs(new Blob([value], { type: "text/plain;charset=utf-8" }), name);
   };
 
@@ -91,14 +91,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
       <div className="GeneratorHeader">
         <ButtonGroup>
           <Button
-            active={kind === "dockerfile"}
-            text={t("Dockerfile")}
-            onClick={() => loadTemplate("dockerfile", lang)}
+            active={kind === "containerfile"}
+            text={t("Containerfile")}
+            onClick={() => loadTemplate("containerfile", lang)}
           />
           <Button active={kind === "compose"} text={t("Compose")} onClick={() => loadTemplate("compose", lang)} />
         </ButtonGroup>
-        {kind === "dockerfile" ? (
-          <HTMLSelect value={lang} onChange={(e) => loadTemplate("dockerfile", e.currentTarget.value)}>
+        {kind === "containerfile" ? (
+          <HTMLSelect value={lang} onChange={(e) => loadTemplate("containerfile", e.currentTarget.value)}>
             {LANGS.map((l) => (
               <option key={l} value={l}>
                 {l}
@@ -112,7 +112,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       <div className="GeneratorEditor">
         <CodeEditor
           value={value}
-          mode={kind === "compose" ? "yaml" : "dockerfile"}
+          mode={kind === "compose" ? "yaml" : "containerfile"}
           readOnly={false}
           onChange={setValue}
         />

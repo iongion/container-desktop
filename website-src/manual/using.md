@@ -7,8 +7,7 @@ order: 10
 permalink: false
 sections:
   - { id: using-notifications, label: "Notification center & activity log" }
-  - { id: using-logs, label: "Live container logs" }
-  - { id: using-fonts, label: "Font settings" }
+  - { id: using-build, label: "Building images" }
 ---
 
 <section class="guide-sec" id="using-notifications">
@@ -30,18 +29,12 @@ The Activity tab doubles as a **learning tool** — it shows exactly how Contain
 
 </section>
 
-<section class="guide-sec" id="using-logs">
+<section class="guide-sec" id="using-build">
 
-### Live container logs
+### Building images
 
-For a **running** container, logs **stream live** and a status pill shows **LIVE / CONNECTING / ENDED / SNAPSHOT**. Stopped containers load their logs once — refresh to reload. Use **Ctrl / Cmd + F** to search within the log (see [Keyboard shortcuts](#shortcuts)).
+Container Desktop builds container images for you — no terminal required. Open the **Build Studio** from the **Build image** button on the **Images** screen: author a Containerfile in the built-in editor (it **lints as you type**), set your tags, build args, target stage and platforms in the configuration panel, then hit **Build image** to run it on a native Podman or Docker engine. The **Build run** panel streams a **Timeline** — every step with a cache **hit / miss** badge and its duration — and, after a successful build, a **Layers** tab with a dive-style waterfall of the image's layers and sizes.
 
-</section>
-
-<section class="guide-sec" id="using-fonts">
-
-### Font settings
-
-Logs, terminals and code views use a monospace font you can change in **Settings**: pick any family installed on your system (type to filter), set the size and weight, or reset to the bundled **JetBrains Mono**. Your choice applies everywhere instantly.
+<img src="/img/podman/Build.png" alt="Building an image in the Build Studio" />
 
 </section>

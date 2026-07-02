@@ -32,11 +32,13 @@ const DEFAULT_PORT = 9322;
 const DEFAULT_CAPTURE_SETTLE_MS = 1000;
 
 function parseArgs(argv) {
-  const args = { mode: "dev", killStray: false, engines: null, only: null };
+  const args = { mode: "dev", killStray: false, engines: null, only: null, clean: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--kill-stray") {
       args.killStray = true;
+    } else if (arg === "--clean") {
+      args.clean = true;
     } else if (arg.startsWith("--mode=")) {
       args.mode = arg.slice("--mode=".length);
     } else if (arg === "--mode") {
@@ -267,8 +269,12 @@ function materializeItem(item, engine) {
   };
 }
 
-async function cleanOutputDirectories(engines, only) {
-  if (!only) {
+// Default is NON-DESTRUCTIVE: only ensure the engine folders exist and let each capture OVERWRITE its own
+// file in place, so a scoped run — or one that fails partway — never wipes screenshots it isn't regenerating.
+// Pass `--clean` (full runs only) to restore the old prune: drop the stale flat files and wipe each engine
+// folder first, so the output ends up matching the manifest exactly.
+async function cleanOutputDirectories(engines, only, clean) {
+  if (clean && !only) {
     for (const file of STALE_FLAT_SCREENSHOTS) {
       await rm(path.join(OUT_DIR, file), { force: true });
     }
@@ -280,11 +286,7 @@ async function cleanOutputDirectories(engines, only) {
     return;
   }
   for (const engine of engines) {
-    const engineOutDir = path.join(OUT_DIR, engine);
-    mkdirSync(engineOutDir, { recursive: true });
-    for (const file of only) {
-      await rm(path.join(engineOutDir, file), { force: true });
-    }
+    mkdirSync(path.join(OUT_DIR, engine), { recursive: true });
   }
 }
 
@@ -310,7 +312,7 @@ async function main() {
   if (args.killStray) {
     await killStray();
   }
-  await cleanOutputDirectories(engines, args.only);
+  await cleanOutputDirectories(engines, args.only, args.clean);
   let port = DEFAULT_PORT;
   for (const engine of engines) {
     const manifest = args.only

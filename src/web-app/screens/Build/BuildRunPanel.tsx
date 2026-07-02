@@ -32,7 +32,7 @@ export const BuildRunPanel: React.FC<BuildRunPanelProps> = ({ run, ast, layers }
   const statusLabel = run ? (run.status === "running" ? t("running…") : t(run.status)) : t("idle");
 
   return (
-    <section className="panel run-panel" data-region="run">
+    <section className="panel run-panel" data-region="run" data-build-status={run?.status ?? "idle"}>
       <header>
         <Icon icon={IconNames.BUILD} />
         {t("Build run")}

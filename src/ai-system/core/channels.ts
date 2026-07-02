@@ -51,9 +51,9 @@ export interface ModelsListResult {
   models: ListedModel[];
 }
 
-// One-shot Dockerfile/Compose generation. Streams its result over the same streamEvent channel.
+// One-shot Containerfile/Compose generation. Streams its result over the same streamEvent channel.
 export interface GenerateRequest {
-  kind: "dockerfile" | "compose";
+  kind: "containerfile" | "compose";
   template?: string;
   instruction?: string;
   providerId?: string;

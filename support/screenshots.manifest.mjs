@@ -49,6 +49,17 @@ export const screenshotManifest = [
     minCountByEngine: { podman: 4, docker: 5, unified: 5 },
   },
   {
+    // The Build Studio driven to a completed build so the timeline fills. The studio seeds a starter
+    // Containerfile and defaults to a native connection, so "Build image" is enabled on load; the runBuild
+    // pre-action clicks it and buildFixtures replays engine-shaped output to a succeeded run (Timeline is the
+    // default tab, so no image-history mock is needed). Build runs on all native engines → captured for each.
+    file: "Build.png",
+    route: "/screens/build",
+    pre: [{ action: "runBuild" }],
+    waitFor: '[data-region="run"][data-build-status="succeeded"]',
+    settleMs: 1200,
+  },
+  {
     file: "Pods.png",
     route: "/screens/pods",
     waitForByEngine: {
@@ -61,8 +72,8 @@ export const screenshotManifest = [
   },
   {
     file: "UserSettings.png",
-    route: "/screens/settings/user-settings?category=config",
-    waitFor: '[data-screen="settings-settings"] [data-form="configuration"]',
+    route: "/screens/settings/user-settings?category=network",
+    waitFor: '[data-screen="settings-settings"] [data-form="network"]',
   },
   {
     // The AI assistant driven into a rendered generative-UI card. Same prompt across engines so the shot is

@@ -2,7 +2,7 @@
 
 A **local-first** AI assistant for your container engines: one always-agentic conversation that can run
 host commands to inspect and fix your setup — gated entirely by a permission mode you choose — plus a
-Dockerfile/Compose generator. It is an expert in the Podman, Docker and Apple Container engines across
+Containerfile/Compose generator. It is an expert in the Podman, Docker and Apple Container engines across
 local, SSH-remote, WSL and Lima/Colima access.
 
 The governing rule matches the rest of the app: **main is the only authority**. Provider keys, provider

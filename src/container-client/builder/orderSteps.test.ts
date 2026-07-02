@@ -6,7 +6,7 @@ import type { BuildStep } from "./types";
 const step = (name: string): BuildStep => ({ key: name, index: 0, name, status: "done", cached: false, logs: [] });
 
 describe("orderBuildSteps", () => {
-  it("orders buildx DAG-emitted steps by Dockerfile step number ([N/M]); internal first, export last", () => {
+  it("orders buildx DAG-emitted steps by Containerfile step number ([N/M]); internal first, export last", () => {
     // buildx --progress=rawjson emits vertices target-first, so the numbered steps arrive descending.
     const emitted = [
       step("[internal] load build definition"),
