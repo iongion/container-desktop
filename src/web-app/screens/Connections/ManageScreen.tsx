@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import { getDefaultConnectors } from "@/container-client";
 import { Application } from "@/container-client/Application";
 import type { Connection, Connector } from "@/env/Types";
-import { CopyToClipboardInput } from "@/web-app/components/CopyToClipboardInput";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -274,7 +273,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   const isCurrent = currentConnector?.connectionId === connection?.id;
                   const isConnected = isCurrent && currentConnector.availability.api;
                   const isAutomatic = connection.settings.mode === "mode.automatic";
-                  const connectionUri = connection.settings?.api?.connection?.uri || "";
                   return (
                     <tr
                       key={connection.id}
@@ -290,9 +288,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <td>{index + 1}.</td>
                       <td>
                         <p className="PlatformConnectionName">{connection.name}</p>
-                        {connectionUri ? (
-                          <CopyToClipboardInput className="PlatformConnectionUri" value={connectionUri} />
-                        ) : null}
                         {connection.description ? (
                           <p className="PlatformConnectionDescription">{connection.description}</p>
                         ) : null}

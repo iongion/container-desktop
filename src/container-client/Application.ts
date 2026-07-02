@@ -68,6 +68,18 @@ import { deepMerge } from "@/utils";
 // named exports (detectOperatingSystem, normalizeAndSortSearchResults) byte-for-byte.
 export { detectOperatingSystem, normalizeAndSortSearchResults };
 
+// A tiny, dependency-free stable hash (FNV-1a 32-bit → 8 hex). This module is bundled into the renderer, where
+// Node builtins like node:crypto are unavailable — so we hash in plain JS to keep a short, deterministic
+// forward-socket filename that fits the ~104-byte Unix-domain-socket path limit.
+function shortStableHash(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < input.length; index++) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 export class Application {
   private static instance: Application;
 
@@ -988,10 +1000,13 @@ export class Application {
     ) {
       return;
     }
+    // A Unix-domain socket path is capped at ~104 bytes; a long connection id (host.<uuid>.docker.remote)
+    // overflows it → listen EINVAL. Hash the id to a short, stable filename. Windows named pipes have no such
+    // limit, so they keep the full, readable id.
     settings.api.connection.uri =
       this.osType === OperatingSystem.Windows
         ? getWindowsPipePath(connection.id)
-        : await Path.join(await Platform.getUserDataPath(), `container-desktop-ssh-relay-${connection.id}`);
+        : await Path.join(await Platform.getUserDataPath(), `cdt-ssh-${shortStableHash(connection.id)}.sock`);
   }
 
   async createConnectorContainerEngineHostClient(

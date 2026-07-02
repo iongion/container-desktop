@@ -35,7 +35,7 @@ import {
 } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { deepMerge, isEmpty } from "@/utils";
-import { findProgramPath, findProgramVersion } from "../detector";
+import { findProgramPath, findProgramVersion, isWindowsProgramPath } from "../detector";
 import type { EngineDialect, HostContext, HostProfile, Transport } from "./composition";
 import type { ApiSurface, CapabilityDescriptor, HostClientFacade } from "./facade";
 
@@ -242,6 +242,19 @@ export class HostClient implements HostContext {
     return this.transport.runScopeCommand(this, program, args, scope, settings);
   }
 
+  runScopeCommandStreaming(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<StreamHandle> {
+    return this.transport.runScopeCommandStreaming(this, program, args, scope, settings);
+  }
+
+  resolveGuestPath(localPath: string, scope: string, settings?: EngineConnectorSettings): Promise<string> {
+    return this.transport.resolveGuestPath(this, localPath, scope, settings);
+  }
+
   // system / events (system info delegated to the dialect; events stream uses the raw driver)
 
   getSystemInfo(
@@ -272,6 +285,19 @@ export class HostClient implements HostContext {
       stderr: result.stderr || "",
     });
     return result;
+  }
+
+  // Streaming twin of runHostCommand: spawns the same launcher via Command.ExecuteStreaming and returns the
+  // live StreamHandle. The scoped/remote build streams its wrapper CLI (wsl/limactl/ssh) through this.
+  async runHostCommandStreaming(program: string, args?: string[]): Promise<StreamHandle> {
+    const commandLauncher =
+      this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
+    this.logger.debug(this.id, ">> Running host command (streaming)", [commandLauncher].concat(args || []).join(" "));
+    return await Command.ExecuteStreaming(
+      commandLauncher,
+      args || [],
+      this.isScoped() ? undefined : { proxyEnv: true },
+    );
   }
 
   async isProgramAvailable(settings: EngineConnectorSettings): Promise<AvailabilityCheck> {
@@ -677,8 +703,20 @@ export class HostClient implements HostContext {
       return await this.runScopeCommand(path, args, userSettings.controller?.scope || "");
     };
     const output = deepMerge({}, program);
-    output.path = await findProgramPath(program.name, { osType: OperatingSystem.Linux }, executor);
-    output.version = await findProgramVersion(output.path, { osType: OperatingSystem.Linux }, executor);
+    // Scoped/remote hosts are usually POSIX (Linux VM / macOS over SSH) — try that first so those paths stay
+    // byte-for-byte unchanged (no extra round-trip). A Windows SSH remote runs cmd.exe, which has no
+    // `which`/`whereis`; fall back to `where` and remember the OS so the version call quotes the path.
+    let osType = OperatingSystem.Linux;
+    let path = await findProgramPath(program.name, { osType: OperatingSystem.Linux }, executor);
+    if (!path) {
+      const windowsPath = await findProgramPath(program.name, { osType: OperatingSystem.Windows }, executor);
+      if (windowsPath) {
+        path = windowsPath;
+        osType = OperatingSystem.Windows;
+      }
+    }
+    output.path = path || "";
+    output.version = path ? await findProgramVersion(path, { osType }, executor) : "";
     return output;
   }
 
@@ -687,7 +725,10 @@ export class HostClient implements HostContext {
       const userSettings = settings || (await this.getSettings());
       return await this.runScopeCommand(path, args, userSettings.controller?.scope || "");
     };
-    return await findProgramVersion(program.path, { osType: OperatingSystem.Linux }, executor);
+    // Infer the remote OS from the path shape (C:\...\docker.exe ⇒ Windows) so the version call quotes and
+    // invokes it correctly over cmd.exe; POSIX paths keep the Linux behavior.
+    const osType = isWindowsProgramPath(program.path) ? OperatingSystem.Windows : OperatingSystem.Linux;
+    return await findProgramVersion(program.path, { osType }, executor);
   }
 
   async getConnectionDataDir() {

@@ -89,18 +89,20 @@ export function engineInventoryTriggerLabel(inventory: EngineInventory, fallback
     return systemLabels.join(" / ");
   }
 
-  const engines = new Set<string>();
+  const labels = new Set<string>();
   for (const group of inventory.groups) {
     if (group === system) {
       continue;
     }
     for (const engine of group.engines) {
       if (engine.running) {
-        engines.add(engine.engine);
+        // Show the detected version (like the system branch + the popover) rather than a bare engine name,
+        // so a remote engine (e.g. Windows Docker over SSH) surfaces its version in the footer too.
+        labels.add(engine.version ? `${engine.engine} ${engine.version}` : engine.engine);
       }
     }
   }
-  return engines.size > 0 ? [...engines].join(" / ") : fallback;
+  return labels.size > 0 ? [...labels].join(" / ") : fallback;
 }
 
 function statusLabel(engine: EngineInventoryEntry, t: (key: string) => string): string {

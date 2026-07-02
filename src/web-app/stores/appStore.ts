@@ -674,6 +674,8 @@ export const useAppStore = create<AppStore>()((set, get) => {
         try {
           await waitForPendingPaint();
           await window.MessageBus.invoke(RESOURCE_SYNC.disconnect, { connectionId });
+          // Note: the disconnected connection's cached resources (byConnection + react-query) are pruned
+          // centrally by the resource mirror when main's next merged snapshot drops it — see resourceMirror.ts.
         } catch (error: any) {
           logger.error("Unable to disconnect engine", connectionId, error);
         }

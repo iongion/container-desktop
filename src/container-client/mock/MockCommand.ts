@@ -30,11 +30,67 @@ function engineForLauncher(launcher: string): ContainerEngine {
   return getMockEngine();
 }
 
+// For a scoped/remote build the launcher is a wrapper (wsl/limactl/ssh/podman machine ssh), so the engine
+// name rides in the args (e.g. ["--distribution","Ubuntu","--exec","podman","build",…]). When the launcher
+// doesn't itself name an engine, pick it from the first engine token in the args; otherwise fall back.
+function engineForStreamingArgs(launcher: string, flat: string[]): ContainerEngine {
+  const normalizedLauncher = `${launcher}`.toLowerCase();
+  if (!/docker|podman|container/.test(normalizedLauncher)) {
+    for (const token of flat) {
+      const value = `${token}`.toLowerCase();
+      if (value === "docker") {
+        return ContainerEngine.DOCKER;
+      }
+      if (value === "podman") {
+        return ContainerEngine.PODMAN;
+      }
+      if (value === "container") {
+        return ContainerEngine.APPLE;
+      }
+    }
+  }
+  return engineForLauncher(launcher);
+}
+
+// Scope wrappers run a program INSIDE the guest: `wsl … --exec <prog> <args>`, `limactl shell <scope> <prog>
+// <args>`, `podman machine ssh <scope> [-o …] <prog> <args>`. Unwrap to the real program so the fixture-backed
+// reads (version / which / system info / echo) answer the same as a native call and a scoped connection boots.
+function unwrapScopeCommand(launcher: string, flat: string[]): { program: string; args: string[] } | undefined {
+  const l = `${launcher}`.toLowerCase();
+  if (l.includes("wsl")) {
+    const idx = flat.indexOf("--exec");
+    if (idx >= 0 && flat[idx + 1]) {
+      return { program: flat[idx + 1], args: flat.slice(idx + 2) };
+    }
+  }
+  if (l.includes("limactl") && flat[0] === "shell" && flat[2]) {
+    return { program: flat[2], args: flat.slice(3) };
+  }
+  if (l.includes("podman") && flat[0] === "machine" && flat[1] === "ssh") {
+    let i = 3;
+    while (flat[i] === "-o") {
+      i += 2;
+    }
+    if (flat[i]) {
+      return { program: flat[i], args: flat.slice(i + 1) };
+    }
+  }
+  return undefined;
+}
+
 async function runCli(launcher: string, args: string[]): Promise<CommandExecutionResult> {
-  const engine = engineForLauncher(launcher);
   const flat = (args || []).map((a) => `${a}`);
+  const unwrapped = unwrapScopeCommand(launcher, flat);
+  if (unwrapped) {
+    return await runCli(unwrapped.program, unwrapped.args);
+  }
+  const engine = engineForLauncher(launcher);
   const normalizedLauncher = `${launcher}`.toLowerCase();
   const firstArg = `${flat[0] || ""}`.toLowerCase();
+  // `echo <x>` (used by the WSL/LIMA scope start-checks) echoes its argument.
+  if (normalizedLauncher === "echo" || normalizedLauncher.endsWith("/echo")) {
+    return okResult({ stdout: `${flat.join(" ")}\n` });
+  }
   if ((normalizedLauncher.endsWith("which") || normalizedLauncher.endsWith("whereis")) && firstArg === "trivy") {
     return okResult({
       stdout: normalizedLauncher.endsWith("whereis") ? "trivy: /usr/bin/trivy\n" : "/usr/bin/trivy\n",
@@ -147,7 +203,7 @@ export function createMockCommand(): ICommand {
       const emitter = new EventEmitter();
       const flat = (args || []).map((a) => `${a}`);
       const isBuild = flat.includes("build");
-      const engine = engineForLauncher(launcher);
+      const engine = engineForStreamingArgs(launcher, flat);
       // Replay engine-shaped build output on a macrotask so the caller's `handle.on(...)` attaches first.
       setTimeout(async () => {
         if (isBuild) {

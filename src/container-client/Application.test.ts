@@ -21,11 +21,25 @@ function emptyUriSettings(): EngineConnectorSettings {
 const conn = (host: ContainerEngineHost): Connection => ({ id: "demo", host }) as unknown as Connection;
 
 describe("Application.ensureRemoteForwardAddress", () => {
-  it("derives a local forward socket for remote SSH hosts when the uri is empty (Linux/macOS)", async () => {
+  it("derives a short, bounded local forward socket for remote SSH hosts when the uri is empty (Linux/macOS)", async () => {
     const app = appFor(OperatingSystem.Linux);
     const settings = emptyUriSettings();
     await app.ensureRemoteForwardAddress(conn(ContainerEngineHost.PODMAN_REMOTE), settings);
-    expect(settings.api.connection.uri).toContain("container-desktop-ssh-relay-demo");
+    const basename = settings.api.connection.uri.split(/[\\/]/).pop() || "";
+    expect(basename).toMatch(/^cdt-ssh-[0-9a-f]{8}\.sock$/);
+  });
+
+  it("keeps the Linux forward socket well under the ~104-byte Unix-socket path limit for a long connection id", async () => {
+    const app = appFor(OperatingSystem.Linux);
+    const settings = emptyUriSettings();
+    const longConn = {
+      id: "host.e2997885-76e0-4ee9-a677-916d5f1dda08.docker.remote",
+      host: ContainerEngineHost.DOCKER_REMOTE,
+    } as unknown as Connection;
+    await app.ensureRemoteForwardAddress(longConn, settings);
+    // The basename is what our fix bounds (the id no longer bloats the path).
+    const basename = settings.api.connection.uri.split(/[\\/]/).pop() || "";
+    expect(basename.length).toBeLessThanOrEqual(30);
   });
 
   it("uses the Windows named pipe for remote SSH hosts on Windows", async () => {

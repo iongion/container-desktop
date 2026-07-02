@@ -13,6 +13,7 @@ import {
   type Connection,
   ContainerEngine,
   ContainerEngineHost,
+  type DialStdioBridge,
   type EngineConnectorSettings,
   type PodmanMachineInspect,
   StartupStatus,
@@ -23,6 +24,7 @@ import { getAvailablePodmanMachines, normalizePodmanMachines } from "../../share
 import type { EngineDialect, EngineExtensionMethods, HostContext } from "../composition";
 import type { CapabilityDescriptor } from "../facade";
 import { PODMAN_SORT_CAPABILITIES } from "../sort-capabilities";
+import { resolvePodmanMachineBridge } from "./podman-machine-ssh";
 import {
   expandScopedSocketPath,
   isScopedMacOS,
@@ -114,6 +116,29 @@ export const podmanDialect: EngineDialect = {
     }
     const info = await host.getSystemInfo(undefined, undefined, settings);
     return info?.host?.remoteSocket?.path || "";
+  },
+
+  // A remote Podman MACHINE (WSL on Windows, QEMU on macOS) keeps its API socket inside the VM, and podman's
+  // own remote client can't dial it from a non-interactive SSH session (its Go SSH client won't load the
+  // machine identity). So bridge it: nest OpenSSH into the machine and run the VM's local `podman system
+  // dial-stdio`. Details come from `podman system connection list` (URI + identity). A native remote Podman
+  // has no machine connection ⇒ undefined ⇒ the caller keeps the `ssh -NL` unix-socket forward.
+  async resolveDialStdioBridge(
+    host: HostContext,
+    settings: EngineConnectorSettings,
+  ): Promise<DialStdioBridge | undefined> {
+    if (host.HOST !== ContainerEngineHost.PODMAN_REMOTE) {
+      return undefined;
+    }
+    const program = settings.program.path || settings.program.name || host.PROGRAM;
+    const output = await runScopedSocketCommand(host, settings, program, [
+      "system",
+      "connection",
+      "list",
+      "--format",
+      "json",
+    ]);
+    return output.success ? resolvePodmanMachineBridge(output.stdout || "") : undefined;
   },
 
   async resolveNativeURISeed(): Promise<string> {

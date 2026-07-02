@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Connect to a **Docker Engine on a Windows remote over SSH** — the engine API is tunneled through an SSH `docker system dial-stdio` bridge into a local socket/named pipe (no TCP relay, even locally), making Docker Desktop's named-pipe engine reachable from macOS/Linux.
+- Connect to a **Podman machine on a Windows remote over SSH** — reached by nesting OpenSSH into the machine's VM and running its local `podman system dial-stdio`, bridging the in-VM engine socket with no docker dependency and no insecure TCP. Docker and Podman now share one unified SSH stdio-bridge (the dialect resolves the bridge command; the transport just runs it).
+
+### Fixed
+
+- Disconnecting an engine now clears its containers/images/volumes from the merged lists immediately, instead of leaving the disconnected engine's resources lingering.
+- Returning to a resource list that shrank while you were away (e.g. after disconnecting an engine) no longer renders a large empty gap with the rows scrolled out of view — a stale saved scroll offset the shorter list can no longer reach is discarded, so it renders correctly on the first visit.
+- The list Reload action refreshes every connected engine and no longer stops if one connection drops mid-refresh.
+- The footer engine menu shows the version for remote engines (e.g. Docker over SSH), matching the details popover.
+- Engine-specific navigation such as Swarm is enabled from any running connection's capabilities, not only the primary connection.
+- Icon fills of the two icon systems.
+
 ## [5.3.12] - 2026-07-02
 
 ### Added

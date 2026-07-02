@@ -594,6 +594,16 @@ body[data-engine]
   color: var(--app-current-intent-text);
 }
 
+/* Non-intent STANDALONE icons (framework .bp6-icon + mdi .ReactIcon/.AppLabelIcon that are NOT inside a
+   button). DARK only: lift to the bright --app-text so mdi and framework match and nothing reads as pure
+   white. LIGHT standalone is intentionally left untouched (Blueprint for framework; the light.css mdi rule
+   for .ReactIcon). In-button icons are handled below; intent icons keep their own color (rule above). */
+body.bp6-dark[data-engine] :is(.bp6-icon, .bp6-icon-standard, .bp6-icon-large):not([class*="bp6-intent-"]),
+body.bp6-dark[data-engine] .ReactIcon,
+body.bp6-dark[data-engine] .AppLabelIcon {
+  color: var(--app-text);
+}
+
 body[data-engine]
   :is(.bp6-callout, .bp6-toast, .bp6-tooltip, .bp6-progress-bar, .bp6-slider-progress, .bp6-spinner):is(
     .bp6-intent-primary,
@@ -737,6 +747,20 @@ body[data-engine] .bp6-button:not([class*="bp6-intent-"]) .bp6-icon svg,
 body[data-engine] .bp6-button:not([class*="bp6-intent-"]) > svg,
 body[data-engine] .bp6-button:not([class*="bp6-intent-"]) svg path {
   fill: currentColor;
+}
+/* Non-intent BUTTON icons — mdi (.ReactIcon) + framework (.bp6-icon) — render the SAME fill in a button
+   (sidebar, footer, action bars). LIGHT is already handled by the currentColor rule above: both the raw
+   .ReactIcon svg and the framework .bp6-icon take the button's text color, so mdi and framework match with no
+   extra rule (light stays exactly as before). DARK is the only place they diverge — Blueprint dims framework
+   button icons (its own 4124 rule) while the mdi svg falls to the white button text — so lift BOTH families to
+   the bright --app-text. Framework is kept at (0,6,1) so the AI-accent caret rule (0,7,1) still wins, and its
+   disabled icons stay dimmed via Blueprint's `color: inherit !important`; the mdi rule guards :not(:disabled)
+   so disabled mdi icons fall through to currentColor (dimmed) like the framework ones. */
+body.bp6-dark[data-engine] .bp6-button:not([class*="bp6-intent-"]) .bp6-icon:not([class*="bp6-intent-"]) {
+  color: var(--app-text);
+}
+body.bp6-dark[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(:disabled):not(.bp6-disabled) .ReactIcon {
+  color: var(--app-text);
 }
 
 /* HTMLSelect (`.bp6-html-select select`) mirrors the filled default-button look — same intent-default tokens,

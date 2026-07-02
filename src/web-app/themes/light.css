@@ -76,6 +76,8 @@ body.bp6-light table[data-table="image.scanning.report.counts"] tr[data-severity
   color: #666;
 }
 
+/* Light standalone mdi icons keep Blueprint's muted slate (the dark brightening to --app-text is scoped to
+   dark in tokens.css; in-button mdi mirrors the framework muted tone there too, so light stays unchanged). */
 body.bp6-light .ReactIcon,
 body.bp6-light .AppLabelIcon {
   color: #5f6b7c;

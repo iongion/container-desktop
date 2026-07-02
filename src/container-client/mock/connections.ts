@@ -104,6 +104,11 @@ export function buildMockConnections(): Connection[] {
   // ./mode getMockEngines). The remote SSH/WSL/LIMA samples stay manual — they exist to populate the
   // Connection Manager, not to connect at boot.
   const engines = getMockEngines();
+  // Opt-in scoped build target: CONTAINER_DESKTOP_MOCK_SCOPED=wsl|lima auto-starts a WSL/LIMA sample so the
+  // Build Studio can exercise a scoped build in mock mode. The default mock is unchanged.
+  const scopedFlag = `${process.env.CONTAINER_DESKTOP_MOCK_SCOPED ?? ""}`.toLowerCase();
+  const wslAuto = scopedFlag === "wsl";
+  const limaAuto = scopedFlag === "lima";
   return [
     mockConnection({
       id: MOCK_PODMAN_SYSTEM_ID,
@@ -154,7 +159,7 @@ export function buildMockConnections(): Connection[] {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
       uri: "unix:///mnt/wsl/Ubuntu-24.04/run/user/1000/podman/podman.sock",
-      autoStart: false,
+      autoStart: wslAuto,
       controller: controller("wsl", "Ubuntu-24.04", "2"),
     }),
     mockConnection({
@@ -174,7 +179,7 @@ export function buildMockConnections(): Connection[] {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
       uri: "unix:///Users/demo/.lima/podman/sock/podman.sock",
-      autoStart: false,
+      autoStart: limaAuto,
       controller: controller("limactl", "podman-lima"),
     }),
     mockConnection({

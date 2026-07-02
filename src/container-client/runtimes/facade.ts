@@ -168,12 +168,23 @@ export interface HostClientFacade
 
   // commands / detection
   runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings): Promise<CommandExecutionResult>;
+  /** Streaming twin of runHostCommand (Command.ExecuteStreaming) — the scoped/remote build streams its wrapper CLI through this. */
+  runHostCommandStreaming(program: string, args?: string[], settings?: EngineConnectorSettings): Promise<StreamHandle>;
   runScopeCommand(
     program: string,
     args: string[],
     scope: string,
     settings?: EngineConnectorSettings,
   ): Promise<CommandExecutionResult>;
+  /** Streaming scoped exec — the scope wrapper streamed via Command.ExecuteStreaming (Native throws). */
+  runScopeCommandStreaming(
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<StreamHandle>;
+  /** Translate a LOCAL host path to its guest-side path for a scoped engine (WSL: drive-letter → /mnt/…; Lima/machine/ssh: identity). */
+  resolveGuestPath(localPath: string, scope: string, settings?: EngineConnectorSettings): Promise<string>;
   findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program>;
   findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program>;
   findHostProgramVersion(program: Program, settings?: EngineConnectorSettings): Promise<string>;

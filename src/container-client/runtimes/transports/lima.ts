@@ -26,6 +26,11 @@ export class LIMATransport implements Transport {
     return true;
   }
 
+  // `limactl shell <scope> <program> <args…>` — shared by the buffered + streaming paths.
+  private buildScopeArgv(scope: string, program: string, args: string[]): string[] {
+    return ["shell", scope, program, ...args];
+  }
+
   async runScopeCommand(
     host: HostContext,
     program: string,
@@ -35,8 +40,24 @@ export class LIMATransport implements Transport {
   ): Promise<CommandExecutionResult> {
     const { controller } = settings || (await host.getSettings());
     const hostLauncher = controller?.path || controller?.name || "";
-    const hostArgs = ["shell", scope, program, ...args];
-    return await host.runHostCommand(hostLauncher, hostArgs, settings);
+    return await host.runHostCommand(hostLauncher, this.buildScopeArgv(scope, program, args), settings);
+  }
+
+  async runScopeCommandStreaming(
+    host: HostContext,
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<StreamHandle> {
+    const { controller } = settings || (await host.getSettings());
+    const hostLauncher = controller?.path || controller?.name || "";
+    return await host.runHostCommandStreaming(hostLauncher, this.buildScopeArgv(scope, program, args));
+  }
+
+  async resolveGuestPath(_host: HostContext, localPath: string): Promise<string> {
+    // LIMA mounts the host home into the VM at the same path, so a local path is already valid inside.
+    return localPath;
   }
 
   async listScopes(host: HostContext, settings?: EngineConnectorSettings): Promise<ControllerScope[]> {

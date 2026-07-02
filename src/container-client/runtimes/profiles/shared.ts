@@ -84,6 +84,20 @@ export async function sshApiConnection(
       relay: relay || settings?.api?.connection?.relay || "",
     };
   }
+  // Prefer a stdio bridge when the engine can't be `ssh -NL` forwarded (Windows Docker npipe, Podman machine
+  // in a VM). Unified across engines: the dialect returns the relay id + the command the SSH transport runs.
+  try {
+    const bridge = await host.dialect.resolveDialStdioBridge?.(host, settings);
+    if (bridge?.command?.length) {
+      return {
+        uri: uri || settings?.api?.connection?.uri || "",
+        relay: bridge.relay,
+        dialStdioCommand: bridge.command,
+      };
+    }
+  } catch (error: any) {
+    host.logger.warn(host.id, "Unable to resolve dial-stdio bridge", error);
+  }
   try {
     relay = (await host.dialect.readEngineSocket(host, settings)) || "";
   } catch (error: any) {
@@ -139,6 +153,7 @@ export async function defaultGetAutomaticSettings(
     const api = await host.getApiConnection(undefined, settings);
     settings.api.connection.uri = api.uri;
     settings.api.connection.relay = api.relay;
+    settings.api.connection.dialStdioCommand = api.dialStdioCommand;
   } catch (error: any) {
     host.logger.error(host.id, "Unable to get automatic settings", error);
   }

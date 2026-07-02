@@ -19,6 +19,11 @@ export const parseProgramVersion = (input: string | undefined) => {
   return parsed;
 };
 
+// Recognize a Windows engine path (C:\...\docker.exe) by shape, so version detection over an SSH executor
+// can pick the cmd.exe-safe (quoted) invocation without a separate remote-OS probe.
+export const isWindowsProgramPath = (programPath: string): boolean =>
+  /^[A-Za-z]:[\\/]/.test(programPath) || programPath.endsWith(".exe") || programPath.includes("\\");
+
 export const findWindowsProgramByRegistryKey = async (programName: string, registryKey: string) => {
   let programPath = "";
   const script = `
@@ -53,7 +58,20 @@ export const findProgramPath = async (
   const windowsLookup = osType === OperatingSystem.Windows;
   const lookupProgram = windowsLookup && !programName.endsWith(".exe") ? `${programName}.exe` : programName;
   const finder = executor ? executor : Command.Execute;
-  if (windowsLookup) {
+  if (windowsLookup && executor) {
+    // Remote Windows reached over an executor (SSH into the cmd.exe default shell): the local
+    // powershell/registry strategy below only works when THIS machine is Windows. `where` is cmd.exe's
+    // `which`; it prints one path per line (Docker Desktop + WinGet shims) — take the first.
+    result = await finder("where", [lookupProgram], opts);
+    logger.debug("Detecting", lookupProgram, "using - where >", result);
+    if (result.success) {
+      programPath =
+        `${result.stdout || ""}`
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .find(Boolean) || "";
+    }
+  } else if (windowsLookup) {
     // Powershell based search for programs that are in PATH
     try {
       const result = await Command.Spawn("powershell.exe", ["-Command", `((gcm '${lookupProgram}').Path)`], {
@@ -149,6 +167,8 @@ export const findProgramVersion = async (
     isSSH = true;
   }
   const finder = executor ? executor : Command.Execute;
+  // Quoting a spaced Windows path for the cmd.exe shell is the executor's job (see SSHTransport.quoteScopeProgram),
+  // so a Windows engine path flows through unchanged here.
   const result = await finder(programPath, [versionFlag], opts);
   if (result.success) {
     version = isSSH ? `${result.stderr}`.trim() : parseProgramVersion(result.stdout || result.stderr);

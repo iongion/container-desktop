@@ -81,7 +81,32 @@ const ScopeLabel: React.FC<{ scope: ControllerScope }> = ({ scope }) => {
   );
 };
 
-const renderControllerScope: ItemRenderer<ControllerScope> = (item, { handleClick, handleFocus, modifiers, query }) => {
+function keyPart(value: unknown): string {
+  return value === undefined || value === null || value === "" ? "-" : `${value}`;
+}
+
+export function getScopeSelectItemKey(item: ControllerScope, index: number): string {
+  const common = [item.Type, item.Name];
+  switch (item.Type) {
+    case ControllerScopeType.SSHConnection: {
+      const ssh = item as SSHHost;
+      return [...common, ssh.Host, ssh.HostName, ssh.User, ssh.Port, ssh.IdentityFile, ssh.ConfigHost, index]
+        .map(keyPart)
+        .join("|");
+    }
+    case ControllerScopeType.LIMAInstance: {
+      const lima = item as LIMAInstance;
+      return [...common, lima.Dir, index].map(keyPart).join("|");
+    }
+    default:
+      return [...common, index].map(keyPart).join("|");
+  }
+}
+
+const renderControllerScope: ItemRenderer<ControllerScope> = (
+  item,
+  { handleClick, handleFocus, index, modifiers, query },
+) => {
   if (!modifiers.matchesPredicate) {
     return null;
   }
@@ -90,7 +115,7 @@ const renderControllerScope: ItemRenderer<ControllerScope> = (item, { handleClic
       className="ScopeSelectMenuItem"
       active={modifiers.active}
       disabled={modifiers.disabled}
-      key={item.Name}
+      key={getScopeSelectItemKey(item, index)}
       labelElement={<ScopeLabel scope={item} />}
       onClick={handleClick}
       onFocus={handleFocus}

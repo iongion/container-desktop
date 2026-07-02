@@ -1,17 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { ContainerEngineHost } from "@/env/Types";
 import { Screen } from "./ManageScreen";
-import { BUILD_ROUTE, getBuildCrumbs, isBuildSupported } from "./Navigation";
+import { BUILD_ROUTE, getBuildCrumbs, isBuildSupported, isRemoteBuildHost } from "./Navigation";
 
 describe("isBuildSupported", () => {
-  it("is true for native hosts and false for scoped/remote", () => {
+  it("is true across native, scoped, and remote transports", () => {
     expect(isBuildSupported({ host: ContainerEngineHost.PODMAN_NATIVE })).toBe(true);
     expect(isBuildSupported({ host: ContainerEngineHost.DOCKER_NATIVE })).toBe(true);
     expect(isBuildSupported({ host: ContainerEngineHost.APPLE_NATIVE })).toBe(true);
-    expect(isBuildSupported({ host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL })).toBe(false);
-    expect(isBuildSupported({ host: ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA })).toBe(false);
-    expect(isBuildSupported({ host: ContainerEngineHost.PODMAN_REMOTE })).toBe(false);
-    expect(isBuildSupported({ host: ContainerEngineHost.APPLE_REMOTE })).toBe(false);
+    expect(isBuildSupported({ host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL })).toBe(true);
+    expect(isBuildSupported({ host: ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA })).toBe(true);
+    expect(isBuildSupported({ host: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR })).toBe(true);
+    expect(isBuildSupported({ host: ContainerEngineHost.PODMAN_REMOTE })).toBe(true);
+    expect(isBuildSupported({ host: ContainerEngineHost.APPLE_REMOTE })).toBe(true);
+  });
+});
+
+describe("isRemoteBuildHost", () => {
+  it("is true only for SSH remotes (no shared filesystem)", () => {
+    expect(isRemoteBuildHost(ContainerEngineHost.PODMAN_REMOTE)).toBe(true);
+    expect(isRemoteBuildHost(ContainerEngineHost.DOCKER_REMOTE)).toBe(true);
+    expect(isRemoteBuildHost(ContainerEngineHost.APPLE_REMOTE)).toBe(true);
+    expect(isRemoteBuildHost(ContainerEngineHost.PODMAN_VIRTUALIZED_WSL)).toBe(false);
+    expect(isRemoteBuildHost(ContainerEngineHost.DOCKER_NATIVE)).toBe(false);
   });
 });
 

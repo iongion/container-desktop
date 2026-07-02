@@ -17,6 +17,7 @@ import type {
   ContainerEngine,
   ContainerEngineHost,
   ControllerScope,
+  DialStdioBridge,
   EngineConnectorSettings,
   OperatingSystem,
   RunnerStopperOptions,
@@ -86,6 +87,21 @@ export interface Transport {
     scope: string,
     settings?: EngineConnectorSettings,
   ): Promise<CommandExecutionResult>;
+  /** Streaming scoped exec — the scope wrapper streamed via Command.ExecuteStreaming (NativeTransport throws). */
+  runScopeCommandStreaming(
+    host: HostContext,
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<StreamHandle>;
+  /** Translate a LOCAL host path to the guest-side path (WSL: drive-letter → /mnt/…; Lima/PodmanMachine/SSH/Native: identity). */
+  resolveGuestPath(
+    host: HostContext,
+    localPath: string,
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<string>;
   /** Scope discovery — SSH/WSL/LIMA via the shared helpers; Native/PodmanMachine defer to the dialect's machines. */
   listScopes(
     host: HostContext,
@@ -118,6 +134,12 @@ export interface EngineDialect {
   readonly capabilitiesBase: CapabilityDescriptor;
   /** Engine socket read: Podman `system info`→`remoteSocket.path` / Docker `context inspect`→`Endpoints.docker.Host`. */
   readEngineSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string>;
+  /**
+   * Optional: how to reach the engine when its API can't be `ssh -NL` forwarded — a Windows named pipe
+   * (Docker) or a Podman machine whose socket lives inside a VM. Returns the stdio-bridge command the SSH
+   * transport runs (unified across engines); undefined ⇒ use `readEngineSocket` + the plain `ssh -NL` path.
+   */
+  resolveDialStdioBridge?(host: HostContext, settings: EngineConnectorSettings): Promise<DialStdioBridge | undefined>;
   /** Native/unscoped URI env-seed (Podman `PODMAN_HOST`/`DOCKER_HOST`; Docker `DOCKER_HOST`). */
   resolveNativeURISeed(host: HostContext, settings: EngineConnectorSettings): Promise<string>;
   /** startApi service args (Podman `system service --time=0 unix://<sock> --log-level=<lvl>`; Docker → null = manual). */

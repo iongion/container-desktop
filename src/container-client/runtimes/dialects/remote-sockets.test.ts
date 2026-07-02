@@ -3,6 +3,7 @@ import { type CommandExecutionResult, ContainerEngineHost, type EngineConnectorS
 import type { HostContext } from "../composition";
 import { dockerDialect } from "./docker";
 import { podmanDialect } from "./podman";
+import { normalizeUnixSocketPath } from "./shared";
 
 function settings(program = "podman"): EngineConnectorSettings {
   return {
@@ -164,5 +165,46 @@ describe("remote SSH host socket discovery", () => {
 
     await expect(dockerDialect.readEngineSocket(host, settings("docker"))).resolves.toBe("/var/run/docker.sock");
     expect(runScopeCommand).not.toHaveBeenCalledWith("colima", expect.anything(), "mac", expect.anything());
+  });
+
+  it("Docker remote keeps a Windows named-pipe endpoint verbatim (for the dial-stdio data plane)", async () => {
+    const runScopeCommand = vi.fn(async (_program: string, args: string[]) => {
+      if (args[0] === "context") {
+        return commandResult({
+          stdout: JSON.stringify([
+            {
+              Name: "desktop-linux",
+              Endpoints: { docker: { Host: "npipe:////./pipe/dockerDesktopLinuxEngine" } },
+            },
+          ]),
+        });
+      }
+      return commandResult({ success: false, code: 1, stderr: "unexpected" });
+    }) as HostContext["runScopeCommand"];
+    const host = hostFor(ContainerEngineHost.DOCKER_REMOTE, runScopeCommand);
+
+    // A Windows Docker Desktop remote exposes a named pipe, not a Unix socket — it must survive resolution so
+    // the SSH transport can bridge it via `docker system dial-stdio` instead of dropping it to "".
+    await expect(dockerDialect.readEngineSocket(host, settings("docker"))).resolves.toBe(
+      "npipe:////./pipe/dockerDesktopLinuxEngine",
+    );
+  });
+});
+
+describe("normalizeUnixSocketPath", () => {
+  it("strips the unix:// scheme", () => {
+    expect(normalizeUnixSocketPath("unix:///var/run/docker.sock")).toBe("/var/run/docker.sock");
+  });
+  it("passes a bare path through", () => {
+    expect(normalizeUnixSocketPath("/run/user/1000/podman/podman.sock")).toBe("/run/user/1000/podman/podman.sock");
+  });
+  it("keeps a Windows named pipe verbatim (bridged over SSH, not forwarded)", () => {
+    expect(normalizeUnixSocketPath("npipe:////./pipe/dockerDesktopLinuxEngine")).toBe(
+      "npipe:////./pipe/dockerDesktopLinuxEngine",
+    );
+  });
+  it("still rejects other URI schemes", () => {
+    expect(normalizeUnixSocketPath("tcp://127.0.0.1:2375")).toBe("");
+    expect(normalizeUnixSocketPath("http://d")).toBe("");
   });
 });

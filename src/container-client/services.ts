@@ -28,12 +28,20 @@ export interface ISSHClient {
   emit: (event: string, ...args: any[]) => boolean;
   connect: (params: SSHClientConnection) => Promise<void>;
   execute: (command: string[]) => Promise<CommandExecutionResult>;
+  executeStreaming: (command: string[]) => Promise<StreamHandle>;
   startTunnel: (config: {
     localAddress: string;
     remoteAddress: string;
     onStatusCheck: (status: any) => void;
     onStopTunnel: () => void;
   }) => Promise<EventEmitter>;
+  // Bridge a local IPC socket/pipe to a raw `<engine> system dial-stdio` channel over SSH — the data plane for
+  // a remote whose engine API is a named pipe (Windows Docker), which can't be `ssh -NL` forwarded. No TCP.
+  // Provided by the platform-side rewrap (ssh-transport.ts); the SSHClient class does not implement it.
+  startStdioBridge?: (config: {
+    localAddress: string;
+    command: string[];
+  }) => Promise<{ stop: () => Promise<void> } | undefined>;
   stopTunnel: () => void;
   close: () => void;
 }
@@ -90,6 +98,10 @@ export class SSHClient implements ISSHClient {
   }
   async execute(command: string[]) {
     return await Command.Execute(this.cli, buildSSHArgs(this.params, command), { timeout: SSH_COMMAND_TIMEOUT_MS });
+  }
+  async executeStreaming(command: string[]): Promise<StreamHandle> {
+    // A build streams for as long as it takes — no command timeout (unlike execute()).
+    return await Command.ExecuteStreaming(this.cli, buildSSHArgs(this.params, command));
   }
   async startTunnel(config: {
     localAddress: string;

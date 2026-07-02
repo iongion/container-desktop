@@ -15,6 +15,7 @@ import {
   ContainerEngine,
   ContainerEngineHost,
   type ContextInspect,
+  type DialStdioBridge,
   type EngineConnectorSettings,
   StartupStatus,
   type SystemInfo,
@@ -138,6 +139,21 @@ export const dockerDialect: EngineDialect = {
   async readEngineSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
     const info = await getContextInspect(host, undefined, settings);
     return await resolveDockerSSHSocket(host, settings, info?.Endpoints?.docker?.Host || "");
+  },
+
+  // A Windows Docker engine is a named pipe (npipe://…) that can't be `ssh -NL` forwarded, so bridge it over
+  // SSH stdio with Docker's own `system dial-stdio` (bare `docker` on the remote PATH — avoids cmd.exe quoting
+  // the detected path). A Unix-socket endpoint returns undefined ⇒ the caller keeps the `ssh -NL` forward.
+  async resolveDialStdioBridge(
+    host: HostContext,
+    settings: EngineConnectorSettings,
+  ): Promise<DialStdioBridge | undefined> {
+    const socket = await this.readEngineSocket(host, settings);
+    if (!socket.startsWith("npipe:")) {
+      return undefined;
+    }
+    const program = settings.program.name || "docker";
+    return { relay: socket, command: [program, "system", "dial-stdio"] };
   },
 
   async resolveNativeURISeed(): Promise<string> {

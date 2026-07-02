@@ -29,6 +29,12 @@ export function normalizeUnixSocketPath(value: string | undefined | null): strin
   if (/^unix:\/\//i.test(socket)) {
     return socket.replace(/^unix:\/\//i, "");
   }
+  // A Windows engine endpoint is a named pipe (npipe://…), not a Unix socket. Keep it verbatim: it can't be
+  // `ssh -NL` forwarded, but the SSH transport bridges it via `docker system dial-stdio`. Other schemes (tcp,
+  // http, …) are still rejected — we only speak over Unix sockets / named pipes.
+  if (/^npipe:\/\//i.test(socket)) {
+    return socket;
+  }
   if (URI_SCHEME_PATTERN.test(socket)) {
     return "";
   }

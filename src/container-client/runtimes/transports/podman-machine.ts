@@ -30,6 +30,21 @@ export class PodmanMachineTransport implements Transport {
     return true; // Keep scope running as podman machines take a lot of time to stop/start
   }
 
+  // `podman machine ssh <scope> -o LogLevel=ERROR <program> <args…>` — shared by buffered + streaming.
+  private buildScopeArgv(scope: string, program: string, args: string[]): string[] {
+    if (!scope) {
+      throw new Error("Unable to build scoped command - scope is not set");
+    }
+    const command: string[] = ["machine", "ssh", scope, "-o", "LogLevel=ERROR"];
+    if (program) {
+      command.push(program);
+    }
+    if (args) {
+      command.push(...args);
+    }
+    return command;
+  }
+
   async runScopeCommand(
     host: HostContext,
     program: string,
@@ -38,20 +53,25 @@ export class PodmanMachineTransport implements Transport {
     settings?: EngineConnectorSettings,
   ): Promise<CommandExecutionResult> {
     const { controller } = settings || (await host.getSettings());
-    let command: string[] = [];
-    if (!scope) {
-      throw new Error("Unable to build scoped command - scope is not set");
-    }
-    command = ["machine", "ssh", scope, "-o", "LogLevel=ERROR"];
-    if (program) {
-      command.push(program);
-    }
-    if (args) {
-      command.push(...args);
-    }
     const hostLauncher = controller?.path || controller?.name || "";
-    const hostArgs = [...command];
-    return await host.runHostCommand(hostLauncher, hostArgs, settings);
+    return await host.runHostCommand(hostLauncher, this.buildScopeArgv(scope, program, args), settings);
+  }
+
+  async runScopeCommandStreaming(
+    host: HostContext,
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<StreamHandle> {
+    const { controller } = settings || (await host.getSettings());
+    const hostLauncher = controller?.path || controller?.name || "";
+    return await host.runHostCommandStreaming(hostLauncher, this.buildScopeArgv(scope, program, args));
+  }
+
+  async resolveGuestPath(_host: HostContext, localPath: string): Promise<string> {
+    // Podman machine mounts $HOME into the VM at the same path.
+    return localPath;
   }
 
   async listScopes(host: HostContext, settings?: EngineConnectorSettings): Promise<ControllerScope[]> {

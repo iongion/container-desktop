@@ -8,8 +8,12 @@ import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { computeSpacers } from "./computeSpacers";
+import {
+  canRestoreScrollOffset,
+  DEFAULT_ESTIMATE_ROW_HEIGHT,
+  estimateWindowedContentHeight,
+} from "./windowedScrollRestore";
 
-const DEFAULT_ESTIMATE_ROW_HEIGHT = 28;
 const DEFAULT_OVERSCAN = 8;
 
 // --- List scroll restoration (list → detail → back) --------------------------------------------------
@@ -107,7 +111,15 @@ export function useWindowedRows<T>({
   const savedRef = useRef<ListScrollState | undefined>(undefined);
   if (keyRef.current === null) {
     keyRef.current = listScrollKey(scrollKey);
-    savedRef.current = scrollStates.get(keyRef.current);
+    const saved = scrollStates.get(keyRef.current);
+    // Restore the saved offset ONLY if the current content can still reach it. The same route can host a
+    // shorter list on remount — a connection was disconnected while we were away, so the merged list shrank
+    // — and re-seeding a stale, deeper offset would window every row out of view (a big empty gap at the
+    // top, no rows). `rows` already reflects the current set on this first render (mirrored synchronously).
+    savedRef.current =
+      saved && canRestoreScrollOffset(saved.offset, estimateWindowedContentHeight(rows, estimateRowHeight))
+        ? saved
+        : undefined;
   }
 
   const virtualizer = useVirtualizer<HTMLElement, HTMLTableRowElement>({

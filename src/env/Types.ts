@@ -190,6 +190,19 @@ export interface DetectFlags {
 export interface ApiConnection {
   uri: string;
   relay: string;
+  // When set, the engine API is reached NOT by `ssh -NL` forwarding `relay`, but by running this command
+  // over the SSH link to produce a raw stdio bridge to the daemon — unified across engines (Docker `system
+  // dial-stdio` on a Windows named pipe; Podman-machine: a nested OpenSSH hop into the VM + its local
+  // dial-stdio). The SSH transport just runs whatever command the dialect resolved (see resolveDialStdioBridge).
+  dialStdioCommand?: string[];
+}
+
+/** How to bridge an engine whose API can't be `ssh -NL` forwarded: a stable relay id + the command to run. */
+export interface DialStdioBridge {
+  /** Stable, non-empty id for this bridge (the engine endpoint / machine URI) — the transport's cache key. */
+  relay: string;
+  /** Command run over the outer SSH to produce a raw stdio bridge to the engine daemon. */
+  command: string[];
 }
 
 export interface EngineConnectorApiSettings {

@@ -28,6 +28,14 @@ export class NativeTransport implements Transport {
     throw new Error("Scope is not supported in native mode");
   }
 
+  async runScopeCommandStreaming(): Promise<StreamHandle> {
+    throw new Error("Scope streaming is not supported in native mode");
+  }
+
+  async resolveGuestPath(_host: HostContext, localPath: string): Promise<string> {
+    return localPath;
+  }
+
   async listScopes(host: HostContext, settings?: EngineConnectorSettings): Promise<ControllerScope[]> {
     // podman-native lists its machines; docker-native has no scopes (gated by the machines capability).
     return host.capabilities.extensions.machines ? await host.getPodmanMachines(undefined, settings) : [];

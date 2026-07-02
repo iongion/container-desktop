@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveShowEngineColumn, resolveShowEngineRowAccent, sameDomainItems } from "./useMergedResources";
+import {
+  reloadResources,
+  resolveShowEngineColumn,
+  resolveShowEngineRowAccent,
+  sameDomainItems,
+} from "./useMergedResources";
 
 describe("resolveShowEngineColumn", () => {
   it("keeps the engine column hidden by default", () => {
@@ -18,6 +23,32 @@ describe("resolveShowEngineRowAccent", () => {
   it("shows row accents automatically in unified mode", () => {
     expect(resolveShowEngineRowAccent(false)).toBe(false);
     expect(resolveShowEngineRowAccent(true)).toBe(true);
+  });
+});
+
+describe("reloadResources", () => {
+  it("attempts every connection even when one refresh throws synchronously (connection dropped)", () => {
+    const calls: string[] = [];
+    reloadResources(["a", "b", "c"], ["containers"], (connId) => {
+      calls.push(connId);
+      if (connId === "b") {
+        throw new Error("connection dropped");
+      }
+    });
+    expect(calls).toEqual(["a", "b", "c"]);
+  });
+
+  it("does not reject on an async refresh failure (swallowed per connection)", () => {
+    const calls: string[] = [];
+    expect(() =>
+      reloadResources(["a", "b"], ["containers", "images"], async (connId, domain) => {
+        calls.push(`${connId}:${domain}`);
+        if (connId === "a") {
+          throw new Error("async fail");
+        }
+      }),
+    ).not.toThrow();
+    expect(calls).toEqual(["a:containers", "a:images", "b:containers", "b:images"]);
   });
 });
 

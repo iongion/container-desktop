@@ -21,7 +21,7 @@ import { BuildConfigPanel } from "./BuildConfigPanel";
 import { BuildRunPanel } from "./BuildRunPanel";
 import { ContainerfileEditorPane } from "./ContainerfileEditorPane";
 import { LayerInspector } from "./LayerInspector";
-import { BUILD_ID, BUILD_ROUTE, getBuildCrumbs, isBuildSupported } from "./Navigation";
+import { BUILD_ID, BUILD_ROUTE, getBuildCrumbs, isBuildSupported, isRemoteBuildHost } from "./Navigation";
 import { useStartBuild } from "./useBuildStreaming";
 
 import "./Build.css";
@@ -53,8 +53,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { connId: connIdParam } = useRouteSearch<{ connId?: string }>();
   const connections = useAppStore((state) => state.connections);
   const activeRuntime = useResourceStore((state) => state.activeRuntime);
-  // v1 builds run on native connections only; the picker + the CTA on Images are both gated on this set.
-  const nativeConnections = useMemo(
+  // Every connected buildable engine (any transport — native/WSL/Lima/machine/SSH); the picker + the Images
+  // CTA are gated on this set. See adapters/build.ts for how each transport streams the build.
+  const buildConnections = useMemo(
     () => connectedConnections(connections, activeRuntime, isBuildSupported),
     [connections, activeRuntime],
   );
@@ -63,11 +64,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
   // when a Podman/Docker connection is available. An explicit connId (deep link) or the user's picker choice
   // still wins; this only steers the zero-config default.
   const preferredDefault =
-    nativeConnections.find((connection) => connection.engine !== ContainerEngine.APPLE) ?? nativeConnections[0];
-  const connectionId = nativeConnections.some((connection) => connection.id === selectedConnId)
+    buildConnections.find((connection) => connection.engine !== ContainerEngine.APPLE) ?? buildConnections[0];
+  const connectionId = buildConnections.some((connection) => connection.id === selectedConnId)
     ? selectedConnId
-    : (nativeConnections.find((connection) => connection.id === connIdParam)?.id ?? preferredDefault?.id ?? "");
-  const connection = nativeConnections.find((entry) => entry.id === connectionId);
+    : (buildConnections.find((connection) => connection.id === connIdParam)?.id ?? preferredDefault?.id ?? "");
+  const connection = buildConnections.find((entry) => entry.id === connectionId);
   const engine: BuildEngineKind = connection ? engineKindOf(connection.engine) : "docker";
 
   // The authored Containerfile buffer (edited by the editor pane) and the latest effective build options from
@@ -100,18 +101,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
     void start({ ...base, containerfileContent: content });
   }, [content, start]);
 
-  // No native buildable engine connected → the gated "coming soon" state.
-  if (nativeConnections.length === 0) {
+  // No buildable engine connected → the neutral empty state.
+  if (buildConnections.length === 0) {
     return (
       <div className="AppScreen" data-screen={ID}>
         <AppScreenHeader withoutSearch withBack breadcrumbs={getBuildCrumbs()} titleIcon={IconNames.BUILD} />
         <div className="AppScreenContent" data-loaded="no">
           <NonIdealState
             icon={IconNames.BUILD}
-            title={t("Building images needs a native engine")}
-            description={
-              <p>{t("Connect a native Podman, Docker or Apple engine. WSL / Lima / SSH builds come next.")}</p>
-            }
+            title={t("Connect an engine to build images")}
+            description={<p>{t("Connect a Podman, Docker or Apple engine — local, in WSL / Lima, or over SSH.")}</p>}
           />
         </div>
       </div>
@@ -174,6 +173,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               engine={engine}
               connectionId={connectionId}
               containerfileContent={content}
+              remote={connection ? isRemoteBuildHost(connection.host) : false}
               onOptionsChange={handleOptionsChange}
             />
           </Pane>

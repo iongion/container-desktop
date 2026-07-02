@@ -37,7 +37,8 @@ const run = (over: Partial<BuildRun> = {}): BuildRun => ({
   ...over,
 });
 
-const fakeHost = () => ({ ENGINE: "docker", getSettings: async () => ({ program: { path: "docker" } }) }) as any;
+const fakeHost = () =>
+  ({ ENGINE: "docker", isScoped: () => false, getSettings: async () => ({ program: { path: "docker" } }) }) as any;
 
 describe("createBuildSink", () => {
   it("pipes a streamed build into the store and finishes it succeeded", async () => {

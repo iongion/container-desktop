@@ -15,6 +15,8 @@ export interface BuildConfigPanelProps {
   engine: BuildEngineKind;
   connectionId: string;
   containerfileContent: string;
+  /** Remote (SSH) connection: no shared filesystem, so ask for remote paths instead of the local pickers. */
+  remote?: boolean;
   onOptionsChange: (options: ImageBuildOptions) => void;
 }
 
@@ -77,6 +79,7 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
   engine,
   connectionId,
   containerfileContent,
+  remote = false,
   onOptionsChange,
 }) => {
   const { t } = useTranslation();
@@ -169,31 +172,43 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
         </FormGroup>
 
         <div className="row">
-          <FormGroup className="field" label={t("Containerfile")}>
+          <FormGroup
+            className="field"
+            label={t("Containerfile")}
+            helperText={remote ? t("Path on the remote host") : undefined}
+          >
             <InputGroup
               value={form.containerfilePath}
               onChange={(event) => patch({ containerfilePath: event.target.value })}
               rightElement={
-                <Button
-                  variant="minimal"
-                  icon={IconNames.DOCUMENT_OPEN}
-                  title={t("Choose a Containerfile")}
-                  onClick={browseContainerfile}
-                />
+                remote ? undefined : (
+                  <Button
+                    variant="minimal"
+                    icon={IconNames.DOCUMENT_OPEN}
+                    title={t("Choose a Containerfile")}
+                    onClick={browseContainerfile}
+                  />
+                )
               }
             />
           </FormGroup>
-          <FormGroup className="field" label={t("Context")}>
+          <FormGroup
+            className="field"
+            label={t("Context")}
+            helperText={remote ? t("Remote path, e.g. /home/you/project") : undefined}
+          >
             <InputGroup
               value={form.contextDir}
               onChange={(event) => patch({ contextDir: event.target.value })}
               rightElement={
-                <Button
-                  variant="minimal"
-                  icon={IconNames.FOLDER_OPEN}
-                  title={t("Choose the build context directory")}
-                  onClick={browseContext}
-                />
+                remote ? undefined : (
+                  <Button
+                    variant="minimal"
+                    icon={IconNames.FOLDER_OPEN}
+                    title={t("Choose the build context directory")}
+                    onClick={browseContext}
+                  />
+                )
               }
             />
           </FormGroup>

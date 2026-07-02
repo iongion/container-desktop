@@ -2,12 +2,12 @@ import { Alignment, AnchorButton, Button, ButtonGroup } from "@blueprintjs/core"
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { Connector, ConnectorCapabilities } from "@/env/Types";
 import { pathTo } from "@/web-app/Navigator";
 import { visibleSidebarScreens } from "@/web-app/screenVisibility";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen } from "@/web-app/Types";
+import { resolveAvailabilityConnector } from "./AppSidebar.logic";
 import { AppSidebarFooter } from "./AppSidebarFooter";
 
 // locals
@@ -26,50 +26,11 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
   const expandSidebar = useAppStore((state) => state.userSettings.expandSidebar);
   const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
   const sidebarScreens = visibleSidebarScreens(screens);
-  const availabilityConnector = useMemo(() => {
-    const running = activeRuntime.filter((info) => info.running && info.capabilities);
-    if (running.length <= 1) {
-      return currentConnector;
-    }
-    const capabilities = running.reduce<ConnectorCapabilities>(
-      (acc, info) => ({
-        resources: {
-          pods: acc.resources.pods || info.capabilities?.resources?.pods === true,
-          secrets: acc.resources.secrets || info.capabilities?.resources?.secrets === true,
-          networks: acc.resources.networks || info.capabilities?.resources?.networks === true,
-        },
-        events: acc.events || info.capabilities?.events === true,
-        sort: { ...acc.sort, ...(info.capabilities?.sort ?? {}) },
-        extensions: {
-          machines: acc.extensions.machines || info.capabilities?.extensions?.machines === true,
-          kube: acc.extensions.kube || info.capabilities?.extensions?.kube === true,
-          contexts: acc.extensions.contexts || info.capabilities?.extensions?.contexts === true,
-          swarm: acc.extensions.swarm || info.capabilities?.extensions?.swarm === true,
-          builders: acc.extensions.builders || info.capabilities?.extensions?.builders === true,
-          compose: acc.extensions.compose || info.capabilities?.extensions?.compose === true,
-          registries: acc.extensions.registries || info.capabilities?.extensions?.registries === true,
-          controllerVersion:
-            acc.extensions.controllerVersion || info.capabilities?.extensions?.controllerVersion === true,
-        },
-      }),
-      {
-        resources: { pods: false, secrets: false, networks: false },
-        events: false,
-        sort: {},
-        extensions: {
-          machines: false,
-          kube: false,
-          contexts: false,
-          swarm: false,
-          builders: false,
-          compose: false,
-          registries: false,
-          controllerVersion: false,
-        },
-      },
-    );
-    return { ...(currentConnector ?? ({} as Connector)), capabilities } as Connector;
-  }, [activeRuntime, currentConnector]);
+  // Capabilities reflect the UNION of running connections (always-merged workspace), not a single connector.
+  const availabilityConnector = useMemo(
+    () => resolveAvailabilityConnector(activeRuntime, currentConnector),
+    [activeRuntime, currentConnector],
+  );
   const onExpandCollapseSidebarClick = useCallback(() => {
     setGlobalUserSettings({ expandSidebar: !expandSidebar });
   }, [expandSidebar, setGlobalUserSettings]);

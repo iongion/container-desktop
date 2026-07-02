@@ -6,6 +6,7 @@
 import type { ResourceDomain } from "@/container-client/resourceDomains";
 import { RESOURCE_SYNC, type ResourceSyncSnapshot } from "@/container-client/resourceSyncProtocol";
 import { createLogger } from "@/logger";
+import { queryClient, removeConnectionQueries } from "@/web-app/domain/queryClient";
 
 import { useAppStore } from "./appStore";
 import { useResourceStore } from "./resourceStore";
@@ -14,6 +15,18 @@ const logger = createLogger("resource.mirror");
 
 export function applyResourceSyncSnapshot(snapshot: ResourceSyncSnapshot): void {
   const store = useResourceStore.getState();
+  // The merged snapshot is the COMPLETE set of connections main is mirroring (main deletes a connection's
+  // state on disconnect). The mirror is otherwise additive, so prune any connection that has dropped out —
+  // else a disconnected engine's resources (e.g. a Podman's containers) linger forever in the merged lists and
+  // getConnectedConnectionIds() keeps targeting a dead connection on reload. Also evict its react-query detail
+  // caches so a later reconnect fetches fresh.
+  const mirrored = new Set(Object.keys(snapshot.resources));
+  for (const connectionId of Object.keys(store.byConnection)) {
+    if (!mirrored.has(connectionId)) {
+      store.resetConnection(connectionId);
+      removeConnectionQueries(queryClient, connectionId);
+    }
+  }
   for (const [connectionId, byDomain] of Object.entries(snapshot.resources)) {
     store.ensureConnection(connectionId);
     for (const [domain, items] of Object.entries(byDomain)) {

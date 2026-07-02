@@ -45,6 +45,17 @@ export const queryClient = new QueryClient({
   },
 });
 
+// Drop a single connection's cached resources. Every resource query key carries the connection id as an
+// element (e.g. ["volumes","list",connId], ["swarm","info",connId]), so a predicate scopes removal to just
+// that connection — never the whole cache. Called on disconnect so a later reconnect/view fetches fresh data
+// instead of serving stale lists (staleTime is Infinity, so nothing else would evict them).
+export function removeConnectionQueries(client: QueryClient, connectionId: string): void {
+  if (!connectionId) {
+    return;
+  }
+  client.removeQueries({ predicate: (query) => query.queryKey.includes(connectionId) });
+}
+
 // Per-query override for LIVE resources (containers/pods/images/volumes/networks/stats/processes/logs/
 // events) — they reflect real-time state, so refetch on mount/focus and poll. The interval is gated by
 // the existing env polling flag (off in development), matching the previous screen poller behaviour. Spread into

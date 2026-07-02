@@ -56,7 +56,7 @@ describe("engineInventoryTriggerLabel", () => {
     ).toBe("podman 5.7.0 / docker 29.5.3");
   });
 
-  it("falls back to connected non-system engine names without versions", () => {
+  it("falls back to connected non-system engines WITH their versions (matches the popover)", () => {
     expect(
       engineInventoryTriggerLabel(
         inventory([
@@ -99,6 +99,30 @@ describe("engineInventoryTriggerLabel", () => {
         ]),
         "Engines",
       ),
-    ).toBe("podman / docker");
+    ).toBe("podman 5.2.2 / docker 29.6.0");
+  });
+
+  it("shows a remote engine's version when it is the only one running (e.g. Windows Docker over SSH)", () => {
+    expect(
+      engineInventoryTriggerLabel(
+        inventory([
+          {
+            id: "host.windows",
+            name: "Windows",
+            engines: [
+              {
+                id: "host.windows.docker",
+                connectionName: "Windows (docker)",
+                engine: "docker",
+                phase: "ready",
+                running: true,
+                version: "29.6.1",
+              },
+            ],
+          },
+        ]),
+        "Engines",
+      ),
+    ).toBe("docker 29.6.1");
   });
 });

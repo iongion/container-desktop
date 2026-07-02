@@ -1,7 +1,9 @@
+import { spawn } from "node:child_process";
 import os from "node:os";
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import type { EventEmitter } from "eventemitter3";
 import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/container-client/services";
+import { buildSSHArgs } from "@/container-client/ssh-args";
 import { type ApiDriverConfig, type Connection, OperatingSystem, type ServiceOpts } from "@/env/Types";
 import { createLogger } from "@/logger";
 import { Path, Platform } from "@/platform/node";
@@ -13,15 +15,22 @@ import {
   requestSummary,
   socketLabel,
 } from "./api-driver";
+import { SSHStdioBridgeServer, type StdioChannel } from "./ssh-stdio-bridge";
 
 const logger = createLogger("platform.ssh");
 
 const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
+// One long-lived dial-stdio bridge per remote npipe endpoint (Windows Docker), keyed like the tunnel cache.
+const SSH_BRIDGES: { [key: string]: { stop: () => Promise<void> } } = {};
 
 /** Clear the SSH tunnel cache. Composed into the facade's `__resetConnectionCaches` (test-only). */
 export function resetSSHTunnelsCache() {
   for (const key of Object.keys(SSH_TUNNELS_CACHE)) {
     delete SSH_TUNNELS_CACHE[key];
+  }
+  for (const key of Object.keys(SSH_BRIDGES)) {
+    void SSH_BRIDGES[key]?.stop();
+    delete SSH_BRIDGES[key];
   }
 }
 
@@ -35,13 +44,21 @@ export async function proxyRequestToSSHConnection(
 ): Promise<AxiosResponse<any, any>> {
   const remoteAddress = connection.settings.api.connection.relay ?? "";
   const localAddress = connection.settings.api.connection.uri ?? "";
+  // When the dialect resolved a stdio-bridge command (the engine can't be `ssh -NL` forwarded — a Windows
+  // Docker named pipe, or a Podman machine whose socket lives inside a VM), bridge over SSH stdio by running
+  // THAT command. Unified across engines: the transport just runs it. Everything else keeps the `ssh -NL` forward.
+  const dialStdioCommand = connection.settings.api.connection.dialStdioCommand;
   if (SSH_TUNNELS_CACHE[remoteAddress]) {
     logger.debug("Reusing SSH tunnel", {
       remote: socketLabel(remoteAddress),
       local: socketLabel(SSH_TUNNELS_CACHE[remoteAddress]),
     });
   } else {
-    logger.debug("Creating SSH tunnel", { remote: socketLabel(remoteAddress), local: socketLabel(localAddress) });
+    const useDialStdio = !!dialStdioCommand && dialStdioCommand.length > 0;
+    logger.debug(useDialStdio ? "Creating SSH dial-stdio bridge" : "Creating SSH tunnel", {
+      remote: socketLabel(remoteAddress),
+      local: socketLabel(localAddress),
+    });
     const sshConnection: ISSHClient = await context.getSSHConnection();
     if (!remoteAddress) {
       // The remote engine socket could not be resolved — usually the engine isn't installed/running on
@@ -50,21 +67,35 @@ export async function proxyRequestToSSHConnection(
         "Remote engine socket could not be determined — is the container engine installed and running on the remote host (and reachable on a non-interactive SSH PATH)?",
       );
     }
-    let em: EventEmitter | undefined;
-    em = await sshConnection.startTunnel({
-      localAddress,
-      remoteAddress,
-      onStatusCheck: (status) => {
-        if (em) {
-          em.emit("status.check", status);
-        }
-      },
-      onStopTunnel: () => {
-        delete SSH_TUNNELS_CACHE[remoteAddress];
-      },
-    });
-    if (em) {
-      SSH_TUNNELS_CACHE[remoteAddress] = localAddress;
+    if (dialStdioCommand && dialStdioCommand.length > 0) {
+      if (!sshConnection.startStdioBridge) {
+        throw new Error("This build cannot bridge the engine over SSH stdio");
+      }
+      const bridge = await sshConnection.startStdioBridge({
+        localAddress,
+        command: dialStdioCommand,
+      });
+      if (bridge) {
+        SSH_BRIDGES[remoteAddress] = bridge;
+        SSH_TUNNELS_CACHE[remoteAddress] = localAddress;
+      }
+    } else {
+      let em: EventEmitter | undefined;
+      em = await sshConnection.startTunnel({
+        localAddress,
+        remoteAddress,
+        onStatusCheck: (status) => {
+          if (em) {
+            em.emit("status.check", status);
+          }
+        },
+        onStopTunnel: () => {
+          delete SSH_TUNNELS_CACHE[remoteAddress];
+        },
+      });
+      if (em) {
+        SSH_TUNNELS_CACHE[remoteAddress] = localAddress;
+      }
     }
   }
   if (SSH_TUNNELS_CACHE[remoteAddress]) {
@@ -102,6 +133,33 @@ export async function startSSHConnection(host: SSHHost, opts?: Partial<ServiceOp
         isConnected: () => connection.isConnected(),
         connect: async (params: SSHClientConnection) => await connection.connect(params),
         execute: async (command: string[]) => await connection.execute(command),
+        executeStreaming: async (command: string[]) => await connection.executeStreaming(command),
+        startStdioBridge: async (params: { localAddress: string; command: string[] }) => {
+          // Per client connection, open a raw `ssh <host> -- <command>` channel (Buffers, never utf-8-decoded)
+          // and let the bridge server shuttle bytes to/from the local IPC listener. No TCP.
+          const sshCli = isWindows ? "ssh.exe" : "ssh";
+          const makeChannel = (): StdioChannel => {
+            const child = spawn(sshCli, buildSSHArgs(credentials, params.command));
+            return {
+              stdin: child.stdin as NodeJS.WritableStream,
+              stdout: child.stdout as NodeJS.ReadableStream,
+              kill: () => {
+                try {
+                  child.kill();
+                } catch {
+                  /* already gone */
+                }
+              },
+              onExit: (cb: () => void) => {
+                child.on("exit", cb);
+                child.on("error", cb);
+              },
+            };
+          };
+          const server = new SSHStdioBridgeServer(params.localAddress, makeChannel);
+          const started = await server.start();
+          return started ? server : undefined;
+        },
         startTunnel: async (params: {
           localAddress: string;
           remoteAddress: string;

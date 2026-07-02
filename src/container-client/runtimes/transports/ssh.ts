@@ -6,6 +6,7 @@
 
 import type { AxiosInstance } from "axios";
 
+import { isWindowsProgramPath } from "@/container-client/detector";
 import { systemNotifier } from "@/container-client/notifier";
 import type { ISSHClient } from "@/container-client/services";
 import { getAvailableSSHConnections } from "@/container-client/shared";
@@ -22,6 +23,17 @@ import { createApplicationApiDriver } from "../../Api.clients";
 import type { HostContext, Transport } from "../composition";
 import { buildCurrentConnection } from "./shared";
 
+// A Windows engine path with spaces ("C:\Program Files\...\docker.exe") reaches the remote as argv joined by
+// spaces, so the cmd.exe default shell would try to run `C:\Program`. Quote argv[0] so the whole path is the
+// command. POSIX program names never match isWindowsProgramPath, so Linux/macOS remotes are unaffected; the
+// already-quoted guard keeps callers that pre-quote (e.g. version detection) from being double-quoted.
+export function quoteScopeProgram(program: string): string {
+  if (program.includes(" ") && !program.startsWith('"') && isWindowsProgramPath(program)) {
+    return `"${program}"`;
+  }
+  return program;
+}
+
 export class SSHTransport implements Transport {
   public readonly isScoped = true;
 
@@ -36,8 +48,20 @@ export class SSHTransport implements Transport {
     if (!this._connection?.isConnected()) {
       throw new Error("SSH connection is not established");
     }
-    const result = await this._connection.execute([program, ...args]);
+    const result = await this._connection.execute([quoteScopeProgram(program), ...args]);
     return result;
+  }
+
+  async runScopeCommandStreaming(_host: HostContext, program: string, args: string[]): Promise<StreamHandle> {
+    if (!this._connection?.isConnected()) {
+      throw new Error("SSH connection is not established");
+    }
+    return await this._connection.executeStreaming([quoteScopeProgram(program), ...args]);
+  }
+
+  async resolveGuestPath(_host: HostContext, localPath: string): Promise<string> {
+    // Remote host: the user provides a path that already lives on the remote — no local↔remote translation.
+    return localPath;
   }
 
   async listScopes(host: HostContext, settings?: EngineConnectorSettings): Promise<ControllerScope[]> {

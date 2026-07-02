@@ -18,12 +18,36 @@ import { getWindowsPipePath } from "@/platform";
 import type { HostContext, Transport } from "../composition";
 import { createPlainApiDriver } from "./shared";
 
+// WSL file/dir pickers hand back Windows paths (C:\Users\…). The engine runs INSIDE the distro, where those
+// files live under /mnt/<drive>/…. Translate drive-letter paths; anything already POSIX passes through.
+export function windowsPathToWSLPath(localPath: string): string {
+  const match = /^([A-Za-z]):[\\/]?(.*)$/.exec(localPath);
+  if (!match) {
+    return localPath;
+  }
+  const drive = match[1].toLowerCase();
+  const rest = match[2].replace(/\\/g, "/");
+  return rest ? `/mnt/${drive}/${rest}` : `/mnt/${drive}`;
+}
+
 export class WSLTransport implements Transport {
   public readonly isScoped = true;
   protected startedScopesMap: Map<string, boolean> = new Map<string, boolean>();
 
   shouldKeepStartedScopeRunning() {
     return false;
+  }
+
+  // `wsl --distribution <scope> --exec <program> <args…>` — shared by the buffered + streaming paths.
+  private buildScopeArgv(scope: string, program: string, args: string[]): string[] {
+    const command: string[] = ["--distribution", scope, "--exec"];
+    if (program) {
+      command.push(program);
+    }
+    if (args?.length) {
+      command.push(...args);
+    }
+    return command;
   }
 
   async runScopeCommand(
@@ -34,20 +58,24 @@ export class WSLTransport implements Transport {
     settings?: EngineConnectorSettings,
   ): Promise<CommandExecutionResult> {
     const { controller } = settings || (await host.getSettings());
-    const command: string[] = ["--distribution", scope, "--exec"];
-    const restArgs: string[] = [];
-    if (program) {
-      restArgs.push(program);
-    }
-    if (args) {
-      restArgs.push(...args);
-    }
-    if (restArgs.length) {
-      command.push(...restArgs);
-    }
     const hostLauncher = controller?.path || controller?.name || "";
-    const hostArgs = [...command];
-    return await host.runHostCommand(hostLauncher, hostArgs, settings);
+    return await host.runHostCommand(hostLauncher, this.buildScopeArgv(scope, program, args), settings);
+  }
+
+  async runScopeCommandStreaming(
+    host: HostContext,
+    program: string,
+    args: string[],
+    scope: string,
+    settings?: EngineConnectorSettings,
+  ): Promise<StreamHandle> {
+    const { controller } = settings || (await host.getSettings());
+    const hostLauncher = controller?.path || controller?.name || "";
+    return await host.runHostCommandStreaming(hostLauncher, this.buildScopeArgv(scope, program, args));
+  }
+
+  async resolveGuestPath(_host: HostContext, localPath: string): Promise<string> {
+    return windowsPathToWSLPath(localPath);
   }
 
   async listScopes(host: HostContext, settings?: EngineConnectorSettings): Promise<ControllerScope[]> {

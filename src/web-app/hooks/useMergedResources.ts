@@ -8,9 +8,12 @@ import { useCallback, useMemo } from "react";
 import { useStoreWithEqualityFn } from "zustand/traditional";
 
 import type { ContainerEngine } from "@/env/Types";
+import { createLogger } from "@/logger";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { type ResourceDomain, type ResourceItemsByDomain, useResourceStore } from "@/web-app/stores/resourceStore";
+
+const logger = createLogger("web.mergedResources");
 
 // A resource flattened out of the per-connection store, carrying first-class engine/connection metadata
 // (NOT a private tag) so consumers can mark, filter, sort and route by engine/connection. For engine-specific
@@ -63,15 +66,36 @@ export function useShowEngineRowAccent(): boolean {
  * single-connection `resourceEvents.refresh`. Plural/variadic form for screens that refresh several domains
  * at once, e.g. `useResourcesReload("pods", "containers")`. See `useResourceReload` for the one-domain case.
  */
+/**
+ * Fire a refresh for every (connection, domain) pair, ISOLATING failures: one connection dropping mid-reload —
+ * or a rejected refresh — must not abort the others. Pure + injectable so it can be tested without React.
+ */
+export function reloadResources(
+  connectionIds: string[],
+  domains: ResourceDomain[],
+  refresh: (connectionId: string, domain: ResourceDomain) => Promise<void> | void,
+): void {
+  for (const connectionId of connectionIds) {
+    for (const domain of domains) {
+      try {
+        const result = refresh(connectionId, domain);
+        if (result && typeof (result as Promise<void>).catch === "function") {
+          (result as Promise<void>).catch((error) =>
+            logger.warn("Resource reload failed for a connection", { connectionId, domain, error }),
+          );
+        }
+      } catch (error) {
+        logger.warn("Resource reload failed for a connection", { connectionId, domain, error });
+      }
+    }
+  }
+}
+
 export function useResourcesReload(...domains: ResourceDomain[]): () => void {
   const key = domains.join(",");
   return useCallback(() => {
     const list = (key ? key.split(",") : []) as ResourceDomain[];
-    for (const connId of getConnectedConnectionIds()) {
-      for (const domain of list) {
-        void resourceEvents.refresh(connId, domain);
-      }
-    }
+    reloadResources(getConnectedConnectionIds(), list, (connId, domain) => resourceEvents.refresh(connId, domain));
   }, [key]);
 }
 
