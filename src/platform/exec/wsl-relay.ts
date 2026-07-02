@@ -1,11 +1,8 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import net from "node:net";
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
-import type { ApiDriverConfig, Connection } from "@/env/Types";
+import type { ApiDriverConfig, Connection, ContainerEngine } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { Path } from "@/platform/node";
 import { isEmpty } from "@/utils";
 import {
   applyProxyRequestDefaults,
@@ -16,109 +13,12 @@ import {
   responseSummary,
   socketLabel,
 } from "./api-driver";
-import { exec_launcher_async } from "./commander";
 import { killProcess } from "./process-utils";
+import { buildWSLDialStdioArgs } from "./wsl-dial-stdio";
 
 const logger = createLogger("platform.wsl");
 
 const RELAY_SERVERS_CACHE: { [key: string]: WSLRelayServer } = {};
-
-const PROGRAM_WSL_RELAY = "container-desktop-relay";
-
-// Servers
-async function getWSLDistributionEnvironmentVariable(distribution: string, variable: string) {
-  // `: any` mirrors the original call through the ambient `Command.Execute` (whose return type resolves
-  // to `any` in global.d.ts); accessing `.stdout` keeps the exact prior behavior under strictNullChecks.
-  const wslCommandOutput: any = await exec_launcher_async("wsl.exe", [
-    "--distribution",
-    distribution,
-    "--exec",
-    "printenv",
-    variable,
-  ]);
-  const wslUser = wslCommandOutput.stdout.toString().trim();
-  return wslUser;
-}
-
-async function _getWSLDistributionApplicationConfigDir(distribution: string) {
-  const appName = import.meta.env.PROJECT_NAME || "container-desktop";
-  const XDG_CONFIG_HOME = await getWSLDistributionEnvironmentVariable(distribution, "XDG_CONFIG_HOME");
-  if (XDG_CONFIG_HOME) {
-    return `${XDG_CONFIG_HOME}/${appName}`;
-  }
-  const home = await getWSLDistributionEnvironmentVariable(distribution, "HOME");
-  return `${home}/.config/${appName}`;
-}
-
-async function getWSLDistributionApplicationDataDir(distribution: string) {
-  const appName = import.meta.env.PROJECT_NAME || "container-desktop";
-  const XDG_DATA_HOME = await getWSLDistributionEnvironmentVariable(distribution, "XDG_DATA_HOME");
-  if (XDG_DATA_HOME) {
-    return `${XDG_DATA_HOME}/${appName}`;
-  }
-  const home = await getWSLDistributionEnvironmentVariable(distribution, "HOME");
-  return `${home}/.local/share/${appName}`;
-}
-
-async function convertWindowsPathToWSLPath(distribution: string, windowsPath: string) {
-  const command: any = await exec_launcher_async("wsl.exe", [
-    "--distribution",
-    distribution,
-    "--exec",
-    "wslpath",
-    windowsPath,
-  ]);
-  const wslPath = command.stdout.trim();
-  return wslPath;
-}
-
-// sha256OfFile returns the lowercase hex SHA-256 of a (Windows-side) file, or ""
-// if it cannot be read - used to verify the relay bridge copied into the distro.
-async function sha256OfFile(filePath: string): Promise<string> {
-  try {
-    return createHash("sha256")
-      .update(await readFile(filePath))
-      .digest("hex");
-  } catch (error: any) {
-    logger.warn("Unable to hash relay program", filePath, error?.message);
-    return "";
-  }
-}
-
-// wslFileHasSha256 checks a file inside the distribution against an expected hash
-// using coreutils `sha256sum` (always present).
-async function wslFileHasSha256(distribution: string, wslPath: string, expectedHash: string): Promise<boolean> {
-  if (!expectedHash) {
-    return false;
-  }
-  try {
-    const out = await exec_launcher_async("wsl.exe", ["--distribution", distribution, "--exec", "sha256sum", wslPath]);
-    const actual = `${out.stdout}`
-      .trim()
-      .toLowerCase()
-      .match(/^[a-f0-9]{64}/)?.[0];
-    return actual === expectedHash;
-  } catch {
-    return false;
-  }
-}
-
-async function ensureRelayProgramExistsInWSLDistribution(distribution: string, dstWSLPath: string, srcWinPath: string) {
-  const baseDirectory = await Path.dirname(dstWSLPath);
-  const srcWSLPath = await convertWindowsPathToWSLPath(distribution, srcWinPath);
-  const expectedHash = await sha256OfFile(srcWinPath);
-  await exec_launcher_async("wsl.exe", ["--distribution", distribution, "--exec", "mkdir", "-p", baseDirectory]);
-  // Copy only when the destination is missing or doesn't match the bundled binary
-  // (self-healing across upgrades), then verify integrity before it is ever executed.
-  if (!(await wslFileHasSha256(distribution, dstWSLPath, expectedHash))) {
-    await exec_launcher_async("wsl.exe", ["--distribution", distribution, "--exec", "cp", srcWSLPath, dstWSLPath]);
-    await exec_launcher_async("wsl.exe", ["--distribution", distribution, "--exec", "chmod", "+x", dstWSLPath]);
-    if (expectedHash && !(await wslFileHasSha256(distribution, dstWSLPath, expectedHash))) {
-      throw new Error(`Relay program integrity verification failed for ${dstWSLPath}`);
-    }
-  }
-  return dstWSLPath;
-}
 
 export class WSLRelayServer {
   protected server?: net.Server;
@@ -140,12 +40,16 @@ export class WSLRelayServer {
     {
       pipePath,
       distribution,
+      engine,
+      program,
       unixSocketPath,
       maxRespawnRetries,
       abort,
     }: {
       pipePath: string;
       distribution: string;
+      engine: ContainerEngine;
+      program: string;
       unixSocketPath: string;
       maxRespawnRetries: number;
       abort: AbortController;
@@ -167,34 +71,17 @@ export class WSLRelayServer {
       });
     }
     distribution = distribution || "Ubuntu"; // Default to Ubuntu
-    let wslAppHome = "";
-    let bundleWindowsRelayProgramPath = "";
-    let wslRelayProgramPath = "";
     let args: string[] = [];
     try {
-      wslAppHome = await getWSLDistributionApplicationDataDir(distribution);
-      bundleWindowsRelayProgramPath = await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_WSL_RELAY);
-      // Version-scope the in-distro path so an upgraded app never reuses a stale binary.
-      const relayVersion = import.meta.env.PROJECT_VERSION || "current";
-      wslRelayProgramPath = `${wslAppHome}/bin/${relayVersion}/${PROGRAM_WSL_RELAY}`;
       maxRespawnRetries = maxRespawnRetries || 5;
-      // Ensure the relay bridge exists inside the distribution, then relay the engine's unix
-      // socket over wsl.exe stdio (named pipe <-> stdio <-> unix socket; no listener, no SSH, no keys).
-      await ensureRelayProgramExistsInWSLDistribution(distribution, wslRelayProgramPath, bundleWindowsRelayProgramPath);
+      // Bridge the engine's in-distro API socket to wsl.exe stdio by running the engine's OWN
+      // `system dial-stdio` inside the distribution (named pipe <-> stdio <-> unix socket). Nothing is
+      // injected into the distro anymore — we exec the podman/docker that already lives there.
+      args = buildWSLDialStdioArgs({ distribution, program, engine, socketPath: unixSocketPath });
       pipeFullPath = pipePath;
-      args = [
-        "--distribution",
-        distribution,
-        "--exec",
-        wslRelayProgramPath,
-        "--mode",
-        "bridge",
-        "--socket",
-        unixSocketPath,
-      ];
       this.socketPath = pipeFullPath;
     } catch (error: any) {
-      logger.error("Error ensuring WSL relay program", error.message);
+      logger.error("Error preparing WSL dial-stdio bridge", error.message);
       onError?.(this, error);
       return Promise.resolve({
         started: false,
@@ -416,6 +303,8 @@ export async function proxyRequestToWSLDistribution(
           {
             pipePath,
             distribution: connection.settings.controller?.scope || "Ubuntu",
+            engine: connection.engine,
+            program: connection.settings.program.name || connection.engine,
             unixSocketPath: `${connection.settings.api.connection.relay}`.replace("unix://", ""),
             maxRespawnRetries: 5,
             abort,

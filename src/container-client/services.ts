@@ -51,15 +51,13 @@ export class SSHClient implements ISSHClient {
   protected params!: SSHClientConnection;
   protected connected = false;
   protected cli = "";
-  protected relayCLI = "";
   protected osType: OperatingSystem = OperatingSystem.Unknown;
   protected nativeApiStarterProcess: CommandExecutionResult | null = null;
   protected nativeApiStarterProcessChild: SpawnedProcess | null = null;
   protected onStopTunnel?: () => void;
-  constructor({ cli, relayCLI, osType }: { cli: string; relayCLI: string; osType: OperatingSystem }) {
+  constructor({ cli, osType }: { cli: string; osType: OperatingSystem }) {
     this.em = new EventEmitter();
     this.cli = cli;
-    this.relayCLI = relayCLI ?? cli;
     this.osType = osType;
   }
   isConnected() {
@@ -110,27 +108,13 @@ export class SSHClient implements ISSHClient {
     onStopTunnel: () => void;
   }): Promise<EventEmitter> {
     const remoteAddress = config.remoteAddress.replace("unix://", "").replace("UNIX://", "");
-    let spawnCLI = this.cli;
-    let spawnArgs = buildSSHTunnelArgs(this.params, config.localAddress, remoteAddress);
-    if (this.osType === OperatingSystem.Windows) {
-      // Relay using custom ssh client that tunnels unix socket over a named pipe
-      spawnCLI = this.relayCLI;
-      const sshConnection = buildSSHConnectionURI(this.params);
-      spawnArgs = [
-        // Relay connection options
-        "--named-pipe",
-        `npipe://${config.localAddress.replaceAll("\\", "/")}`,
-        "--ssh-connection",
-        `ssh://${sshConnection}${remoteAddress}`,
-        "--ssh-timeout",
-        "15",
-        ...(this.params.privateKeyPath ? ["--identity-path", this.params.privateKeyPath] : []),
-      ];
-    }
+    // Plain OpenSSH unix-socket forward (`ssh -NL`). Non-Windows only — the transport refuses this path on
+    // Windows, where the engine's own `system dial-stdio` bridge is used instead.
+    const spawnCLI = this.cli;
+    const spawnArgs = buildSSHTunnelArgs(this.params, config.localAddress, remoteAddress);
     logger.debug("Starting SSH tunnel", {
       osType: this.osType,
       spawnCLI,
-      relayCLI: this.relayCLI,
       localAddress: config.localAddress,
       remoteAddress,
     });

@@ -138,7 +138,18 @@ export const podmanDialect: EngineDialect = {
       "--format",
       "json",
     ]);
-    return output.success ? resolvePodmanMachineBridge(output.stdout || "") : undefined;
+    // A remote MACHINE needs a nested OpenSSH hop into its VM (resolvePodmanMachineBridge). A native remote
+    // podman is a plain socket the outer SSH reaches directly — bridge it with its own `podman system
+    // dial-stdio`, so no engine endpoint ever falls back to an `ssh -NL` forward.
+    const machineBridge = output.success ? resolvePodmanMachineBridge(output.stdout || "") : undefined;
+    if (machineBridge) {
+      return machineBridge;
+    }
+    const socket = await this.readEngineSocket(host, settings);
+    if (!socket) {
+      return undefined;
+    }
+    return { relay: socket, command: [settings.program.name || "podman", "system", "dial-stdio"] };
   },
 
   async resolveNativeURISeed(): Promise<string> {

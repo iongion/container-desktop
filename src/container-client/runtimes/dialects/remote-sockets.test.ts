@@ -191,6 +191,99 @@ describe("remote SSH host socket discovery", () => {
   });
 });
 
+describe("resolveDialStdioBridge (SSH data plane — always dial-stdio, never the ssh -NL relay)", () => {
+  it("Docker remote unix socket now bridges via docker system dial-stdio", async () => {
+    const runScopeCommand = vi.fn(async (program: string, args: string[]) => {
+      if (program === "docker" && args[0] === "context") {
+        return commandResult({
+          stdout: JSON.stringify([{ Name: "default", Endpoints: { docker: { Host: "unix:///var/run/docker.sock" } } }]),
+        });
+      }
+      if (program === "uname") {
+        return commandResult({ stdout: "Linux\n" });
+      }
+      return commandResult({ success: false, code: 1, stderr: "unexpected" });
+    }) as HostContext["runScopeCommand"];
+    const host = hostFor(ContainerEngineHost.DOCKER_REMOTE, runScopeCommand);
+
+    await expect(dockerDialect.resolveDialStdioBridge?.(host, settings("docker"))).resolves.toEqual({
+      relay: "/var/run/docker.sock",
+      command: ["docker", "system", "dial-stdio"],
+    });
+  });
+
+  it("Docker remote Windows named pipe still bridges via docker system dial-stdio", async () => {
+    const runScopeCommand = vi.fn(async (_program: string, args: string[]) => {
+      if (args[0] === "context") {
+        return commandResult({
+          stdout: JSON.stringify([
+            { Name: "desktop-linux", Endpoints: { docker: { Host: "npipe:////./pipe/dockerDesktopLinuxEngine" } } },
+          ]),
+        });
+      }
+      return commandResult({ success: false, code: 1, stderr: "unexpected" });
+    }) as HostContext["runScopeCommand"];
+    const host = hostFor(ContainerEngineHost.DOCKER_REMOTE, runScopeCommand);
+
+    await expect(dockerDialect.resolveDialStdioBridge?.(host, settings("docker"))).resolves.toEqual({
+      relay: "npipe:////./pipe/dockerDesktopLinuxEngine",
+      command: ["docker", "system", "dial-stdio"],
+    });
+  });
+
+  it("Podman native remote (no machine) bridges the plain socket via podman system dial-stdio", async () => {
+    const runScopeCommand = vi.fn(async (program: string, args: string[]) => {
+      if (program === "uname") {
+        return commandResult({ stdout: "Linux\n" });
+      }
+      if (args[0] === "system" && args[1] === "connection" && args[2] === "list") {
+        // A native remote podman reachable by ssh -NL: IsMachine=false ⇒ no nested machine bridge.
+        return commandResult({
+          stdout: JSON.stringify([
+            { Name: "remote", URI: "ssh://podman@box:22/run/user/1000/podman/podman.sock", IsMachine: false },
+          ]),
+        });
+      }
+      return commandResult({ success: false, code: 1, stderr: "unexpected" });
+    }) as HostContext["runScopeCommand"];
+    const host = hostFor(ContainerEngineHost.PODMAN_REMOTE, runScopeCommand, {
+      getSystemInfo: vi.fn(async () => ({
+        host: { remoteSocket: { exists: true, path: "/run/user/1000/podman/podman.sock" } },
+      })) as unknown as HostContext["getSystemInfo"],
+    });
+
+    await expect(podmanDialect.resolveDialStdioBridge?.(host, settings("podman"))).resolves.toEqual({
+      relay: "/run/user/1000/podman/podman.sock",
+      command: ["podman", "system", "dial-stdio"],
+    });
+  });
+
+  it("Podman machine remote keeps the nested-OpenSSH machine dial-stdio bridge", async () => {
+    const runScopeCommand = vi.fn(async (_program: string, args: string[]) => {
+      if (args[0] === "system" && args[1] === "connection" && args[2] === "list") {
+        return commandResult({
+          stdout: JSON.stringify([
+            {
+              Name: "podman-machine-default-root",
+              URI: "ssh://root@127.0.0.1:56515/run/podman/podman.sock",
+              Identity: "C:\\Users\\me\\machine",
+              IsMachine: true,
+              Default: true,
+            },
+          ]),
+        });
+      }
+      return commandResult({ success: false, code: 1, stderr: "unexpected" });
+    }) as HostContext["runScopeCommand"];
+    const host = hostFor(ContainerEngineHost.PODMAN_REMOTE, runScopeCommand);
+
+    const bridge = await podmanDialect.resolveDialStdioBridge?.(host, settings("podman"));
+    expect(bridge?.relay).toBe("ssh://root@127.0.0.1:56515/run/podman/podman.sock");
+    expect(bridge?.command[0]).toBe("ssh"); // nested OpenSSH hop into the VM
+    expect(bridge?.command).toContain("dial-stdio");
+  });
+});
+
 describe("normalizeUnixSocketPath", () => {
   it("strips the unix:// scheme", () => {
     expect(normalizeUnixSocketPath("unix:///var/run/docker.sock")).toBe("/var/run/docker.sock");

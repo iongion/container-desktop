@@ -121,7 +121,7 @@ describe("SSHClient argv (recorded via fake Command)", () => {
     fake = installFakeCommand((call) =>
       call.args.includes("SSH connection established") ? { stdout: "SSH connection established" } : {},
     );
-    const client = new SSHClient({ cli: "ssh", relayCLI: "ssh", osType: OperatingSystem.Linux });
+    const client = new SSHClient({ cli: "ssh", osType: OperatingSystem.Linux });
     let established = false;
     client.on("connection.established", () => {
       established = true;
@@ -140,7 +140,7 @@ describe("SSHClient argv (recorded via fake Command)", () => {
     fake = installFakeCommand((call) =>
       call.args.includes("SSH connection established") ? { stdout: "SSH connection established" } : {},
     );
-    const client = new SSHClient({ cli: "ssh", relayCLI: "ssh", osType: OperatingSystem.Linux });
+    const client = new SSHClient({ cli: "ssh", osType: OperatingSystem.Linux });
 
     await client.connect(noIdentityParams);
 
@@ -151,7 +151,7 @@ describe("SSHClient argv (recorded via fake Command)", () => {
 
   it("execute() reuses the same bounded argv with the requested command", async () => {
     fake = installFakeCommand();
-    const client = new SSHClient({ cli: "ssh", relayCLI: "ssh", osType: OperatingSystem.Linux });
+    const client = new SSHClient({ cli: "ssh", osType: OperatingSystem.Linux });
     await client.connect(params);
     fake.calls.length = 0;
 
@@ -164,7 +164,7 @@ describe("SSHClient argv (recorded via fake Command)", () => {
   it("connect() failure attaches a structured preflight report, not just raw output (#186/#171)", async () => {
     // Make the probe fail; connect() then runs the (bounded) preflight to diagnose why.
     fake = installFakeCommand((call) => (call.args.includes("echo") ? { success: false, stderr: "boom" } : {}));
-    const client = new SSHClient({ cli: "ssh", relayCLI: "ssh", osType: OperatingSystem.Linux });
+    const client = new SSHClient({ cli: "ssh", osType: OperatingSystem.Linux });
     let payload: any;
     client.on("error", (e) => {
       payload = e;
@@ -179,57 +179,9 @@ describe("SSHClient argv (recorded via fake Command)", () => {
     expect(payload.report.steps.some((s: { skipped: boolean; ok: boolean }) => !s.skipped && !s.ok)).toBe(true);
   });
 
-  it("startTunnel() on Windows spawns the relay embedding the non-default port in the ssh:// URL", async () => {
-    fake = installFakeCommand();
-    const client = new SSHClient({
-      cli: "ssh",
-      relayCLI: "container-desktop-ssh-relay",
-      osType: OperatingSystem.Windows,
-    });
-    await client.connect({ ...params, port: 2222 });
-    fake.calls.length = 0;
-
-    await client.startTunnel({
-      localAddress: "\\\\.\\pipe\\cdt-test",
-      remoteAddress: "unix:///run/user/1000/podman/podman.sock",
-      onStatusCheck: () => {},
-      onStopTunnel: () => {},
-    });
-
-    const bg = fake.calls.find((c) => c.launcher === "container-desktop-ssh-relay");
-    expect(bg).toBeDefined();
-    expect(bg?.args).toContain("--named-pipe");
-    const sshConn = bg!.args[bg!.args.indexOf("--ssh-connection") + 1];
-    expect(sshConn).toBe("ssh://ion@10.0.0.5:2222/run/user/1000/podman/podman.sock");
-    expect(bg!.args[bg!.args.indexOf("--identity-path") + 1]).toBe(params.privateKeyPath);
-    expect(bg!.args).toContain("--ssh-timeout");
-  });
-
-  it("startTunnel() on Windows omits --identity-path when no identity file is configured", async () => {
-    fake = installFakeCommand();
-    const client = new SSHClient({
-      cli: "ssh",
-      relayCLI: "container-desktop-ssh-relay",
-      osType: OperatingSystem.Windows,
-    });
-    await client.connect(noIdentityParams);
-    fake.calls.length = 0;
-
-    await client.startTunnel({
-      localAddress: "\\\\.\\pipe\\cdt-test",
-      remoteAddress: "unix:///run/user/1000/podman/podman.sock",
-      onStatusCheck: () => {},
-      onStopTunnel: () => {},
-    });
-
-    const bg = fake.calls.find((c) => c.launcher === "container-desktop-ssh-relay");
-    expect(bg).toBeDefined();
-    expect(bg!.args).not.toContain("--identity-path");
-  });
-
   it("startTunnel() on Linux spawns native ssh -NL using the shared bounded target argv", async () => {
     fake = installFakeCommand();
-    const client = new SSHClient({ cli: "ssh", relayCLI: "ssh", osType: OperatingSystem.Linux });
+    const client = new SSHClient({ cli: "ssh", osType: OperatingSystem.Linux });
     await client.connect(params);
     fake.calls.length = 0;
 

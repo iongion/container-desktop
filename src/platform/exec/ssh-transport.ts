@@ -6,7 +6,7 @@ import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/containe
 import { buildSSHArgs } from "@/container-client/ssh-args";
 import { type ApiDriverConfig, type Connection, OperatingSystem, type ServiceOpts } from "@/env/Types";
 import { createLogger } from "@/logger";
-import { Path, Platform } from "@/platform/node";
+import { Platform } from "@/platform/node";
 import { expandHome } from "@/utils";
 import {
   applyProxyRequestDefaults,
@@ -33,8 +33,6 @@ export function resetSSHTunnelsCache() {
     delete SSH_BRIDGES[key];
   }
 }
-
-const PROGRAM_SSH_RELAY = "container-desktop-ssh-relay.exe";
 
 export async function proxyRequestToSSHConnection(
   connection: Connection,
@@ -80,6 +78,14 @@ export async function proxyRequestToSSHConnection(
         SSH_TUNNELS_CACHE[remoteAddress] = localAddress;
       }
     } else {
+      // No dial-stdio bridge ⇒ a plain `ssh -NL` unix-socket forward. Windows can't forward a unix socket
+      // (the removed relay binary papered over that), and every Windows-reachable engine now emits a dial-stdio
+      // command, so refuse here rather than spawn a tunnel that cannot work.
+      if ((os.type() as OperatingSystem) === OperatingSystem.Windows) {
+        throw new Error(
+          "No dial-stdio bridge for this SSH connection — the remote engine must support `<engine> system dial-stdio`.",
+        );
+      }
       let em: EventEmitter | undefined;
       em = await sshConnection.startTunnel({
         localAddress,
@@ -119,12 +125,10 @@ export async function startSSHConnection(host: SSHHost, opts?: Partial<ServiceOp
   const privateKeyPath = host.IdentityFile ? expandHome(host.IdentityFile, homeDir) : "";
   host.IdentityFile = privateKeyPath;
   const isWindows = (os.type() as OperatingSystem) === OperatingSystem.Windows;
-  const sshRelayProgramCLI = isWindows ? await Path.join(process.env.APP_PATH || "", "bin", PROGRAM_SSH_RELAY) : "ssh";
   return new Promise<ISSHClient>((resolve, reject) => {
     const connection = new SSHClient({
       osType: os.type() as OperatingSystem,
       cli: isWindows ? "ssh.exe" : "ssh",
-      relayCLI: sshRelayProgramCLI,
     });
     connection.on("connection.established", () => {
       logger.debug("Connection established", connection);
