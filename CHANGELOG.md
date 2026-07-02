@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.14] - 2026-07-02
+
 ### Changed
 
 - SSH and WSL engine connections now bridge through the engine's own `docker`/`podman system dial-stdio` (over OpenSSH, or `wsl.exe --exec` inside the distro) rather than a separate helper executable, which is no longer built or shipped. Behaviour is unchanged; this requires a reasonably recent Docker/Podman (both have shipped `system dial-stdio` for years).
