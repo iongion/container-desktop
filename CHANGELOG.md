@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Podman on **native Windows** no longer fails with "API is not reachable" when Podman marks the rootful `-root` system connection as Default (common on WSL machines): the app now always targets the **rootless** machine connection — for the scope, the named pipe and the SSH bridge — which is the only one Podman actually serves. Scope resolution also logs the chosen connection and the available machines when it can't resolve one.
+- The image **security scan** no longer shows a misleading "internal error, please report the issue" when Trivy is not installed: it now detects the scanner's absence up front, never runs a missing binary, and shows a clear "vulnerability scanning is unavailable — install trivy" state.
 
 ## [5.3.14] - 2026-07-02
 

@@ -703,7 +703,11 @@ export class Application {
           path: "",
         });
       }
-      const programPath = program?.path || program?.name || scanner;
+      // Only the DETECTED path — never fall back to the bare scanner name. When the scanner is not installed
+      // detection yields an empty path; fabricating one here made the app run a missing binary and, because
+      // report.scanner.path was truthy, made the UI show "internal error, please report" instead of the correct
+      // "please install trivy" guidance.
+      const programPath = program?.path || "";
       // support only trivy for now
       if (programPath) {
         report.scanner.path = programPath;
@@ -771,6 +775,8 @@ export class Application {
             };
           }
         }
+      } else {
+        this.logger.debug(`Security scanner '${scanner}' is not installed - reporting as unavailable`);
       }
     } catch (error: any) {
       this.logger.error("Error during scanner detection", error.message);

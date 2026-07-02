@@ -65,6 +65,31 @@ describe("Application.checkSecurity", () => {
     expect(report.result.Results[0].Vulnerabilities.map((v: any) => v.Severity)).toEqual(["CRITICAL", "HIGH", "LOW"]);
   });
 
+  it("trivy not installed: empty scanner.path, runs nothing, stays failure (UI shows install guidance)", async () => {
+    const app = makeApp();
+    let executed = false;
+    const host = hostFor({});
+    // Detection found no scanner — path is empty (findProgramPath returns undefined -> host-client sets "").
+    host.findHostProgram = async () => ({ name: "trivy", path: "", version: "" });
+    host.findScopeProgram = async () => ({ name: "trivy", path: "", version: "" });
+    host.runHostCommand = async () => {
+      executed = true;
+      return { success: false, stdout: "" };
+    };
+    host.runScopeCommand = async () => {
+      executed = true;
+      return { success: false, stdout: "" };
+    };
+
+    const report = await app.checkSecurity({ scanner: "trivy", subject: "image", target: "nginx", host });
+
+    // Never fabricate a path or execute a missing binary; leave path empty so the UI shows "please install trivy"
+    // instead of the misleading "internal error, please report the issue".
+    expect(report.scanner.path).toBe("");
+    expect(report.status).toBe("failure");
+    expect(executed).toBe(false);
+  });
+
   it("bad db-version JSON: logs, retains the program version, scan continues", async () => {
     const app = makeApp();
     const errSpy = vi.spyOn(app.logger, "error").mockImplementation(() => {});

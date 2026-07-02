@@ -268,8 +268,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </div>
             ) : (
               <NonIdealState
-                icon={IconNames.WARNING_SIGN}
-                title={t("Report could not be generated")}
+                icon={report?.scanner?.path ? IconNames.WARNING_SIGN : IconNames.SHIELD}
+                title={
+                  report?.scanner?.path
+                    ? t("Report could not be generated")
+                    : t("Vulnerability scanning is unavailable")
+                }
                 description={
                   report?.scanner?.path ? (
                     <p>{t("An internal error occurred, please report the issue.")}</p>
