@@ -7,6 +7,7 @@
 import { ContainerEngineHost, OperatingSystem } from "@/env/Types";
 import { isEmpty } from "@/utils";
 import type { HostProfile } from "../composition";
+import { isWindowsNamedPipe } from "../dialects/podman-machine-pipe";
 import {
   availableAlways,
   availableOn,
@@ -53,7 +54,9 @@ export const podmanVendorProfile: HostProfile = {
       return { uri: "", relay: "" };
     }
     const uri = await host.transport.resolveScopeURI(host, settings);
-    if (host.isScoped()) {
+    // A native Windows named pipe (newer Podman) is dialed directly — no relay/bridge. Reading the in-VM
+    // engine socket for a relay is only for the bridged cases (WSL/LIMA/SSH), so skip it when we have a pipe.
+    if (host.isScoped() && !isWindowsNamedPipe(uri)) {
       try {
         relay = (await host.dialect.readEngineSocket(host, settings)) || "";
       } catch (error: any) {

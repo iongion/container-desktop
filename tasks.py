@@ -12,6 +12,11 @@ from pathlib import Path
 
 from invoke import Collection, Exit, task
 
+from support.ci_artifacts import (
+    WINDOWS_ARTIFACT_NAME,
+    parse_appx_version,
+    select_windows_artifact,
+)
 from support.versioning import (
     bump_version,
     extract_changelog_section,
@@ -554,6 +559,91 @@ def publish_meta(ctx, version=None, perform=False):
         print(f"  would update: {rb} (fetch dmg sha256 for arm64)")
 
 
+def _repo_artifacts(ctx):
+    """The newest ~100 GitHub Actions upload artifacts for the repo (parsed JSON)."""
+    result = ctx.run(
+        f"gh api {_quote(f'repos/{REPO_SLUG}/actions/artifacts?per_page=100')}",
+        hide=True,
+        warn=True,
+    )
+    if not result.ok:
+        raise Exit("Could not list GitHub artifacts -- is `gh` installed and authenticated? Try `gh auth login`.")
+    return json.loads(result.stdout or "{}").get("artifacts", [])
+
+
+@task(name="fetch-appx")
+def fetch_appx(ctx, run_id=None, version=None, keep=False):
+    """Download the Microsoft Store .appx from a CDPipeline run (no local build).
+
+    The Windows CD job builds container-desktop-x64-<version>.appx but keeps it
+    OFF the public GitHub release (there it is superseded by the signed installer +
+    portable zip), so it only lives inside that run's `container-desktop-windows`
+    upload artifact. This fetches that artifact with `gh`, extracts just the .appx
+    (+ .sha256), verifies the checksum and drops it in release/ -- ready to upload
+    to Partner Center. Runs on macOS/Linux: no Windows or build toolchain needed,
+    only an authenticated `gh` CLI.
+
+    Defaults to the newest non-expired windows artifact. Pass --run-id to target a
+    specific run (`gh run list --workflow CDPipeline.yml`), or --version to assert
+    the fetched build matches (errors on mismatch instead of silently guessing).
+    Pass --keep to leave the raw download dir in place for inspection.
+    """
+    release_dir = _release_dir()
+    if run_id is None:
+        artifact = select_windows_artifact(_repo_artifacts(ctx))
+        if artifact is None:
+            raise Exit(
+                f"No downloadable '{WINDOWS_ARTIFACT_NAME}' artifact found "
+                "(none built yet, or all expired -- re-run CDPipeline for the windows target)."
+            )
+        run_id = artifact["workflow_run"]["id"]
+        print(f"Using newest '{WINDOWS_ARTIFACT_NAME}' artifact from run {run_id}")
+    else:
+        print(f"Using '{WINDOWS_ARTIFACT_NAME}' artifact from run {run_id} (--run-id)")
+
+    download_dir = release_dir / f"_appx-{run_id}"
+    shutil.rmtree(download_dir, ignore_errors=True)
+    try:
+        ctx.run(
+            f"gh run download {_quote(run_id)} --repo {_quote(REPO_SLUG)} "
+            f"-n {_quote(WINDOWS_ARTIFACT_NAME)} --dir {_quote(download_dir)}"
+        )
+        appx_files = sorted(download_dir.rglob("*.appx"))
+        if not appx_files:
+            raise Exit(f"No .appx inside '{WINDOWS_ARTIFACT_NAME}' (run {run_id}).")
+        appx = appx_files[0]
+        found_version = parse_appx_version(appx.name)
+        if version and found_version != version:
+            raise Exit(
+                f"Fetched {appx.name} (version {found_version}) != requested --version {version}. "
+                "Pass the matching --run-id, or drop --version to accept this build."
+            )
+        if found_version != PROJECT_VERSION:
+            print(f"  note: fetched version {found_version} differs from local VERSION ({PROJECT_VERSION})")
+
+        target = release_dir / appx.name
+        shutil.copy2(appx, target)
+        print(f"  extracted: {target.name}")
+        checksum_src = appx.with_name(f"{appx.name}.sha256")
+        if checksum_src.exists():
+            shutil.copy2(checksum_src, release_dir / checksum_src.name)
+            expected = checksum_src.read_text(encoding="utf-8").strip().split()[0]
+            actual = hashlib.sha256(target.read_bytes()).hexdigest()
+            if actual != expected:
+                raise Exit(f"Checksum mismatch for {target.name}: expected {expected}, got {actual}")
+            print(f"  checksum OK ({actual[:12]}...)")
+    finally:
+        if keep:
+            print(f"  kept raw download: {download_dir}")
+        else:
+            shutil.rmtree(download_dir, ignore_errors=True)
+
+    print("")
+    print(f"Ready: {target}")
+    print("Next: Partner Center -> your app -> Packages -> upload this .appx -> Submit.")
+    print("The Store re-signs it (no certificate needed); the version must exceed the last submission.")
+
+
 namespace = Collection(
     show_help,
     clean,
@@ -567,6 +657,7 @@ namespace = Collection(
     version_sync,
     publish_release,
     publish_meta,
+    fetch_appx,
     update_demo_replay,
     update_screenshots,
     start,

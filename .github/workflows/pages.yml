@@ -36,7 +36,14 @@ jobs:
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
+          # Per-attempt name — see CDPipeline.yml's publish-pages for the full why:
+          # re-running a single deploy job would otherwise stack a duplicate
+          # github-pages artifact and deploy-pages aborts on >1 of the same name.
+          name: github-pages-${{ github.run_attempt }}
           path: website
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+          timeout: 1200000 # 20 min — ride out slow GitHub Pages deploys (default 10)

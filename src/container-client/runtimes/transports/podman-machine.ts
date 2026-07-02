@@ -19,6 +19,7 @@ import {
 } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import type { HostContext, Transport } from "../composition";
+import { isWindowsNamedPipe, parsePodmanMachineNamedPipe } from "../dialects/podman-machine-pipe";
 import { createPlainApiDriver } from "./shared";
 
 const PODMAN_API_SOCKET = `container-desktop-${PODMAN_PROGRAM}-rest-api.sock`;
@@ -148,7 +149,12 @@ export class PodmanMachineTransport implements Transport {
     const scope = settings.controller?.scope;
     let uri = await Path.join(await userConfiguration.getStoragePath(), PODMAN_API_SOCKET);
     if (host.osType === OperatingSystem.Windows) {
-      uri = getWindowsPipePath(scope!);
+      // Favor Podman's OWN native Windows named pipe when it exposes one (newer Podman lists it as
+      // npipe:////./pipe/podman-machine-default). It is dialable directly from a native Windows process — no
+      // relay, no SSH, no dial-stdio. Only when there is no native pipe (older WSL-ssh machines) fall back to
+      // the app's ssh-relay pipe, which a bridge must serve.
+      const nativePipe = parsePodmanMachineNamedPipe(await this.getSystemConnections(host, settings));
+      uri = nativePipe || getWindowsPipePath(scope!);
     } else {
       const homeDir = await Platform.getHomeDir();
       uri = await Path.join(homeDir, ".local/share/containers/podman/machine/podman.sock");
@@ -164,12 +170,15 @@ export class PodmanMachineTransport implements Transport {
         }
       }
     }
-    // Inspect machine for connection details - named pipe or unix socket
+    // Inspect machine for connection details — a named pipe wins (also how Podman reports it on Windows). Never
+    // overwrite a resolved Windows pipe with the in-VM unix socket (PodmanSocket.Path): that path is not
+    // reachable from a native Windows process, and clobbering it is exactly what left Podman "not reachable".
     try {
       const inspectResult = await host.getPodmanMachineInspect(undefined, settings);
-      if (inspectResult?.ConnectionInfo?.PodmanPipe?.Path) {
-        uri = inspectResult?.ConnectionInfo?.PodmanPipe?.Path || uri;
-      } else {
+      const pipePath = inspectResult?.ConnectionInfo?.PodmanPipe?.Path;
+      if (pipePath) {
+        uri = pipePath;
+      } else if (!isWindowsNamedPipe(uri)) {
         uri = inspectResult?.ConnectionInfo?.PodmanSocket?.Path || uri;
       }
     } catch (error: any) {

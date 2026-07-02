@@ -191,7 +191,16 @@ jobs:
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
+          # Name the artifact per run-attempt. Artifacts persist across a run's
+          # attempts, so re-running ONLY this job would leave the previous attempt's
+          # upload behind and deploy-pages aborts when it finds >1 artifact of the
+          # same name ("Multiple artifacts named github-pages ..."). A per-attempt
+          # name keeps each re-run pointing at exactly its own artifact.
+          name: github-pages-${{ github.run_attempt }}
           path: website
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+          timeout: 1200000 # 20 min — ride out slow GitHub Pages deploys (default 10)
