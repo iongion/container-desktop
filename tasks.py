@@ -412,7 +412,7 @@ def commit_release(ctx):
     _commit_release(
         ctx,
         version,
-        extra_paths=("website", "website-src/static/img", "website-src/static/replays"),
+        extra_paths=("website", "website-src/static/img", "website-src/static/replays", "website-src/static/videos"),
     )
 
 
