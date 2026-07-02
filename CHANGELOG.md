@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.13] - 2026-07-02
+
 ### Added
 
 - Connect to a **Docker Engine on a Windows remote over SSH** — the engine API is tunneled through an SSH `docker system dial-stdio` bridge into a local socket/named pipe (no TCP relay, even locally), making Docker Desktop's named-pipe engine reachable from macOS/Linux.
