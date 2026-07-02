@@ -1,7 +1,7 @@
 # Testing
 
-The verification gate is **type-check · lint · unit tests · production build**, plus the Go
-relay and Python suites — all enforced on every PR and push to `main` by
+The verification gate is **type-check · lint · unit tests · production build**, plus the Python
+suite — all enforced on every PR and push to `main` by
 [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml). That is the **CI**
 pipeline; `CDPipeline.yml` is the separate **release/publish** pipeline and runs no checks.
 
@@ -83,15 +83,6 @@ states — no Docker required.
 yarn test:ui
 ```
 
-## Go relay
-
-```bash
-cd support/container-desktop-relay && go test ./...
-```
-
-The Windows SSH paths are `//go:build windows`, so they only compile under `GOOS=windows` — CI
-runs `go test` on **both** ubuntu and windows for that reason.
-
 ## Python tooling
 
 ```bash
@@ -101,12 +92,11 @@ uv run --locked pytest
 
 ## CI jobs
 
-[`CIPipeline.yml`](../.github/workflows/CIPipeline.yml) runs three jobs:
+[`CIPipeline.yml`](../.github/workflows/CIPipeline.yml) runs two jobs:
 
 | Job         | Does                                                                                           |
 | ----------- | ---------------------------------------------------------------------------------------------- |
 | **app**     | `yarn check-types` · `yarn lint:check` · `yarn test:run` · `ENVIRONMENT=production yarn build` |
-| **relay**   | `go test ./...` on ubuntu **and** windows                                                      |
 | **tooling** | `ruff check` · `pytest` (via `uv`)                                                             |
 
 ## Source map

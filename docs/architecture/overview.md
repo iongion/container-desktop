@@ -44,9 +44,9 @@ renders the results.
 
 ## C4 L2 — Containers (runnable pieces)
 
-The app is **three runtimes** in one repo (see [`CLAUDE.md`](../../CLAUDE.md) for
-the build model): a Node/TypeScript Electron app, a Go relay, and Python build
-tooling (not shown — it builds, it doesn't run at app runtime).
+The app is a Node/TypeScript Electron app (see [`CLAUDE.md`](../../CLAUDE.md) for
+the build model), with Python build tooling (not shown — it builds, it doesn't run
+at app runtime).
 
 The interesting and slightly unusual part is **where the engine logic runs**: the
 `container-client` "backend" executes **in the renderer process**, not the main
@@ -67,8 +67,6 @@ flowchart TB
       web["Web-app world<br/>(web-app/ + container-client/)<br/>React UI + engine orchestration"]:::container
       preload["Preload bridge — Node world<br/>(electron-shell/preload.ts,<br/>platform/node-executor.ts)<br/>Command · FS · Platform · Path · MessageBus"]:::container
     end
-
-    relay["Go relay<br/>(support/container-desktop-relay)<br/>SSH ↔ unix-socket / named-pipe bridge"]:::container
   end
 
   engines[(Container engine sockets:<br/>Podman / Docker / Apple Container · local · VM ·<br/>WSL · remote SSH)]:::external
@@ -76,9 +74,7 @@ flowchart TB
   dev -->|interacts| web
   web -->|"window.Command / FS / Platform / Path<br/>(contextBridge, in-process)"| preload
   web -.->|"window.MessageBus (IPC):<br/>window, terminal, dialogs"| main
-  preload -->|spawns CLIs, HTTP-over-socket,<br/>SSH; spawns relay| engines
-  preload -->|launch / supervise| relay
-  relay -.->|forwards socket traffic| engines
+  preload -->|"spawns CLIs, HTTP-over-socket, SSH;<br/>bridges via engine 'system dial-stdio'"| engines
 
   classDef person fill:#08427b,color:#fff,stroke:#052e56;
   classDef container fill:#438dd5,color:#fff,stroke:#2e6295;
@@ -102,10 +98,14 @@ flowchart TB
     `Command` (process spawn, `ProxyRequest` = HTTP over a unix socket / named
     pipe, `StartSSHConnection`), `FS`, `Platform`, `Path`, and `MessageBus`.
     Engine I/O physically happens here, in Node.
-- **Go relay** — `support/container-desktop-relay/`. A spawned helper that bridges a
-  Windows named pipe to a Unix socket — inside **WSL** via a stdio bridge (no SSH server in
-  the distro), or to a **remote host over SSH** on Windows. Linux/macOS remote SSH uses the
-  native `ssh` client instead. See [connection-startup.md](connection-startup.md).
+- **Socket bridge (in-process)** — for hosts whose engine socket isn't locally reachable, the
+  preload runs an in-process Node bridge server that fronts a local pipe/socket and pumps bytes to
+  the engine's own `docker`/`podman system dial-stdio`. `WSLRelayServer`
+  ([`exec/wsl-relay.ts`](../../src/platform/exec/wsl-relay.ts)) fronts a Windows named pipe and
+  runs `wsl.exe --exec … system dial-stdio` inside the distro (no SSH server in the distro);
+  `SSHStdioBridgeServer` ([`exec/ssh-stdio-bridge.ts`](../../src/platform/exec/ssh-stdio-bridge.ts))
+  runs `system dial-stdio` on a **remote host over SSH**. Linux/macOS remote SSH can also use the
+  native `ssh` client's port forward. See [connection-startup.md](connection-startup.md).
 - **External engines** — Podman/Docker REST sockets, plus Apple Container's
   Docker-compatible socket exposed by **socktainer** (macOS/Apple-silicon),
   reachable directly (native), through a VM (machine/Lima), through WSL, or across SSH.
@@ -128,4 +128,4 @@ here.
 | IPC bus | [`src/electron-shell/shared.ts`](../../src/electron-shell/shared.ts) |
 | Engine logic (backend) | [`src/container-client/`](../../src/container-client/) |
 | React renderer (frontend) | [`src/web-app/`](../../src/web-app/) |
-| Go relay | [`support/container-desktop-relay/`](../../support/container-desktop-relay/) |
+| Socket bridge servers | [`exec/ssh-stdio-bridge.ts`](../../src/platform/exec/ssh-stdio-bridge.ts) · [`exec/wsl-relay.ts`](../../src/platform/exec/wsl-relay.ts) |

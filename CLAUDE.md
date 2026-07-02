@@ -7,18 +7,16 @@
 
 Cross-platform **Electron desktop app** for managing container engines
 (Podman, Docker, and Apple Container — the last is **experimental**, macOS /
-Apple-silicon only) — local, remote over SSH, and WSL. One repo, three runtimes:
+Apple-silicon only) — local, remote over SSH, and WSL. One repo, two runtimes:
 
 - **Node / TypeScript** app — Electron main + preload + React renderer
-- **Go** SSH/vsock relay — `support/container-desktop-relay/`
 - **Python** build tooling — `invoke` tasks (`tasks.py`) + `uv`
 
 ## Stack
 
 Electron 42 · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
 Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format).
-Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Go 1.25+ (toolchain 1.26.4).
-Python ≥ 3.12 via `uv`.
+Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Python ≥ 3.12 via `uv`.
 
 ## Layout
 
@@ -58,7 +56,6 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   copied into `release/container-desktop-installer.exe` when available.
   `CDPipeline.yml` can also publish after all production targets build; use its
   `replace-release` input to delete/recreate the same version cleanly.
-- Relay: `cd support/container-desktop-relay && ./relay-build.sh`; scan `govulncheck ./...`
 - Python tooling: `make check` (ruff), `make prepare` (`uv sync --locked --dev --no-install-project`)
 - Linux system deps (one-shot): `bash support/provision-deps.sh`
 
@@ -162,7 +159,7 @@ How you build here, **per change** — not an end-of-task afterthought:
 - **Tests:** a hermetic **Vitest** suite (`yarn test:run`) runs the renderer +
   container-client under plain Node via `src/__tests__/setup/` (headless globals + a recording
   `fakeCommand`); `*.live.test.ts` + `installRealCommand()` are reserved for a future real-VM
-  suite (no separate config yet). Go relay `go test ./...`; Python `pytest` (`support/`). CI
+  suite (no separate config yet). Python `pytest` (`support/`). CI
   gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
 - **UI changes:** verify live in the running app, not off static checks — see Development workflow.
 - **Logging:** use `@/logger` (`createLogger`), never raw `console.*` (except the façade
@@ -197,7 +194,7 @@ The user is a hands-on designer and corrects deviations fast — match these up 
   claim success unverified.
 - Long-running steps (packaging, dev run) → run in the background; don't block.
 - `.github/dependabot.yml` groups minor/patch bumps weekly per ecosystem
-  (npm / gomod / github-actions); **major bumps are never auto-proposed** (ignored
+  (npm / github-actions); **major bumps are never auto-proposed** (ignored
   globally) — adopt majors deliberately by hand.
 - Build/release automation must use lockfile-respecting installs
   (`yarn install --frozen-lockfile`, `uv run --locked` / `uv sync --locked`) and

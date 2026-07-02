@@ -17,16 +17,16 @@ OS gating from [`connection.ts`](../../src/container-client/connection.ts).
 | --- | --- | --- | --- | --- | --- | --- |
 | `podman.native` | Podman | Native | — | `podman` | Linux | direct unix socket |
 | `podman.virtualized.vendor` | Podman | PodmanMachine | `PodmanMachine` | `podman` | all | machine VM socket (npipe on Windows) |
-| `podman.virtualized.wsl` | Podman | WSL | `WSLDistribution` | `wsl` | Windows | named pipe ↔ Linux socket via **relay** |
+| `podman.virtualized.wsl` | Podman | WSL | `WSLDistribution` | `wsl` | Windows | named pipe ↔ Linux socket via **`system dial-stdio`** |
 | `podman.virtualized.lima` | Podman | Lima | `LIMAInstance` | `limactl` | macOS | Lima VM socket |
-| `podman.remote` | Podman | SSH | `SSHConnection` | `ssh` | all | SSH tunnel → remote socket via **relay** |
+| `podman.remote` | Podman | SSH | `SSHConnection` | `ssh` | all | SSH tunnel → remote socket via **`system dial-stdio`** |
 | `docker.native` | Docker | Native | — | `docker` | Linux | direct unix socket |
 | `docker.virtualized.vendor` | Docker | **Native** (unscoped) | — | `docker` | all | Docker Desktop / Colima socket (npipe on Windows) |
-| `docker.virtualized.wsl` | Docker | WSL | `WSLDistribution` | `wsl` | Windows | named pipe ↔ Linux socket via **relay** |
+| `docker.virtualized.wsl` | Docker | WSL | `WSLDistribution` | `wsl` | Windows | named pipe ↔ Linux socket via **`system dial-stdio`** |
 | `docker.virtualized.lima` | Docker | Lima | `LIMAInstance` | `limactl` | macOS | Lima VM socket |
-| `docker.remote` | Docker | SSH | `SSHConnection` | `ssh` | all | SSH tunnel → remote socket via **relay** |
+| `docker.remote` | Docker | SSH | `SSHConnection` | `ssh` | all | SSH tunnel → remote socket via **`system dial-stdio`** |
 | `container.native` | Apple Container | Native | — | `container` | macOS (Apple silicon) | socktainer unix socket (`~/.socktainer/container.sock`) |
-| `container.remote` | Apple Container | SSH | `SSHConnection` | `ssh` | all | SSH tunnel → remote socktainer socket via **relay** |
+| `container.remote` | Apple Container | SSH | `SSHConnection` | `ssh` | all | SSH tunnel → remote socktainer socket via **`system dial-stdio`** |
 
 Notes:
 
@@ -88,12 +88,12 @@ Podman-machine keep per-connection state (an open tunnel, a started VM). An unkn
 
 ```mermaid
 flowchart TB
-  subgraph local[Local — no relay]
+  subgraph local[Local — direct]
     n1["native · Linux<br/>unix socket directly"]:::external
     n2["machine / vendor<br/>VM or Desktop socket"]:::external
     n3["Lima · macOS<br/>VM socket"]:::external
   end
-  subgraph relayed[Relayed — via Go relay]
+  subgraph relayed[Bridged — via dial-stdio]
     r1["WSL · Windows<br/>npipe ↔ Linux socket"]:::external
     r2["remote · SSH<br/>tunnel → remote socket"]:::external
   end
@@ -101,8 +101,8 @@ flowchart TB
   classDef external fill:#8a8a8a,color:#fff,stroke:#5e5e5e;
 ```
 
-The relayed paths are detailed in
-[connection-startup.md](connection-startup.md#the-relays-job).
+The bridged paths are detailed in
+[connection-startup.md](connection-startup.md#reaching-a-socket-that-isnt-local).
 
 ## Source map
 

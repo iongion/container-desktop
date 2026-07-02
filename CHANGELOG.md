@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- SSH and WSL engine connections now bridge through the engine's own `docker`/`podman system dial-stdio` (over OpenSSH, or `wsl.exe --exec` inside the distro) rather than a separate helper executable, which is no longer built or shipped. Behaviour is unchanged; this requires a reasonably recent Docker/Podman (both have shipped `system dial-stdio` for years).
+
 ### Fixed
 
 - Podman on **native Windows** now connects: when a Podman machine exposes its own Windows named pipe (`npipe:////./pipe/podman-machine-default`), the app dials it directly instead of falling back to the in-VM Unix socket (not reachable from a native Windows process) or the unserved SSH-relay pipe. Podman's named pipe is now favored over any relay for local machines.

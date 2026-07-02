@@ -152,8 +152,6 @@
     "gitea",
     "GOARCH",
     "golangci",
-    "gomod",
-    "govulncheck",
     "groupinstall",
     "gvisor",
     "gvproxy",

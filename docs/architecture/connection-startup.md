@@ -108,9 +108,9 @@ flowchart TB
 
   native --> ns["no scope · engine runs on host<br/>unix socket directly"]:::external
   machine --> ms["podman machine · VM socket<br/>(npipe on Windows)"]:::external
-  wsl --> ws["wsl.exe -d distro · Linux socket<br/>bridged by the relay"]:::external
+  wsl --> ws["wsl.exe -d distro · Linux socket<br/>bridged via engine dial-stdio"]:::external
   lima --> ls["limactl shell instance · VM socket"]:::external
-  ssh --> ss["SSH connection · remote socket<br/>tunnelled by the relay"]:::external
+  ssh --> ss["SSH connection · remote socket<br/>bridged via engine dial-stdio"]:::external
 
   classDef component fill:#85bbf0,color:#000,stroke:#5d82a8;
   classDef external fill:#8a8a8a,color:#fff,stroke:#5e5e5e;
@@ -129,7 +129,7 @@ Notes per host:
   Docker Desktop / Colima — is **unscoped** and uses the Native transport.)*
 - **WSL** ([`wsl.ts`](../../src/container-client/runtimes/transports/wsl.ts)) —
   commands run via `wsl.exe -d <distro>`; the Windows side reaches the Linux socket
-  through the **relay** (below).
+  through the engine's **`system dial-stdio` bridge** (below).
 - **Lima** ([`lima.ts`](../../src/container-client/runtimes/transports/lima.ts)) —
   commands run via `limactl shell <instance>`.
 - **remote / SSH** ([`ssh.ts`](../../src/container-client/runtimes/transports/ssh.ts)) —
@@ -146,54 +146,53 @@ connected.
 sequenceDiagram
   participant Host as HostClient (SSH)
   participant Cmd as Command · preload/Node
-  participant Relay as ssh (Linux/macOS) · relay.exe (Windows)
+  participant Bridge as ssh port-forward (Linux/macOS) · SSHStdioBridgeServer (Windows)
   participant Remote as Remote host (sshd)
   participant Sock as Engine socket (remote)
 
   Note over Host: first API request triggers the tunnel
   Host->>Cmd: getApiDriver → getSSHConnection()
   Cmd->>Cmd: StartSSHConnection(sshHost)
-  Cmd->>Relay: start tunnel (ssh -NL · or SSH direct-streamlocal)
-  Relay->>Remote: connect · key auth · host key checked (accept-new / known_hosts)
+  Cmd->>Bridge: start tunnel (ssh -NL · or ssh … engine system dial-stdio)
+  Bridge->>Remote: connect · key auth · host key checked (accept-new / known_hosts)
   Remote->>Sock: dial unix socket
   Note over Host,Sock: tunnel up · local uri/npipe ↔ remote socket
   Host->>Cmd: ProxyRequest GET /containers/json
-  Cmd->>Relay: bytes over channel
-  Relay->>Sock: forward to engine socket
+  Cmd->>Bridge: bytes over channel
+  Bridge->>Sock: forward to engine socket
   Sock-->>Host: response
 ```
 
 ## Reaching a socket that isn't local
 
 Two host families can't open the engine's unix socket directly, so the bytes are carried to
-where the socket lives. **No SSH server runs inside WSL, and host keys are verified** (the old
-`:20022` sshd / `InsecureIgnoreHostKey` design is gone).
+where the socket lives — by the **engine's own `docker`/`podman system dial-stdio`**, which
+pumps a single stream to/from the socket. The app fronts a local pipe/socket and wires it to
+that stdio stream; it no longer ships a byte-pump of its own. **No SSH server runs inside WSL,
+and host keys are verified** (the old `:20022` sshd / `InsecureIgnoreHostKey` design is gone).
 
 - **WSL (Windows)** — the app's `WSLRelayServer`
   ([`exec/wsl-relay.ts`](../../src/platform/exec/wsl-relay.ts)) listens on a Windows **named
-  pipe** and, per connection, runs the **Linux bridge**
-  ([`container-desktop-relay`](../../support/container-desktop-relay/main_linux.go),
-  `--mode bridge --socket <sock>`) inside the distro via `wsl.exe --exec`: named pipe ↔
-  `wsl.exe` stdio ↔ unix socket. No TCP listener, no SSH, no daemon left in the distro. The
-  bridge binary is injected under a **version-scoped** path and **SHA-256-verified** before it
-  runs (re-copied on mismatch, refused if it still doesn't match).
+  pipe** and, per connection, runs `wsl.exe --distribution <d> --exec <engine> system dial-stdio`
+  inside the distro: named pipe ↔ `wsl.exe` stdio ↔ engine socket. No TCP listener, no SSH, no
+  daemon left in the distro.
 - **Remote SSH** — the lazy tunnel above. On **Linux/macOS** the app shells out to the OS
   `ssh` binary (`StrictHostKeyChecking=accept-new`, bounded connect, `-NL <local>:<remote>`),
   with a structured pre-flight
   ([`ssh-preflight.ts`](../../src/container-client/diagnostics/ssh-preflight.ts)) that explains
-  failures instead of hanging. On **Windows** it runs
-  [`container-desktop-ssh-relay.exe`](../../support/container-desktop-relay/main_windows.go) to
-  front a named pipe over an SSH `direct-streamlocal` channel, verifying `known_hosts`.
+  failures instead of hanging. On **Windows** the app's `SSHStdioBridgeServer`
+  ([`exec/ssh-stdio-bridge.ts`](../../src/platform/exec/ssh-stdio-bridge.ts)) fronts a named
+  pipe and runs `<engine> system dial-stdio` on the remote over SSH, verifying `known_hosts`.
 
 ```mermaid
 flowchart LR
   client["Engine API client<br/>(container-client)"]:::component
   pipe["Windows named pipe"]:::external
   server["WSLRelayServer<br/>(exec/wsl-relay.ts)"]:::container
-  bridge["container-desktop-relay<br/>(linux · mode=bridge)"]:::container
+  dial["engine system dial-stdio<br/>(via wsl.exe --exec)"]:::container
   sock["/run/.../podman.sock"]:::external
 
-  client --> pipe --> server -->|wsl.exe --exec · stdio| bridge --> sock
+  client --> pipe --> server -->|wsl.exe --exec · stdio| dial --> sock
 
   classDef component fill:#85bbf0,color:#000,stroke:#5d82a8;
   classDef container fill:#438dd5,color:#fff,stroke:#2e6295;

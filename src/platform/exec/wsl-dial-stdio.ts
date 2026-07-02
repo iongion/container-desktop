@@ -2,10 +2,9 @@ import { ContainerEngine } from "@/env/Types";
 
 /**
  * Build the `wsl.exe` argv that runs the engine's OWN `system dial-stdio` inside a WSL distribution, bridging
- * its in-distro API socket to stdio. This is the native replacement for the removed in-distro relay binary —
- * nothing is injected into the distro anymore; we just exec the engine that already lives there. Podman takes
- * the target socket via its `--url` global flag, Docker via `-H`, so a non-default (rootless/custom) socket
- * still resolves correctly.
+ * its in-distro API socket to stdio. Nothing is copied into the distro — we exec the podman/docker that
+ * already lives there. Podman takes the target socket via its `--url` global flag, Docker via `-H`, so a
+ * non-default (rootless/custom) socket still resolves correctly.
  */
 export function buildWSLDialStdioArgs(opts: {
   distribution: string;

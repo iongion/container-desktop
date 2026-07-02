@@ -78,9 +78,9 @@ export async function proxyRequestToSSHConnection(
         SSH_TUNNELS_CACHE[remoteAddress] = localAddress;
       }
     } else {
-      // No dial-stdio bridge ⇒ a plain `ssh -NL` unix-socket forward. Windows can't forward a unix socket
-      // (the removed relay binary papered over that), and every Windows-reachable engine now emits a dial-stdio
-      // command, so refuse here rather than spawn a tunnel that cannot work.
+      // No dial-stdio bridge ⇒ a plain `ssh -NL` unix-socket forward. Windows has no unix-socket forwarding,
+      // and every Windows-reachable engine now emits a dial-stdio command, so refuse here rather than spawn a
+      // tunnel that cannot work.
       if ((os.type() as OperatingSystem) === OperatingSystem.Windows) {
         throw new Error(
           "No dial-stdio bridge for this SSH connection — the remote engine must support `<engine> system dial-stdio`.",

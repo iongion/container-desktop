@@ -76,7 +76,7 @@ export class WSLRelayServer {
       maxRespawnRetries = maxRespawnRetries || 5;
       // Bridge the engine's in-distro API socket to wsl.exe stdio by running the engine's OWN
       // `system dial-stdio` inside the distribution (named pipe <-> stdio <-> unix socket). Nothing is
-      // injected into the distro anymore — we exec the podman/docker that already lives there.
+      // copied into the distro — we exec the podman/docker that already lives there.
       args = buildWSLDialStdioArgs({ distribution, program, engine, socketPath: unixSocketPath });
       pipeFullPath = pipePath;
       this.socketPath = pipeFullPath;
