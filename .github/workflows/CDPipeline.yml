@@ -76,12 +76,6 @@ jobs:
           python-version-file: ".python-version"
       - name: Install uv
         run: python -m pip install --disable-pip-version-check "uv==${{ env.UV_VERSION }}"
-      - name: Use Go
-        if: matrix.target == 'windows'
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with:
-          go-version-file: support/container-desktop-relay/go.mod
-          cache-dependency-path: support/container-desktop-relay/go.sum
       - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
         run: uv run --locked invoke prepare
       - name: Build ${{github.event.inputs.stage}} ${{matrix.target}}

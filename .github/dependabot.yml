@@ -25,22 +25,6 @@ updates:
         update-types:
           - "version-update:semver-major"
 
-  # Go SSH relay
-  - package-ecosystem: "gomod"
-    directory: "/support/container-desktop-relay"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    groups:
-      go-minor-patch:
-        update-types:
-          - "minor"
-          - "patch"
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - "version-update:semver-major"
-
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
     directory: "/"

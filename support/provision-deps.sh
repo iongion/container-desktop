@@ -15,8 +15,6 @@
 #
 set -euo pipefail
 
-GOVULNCHECK_VERSION="${GOVULNCHECK_VERSION:-v1.3.0}"
-
 # --- privilege helper ----------------------------------------------------------
 if [ "$(id -u)" -eq 0 ]; then
   SUDO=""
@@ -91,30 +89,6 @@ log "Installing system packages..."
 install_build_toolchain
 install_packaging_tools
 
-# --- Go tooling for the SSH relay (support/container-desktop-relay) -------------
-# The relay's build toolchain (go1.26.x) is auto-fetched by Go itself from the
-# 'toolchain' directive in go.mod, as long as GOTOOLCHAIN is left at its default
-# (auto). We only need to install govulncheck for relay vulnerability scanning.
-if command -v go >/dev/null 2>&1; then
-  if [ "${SKIP_GO_TOOLS:-0}" = "1" ]; then
-    warn "SKIP_GO_TOOLS=1 set - not installing govulncheck."
-  else
-    GOBIN_DIR="$(go env GOPATH)/bin"
-    if command -v govulncheck >/dev/null 2>&1 || [ -x "$GOBIN_DIR/govulncheck" ]; then
-      log "govulncheck already installed ($GOBIN_DIR/govulncheck)."
-    else
-      log "Installing govulncheck ${GOVULNCHECK_VERSION} (Go vulnerability scanner)..."
-      go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
-    fi
-    case ":$PATH:" in
-      *":$GOBIN_DIR:"*) : ;;
-      *) warn "Add Go's bin dir to PATH to use govulncheck:  export PATH=\"$GOBIN_DIR:\$PATH\"" ;;
-    esac
-  fi
-else
-  warn "go not found - skipping govulncheck (install Go to build/scan the relay)."
-fi
-
 # --- report per-user toolchains (NOT auto-installed) ---------------------------
 log "Per-user toolchains (install yourself per DEVELOPMENT.md if missing):"
 report_tool() {
@@ -127,6 +101,5 @@ report_tool() {
 report_tool node "via nvm: https://github.com/nvm-sh/nvm  (project pins .nvmrc)"
 report_tool yarn "install yarn 1.22.22 through your pinned Node toolchain"
 report_tool uv   "https://docs.astral.sh/uv/  (used by 'make prepare')"
-report_tool go   "https://go.dev/dl/  (for support/container-desktop-relay)"
 
 log "Done. System packages provisioned. Next: 'make prepare' then 'inv release'."

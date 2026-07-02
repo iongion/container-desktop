@@ -1,11 +1,10 @@
 PROJECT_ROOT:=$(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TEMP_DIR:=$(PROJECT_ROOT)/temp
-RELAY_DIR:=$(PROJECT_ROOT)/support/container-desktop-relay
 UV_VERSION:=0.6.11
 PART?=patch
 
 
-.PHONY: clean prepare-python prepare-node prepare check format build-website demo-record screenshots release test test-app test-relay test-tooling
+.PHONY: clean prepare-python prepare-node prepare check format build-website demo-record screenshots release test test-app test-tooling
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -91,11 +90,10 @@ release: test
 		-f git-ref=$$V -f stage=production -f target=all \
 		-f publish-release=true -f replace-release=false
 
-# Run the same verification set as CIPipeline.yml, locally. Mirrors its three jobs:
-# app (types/lint/tests/build), relay (Go) and tooling (Python). Run `make prepare`
-# first if dependencies are not installed. The Go relay job also runs on Windows in
-# CI (the SSH paths are //go:build windows) — that half can only be covered there.
-test: test-app test-relay test-tooling
+# Run the same verification set as CIPipeline.yml, locally. Mirrors its two jobs:
+# app (types/lint/tests/build) and tooling (Python). Run `make prepare` first if
+# dependencies are not installed.
+test: test-app test-tooling
 	@echo "All CI checks passed locally"
 
 test-app:
@@ -109,10 +107,6 @@ test-app:
 	yarn lint:check && \
 	yarn test:run && \
 	ENVIRONMENT=production yarn build
-
-test-relay:
-	@echo "Relay — go test ./... (like CIPipeline)"
-	cd "$(RELAY_DIR)" && go test ./...
 
 test-tooling:
 	@echo "Tooling — ruff check (no fixes) + pytest (like CIPipeline)"

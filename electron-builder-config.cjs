@@ -1,5 +1,4 @@
 const path = require("node:path");
-const os = require("node:os");
 const fs = require("node:fs");
 // vendors
 const dayjs = require("dayjs");
@@ -76,7 +75,6 @@ const config = {
     buildNumber,
     main: pkg.main,
   },
-  extraFiles: os.type() === "Windows_NT" ? ["bin/*"] : [],
   directories: {
     app: ".",
     output: "release",

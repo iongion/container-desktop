@@ -2,8 +2,7 @@ name: CIPipeline
 
 # Continuous-integration gate (companion to CDPipeline.yml, which builds/packages releases).
 # The release pipeline runs no checks, so this guards every PR and push to main with the full
-# verification set: type-check, lint, unit tests and a production build, plus the Go relay and
-# Python tooling suites.
+# verification set: type-check, lint, unit tests and a production build, plus the Python tooling suite.
 on:
   pull_request:
   push:
@@ -42,28 +41,6 @@ jobs:
         # ENVIRONMENT=production exercises the packaged single-file layout (CLAUDE.md). A plain
         # `yarn build` defaults to development and would give false confidence.
         run: ENVIRONMENT=production yarn build
-
-  relay:
-    name: Relay (Go, ${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        # windows-latest is REQUIRED: every relay SSH file is `//go:build windows`, so an Ubuntu-only
-        # `go test` never compiles the code paths the remote-SSH bugs (#171) live in.
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        working-directory: support/container-desktop-relay
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - name: Use Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with:
-          go-version-file: support/container-desktop-relay/go.mod
-      - name: Test
-        run: go test ./...
 
   tooling:
     name: Tooling (Python)

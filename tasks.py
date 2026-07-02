@@ -179,24 +179,6 @@ def build(ctx, env=None):
 
 
 @task
-def build_relay(ctx, env=None):
-    path = Path(PROJECT_HOME)
-    relay_dir = os.path.join(path, "support/container-desktop-relay")
-    with ctx.cd(relay_dir):
-        os.makedirs(os.path.join(PROJECT_HOME, "bin"), exist_ok=True)
-        system = platform.system()
-        print(f"Building relay on {system}")
-        if system == "Linux":
-            run_env(ctx, f'cd "{relay_dir}" && ./relay-build.sh', env)
-        elif system == "Windows":
-            run_env(ctx, "powershell.exe -NoProfile -ExecutionPolicy Bypass -File relay-build.ps1", env)
-            for file in glob.glob(os.path.join(relay_dir, "bin", "**")):
-                shutil.copy(file, os.path.join(path, "bin"))
-        else:
-            raise Exception(f"Unsupported system: {system}")
-
-
-@task
 def bundle(ctx, env=None):
     system = platform.system()
     path = Path(PROJECT_HOME)
@@ -209,7 +191,6 @@ def bundle(ctx, env=None):
             run_env(ctx, "yarn package:linux_x86", env)
             run_env(ctx, "yarn package:linux_arm", env)
         else:
-            build_relay(ctx, env)
             run_env(ctx, "yarn package:win_x86", env)
 
 
@@ -649,7 +630,6 @@ namespace = Collection(
     clean,
     prepare,
     build,
-    build_relay,
     bundle,
     release,
     bump,
