@@ -206,7 +206,7 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
         >
           <TextArea
             fill
-            autoResize
+            rows={5}
             value={form.buildArgsText}
             placeholder={"VER=9\nDEBUG=true"}
             onChange={(event) => patch({ buildArgsText: event.target.value })}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { analyzeCache } from "@/container-client/build/analyzeCache";
+import { orderBuildSteps } from "@/container-client/build/orderSteps";
 import type { BuildRun, ContainerfileAst } from "@/container-client/build/types";
 
 export interface BuildTimelineProps {
@@ -11,7 +12,9 @@ export interface BuildTimelineProps {
 
 export const BuildTimeline: React.FC<BuildTimelineProps> = ({ run, ast }) => {
   const { t } = useTranslation();
-  const steps = run?.steps ?? [];
+  // Order by execution start — buildx emits steps in DAG order (target-first), so the raw list reads
+  // [5/5]…[1/5]. Ordering here fixes both the timeline display and the order-dependent cache analysis.
+  const steps = useMemo(() => orderBuildSteps(run?.steps ?? []), [run?.steps]);
   const cache = useMemo(() => analyzeCache(steps, ast), [steps, ast]);
   const cascade = new Set(cache.cascadeKeys);
   const breakerKey = cache.breaker?.stepKey;
@@ -57,7 +60,7 @@ export const BuildTimeline: React.FC<BuildTimelineProps> = ({ run, ast }) => {
         </div>
       ) : null}
 
-      <div className="run-scroll" ref={scrollRef}>
+      <div className={`run-scroll${steps.length === 0 ? " centered" : ""}`} ref={scrollRef}>
         {steps.length === 0 ? (
           <span className="muted">{t("No steps yet — start a build to see the timeline.")}</span>
         ) : (

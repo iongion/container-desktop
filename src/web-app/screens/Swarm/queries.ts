@@ -23,6 +23,7 @@ export type SwarmInspectKind = "service" | "node" | "config" | "secret";
 export const swarmKeys = {
   all: ["swarm"] as const,
   info: (connId: string) => [...swarmKeys.all, "info", connId] as const,
+  advertiseCandidates: (connId: string) => [...swarmKeys.all, "advertiseCandidates", connId] as const,
   services: (connId: string) => [...swarmKeys.all, "services", connId] as const,
   nodes: (connId: string) => [...swarmKeys.all, "nodes", connId] as const,
   stacks: (connId: string) => [...swarmKeys.all, "stacks", connId] as const,
@@ -75,6 +76,18 @@ export const useSwarmInfo = (connId: string, enabled = true) =>
     // while a swarm IS active. retry: swarmRetry so a not-in-a-swarm 503 never triggers on-the-spot retries.
     refetchOnMount: true,
     refetchOnReconnect: true,
+    retry: swarmRetry,
+  });
+
+// Advertise-address (NIC) candidates for the init drawer — a cache-first probe (runs `ip addr` on the target
+// host), refreshed each time the drawer opens. Best-effort: an empty result just means the drawer shows the
+// free-text advertise field. Only enabled while the drawer is open.
+export const useSwarmAdvertiseCandidates = (connId: string, enabled = true) =>
+  useQuery({
+    queryKey: swarmKeys.advertiseCandidates(connId),
+    queryFn: async () => (await swarmAdapter(connId)).listAdvertiseCandidates(),
+    enabled: enabled && !!connId,
+    refetchOnMount: true,
     retry: swarmRetry,
   });
 

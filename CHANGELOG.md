@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.12] - 2026-07-02
+
+### Added
+
+- "Initialize Swarm" is now a form drawer — choose the advertise interface (NIC, auto-detected for the target host over local/SSH/WSL; a physical interface is pre-selected on multi-NIC hosts) and customize the listen host/port and force-new-cluster. A matching **Leave Swarm** action un-initializes the node. Fixes swarm init on multi-NIC hosts that previously failed with "could not choose an IP address to advertise".
+- Build Studio panels (Containerfile, Build configuration, Build run) are now resizable — drag the dividers; sizes use percentage defaults with pixel minimums so no panel collapses.
+
+### Fixed
+
+- Build timeline now lists steps in Dockerfile order. Docker/buildx (`--progress=rawjson`) emits vertices in BuildKit's DAG/solve order, so the numbered steps read reversed ([5/5]…[1/5]); this also corrects the order-dependent cache-miss analysis.
+- Build/image layer waterfall now reads base → final instead of newest-first (the entrypoint layer was shown at the top).
+- The Layers tab populates after a successful Docker build — buildx does not report the image id in its rawjson logs, so the built image is referenced by the tag it was loaded under.
+- The Build arguments field now resizes vertically only (never horizontally) and keeps a compact default height.
+
+- Engine API errors now surface the daemon's real reason (e.g. Docker Swarm's advertise-address message) instead of the generic "Request failed with status code NNN" — the error body and status were being stripped crossing the preload contextBridge.
+- Activity panel shows the HTTP status code and response body for failed API calls instead of collapsing to a single generic error.
+- "Leave Swarm" now works on a single-node manager — removing the last manager requires `--force`, which was missing, so the leave previously failed.
+
+### Changed
+
+- Swarm init failures are shown as a Notification (toast + Notification Center), not an inline callout.
+
 ## [5.3.11] - 2026-07-01
 
 ### Fixed

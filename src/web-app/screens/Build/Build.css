@@ -22,27 +22,35 @@
   color: var(--app-text);
 }
 
-/* Studio grid: editor top-left (dominant), config right rail (full height), run panel bottom-left. The
-   outer 10px gap comes from .AppScreen's padding; here we only own the inter-panel gap. */
+/* Studio: react-split-pane resizable layout — left column (editor over run) | config right rail. The lib
+   sizes each .split-pane-pane inline; we make the contained panel (or nested split) fill its pane and skin
+   the draggable divider with theme tokens. Panel spacing is owned by the divider (no grid gap). */
 .BuildStudio .studio {
   flex: 1 1 auto;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
-  grid-template-rows: minmax(0, 1fr) minmax(210px, 38%);
-  gap: 10px;
 }
-.BuildStudio .editor-panel {
-  grid-column: 1;
-  grid-row: 1;
+.BuildStudio .split-pane-pane {
+  overflow: hidden;
 }
-.BuildStudio .run-panel {
-  grid-column: 1;
-  grid-row: 2;
+.BuildStudio .split-pane-pane > .panel,
+.BuildStudio .split-pane-pane > .split-pane {
+  width: 100%;
+  height: 100%;
 }
-.BuildStudio .config-panel {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+.BuildStudio .split-pane-divider {
+  background: transparent;
+  transition: background 0.12s ease;
+}
+.BuildStudio .split-pane-divider:hover {
+  background: var(--app-accent);
+}
+/* The lib hardcodes the divider to 1px inline; give it a real grab/gap width (override the inline size).
+   `.horizontal` is the vertical bar between the side-by-side panes; `.vertical` is the bar between stacked. */
+.BuildStudio .split-pane-divider.horizontal {
+  width: 8px !important;
+}
+.BuildStudio .split-pane-divider.vertical {
+  height: 8px !important;
 }
 
 /* Every panel follows header (flex 0) / body (flex 1, scroll) / footer (flex 0, pinned). */
@@ -176,9 +184,11 @@
   word-break: break-all;
   font-family: "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
 }
-/* Match Blueprint's InputGroup text size (TextArea defaults larger) so the two read as one form. */
+/* Match Blueprint's InputGroup text size (TextArea defaults larger) so the two read as one form. Textareas
+   resize vertically only — never horizontally (which would fight the fixed-width config rail). */
 .BuildStudio .config-panel textarea {
   font-size: 12px;
+  resize: vertical;
 }
 /* Plain, theme-aware inline note (e.g. the multi-platform hint) — deliberately NOT a loud Callout. */
 .BuildStudio .cfg-note {
@@ -248,7 +258,7 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  padding: 10px;
+  padding: 4px;
 }
 
 /* Cache diagnostics — the headline: a fixed strip + per-step badges + the cascade rail. */

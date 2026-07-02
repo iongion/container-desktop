@@ -9,6 +9,7 @@
 // short-circuits when the host's swarm capability is off — WITHOUT touching the driver.
 
 import type {
+  HostAddress,
   NodeUpdateOptions,
   SwarmConfig,
   SwarmConfigCreateOptions,
@@ -23,6 +24,7 @@ import type {
   SwarmTask,
 } from "@/env/Types";
 import { ResourceAdapter } from "./shared";
+import { parseHostAddresses } from "./swarm-net";
 import * as swarm from "./swarm-rest";
 
 export class SwarmAdapter extends ResourceAdapter {
@@ -49,6 +51,28 @@ export class SwarmAdapter extends ResourceAdapter {
       return false;
     }
     return swarm.swarmLeave(await this.driver(), opts);
+  }
+
+  /**
+   * Candidate `--advertise-addr` values — the IPv4 interfaces of the SELECTED connection's host, obtained by
+   * running `ip -o -4 addr show scope global` on that host (native/SSH/WSL) via the same scoped-command path
+   * getSystemInfo uses. Best-effort: returns [] when `ip` is unavailable (e.g. Docker Desktop's VM) so the
+   * init drawer degrades to free-text.
+   */
+  async listAdvertiseCandidates(): Promise<HostAddress[]> {
+    if (!this.enabled) {
+      return [];
+    }
+    try {
+      const settings = await this.host.getSettings();
+      const args = ["-4", "-o", "addr", "show", "scope", "global"];
+      const result = this.host.isScoped()
+        ? await this.host.runScopeCommand("ip", args, settings.controller?.scope || "", settings)
+        : await this.host.runHostCommand("ip", args, settings);
+      return result?.success ? parseHostAddresses(result.stdout) : [];
+    } catch {
+      return [];
+    }
   }
 
   // services

@@ -117,7 +117,7 @@ export function axiosConfigToCURL(
   });
   if (typeof config.data !== "undefined") {
     let data = config.data;
-    if (headers["Content-Type"] === "application/json") {
+    if (headers["Content-Type"] === "application/json" || typeof data !== "string") {
       data = JSON.stringify(data);
     }
     command.push("-d", `'${data}'`);

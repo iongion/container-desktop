@@ -20,7 +20,9 @@ export interface LayerInspectorProps {
 // tab and as the body of the image LayersScreen. Few layers, so a plain list (no virtualization).
 export const LayerInspector: React.FC<LayerInspectorProps> = ({ history }) => {
   const { t } = useTranslation();
-  const analysis = useMemo(() => analyzeLayers(history), [history]);
+  // `image history` (docker/podman) returns layers newest-first (the entrypoint/CMD layer first); analyzeLayers
+  // wants them base-first for the natural base → final waterfall (matching the build timeline), so reverse a copy.
+  const analysis = useMemo(() => analyzeLayers([...history].reverse()), [history]);
   const rows = useMemo(() => toWaterfallRows(analysis), [analysis]);
 
   if (rows.length === 0) {

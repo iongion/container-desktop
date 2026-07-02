@@ -64,12 +64,17 @@ body.bp6-light .AppHeaderActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-
    buttons. The flush caret needs display:flex — the Blueprint Popover target is inline-block by default. */
 .AppHeaderAIActions {
   border: 1px solid color-mix(in srgb, var(--app-accent) 55%, transparent);
+  background-color: color-mix(in srgb, var(--app-accent) 55%, transparent);
   border-radius: 3px;
   overflow: hidden;
   margin-right: 6px;
+  transform: scale(0.75);
 }
 .AppHeaderAIActions .bp6-popover-target {
   display: flex;
+}
+.AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton {
+  outline: none;
 }
 /* The body.bp6-* prefix lifts specificity above the muted header-icon rule (0,5,1) so the accent wins. */
 body.bp6-dark .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon,

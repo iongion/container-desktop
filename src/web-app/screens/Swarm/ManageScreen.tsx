@@ -2,7 +2,6 @@ import {
   AnchorButton,
   Button,
   ButtonGroup,
-  Callout,
   HTMLTable,
   Intent,
   Menu,
@@ -18,16 +17,19 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Connector, SwarmConfig, SwarmNode, SwarmSecret, SwarmService, SwarmStack } from "@/env/Types";
+import { extractApiErrorText } from "@/utils/apiError";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { ConfirmMenu, ConfirmMenuItem } from "@/web-app/components/ConfirmMenu";
 import { ConnectionSelect, connectedConnections, isDockerConnection } from "@/web-app/components/ConnectionSelect";
 import { useRouteSearch } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
+import { InitializeDrawer } from "./InitializeDrawer";
 import { getSwarmInspectUrl, getSwarmTabUrl, type SwarmTab } from "./Navigation";
 import {
   useRemoveNode,
@@ -37,7 +39,6 @@ import {
   useScaleService,
   useSwarmConfigs,
   useSwarmInfo,
-  useSwarmInit,
   useSwarmLeave,
   useSwarmNodes,
   useSwarmSecrets,
@@ -107,7 +108,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const secretsQuery = useSwarmSecrets(connectionId, !!connectionId && !!infoQuery.data);
   const configsQuery = useSwarmConfigs(connectionId, !!connectionId && !!infoQuery.data);
 
-  const swarmInit = useSwarmInit(connectionId);
   const swarmLeave = useSwarmLeave(connectionId);
   const scaleService = useScaleService(connectionId);
   const removeService = useRemoveService(connectionId);
@@ -124,6 +124,31 @@ export const Screen: AppScreen<ScreenProps> = () => {
     secretsQuery.refetch();
     configsQuery.refetch();
   }, [infoQuery, servicesQuery, nodesQuery, stacksQuery, secretsQuery, configsQuery]);
+
+  // "Initialize Swarm" opens the InitializeDrawer form (advertise NIC + listen host/port + force-new-cluster)
+  // instead of firing the mutation blind — which 400s on multi-NIC hosts that can't auto-pick an advertise addr.
+  const [withInit, setWithInit] = useState(false);
+
+  // Un-initialize: leave the swarm on this node. A single-node manager is the last manager, so Docker requires
+  // `force` to erase it — without it the leave 400s ("you are attempting to leave the swarm on a node that is
+  // participating as a manager"). This is the UI equivalent of `docker swarm leave --force`.
+  const onLeaveSwarm = useCallback(() => {
+    swarmLeave.mutate(
+      { force: true },
+      {
+        // No success toast: the screen flipping back to the "not part of a Swarm" state is the feedback.
+        onError: (error: any) => {
+          const reason = extractApiErrorText(error, t("Request failed"));
+          Notification.show({
+            intent: Intent.DANGER,
+            message: t("Could not leave the Swarm: {{reason}}", { reason }),
+            detail: reason,
+            timeout: 8000,
+          });
+        },
+      },
+    );
+  }, [swarmLeave, t]);
 
   const matches = nameMatches(searchTerm);
   const services = useMemo(
@@ -159,23 +184,26 @@ export const Screen: AppScreen<ScreenProps> = () => {
   );
 
   const listActions = (
-    <PopoverNext
-      usePortal
-      placement="bottom-start"
-      content={
-        <Menu>
-          <MenuItem icon={IconNames.REFRESH} text={t("Reload")} onClick={onReload} />
-          <ConfirmMenuItem
-            icon={IconNames.LOG_OUT}
-            text={t("Leave Swarm")}
-            title={t("Leave the swarm on this node")}
-            onConfirm={() => swarmLeave.mutate(undefined)}
-          />
-        </Menu>
-      }
-    >
-      <Button variant="minimal" icon={IconNames.MORE} title={t("Actions")} />
-    </PopoverNext>
+    <ButtonGroup>
+      <Button variant="minimal" icon={IconNames.REFRESH} title={t("Reload")} onClick={onReload} />
+      <PopoverNext
+        usePortal
+        placement="bottom-start"
+        content={
+          <Menu>
+            <ConfirmMenuItem
+              icon={IconNames.LOG_OUT}
+              text={t("Leave Swarm")}
+              title={t("Leave the Swarm on this node? This erases the single-node Swarm.")}
+              intent={Intent.DANGER}
+              onConfirm={onLeaveSwarm}
+            />
+          </Menu>
+        }
+      >
+        <Button variant="minimal" icon={IconNames.MORE} />
+      </PopoverNext>
+    </ButtonGroup>
   );
 
   // No connected Docker engine at all — swarm is Docker-only (not Podman / Apple container).
@@ -213,51 +241,25 @@ export const Screen: AppScreen<ScreenProps> = () => {
     content = <NonIdealState icon={<Spinner size={28} />} title={t("Loading swarm…")} />;
   } else if (!populated) {
     // Docker connected but the SELECTED engine is not part of a swarm. Spell out what "Initialize" actually
-    // does (this node becomes the manager; which resources it unlocks; the address it binds) and, on failure,
-    // surface the engine's exact reason inline — a bare toast wasn't enough to act on. The most common real
-    // failure is a multi-NIC host that can't pick an advertise address, so hint at that when we detect it.
-    const initErrorRaw = swarmInit.isError
-      ? `${(swarmInit.error as any)?.response?.data?.message ?? (swarmInit.error as any)?.message ?? swarmInit.error}`
-      : "";
-    const needsAdvertiseAddr = /advertise|multiple addresses|could not choose an ip/i.test(initErrorRaw);
+    // does (this node becomes the manager; which resources it unlocks; the address it binds); the button opens
+    // the InitializeDrawer form where the user picks the advertise NIC + listen address.
     content = (
       <NonIdealState
         icon={IconNames.LAYERS}
         title={t("This engine is not part of a Swarm")}
         className="SwarmInitState"
         description={
-          <>
-            <div className="SwarmInitAbout">
-              <p>{t("Initializing creates a single-node Swarm and makes this Docker engine its manager.")}</p>
-              <p>{t("You can then manage services, nodes, stacks, secrets and configs from here.")}</p>
-              <p>{t("The manager listens on 0.0.0.0:2377 and this node becomes the leader.")}</p>
-            </div>
-            {swarmInit.isError ? (
-              <Callout
-                className="SwarmInitError"
-                intent={Intent.DANGER}
-                icon={IconNames.ERROR}
-                title={t("Could not initialize the Swarm")}
-              >
-                <p className="SwarmInitErrorReason">{initErrorRaw}</p>
-                {needsAdvertiseAddr ? (
-                  <p>
-                    {t(
-                      "This host has multiple network interfaces, so Docker can't pick which address to advertise. Choose one explicitly from a terminal: docker swarm init --advertise-addr <ip>.",
-                    )}
-                  </p>
-                ) : null}
-              </Callout>
-            ) : null}
-          </>
+          <div className="SwarmInitAbout">
+            <p>{t("Initializing creates a single-node Swarm and makes this Docker engine its manager.")}</p>
+            <p>{t("You can then manage services, nodes, stacks, secrets and configs from here.")}</p>
+          </div>
         }
         action={
           <Button
             intent={Intent.PRIMARY}
             icon={IconNames.PLUS}
-            text={swarmInit.isError ? t("Try again") : t("Initialize Swarm")}
-            loading={swarmInit.isPending}
-            onClick={() => swarmInit.mutate(undefined)}
+            text={t("Initialize Swarm")}
+            onClick={() => setWithInit(true)}
           />
         }
       />
@@ -308,6 +310,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
         {connectionSelector}
       </AppScreenHeader>
       <div className="AppScreenContent">{content}</div>
+      {withInit && connectionId ? (
+        <InitializeDrawer connectionId={connectionId} onClose={() => setWithInit(false)} />
+      ) : null}
     </div>
   );
 };

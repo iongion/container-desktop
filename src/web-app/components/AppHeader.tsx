@@ -10,7 +10,7 @@ import {
   PopoverNext,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { mdiBug } from "@mdi/js";
+import { mdiBug, mdiRobot } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -104,8 +104,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <ButtonGroup variant="minimal" className="AppHeaderAIActions">
         <AnchorButton
           className="AppHeaderActionButton"
+          data-action="ai-assistant"
           href={pathTo(aiAssistant.Route.Path)}
-          icon={IconNames.CHAT}
+          icon={<ReactIcon.Icon className="ReactIcon" path={mdiRobot} size={0.75} />}
           title={t("AI Assistant")}
           aria-label={t("AI Assistant")}
         />
@@ -121,6 +122,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <Button
             className="AppHeaderActionButton"
+            data-action="ai-tools"
             icon={IconNames.CARET_DOWN}
             title={t("AI tools")}
             aria-label={t("AI tools")}

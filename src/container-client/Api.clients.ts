@@ -8,6 +8,7 @@ import {
   OperatingSystem,
 } from "@/env/Types";
 import { axiosConfigToCURL, deepMerge } from "@/utils";
+import { extractApiErrorText } from "@/utils/apiError";
 import { systemNotifier } from "./notifier";
 
 export async function getApiConfig(
@@ -107,6 +108,24 @@ export function createApplicationApiDriver(connection: Connection, context?: any
     systemNotifier.transmit("activity.api", { phase: "pending", guid, method, url });
     try {
       const response = await Command.ProxyRequest(req, connection, context);
+      // The renderer reaches ProxyRequest through a contextBridge that strips custom Error properties, so main
+      // returns HTTP failures as a serializable envelope rather than throwing. Rebuild the axios-like error HERE
+      // (renderer context) so `.response.data` — the engine's real message — and the numeric status survive to
+      // every caller and to the activity entry below (the local Node path never sets this flag).
+      if (response && (response as any).__proxyError) {
+        const envelope = response as any;
+        const rebuilt: any = new Error(
+          envelope.message || `Request failed${envelope.status ? ` with status code ${envelope.status}` : ""}`,
+        );
+        rebuilt.isAxiosError = true;
+        rebuilt.response = {
+          status: envelope.status,
+          statusText: envelope.statusText,
+          data: envelope.data,
+          headers: envelope.headers,
+        };
+        throw rebuilt;
+      }
       systemNotifier.transmit("activity.api", {
         phase: "settled",
         guid,
@@ -129,7 +148,9 @@ export function createApplicationApiDriver(connection: Connection, context?: any
         status: "error",
         httpStatus: error?.response?.status,
         durationMs: Math.round(performance.now() - startedAt),
-        error: `${error?.message || error}`,
+        // Rich, engine-normalized text — never the bare "Request failed with status code NNN" when the
+        // response body carries a real reason.
+        error: extractApiErrorText(error, `${error?.message || error}`),
         requestBody: activityTruncate(activityStringify(req.data)),
         responseBody: activityTruncate(activityStringify(error?.response?.data)),
         curl: activityCurl(req, connection),

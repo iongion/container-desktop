@@ -617,6 +617,12 @@ export interface SwarmLeaveOptions {
   force?: boolean;
 }
 
+/** A host network interface address — a candidate `--advertise-addr` for swarm init. */
+export interface HostAddress {
+  iface: string;
+  address: string;
+}
+
 /** Node availability/role change (read-modify-write onto the node's current Spec). */
 export interface NodeUpdateOptions {
   Availability?: "active" | "pause" | "drain";

@@ -63,6 +63,15 @@ async function runCli(launcher: string, args: string[]): Promise<CommandExecutio
       }),
     });
   }
+  // `ip -o -4 addr show scope global` → advertise-address candidates for the Swarm init drawer's NIC picker.
+  // Two NICs matching the "init-error" scenario's message (10.0.2.15 on eth0, 192.168.64.1 on eth1).
+  if (normalizedLauncher.endsWith("ip") && flat.includes("addr")) {
+    return okResult({
+      stdout:
+        "2: eth0    inet 10.0.2.15/24 brd 10.0.2.255 scope global eth0\\       valid_lft forever preferred_lft forever\n" +
+        "3: eth1    inet 192.168.64.1/24 brd 192.168.64.255 scope global eth1\\       valid_lft forever preferred_lft forever\n",
+    });
+  }
   if (flat[0] === "machine") {
     const fx = await loadEngineFixtures(engine);
     if (engine !== ContainerEngine.PODMAN) {

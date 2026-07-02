@@ -70,6 +70,7 @@ export function requestSummary(request: Partial<AxiosRequestConfig>) {
     baseURL: request.baseURL,
     socket: socketLabel(request.socketPath),
     params: request.params,
+    data: request.data,
   };
 }
 

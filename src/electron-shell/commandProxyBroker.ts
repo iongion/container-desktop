@@ -102,8 +102,8 @@ export class CommandProxyBroker {
     } catch (error: any) {
       const response = error?.response;
       logger.error(
-        "proxy request failed",
-        { method: req.method, url: req.url, status: response?.status },
+        "proxy request error",
+        { method: req.method, url: req.url, status: response?.status, data: response?.data },
         error?.message ?? error,
       );
       return {

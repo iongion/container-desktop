@@ -2,6 +2,7 @@ import { Button, Divider, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Pane, SplitPane } from "react-split-pane";
 
 import { lint } from "@/container-client/build/containerfile/lint";
 import { parse } from "@/container-client/build/containerfile/parse";
@@ -83,10 +84,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { start, cancel } = useStartBuild();
   const activeRun = useBuildStore((state) => (state.activeRunId ? state.runs[state.activeRunId] : undefined));
   const building = activeRun?.status === "running";
-  // Layers tab of the run panel: the built image's history, once a successful build reports an image id.
-  const builtHistory = useImageHistory(connectionId, activeRun?.imageId);
-  const layersNode =
-    activeRun?.imageId && builtHistory.data ? <LayerInspector history={builtHistory.data} /> : undefined;
+  // Layers tab of the run panel: the built image's history. buildx --progress=rawjson does NOT report the image
+  // id in its logs (it's buried in an exporter status, and which digest is "the id" varies by image store), so
+  // on a SUCCESSFUL build we reference the image by the tag it was --loaded under — reliable across engines —
+  // falling back to a parsed image id if one is ever captured.
+  const builtImageRef = activeRun?.status === "succeeded" ? (activeRun.imageId ?? activeRun.tags?.[0]) : undefined;
+  const builtHistory = useImageHistory(activeRun?.connectionId ?? connectionId, builtImageRef);
+  const layersNode = builtImageRef && builtHistory.data ? <LayerInspector history={builtHistory.data} /> : undefined;
 
   const onBuild = useCallback(() => {
     const base = buildOptionsRef.current;
@@ -152,18 +156,28 @@ export const Screen: AppScreen<ScreenProps> = () => {
         }
       />
       <div className="BuildStudio">
-        <div className="studio">
-          <ContainerfileEditorPane engine={engine} value={content} onChange={setContent} findings={findings} />
-
-          <BuildConfigPanel
-            engine={engine}
-            connectionId={connectionId}
-            containerfileContent={content}
-            onOptionsChange={handleOptionsChange}
-          />
-
-          <BuildRunPanel run={activeRun} ast={ast} layers={layersNode} />
-        </div>
+        {/* Resizable layout: left column (Containerfile over Build run) | Build configuration rail. Sizes are
+            percentages with px minimums so panels never collapse below a usable size. */}
+        <SplitPane direction="horizontal" className="studio" dividerSize={8}>
+          <Pane defaultSize="70%" minSize="360px">
+            <SplitPane direction="vertical" dividerSize={8}>
+              <Pane defaultSize="58%" minSize="160px">
+                <ContainerfileEditorPane engine={engine} value={content} onChange={setContent} findings={findings} />
+              </Pane>
+              <Pane minSize="180px">
+                <BuildRunPanel run={activeRun} ast={ast} layers={layersNode} />
+              </Pane>
+            </SplitPane>
+          </Pane>
+          <Pane defaultSize="30%" minSize="320px">
+            <BuildConfigPanel
+              engine={engine}
+              connectionId={connectionId}
+              containerfileContent={content}
+              onOptionsChange={handleOptionsChange}
+            />
+          </Pane>
+        </SplitPane>
       </div>
     </div>
   );

@@ -78,16 +78,18 @@ export async function forwardProxyRequest(request: any, connection: any, _contex
   if (result?.ok) {
     return { data: result.data, status: result.status, statusText: result.statusText, headers: result.headers ?? {} };
   }
-  // Rebuild an axios-like error so the adapters' catch / `isOk` logic behaves exactly as for the local path.
-  const error: any = new Error(
-    result?.message || `Request failed${result?.status ? ` with status ${result.status}` : ""}`,
-  );
-  error.isAxiosError = true;
-  error.response = {
+  // Do NOT throw here. This function is exposed to the renderer via contextBridge, and an Error thrown across
+  // that boundary keeps ONLY its `message` — every custom property (`response`, `isAxiosError`, the numeric
+  // status, the engine's `data.message`) is stripped, so the renderer would forever see just the generic
+  // "Request failed with status code NNN". Return a serializable error envelope instead and let the
+  // renderer-side driver (createApplicationApiDriver) reconstruct + throw the axios-like error in its own
+  // context, where `.response.data` survives intact.
+  return {
+    __proxyError: true,
     status: result?.status,
     statusText: result?.statusText,
     data: result?.data,
     headers: result?.headers,
+    message: result?.message,
   };
-  throw error;
 }
