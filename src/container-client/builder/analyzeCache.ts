@@ -29,12 +29,14 @@ function classify(kw: string): { cause: CacheBreakerCause; fixHint: string } {
     case "ADD":
       return {
         cause: "context-changed",
-        fixHint: "A file this step copies changed. Copy just the dependency manifest before this, install, then copy the rest.",
+        fixHint:
+          "A file this step copies changed. Copy just the dependency manifest before this, install, then copy the rest.",
       };
     case "RUN":
       return {
         cause: "command-changed",
-        fixHint: "The command text or an earlier layer changed. Keep volatile commands late and pin what they depend on.",
+        fixHint:
+          "The command text or an earlier layer changed. Keep volatile commands late and pin what they depend on.",
       };
     case "FROM":
       return {

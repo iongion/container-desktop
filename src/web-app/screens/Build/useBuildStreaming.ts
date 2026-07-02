@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 
 import { BuildAdapter, type BuildHandle } from "@/container-client/adapters/build";
-import type { BuildRun, BuildSink, ImageBuildOptions } from "@/container-client/build/types";
+import type { BuildRun, BuildSink, ImageBuildOptions } from "@/container-client/builder/types";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { imageKeys } from "@/web-app/screens/Image/queries";
 import { useBuildStore } from "@/web-app/stores/buildStore";

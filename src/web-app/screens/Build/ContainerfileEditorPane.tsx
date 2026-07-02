@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { LintFinding } from "@/container-client/build/types";
+import type { LintFinding } from "@/container-client/builder/types";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 
 import { lintFindingsToMarkers } from "./lintMarkers";

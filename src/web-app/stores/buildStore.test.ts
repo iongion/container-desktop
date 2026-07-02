@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { BuildRun, BuildStep, ImageBuildOptions } from "@/container-client/build/types";
+import type { BuildRun, BuildStep, ImageBuildOptions } from "@/container-client/builder/types";
 import { toPersistedRun, useBuildStore } from "./buildStore";
 
 const options = (over: Partial<ImageBuildOptions> = {}): ImageBuildOptions => ({

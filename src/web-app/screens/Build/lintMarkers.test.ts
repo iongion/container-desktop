@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { lint } from "@/container-client/build/containerfile/lint";
-import { parse } from "@/container-client/build/containerfile/parse";
-import type { LintFinding } from "@/container-client/build/types";
+import { lint } from "@/container-client/builder/containerfile/lint";
+import { parse } from "@/container-client/builder/containerfile/parse";
+import type { LintFinding } from "@/container-client/builder/types";
 import { lintFindingsToMarkers } from "./lintMarkers";
 
 describe("lintFindingsToMarkers", () => {

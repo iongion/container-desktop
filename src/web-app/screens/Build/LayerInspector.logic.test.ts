@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeLayers } from "@/container-client/build/analyzeLayers";
+import { analyzeLayers } from "@/container-client/builder/analyzeLayers";
 import type { ContainerImageHistory } from "@/env/Types";
 import { toWaterfallRows } from "./LayerInspector.logic";
 

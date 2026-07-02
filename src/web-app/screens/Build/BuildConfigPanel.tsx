@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import { FEATURE_MATRIX } from "@/container-client/build/featureMatrix";
-import type { BuildEngineKind, BuildSecret, ImageBuildOptions, NamedContext } from "@/container-client/build/types";
+import { FEATURE_MATRIX } from "@/container-client/builder/featureMatrix";
+import type { BuildEngineKind, BuildSecret, ImageBuildOptions, NamedContext } from "@/container-client/builder/types";
 import { Environments } from "@/env/Types";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 

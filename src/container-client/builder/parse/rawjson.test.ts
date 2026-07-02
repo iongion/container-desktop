@@ -16,9 +16,7 @@ describe("createRawjsonParser", () => {
   it("decodes a buildx vertex line into a step and a base64 log", () => {
     const parser = createRawjsonParser();
     const line = JSON.stringify({
-      vertexes: [
-        { digest: "sha256:aa", name: "[1/2] FROM alpine", started: "t0", completed: "t1", cached: true },
-      ],
+      vertexes: [{ digest: "sha256:aa", name: "[1/2] FROM alpine", started: "t0", completed: "t1", cached: true }],
       logs: [{ vertex: "sha256:aa", msg: btoa("building alpine"), stream: 1 }],
     });
     const events = parser.push("stdout", `${line}\n`);

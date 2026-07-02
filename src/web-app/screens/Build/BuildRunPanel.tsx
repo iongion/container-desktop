@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { BuildRun, BuildRunStatus, ContainerfileAst } from "@/container-client/build/types";
+import type { BuildRun, BuildRunStatus, ContainerfileAst } from "@/container-client/builder/types";
 
 import { BuildRawLog } from "./BuildRawLog";
 import { BuildTimeline } from "./BuildTimeline";

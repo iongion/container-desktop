@@ -4,9 +4,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pane, SplitPane } from "react-split-pane";
 
-import { lint } from "@/container-client/build/containerfile/lint";
-import { parse } from "@/container-client/build/containerfile/parse";
-import type { BuildEngineKind, ImageBuildOptions } from "@/container-client/build/types";
+import { lint } from "@/container-client/builder/containerfile/lint";
+import { parse } from "@/container-client/builder/containerfile/parse";
+import type { BuildEngineKind, ImageBuildOptions } from "@/container-client/builder/types";
 import { ContainerEngine } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { ConnectionSelect, connectedConnections } from "@/web-app/components/ConnectionSelect";

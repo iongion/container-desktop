@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { installFakeCommand } from "@/__tests__/setup/fakeCommand";
-import type { ImageBuildOptions } from "../build/types";
+import type { ImageBuildOptions } from "../builder/types";
 import { BuildAdapter } from "./build";
 
 const opts = (over: Partial<ImageBuildOptions> = {}): ImageBuildOptions => ({

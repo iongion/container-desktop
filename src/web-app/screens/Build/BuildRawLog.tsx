@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { BuildRun } from "@/container-client/build/types";
+import type { BuildRun } from "@/container-client/builder/types";
 import { Terminal } from "@/web-app/components/Terminal";
 
 export interface BuildRawLogProps {

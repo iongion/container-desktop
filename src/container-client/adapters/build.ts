@@ -8,13 +8,13 @@
 // plan's Task 7 design note. This adapter deliberately does not reach for those seams yet.
 
 import { ContainerEngine } from "@/env/Types";
-import { buildAppleArgs } from "../build/flags/apple";
-import { buildDockerArgs } from "../build/flags/docker";
-import { buildPodmanArgs } from "../build/flags/podman";
-import { createAppleTextParser } from "../build/parse/appleText";
-import { createPodmanTextParser } from "../build/parse/podmanText";
-import { createRawjsonParser } from "../build/parse/rawjson";
-import type { BuildEngineKind, BuildProgressParser, BuildSink, ImageBuildOptions } from "../build/types";
+import { buildAppleArgs } from "../builder/flags/apple";
+import { buildDockerArgs } from "../builder/flags/docker";
+import { buildPodmanArgs } from "../builder/flags/podman";
+import { createAppleTextParser } from "../builder/parse/appleText";
+import { createPodmanTextParser } from "../builder/parse/podmanText";
+import { createRawjsonParser } from "../builder/parse/rawjson";
+import type { BuildEngineKind, BuildProgressParser, BuildSink, ImageBuildOptions } from "../builder/types";
 import { ResourceAdapter } from "./shared";
 
 export interface BuildHandle {

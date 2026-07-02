@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { installFakeCommand } from "@/__tests__/setup/fakeCommand";
 import { BuildAdapter } from "@/container-client/adapters/build";
-import type { BuildRun, ImageBuildOptions } from "@/container-client/build/types";
+import type { BuildRun, ImageBuildOptions } from "@/container-client/builder/types";
 import { useBuildStore } from "@/web-app/stores/buildStore";
 import { createBuildSink } from "./useBuildStreaming";
 

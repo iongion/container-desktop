@@ -2,7 +2,7 @@
 // style) so the biggest layer is full-width and the rest scale against it. Kept separate from the component
 // so the sizing math is unit testable.
 
-import type { LayerAnalysis } from "@/container-client/build/types";
+import type { LayerAnalysis } from "@/container-client/builder/types";
 
 export interface WaterfallRow {
   index: number;

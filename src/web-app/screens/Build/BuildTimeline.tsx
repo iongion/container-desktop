@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { analyzeCache } from "@/container-client/build/analyzeCache";
-import { orderBuildSteps } from "@/container-client/build/orderSteps";
-import type { BuildRun, ContainerfileAst } from "@/container-client/build/types";
+import { analyzeCache } from "@/container-client/builder/analyzeCache";
+import { orderBuildSteps } from "@/container-client/builder/orderSteps";
+import type { BuildRun, ContainerfileAst } from "@/container-client/builder/types";
 
 export interface BuildTimelineProps {
   run?: BuildRun;

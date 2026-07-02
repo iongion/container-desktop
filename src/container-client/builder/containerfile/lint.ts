@@ -32,10 +32,7 @@ const INSTALL_RE =
 function commandBody(instruction: CfInstruction): string {
   const idx = instruction.raw.indexOf(instruction.rawKeyword);
   const after = idx >= 0 ? instruction.raw.slice(idx + instruction.rawKeyword.length) : instruction.args;
-  return after
-    .replace(/\\\n/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return after.replace(/\\\n/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function firstArgToken(instruction: CfInstruction): string {

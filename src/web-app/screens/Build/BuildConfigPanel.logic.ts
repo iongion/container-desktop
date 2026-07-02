@@ -3,10 +3,10 @@
 // the SAME per-engine flag mappers the BuildAdapter runs, so what the user sees is what will execute.
 
 import { redactText } from "@/ai-system/core/redact";
-import { buildAppleArgs } from "@/container-client/build/flags/apple";
-import { buildDockerArgs } from "@/container-client/build/flags/docker";
-import { buildPodmanArgs } from "@/container-client/build/flags/podman";
-import type { BuildEngineKind, ImageBuildOptions } from "@/container-client/build/types";
+import { buildAppleArgs } from "@/container-client/builder/flags/apple";
+import { buildDockerArgs } from "@/container-client/builder/flags/docker";
+import { buildPodmanArgs } from "@/container-client/builder/flags/podman";
+import type { BuildEngineKind, ImageBuildOptions } from "@/container-client/builder/types";
 
 const PROGRAM: Record<BuildEngineKind, string> = {
   docker: "docker",

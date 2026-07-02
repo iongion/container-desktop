@@ -4,7 +4,7 @@
 //
 // Each stream deliberately contains a CACHE MISS partway through (the classic `COPY . .` cache-buster)
 // so the cache-summary strip and the "cache broke at step N" breaker render in the mock. Formats mirror
-// the real progress each engine emits and are consumed by src/container-client/build/parse/*:
+// the real progress each engine emits and are consumed by src/container-client/builder/parse/*:
 //   - Podman  → Buildah `STEP N/M:` text + `--> Using cache` markers
 //   - Docker  → `buildx --progress=rawjson` newline-delimited JSON vertices
 //   - Apple   → `container build --progress=plain` BuildKit `#N … CACHED/DONE` text

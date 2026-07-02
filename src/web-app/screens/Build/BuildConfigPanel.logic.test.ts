@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ImageBuildOptions } from "@/container-client/build/types";
+import type { ImageBuildOptions } from "@/container-client/builder/types";
 import { buildArgvPreview, buildRedactedPreview, canLoadLocally } from "./BuildConfigPanel.logic";
 
 const options = (over: Partial<ImageBuildOptions> = {}): ImageBuildOptions => ({
