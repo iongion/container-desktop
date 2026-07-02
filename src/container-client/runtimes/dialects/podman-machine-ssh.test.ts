@@ -7,7 +7,8 @@ import {
 } from "./podman-machine-ssh";
 
 // Exact shape of `podman system connection list --format json` on a Windows host with a running WSL machine
-// (captured live). Rootful machine → the Default connection is the `-root` one on the in-VM root socket.
+// (captured live). Podman marks the rootful `-root` connection Default, but the app targets rootless podman, so
+// the selectors must pick the rootless `podman-machine-default` on the in-VM rootless socket.
 const WINDOWS_IDENTITY = "C:\\Users\\istoica\\.local\\share\\containers\\podman\\machine\\machine";
 const windowsConnectionList = JSON.stringify([
   {
@@ -29,13 +30,13 @@ const windowsConnectionList = JSON.stringify([
 ]);
 
 describe("parsePodmanMachineSSHConnection", () => {
-  it("picks the Default machine connection and parses its ssh URI + identity", () => {
+  it("picks the ROOTLESS machine connection even when the rootful -root is Default", () => {
     const conn = parsePodmanMachineSSHConnection(windowsConnectionList);
     expect(conn).toEqual({
-      user: "root",
+      user: "user",
       host: "127.0.0.1",
       port: 56515,
-      socket: "/run/podman/podman.sock",
+      socket: "/run/user/1000/podman/podman.sock",
       identity: WINDOWS_IDENTITY,
     });
   });
@@ -107,10 +108,10 @@ describe("buildPodmanMachineDialStdioCommand", () => {
 describe("resolvePodmanMachineBridge", () => {
   it("produces a stable relay id (the machine URI) plus the nested dial-stdio command", () => {
     const bridge = resolvePodmanMachineBridge(windowsConnectionList);
-    expect(bridge?.relay).toBe("ssh://root@127.0.0.1:56515/run/podman/podman.sock");
+    expect(bridge?.relay).toBe("ssh://user@127.0.0.1:56515/run/user/1000/podman/podman.sock");
     expect(bridge?.command[0]).toBe("ssh");
     expect(bridge?.command).toContain("dial-stdio");
-    expect(bridge?.command).toContain("root@127.0.0.1");
+    expect(bridge?.command).toContain("user@127.0.0.1");
   });
 
   it("returns undefined when there is no machine to bridge", () => {

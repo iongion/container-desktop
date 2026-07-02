@@ -19,6 +19,7 @@ import {
 } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import type { HostContext, Transport } from "../composition";
+import { selectDefaultMachineScopeName } from "../dialects/podman-machine-connections";
 import { isWindowsNamedPipe, parsePodmanMachineNamedPipe } from "../dialects/podman-machine-pipe";
 import { createPlainApiDriver } from "./shared";
 
@@ -83,25 +84,24 @@ export class PodmanMachineTransport implements Transport {
     host: HostContext,
     customSettings?: EngineConnectorSettings,
   ): Promise<ControllerScope | undefined> {
-    let defaultScope: ControllerScope | undefined;
     const connections = await this.getSystemConnections(host, customSettings);
-    if (connections.length) {
-      let defaultConnection = connections.find((it: any) => it.Default && it.IsMachine);
-      if (!defaultConnection) {
-        defaultConnection = connections[0];
-      }
-      const machines = await host.getPodmanMachines(undefined, customSettings);
-      if (machines.length) {
-        defaultScope = machines.find(
-          (it) => it.Name?.trim().toLowerCase() === defaultConnection.Name?.trim().toLowerCase(),
-        );
-      } else {
-        host.logger.error(host.id, "Unable to get default scope - no machines");
-      }
-    } else {
-      host.logger.error(host.id, "Unable to get default scope - no connections or machines");
+    const machines = await host.getPodmanMachines(undefined, customSettings);
+    const machineNames = machines.map((it) => it.Name).filter((name): name is string => !!name);
+    // Prefer the ROOTLESS machine connection and map it to its machine. Podman marks the rootful `<machine>-root`
+    // connection Default on some (WSL) machines; the old exact-name match against it never equalled the machine
+    // name, so no scope was set and the connection resolved to an empty URI — the "API is not reachable" the user
+    // saw. The app targets rootless podman only, so the rootful connection must never be selected.
+    const { name, reason } = selectDefaultMachineScopeName(connections, machineNames);
+    if (!name) {
+      host.logger.error(host.id, "Unable to resolve default machine scope", {
+        reason,
+        connections: connections.map((it: any) => ({ Name: it?.Name, Default: it?.Default, IsMachine: it?.IsMachine })),
+        machines: machineNames,
+      });
+      return undefined;
     }
-    return defaultScope;
+    host.logger.debug(host.id, "Resolved default machine scope", reason);
+    return machines.find((it) => it.Name?.trim().toLowerCase() === name.toLowerCase());
   }
 
   protected async getSystemConnections(host: HostContext, customSettings?: EngineConnectorSettings) {

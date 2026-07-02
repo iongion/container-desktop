@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Podman on **native Windows** no longer fails with "API is not reachable" when Podman marks the rootful `-root` system connection as Default (common on WSL machines): the app now always targets the **rootless** machine connection — for the scope, the named pipe and the SSH bridge — which is the only one Podman actually serves. Scope resolution also logs the chosen connection and the available machines when it can't resolve one.
+
 ## [5.3.14] - 2026-07-02
 
 ### Changed

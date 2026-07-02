@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { isWindowsNamedPipe, parsePodmanMachineNamedPipe } from "./podman-machine-pipe";
 
 // `podman system connection list --format json` on a Windows host whose machine exposes a NATIVE named pipe
-// (newer Podman). Rootful machine → the Default connection is the `-root` pipe. This is the case we want to
-// favor: the pipe is dialable directly from a native Windows process, no relay/SSH/dial-stdio needed.
+// (newer Podman). Podman marks the rootful `-root` connection Default, but the app targets rootless podman, so
+// we favor the ROOTLESS pipe — dialable directly from a native Windows process, no relay/SSH/dial-stdio needed.
 const WINDOWS_PIPE_LIST = [
   {
     Name: "podman-machine-default",
@@ -31,8 +31,8 @@ const WINDOWS_SSH_LIST = [
 ];
 
 describe("parsePodmanMachineNamedPipe", () => {
-  it("returns the Default machine's pipe path (rootful → the -root pipe)", () => {
-    expect(parsePodmanMachineNamedPipe(WINDOWS_PIPE_LIST)).toBe("\\\\.\\pipe\\podman-machine-default-root");
+  it("returns the ROOTLESS machine pipe even when the rootful -root is Default (app targets rootless)", () => {
+    expect(parsePodmanMachineNamedPipe(WINDOWS_PIPE_LIST)).toBe("\\\\.\\pipe\\podman-machine-default");
   });
 
   it("falls back to the first machine pipe when none is marked Default", () => {

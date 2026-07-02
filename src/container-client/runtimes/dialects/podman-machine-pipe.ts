@@ -5,6 +5,7 @@
 // Older WSL-ssh machines expose only ssh:// URIs (no pipe) ⇒ undefined ⇒ the caller keeps its bridge path.
 
 import { getWindowsPipePath } from "@/platform";
+import { preferRootlessMachineConnection } from "./podman-machine-connections";
 
 interface PodmanConnectionEntry {
   Name?: string;
@@ -35,15 +36,15 @@ function extractPipeName(uri: string): string | undefined {
 
 /**
  * From the parsed `podman system connection list --format json`, return the machine's Windows named-pipe path
- * (`\\.\pipe\<name>`) when Podman exposes one, else undefined. Prefers the Default machine connection — the
- * rootful `-root` pipe on a rootful machine — mirroring the SSH bridge selection in podman-machine-ssh.ts.
+ * (`\\.\pipe\<name>`) when Podman exposes one, else undefined. Prefers the ROOTLESS machine connection (never the
+ * rootful `-root` pipe, which the app does not target) — mirroring the SSH bridge selection in podman-machine-ssh.ts.
  */
 export function parsePodmanMachineNamedPipe(connections: unknown): string | undefined {
   const entries: PodmanConnectionEntry[] = Array.isArray(connections) ? connections : [];
   const machines = entries.filter(
     (entry) => entry?.IsMachine === true && typeof entry.URI === "string" && NPIPE_SCHEME.test(entry.URI),
   );
-  const chosen = machines.find((entry) => entry.Default) ?? machines[0];
+  const chosen = preferRootlessMachineConnection(machines);
   const name = chosen?.URI ? extractPipeName(chosen.URI) : undefined;
   return name ? getWindowsPipePath(name, true) : undefined;
 }

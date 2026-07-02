@@ -7,6 +7,7 @@
 // and build that nested command; the SSH transport runs it through the SAME dial-stdio bridge Docker uses.
 
 import type { DialStdioBridge } from "@/env/Types";
+import { preferRootlessMachineConnection } from "./podman-machine-connections";
 
 export interface PodmanMachineSSH {
   user: string;
@@ -17,6 +18,7 @@ export interface PodmanMachineSSH {
 }
 
 interface PodmanConnectionEntry {
+  Name?: string;
   URI?: string;
   Identity?: string;
   IsMachine?: boolean;
@@ -39,8 +41,8 @@ function parseSSHURI(uri: string): Omit<PodmanMachineSSH, "identity"> | undefine
 /**
  * Pick the machine's SSH connection from `podman system connection list --format json`. Only `IsMachine`
  * entries with an identity qualify — a directly-reachable native remote podman has none, so this returns
- * undefined and the caller keeps the existing `ssh -NL` unix-socket forward. Prefers the Default connection
- * (on a rootful machine that is the root socket, which is exactly what podman itself uses).
+ * undefined and the caller keeps the existing `ssh -NL` unix-socket forward. Prefers the ROOTLESS connection
+ * (never the rootful `-root` socket — the app targets rootless podman only).
  */
 export function parsePodmanMachineSSHConnection(connectionListJson: string): PodmanMachineSSH | undefined {
   let entries: PodmanConnectionEntry[];
@@ -51,7 +53,7 @@ export function parsePodmanMachineSSHConnection(connectionListJson: string): Pod
     return undefined;
   }
   const machines = entries.filter((entry) => entry?.IsMachine === true && !!entry.URI && !!entry.Identity);
-  const chosen = machines.find((entry) => entry.Default) ?? machines[0];
+  const chosen = preferRootlessMachineConnection(machines);
   if (!chosen) {
     return undefined;
   }
