@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 270.93334 270.93334" width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="28 28 200 200" width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
   <title>Container Desktop</title>
-  <rect x="14" y="14" width="242.93334" height="242.93334" rx="58" fill="#0f1420" />
-  <g transform="translate(33.07,33.07) scale(0.8)" stroke-linejoin="round" stroke-width="16">
+  <g stroke-linejoin="round" stroke-width="16">
     <path d="M128,120 L216,152 L128,184 L40,152 Z" fill="#1d56b8" stroke="#1d56b8" />
     <path d="M128,94 L198,120 L128,146 L58,120 Z" fill="#2f7df0" stroke="#2f7df0" />
     <path d="M128,72 L180,92 L128,112 L76,92 Z" fill="#6fb2ff" stroke="#6fb2ff" />

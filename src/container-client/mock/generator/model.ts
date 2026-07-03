@@ -312,8 +312,9 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     replica: number,
     image: LogicalImage,
     network: LogicalNetwork,
+    forcedState?: ContainerStateValue,
   ): LogicalContainer => {
-    const state = pickState();
+    const state = forcedState ?? pickState();
     const isUp = state === "running" || state === "paused" || state === "degraded";
     const startedAt = faker.date.recent({ days: 14 });
     const createdAt = new Date(startedAt.getTime() - faker.number.int({ min: 1, max: 90 }) * 1000);
@@ -325,7 +326,8 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
       finishedAt = faker.date.between({ from: startedAt, to: REF_DATE });
       agoHours = Math.max(1, Math.floor((REF_MS - finishedAt.getTime()) / 3_600_000));
     }
-    const healthy = state === "running" && image.exposesPort && faker.datatype.boolean({ probability: 0.6 });
+    const healthy =
+      state === "running" && image.exposesPort && (forcedState ? true : faker.datatype.boolean({ probability: 0.6 }));
     const status = statusText(
       state,
       state === "exited" || state === "stopped" ? agoHours : uptimeHours,
@@ -335,10 +337,15 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
 
     const ports: LogicalPort[] = [];
     if (image.exposesPort && image.port && isUp) {
+      // Always draw both values so the dataset stays byte-stable whether or not this service is pinned. A
+      // pinned/showcase service then publishes on its canonical host:container port (e.g. Postgres 5432:5432);
+      // generated services take the sequential host port so the stress dataset stays collision-free.
+      const seqHostPort = hostPortSeq++;
+      const randomHostIp = faker.helpers.arrayElement(["0.0.0.0", "127.0.0.1"]);
       ports.push({
         containerPort: image.port,
-        hostPort: hostPortSeq++,
-        hostIp: faker.helpers.arrayElement(["0.0.0.0", "127.0.0.1"]),
+        hostPort: forcedState ? image.port : seqHostPort,
+        hostIp: forcedState ? "0.0.0.0" : randomHostIp,
         protocol: "tcp",
       });
     }
@@ -387,7 +394,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
           break;
         }
         const name = `${template.name}-${svc.service}-${replica}`;
-        containers.push(buildContainer(name, template.name, svc.service, replica, image, network));
+        containers.push(buildContainer(name, template.name, svc.service, replica, image, network, svc.state));
       }
     }
   }

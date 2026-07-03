@@ -46,9 +46,8 @@ export function createRuntime(paths: RuntimePaths) {
   const engineIconPath = (base: string, engine?: string): string => {
     const fallback = `${base}.png`;
     const normalizedEngine = normalizeIconEngine(engine ?? currentIconEngine);
-    if (normalizedEngine === "podman") {
-      return iconPath(fallback);
-    }
+    // Every engine (podman included) uses its own colored mark; the monochrome `${base}.png` is only the
+    // last-resort fallback when a per-engine asset is missing.
     return existingIconPath(`${base}-${normalizedEngine}.png`, fallback);
   };
 

@@ -2,6 +2,8 @@
 // (real image refs, sensible ports, compose-style projects) instead of lorem ipsum. The generator
 // (model.ts) draws from these deterministically.
 
+import type { ContainerStateValue } from "./model";
+
 export interface ImageCatalogEntry {
   /** Registry host. "docker.io" for Hub; others (quay.io/ghcr.io/gcr.io) exercise the registry split. */
   registry: string;
@@ -85,7 +87,18 @@ export const IMAGE_CATALOG: ImageCatalogEntry[] = [
     size: [80 * MB, 440 * MB],
     cmd: ["postgres"],
     entrypoint: ["docker-entrypoint.sh"],
-    env: ["POSTGRES_PASSWORD_FILE=/run/secrets/db_password", "PG_MAJOR=16"],
+    env: [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "GOSU_VERSION=1.17",
+      "LANG=en_US.utf8",
+      "PG_MAJOR=16",
+      "PG_VERSION=16.4-1.pgdg120+1",
+      "PGDATA=/var/lib/postgresql/data",
+      "POSTGRES_USER=app",
+      "POSTGRES_PASSWORD=app_dev_password",
+      "POSTGRES_DB=app",
+      "POSTGRES_INITDB_ARGS=--data-checksums",
+    ],
   },
   {
     registry: "docker.io",
@@ -306,11 +319,23 @@ export const IMAGE_CATALOG: ImageCatalogEntry[] = [
 /** A compose project = a named group of services. Used to build realistic multi-service container groups. */
 export interface ProjectTemplate {
   name: string;
-  /** Service definitions: a repo from the catalog + optional replica count. */
-  services: { repo: string; service: string; replicas?: number }[];
+  /** Service definitions: a repo from the catalog + optional replica count + optional pinned state. */
+  services: { repo: string; service: string; replicas?: number; state?: ContainerStateValue }[];
 }
 
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
+  // "acme" sorts before every other multi-item project, so acme-db-1 is the FIRST row of the Containers list —
+  // the exact container the docs Inspect screenshot resolves ([data-container] .first()). Its db is pinned
+  // running so that row shows a rich, realistic Postgres inspect (env + published 5432 + a data volume),
+  // instead of the empty CI worker that used to land there. Keep every sibling service name > "db" so the
+  // Postgres row stays alphabetically first within the group.
+  {
+    name: "acme",
+    services: [
+      { repo: "library/postgres", service: "db", state: "running" },
+      { repo: "library/nginx", service: "web", replicas: 2 },
+    ],
+  },
   {
     name: "lamp",
     services: [

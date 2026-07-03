@@ -20,6 +20,24 @@ describe("generated raw data survives the real normalizers", () => {
     expect(groups.some((group) => group.Items.length > 1)).toBe(true);
   });
 
+  it("the first-listed container (the one the docs Inspect screenshot captures) is a running service with env, ports and mounts", () => {
+    // resolveFirstId([data-container]) in the screenshot harness picks the very first rendered row, which is
+    // groups[0].Items[0] under the default sort. That container must be a realistic, fully-populated service —
+    // not a bare CI worker with empty Environment/Mounts/Ports — so 003-ContainerInspect.png shows real data.
+    const ds = buildEngineDataset(ContainerEngine.PODMAN);
+    const normalized = list(ds.containers).map((raw) => podmanNormalizers.normalizeContainer(raw as Container));
+    const firstShown = groupContainers(normalized, "", undefined)[0].Items[0];
+    expect(firstShown.Computed.DecodedState).toBe("running");
+    const inspect = ds.containerInspect[firstShown.Id] as {
+      Config: { Env: string[] };
+      Ports: unknown[];
+      Mounts: unknown[];
+    };
+    expect(inspect.Config.Env.length).toBeGreaterThan(0);
+    expect(inspect.Ports.length).toBeGreaterThan(0);
+    expect(inspect.Mounts.length).toBeGreaterThan(0);
+  });
+
   it("podman images normalize to non-empty Name/Tag/Registry/FullName", () => {
     const ds = buildEngineDataset(ContainerEngine.PODMAN);
     for (const raw of list(ds.images)) {
