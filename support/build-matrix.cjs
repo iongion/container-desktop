@@ -28,7 +28,7 @@ const REPO = "iongion/container-desktop";
 // download link AND the in-app Windows update check (the /VERSION-Windows_NT
 // endpoint, read by Api.clients.ts), so Windows users are never told about a
 // build they cannot install yet.
-const WINDOWS_INSTALLER_VERSION = "5.2.13";
+const WINDOWS_INSTALLER_VERSION = "5.3.15";
 const WINDOWS_INSTALLER_WRAPPER = "container-desktop-installer.exe";
 
 // Canonical arches and how they read in the UI.
