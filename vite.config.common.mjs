@@ -109,6 +109,7 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
         alias: {
           "@": path.resolve(__dirname, "src"),
           "@/container-client": path.resolve(__dirname, "src/container-client"),
+          "@/container-provisioning": path.resolve(__dirname, "src/container-provisioning"),
           "@/electron-shell": path.resolve(__dirname, "src/electron-shell"),
           "@/env": path.resolve(__dirname, "src/env"),
           "@/logger": path.resolve(__dirname, "src/logger"),

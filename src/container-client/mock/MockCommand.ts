@@ -184,6 +184,25 @@ async function runCli(launcher: string, args: string[]): Promise<CommandExecutio
   return okResult();
 }
 
+// Canned streamed progress for provisioning commands so the wizard's execute step shows a believable log
+// in mock mode (real commands stream their own output). Returns [] for anything not provisioning-shaped.
+export function mockProvisioningStream(launcher: string, flat: string[]): string[] {
+  const cmd = [launcher, ...flat].join(" ");
+  if (flat.includes("machine") && flat.includes("init")) {
+    return ["Downloading VM image…", "Extracting image…", "Creating machine…", "Machine initialized."];
+  }
+  if (flat.includes("--import")) {
+    return ["Fetching distro rootfs…", "Registering distribution…", "Distribution ready."];
+  }
+  if (flat.includes("install") || cmd.includes("apt") || cmd.includes("dnf") || cmd.includes("pacman")) {
+    return ["Resolving packages…", "Installing engine + compose…", "Configuring rootless…", "Installed."];
+  }
+  if (flat.includes("--version")) {
+    return [`${launcher} version 5.0.0 (mock)`];
+  }
+  return [];
+}
+
 /** Build a fresh MockCommand (implements ICommand). */
 export function createMockCommand(): ICommand {
   const command: ICommand = {
@@ -204,12 +223,17 @@ export function createMockCommand(): ICommand {
       const flat = (args || []).map((a) => `${a}`);
       const isBuild = flat.includes("build");
       const engine = engineForStreamingArgs(launcher, flat);
+      const provisioningLines = mockProvisioningStream(launcher, flat);
       // Replay engine-shaped build output on a macrotask so the caller's `handle.on(...)` attaches first.
       setTimeout(async () => {
         if (isBuild) {
           const fx = await loadEngineFixtures(engine);
           for (const chunk of fx.buildOutput ?? []) {
             emitter.emit("data", chunk);
+          }
+        } else {
+          for (const line of provisioningLines) {
+            emitter.emit("data", { from: "stdout", data: `${line}\n` });
           }
         }
         emitter.emit("exit", { code: 0 });

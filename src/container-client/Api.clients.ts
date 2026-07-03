@@ -92,9 +92,17 @@ function activityCurl(req: any, connection: Connection): string | undefined {
 
 export function createApplicationApiDriver(connection: Connection, context?: any): AxiosInstance {
   async function request<_T = any, _DD = any>(request, config?: AxiosRequestConfig<any> | undefined) {
+    // An AbortSignal (used to bound streaming attaches like /events + container logs) must keep its identity:
+    // deepMerge deep-clones plain objects, which strips the signal to a prototype-less object — the Node http
+    // adapter then throws "config.signal.addEventListener is not a function", the stream never opens, and the
+    // UI stops live-updating (dashboard/containers ignore `docker run` until a manual reload). Re-attach it.
+    const signal = config?.signal ?? request?.signal;
     const req = (config ? deepMerge({}, request, config) : request) || {
       headers: {},
     };
+    if (signal) {
+      req.signal = signal;
+    }
     const headersFlat = Object.keys(req.headers || {}).reduce((acc, key) => {
       acc[key] = req.headers[key];
       return acc;

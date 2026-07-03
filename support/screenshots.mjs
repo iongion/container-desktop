@@ -110,6 +110,9 @@ function seedWindowSettings(userDataDir, viewport) {
         minimizeToSystemTray: false,
         trayWidgetEnabled: false,
         expandSidebar: false,
+        // Suppress the first-run provisioning wizard: on this fresh profile it would auto-open and its
+        // full-screen overlay would cover every capture and intercept clicks. skipAtStartup gates it off.
+        wizard: { skipAtStartup: true },
         window: {
           width: viewport.width,
           height: viewport.height,

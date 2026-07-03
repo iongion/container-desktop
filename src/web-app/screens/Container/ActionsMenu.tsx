@@ -32,6 +32,8 @@ interface ActionsMenuProps {
   withOverlay?: boolean;
   withInlinePlayerActions?: boolean;
   onReload?: () => void;
+  // Bubbled up so a hover-gated container row can stay mounted while its actions popover is open.
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
 interface PerformActionOptions {
@@ -49,6 +51,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   withInlinePlayerActions,
   onReload,
   withOverlay,
+  onMenuOpenChange,
 }: ActionsMenuProps) => {
   const { t } = useTranslation();
   const [disabledAction, setDisabledAction] = useState<string | undefined>();
@@ -393,6 +396,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           tag={container.Id}
           title={t("The container cannot be removed while running")}
           disabled={!canRemove || disabledAction === "container.remove"}
+          onOpenChange={onMenuOpenChange}
         >
           {expandAsMenuItems}
           <MenuItem

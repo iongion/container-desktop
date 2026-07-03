@@ -27,6 +27,7 @@ import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
 import { FindHost } from "@/web-app/components/Find/FindHost";
 import { NotificationCenterHost } from "@/web-app/components/NotificationCenter/NotificationCenterHost";
+import { ProvisioningWizardHost } from "@/web-app/components/ProvisioningWizard/ProvisioningWizardHost";
 import { resolveEngineTheme } from "@/web-app/domain/engineTheme";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { waitForPreload } from "@/web-app/Native";
@@ -269,6 +270,16 @@ function AppLayout() {
   return (
     <>
       <AppBootstrapReadySignal />
+      {/* The non-blocking wizard gets its own boundary (the app's standard one) so a crash inside it is
+          contained + recoverable and can never take down the app chrome — AppHeader is a sibling outside it. */}
+      <AppErrorBoundary
+        onReconnect={onReconnect}
+        reconnect={t("Try to recover")}
+        title={t("An uncaught error showed up")}
+        suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
+      >
+        <ProvisioningWizardHost />
+      </AppErrorBoundary>
       <AppHeader
         osType={osType}
         program={program}

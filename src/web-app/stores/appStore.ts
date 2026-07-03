@@ -42,6 +42,7 @@ import { Notification } from "@/web-app/Notification";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { applyResourceSyncSnapshot, startResourceMirror } from "@/web-app/stores/resourceMirror";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
+import { updateLogLevel } from "@/web-app/stores/settingsUpdate";
 import { useUIStore } from "@/web-app/stores/uiStore";
 
 const logger = createLogger("web.appStore");
@@ -557,7 +558,12 @@ export const useAppStore = create<AppStore>()((set, get) => {
       runPending(async () => {
         try {
           const instance = Application.getInstance();
-          instance.setLogLevel(options.logging?.level || "warn");
+          // Only (re)apply the log level when this update explicitly carries one — a partial update
+          // that doesn't touch logging (wizard opt-out, makePrimary) must not reset the running level.
+          const nextLogLevel = updateLogLevel(options);
+          if (nextLogLevel) {
+            instance.setLogLevel(nextLogLevel);
+          }
           const userSettings = await instance.setGlobalUserSettings(options);
           if (Object.hasOwn(options, "proxy")) {
             await instance.applyProxy(userSettings.proxy);

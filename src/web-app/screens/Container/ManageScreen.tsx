@@ -46,6 +46,9 @@ const estimateContainerRowHeight = (descriptor: ContainerRowDescriptor): number 
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const [containerOverlay, setContainerOverlay] = useState<string | undefined>();
+  // The row whose actions popover is currently open. Its menu stays mounted even after the mouse leaves the
+  // row (the popover portals below the row), so reaching for a menu item doesn't tear the popover down.
+  const [pinnedRow, setPinnedRow] = useState<string | undefined>();
   const [collapse, setCollapse] = useState<{
     [key: string]: boolean | undefined;
   }>({});
@@ -385,8 +388,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </td>
                     <td>{creationDate.format("DD MMM YYYY HH:mm")}</td>
                     <td data-column="Actions">
-                      {containerOverlay === rowId ? (
-                        <ActionsMenu container={container} connectionId={container.connectionId} withOverlay />
+                      {containerOverlay === rowId || pinnedRow === rowId ? (
+                        <ActionsMenu
+                          container={container}
+                          connectionId={container.connectionId}
+                          withOverlay
+                          onMenuOpenChange={(open) => setPinnedRow(open ? rowId : undefined)}
+                        />
                       ) : (
                         <ButtonGroup
                           className="ItemActionsMenu ResourceItemInlineActionsMenu"
