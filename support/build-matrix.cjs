@@ -28,7 +28,7 @@ const REPO = "iongion/container-desktop";
 // download link AND the in-app Windows update check (the /VERSION-Windows_NT
 // endpoint, read by Api.clients.ts), so Windows users are never told about a
 // build they cannot install yet.
-const WINDOWS_INSTALLER_VERSION = "5.3.15";
+const WINDOWS_INSTALLER_VERSION = "5.3.16";
 const WINDOWS_INSTALLER_WRAPPER = "container-desktop-installer.exe";
 
 // Canonical arches and how they read in the UI.
@@ -48,11 +48,51 @@ const PLATFORMS = {
     menu: true,
     primary: { format: "deb", arch: "x64" },
     formats: [
-      { target: "deb", ext: "deb", arch: { x64: "amd64", arm64: "arm64" }, title: "Debian / Ubuntu", badge: ".deb", button: "Download .deb", note: "Debian/Ubuntu <b>.deb</b> package" },
-      { target: "rpm", ext: "rpm", arch: { x64: "x86_64", arm64: "aarch64" }, title: "Fedora / RHEL", badge: ".rpm", button: "Download .rpm", note: "Fedora/RHEL <b>.rpm</b> package" },
-      { target: "tar.gz", ext: "tar.gz", arch: { x64: "x64", arm64: "arm64" }, title: "Portable tarball", badge: ".tar.gz", button: "Download .tar.gz", note: "Portable <b>tarball</b> — unpack &amp; run" },
-      { target: "AppImage", ext: "AppImage", arch: { x64: "x86_64", arm64: "arm64" }, title: "AppImage", badge: ".AppImage", button: "Download .AppImage", note: "Portable <b>AppImage</b> — make executable &amp; run" },
-      { target: "pacman", ext: "pacman", arch: { x64: "x64", arm64: "aarch64" }, title: "Arch Linux", badge: ".pacman", button: "Download .pacman", note: "Arch Linux <b>pacman</b> package" },
+      {
+        target: "deb",
+        ext: "deb",
+        arch: { x64: "amd64", arm64: "arm64" },
+        title: "Debian / Ubuntu",
+        badge: ".deb",
+        button: "Download .deb",
+        note: "Debian/Ubuntu <b>.deb</b> package",
+      },
+      {
+        target: "rpm",
+        ext: "rpm",
+        arch: { x64: "x86_64", arm64: "aarch64" },
+        title: "Fedora / RHEL",
+        badge: ".rpm",
+        button: "Download .rpm",
+        note: "Fedora/RHEL <b>.rpm</b> package",
+      },
+      {
+        target: "tar.gz",
+        ext: "tar.gz",
+        arch: { x64: "x64", arm64: "arm64" },
+        title: "Portable tarball",
+        badge: ".tar.gz",
+        button: "Download .tar.gz",
+        note: "Portable <b>tarball</b> — unpack &amp; run",
+      },
+      {
+        target: "AppImage",
+        ext: "AppImage",
+        arch: { x64: "x86_64", arm64: "arm64" },
+        title: "AppImage",
+        badge: ".AppImage",
+        button: "Download .AppImage",
+        note: "Portable <b>AppImage</b> — make executable &amp; run",
+      },
+      {
+        target: "pacman",
+        ext: "pacman",
+        arch: { x64: "x64", arm64: "aarch64" },
+        title: "Arch Linux",
+        badge: ".pacman",
+        button: "Download .pacman",
+        note: "Arch Linux <b>pacman</b> package",
+      },
     ],
   },
   mac: {
@@ -65,8 +105,25 @@ const PLATFORMS = {
     menu: false,
     primary: { format: "dmg", arch: "arm64" },
     formats: [
-      { target: "dmg", ext: "dmg", arch: { arm64: "arm64" }, title: "Disk image", badge: ".dmg", button: "Download .dmg", note: "Standard <b>.dmg</b> disk image" },
-      { target: "tar.gz", ext: "tar.gz", arch: { arm64: "arm64" }, title: "Portable tarball", badge: ".tar.gz", button: "Download .tar.gz", note: "Portable <b>tarball</b>", link: "Portable .tar.gz" },
+      {
+        target: "dmg",
+        ext: "dmg",
+        arch: { arm64: "arm64" },
+        title: "Disk image",
+        badge: ".dmg",
+        button: "Download .dmg",
+        note: "Standard <b>.dmg</b> disk image",
+      },
+      {
+        target: "tar.gz",
+        ext: "tar.gz",
+        arch: { arm64: "arm64" },
+        title: "Portable tarball",
+        badge: ".tar.gz",
+        button: "Download .tar.gz",
+        note: "Portable <b>tarball</b>",
+        link: "Portable .tar.gz",
+      },
     ],
   },
   win: {
@@ -82,7 +139,16 @@ const PLATFORMS = {
     formats: [
       { target: "appx", ext: "appx", arch: { x64: "x64" }, public: false },
       { target: "nsis", ext: "exe", arch: { x64: "x64" }, public: false },
-      { target: "zip", ext: "zip", arch: { x64: "x64" }, title: "Portable zip", badge: ".zip", button: "Download .zip", note: "Portable <b>.zip</b> archive", link: "Portable .zip" },
+      {
+        target: "zip",
+        ext: "zip",
+        arch: { x64: "x64" },
+        title: "Portable zip",
+        badge: ".zip",
+        button: "Download .zip",
+        note: "Portable <b>.zip</b> archive",
+        link: "Portable .zip",
+      },
     ],
   },
 };
@@ -171,16 +237,17 @@ function downloadModel(version, { microsoftStore } = {}) {
     );
 
   const win = PLATFORMS.win;
-  const winGeneratedLinks = win.formats
-    .filter(isPublic)
-    .flatMap((format) =>
-      win.arches
-        .map((arch) => optionFor("win", format, arch, version))
-        .filter(Boolean)
-        .map((option) => ({ file: option.file, label: formatByTarget(win, option.format).link })),
-    );
+  const winGeneratedLinks = win.formats.filter(isPublic).flatMap((format) =>
+    win.arches
+      .map((arch) => optionFor("win", format, arch, version))
+      .filter(Boolean)
+      .map((option) => ({ file: option.file, label: formatByTarget(win, option.format).link })),
+  );
   const winLinks = [
-    { file: `https://github.com/${REPO}/releases/download/${WINDOWS_INSTALLER_VERSION}/${WINDOWS_INSTALLER_WRAPPER}`, label: "Installer .exe" },
+    {
+      file: `https://github.com/${REPO}/releases/download/${WINDOWS_INSTALLER_VERSION}/${WINDOWS_INSTALLER_WRAPPER}`,
+      label: "Installer .exe",
+    },
     ...winGeneratedLinks,
   ];
 
