@@ -332,16 +332,17 @@ def version_sync(ctx, version=None, perform=False):
     _apply(_synced_targets(version), perform)
 
 
-# The version-source files staged in every release commit. `make release` adds the
-# regenerated site on top (website/ + captured screenshots/replays) via commit-release.
-_VERSION_SOURCE_PATHS = ("package.json", "VERSION", "public/manifest.json", "CHANGELOG.md")
+def _commit_release(ctx, version):
+    """Stage every working-tree change, commit, tag and push.
 
-
-def _commit_release(ctx, version, extra_paths=()):
-    """Stage the version-source files (plus any extra paths), commit, tag and push."""
-    paths = " ".join(_quote(path) for path in (*_VERSION_SOURCE_PATHS, *extra_paths))
+    A release commit captures the whole regenerated state -- bumped version files,
+    the rebuilt website/, captured screenshots/replays and any regenerated support
+    assets (icons, appx tiles) -- so nothing is missed by an out-of-date path list.
+    `temp/` and other build scratch are gitignored; run from an otherwise-clean tree
+    so only release content is swept in.
+    """
     with ctx.cd(PROJECT_HOME):
-        ctx.run(f"git add {paths}")
+        ctx.run("git add -A")
         ctx.run(f'git commit -m "Release {version}"')
         ctx.run(f'git tag -a "{version}" -m "{version}"')
         ctx.run("git push")
@@ -385,8 +386,9 @@ def bump(ctx, part="patch", perform=False, commit=True):
 
 @task(name="commit-release")
 def commit_release(ctx):
-    """Commit an already-bumped release -- version files PLUS the regenerated site
-    (website/, screenshots, demo replay) -- then tag and push, WITHOUT re-bumping.
+    """Commit an already-bumped release -- every working-tree change (version files,
+    the regenerated website/, screenshots, demo replay and any support assets) --
+    then tag and push, WITHOUT re-bumping.
 
     This is the git tail of `bump --perform`, but staging the generated content too.
     `make release` calls it after bumping (--no-commit) and regenerating the
@@ -394,12 +396,8 @@ def commit_release(ctx):
     land in one release commit that CDPipeline then simply deploys.
     """
     version = read_source_version()
-    print(f"Commit release {version} (version files + website/ + captured screenshots/replays)")
-    _commit_release(
-        ctx,
-        version,
-        extra_paths=("website", "website-src/static/img", "website-src/static/replays", "website-src/static/videos"),
-    )
+    print(f"Commit release {version} (all working-tree changes: version files + website/ + assets)")
+    _commit_release(ctx, version)
 
 
 def _latest_release_version(ctx):
