@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.16] - 2026-07-03
+
+### Updated
+
+- Branding for Microsoft/Windows Store
+
 ## [5.3.15] - 2026-07-02
 
 ### Fixed
