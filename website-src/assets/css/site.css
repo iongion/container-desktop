@@ -286,11 +286,16 @@ footer{border-top:1px solid var(--border);padding:60px 0 36px;background:rgba(va
 
 /* legal / privacy prose */
 .prose{max-width:780px;margin:0 auto;padding:10px 0 80px}
+.prose .eyebrow{display:block;margin-bottom:10px}
 .prose h1{font-size:40px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
 .prose h2{font-size:22px;font-weight:600;margin:28px 0 8px}
 .prose p,.prose li{color:var(--ink-soft);font-weight:300;font-size:15px;margin:10px 0}
+.prose .lead{font-size:18px;font-weight:400;color:var(--ink);margin:14px 0 6px}
 .prose ul,.prose ol{margin-left:22px}
 .prose a{color:var(--cyan)}
+.prose .pp-back{margin-top:34px}
+.prose a.btn{color:var(--ink-soft)}
+.prose a.btn:hover{color:#fff}
 
 /* =====================  ENGINE THEMES  =====================
    Each block overrides only token VALUES; every rule above reads tokens, so
