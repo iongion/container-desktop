@@ -1,0 +1,439 @@
+/* Full-screen provisioning wizard. A fixed, full-viewport takeover (above the app chrome) — NOT a
+   dialog. All colors come from the --app-* theme tokens so it tracks every engine x mode. */
+
+.PWizOverlay {
+  position: fixed;
+  /* Sit BELOW the custom titlebar (AppHeader) so window controls + drag region stay usable. */
+  inset: var(--app-header-height, 50px) 0 0 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  grid-template-rows: 1fr auto;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+}
+
+/* Left step rail — reuses the receding-chrome idiom of the AppSidebar. */
+.PWizRail {
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 14px;
+  background-color: var(--app-chrome);
+  border-right: 1px solid var(--app-border);
+}
+.PWizBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 0 6px;
+}
+.PWizBrandMark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background-color: var(--app-accent);
+  color: var(--app-accent-fg);
+  font-weight: 700;
+}
+.PWizBrandText {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.PWizBrandText small {
+  display: block;
+  color: var(--app-text-muted);
+  font-weight: 400;
+  font-size: 11px;
+}
+.PWizStep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--app-text-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.PWizStep:hover {
+  background-color: color-mix(in srgb, var(--app-text-muted) 10%, transparent);
+}
+.PWizStep.is-done {
+  color: var(--app-text);
+}
+.PWizStep.is-active {
+  background-color: color-mix(in srgb, var(--app-accent) 16%, transparent);
+  color: var(--app-text);
+}
+.PWizStepNum {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--app-border);
+  border-radius: 50%;
+  font-size: 11px;
+}
+.PWizStep.is-done .PWizStepNum {
+  background-color: var(--app-intent-success-rest);
+  border-color: var(--app-intent-success-rest);
+  color: var(--app-accent-fg);
+}
+.PWizStep.is-active .PWizStepNum {
+  border-color: var(--app-accent);
+  color: var(--app-accent-text);
+}
+.PWizRailGrow {
+  flex: 1;
+}
+
+/* Content stage. */
+.PWizStage {
+  grid-column: 2;
+  overflow: auto;
+  padding: 34px 40px;
+}
+.PWizStage h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+.PWizSub {
+  margin: 0 0 18px;
+  color: var(--app-text-muted);
+}
+
+/* Footer — opt-out + Skip + a Back/Continue group (equal width). */
+.PWizFoot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 22px;
+  background-color: var(--app-chrome);
+  border-top: 1px solid var(--app-border);
+}
+.PWizFoot .bp6-checkbox {
+  margin: 0;
+  color: var(--app-text-muted);
+}
+.PWizFootSpacer {
+  flex: 1;
+}
+.PWizFoot .bp6-button-group .bp6-button {
+  min-width: 122px;
+  justify-content: center;
+}
+
+/* ---- Step content ---- */
+
+/* System check */
+.PWizChecking {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--app-text-muted);
+  padding: 12px 0;
+}
+.PWizProbeList {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  max-width: 520px;
+}
+.PWizProbe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background-color: var(--app-surface);
+  transition: opacity 120ms ease;
+}
+.PWizProbe.is-checking {
+  opacity: 0.72;
+}
+/* Program that can't exist on this OS (e.g. WSL on Linux): listed for consistency but not probed. */
+.PWizProbe.is-na {
+  opacity: 0.5;
+}
+.PWizProbeName {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.PWizProbeState {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Engine choice — brand-SVG cards (same assets as the table/footer glyphs). */
+.PWizEngineCards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.PWizEngineCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 190px;
+  padding: 18px;
+  border: 1.5px solid var(--app-border);
+  border-radius: 12px;
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+.PWizEngineExp {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-intent-warning-text);
+  background-color: color-mix(in srgb, var(--app-intent-warning-rest) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--app-intent-warning-rest) 42%, var(--app-border));
+}
+.PWizEngineCard:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+}
+.PWizEngineCard.is-active {
+  border-color: var(--app-accent);
+  background-color: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
+}
+/* Engine not provisionable on this OS (e.g. Apple Container off macOS): visible + badged, but not selectable. */
+.PWizEngineCard:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.PWizEngineIcon {
+  display: block;
+  width: 34px;
+  height: 34px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.PWizEngineIcon.is-small {
+  width: 22px;
+  height: 22px;
+}
+[data-engine-marker="podman"] > .PWizEngineIcon,
+.PWizEngineIcon[data-engine-marker="podman"] {
+  background-image: url("../../images/podman-engine.svg");
+}
+[data-engine-marker="docker"] > .PWizEngineIcon,
+.PWizEngineIcon[data-engine-marker="docker"] {
+  background-image: url("../../images/docker-engine.svg");
+}
+[data-engine-marker="container"] > .PWizEngineIcon,
+.PWizEngineIcon[data-engine-marker="container"] {
+  background-image: url("../../images/container-engine.svg");
+}
+.PWizEngineName {
+  font-weight: 700;
+  font-size: 15px;
+}
+.PWizEngineTag {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+/* Review — target summary + deterministic plan steps. */
+.PWizReviewSummary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background-color: var(--app-surface);
+  margin-bottom: 16px;
+}
+.PWizReviewSummaryText {
+  display: flex;
+  flex-direction: column;
+}
+.PWizReviewSummaryText small {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+.PWizPlanSteps {
+  margin: 14px 0 0;
+  padding-left: 22px;
+  max-width: 560px;
+}
+.PWizPlanStep {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--app-border);
+}
+.PWizPlanStep:last-child {
+  border-bottom: 0;
+}
+.PWizPlanStepBadge {
+  margin-left: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--app-text-muted) 16%, transparent);
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+/* Execute — progress bar + per-step status list + streamed log. */
+.PWizExecute .bp6-progress-bar {
+  margin-bottom: 18px;
+}
+.PWizRunSteps {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  max-width: 620px;
+}
+.PWizRunStep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.PWizRunStep.is-pending .PWizRunStepTitle {
+  color: var(--app-text-muted);
+}
+.PWizRunStepTitle {
+  font-weight: 500;
+}
+.PWizRunStepError {
+  margin-left: auto;
+  color: var(--app-intent-danger-rest, #db3737);
+  font-size: 12px;
+}
+.PWizLog {
+  margin: 0;
+  padding: 12px 14px;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background-color: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Ready — readiness checklist. */
+.PWizChecklist {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  max-width: 560px;
+}
+.PWizCheck {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--app-border);
+}
+.PWizCheck:last-child {
+  border-bottom: 0;
+}
+.PWizCheckLabel {
+  font-weight: 500;
+}
+.PWizCheckDetail {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+/* Resources — VM sizing fields. */
+.PWizResources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  max-width: 560px;
+}
+.PWizField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.PWizFieldLabel {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--app-text-muted);
+}
+
+/* Volumes — folder rows + resolved flag preview (the make-or-break step). */
+.PWizVolumes {
+  max-width: 720px;
+}
+.PWizFolderList {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.PWizFolder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background-color: var(--app-surface);
+  margin-bottom: 8px;
+}
+.PWizFolderPath {
+  font-weight: 600;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.PWizFolderPreview {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background-color: var(--app-surface-strong);
+  color: var(--app-accent-text, var(--app-text));
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.PWizVolumes .bp6-callout {
+  margin-top: 16px;
+}
+.PWizVolFlag {
+  margin-top: 8px;
+  color: var(--app-text-muted);
+}
+.PWizVolFlag code,
+.PWizFolderPreview {
+  font-variant-ligatures: none;
+}

@@ -98,6 +98,9 @@ export interface ConfirmMenuProps {
   title?: string;
   tag?: any;
   onConfirm: ConfirmMenuRemoveHandler;
+  // Notified whenever the popover opens/closes. The container list uses this to keep the (hover-gated) row
+  // menu mounted while it's open, so moving the mouse toward a menu item doesn't tear the popover down.
+  onOpenChange?: (open: boolean) => void;
 }
 export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   disabled,
@@ -105,28 +108,39 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   title,
   children,
   onConfirm,
+  onOpenChange,
 }: ConfirmMenuProps) => {
   // Controlled open state: PopoverNext (React 19 compatible) has no imperative
   // handleOverlayClose, so we close it explicitly when an action is taken.
   const [isOpen, setIsOpen] = useState(false);
+  const changeOpen = useCallback(
+    (next: boolean) => {
+      setIsOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
   const onActionConfirm = useCallback(
     (_e) => {
-      setIsOpen(false);
+      changeOpen(false);
       onConfirm(tag, true);
     },
-    [onConfirm, tag],
+    [changeOpen, onConfirm, tag],
   );
   const onActionCancel = useCallback(
     (_e) => {
-      setIsOpen(false);
+      changeOpen(false);
       onConfirm(tag, false);
     },
-    [onConfirm, tag],
+    [changeOpen, onConfirm, tag],
   );
-  const onOpen = useCallback((e) => {
-    e.stopPropagation();
-    setIsOpen(true);
-  }, []);
+  const onOpen = useCallback(
+    (e) => {
+      e.stopPropagation();
+      changeOpen(true);
+    },
+    [changeOpen],
+  );
   const triggerButton = (
     <Button variant="minimal" size="small" icon={IconNames.MORE} onClick={isOpen ? undefined : onOpen} />
   );
@@ -148,7 +162,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   return (
     <PopoverNext
       isOpen={isOpen}
-      onInteraction={(nextOpenState) => setIsOpen(nextOpenState)}
+      onInteraction={(nextOpenState) => changeOpen(nextOpenState)}
       usePortal
       hasBackdrop={false}
       content={menuContent}

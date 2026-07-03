@@ -95,3 +95,8 @@ body.bp6-light .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(
 [data-native="yes"] .App-projectNameVersion span {
   display: none;
 }
+/* When the full-screen provisioning wizard (PWizOverlay, z-index 40) is open, the AI menu still opens from the
+   header — lift its portal above the overlay so it isn't hidden underneath it. */
+.bp6-portal.AppHeaderPopoverAboveWizard {
+  z-index: 50;
+}

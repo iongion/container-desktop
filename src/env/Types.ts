@@ -120,6 +120,16 @@ export interface LoggingFileSettings {
   maxFiles: number;
 }
 
+// First-run provisioning wizard state, persisted under GlobalUserSettings.wizard.
+export interface WizardSettings {
+  skipAtStartup: boolean;
+  lastCompletedVersion?: string;
+  dismissedAt?: string;
+  // ISO timestamp written the first time the wizard auto-opens. Its presence is the "already shown once"
+  // sentinel that keeps the wizard from auto-opening on every launch (the header button opens it manually).
+  firstRunHandledAt?: string;
+}
+
 export interface GlobalUserSettings {
   theme: string;
   engineTheme: EngineThemePreference;
@@ -160,6 +170,9 @@ export interface GlobalUserSettings {
   ai: AISettings;
   // Global app proxy. Optional for older configs; absence normalizes to disabled at runtime.
   proxy?: ProxyConfig;
+  // First-run provisioning wizard state. Optional for back-compat; normalized to { skipAtStartup:false }
+  // in getGlobalUserSettings so a fresh config shows the wizard once (the renderer gates on `!== true`).
+  wizard?: WizardSettings;
 }
 
 export interface GlobalUserSettingsOptions extends GlobalUserSettings {

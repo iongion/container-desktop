@@ -354,6 +354,10 @@ export class Application {
       // ai blob) never surface `undefined` to the UI or the ai:* IPC handlers.
       ai: normalizeAISettings(await this.userConfiguration.getKey("ai")),
       proxy: normalizeProxyConfig(await this.userConfiguration.getKey("proxy")),
+      // First-run wizard state. Default skipAtStartup:false so a fresh config shows the wizard once
+      // (the renderer gates on `skipAtStartup !== true`). Inlined so container-client need not import
+      // the higher-level provisioning package.
+      wizard: { skipAtStartup: false, ...((await this.userConfiguration.getKey<any>("wizard")) ?? {}) },
     } as GlobalUserSettings;
     return settings;
   }

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Setup & Readiness wizard** — an opt-in, full-screen guide that helps take a machine toward a working container engine: it detects installed engines and transports (only the ones relevant to your OS are checkable), recommends the right engine per OS — Podman, Docker, or the experimental **Apple Container** (native Apple-silicon runtime, selectable on macOS only) — sizes a VM when one is needed, and auto-configures volume mounts + file permissions so bind mounts just work (no manual `chown`). It auto-opens only once, on the first launch after install, and never blocks app startup; reopen it anytime from the header **Provision** button.
+
 ## [5.3.16] - 2026-07-03
 
 ### Updated

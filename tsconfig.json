@@ -35,6 +35,8 @@
       "@/ai-system/*": ["./src/ai-system/*"],
       "@/container-client": ["./src/container-client"],
       "@/container-client/*": ["./src/container-client/*"],
+      "@/container-provisioning": ["./src/container-provisioning"],
+      "@/container-provisioning/*": ["./src/container-provisioning/*"],
       "@/electron-shell": ["./src/electron-shell"],
       "@/electron-shell/*": ["./src/electron-shell/*"],
       "@/env": ["./src/env"],

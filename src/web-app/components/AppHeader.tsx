@@ -19,10 +19,12 @@ import { Application } from "@/container-client/Application";
 import { OperatingSystem, type Program, type WindowAction } from "@/env/Types";
 import { WINDOW_CONTROLS } from "@/web-app/chrome/appChrome";
 import { aiNavScreens } from "@/web-app/screenVisibility";
+import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
 import type { AppScreen } from "../Types";
 import { AppHeaderLogo } from "./AppHeaderLogo";
+import { ProvisionButton } from "./ProvisioningWizard/ProvisionButton";
 
 import "./AppHeader.css";
 import { createLogger } from "@/logger";
@@ -67,6 +69,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }: AppHeaderProps) => {
   const { t } = useTranslation();
   const [withControls, setWithControls] = useState(true);
+  // While the full-screen wizard is open its nav targets sit behind the overlay, so every header action
+  // (Connections, AI, Troubleshoot) dismisses the wizard on click (like Skip) and then navigates — rather than
+  // being disabled or appearing to do nothing.
+  const wizardOpen = useProvisioningStore((s) => s.isOpen);
+  const closeWizard = useProvisioningStore((s) => s.closeWizard);
   const onWindowControlClick = useCallback((e) => {
     const action: WindowAction = e.currentTarget.getAttribute("data-action");
     const handler = WINDOW_ACTIONS_MAP[action];
@@ -109,13 +116,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           icon={<ReactIcon.Icon className="ReactIcon" path={mdiRobot} size={0.75} />}
           title={t("AI Assistant")}
           aria-label={t("AI Assistant")}
+          onClick={wizardOpen ? closeWizard : undefined}
         />
         <PopoverNext
           placement="bottom-end"
+          portalClassName="AppHeaderPopoverAboveWizard"
           content={
             <Menu>
               {aiScreens.map((s) => (
-                <MenuItem key={s.ID} icon={s.Metadata?.LeftIcon as any} text={t(s.Title)} href={pathTo(s.Route.Path)} />
+                <MenuItem
+                  key={s.ID}
+                  icon={s.Metadata?.LeftIcon as any}
+                  text={t(s.Title)}
+                  href={pathTo(s.Route.Path)}
+                  onClick={wizardOpen ? closeWizard : undefined}
+                />
               ))}
             </Menu>
           }
@@ -134,12 +149,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const disabledHeaderActions = !(provisioned && running);
   const utilityActions = (
     <ButtonGroup variant="minimal" className="AppHeaderUtilityActions">
+      <ProvisionButton />
       <AnchorButton
         className="AppHeaderActionButton"
         href={pathTo("/screens/connections/manage")}
         icon={IconNames.DATA_CONNECTION}
         title={t("Connections")}
         aria-label={t("Connections")}
+        onClick={wizardOpen ? closeWizard : undefined}
       />
       <AnchorButton
         className="AppHeaderActionButton"
@@ -148,6 +165,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         icon={<ReactIcon.Icon className="ReactIcon" path={mdiBug} size={0.75} />}
         title={t("Troubleshoot")}
         aria-label={t("Troubleshoot")}
+        onClick={wizardOpen ? closeWizard : undefined}
       />
     </ButtonGroup>
   );
