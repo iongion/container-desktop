@@ -4,7 +4,7 @@ UV_VERSION:=0.6.11
 PART?=patch
 
 
-.PHONY: clean prepare-python prepare-node prepare check format build-website demo-record screenshots release test test-app test-tooling
+.PHONY: clean prepare-python prepare-node prepare check format build-website build-assets demo-record screenshots release test test-app test-tooling trigger-cd-pipeline
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -70,6 +70,12 @@ build-assets:
 	$(MAKE) demo-record
 	$(MAKE) build-website
 
+trigger-cd-pipeline:
+	@V=$$(cat VERSION); echo "Triggering CDPipeline for $$V"; \
+	gh workflow run CDPipeline.yml --ref main \
+		-f git-ref=$$V -f stage=production -f target=all \
+		-f publish-release=true -f replace-release=false
+
 # Cut a release, keeping docs / static site / screenshots / demo videos in sync
 # INSIDE the release commit. Runs the full local CI gate, bumps the version WITHOUT
 # committing, regenerates the deterministic screenshots + demo replay and the static
@@ -85,10 +91,7 @@ release: test
 	uv run --locked invoke bump --part=$(PART) --perform --no-commit
 	$(MAKE) build-assets
 	uv run --locked invoke commit-release
-	@V=$$(cat VERSION); echo "Triggering CDPipeline for $$V"; \
-	gh workflow run CDPipeline.yml --ref main \
-		-f git-ref=$$V -f stage=production -f target=all \
-		-f publish-release=true -f replace-release=false
+	$(MAKE) trigger-cd-pipeline
 
 # Run the same verification set as CIPipeline.yml, locally. Mirrors its two jobs:
 # app (types/lint/tests/build) and tooling (Python). Run `make prepare` first if
