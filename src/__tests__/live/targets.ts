@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { config as dotenvConfig } from "dotenv";
 import { parseRemoteConnectionsEnv, type RemoteEnvConnection } from "@/container-client/remote-env";
 import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
-import { CURRENT_OS_TYPE } from "@/platform/node";
+import { CURRENT_OS_TYPE } from "@/platform/electron/host";
 
 export interface TestTarget {
   id: string;

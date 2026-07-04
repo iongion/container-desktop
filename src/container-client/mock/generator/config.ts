@@ -4,6 +4,7 @@
 // generator graph, including @faker-js/faker — is tree-shaken out of production builds (see
 // ./fixturesLoader for the PROD gate). @faker-js/faker is a devDependency for the same reason.
 
+import { mockEnvValue } from "@/container-client/mock/mode";
 import { ContainerEngine } from "@/env/Types";
 
 export interface EngineCounts {
@@ -72,9 +73,7 @@ export const COUNTS: Record<ContainerEngine, EngineCounts> = {
 
 /** Optional dev-only seed override (same read strategy as mode.ts reads CONTAINER_DESKTOP_MOCK). */
 export function readSeedOverride(): number | undefined {
-  const raw =
-    (typeof process !== "undefined" && process.env?.CONTAINER_DESKTOP_MOCK_SEED) ||
-    (globalThis as unknown as { CONTAINER_DESKTOP_MOCK_SEED?: string }).CONTAINER_DESKTOP_MOCK_SEED;
+  const raw = mockEnvValue("CONTAINER_DESKTOP_MOCK_SEED");
   if (!raw) {
     return undefined;
   }

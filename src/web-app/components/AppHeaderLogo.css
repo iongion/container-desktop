@@ -19,7 +19,7 @@
   --app-logo-tagline: color-mix(in srgb, var(--app-text-muted) 88%, var(--app-accent) 12%);
 }
 
-/* ---- per-engine (dark): icon tri-tone + wordmark gradient. container (Apple) reuses unified ---- */
+/* per-engine (dark): icon tri-tone + wordmark gradient. container (Apple) reuses unified */
 body[data-engine="unified"] .AppHeaderLogo,
 body[data-engine="container"] .AppHeaderLogo {
   --app-logo-bright: #2dd4bf;
@@ -45,8 +45,8 @@ body[data-engine="docker"] .AppHeaderLogo {
   --app-logo-grad-2: #5cc6ff;
 }
 
-/* ---- light mode: a white start would vanish on the light header, so the wordmark runs
-        dark-ink → accent (still per-engine), and the icon uses the light-theme accents ---- */
+/* light mode: a white start would vanish on the light header, so the wordmark runs
+        dark-ink → accent (still per-engine), and the icon uses the light-theme accents */
 body.bp6-light .AppHeaderLogo {
   --app-logo-grad-0: #1f2937;
 }
@@ -76,7 +76,7 @@ body.bp6-light[data-engine="docker"] .AppHeaderLogo {
   --app-logo-grad-2: #1f59cf;
 }
 
-/* ---- wordmark gradient stops ---- */
+/* wordmark gradient stops */
 .AppHeaderLogoGradStop0 {
   stop-color: var(--app-logo-grad-0);
 }
@@ -87,7 +87,7 @@ body.bp6-light[data-engine="docker"] .AppHeaderLogo {
   stop-color: var(--app-logo-grad-2);
 }
 
-/* ---- stacked-layers icon ---- */
+/* stacked-layers icon */
 .AppHeaderLogoPlate {
   stroke-width: 16;
   stroke-linejoin: round;
@@ -105,13 +105,14 @@ body.bp6-light[data-engine="docker"] .AppHeaderLogo {
   stroke: var(--app-logo-bright);
 }
 
-/* ---- wordmark + tagline (bundled Montserrat, see themes/shared.css) ---- */
+/* wordmark + tagline (bundled Montserrat, see themes/shared.css) */
 .AppHeaderLogoTitle {
   font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
   font-weight: 800;
   font-size: 56px;
   letter-spacing: -1.8px;
-  fill: url(#AppHeaderLogoGrad);
+  /* Flat wordmark (no gradient) — theme-aware base color: near-white on dark, dark-ink on light. */
+  fill: var(--app-logo-grad-0);
 }
 .AppHeaderLogoTagline {
   display: none;

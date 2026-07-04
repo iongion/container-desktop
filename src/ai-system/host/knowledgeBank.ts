@@ -1,8 +1,8 @@
 // Diagnostic knowledge bank. A small JSON store seeded with built-in
 // Podman/Docker/WSL/SSH solutions. The diagnostic agent searches it for known fixes as silent
 // grounding (the `searchKnowledge` tool) — it has NO renderer-facing surface and is read-only.
-// Storage is a port so the bank is unit-testable without the filesystem; the Electron adapter
-// wires a file-backed store via runtimes/node/knowledgeFileStorage.
+// Storage is a port so the bank is unit-testable without the filesystem; createAISystem wires the
+// file-backed store via runtimes/knowledgeFileStorage over the app FS port.
 // No Electron/AI-SDK/node:* imports.
 
 import type { KnowledgeDomain, KnowledgeEntry } from "@/ai-system/core";

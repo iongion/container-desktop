@@ -39,13 +39,14 @@ describe("website download model", () => {
     expect(linux.options[0].id).toBe("linux-deb-x64");
   });
 
-  it("never offers the unpublished Windows artifacts (.appx / unsigned .exe)", () => {
+  it("never offers the unpublished Windows artifacts (Store packages / unsigned .exe)", () => {
     const published = matrix.publicAssetNames(VERSION);
     expect(published.some((name: string) => name.endsWith(".appx"))).toBe(false);
+    expect(published.some((name: string) => name.endsWith(".msix"))).toBe(false);
     expect(published.some((name: string) => name.endsWith(".exe"))).toBe(false);
   });
 
-  it("keeps electron-builder targets and the website in lockstep", () => {
+  it("keeps legacy Electron builder targets compatible with public formats", () => {
     for (const platform of ["linux", "mac", "win"] as const) {
       const targets = matrix.electronBuilderTargets(platform);
       const publicTargets = matrix.PLATFORMS[platform].formats
@@ -57,7 +58,7 @@ describe("website download model", () => {
     expect(matrix.electronBuilderTargets("linux")).toEqual(["deb", "rpm", "tar.gz", "AppImage", "pacman"]);
   });
 
-  it("uses the per-format arch tokens electron-builder actually emits", () => {
+  it("uses the per-format arch tokens published artifacts keep for parity", () => {
     // Regression guard for the tokens verified against real release assets.
     expect(linkedAssetNames()).toContain(`container-desktop-linux-amd64-${VERSION}.deb`);
     expect(linkedAssetNames()).toContain(`container-desktop-linux-aarch64-${VERSION}.rpm`);

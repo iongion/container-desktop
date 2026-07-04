@@ -172,7 +172,7 @@ that stdio stream; it no longer ships a byte-pump of its own. **No SSH server ru
 and host keys are verified** (the old `:20022` sshd / `InsecureIgnoreHostKey` design is gone).
 
 - **WSL (Windows)** — the app's `WSLRelayServer`
-  ([`exec/wsl-relay.ts`](../../src/platform/exec/wsl-relay.ts)) listens on a Windows **named
+  ([`exec/wsl-relay.ts`](../../src/platform/electron/exec/wsl-relay.ts)) listens on a Windows **named
   pipe** and, per connection, runs `wsl.exe --distribution <d> --exec <engine> system dial-stdio`
   inside the distro: named pipe ↔ `wsl.exe` stdio ↔ engine socket. No TCP listener, no SSH, no
   daemon left in the distro.
@@ -181,7 +181,7 @@ and host keys are verified** (the old `:20022` sshd / `InsecureIgnoreHostKey` de
   with a structured pre-flight
   ([`ssh-preflight.ts`](../../src/container-client/diagnostics/ssh-preflight.ts)) that explains
   failures instead of hanging. On **Windows** the app's `SSHStdioBridgeServer`
-  ([`exec/ssh-stdio-bridge.ts`](../../src/platform/exec/ssh-stdio-bridge.ts)) fronts a named
+  ([`exec/ssh-stdio-bridge.ts`](../../src/platform/electron/exec/ssh-stdio-bridge.ts)) fronts a named
   pipe and runs `<engine> system dial-stdio` on the remote over SSH, verifying `known_hosts`.
 
 ```mermaid

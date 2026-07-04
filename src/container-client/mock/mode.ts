@@ -28,8 +28,20 @@ function rawFlag(): string {
   if (typeof process !== "undefined" && process.env?.CONTAINER_DESKTOP_MOCK) {
     return `${process.env.CONTAINER_DESKTOP_MOCK}`;
   }
-  // renderer → exposed via contextBridge in preload (electron-shell/preload.ts).
+  // renderer → exposed via contextBridge in preload (platform/electron/preload.ts).
   const exposed = (globalThis as unknown as { CONTAINER_DESKTOP_MOCK?: string }).CONTAINER_DESKTOP_MOCK;
+  return `${exposed ?? ""}`;
+}
+
+/** Read a mock-only env flag with the same guarded strategy as the mock gate: process.env in main/preload, the
+ *  contextBridge-exposed global in the renderer, "" otherwise. The single guarded `process` read for mock config
+ *  lives HERE so the mock sites (connections / mockApiAdapter / generator) stay node-free. Not production-gated —
+ *  callers already run only in mock mode. */
+export function mockEnvValue(name: string): string {
+  if (typeof process !== "undefined" && process.env?.[name]) {
+    return `${process.env[name]}`;
+  }
+  const exposed = (globalThis as unknown as Record<string, string | undefined>)[name];
   return `${exposed ?? ""}`;
 }
 

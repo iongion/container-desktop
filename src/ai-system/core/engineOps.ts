@@ -1,6 +1,6 @@
 // EngineOps PORT — the typed container-engine operations the assistant's first-class tools call.
 // OWNED by core: a neutral interface (type-only imports), implemented MAIN-side over EngineDataService
-// (adapters/electron — see engineOpsAdapter). The tools (runtimes/node/agent/containerTools) build their
+// (platform/electron — see engineOpsAdapter). The tools (runtimes/agent/containerTools) build their
 // AI-SDK definitions from this, and the broker dispatches an APPROVED mutation through the same surface.
 // Keeps engine access in MAIN: the renderer never reaches these — it only renders the tool results.
 //

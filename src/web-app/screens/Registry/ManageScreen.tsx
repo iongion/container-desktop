@@ -18,7 +18,7 @@ import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
 
 import { ActionsMenu, ScreenHeader } from ".";
 import "./ManageScreen.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { useRegistriesMap, useSearchRegistry } from "./queries";
 import { SearchResultDrawer } from "./SearchResultDrawer";
 

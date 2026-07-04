@@ -111,6 +111,20 @@ export const createConfig = ({ mode, command, host, port }) => {
       input: path.join(PROJECT_HOME, "index.html"),
     },
     optimizeDeps: {
+      // Pre-bundle the heavy, lazy-loaded deps at dev-server startup. Otherwise the first visit to a screen that
+      // dynamically imports them (Terminal/Logs → xterm; editors → monaco) makes Vite discover + re-optimize
+      // them mid-session, which 504s the in-flight dynamic import ("Outdated Optimize Dep") and trips the error
+      // boundary. Build mode ignores optimizeDeps, so this is dev-server only (Electron dev + Tauri dev alike).
+      include: [
+        "@xterm/xterm",
+        "@xterm/addon-fit",
+        "@xterm/addon-search",
+        "@xterm/addon-unicode11",
+        "@xterm/addon-web-links",
+        "@xterm/addon-webgl",
+        "@monaco-editor/react",
+        "monaco-editor",
+      ],
       esbuildOptions: {
         define: {
           global: "globalThis",

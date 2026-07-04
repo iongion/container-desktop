@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
 # provision-deps.sh - Install the Linux *system* packages required to build and
-# bundle Container Desktop. The Linux build emits tar.gz + deb + rpm + AppImage +
-# pacman, so it needs a build toolchain (git + a C toolchain for native deps) plus
-# the packaging tooling fpm/electron-builder shell out to (bsdtar, rpmbuild, fakeroot).
+# bundle Container Desktop with Tauri. The Linux build emits tar.gz + deb + rpm +
+# AppImage + pacman, so it needs GTK/WebKit development headers plus packaging
+# tooling (bsdtar, rpmbuild, fakeroot).
 #
 # It is idempotent: re-running only installs what is missing.
 #
@@ -15,7 +15,31 @@
 #
 set -euo pipefail
 
-# --- privilege helper ----------------------------------------------------------
+usage() {
+  cat <<'EOF'
+Usage:
+  bash support/provision-deps.sh
+
+Options:
+  -h, --help  Show this help.
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown argument: $arg" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+# privilege helper
 if [ "$(id -u)" -eq 0 ]; then
   SUDO=""
 elif command -v sudo >/dev/null 2>&1; then
@@ -28,7 +52,7 @@ fi
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
 
-# --- detect distro family ------------------------------------------------------
+# detect distro family
 PM=""
 if command -v apt-get >/dev/null 2>&1; then PM="apt"
 elif command -v dnf >/dev/null 2>&1; then PM="dnf"
@@ -40,10 +64,11 @@ else
 fi
 log "Detected package manager: $PM"
 
-# --- install system packages ---------------------------------------------------
-# Two tiers:
+# install system packages
+# Three tiers:
 #   1. build toolchain (git + C toolchain) - required for native deps. Hard fail.
-#   2. packaging tooling - the deb/rpm/AppImage/pacman targets need bsdtar (pacman
+#   2. Tauri native Linux dependencies (GTK/WebKit/AppIndicator/Rsvg/OpenSSL).
+#   3. packaging tooling - the deb/rpm/AppImage/pacman targets need bsdtar (pacman
 #      writes .MTREE via `bsdtar --format=mtree`), rpmbuild (rpm) and fakeroot
 #      (deb/rpm staging). Best-effort: a package missing on an exotic distro warns
 #      instead of aborting the whole provisioning run.
@@ -62,6 +87,47 @@ install_build_toolchain() {
     pacman)
       $SUDO pacman -Sy --needed --noconfirm \
         base-devel git
+      ;;
+  esac
+}
+
+install_tauri_linux_deps() {
+  local note="some Tauri Linux dependencies failed to install (Tauri Linux bundling may not work)."
+  case "$PM" in
+    apt)
+      $SUDO apt-get install -y \
+        pkg-config \
+        libwebkit2gtk-4.1-dev \
+        libgtk-3-dev \
+        libayatana-appindicator3-dev \
+        librsvg2-dev \
+        libssl-dev \
+        libxdo-dev \
+        webkitgtk-webdriver \
+        icnsutils \
+        file || warn "$note"
+      ;;
+    dnf|yum)
+      $SUDO "$PM" install -y \
+        pkgconf-pkg-config \
+        webkit2gtk4.1-devel \
+        gtk3-devel \
+        libappindicator-gtk3-devel \
+        librsvg2-devel \
+        openssl-devel \
+        libxdo-devel \
+        file || warn "$note"
+      ;;
+    pacman)
+      $SUDO pacman -S --needed --noconfirm \
+        pkgconf \
+        webkit2gtk-4.1 \
+        gtk3 \
+        libayatana-appindicator \
+        librsvg \
+        openssl \
+        xdotool \
+        file || warn "$note"
       ;;
   esac
 }
@@ -85,11 +151,13 @@ install_packaging_tools() {
       ;;
   esac
 }
+
 log "Installing system packages..."
 install_build_toolchain
+install_tauri_linux_deps
 install_packaging_tools
 
-# --- report per-user toolchains (NOT auto-installed) ---------------------------
+# report per-user toolchains (NOT auto-installed)
 log "Per-user toolchains (install yourself per DEVELOPMENT.md if missing):"
 report_tool() {
   if command -v "$1" >/dev/null 2>&1; then

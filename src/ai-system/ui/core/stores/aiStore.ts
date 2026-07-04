@@ -22,7 +22,7 @@ const uid = () => `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).
 export interface AIStoreDeps {
   /** Preload bridge — a getter for window.AI, evaluated at call time so tests can swap it. */
   getAI: () => IAI;
-  /** Logging — injected so core never imports @/logger. */
+  /** Logging — injected so core never imports @/platform/logger. */
   log: { error: (...args: any[]) => void };
   /** Best-effort live engine/diagnostics context from the app layer. Called fresh each turn. */
   collectBundle: () => DiagnosticsBundle;

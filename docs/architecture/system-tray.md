@@ -16,7 +16,7 @@ renderer**: nothing to bootstrap, no second window, no extra IPC.
   so a frequently-rebuilt menu costs no engine call.
 
 `main.ts` projects those into a lean `TrayMenuData` and hands it to the pure
-[`buildTrayMenuTemplate()`](../../src/electron-shell/trayMenu.ts), which returns an Electron menu template.
+[`buildTrayMenuTemplate()`](../../src/platform/trayMenu.ts), which returns an Electron-style menu template.
 The projection is deliberately lean (container state from `Computed.DecodedState`, no Blueprint/grouping
 import) so the main bundle stays free of renderer/UI code.
 
@@ -112,9 +112,9 @@ The menu acts in-process, so the only tray channel left is the **follow** signal
 
 | Piece                                   | Path                                                                                                                                                          |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Menu builder (pure)                     | [`src/electron-shell/trayMenu.ts`](../../src/electron-shell/trayMenu.ts) · [`trayMenu.test.ts`](../../src/electron-shell/trayMenu.test.ts)                     |
-| Tray controller                         | [`src/electron-shell/trayController.ts`](../../src/electron-shell/trayController.ts)                                                                           |
-| Preload receive bridge (follow signal)  | [`src/electron-shell/trayBus.ts`](../../src/electron-shell/trayBus.ts)                                                                                         |
-| Main-side data / actions / machines     | [`src/electron-shell/engineDataService.ts`](../../src/electron-shell/engineDataService.ts)                                                                     |
-| TrayMenuData projection + wiring        | [`src/electron-shell/main.ts`](../../src/electron-shell/main.ts)                                                                                               |
+| Menu builder (pure)                     | [`src/platform/trayMenu.ts`](../../src/platform/trayMenu.ts) · [`trayMenu.test.ts`](../../src/platform/trayMenu.test.ts)                  |
+| Tray controller                         | [`src/platform/electron/trayController.ts`](../../src/platform/electron/trayController.ts) |
+| Receive bridge (follow signal)          | [`src/platform/electron/trayBus.ts`](../../src/platform/electron/trayBus.ts)          |
+| Runtime data / actions / machines       | [`src/platform/engineDataService.ts`](../../src/platform/engineDataService.ts)                                                                   |
+| TrayMenuData projection + wiring        | [`src/platform/electron/main.ts`](../../src/platform/electron/main.ts)                  |
 | Follow-the-switch in the app            | [`src/web-app/stores/appStore.ts`](../../src/web-app/stores/appStore.ts)                                                                                       |

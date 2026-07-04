@@ -10,7 +10,7 @@ import type { DiagnosticsBundle } from "@/ai-system/core";
 import { buildResourceContext, type ConnectionResourceSummary } from "@/ai-system/ui/core/resourceContext";
 import { type AIState, createAIStore, startAIBus as startVanillaAIBus } from "@/ai-system/ui/core/stores/aiStore";
 import { ContainerStateList } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { useActivityStore } from "@/web-app/stores/activityStore";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";

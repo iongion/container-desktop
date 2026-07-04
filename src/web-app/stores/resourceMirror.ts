@@ -5,7 +5,7 @@
 
 import type { ResourceDomain } from "@/container-client/resourceDomains";
 import { RESOURCE_SYNC, type ResourceSyncSnapshot } from "@/container-client/resourceSyncProtocol";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { queryClient, removeConnectionQueries } from "@/web-app/domain/queryClient";
 
 import { useAppStore } from "./appStore";

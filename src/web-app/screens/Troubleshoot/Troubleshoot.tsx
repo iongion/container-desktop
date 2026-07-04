@@ -9,7 +9,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { usePruneSystem, useResetSystem } from "./queries";
 import "./Troubleshoot.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.troubleshoot");
 

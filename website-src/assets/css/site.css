@@ -42,7 +42,7 @@ section{position:relative}
 .sec-head h2{font-size:38px;font-weight:700;letter-spacing:-.5px;line-height:1.15}
 .sec-head p{color:var(--muted);font-weight:300;font-size:17px;margin-top:12px}
 
-/* ---- announce + nav (identical on every page; only .on differs) ---- */
+/* announce + nav (identical on every page; only .on differs) */
 .announce{display:flex;justify-content:center;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-soft);
   padding:9px;background:rgba(var(--accent-rgb),.12);border-bottom:1px solid var(--border)}
 .announce .mono{color:var(--purple-l)}
@@ -63,7 +63,7 @@ section{position:relative}
 .gh-star{min-width:118px;height:28px;display:flex;align-items:center;position:relative;top:4px}
 @media(max-width:860px){.nav-links{display:none}.gh-star{display:none}}
 
-/* ---- engine switcher (per-engine color picker; scales as engines are added) ---- */
+/* engine switcher (per-engine color picker; scales as engines are added) */
 .engine-switcher{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .engine-swatch{width:18px;height:18px;padding:0;border-radius:50%;cursor:pointer;background:var(--sw);
   border:1px solid rgba(255,255,255,.28);transition:transform .14s,box-shadow .14s}
@@ -71,7 +71,7 @@ section{position:relative}
 .engine-swatch:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--purple-l)}
 .engine-swatch.is-active{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--magenta)}
 
-/* ---- hero ---- */
+/* hero */
 .hero{padding:74px 0 30px;text-align:center}
 .badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);
   background:rgba(var(--accent-l-rgb),.08);border:1px solid var(--border-2);border-radius:30px;padding:6px 14px}
@@ -120,7 +120,7 @@ section{position:relative}
 [data-demo-replay-error="true"] .demo-replay-controls{display:none}
 @media(max-width:620px){.demo-replay-controls{grid-template-columns:auto 1fr}.demo-replay-time{grid-column:1 / -1;order:4}.demo-replay-seek{grid-column:2;grid-row:1}}
 
-/* ---- trust ---- */
+/* trust */
 .trust{margin-top:64px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:24px 0;background:rgba(var(--surface-rgb),.4)}
 .trust .wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 34px;align-items:center}
 .trust .t{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);font-weight:500}
@@ -128,7 +128,7 @@ section{position:relative}
 .trust .t .ic{color:var(--purple-l)}
 .trust .t .ic i{margin:0 1px}
 
-/* ---- feature rows ---- */
+/* feature rows */
 .features{padding:96px 0 20px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:54px;align-items:center;margin-bottom:104px}
 .row.alt .copy{order:2}
@@ -144,7 +144,7 @@ section{position:relative}
 .chip{font-family:"JetBrains Mono",monospace;font-size:11px;padding:5px 11px;border-radius:7px;border:1px solid var(--border-2);color:var(--ink-soft);background:rgba(var(--accent-l-rgb),.05)}
 @media(max-width:880px){.row{grid-template-columns:1fr;gap:30px}.row.alt .copy{order:0}}
 
-/* ---- feature grid ---- */
+/* feature grid */
 .grid-sec{padding:40px 0 96px}
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .card{background:rgba(var(--surface-2-rgb),.42);border:1px solid var(--border);
@@ -159,7 +159,7 @@ section{position:relative}
 @media(max-width:880px){.cards{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.cards{grid-template-columns:1fr}}
 
-/* ---- homepage Manual teaser (links to the dedicated Manual page) ---- */
+/* homepage Manual teaser (links to the dedicated Manual page) */
 .manual{padding:90px 0;background:radial-gradient(720px 380px at 50% 0%, rgba(var(--teal-rgb),.08), transparent 62%);border-top:1px solid var(--border)}
 .manual-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .mcard{display:block;background:rgba(var(--surface-rgb),.55);border:1px solid var(--border);border-radius:14px;padding:24px 22px;transition:.16s}
@@ -173,7 +173,7 @@ section{position:relative}
 .manual-foot{text-align:center;margin-top:34px}
 @media(max-width:760px){.manual-cards{grid-template-columns:1fr}}
 
-/* ---- downloads ---- */
+/* downloads */
 .dl{padding:90px 0;border-top:1px solid var(--border)}
 .dl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:880px;margin:0 auto}
 .dlc{background:rgba(var(--surface-2-rgb),.46);border:1px solid var(--border);border-radius:16px;padding:30px 26px;text-align:center;position:relative}
@@ -215,7 +215,7 @@ section{position:relative}
 .dl-links a:hover{text-decoration:underline}
 @media(max-width:760px){.dl-cards{grid-template-columns:1fr;max-width:420px}.dlc{padding:28px 22px}.dl-menu-panel{position:static;transform:none;width:100%;margin-top:8px}.dl-menu-head,.dl-package-row{grid-template-columns:minmax(116px,1.1fr) repeat(2,minmax(68px,.72fr));gap:6px}.dl-package-kind,.dl-menu-option{padding:9px 8px}.dl-option-badge{display:none}}
 
-/* ---- publications / books ---- */
+/* publications / books */
 .pubs{padding:80px 0;border-top:1px solid var(--border)}
 .books{display:flex;gap:40px;justify-content:center;flex-wrap:wrap}
 .book{display:flex;flex-direction:column;align-items:center;gap:13px;transition:.16s}
@@ -224,7 +224,7 @@ section{position:relative}
 .book span{font-size:14px;color:var(--ink-soft);font-weight:500}
 .book:hover span{color:var(--cyan)}
 
-/* ---- footer ---- */
+/* footer */
 footer{border-top:1px solid var(--border);padding:60px 0 36px;background:rgba(var(--footer-rgb),.6)}
 .fgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:34px}
 .fbrand p{color:var(--muted);font-size:13.5px;font-weight:300;margin-top:14px;max-width:280px}
@@ -235,7 +235,7 @@ footer{border-top:1px solid var(--border);padding:60px 0 36px;background:rgba(va
   font-size:12.5px;color:var(--faint);flex-wrap:wrap;gap:10px}
 @media(max-width:760px){.fgrid{grid-template-columns:1fr 1fr}}
 
-/* =====================  MANUAL PAGE  ===================== */
+/* MANUAL PAGE */
 .mhero{padding:54px 0 26px;text-align:center}
 .mhero .eyebrow{display:block}
 .mhero h1{font-size:50px;font-weight:800;letter-spacing:-1px;margin:10px 0 0;
@@ -297,7 +297,7 @@ footer{border-top:1px solid var(--border);padding:60px 0 36px;background:rgba(va
 .prose a.btn{color:var(--ink-soft)}
 .prose a.btn:hover{color:#fff}
 
-/* =====================  ENGINE THEMES  =====================
+/* ENGINE THEMES
    Each block overrides only token VALUES; every rule above reads tokens, so
    the whole site re-skins from here. podman == :root (no block needed).
    Add a new engine: append one block + an entry in _data/site.js `themes`. */

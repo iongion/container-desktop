@@ -1,3 +1,5 @@
+import base64
+import fnmatch
 import glob
 import hashlib
 import json
@@ -5,17 +7,21 @@ import os
 import platform
 import shlex
 import shutil
+import subprocess
+import tarfile
+import tempfile
 import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
+from dotenv import dotenv_values
 from invoke import Collection, Exit, task
 
 from support.ci_artifacts import (
-    WINDOWS_ARTIFACT_NAME,
-    parse_appx_version,
+    parse_windows_store_package_version,
     select_windows_artifact,
+    windows_artifact_name,
 )
 from support.versioning import (
     bump_version,
@@ -37,6 +43,366 @@ APP_PROJECT_VERSION = PROJECT_VERSION
 TARGET = os.environ.get("TARGET", "linux")
 PORT = int(os.environ.get("PORT", str(3000)))
 PTY = os.name != "nt"
+LOCAL_BUILD_BOX_KEYS = {
+    "win": "BUILD_WIN_BOX",
+    "mac": "BUILD_MAC_BOX",
+    "linux": "BUILD_LIN_BOX",
+}
+LOCAL_BUILD_BOX_PATH_KEYS = {
+    "win": "BUILD_WIN_BOX_PATH",
+    "mac": "BUILD_MAC_BOX_PATH",
+    "linux": "BUILD_LIN_BOX_PATH",
+}
+REMOTE_BUILD_ROOT = "container-desktop-remote-build/container-desktop"
+REMOTE_SOURCE_ARCHIVE = "source.tar.gz"
+REMOTE_ARTIFACT_ARCHIVE = "artifacts.tar.gz"
+REMOTE_EXCLUDED_DIRS = {
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".turbo",
+    ".venv",
+    ".vscode",
+    "build",
+    "dist",
+    "node_modules",
+    "release",
+    "temp",
+    "website",
+}
+REMOTE_EXCLUDED_FILES = {
+    ".env.local",
+    ".env.development.local",
+    ".env.test.local",
+    ".env.production.local",
+}
+REMOTE_EXCLUDED_PATTERNS = (
+    "*.log",
+    "*.pyc",
+    ".DS_Store",
+)
+
+
+def _is_arm_machine(machine):
+    return machine.lower() in {"aarch64", "arm64", "arm"}
+
+
+def bundle_script_for_target(target=None, system=None, machine=None):
+    target = target or os.environ.get("TARGET", TARGET)
+    if target == "linux-x64":
+        return "package:tauri:linux_x86"
+    if target == "linux-arm64":
+        return "package:tauri:linux_arm"
+    if target == "macos-arm64":
+        return "package:tauri:mac_arm"
+    if target == "windows-x64":
+        return "package:tauri:win_x64"
+    if target == "windows-arm":
+        return "package:tauri:win_arm"
+
+    resolved_system = system or platform.system()
+    resolved_machine = machine or platform.machine()
+    if target == "linux":
+        return "package:tauri:linux_arm" if _is_arm_machine(resolved_machine) else "package:tauri:linux_x86"
+    if target == "macos" or resolved_system == "Darwin":
+        return "package:tauri:mac_arm"
+    if target == "windows" or resolved_system == "Windows":
+        return "package:tauri:win_arm" if _is_arm_machine(resolved_machine) else "package:tauri:win_x64"
+    raise Exit(f"Unsupported bundle target: {target}")
+
+
+def env_source_files(environment=ENVIRONMENT):
+    return (
+        (".env", False),
+        (".env.local", True),
+        (f".env.{environment}", True),
+        (f".env.{environment}.local", True),
+    )
+
+
+def source_env_values(project_root=PROJECT_HOME, environment=ENVIRONMENT, environ=None):
+    root = Path(project_root)
+    values = dict(os.environ if environ is None else environ)
+    for filename, override in env_source_files(environment):
+        path = root / filename
+        if not path.exists():
+            continue
+        for key, value in dotenv_values(path).items():
+            if value is None:
+                continue
+            if override or key not in values:
+                values[key] = value
+    return values
+
+
+def load_local_build_boxes(project_root=PROJECT_HOME, environ=None, environment=ENVIRONMENT):
+    values = source_env_values(project_root, environment, environ)
+    return {
+        platform_key: str(values.get(env_key, "")).strip() for platform_key, env_key in LOCAL_BUILD_BOX_KEYS.items()
+    }
+
+
+def load_local_build_box_paths(project_root=PROJECT_HOME, environ=None, environment=ENVIRONMENT):
+    values = source_env_values(project_root, environment, environ)
+    return {
+        platform_key: str(values.get(env_key, "")).strip()
+        for platform_key, env_key in LOCAL_BUILD_BOX_PATH_KEYS.items()
+    }
+
+
+def package_platform_for_script(script):
+    script = str(script or "")
+    if ":win" in script or "windows" in script:
+        return "win"
+    if ":mac" in script or "macos" in script or "darwin" in script:
+        return "mac"
+    if ":linux" in script or "linux" in script:
+        return "linux"
+    return None
+
+
+def local_platform_key(system=None):
+    resolved = (system or platform.system()).lower()
+    if resolved.startswith("win"):
+        return "win"
+    if resolved == "darwin":
+        return "mac"
+    if resolved == "linux":
+        return "linux"
+    return None
+
+
+def _truthy(value):
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_value(env, key):
+    if env is not None and key in env:
+        return env[key]
+    return os.environ.get(key)
+
+
+def _is_ci(env=None):
+    return _truthy(_env_value(env, "CI")) or _truthy(_env_value(env, "GITHUB_ACTIONS"))
+
+
+def resolve_remote_bundle(script, env=None, system=None, project_root=PROJECT_HOME, environment=None):
+    if _is_ci(env):
+        return None
+
+    target_platform = package_platform_for_script(script)
+    host_platform = local_platform_key(system)
+    if target_platform is None or target_platform == host_platform:
+        return None
+
+    resolved_environment = environment or _env_value(env, "ENVIRONMENT") or ENVIRONMENT
+    boxes = load_local_build_boxes(project_root, environment=resolved_environment)
+    paths = load_local_build_box_paths(project_root, environment=resolved_environment)
+    for platform_key, env_key in LOCAL_BUILD_BOX_KEYS.items():
+        if env is not None and env_key in env:
+            boxes[platform_key] = str(env[env_key]).strip()
+    for platform_key, env_key in LOCAL_BUILD_BOX_PATH_KEYS.items():
+        if env is not None and env_key in env:
+            paths[platform_key] = str(env[env_key]).strip()
+    box = boxes.get(target_platform, "")
+    if not box:
+        return None
+
+    return {
+        "platform": target_platform,
+        "box": box,
+        "script": script,
+        "root": paths.get(target_platform) or REMOTE_BUILD_ROOT,
+    }
+
+
+def _remote_path(remote_root, filename):
+    return f"{remote_root.rstrip('/')}/{filename}"
+
+
+def _run_process(args, cwd=None):
+    print("+ " + " ".join(shlex.quote(str(arg)) for arg in args))
+    subprocess.run(args, cwd=cwd, check=True)  # noqa: S603 - argv comes from local build configuration.
+
+
+def _powershell_command(script):
+    encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+    return f"powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand {encoded}"
+
+
+def _posix_command(script):
+    return f"bash -lc {shlex.quote(script)}"
+
+
+def _remote_command(platform_key, script):
+    if platform_key == "win":
+        return _powershell_command(script)
+    return _posix_command(script)
+
+
+def _ps_quote(value):
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _windows_prepare_script(remote_root=REMOTE_BUILD_ROOT):
+    root = _ps_quote(remote_root)
+    return "\n".join(
+        [
+            "$ErrorActionPreference = 'Stop'",
+            "$ProgressPreference = 'SilentlyContinue'",
+            f"$root = {root}",
+            "New-Item -ItemType Directory -Force -Path $root | Out-Null",
+            "Remove-Item -Force -ErrorAction SilentlyContinue -Path (Join-Path $root 'source.tar.gz')",
+            "Remove-Item -Force -ErrorAction SilentlyContinue -Path (Join-Path $root 'artifacts.tar.gz')",
+            "exit 0",
+        ]
+    )
+
+
+def _windows_build_script(script, remote_root=REMOTE_BUILD_ROOT):
+    root = _ps_quote(remote_root)
+    package_script = _ps_quote(script)
+    return "\n".join(
+        [
+            "$ErrorActionPreference = 'Stop'",
+            "$ProgressPreference = 'SilentlyContinue'",
+            "function Invoke-Yarn {",
+            "  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)",
+            "  if (Get-Command yarn -ErrorAction SilentlyContinue) { & yarn @Arguments; return }",
+            "  if (Get-Command corepack -ErrorAction SilentlyContinue) { & corepack yarn @Arguments; return }",
+            "  throw 'Remote build requires yarn or corepack on PATH'",
+            "}",
+            f"$root = {root}",
+            "$source = Join-Path $root 'source'",
+            "$sourceArchive = Join-Path $root 'source.tar.gz'",
+            "$artifactsArchive = Join-Path $root 'artifacts.tar.gz'",
+            "if (Test-Path $source) { Remove-Item -Recurse -Force $source }",
+            "New-Item -ItemType Directory -Force -Path $source | Out-Null",
+            "tar -xzf $sourceArchive -C $source",
+            "Set-Location $source",
+            "Invoke-Yarn install --frozen-lockfile --production=false",
+            f"Invoke-Yarn {package_script}",
+            "if (-not (Test-Path 'release')) { throw 'Remote build did not create release directory' }",
+            "tar -czf $artifactsArchive -C release .",
+        ]
+    )
+
+
+def _posix_prepare_script(remote_root=REMOTE_BUILD_ROOT):
+    root = shlex.quote(remote_root)
+    return "\n".join(
+        [
+            "set -euo pipefail",
+            f"root={root}",
+            'mkdir -p "$root"',
+            'rm -f "$root/source.tar.gz" "$root/artifacts.tar.gz"',
+        ]
+    )
+
+
+def _posix_build_script(script, remote_root=REMOTE_BUILD_ROOT):
+    root = shlex.quote(remote_root)
+    package_script = shlex.quote(script)
+    return "\n".join(
+        [
+            "set -euo pipefail",
+            f"root={root}",
+            "remote_yarn() {",
+            '  if command -v yarn >/dev/null 2>&1; then yarn "$@"; return; fi',
+            '  if command -v corepack >/dev/null 2>&1; then corepack yarn "$@"; return; fi',
+            "  echo 'Remote build requires yarn or corepack on PATH' >&2",
+            "  exit 127",
+            "}",
+            'source_dir="$root/source"',
+            'rm -rf "$source_dir"',
+            'mkdir -p "$source_dir"',
+            'tar -xzf "$root/source.tar.gz" -C "$source_dir"',
+            'cd "$source_dir"',
+            "remote_yarn install --frozen-lockfile --production=false",
+            f"remote_yarn {package_script}",
+            "test -d release",
+            'tar -czf "$root/artifacts.tar.gz" -C release .',
+        ]
+    )
+
+
+def _prepare_script(platform_key, remote_root=REMOTE_BUILD_ROOT):
+    if platform_key == "win":
+        return _windows_prepare_script(remote_root)
+    return _posix_prepare_script(remote_root)
+
+
+def _build_script(platform_key, script, remote_root=REMOTE_BUILD_ROOT):
+    if platform_key == "win":
+        return _windows_build_script(script, remote_root)
+    return _posix_build_script(script, remote_root)
+
+
+def _is_remote_excluded(rel_path):
+    rel = rel_path.as_posix()
+    name = rel_path.name
+    parts = set(rel_path.parts)
+    if parts.intersection(REMOTE_EXCLUDED_DIRS):
+        return True
+    if rel.startswith("src-tauri/target/"):
+        return True
+    if name in REMOTE_EXCLUDED_FILES:
+        return True
+    return any(fnmatch.fnmatch(name, pattern) for pattern in REMOTE_EXCLUDED_PATTERNS)
+
+
+def _create_remote_source_archive(project_root, archive_path):
+    root = Path(project_root)
+    with tarfile.open(archive_path, "w:gz") as archive:
+        for current_root, dirnames, filenames in os.walk(root):
+            current = Path(current_root)
+            relative_dir = current.relative_to(root)
+            dirnames[:] = [dirname for dirname in dirnames if not _is_remote_excluded(relative_dir / dirname)]
+            for filename in filenames:
+                rel_path = relative_dir / filename
+                if _is_remote_excluded(rel_path):
+                    continue
+                archive.add(current / filename, arcname=rel_path.as_posix(), recursive=False)
+
+
+def _extract_remote_artifacts(archive_path, release_dir):
+    release_dir = Path(release_dir)
+    release_dir.mkdir(exist_ok=True)
+    with tarfile.open(archive_path, "r:gz") as archive:
+        for member in archive.getmembers():
+            if not member.isfile():
+                continue
+            filename = Path(member.name).name
+            if not filename.startswith(f"{PROJECT_CODE}-"):
+                continue
+            source = archive.extractfile(member)
+            if source is None:
+                continue
+            destination = release_dir / filename
+            with source, open(destination, "wb") as output:
+                shutil.copyfileobj(source, output)
+
+
+def run_remote_bundle(ctx, remote_plan, env=None):
+    del ctx, env
+    box = remote_plan["box"]
+    platform_key = remote_plan["platform"]
+    script = remote_plan["script"]
+    remote_root = remote_plan.get("root") or REMOTE_BUILD_ROOT
+    if shutil.which("ssh") is None or shutil.which("scp") is None:
+        raise Exit("Remote bundle builds require both `ssh` and `scp` on PATH.")
+
+    print(f"Building {script} on {box} via {LOCAL_BUILD_BOX_KEYS[platform_key]}")
+    with tempfile.TemporaryDirectory(prefix="container-desktop-remote-build-") as temp_dir:
+        temp = Path(temp_dir)
+        source_archive = temp / REMOTE_SOURCE_ARCHIVE
+        artifacts_archive = temp / REMOTE_ARTIFACT_ARCHIVE
+        _create_remote_source_archive(PROJECT_HOME, source_archive)
+        _run_process(["ssh", box, _remote_command(platform_key, _prepare_script(platform_key, remote_root))])
+        _run_process(["scp", str(source_archive), f"{box}:{_remote_path(remote_root, REMOTE_SOURCE_ARCHIVE)}"])
+        _run_process(["ssh", box, _remote_command(platform_key, _build_script(platform_key, script, remote_root))])
+        _run_process(["scp", f"{box}:{_remote_path(remote_root, REMOTE_ARTIFACT_ARCHIVE)}", str(artifacts_archive)])
+        _extract_remote_artifacts(artifacts_archive, Path(PROJECT_HOME, "release"))
 
 
 def _urlopen(url):
@@ -156,7 +522,7 @@ def install_self_signed_appx(ctx):
             )
         if os.path.exists(appx_path):
             print(f"Signing {appx_path}")
-            shutil.copy(exe_path, f"{appx_path}.unsigned")
+            shutil.copy(appx_path, f"{appx_path}.unsigned")
             run_env(
                 ctx,
                 f'java -jar "{jar_path}" --keystore {pfx_path} --storetype PKCS12 --storepass 123456"" --tsaurl "{ts_url}" "{appx_path}"',
@@ -180,18 +546,30 @@ def build(ctx, env=None):
 
 @task
 def bundle(ctx, env=None):
-    system = platform.system()
     path = Path(PROJECT_HOME)
     with ctx.cd(path):
         env = {} if env is None else env
-        env["DEBUG"] = "*"
-        if system == "Darwin":
-            run_env(ctx, "yarn package:mac_arm", env)
-        elif system == "Linux":
-            run_env(ctx, "yarn package:linux_x86", env)
-            run_env(ctx, "yarn package:linux_arm", env)
+        script = (
+            env.get("PACKAGE_SCRIPT") or os.environ.get("PACKAGE_SCRIPT") or bundle_script_for_target(env.get("TARGET"))
+        )
+        remote_plan = resolve_remote_bundle(script, env)
+        if remote_plan is None:
+            run_env(ctx, f"yarn {script}", env)
         else:
-            run_env(ctx, "yarn package:win_x86", env)
+            run_remote_bundle(ctx, remote_plan, env)
+
+
+@task(name="tauri-win-store")
+def tauri_win_store(ctx, package_format="appx", env=None):
+    """Build the Tauri Windows Store package through Microsoft winapp tooling.
+
+    Default is AppX for Electron artifact parity. Pass ``--package-format msix``
+    only when following Microsoft's current WinApp CLI MSIX flow explicitly.
+    """
+    if package_format not in {"msix", "appx"}:
+        raise Exit("--package-format must be either 'msix' or 'appx'")
+    with ctx.cd(PROJECT_HOME):
+        run_env(ctx, f"yarn package:tauri:win_store:{package_format}", env)
 
 
 @task
@@ -226,7 +604,6 @@ def release(ctx, docs=False):
         "NODE_ENV": "production",
         "ENVIRONMENT": "production",
     }
-    build(ctx, env)
     bundle(ctx, env)
     checksums(ctx, env)
 
@@ -275,7 +652,7 @@ def update_demo_replay(ctx):
         run_env(ctx, "yarn demo:record")
 
 
-# --- versioning & release metadata ----------------------------------------
+# versioning & release metadata
 #
 # package.json `version` is the single source of truth. `version-sync` and
 # `bump` derive the other "synced" files (VERSION, public/manifest.json) from
@@ -466,10 +843,9 @@ def _write_release_checksums(release_dir, version):
 
 def _public_release_assets(release_dir, version):
     unsigned_windows = {
-        f"{PROJECT_CODE}-x64-{version}.exe",
-        f"{PROJECT_CODE}-x64-{version}.exe.sha256",
-        f"{PROJECT_CODE}-x64-{version}.appx",
-        f"{PROJECT_CODE}-x64-{version}.appx.sha256",
+        f"{PROJECT_CODE}-{arch}-{version}.{ext}"
+        for arch in ("x64", "arm64")
+        for ext in ("exe", "exe.sha256", "appx", "appx.sha256", "msix", "msix.sha256")
     }
     return sorted(
         asset
@@ -551,59 +927,61 @@ def _repo_artifacts(ctx):
 
 
 @task(name="fetch-appx")
-def fetch_appx(ctx, run_id=None, version=None, keep=False):
-    """Download the Microsoft Store .appx from a CDPipeline run (no local build).
+def fetch_appx(ctx, run_id=None, version=None, arch="x64", keep=False):
+    """Download the Microsoft Store package from a CDPipeline run (no local build).
 
-    The Windows CD job builds container-desktop-x64-<version>.appx but keeps it
-    OFF the public GitHub release (there it is superseded by the signed installer +
-    portable zip), so it only lives inside that run's `container-desktop-windows`
-    upload artifact. This fetches that artifact with `gh`, extracts just the .appx
-    (+ .sha256), verifies the checksum and drops it in release/ -- ready to upload
-    to Partner Center. Runs on macOS/Linux: no Windows or build toolchain needed,
-    only an authenticated `gh` CLI.
+    The Windows CD job builds a Store-ready AppX/MSIX but keeps it OFF the public
+    GitHub release (there it is superseded by the signed installer + portable
+    zip), so it only lives inside that run's per-arch Windows upload artifact.
+    This fetches that artifact with `gh`, extracts just the package
+    (+ .sha256), verifies the checksum and drops it in release/ -- ready to
+    upload to Partner Center. Runs on macOS/Linux: no Windows or build toolchain
+    needed, only an authenticated `gh` CLI.
 
-    Defaults to the newest non-expired windows artifact. Pass --run-id to target a
-    specific run (`gh run list --workflow CDPipeline.yml`), or --version to assert
-    the fetched build matches (errors on mismatch instead of silently guessing).
-    Pass --keep to leave the raw download dir in place for inspection.
+    Defaults to the newest non-expired Windows x64 artifact. Pass --arch arm64
+    for the Windows ARM package, --run-id to target a specific run (`gh run list
+    --workflow CDPipeline.yml`), or --version to assert the fetched build matches
+    (errors on mismatch instead of silently guessing). Pass --keep to leave the
+    raw download dir in place for inspection.
     """
     release_dir = _release_dir()
+    artifact_name = windows_artifact_name(arch)
     if run_id is None:
-        artifact = select_windows_artifact(_repo_artifacts(ctx))
+        artifact = select_windows_artifact(_repo_artifacts(ctx), name=artifact_name)
         if artifact is None:
             raise Exit(
-                f"No downloadable '{WINDOWS_ARTIFACT_NAME}' artifact found "
+                f"No downloadable '{artifact_name}' artifact found "
                 "(none built yet, or all expired -- re-run CDPipeline for the windows target)."
             )
         run_id = artifact["workflow_run"]["id"]
-        print(f"Using newest '{WINDOWS_ARTIFACT_NAME}' artifact from run {run_id}")
+        print(f"Using newest '{artifact_name}' artifact from run {run_id}")
     else:
-        print(f"Using '{WINDOWS_ARTIFACT_NAME}' artifact from run {run_id} (--run-id)")
+        print(f"Using '{artifact_name}' artifact from run {run_id} (--run-id)")
 
-    download_dir = release_dir / f"_appx-{run_id}"
+    download_dir = release_dir / f"_store-package-{run_id}"
     shutil.rmtree(download_dir, ignore_errors=True)
     try:
         ctx.run(
             f"gh run download {_quote(run_id)} --repo {_quote(REPO_SLUG)} "
-            f"-n {_quote(WINDOWS_ARTIFACT_NAME)} --dir {_quote(download_dir)}"
+            f"-n {_quote(artifact_name)} --dir {_quote(download_dir)}"
         )
-        appx_files = sorted(download_dir.rglob("*.appx"))
-        if not appx_files:
-            raise Exit(f"No .appx inside '{WINDOWS_ARTIFACT_NAME}' (run {run_id}).")
-        appx = appx_files[0]
-        found_version = parse_appx_version(appx.name)
+        store_packages = sorted(download_dir.rglob("*.appx")) + sorted(download_dir.rglob("*.msix"))
+        if not store_packages:
+            raise Exit(f"No .appx/.msix inside '{artifact_name}' (run {run_id}).")
+        store_package = store_packages[0]
+        found_version = parse_windows_store_package_version(store_package.name)
         if version and found_version != version:
             raise Exit(
-                f"Fetched {appx.name} (version {found_version}) != requested --version {version}. "
+                f"Fetched {store_package.name} (version {found_version}) != requested --version {version}. "
                 "Pass the matching --run-id, or drop --version to accept this build."
             )
         if found_version != PROJECT_VERSION:
             print(f"  note: fetched version {found_version} differs from local VERSION ({PROJECT_VERSION})")
 
-        target = release_dir / appx.name
-        shutil.copy2(appx, target)
+        target = release_dir / store_package.name
+        shutil.copy2(store_package, target)
         print(f"  extracted: {target.name}")
-        checksum_src = appx.with_name(f"{appx.name}.sha256")
+        checksum_src = store_package.with_name(f"{store_package.name}.sha256")
         if checksum_src.exists():
             shutil.copy2(checksum_src, release_dir / checksum_src.name)
             expected = checksum_src.read_text(encoding="utf-8").strip().split()[0]
@@ -619,7 +997,7 @@ def fetch_appx(ctx, run_id=None, version=None, keep=False):
 
     print("")
     print(f"Ready: {target}")
-    print("Next: Partner Center -> your app -> Packages -> upload this .appx -> Submit.")
+    print("Next: Partner Center -> your app -> Packages -> upload this Store package -> Submit.")
     print("The Store re-signs it (no certificate needed); the version must exceed the last submission.")
 
 
@@ -636,6 +1014,7 @@ namespace = Collection(
     publish_release,
     publish_meta,
     fetch_appx,
+    tauri_win_store,
     update_demo_replay,
     update_screenshots,
     start,

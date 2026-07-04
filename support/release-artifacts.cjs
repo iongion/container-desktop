@@ -45,11 +45,14 @@ function assetBelongsToRelease(name, version) {
 
 function isWindowsBuilderInstallerAsset(name, version) {
   const unchecksummed = stripChecksumExtension(name);
-  return new Set([
-    winArtifactName("x64", version, "exe"),
-    `${winArtifactName("x64", version, "exe")}.blockmap`,
-    winArtifactName("x64", version, "appx"),
-  ]).has(unchecksummed);
+  const privateWindowsAssets = new Set();
+  for (const arch of ["x64", "arm64"]) {
+    privateWindowsAssets.add(winArtifactName(arch, version, "exe"));
+    privateWindowsAssets.add(`${winArtifactName(arch, version, "exe")}.blockmap`);
+    privateWindowsAssets.add(winArtifactName(arch, version, "appx"));
+    privateWindowsAssets.add(winArtifactName(arch, version, "msix"));
+  }
+  return privateWindowsAssets.has(unchecksummed);
 }
 
 function isBlockmapAsset(name) {

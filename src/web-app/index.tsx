@@ -1,6 +1,7 @@
 // Renderer entry. A single window loads this bundle: the main app. (The tray is a native OS menu built in
 // the main process — there is no tray renderer.) Global CSS is imported here.
 
+import type { LoggerBackend } from "@/platform/logger";
 import { bootTimeline } from "./bootTimeline";
 import "./index.css";
 // Cascade order: universal → tokens (semantic palette + Blueprint bridge + shared structure)
@@ -17,9 +18,30 @@ const rootEl = document.getElementById("root");
 
 async function boot() {
   bootTimeline.mark("script-start");
+  // Shell selection: under Tauri there is no Electron preload, so install the Tauri host bridge (the same
+  // window.* globals, backed by the native Rust port) before rendering. Under Electron the preload already
+  // exposed those globals, so this branch is skipped.
+  const { isTauriRuntime } = await import("@/platform/tauri/detect");
+  const { isElectronRuntime } = await import("@/platform/electron/detect");
+  let loggerBackend: LoggerBackend | undefined;
+  if (isTauriRuntime()) {
+    const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
+    await installTauriHostBridge();
+    bootTimeline.mark("tauri-bridge-installed");
+    // Symmetric to the Electron renderer backend below: route the façade's persisted records to the native Rust
+    // file sink (@tauri-apps/plugin-log). Dynamic so plugin-log never loads under Electron.
+    const { tauriLogBackend } = await import("@/platform/tauri/log/tauriLog");
+    loggerBackend = tauriLogBackend;
+  } else if (isElectronRuntime()) {
+    // Electron branch only — dynamic so the electron-log backend never loads under Tauri.
+    const { electronLogRendererBackend } = await import("@/platform/electron/log/electronLogRenderer");
+    loggerBackend = electronLogRendererBackend;
+  } else {
+    throw new Error("No supported desktop host runtime detected");
+  }
   const { renderApplication } = await import("./App.render");
   bootTimeline.mark("app-render-imported");
-  renderApplication();
+  renderApplication({ loggerBackend });
 }
 
 boot().catch((error) => {

@@ -68,9 +68,7 @@ exclude_lines = [
     "if __name__ >= .__main__.:",
 ]
 
-# -----------------
 # Ruff configuration
-# -----------------
 
 [tool.ruff]
 line-length = 120
@@ -161,9 +159,7 @@ max-public-methods = 20
 "tests/**/*.py" = ["S101"]        # same for nested tests
 "create-icons.py" = ["S603"]      # trusted local build tools, hardcoded args (no untrusted input)
 
-# -----------------
 # Pyright / Pylance configuration
-# -----------------
 # Type checking is intentionally DISABLED for this project. The Python here is
 # build/release tooling (invoke tasks, icon + versioning scripts), not a typed
 # library. We lint with ruff (`make check`); Pyright's type / unreachable-code

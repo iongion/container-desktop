@@ -7,6 +7,7 @@ import { Application } from "@/container-client/Application";
 import { FEATURE_MATRIX } from "@/container-client/builder/featureMatrix";
 import type { BuildEngineKind, BuildSecret, ImageBuildOptions, NamedContext } from "@/container-client/builder/types";
 import { Environments } from "@/env/Types";
+import { CopyButton } from "@/web-app/components/CopyButton";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 
 import { buildRedactedPreview, canLoadLocally } from "./BuildConfigPanel.logic";
@@ -86,7 +87,6 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
   const features = FEATURE_MATRIX[engine];
   const [form, setForm] = useState<FormState>(INITIAL);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const patch = (next: Partial<FormState>) => setForm((prev) => ({ ...prev, ...next }));
 
@@ -145,16 +145,6 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
 
   const preview = buildRedactedPreview(options);
   const multiPlatform = form.platforms.length > 1;
-
-  const onCopy = () => {
-    navigator.clipboard?.writeText(preview).then(
-      () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1200);
-      },
-      () => {},
-    );
-  };
 
   return (
     <aside className="panel config-panel" data-region="config">
@@ -333,13 +323,7 @@ export const BuildConfigPanel: React.FC<BuildConfigPanelProps> = ({
         <div className="cmd">
           <div className="cmd-head">
             <span className="muted">{t("Command preview")}</span>
-            <Button
-              variant="minimal"
-              size="small"
-              icon={copied ? IconNames.TICK : IconNames.DUPLICATE}
-              title={t("Copy")}
-              onClick={onCopy}
-            />
+            <CopyButton text={preview} />
           </div>
           <Divider />
           <code>{preview}</code>

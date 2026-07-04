@@ -10,7 +10,7 @@ import {
   type EngineConnectorAvailability,
   type EngineConnectorSettings,
 } from "@/env/Types";
-import { getMockEngines } from "./mode";
+import { getMockEngines, mockEnvValue } from "./mode";
 
 export const MOCK_PODMAN_SYSTEM_ID = "mock.podman.system";
 export const MOCK_DOCKER_SYSTEM_ID = "mock.docker.system";
@@ -106,7 +106,7 @@ export function buildMockConnections(): Connection[] {
   const engines = getMockEngines();
   // Opt-in scoped build target: CONTAINER_DESKTOP_MOCK_SCOPED=wsl|lima auto-starts a WSL/LIMA sample so the
   // Build Studio can exercise a scoped build in mock mode. The default mock is unchanged.
-  const scopedFlag = `${process.env.CONTAINER_DESKTOP_MOCK_SCOPED ?? ""}`.toLowerCase();
+  const scopedFlag = mockEnvValue("CONTAINER_DESKTOP_MOCK_SCOPED").toLowerCase();
   const wslAuto = scopedFlag === "wsl";
   const limaAuto = scopedFlag === "lima";
   return [

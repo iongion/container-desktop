@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { mdiEmoticonSad } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import React from "react";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.AppErrorBoundary");
 
@@ -15,6 +15,7 @@ export default class AppErrorBoundary extends React.Component<
     message?: string;
     suggestion?: string;
     reconnect?: string;
+    dashboard?: string;
   },
   any
 > {
@@ -32,6 +33,14 @@ export default class AppErrorBoundary extends React.Component<
     // Raw, full window reload — deliberately NOT a code-driven re-bootstrap (which can carry the bad
     // state forward). The hash router keeps the current route in window.location, so reloading reboots
     // the app and restores the very screen that failed.
+    window.location.reload();
+  };
+
+  onGoToDashboardClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    // Escape the failed screen: point the hash router at the dashboard (root route), then hard-reload so the
+    // app reboots on a known-good screen instead of re-mounting the one that just crashed.
+    window.location.hash = "#/";
     window.location.reload();
   };
 
@@ -54,6 +63,14 @@ export default class AppErrorBoundary extends React.Component<
                 >
                   <h3>{this.props.message}</h3>
                   <p>{this.props.suggestion}</p>
+                  <div className="AppErrorBoundaryDashboard">
+                    <Button
+                      variant="minimal"
+                      icon={IconNames.DASHBOARD}
+                      onClick={this.onGoToDashboardClick}
+                      text={this.props.dashboard ?? "Go to Dashboard"}
+                    />
+                  </div>
                   <Button
                     onClick={this.onReconnectClick}
                     icon={IconNames.RESOLVE}

@@ -59,9 +59,9 @@ import {
   StartupStatus,
   type SubscriptionOptions,
 } from "@/env/Types";
-import { createLogger, getLevel, setLevel } from "@/logger";
-import { normalizeLoggingFileSettings } from "@/logger/loggingSettings";
 import { getWindowsPipePath } from "@/platform";
+import { createLogger, getLevel, setLevel } from "@/platform/logger";
+import { normalizeLoggingFileSettings } from "@/platform/logger/loggingSettings";
 import { deepMerge } from "@/utils";
 
 // Re-export the helpers that moved to ./application/* so Application.ts keeps its historical

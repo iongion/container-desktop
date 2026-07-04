@@ -19,7 +19,7 @@ import {
   useUnpauseContainer,
 } from "./queries";
 import "./ActionsMenu.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.container");
 

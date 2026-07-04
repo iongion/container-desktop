@@ -1,11 +1,11 @@
-import { Button, HTMLTable, Intent } from "@blueprintjs/core";
+import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { CopyButton } from "@/web-app/components/CopyButton";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
-import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
@@ -39,18 +39,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const onScreenReload = useCallback(() => {
     refetch();
   }, [refetch]);
-
-  const onCopyToClipboardClick = useCallback(
-    async (e) => {
-      const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("[data-copy-value]");
-      await navigator.clipboard.writeText(contentNode?.innerText || "");
-      Notification.show({
-        message: t("The value was copied to clipboard"),
-        intent: Intent.SUCCESS,
-      });
-    },
-    [t],
-  );
 
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -133,14 +121,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         <code>{item.key}</code>
                       </td>
                       <td>
-                        <Button
-                          size="small"
-                          variant="minimal"
-                          icon={IconNames.CLIPBOARD}
-                          onClick={onCopyToClipboardClick}
-                        />
+                        <CopyButton text={item.value} />
                         &nbsp;
-                        <span data-copy-value>{item.value}</span>
+                        <span>{item.value}</span>
                       </td>
                     </tr>
                   );

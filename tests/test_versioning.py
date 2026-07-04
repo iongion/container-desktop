@@ -26,7 +26,7 @@ from support.versioning import (
 )
 
 
-# --- parse_version ---------------------------------------------------------
+# parse_version
 
 
 def test_parse_version_basic():
@@ -37,7 +37,7 @@ def test_parse_version_ignores_prerelease():
     assert parse_version("5.2.2-rc.8") == (5, 2, 2)
 
 
-# --- bump_version ----------------------------------------------------------
+# bump_version
 
 
 def test_bump_patch():
@@ -61,7 +61,7 @@ def test_bump_rejects_unknown_part():
         bump_version("5.2.15", "huge")
 
 
-# --- set_package_json_version ----------------------------------------------
+# set_package_json_version
 
 
 def test_set_package_json_version_updates_version_and_main_filename():
@@ -82,7 +82,7 @@ def test_set_package_json_version_updates_version_and_main_filename():
     assert '"react": "19.2.7"' in out
 
 
-# --- set_manifest_version --------------------------------------------------
+# set_manifest_version
 
 
 def test_set_manifest_version_leaves_manifest_version_key_alone():
@@ -92,14 +92,14 @@ def test_set_manifest_version_leaves_manifest_version_key_alone():
     assert '"version": "5.2.16"' in out
 
 
-# --- set_plain_version -----------------------------------------------------
+# set_plain_version
 
 
 def test_set_plain_version_replaces_content_and_keeps_trailing_newline():
     assert set_plain_version("5.2.14\n", "5.2.15") == "5.2.15\n"
 
 
-# --- promote_changelog -----------------------------------------------------
+# promote_changelog
 
 
 def test_promote_changelog_inserts_dated_section_after_unreleased():
@@ -114,7 +114,7 @@ def test_promote_changelog_is_noop_without_unreleased():
     assert promote_changelog(text, "5.2.16", "2026-06-13") == text
 
 
-# --- extract_changelog_section --------------------------------------------
+# extract_changelog_section
 
 
 def test_extract_changelog_section_returns_only_requested_version_body():
@@ -155,7 +155,7 @@ def test_extract_changelog_section_returns_unreleased_body_when_present():
     assert "5.3.0" not in out
 
 
-# --- set_website_version ------------------------------------------------------
+# set_website_version
 
 
 def test_set_website_version_updates_data_version_cachebuster_and_urls():
@@ -177,7 +177,7 @@ def test_set_website_version_is_noop_when_already_current():
     assert set_website_version(text, "5.2.16") == text
 
 
-# --- render_homebrew_rb ----------------------------------------------------
+# render_homebrew_rb
 
 
 def test_render_homebrew_rb_updates_version_and_sha256():

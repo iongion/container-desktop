@@ -5,7 +5,7 @@
 // everywhere; `create`'s Docker re-fetch relies on get() already normalizing (no second pass needed).
 
 import type { Network } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { DOCKER_BASE_URL, LIBPOD_BASE_URL, ResourceAdapter } from "./shared";
 
 const logger = createLogger("client.networks");

@@ -14,22 +14,20 @@ Apple-silicon only) — local, remote over SSH, and WSL. One repo, two runtimes:
 
 ## Stack
 
-Electron 42 · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
+Electron 43 · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
 Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format).
 Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Python ≥ 3.12 via `uv`.
 
 ## Layout
 
-- `src/electron-shell/` — `main.ts`, `preload.ts`, `shared.ts`
 - `src/web-app/` — React renderer: `App.tsx`, `stores/` (Zustand state),
   `domain/` (TanStack Query client), `screens/`, `components/`, `hooks/`,
   `Native.ts`, `Environment.ts`
-- `src/container-client/` — engine API clients/adapters · `src/logger/` ·
-  `src/utils/` · `src/env/`
-- `src/platform/` — Node `Command` primitives: `node-executor.ts` (facade) over
-  `exec/` impl modules (process-utils, api-driver, commander, ssh-transport,
-  wsl-relay, proxy-request); `node.ts` = `Platform`/`Path`
-- `src/ai-system/` — local-first AI assistant (hexagonal: core/host/adapters/runtimes/ui/prompt): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
+- `src/container-client/` — engine API clients/adapters · `src/utils/` · `src/env/`
+  (logging façade lives in `src/platform/logger/`)
+- `src/platform/` + `src-tauri/` — runtime ports: shared brokers/services live at
+  `src/platform/*`; `electron/` and `tauri/` align host, command, exec, buses, tray, runtime, AI.
+- `src/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/prompt/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · `tasks.py` / `Makefile`
 - **`website-src/`** — Eleventy sources for the public site (container-desktop.com),
@@ -44,9 +42,10 @@ Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Python ≥ 3.12 via `uv`.
 Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 
 - Install: `uv run --locked invoke prepare` or `yarn install --frozen-lockfile`
-- **Verify — run all four before claiming done:**
+- **Verify — run all before claiming done:**
   `yarn check-types` (tsc) · `yarn lint` (Biome; `yarn lint:check` = no-write, used in CI) ·
-  `yarn test:run` (Vitest, hermetic) · `yarn build` (main+preload+renderer)
+  `yarn test:run` (Vitest, hermetic) · `yarn build` (main+preload+renderer) ·
+  `yarn audit:shared` (no node/electron/@tauri leaks in shared `src/` code — see `support/audit-shared.mjs`)
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `inv release`
@@ -135,6 +134,16 @@ How you build here, **per change** — not an end-of-task afterthought:
   running (it usually is), **attach** to it via `support/cdp.mjs` on the auto-discovered CDP port — that
   is the required verification path. Do **not** use `xvfb-run`, `launchApp`, or `yarn test:ui` for local
   UI verification; the Electron/xvfb UI suite (`yarn test:ui`) is for CI only, never for iterating here.
+- **Tauri build has NO CDP** (WebKitGTK). Drive it over **W3C WebDriver** instead — the Tauri
+  equivalent of `support/cdp.mjs`: `yarn test:e2e:tauri` runs `webdriver/wdio.conf.js`
+  (WebdriverIO → `tauri-driver` → `WebKitWebDriver` → the app). Prereqs: `tauri-driver`
+  (`~/.cargo/bin`) + `webkitgtk-webdriver` (`/usr/bin/WebKitWebDriver`). The harness sets
+  `CONTAINER_DESKTOP_E2E=1`, which gates single-instance OFF (lib.rs) so it runs standalone
+  next to your dev app. Specs use `browser.execute`/`saveScreenshot`. **Caveat:** the debug
+  binary loads `devUrl` :3000 (needs a running vite / `yarn tauri:serve`); point at a
+  self-contained release binary via `CONTAINER_DESKTOP_E2E_APP`. **Paint caveat:** WebKitGTK
+  parks its compositor when idle, so a WebDriver screenshot can force a paint the live view
+  hadn't done — read the DOM to confirm data, use eyes/screenshots for paint.
 - Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`. **Footgun:** never
   run `pkill -f <pattern>` from a one-liner whose own command text contains `<pattern>` —
   it matches and kills its own shell (silent exit 144). Kill by numeric PID instead.
@@ -162,7 +171,7 @@ How you build here, **per change** — not an end-of-task afterthought:
   suite (no separate config yet). Python `pytest` (`support/`). CI
   gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
 - **UI changes:** verify live in the running app, not off static checks — see Development workflow.
-- **Logging:** use `@/logger` (`createLogger`), never raw `console.*` (except the façade
+- **Logging:** use `@/platform/logger` (`createLogger`), never raw `console.*` (except the façade
   sink + the pre-React fallback in `index.tsx`). Verbosity is controlled solely by log level.
 
 ## UI conventions (renderer · Blueprint)

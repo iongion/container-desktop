@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AgentToolDeps, KnowledgeBankLike, KnowledgeEntry, PermissionsSnapshot } from "@/ai-system/core";
+import type {
+  AgentToolDeps,
+  AIKeyStore,
+  KnowledgeBankLike,
+  KnowledgeEntry,
+  PermissionsSnapshot,
+} from "@/ai-system/core";
 import { AI_CHANNELS, commandKey, normalizeAISettings, toolRule } from "@/ai-system/core";
 import { AIBroker } from "@/ai-system/host/broker";
-import { executeSandboxed } from "@/ai-system/runtimes/node/agent/sandbox";
-import { createAgentTools } from "@/ai-system/runtimes/node/agent/tools";
-import type { AIKeyStore } from "@/ai-system/runtimes/node/keyStore";
+import { executeSandboxed } from "@/ai-system/runtimes/agent/sandbox";
+import { createAgentTools } from "@/ai-system/runtimes/agent/tools";
 import type { AISettings } from "@/env/Types";
 
 const kbEntry = (over: Partial<KnowledgeEntry> = {}): KnowledgeEntry => ({
