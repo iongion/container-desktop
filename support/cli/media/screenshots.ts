@@ -1,13 +1,11 @@
-#!/usr/bin/env node
-
 import { spawn } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint.mjs";
+import { PROJECT_HOME } from "@/cli/lib/paths";
+import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint";
 import {
   captureWindow,
   freezeUi,
@@ -17,22 +15,28 @@ import {
   setSidebarExpanded,
   waitForSelectorCount,
   waitReady,
-} from "./screenshotActions.mjs";
+} from "./screenshotActions";
 import {
   SCREENSHOT_ENGINES,
   SCREENSHOT_VIEWPORT,
   STALE_FLAT_SCREENSHOTS,
   screenshotManifest,
-} from "./screenshots.manifest.mjs";
+} from "./screenshots.manifest";
 
 const require = createRequire(import.meta.url);
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = PROJECT_HOME;
 const OUT_DIR = path.join(ROOT, "website-src", "static", "img");
 const DEFAULT_PORT = 9322;
 const DEFAULT_CAPTURE_SETTLE_MS = 1000;
 
 function parseArgs(argv) {
-  const args = { mode: "dev", killStray: false, engines: null, only: null, clean: false };
+  const args: {
+    mode: string;
+    killStray: boolean;
+    engines: Set<string> | null;
+    only: Set<string> | null;
+    clean: boolean;
+  } = { mode: "dev", killStray: false, engines: null, only: null, clean: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--kill-stray") {
@@ -146,7 +150,7 @@ function commandFor(mode, port) {
 
 async function waitForApp(endpoint, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
-  let lastError;
+  let lastError: any;
   while (Date.now() < deadline) {
     try {
       const browser = await chromium.connectOverCDP(endpoint);
@@ -207,7 +211,7 @@ async function stopProcess(child) {
       /* already gone */
     }
   };
-  await new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     const timer = setTimeout(() => {
       signalProcessTree("SIGKILL");
     }, 5000);
@@ -242,7 +246,7 @@ async function withApp(engine, mode, port, fn) {
     env: electronEnv(engine, port),
     stdio: ["ignore", "inherit", "inherit"],
   });
-  let browser;
+  let browser: any;
   try {
     const session = await waitForApp(await resolveCdpEndpoint(mode, port));
     browser = session.browser;
@@ -308,8 +312,8 @@ async function captureItem(page, engine, item) {
   console.log(`captured ${engine}/${engineItem.file}`);
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+export async function main(argv = process.argv.slice(2)) {
+  const args = parseArgs(argv);
   const engines = resolveEngines(args);
   mkdirSync(OUT_DIR, { recursive: true });
   if (args.killStray) {
@@ -319,10 +323,10 @@ async function main() {
   let port = DEFAULT_PORT;
   for (const engine of engines) {
     const manifest = args.only
-      ? screenshotManifest.filter((item) => args.only.has(materializeItem(item, engine).file))
+      ? screenshotManifest.filter((item) => args.only?.has(materializeItem(item, engine).file))
       : screenshotManifest;
     if (manifest.length === 0) {
-      throw new Error(`No screenshot manifest entries matched ${[...args.only].join(", ")} for ${engine}`);
+      throw new Error(`No screenshot manifest entries matched ${[...(args.only ?? [])].join(", ")} for ${engine}`);
     }
     await withApp(engine, args.mode, port, async (page) => {
       for (const item of manifest) {
@@ -332,8 +336,3 @@ async function main() {
     port += 1;
   }
 }
-
-main().catch(async (error) => {
-  console.error(error);
-  process.exit(1);
-});

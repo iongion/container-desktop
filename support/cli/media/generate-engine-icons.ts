@@ -1,39 +1,27 @@
-#!/usr/bin/env node
-
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { PROJECT_HOME } from "@/cli/lib/paths";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const PROJECT_HOME = path.dirname(__dirname);
+// Recolor the unified duotone app-icon template into per-engine SVG + PNG variants. Uses a headless
+// Chromium (or an attached CDP endpoint) to rasterize the SVG at OUTPUT_SIZE. Run via
+// `yarn cli generate-engine-icons` (needs a Chrome on PATH or a CDP endpoint at CDP_URL).
+
 const ICONS_DIR = path.join(PROJECT_HOME, "src/resources/icons");
 const CDP = process.env.CDP_URL || "http://localhost:9222";
-const CHROME_PATH = process.env.CHROME_PATH || (fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : "");
+const CHROME_PATH =
+  process.env.CHROME_PATH || (fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : "");
 const TEMPLATE_PATH = path.join(ICONS_DIR, "appIcon-duotone-unified.svg");
 const OUTPUT_SIZE = 96;
 
-const engines = {
-  docker: {
-    bright: "#6fb2ff",
-    accent: "#2f7df0",
-    strong: "#1d56b8",
-  },
-  podman: {
-    bright: "#d98fe8",
-    accent: "#a855c9",
-    strong: "#7b3398",
-  },
-  unified: {
-    bright: "#2dd4bf",
-    accent: "#14b8a6",
-    strong: "#0d9488",
-  },
+const engines: Record<string, { bright: string; accent: string; strong: string }> = {
+  docker: { bright: "#6fb2ff", accent: "#2f7df0", strong: "#1d56b8" },
+  podman: { bright: "#d98fe8", accent: "#a855c9", strong: "#7b3398" },
+  unified: { bright: "#2dd4bf", accent: "#14b8a6", strong: "#0d9488" },
 };
 
 // Recolor the three stacked-layers tones (bright / accent / deep) from the unified template per engine.
-function appIconSvg(engine) {
+function appIconSvg(engine: string): string {
   const colors = engines[engine];
   return fs
     .readFileSync(TEMPLATE_PATH, "utf8")
@@ -42,10 +30,10 @@ function appIconSvg(engine) {
     .replaceAll("#0d9488", colors.strong);
 }
 
-async function renderPng(page, svg, pngPath) {
+async function renderPng(page, svg: string, pngPath: string): Promise<void> {
   try {
     await page.evaluate(
-      ({ source, size }) => {
+      ({ source, size }: { source: string; size: number }) => {
         const html = document.documentElement;
         const body = document.body;
         html.dataset.engineIconPreviousBackground = html.style.background;
@@ -58,7 +46,7 @@ async function renderPng(page, svg, pngPath) {
           root.id = "engine-icon-render-root";
           body.append(root);
         }
-        for (const child of Array.from(body.children)) {
+        for (const child of Array.from(body.children) as HTMLElement[]) {
           if (child === root) {
             continue;
           }
@@ -88,7 +76,7 @@ async function renderPng(page, svg, pngPath) {
     await page
       .evaluate(() => {
         const root = document.getElementById("engine-icon-render-root");
-        for (const child of Array.from(document.body.children)) {
+        for (const child of Array.from(document.body.children) as HTMLElement[]) {
           if (child === root) {
             continue;
           }
@@ -96,8 +84,7 @@ async function renderPng(page, svg, pngPath) {
           delete child.dataset.engineIconPreviousVisibility;
         }
         root?.remove();
-        document.documentElement.style.background =
-          document.documentElement.dataset.engineIconPreviousBackground ?? "";
+        document.documentElement.style.background = document.documentElement.dataset.engineIconPreviousBackground ?? "";
         document.body.style.background = document.body.dataset.engineIconPreviousBackground ?? "";
         delete document.documentElement.dataset.engineIconPreviousBackground;
         delete document.body.dataset.engineIconPreviousBackground;
@@ -106,13 +93,9 @@ async function renderPng(page, svg, pngPath) {
   }
 }
 
-async function main() {
+export async function main(): Promise<void> {
   const browser = CHROME_PATH
-    ? await chromium.launch({
-        executablePath: CHROME_PATH,
-        headless: true,
-        args: ["--no-sandbox"],
-      })
+    ? await chromium.launch({ executablePath: CHROME_PATH, headless: true, args: ["--no-sandbox"] })
     : await chromium.connectOverCDP(CDP);
   const context = await browser.newContext({
     viewport: { width: OUTPUT_SIZE, height: OUTPUT_SIZE },
@@ -131,8 +114,3 @@ async function main() {
   }
   await browser.close();
 }
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});

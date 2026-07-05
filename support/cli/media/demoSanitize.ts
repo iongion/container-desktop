@@ -9,9 +9,9 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { PROJECT_HOME } from "@/cli/lib/paths";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = PROJECT_HOME;
 
 const assetDataUrlCache = new Map();
 export const TRANSPARENT_PIXEL_URL = 'url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==")';

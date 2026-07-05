@@ -73,10 +73,13 @@ function createTauriBuildCommand(options = {}) {
     );
   }
 
+  const command = options.command || tauriCommand(options.projectRoot || PROJECT_ROOT, hostPlatform);
+
   return {
-    command: options.command || tauriCommand(options.projectRoot || PROJECT_ROOT, hostPlatform),
+    command,
     args: resolvedArgs,
     env,
+    spawnOptions: hostPlatform === "win32" && command.toLowerCase().endsWith(".cmd") ? { shell: true } : undefined,
   };
 }
 
@@ -86,6 +89,7 @@ function runTauriBuild(options = {}) {
     cwd: options.cwd || PROJECT_ROOT,
     env: { ...process.env, ...(build.env || {}) },
     stdio: "inherit",
+    ...(build.spawnOptions || {}),
   });
   if (result.error) {
     throw result.error;

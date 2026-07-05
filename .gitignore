@@ -1,7 +1,3 @@
-**/__pycache__/**
-.pytest_cache/
-.ruff_cache/
-.venv
 bin
 build
 dist
@@ -10,9 +6,7 @@ squashfs-root
 .tmp/
 temp/
 .DS_Store
-.egg-info
 ContainerDesktop.pfx
-src/container_desktop_tools.egg-info
 
 # Worktrees
 .claude/worktrees/

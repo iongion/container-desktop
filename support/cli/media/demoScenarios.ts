@@ -7,7 +7,7 @@
 //   selectors (first matching row) so they work against any fixture set; docker drops the
 //   Podman-only Pods chapter, unified keeps it (the merged view surfaces pods from podman).
 
-import { demoScenario } from "./demoScenario.mjs";
+import { demoScenario } from "./demoScenario";
 
 const { steps: _baseSteps, ...baseConfig } = demoScenario;
 
@@ -19,7 +19,7 @@ function buildTourSteps({
   actionText = "using the action menu Docker users expect, without giving up Podman",
   connectionsText = "managing local, SSH, WSL and LIMA connections for Podman and Docker from one place",
 }) {
-  const steps = [
+  const steps: any[] = [
     {
       keyword: "Given",
       label: "Auto-detect",

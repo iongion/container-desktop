@@ -45,8 +45,8 @@ renders the results.
 ## C4 L2 — Containers (runnable pieces)
 
 The app is a Node/TypeScript Electron app (see [`CLAUDE.md`](../../CLAUDE.md) for
-the build model), with Python build tooling (not shown — it builds, it doesn't run
-at app runtime).
+the build model), with a TypeScript build CLI in `support/cli/` (not shown — it
+builds, it doesn't run at app runtime).
 
 The interesting and slightly unusual part is **where the engine logic runs**: the
 `container-client` "backend" executes **in the renderer process**, not the main

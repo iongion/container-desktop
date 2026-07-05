@@ -1,4 +1,4 @@
-export async function waitReady(page, opts = {}) {
+export async function waitReady(page, opts: { timeout?: number } = {}) {
   const timeout = opts.timeout ?? 45_000;
   await page.waitForFunction(
     () => {
@@ -31,7 +31,7 @@ export async function freezeUi(page) {
       display: none !important;
     }
   `;
-  let lastError;
+  let lastError: any;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       await page.addStyleTag({ content });
@@ -47,7 +47,7 @@ export async function freezeUi(page) {
           '[class*="Toast"]',
         ];
         const hideToasts = () => {
-          for (const element of document.querySelectorAll(selectors.join(","))) {
+          for (const element of document.querySelectorAll<HTMLElement>(selectors.join(","))) {
             element.style.setProperty("display", "none", "important");
             element.style.setProperty("visibility", "hidden", "important");
             element.style.setProperty("opacity", "0", "important");
@@ -100,9 +100,9 @@ export async function settleOnScreen(page, quietMs = 350, maxWaitMs = 4000) {
   await waitReady(page).catch(() => undefined);
   await page.evaluate(
     ([quiet, maxWait]) =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         const start = performance.now();
-        let timer;
+        let timer: any;
         const done = () => {
           clearTimeout(timer);
           observer.disconnect();
@@ -208,7 +208,7 @@ export async function askAssistant(page, prompt) {
   await input.fill(prompt);
   await page.waitForFunction(
     () => {
-      const button = document.querySelector(".AIComposerSend");
+      const button = document.querySelector<HTMLButtonElement>(".AIComposerSend");
       return !!button && !button.hasAttribute("disabled") && !button.disabled;
     },
     undefined,
@@ -230,7 +230,10 @@ export async function runBuild(page) {
   await page.locator('[data-region="run"][data-build-status="succeeded"]').first().waitFor({ timeout: 60_000 });
 }
 
-export async function runPreActions(page, actions = []) {
+export async function runPreActions(
+  page,
+  actions: Array<{ action: string; rowSelector?: string; prompt?: string; expanded?: boolean }> = [],
+) {
   for (const action of actions) {
     if (action.action === "openRowActions") {
       await openRowActions(page, action.rowSelector);

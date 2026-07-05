@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -34,6 +35,22 @@ describe("Tauri build command planning", () => {
     });
 
     expect(command.args).toEqual(["build", "--target", "x86_64-pc-windows-msvc"]);
+  });
+
+  it("runs local Windows cmd shims through a shell", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tauri-build-"));
+    fs.mkdirSync(path.join(tempRoot, "node_modules", ".bin"), { recursive: true });
+    fs.writeFileSync(path.join(tempRoot, "node_modules", ".bin", "tauri.cmd"), "@echo off\n");
+
+    const command = tauriBuild.createTauriBuildCommand({
+      args: ["build"],
+      hostPlatform: "win32",
+      projectRoot: tempRoot,
+      commandExists: () => false,
+    });
+
+    expect(command.command).toBe(path.join(tempRoot, "node_modules", ".bin", "tauri.cmd"));
+    expect(command.spawnOptions).toEqual({ shell: true });
   });
 
   it("respects an explicit runner", () => {

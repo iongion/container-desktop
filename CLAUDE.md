@@ -7,16 +7,17 @@
 
 Cross-platform **Electron desktop app** for managing container engines
 (Podman, Docker, and Apple Container — the last is **experimental**, macOS /
-Apple-silicon only) — local, remote over SSH, and WSL. One repo, two runtimes:
+Apple-silicon only) — local, remote over SSH, and WSL. All **Node / TypeScript**:
 
-- **Node / TypeScript** app — Electron main + preload + React renderer
-- **Python** build tooling — `invoke` tasks (`tasks.py`) + `uv`
+- **App** — Electron main + preload + React renderer
+- **Build/dev/release tooling** — a home-grown CLI (`yarn cli`, commander + tsx) in `support/cli/`
 
 ## Stack
 
 Electron 43 · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
 Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format).
-Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Python ≥ 3.12 via `uv`.
+Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Build/dev/release tooling is a home-grown
+TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
 
 ## Layout
 
@@ -29,33 +30,39 @@ Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Python ≥ 3.12 via `uv`.
   `src/platform/*`; `electron/` and `tauri/` align host, command, exec, buses, tray, runtime, AI.
 - `src/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/prompt/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
-  · `support/watch.mjs` (dev launcher) · `tasks.py` / `Makefile`
+  · `support/watch.mjs` (dev launcher) · **`support/cli/`** (the `yarn cli` build/dev/release
+  tool, commander + tsx) · `Makefile`
 - **`website-src/`** — Eleventy sources for the public site (container-desktop.com),
   compiled to the **generated `website/`** (never hand-edit `website/`; see Website below).
 - **`docs/`** — architecture docs (C4 diagrams) + contributor guides;
   start at `docs/README.md`.
-- Path alias **`@/* → src/*`** (e.g. `@/web-app/...`), defined in `tsconfig.json`
-  `paths` + explicit `resolve.alias` in the common vite config.
+- Path alias **`@/* → src/*`** (e.g. `@/web-app/...`) plus **`@/cli/* → support/cli/*`** for the
+  tooling, defined in `tsconfig.json` `paths` + explicit `resolve.alias` in the common vite config
+  (and vitest). `@/cli` must precede `@` in the vite/vitest alias order (first-hit matching).
 
 ## Commands
 
 Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 
-- Install: `uv run --locked invoke prepare` or `yarn install --frozen-lockfile`
+- Install: `yarn install --frozen-lockfile` (or `make prepare`)
 - **Verify — run all before claiming done:**
-  `yarn check-types` (tsc) · `yarn lint` (Biome; `yarn lint:check` = no-write, used in CI) ·
+  `yarn check-types` (tsc — app + `support/cli`) · `yarn lint` (Biome; `yarn lint:check` = no-write, used in CI) ·
   `yarn test:run` (Vitest, hermetic) · `yarn build` (main+preload+renderer) ·
-  `yarn audit:shared` (no node/electron/@tauri leaks in shared `src/` code — see `support/audit-shared.mjs`)
+  `yarn audit:shared` (no node/electron/@tauri leaks in shared `src/` code — see `support/cli/lib/audit-shared.ts`)
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
-  full release: `inv release`
+  full release: `yarn cli release`
 - Publish GitHub release assets locally only:
-  `uv run --locked invoke publish-release --run-id <actions-run-id>` dry-run,
+  `yarn cli publish-release --run-id <actions-run-id>` dry-run,
   then add `--perform`. The Microsoft Store wrapper is optional and can be
   copied into `release/container-desktop-installer.exe` when available.
   `CDPipeline.yml` can also publish after all production targets build; use its
   `replace-release` input to delete/recreate the same version cleanly.
-- Python tooling: `make check` (ruff), `make prepare` (`uv sync --locked --dev --no-install-project`)
+- **Build/dev/release CLI:** `yarn cli <command>` (commander + tsx; source in `support/cli/`) — the
+  home-grown replacement for the old Python `invoke` tasks: `bundle`, `bump`, `version-sync`,
+  `release`, `commit-release`, `publish-release`, `publish-meta`, `fetch-appx`, `checksums`,
+  `create-icons`, … (run `yarn cli` to list them). Lint/format the tooling with `make check` /
+  `make format` (Biome).
 - Linux system deps (one-shot): `bash support/provision-deps.sh`
 
 ## Development workflow — TDD + live app, NOT static-checks-at-the-end (non-negotiable)
@@ -102,8 +109,8 @@ How you build here, **per change** — not an end-of-task afterthought:
   (`.github/workflows/pages.yml`). Flow: **edit `website-src/` → `make build-website`
   → commit both `website-src/` and `website/` → push**.
 - Versions + per-OS download URLs are injected at build time from `package.json`
-  (`website-src/_data/`); never hand-edit a version in the output. `tasks.py` reruns
-  `build_website` on release so links match the tag.
+  (`website-src/_data/`); never hand-edit a version in the output. The release flow
+  (`make release` → `make build-assets`) rebuilds the website so links match the tag.
 
 ## Dev launcher (`support/watch.mjs`) & debugging
 
@@ -168,7 +175,8 @@ How you build here, **per change** — not an end-of-task afterthought:
 - **Tests:** a hermetic **Vitest** suite (`yarn test:run`) runs the renderer +
   container-client under plain Node via `src/__tests__/setup/` (headless globals + a recording
   `fakeCommand`); `*.live.test.ts` + `installRealCommand()` are reserved for a future real-VM
-  suite (no separate config yet). Python `pytest` (`support/`). CI
+  suite (no separate config yet). The `support/cli/` tooling has its own Vitest specs
+  (`support/cli/**/*.test.ts`, included in `yarn test:run`). CI
   gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
 - **UI changes:** verify live in the running app, not off static checks — see Development workflow.
 - **Logging:** use `@/platform/logger` (`createLogger`), never raw `console.*` (except the façade
@@ -206,5 +214,5 @@ The user is a hands-on designer and corrects deviations fast — match these up 
   (npm / github-actions); **major bumps are never auto-proposed** (ignored
   globally) — adopt majors deliberately by hand.
 - Build/release automation must use lockfile-respecting installs
-  (`yarn install --frozen-lockfile`, `uv run --locked` / `uv sync --locked`) and
-  pinned tool/action versions. Do not use `@latest` or floating GitHub Actions tags.
+  (`yarn install --frozen-lockfile`) and pinned tool/action versions. Do not use
+  `@latest` or floating GitHub Actions tags.

@@ -23,7 +23,7 @@ function collectSelectorValues(value: unknown, selectors: string[] = []): string
 
 describe("demo scenario", () => {
   it("does not hardcode generated mock container ids", () => {
-    const scenario = JSON.parse(readFileSync(path.resolve("support/demoScenario.json"), "utf8"));
+    const scenario = JSON.parse(readFileSync(path.resolve("support/cli/media/demoScenario.json"), "utf8"));
     const selectors = collectSelectorValues(scenario);
 
     expect(selectors).toContain("[data-container]");

@@ -7,8 +7,8 @@
 #
 # It is idempotent: re-running only installs what is missing.
 #
-# It does NOT manage node/nvm, python or uv - those are per-user, version-pinned
-# toolchains (see DEVELOPMENT.md). Presence of those is only reported at the end.
+# It does NOT manage node/nvm - that is a per-user, version-pinned toolchain
+# (see DEVELOPMENT.md). Presence of node/yarn is only reported at the end.
 #
 # Usage:
 #   bash support/provision-deps.sh
@@ -168,6 +168,5 @@ report_tool() {
 }
 report_tool node "via nvm: https://github.com/nvm-sh/nvm  (project pins .nvmrc)"
 report_tool yarn "install yarn 1.22.22 through your pinned Node toolchain"
-report_tool uv   "https://docs.astral.sh/uv/  (used by 'make prepare')"
 
-log "Done. System packages provisioned. Next: 'make prepare' then 'inv release'."
+log "Done. System packages provisioned. Next: 'make prepare' then 'yarn cli release'."

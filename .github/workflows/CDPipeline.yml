@@ -89,9 +89,6 @@ jobs:
       CD: true
       NODE_ENV: ${{github.event.inputs.stage}}
       ENVIRONMENT: ${{github.event.inputs.stage}}
-      PYTHONIOENCODING: utf-8
-      PYTHONUTF8: "1"
-      UV_VERSION: "0.6.11"
 
     steps:
       - name: Clone Repository (latest)
@@ -107,14 +104,8 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           registry-url: "https://npm.pkg.github.com"
-      - name: Use Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
-        with:
-          python-version-file: ".python-version"
-      - name: Install uv
-        run: python -m pip install --disable-pip-version-check "uv==${{ env.UV_VERSION }}"
       - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: uv run --locked invoke prepare
+        run: yarn install --frozen-lockfile --production=false
       - name: Use Rust ${{ matrix.rustTarget }}
         run: |
           rustup toolchain install stable --profile minimal
@@ -124,12 +115,12 @@ jobs:
         if: startsWith(matrix.target, 'linux-')
         run: bash support/provision-deps.sh
       - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: uv run --locked invoke bundle
+        run: yarn cli bundle
         env:
           TARGET: ${{matrix.target}}
           PACKAGE_SCRIPT: ${{ matrix.packageScript }}
       - name: Checksum ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
-        run: uv run --locked invoke checksums
+        run: yarn cli checksums
       - name: Publish ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

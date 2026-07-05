@@ -11,8 +11,8 @@ const { WINDOWS_INSTALLER_VERSION } = require("../../support/build-matrix.cjs");
 // swaps with it. `id` matches the CSS html[data-theme="…"] blocks in assets/css/site.css; `swatch`
 // is the nav dot; `tagline` is the brand sub-line under the logo; `shots` is the screenshot folder
 // under static/img/; `replay`/`poster` are the tutorial pseudo-video + its first frame. Capture
-// writes per-engine media to /replays/<id>.json and /videos/<id>.png (see support/screenshots.mjs +
-// support/demoReplay.mjs); until an engine has its own, point it at unified's. Add an engine = one
+// writes per-engine media to /replays/<id>.json and /videos/<id>.png (see support/cli/media/screenshots.ts +
+// support/cli/media/demoReplay.ts); until an engine has its own, point it at unified's. Add an engine = one
 // entry here + one [data-theme] block in site.css; the nav loop, theme-switcher.js and
 // demo-replay.js pick it up automatically.
 const themes = [

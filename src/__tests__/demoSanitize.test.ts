@@ -5,7 +5,7 @@ import {
   mimeTypeForPathname,
   sanitizeLocalDevReferences,
   WORDMARK_REPLAY_FILL,
-} from "../../support/demoSanitize.mjs";
+} from "../../support/cli/media/demoSanitize";
 
 // The demo replays render inside a self-contained rrweb <iframe> on the site, so the app's bundled webfonts
 // (Montserrat wordmark/tagline, JetBrains Mono) must travel INSIDE the recording as inlined @font-face data

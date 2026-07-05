@@ -1,14 +1,12 @@
-#!/usr/bin/env node
-
 import { spawn } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint.mjs";
-import { dataUrlForLocalAsset, sanitizeLocalDevReferences } from "./demoSanitize.mjs";
-import { demoScenarios } from "./demoScenarios.mjs";
+import { PROJECT_HOME } from "@/cli/lib/paths";
+import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint";
+import { dataUrlForLocalAsset, sanitizeLocalDevReferences } from "./demoSanitize";
+import { demoScenarios } from "./demoScenarios";
 import {
   captureWindow,
   freezeUi,
@@ -19,14 +17,18 @@ import {
   settleOnScreen,
   waitForSelectorCount,
   waitReady,
-} from "./screenshotActions.mjs";
+} from "./screenshotActions";
 
 const require = createRequire(import.meta.url);
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = PROJECT_HOME;
 const DEFAULT_PORT = 9422;
 
 function parseArgs(argv) {
-  const args = { mode: "dev", killStray: false, engines: null };
+  const args: { mode: string; killStray: boolean; engines: Set<string> | null } = {
+    mode: "dev",
+    killStray: false,
+    engines: null,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--kill-stray") {
@@ -140,7 +142,7 @@ async function findAppPage(browser, timeoutMs) {
 
 async function waitForApp(endpoint, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
-  let lastError;
+  let lastError: any;
   while (Date.now() < deadline) {
     try {
       const browser = await chromium.connectOverCDP(endpoint);
@@ -173,7 +175,7 @@ async function stopProcess(child) {
       /* already gone */
     }
   };
-  await new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     const timer = setTimeout(() => {
       signalProcessTree("SIGKILL");
     }, 5000);
@@ -208,7 +210,7 @@ async function withApp(scenario, mode, port, fn) {
     env: electronEnv(scenario.engine, port, scenario.viewport),
     stdio: ["ignore", "inherit", "inherit"],
   });
-  let browser;
+  let browser: any;
   try {
     const session = await waitForApp(await resolveCdpEndpoint(mode, port));
     browser = session.browser;
@@ -255,7 +257,7 @@ function recordScriptPath() {
 }
 
 async function startRecording(page) {
-  let lastError;
+  let lastError: any;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       await page.addScriptTag({ path: recordScriptPath() });
@@ -331,7 +333,8 @@ async function moveToSelector(page, selector, duration = 900) {
 }
 
 function firstResolverSelector(action) {
-  return Object.values(action.resolve || {}).find((resolver) => typeof resolver?.selector === "string")?.selector;
+  const resolvers = Object.values((action.resolve || {}) as Record<string, any>);
+  return resolvers.find((resolver) => typeof resolver?.selector === "string")?.selector;
 }
 
 async function clickSelector(page, action, context) {
@@ -425,7 +428,7 @@ async function runAction(page, action, context) {
 }
 
 async function runScenario(page, scenario) {
-  const chapters = [];
+  const chapters: Array<{ keyword: string; label: string; title: string; timestamp: number }> = [];
   const pauses = [];
   const defaultScreenHold = scenario.screenHoldMs ?? 0;
   const captureSettleMs = scenario.captureSettleMs ?? 250;
@@ -602,13 +605,13 @@ function normalizeRecording(scenario, recording) {
   };
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+export async function main(argv = process.argv.slice(2)) {
+  const args = parseArgs(argv);
   if (args.killStray) {
     await killStray();
   }
   const scenarios = args.engines
-    ? demoScenarios.filter((scenario) => args.engines.has(scenario.engine))
+    ? demoScenarios.filter((scenario) => args.engines?.has(scenario.engine))
     : demoScenarios;
   if (scenarios.length === 0) {
     throw new Error(`No demo scenario matched engine(s): ${[...(args.engines || [])].join(", ")}`);
@@ -632,8 +635,3 @@ async function main() {
     port += 1;
   }
 }
-
-main().catch(async (error) => {
-  console.error(error);
-  process.exit(1);
-});

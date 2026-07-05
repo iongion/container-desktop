@@ -46,18 +46,18 @@
     ".certs/**",
     ".github/**",
     ".gitignore",
-    ".venv/**",
     ".vscode/**",
     "bin/**",
     "build/**",
     "dist/**",
     "node_modules/**",
-    "src/web-app/assets/languages.json",
-    "pyproject.toml"
+    "src/web-app/assets/languages.json"
   ],
   "cSpell.words": [
     "Aalvistack",
     "aarch",
+    "absolutized",
+    "ABSOLUTIZES",
     "addrs",
     "agentic",
     "aistore",
@@ -72,6 +72,7 @@
     "aquasec",
     "aquasecurity",
     "Archs",
+    "arcname",
     "arraybuffer",
     "asar",
     "askp",
@@ -131,6 +132,7 @@
     "distroless",
     "Distros",
     "dockercfg",
+    "domcontentloaded",
     "dotenv",
     "dotnettools",
     "dozzle",
@@ -160,6 +162,8 @@
     "Fira",
     "flathub",
     "flatpak",
+    "fnmatch",
+    "Footgun",
     "freedesktop",
     "frobnicate",
     "funlen",
@@ -205,6 +209,7 @@
     "knownhosts",
     "konsole",
     "kwallet",
+    "LASTEXITCODE",
     "libappindicator",
     "libayatana",
     "libc",
@@ -283,6 +288,7 @@
     "passout",
     "passt",
     "pasteable",
+    "PATHEXT",
     "pbkdf",
     "pcre",
     "Pdeathsig",
@@ -310,6 +316,7 @@
     "PRCTL",
     "precpu",
     "preread",
+    "Prereqs",
     "printenv",
     "procs",
     "provisionable",
@@ -351,6 +358,7 @@
     "scrollview",
     "serde",
     "shellcheck",
+    "SHLEX",
     "signkey",
     "SIGNTOOL",
     "sirupsen",
@@ -400,6 +408,7 @@
     "Unparseable",
     "unplugin",
     "unsloth",
+    "unstub",
     "Unsub",
     "upserts",
     "uptimekuma",
@@ -414,9 +423,11 @@
     "utsname",
     "vaultwarden",
     "venv",
+    "vite",
     "vscodeintellicode",
     "vsock",
     "Warnln",
+    "wdio",
     "webfonts",
     "webgl",
     "webkitgtk",
@@ -465,36 +476,25 @@
   "files.eol": "\n",
   "files.exclude": {
     "**/.DS_Store": true,
-    "**/.git/**": true,
-    "**/__pycache__": true,
-    "**/.pytest_cache": true,
-    "**/.ruff_cache": true
+    "**/.git/**": true
   },
   "files.watcherExclude": {
     "**/.DS_Store": true,
     "**/.git/**": true,
-    "**/.venv/**": true,
     "**/bin/**": true,
     "**/build/**": true,
     "**/release/**": true,
     "**/dist/**": true,
-    "**/node_modules/**": true,
-    "**/__pycache__/**": true,
-    "**/.pytest_cache/**": true,
-    "**/.ruff_cache/**": true
+    "**/node_modules/**": true
   },
   "search.exclude": {
     "**/.DS_Store": true,
     "**/.git/**": true,
-    "**/.venv/**": true,
     "**/bin/**": true,
     "**/build/**": true,
     "**/release/**": true,
     "**/dist/**": true,
-    "**/node_modules/**": true,
-    "**/__pycache__/**": true,
-    "**/.pytest_cache/**": true,
-    "**/.ruff_cache/**": true
+    "**/node_modules/**": true
   },
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
@@ -509,14 +509,6 @@
   "notebook.codeActionsOnSave": {
     "notebook.source.fixAll": "explicit",
     "notebook.source.organizeImports": "explicit"
-  },
-  "[python]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.codeActionsOnSave": {
-      "source.fixAll": "always",
-      "source.organizeImports": "always"
-    }
   },
   "makefile.configureOnOpen": false
 }

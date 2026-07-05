@@ -30,7 +30,7 @@ describe("mock mode flag", () => {
   // The website/screenshot/demo tooling keys the Apple engine by its brand name "container"
   // (asset folders img/container, replays/container.json) while the runtime value is ContainerEngine.APPLE
   // ("container"). The mock gate must accept the brand alias or those pipelines silently boot with
-  // no engine (see support/screenshots.mjs electronEnv → CONTAINER_DESKTOP_MOCK=<engine>).
+  // no engine (see support/cli/media/screenshots.ts electronEnv → CONTAINER_DESKTOP_MOCK=<engine>).
   it("accepts the 'container' brand alias used by the screenshot/demo tooling", () => {
     withFlag("container");
     expect(isMockMode()).toBe(true);

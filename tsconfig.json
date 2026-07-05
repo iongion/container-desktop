@@ -48,7 +48,9 @@
       "@/utils": ["./src/utils"],
       "@/utils/*": ["./src/utils/*"],
       "@/web-app": ["./src/web-app"],
-      "@/web-app/*": ["./src/web-app/*"]
+      "@/web-app/*": ["./src/web-app/*"],
+      "@/cli": ["./support/cli"],
+      "@/cli/*": ["./support/cli/*"]
     }
   },
   "include": ["src", "tests"]
