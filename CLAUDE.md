@@ -151,6 +151,14 @@ How you build here, **per change** — not an end-of-task afterthought:
   self-contained release binary via `CONTAINER_DESKTOP_E2E_APP`. **Paint caveat:** WebKitGTK
   parks its compositor when idle, so a WebDriver screenshot can force a paint the live view
   hadn't done — read the DOM to confirm data, use eyes/screenshots for paint.
+- **Website capture (screenshots + rrweb demos) runs on either shell.** The two capture scripts
+  (`support/cli/media/{screenshots,demoReplay}.ts`) drive a `CaptureDriver` port with two adapters —
+  Playwright/CDP (Electron) and WebdriverIO/WebDriver (Tauri, reusing the `test:e2e:tauri` stack).
+  Pick via **`CONTAINER_DESKTOP_CAPTURE_BACKEND=electron|tauri`** (default `electron`) or `--backend`;
+  `yarn screenshots:tauri` / `yarn demo:record:tauri` are shortcuts. Electron writes the published
+  `website-src/static/**` assets; **Tauri writes a separate set under `webdriver/artifacts/capture/`**
+  for side-by-side comparison (needs `CONTAINER_DESKTOP_MOCK=1 yarn tauri:serve` for the debug binary,
+  or a release binary via `CONTAINER_DESKTOP_E2E_APP`).
 - Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`. **Footgun:** never
   run `pkill -f <pattern>` from a one-liner whose own command text contains `<pattern>` —
   it matches and kills its own shell (silent exit 144). Kill by numeric PID instead.

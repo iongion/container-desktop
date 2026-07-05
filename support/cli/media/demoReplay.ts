@@ -1,15 +1,15 @@
-import { spawn } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { chromium } from "playwright-core";
 import { PROJECT_HOME } from "@/cli/lib/paths";
-import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint";
 import { dataUrlForLocalAsset, sanitizeLocalDevReferences } from "./demoSanitize";
 import { demoScenarios } from "./demoScenarios";
+import { createBackend, demoOutputPath, resolveCaptureBackend } from "./drivers/backend";
+import type { CaptureBackend, CaptureDriver } from "./drivers/types";
 import {
   captureWindow,
   freezeUi,
+  moveToSelector,
   navigate,
   resolveRoute,
   runPreActions,
@@ -19,12 +19,19 @@ import {
   waitReady,
 } from "./screenshotActions";
 
+// Record the website rrweb demo replays: boot a mock app per engine, drive the scenario, and harvest the
+// rrweb event stream + poster. Backend (Electron over CDP or Tauri over WebDriver) is chosen by
+// CONTAINER_DESKTOP_CAPTURE_BACKEND / --backend; the smooth cursor motion the replay shows is produced by
+// the driver's interpolated pointer primitive, identical across backends.
+
 const require = createRequire(import.meta.url);
 const ROOT = PROJECT_HOME;
 const DEFAULT_PORT = 9422;
+// Demo scenarios move the pointer with a longer settle than screenshots so the cursor reads as deliberate.
+const POINTER_SETTLE_MS = 160;
 
-function parseArgs(argv) {
-  const args: { mode: string; killStray: boolean; engines: Set<string> | null } = {
+function parseArgs(argv: string[]) {
+  const args: { mode: string; killStray: boolean; engines: Set<string> | null; backend?: string } = {
     mode: "dev",
     killStray: false,
     engines: null,
@@ -38,6 +45,11 @@ function parseArgs(argv) {
     } else if (arg === "--mode") {
       args.mode = argv[index + 1];
       index += 1;
+    } else if (arg.startsWith("--backend=")) {
+      args.backend = arg.slice("--backend=".length);
+    } else if (arg === "--backend") {
+      args.backend = argv[index + 1];
+      index += 1;
     } else if (arg.startsWith("--engine=")) {
       args.engines = parseCsvArg(arg.slice("--engine=".length));
     } else if (arg === "--engine") {
@@ -48,7 +60,7 @@ function parseArgs(argv) {
   return args;
 }
 
-function parseCsvArg(value) {
+function parseCsvArg(value: string) {
   return new Set(
     String(value || "")
       .split(",")
@@ -57,183 +69,32 @@ function parseCsvArg(value) {
   );
 }
 
-function electronEnv(engine, port, viewport) {
-  const env = { ...process.env };
-  const userDataDir = path.join(ROOT, ".tmp", "mock-user-data", "demo", engine);
-  rmSync(userDataDir, { recursive: true, force: true });
-  mkdirSync(userDataDir, { recursive: true });
-  seedWindowSettings(userDataDir, viewport);
-  delete env.ELECTRON_RUN_AS_NODE;
-  env.CONTAINER_DESKTOP_MOCK = engine;
-  env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
-  env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT = `${port}`;
-  // Don't pin the CDP origin: watch.mjs may fall back from `port` to a free port and would then keep
-  // this stale origin in --remote-allow-origins, rejecting the websocket. Unset lets it derive the
-  // allow-origin from the port it actually bound, so origin and port always agree (see cdpEndpoint.mjs).
-  delete env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN;
-  env.CONTAINER_DESKTOP_CAPTURE_OFFSCREEN = "1";
-  env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN = "1";
-  env.ENVIRONMENT = "development";
-  env.NODE_ENV = "development";
-  env.CI = env.CI || "true";
-  return env;
-}
-
-function seedWindowSettings(userDataDir, viewport) {
-  writeFileSync(
-    path.join(userDataDir, "user-settings.json"),
-    JSON.stringify(
-      {
-        minimizeToSystemTray: false,
-        trayWidgetEnabled: false,
-        expandSidebar: false,
-        // Suppress the first-run provisioning wizard: on this fresh profile it would auto-open and its
-        // full-screen overlay would cover every capture and intercept clicks. skipAtStartup gates it off.
-        wizard: { skipAtStartup: true },
-        window: {
-          width: viewport.width,
-          height: viewport.height,
-          isMaximized: false,
-        },
-      },
-      null,
-      2,
-    ),
-  );
-}
-
-function commandFor(mode, port) {
-  if (mode === "dev") {
-    return { command: "yarn", args: ["dev"] };
-  }
-  if (mode === "built") {
-    const version = require(path.join(ROOT, "package.json")).version;
-    return {
-      command: String(require("electron")),
-      args: [
-        path.join(ROOT, "build", version, "main.cjs"),
-        `--remote-debugging-port=${port}`,
-        `--remote-allow-origins=http://localhost:${port}`,
-        "--no-sandbox",
-      ],
-    };
-  }
-  throw new Error(`Unsupported demo replay mode: ${mode}`);
-}
-
-async function findAppPage(browser, timeoutMs) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    for (const context of browser.contexts()) {
-      for (const page of context.pages()) {
-        if (page.url().startsWith("devtools://")) {
-          continue;
-        }
-        const preloaded = await page.evaluate(() => globalThis.Preloaded === true).catch(() => false);
-        if (preloaded) {
-          return page;
-        }
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error("No app page with preload bridge found");
-}
-
-async function waitForApp(endpoint, timeoutMs = 60_000) {
-  const deadline = Date.now() + timeoutMs;
-  let lastError: any;
-  while (Date.now() < deadline) {
-    try {
-      const browser = await chromium.connectOverCDP(endpoint);
-      const page = await findAppPage(browser, timeoutMs);
-      return { browser, page };
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-  throw lastError || new Error(`Timed out waiting for ${endpoint}`);
-}
-
-async function stopProcess(child) {
-  if (!child || child.exitCode !== null || child.signalCode) {
-    return;
-  }
-  const signalProcessTree = (signal) => {
-    if (process.platform !== "win32" && child.pid) {
-      try {
-        process.kill(-child.pid, signal);
-        return;
-      } catch {
-        /* fall through to the direct child */
-      }
-    }
-    try {
-      child.kill(signal);
-    } catch {
-      /* already gone */
-    }
-  };
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(() => {
-      signalProcessTree("SIGKILL");
-    }, 5000);
-    child.once("exit", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-    child.once("error", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-    signalProcessTree("SIGTERM");
+async function withApp(
+  backend: CaptureBackend,
+  scenario: any,
+  mode: string,
+  port: number,
+  fn: (driver: CaptureDriver) => Promise<void>,
+) {
+  const app = await backend.launch({
+    engine: scenario.engine,
+    viewport: scenario.viewport,
+    mode,
+    label: "demo",
+    port,
   });
-}
-
-async function killStray() {
-  for (const pattern of ["support/watch.mjs", "dist/electron"]) {
-    await new Promise((resolve) => {
-      const child = spawn("pkill", ["-f", pattern], { stdio: "ignore" });
-      child.once("exit", resolve);
-      child.once("error", resolve);
-    });
-  }
-}
-
-async function withApp(scenario, mode, port, fn) {
-  const spec = commandFor(mode, port);
-  clearCdpEndpointFile();
-  const child = spawn(spec.command, spec.args, {
-    cwd: ROOT,
-    detached: process.platform !== "win32",
-    env: electronEnv(scenario.engine, port, scenario.viewport),
-    stdio: ["ignore", "inherit", "inherit"],
-  });
-  let browser: any;
   try {
-    const session = await waitForApp(await resolveCdpEndpoint(mode, port));
-    browser = session.browser;
-    await waitForAppViewport(session.page, scenario.viewport);
-    await session.page.waitForLoadState("domcontentloaded").catch(() => undefined);
-    await freezeUi(session.page);
-    await fn(session.page);
+    const { driver } = app;
+    await driver.waitForLoadState("domcontentloaded");
+    await freezeUi(driver);
+    await fn(driver);
   } finally {
-    await browser?.close().catch(() => {});
-    await stopProcess(child);
+    await app.close();
   }
 }
 
-async function waitForAppViewport(page, viewport) {
-  await page.waitForFunction(
-    ([width, height]) => window.innerWidth === width && window.innerHeight === height,
-    [viewport.width, viewport.height],
-    { timeout: 10_000 },
-  );
-}
-
-async function waitForNoToasts(page) {
-  await page.waitForFunction(
+async function waitForNoToasts(driver: CaptureDriver) {
+  await driver.waitForFunction(
     () => {
       const elements = document.querySelectorAll(
         '.AppToaster,.NotificationAppToaster,.bp6-toast,.bp6-toast-container,.bp6-overlay-toaster,[class*="Toaster"],[class*="toast"],[class*="Toast"]',
@@ -248,20 +109,21 @@ async function waitForNoToasts(page) {
   );
 }
 
-function packageRoot(packageName) {
+function packageRoot(packageName: string) {
   return path.resolve(path.dirname(require.resolve(packageName)), "..");
 }
 
-function recordScriptPath() {
-  return path.join(packageRoot("@rrweb/record"), "dist", "record.umd.min.cjs");
+function recordScriptSource() {
+  return readFileSync(path.join(packageRoot("@rrweb/record"), "dist", "record.umd.min.cjs"), "utf8");
 }
 
-async function startRecording(page) {
+async function startRecording(driver: CaptureDriver) {
+  const source = recordScriptSource();
   let lastError: any;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      await page.addScriptTag({ path: recordScriptPath() });
-      await page.evaluate(() => {
+      await driver.injectScript(source);
+      await driver.evaluate(() => {
         const recorder = globalThis.rrwebRecord?.record;
         if (typeof recorder !== "function") {
           throw new Error("rrweb recorder did not load");
@@ -285,151 +147,133 @@ async function startRecording(page) {
       return;
     } catch (error) {
       lastError = error;
-      await page.waitForLoadState("domcontentloaded").catch(() => undefined);
-      await page.waitForTimeout(250);
+      await driver.waitForLoadState("domcontentloaded");
+      await driver.pause(250);
     }
   }
   throw lastError;
 }
 
-async function stopRecording(page) {
-  return page.evaluate(() => {
+async function stopRecording(driver: CaptureDriver) {
+  return driver.evaluate(() => {
     globalThis.__containerDesktopStopDemoRecording?.();
     return globalThis.__containerDesktopDemoEvents || [];
   });
 }
 
-async function actionTimestamp(page) {
-  return page.evaluate(() => Date.now());
+async function actionTimestamp(driver: CaptureDriver): Promise<number> {
+  return driver.evaluate(() => Date.now());
 }
 
-async function addReplayPause(page, pauses, duration, settleMs = 80) {
+async function addReplayPause(driver: CaptureDriver, pauses: any[], duration: number, settleMs = 80) {
   if (!duration || duration <= 0) {
     return;
   }
-  await page.waitForTimeout(settleMs);
+  await driver.pause(settleMs);
   pauses.push({
-    afterTimestamp: await actionTimestamp(page),
+    afterTimestamp: await actionTimestamp(driver),
     duration,
   });
 }
 
-async function moveToSelector(page, selector, duration = 900) {
-  const locator = page.locator(selector).first();
-  await locator.waitFor({ timeout: 30_000 });
-  await locator.scrollIntoViewIfNeeded();
-  const box = await locator.boundingBox();
-  if (!box) {
-    throw new Error(`Unable to move to ${selector}: element has no bounding box`);
-  }
-  const target = {
-    x: box.x + box.width / 2,
-    y: box.y + box.height / 2,
-  };
-  const steps = Math.max(8, Math.round(duration / 24));
-  await page.mouse.move(target.x, target.y, { steps });
-  await page.waitForTimeout(160);
-  return box;
-}
-
-function firstResolverSelector(action) {
+function firstResolverSelector(action: any) {
   const resolvers = Object.values((action.resolve || {}) as Record<string, any>);
   return resolvers.find((resolver) => typeof resolver?.selector === "string")?.selector;
 }
 
-async function clickSelector(page, action, context) {
-  await moveToSelector(page, action.selector, action.duration || 900);
-  await addReplayPause(page, context.pauses, action.focusMs ?? context.actionFocusMs);
-  await page.mouse.down();
-  await page.waitForTimeout(80);
-  await page.mouse.up();
-  await addReplayPause(page, context.pauses, action.pulseMs ?? context.actionPulseMs);
+async function clickSelector(driver: CaptureDriver, action: any, context: any) {
+  await moveToSelector(driver, action.selector, action.duration || 900, POINTER_SETTLE_MS);
+  await addReplayPause(driver, context.pauses, action.focusMs ?? context.actionFocusMs);
+  await driver.pointerDown();
+  await driver.pause(80);
+  await driver.pointerUp();
+  await addReplayPause(driver, context.pauses, action.pulseMs ?? context.actionPulseMs);
   if (action.waitReady !== false) {
-    await waitReady(page).catch(() => undefined);
+    await waitReady(driver).catch(() => undefined);
   }
   if (action.waitFor) {
-    await waitForSelectorCount(page, action.waitFor, action.minCount || 1);
+    await waitForSelectorCount(driver, action.waitFor, action.minCount || 1);
   }
   // A click can trigger a screen change (sidebar nav, row → detail); let it settle before the hold.
-  await settleOnScreen(page, action.settleMs ?? context.actionSettleMs);
-  await addReplayPause(page, context.pauses, action.resultMs ?? context.actionResultMs);
+  await settleOnScreen(driver, action.settleMs ?? context.actionSettleMs);
+  await addReplayPause(driver, context.pauses, action.resultMs ?? context.actionResultMs);
 }
 
-async function runAction(page, action, context) {
+async function runAction(driver: CaptureDriver, action: any, context: any) {
   if (action.type === "navigate") {
-    const route = await resolveRoute(page, action);
+    const route = await resolveRoute(driver, action);
     const selector = action.highlightSelector || firstResolverSelector(action);
     if (selector) {
-      await moveToSelector(page, selector, action.duration || 900);
-      await addReplayPause(page, context.pauses, action.focusMs ?? context.navigationFocusMs);
+      await moveToSelector(driver, selector, action.duration || 900, POINTER_SETTLE_MS);
+      await addReplayPause(driver, context.pauses, action.focusMs ?? context.navigationFocusMs);
     }
-    await navigate(page, route);
+    await navigate(driver, route);
     if (action.waitFor) {
-      await waitForSelectorCount(page, action.waitFor, action.minCount || 1);
+      await waitForSelectorCount(driver, action.waitFor, action.minCount || 1);
     }
     // Let the previous screen unmount and the new one render+paint before recording the hold, so the
     // rrweb pause never freezes on a mid-transition frame.
-    await settleOnScreen(page, action.settleMs ?? context.navigationSettleMs);
-    await addReplayPause(page, context.pauses, action.resultMs ?? context.navigationResultMs);
+    await settleOnScreen(driver, action.settleMs ?? context.navigationSettleMs);
+    await addReplayPause(driver, context.pauses, action.resultMs ?? context.navigationResultMs);
     return;
   }
   if (action.type === "hover") {
-    await moveToSelector(page, action.selector, action.duration || 900);
+    await moveToSelector(driver, action.selector, action.duration || 900, POINTER_SETTLE_MS);
     if (action.waitFor) {
-      await waitForSelectorCount(page, action.waitFor, action.minCount || 1);
+      await waitForSelectorCount(driver, action.waitFor, action.minCount || 1);
     }
     if (action.hold) {
-      await addReplayPause(page, context.pauses, action.hold);
+      await addReplayPause(driver, context.pauses, action.hold);
     }
     return;
   }
   if (action.type === "move") {
-    await page.mouse.move(action.x, action.y, { steps: Math.max(8, Math.round((action.duration || 900) / 24)) });
+    await driver.pointerMove(action.x, action.y, Math.max(8, Math.round((action.duration || 900) / 24)));
     if (action.hold) {
-      await addReplayPause(page, context.pauses, action.hold);
+      await addReplayPause(driver, context.pauses, action.hold);
     }
     return;
   }
   if (action.type === "wait") {
-    await addReplayPause(page, context.pauses, action.ms || 500);
+    await addReplayPause(driver, context.pauses, action.ms || 500);
     return;
   }
   if (action.type === "key") {
-    await page.keyboard.press(action.key);
+    await driver.pressKey(action.key);
     if (action.hold) {
-      await addReplayPause(page, context.pauses, action.hold);
+      await addReplayPause(driver, context.pauses, action.hold);
     }
     return;
   }
   if (action.type === "waitReady") {
-    await waitReady(page);
+    await waitReady(driver);
     return;
   }
   if (action.type === "sidebar") {
-    await setSidebarExpanded(page, action.expanded !== false);
+    await setSidebarExpanded(driver, action.expanded !== false);
     if (action.hold) {
-      await addReplayPause(page, context.pauses, action.hold);
+      await addReplayPause(driver, context.pauses, action.hold);
     }
     return;
   }
   if (action.type === "pre") {
-    await runPreActions(page, action.pre);
+    await runPreActions(driver, action.pre);
     return;
   }
   if (action.type === "click") {
-    await clickSelector(page, action, context);
+    await clickSelector(driver, action, context);
     return;
   }
   if (action.type === "waitFor") {
-    await waitForSelectorCount(page, action.selector, action.minCount || 1);
+    await waitForSelectorCount(driver, action.selector, action.minCount || 1);
     return;
   }
   throw new Error(`Unknown demo scenario action: ${action.type}`);
 }
 
-async function runScenario(page, scenario) {
+async function runScenario(driver: CaptureDriver, scenario: any) {
   const chapters: Array<{ keyword: string; label: string; title: string; timestamp: number }> = [];
-  const pauses = [];
+  const pauses: any[] = [];
   const defaultScreenHold = scenario.screenHoldMs ?? 0;
   const captureSettleMs = scenario.captureSettleMs ?? 250;
   const context = {
@@ -442,53 +286,53 @@ async function runScenario(page, scenario) {
     navigationResultMs: scenario.navigationResultMs ?? 2600,
     navigationSettleMs: scenario.navigationSettleMs ?? 400,
   };
-  await waitReady(page);
-  await page.waitForTimeout(scenario.recordingSettleMs ?? 1000);
-  await setSidebarExpanded(page, false);
-  await waitForNoToasts(page);
-  await page.mouse.move(scenario.viewport.width / 2, scenario.viewport.height / 2);
-  await startRecording(page);
-  await page
+  await waitReady(driver);
+  await driver.pause(scenario.recordingSettleMs ?? 1000);
+  await setSidebarExpanded(driver, false);
+  await waitForNoToasts(driver);
+  await driver.pointerMove(scenario.viewport.width / 2, scenario.viewport.height / 2, 1);
+  await startRecording(driver);
+  await driver
     .waitForFunction(() => (globalThis.__containerDesktopDemoEvents || []).length > 0, undefined, { timeout: 5000 })
     .catch(() => undefined);
-  await page.waitForTimeout(250);
+  await driver.pause(250);
   for (const step of scenario.steps) {
     console.log(`${step.keyword} ${step.text}`);
     chapters.push({
       keyword: step.keyword,
       label: step.label,
       title: step.text,
-      timestamp: await actionTimestamp(page),
+      timestamp: await actionTimestamp(driver),
     });
     for (const action of step.actions) {
-      await runAction(page, action, context);
+      await runAction(driver, action, context);
     }
-    await page.waitForTimeout(step.captureSettleMs ?? captureSettleMs);
+    await driver.pause(step.captureSettleMs ?? captureSettleMs);
     const duration = Math.max(step.hold ?? defaultScreenHold, defaultScreenHold);
-    await addReplayPause(page, pauses, duration, 0);
+    await addReplayPause(driver, pauses, duration, 0);
   }
-  await page.waitForTimeout(250);
-  const events = await stopRecording(page);
+  await driver.pause(250);
+  const events = await stopRecording(driver);
   if (events.length === 0) {
     throw new Error("rrweb recording produced no events");
   }
   return { events, chapters, pauses };
 }
 
-async function writePoster(page, posterPath) {
+async function writePoster(driver: CaptureDriver, posterPath: string) {
   mkdirSync(path.dirname(posterPath), { recursive: true });
-  await captureWindow(page, posterPath);
+  await captureWindow(driver, posterPath);
 }
 
-function replayOffsetAt(timestamp, pauses) {
+function replayOffsetAt(timestamp: number, pauses: any[]) {
   return pauses.reduce((offset, pause) => (timestamp > pause.afterTimestamp ? offset + pause.duration : offset), 0);
 }
 
-function isLocalDevUrl(value) {
+function isLocalDevUrl(value: any) {
   return typeof value === "string" && /^https?:\/\/(?:localhost|127\.0\.0\.1):3000(?:\/|$)/.test(value);
 }
 
-function sanitizeNode(node) {
+function sanitizeNode(node: any) {
   if (!node || typeof node !== "object") {
     return node;
   }
@@ -530,13 +374,13 @@ function sanitizeNode(node) {
   }
 
   if (Array.isArray(node.childNodes)) {
-    node.childNodes = node.childNodes.map((child) => sanitizeNode(child)).filter(Boolean);
+    node.childNodes = node.childNodes.map((child: any) => sanitizeNode(child)).filter(Boolean);
   }
 
   return node;
 }
 
-function sanitizeRecordingEvent(event) {
+function sanitizeRecordingEvent(event: any) {
   if (event.type === 3 && event.data?.source === 10) {
     return null;
   }
@@ -549,12 +393,12 @@ function sanitizeRecordingEvent(event) {
   }
   if (Array.isArray(event.data?.adds)) {
     event.data.adds = event.data.adds
-      .map((add) => ({ ...add, node: sanitizeNode(add.node) }))
-      .filter((add) => add.node);
+      .map((add: any) => ({ ...add, node: sanitizeNode(add.node) }))
+      .filter((add: any) => add.node);
   }
   if (Array.isArray(event.data?.attributes)) {
-    event.data.attributes = event.data.attributes.map((mutation) => {
-      const attributes = {};
+    event.data.attributes = event.data.attributes.map((mutation: any) => {
+      const attributes: Record<string, any> = {};
       for (const [key, value] of Object.entries(mutation.attributes || {})) {
         attributes[key] = sanitizeLocalDevReferences(value);
       }
@@ -564,11 +408,11 @@ function sanitizeRecordingEvent(event) {
   return event;
 }
 
-function normalizeRecording(scenario, recording) {
+function normalizeRecording(scenario: any, recording: any) {
   const firstTimestamp = recording.events[0].timestamp;
   const pauses = recording.pauses || [];
   const events = recording.events
-    .map((event) =>
+    .map((event: any) =>
       sanitizeRecordingEvent({
         ...event,
         timestamp:
@@ -595,7 +439,7 @@ function normalizeRecording(scenario, recording) {
     title: scenario.title,
     engine: scenario.engine,
     viewport: scenario.viewport,
-    chapters: recording.chapters.map((chapter) => ({
+    chapters: recording.chapters.map((chapter: any) => ({
       keyword: chapter.keyword,
       label: chapter.label,
       title: chapter.title,
@@ -607,8 +451,10 @@ function normalizeRecording(scenario, recording) {
 
 export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
+  const kind = resolveCaptureBackend(args.backend);
+  const backend = await createBackend(kind);
   if (args.killStray) {
-    await killStray();
+    await backend.killStray();
   }
   const scenarios = args.engines
     ? demoScenarios.filter((scenario) => args.engines?.has(scenario.engine))
@@ -618,16 +464,16 @@ export async function main(argv = process.argv.slice(2)) {
   }
   let port = DEFAULT_PORT;
   for (const scenario of scenarios) {
-    const outPath = path.join(ROOT, scenario.output);
-    const posterPath = path.join(ROOT, scenario.poster);
+    const outPath = demoOutputPath(kind, scenario.output);
+    const posterPath = demoOutputPath(kind, scenario.poster);
     mkdirSync(path.dirname(outPath), { recursive: true });
-    await withApp(scenario, args.mode, port, async (page) => {
-      await waitReady(page);
-      await page.waitForTimeout(scenario.posterSettleMs ?? 1000);
-      await setSidebarExpanded(page, false);
-      await waitForNoToasts(page);
-      await writePoster(page, posterPath);
-      const recording = await runScenario(page, scenario);
+    await withApp(backend, scenario, args.mode, port, async (driver) => {
+      await waitReady(driver);
+      await driver.pause(scenario.posterSettleMs ?? 1000);
+      await setSidebarExpanded(driver, false);
+      await waitForNoToasts(driver);
+      await writePoster(driver, posterPath);
+      const recording = await runScenario(driver, scenario);
       const replay = normalizeRecording(scenario, recording);
       writeFileSync(outPath, `${JSON.stringify(replay)}\n`);
       console.log(`wrote ${path.relative(ROOT, outPath)} (${replay.events.length} events)`);

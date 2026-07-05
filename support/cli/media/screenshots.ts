@@ -1,11 +1,8 @@
-import { spawn } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { createRequire } from "node:module";
 import path from "node:path";
-import { chromium } from "playwright-core";
-import { PROJECT_HOME } from "@/cli/lib/paths";
-import { clearCdpEndpointFile, resolveCdpEndpoint } from "./cdpEndpoint";
+import { createBackend, resolveCaptureBackend, screenshotOutDir } from "./drivers/backend";
+import type { CaptureBackend, CaptureDriver } from "./drivers/types";
 import {
   captureWindow,
   freezeUi,
@@ -23,19 +20,22 @@ import {
   screenshotManifest,
 } from "./screenshots.manifest";
 
-const require = createRequire(import.meta.url);
-const ROOT = PROJECT_HOME;
-const OUT_DIR = path.join(ROOT, "website-src", "static", "img");
+// Regenerate the deterministic website screenshots by driving a mock app across the manifest, one
+// engine at a time. The recording backend (Electron over CDP, or Tauri over WebDriver) is chosen by
+// CONTAINER_DESKTOP_CAPTURE_BACKEND / --backend; the app lifecycle + page primitives live behind
+// CaptureBackend / CaptureDriver, so this file is pure orchestration.
+
 const DEFAULT_PORT = 9322;
 const DEFAULT_CAPTURE_SETTLE_MS = 1000;
 
-function parseArgs(argv) {
+function parseArgs(argv: string[]) {
   const args: {
     mode: string;
     killStray: boolean;
     engines: Set<string> | null;
     only: Set<string> | null;
     clean: boolean;
+    backend?: string;
   } = { mode: "dev", killStray: false, engines: null, only: null, clean: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -47,6 +47,11 @@ function parseArgs(argv) {
       args.mode = arg.slice("--mode=".length);
     } else if (arg === "--mode") {
       args.mode = argv[index + 1];
+      index += 1;
+    } else if (arg.startsWith("--backend=")) {
+      args.backend = arg.slice("--backend=".length);
+    } else if (arg === "--backend") {
+      args.backend = argv[index + 1];
       index += 1;
     } else if (arg.startsWith("--engine=")) {
       args.engines = parseCsvArg(arg.slice("--engine=".length));
@@ -63,7 +68,7 @@ function parseArgs(argv) {
   return args;
 }
 
-function parseCsvArg(value) {
+function parseCsvArg(value: string) {
   return new Set(
     String(value || "")
       .split(",")
@@ -72,11 +77,11 @@ function parseCsvArg(value) {
   );
 }
 
-function resolveEngines(args) {
+function resolveEngines(args: { engines: Set<string> | null }) {
   if (!args.engines) {
     return SCREENSHOT_ENGINES;
   }
-  const engines = SCREENSHOT_ENGINES.filter((engine) => args.engines.has(engine));
+  const engines = SCREENSHOT_ENGINES.filter((engine) => args.engines?.has(engine));
   if (engines.length !== args.engines.size) {
     const unknown = [...args.engines].filter((engine) => !SCREENSHOT_ENGINES.includes(engine));
     throw new Error(`Unknown screenshot engine: ${unknown.join(", ")}`);
@@ -84,188 +89,12 @@ function resolveEngines(args) {
   return engines;
 }
 
-function electronEnv(engine, port) {
-  const env = { ...process.env };
-  const userDataDir = path.join(ROOT, ".tmp", "mock-user-data", "screenshots", engine);
-  rmSync(userDataDir, { recursive: true, force: true });
-  mkdirSync(userDataDir, { recursive: true });
-  seedWindowSettings(userDataDir, SCREENSHOT_VIEWPORT);
-  delete env.ELECTRON_RUN_AS_NODE;
-  env.CONTAINER_DESKTOP_MOCK = engine;
-  env.CONTAINER_DESKTOP_USER_DATA_DIR = userDataDir;
-  env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT = `${port}`;
-  // Don't pin the CDP origin: watch.mjs may fall back from `port` to a free port and would then keep
-  // this stale origin in --remote-allow-origins, rejecting the websocket. Unset lets it derive the
-  // allow-origin from the port it actually bound, so origin and port always agree (see cdpEndpoint.mjs).
-  delete env.CONTAINER_DESKTOP_REMOTE_DEBUGGING_ORIGIN;
-  env.CONTAINER_DESKTOP_CAPTURE_OFFSCREEN = "1";
-  env.CONTAINER_DESKTOP_DISABLE_EXTERNAL_OPEN = "1";
-  env.ENVIRONMENT = "development";
-  env.NODE_ENV = "development";
-  env.CI = env.CI || "true";
-  return env;
-}
-
-function seedWindowSettings(userDataDir, viewport) {
-  writeFileSync(
-    path.join(userDataDir, "user-settings.json"),
-    JSON.stringify(
-      {
-        minimizeToSystemTray: false,
-        trayWidgetEnabled: false,
-        expandSidebar: false,
-        // Suppress the first-run provisioning wizard: on this fresh profile it would auto-open and its
-        // full-screen overlay would cover every capture and intercept clicks. skipAtStartup gates it off.
-        wizard: { skipAtStartup: true },
-        window: {
-          width: viewport.width,
-          height: viewport.height,
-          isMaximized: false,
-        },
-      },
-      null,
-      2,
-    ),
-  );
-}
-
-function commandFor(mode, port) {
-  if (mode === "dev") {
-    return { command: "yarn", args: ["dev"] };
-  }
-  if (mode === "built") {
-    const version = require(path.join(ROOT, "package.json")).version;
-    return {
-      command: String(require("electron")),
-      args: [
-        path.join(ROOT, "build", version, "main.cjs"),
-        `--remote-debugging-port=${port}`,
-        `--remote-allow-origins=http://localhost:${port}`,
-        "--no-sandbox",
-      ],
-    };
-  }
-  throw new Error(`Unsupported screenshot mode: ${mode}`);
-}
-
-async function waitForApp(endpoint, timeoutMs = 60_000) {
-  const deadline = Date.now() + timeoutMs;
-  let lastError: any;
-  while (Date.now() < deadline) {
-    try {
-      const browser = await chromium.connectOverCDP(endpoint);
-      const page = await findAppPage(browser, timeoutMs);
-      return { browser, page };
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-  throw lastError || new Error(`Timed out waiting for ${endpoint}`);
-}
-
-async function findAppPage(browser, timeoutMs) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    for (const context of browser.contexts()) {
-      for (const page of context.pages()) {
-        if (page.url().startsWith("devtools://")) {
-          continue;
-        }
-        const preloaded = await page.evaluate(() => globalThis.Preloaded === true).catch(() => false);
-        if (preloaded) {
-          await waitForAppViewport(page, SCREENSHOT_VIEWPORT);
-          return page;
-        }
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error("No app page with preload bridge found");
-}
-
-async function waitForAppViewport(page, viewport) {
-  await page.waitForFunction(
-    ([width, height]) => window.innerWidth === width && window.innerHeight === height,
-    [viewport.width, viewport.height],
-    { timeout: 10_000 },
-  );
-}
-
-async function stopProcess(child) {
-  if (!child || child.exitCode !== null || child.signalCode) {
-    return;
-  }
-  const signalProcessTree = (signal) => {
-    if (process.platform !== "win32" && child.pid) {
-      try {
-        process.kill(-child.pid, signal);
-        return;
-      } catch {
-        /* fall through to the direct child */
-      }
-    }
-    try {
-      child.kill(signal);
-    } catch {
-      /* already gone */
-    }
-  };
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(() => {
-      signalProcessTree("SIGKILL");
-    }, 5000);
-    child.once("exit", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-    child.once("error", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-    signalProcessTree("SIGTERM");
-  });
-}
-
-async function killStray() {
-  for (const pattern of ["support/watch.mjs", "dist/electron"]) {
-    await new Promise((resolve) => {
-      const child = spawn("pkill", ["-f", pattern], { stdio: "ignore" });
-      child.once("exit", resolve);
-      child.once("error", resolve);
-    });
-  }
-}
-
-async function withApp(engine, mode, port, fn) {
-  const spec = commandFor(mode, port);
-  clearCdpEndpointFile();
-  const child = spawn(spec.command, spec.args, {
-    cwd: ROOT,
-    detached: process.platform !== "win32",
-    env: electronEnv(engine, port),
-    stdio: ["ignore", "inherit", "inherit"],
-  });
-  let browser: any;
-  try {
-    const session = await waitForApp(await resolveCdpEndpoint(mode, port));
-    browser = session.browser;
-    await waitReady(session.page);
-    await session.page.waitForLoadState("load").catch(() => undefined);
-    await freezeUi(session.page);
-    await fn(session.page);
-  } finally {
-    await browser?.close().catch(() => {});
-    await stopProcess(child);
-  }
-}
-
-function valueForEngine(item, key, engine) {
+function valueForEngine(item: any, key: string, engine: string) {
   const byEngine = item[`${key}ByEngine`];
   return byEngine?.[engine] ?? item[key];
 }
 
-function materializeItem(item, engine) {
+function materializeItem(item: any, engine: string) {
   return {
     ...item,
     route: valueForEngine(item, "route", engine),
@@ -280,46 +109,68 @@ function materializeItem(item, engine) {
 // file in place, so a scoped run — or one that fails partway — never wipes screenshots it isn't regenerating.
 // Pass `--clean` (full runs only) to restore the old prune: drop the stale flat files and wipe each engine
 // folder first, so the output ends up matching the manifest exactly.
-async function cleanOutputDirectories(engines, only, clean) {
+async function cleanOutputDirectories(outDir: string, engines: string[], only: Set<string> | null, clean: boolean) {
   if (clean && !only) {
     for (const file of STALE_FLAT_SCREENSHOTS) {
-      await rm(path.join(OUT_DIR, file), { force: true });
+      await rm(path.join(outDir, file), { force: true });
     }
     for (const engine of engines) {
-      const engineOutDir = path.join(OUT_DIR, engine);
+      const engineOutDir = path.join(outDir, engine);
       await rm(engineOutDir, { recursive: true, force: true });
       mkdirSync(engineOutDir, { recursive: true });
     }
     return;
   }
   for (const engine of engines) {
-    mkdirSync(path.join(OUT_DIR, engine), { recursive: true });
+    mkdirSync(path.join(outDir, engine), { recursive: true });
   }
 }
 
-async function captureItem(page, engine, item) {
+async function withApp(
+  backend: CaptureBackend,
+  engine: string,
+  mode: string,
+  port: number,
+  fn: (driver: CaptureDriver) => Promise<void>,
+) {
+  const app = await backend.launch({ engine, viewport: SCREENSHOT_VIEWPORT, mode, label: "screenshots", port });
+  try {
+    const { driver } = app;
+    await waitReady(driver);
+    await driver.waitForLoadState("load");
+    await freezeUi(driver);
+    await fn(driver);
+  } finally {
+    await app.close();
+  }
+}
+
+async function captureItem(driver: CaptureDriver, outDir: string, engine: string, item: any) {
   const engineItem = materializeItem(item, engine);
   console.log(`capturing ${engine}/${engineItem.file}`);
-  const route = await resolveRoute(page, engineItem);
-  await navigate(page, route);
-  await setSidebarExpanded(page, engineItem.expandSidebar === true);
-  await runPreActions(page, engineItem.pre);
+  const route = await resolveRoute(driver, engineItem);
+  await navigate(driver, route);
+  await setSidebarExpanded(driver, engineItem.expandSidebar === true);
+  await runPreActions(driver, engineItem.pre);
   if (engineItem.waitFor) {
-    await waitForSelectorCount(page, engineItem.waitFor, engineItem.minCount || 1);
+    await waitForSelectorCount(driver, engineItem.waitFor, engineItem.minCount || 1);
   }
-  await page.waitForTimeout(engineItem.settleMs ?? DEFAULT_CAPTURE_SETTLE_MS);
-  await captureWindow(page, path.join(OUT_DIR, engine, engineItem.file));
+  await driver.pause(engineItem.settleMs ?? DEFAULT_CAPTURE_SETTLE_MS);
+  await captureWindow(driver, path.join(outDir, engine, engineItem.file));
   console.log(`captured ${engine}/${engineItem.file}`);
 }
 
 export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
+  const kind = resolveCaptureBackend(args.backend);
+  const backend = await createBackend(kind);
+  const outDir = screenshotOutDir(kind);
   const engines = resolveEngines(args);
-  mkdirSync(OUT_DIR, { recursive: true });
+  mkdirSync(outDir, { recursive: true });
   if (args.killStray) {
-    await killStray();
+    await backend.killStray();
   }
-  await cleanOutputDirectories(engines, args.only, args.clean);
+  await cleanOutputDirectories(outDir, engines, args.only, args.clean);
   let port = DEFAULT_PORT;
   for (const engine of engines) {
     const manifest = args.only
@@ -328,9 +179,9 @@ export async function main(argv = process.argv.slice(2)) {
     if (manifest.length === 0) {
       throw new Error(`No screenshot manifest entries matched ${[...(args.only ?? [])].join(", ")} for ${engine}`);
     }
-    await withApp(engine, args.mode, port, async (page) => {
+    await withApp(backend, engine, args.mode, port, async (driver) => {
       for (const item of manifest) {
-        await captureItem(page, engine, item);
+        await captureItem(driver, outDir, engine, item);
       }
     });
     port += 1;

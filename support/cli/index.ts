@@ -118,12 +118,22 @@ program
 program
   .command("update-demo-replay")
   .description("Regenerate the website rrweb demo replay")
-  .action(runUpdateDemoReplay);
+  .option("--backend <backend>", "electron | tauri (defaults to CONTAINER_DESKTOP_CAPTURE_BACKEND, else electron)")
+  .option("--engine <engines>", "comma-separated engines to record (podman,docker,unified)")
+  .option("--mode <mode>", "dev | built", "dev")
+  .option("--kill-stray", "kill orphaned capture apps/drivers first", false)
+  .action((options) => runUpdateDemoReplay(options));
 
 program
   .command("update-screenshots")
   .description("Regenerate deterministic website screenshots")
-  .action(runUpdateScreenshots);
+  .option("--backend <backend>", "electron | tauri (defaults to CONTAINER_DESKTOP_CAPTURE_BACKEND, else electron)")
+  .option("--engine <engines>", "comma-separated engines to capture (podman,docker,unified)")
+  .option("--only <files>", "comma-separated screenshot filenames to capture")
+  .option("--mode <mode>", "dev | built", "dev")
+  .option("--clean", "prune stale files + wipe engine folders first (full runs only)", false)
+  .option("--kill-stray", "kill orphaned capture apps/drivers first", false)
+  .action((options) => runUpdateScreenshots(options));
 
 program.command("start").description("Run the app in development (yarn dev)").action(runStart);
 

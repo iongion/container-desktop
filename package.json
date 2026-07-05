@@ -30,7 +30,9 @@
     "build:website": "eleventy",
     "dev:website": "eleventy --serve --port=8088",
     "demo:record": "tsx support/cli/index.ts update-demo-replay",
+    "demo:record:tauri": "cross-env CONTAINER_DESKTOP_CAPTURE_BACKEND=tauri tsx support/cli/index.ts update-demo-replay",
     "screenshots": "tsx support/cli/index.ts update-screenshots",
+    "screenshots:tauri": "cross-env CONTAINER_DESKTOP_CAPTURE_BACKEND=tauri tsx support/cli/index.ts update-screenshots",
     "bundle": "tsx support/cli/index.ts bundle",
     "bundle:electron": "cross-env DEBUG=electron-builder electron-builder --config electron-builder-config.cjs",
     "release": "cross-env ENVIRONMENT=production tsx support/cli/index.ts release",
@@ -179,6 +181,7 @@
     "vite-plugin-static-copy": "4.1.1",
     "vite-plugin-svgr": "5.2.0",
     "vitest": "4.1.9",
+    "webdriverio": "9.29.1",
     "xml2js": "0.6.2"
   },
   "optionalDependencies": {

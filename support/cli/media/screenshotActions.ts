@@ -1,6 +1,13 @@
-export async function waitReady(page, opts: { timeout?: number } = {}) {
+import type { Box, CaptureDriver } from "./drivers/types";
+
+// Screen-driving actions shared by the screenshot + demo capture scripts. Written against CaptureDriver
+// (not a raw Playwright page) so a single action layer drives either shell — Electron over CDP or Tauri
+// over WebDriver. DOM reads/writes stay inside evaluate() (identical page-side JS on both); only pointer,
+// screenshot and injection go through backend-specific primitives.
+
+export async function waitReady(driver: CaptureDriver, opts: { timeout?: number } = {}) {
   const timeout = opts.timeout ?? 45_000;
-  await page.waitForFunction(
+  await driver.waitForFunction(
     () => {
       const html = document.documentElement;
       return html.dataset.phase === "ready" && html.dataset.running === "yes" && html.dataset.provisioned === "yes";
@@ -10,7 +17,7 @@ export async function waitReady(page, opts: { timeout?: number } = {}) {
   );
 }
 
-export async function freezeUi(page) {
+export async function freezeUi(driver: CaptureDriver) {
   const content = `
     *, *::before, *::after {
       animation-duration: 0s !important;
@@ -34,8 +41,8 @@ export async function freezeUi(page) {
   let lastError: any;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      await page.addStyleTag({ content });
-      await page.evaluate(() => {
+      await driver.injectStyle(content);
+      await driver.evaluate(() => {
         const selectors = [
           ".AppToaster",
           ".NotificationAppToaster",
@@ -63,26 +70,27 @@ export async function freezeUi(page) {
       return;
     } catch (error) {
       lastError = error;
-      await page.waitForLoadState("domcontentloaded").catch(() => undefined);
-      await page.waitForTimeout(250);
+      await driver.waitForLoadState("domcontentloaded");
+      await driver.pause(250);
     }
   }
   throw lastError;
 }
 
-export async function navigate(page, route) {
-  await page.evaluate((nextRoute) => {
+export async function navigate(driver: CaptureDriver, route: string) {
+  await driver.evaluate((nextRoute: string) => {
     if (window.location.hash !== `#${nextRoute}`) {
       window.location.hash = nextRoute;
     }
   }, route);
-  await waitReady(page);
-  await page.waitForTimeout(50);
+  await waitReady(driver);
+  await driver.pause(50);
 }
 
-export async function waitForSelectorCount(page, selector, minCount = 1, timeout = 30_000) {
-  await page.waitForFunction(
-    ([targetSelector, targetCount]) => document.querySelectorAll(targetSelector).length >= targetCount,
+export async function waitForSelectorCount(driver: CaptureDriver, selector: string, minCount = 1, timeout = 30_000) {
+  await driver.waitForFunction(
+    ([targetSelector, targetCount]: [string, number]) =>
+      document.querySelectorAll(targetSelector).length >= targetCount,
     [selector, minCount],
     { timeout },
   );
@@ -93,13 +101,13 @@ export async function waitForSelectorCount(page, selector, minCount = 1, timeout
 // Without this a frame (or an rrweb pause) can land mid-transition where the old screen still overlaps
 // the new one. Waits until DOM mutations go quiet for `quietMs` (bounded by `maxWaitMs` so a steadily
 // polling screen can't hang it), then two animation frames so the settled tree has actually painted.
-export async function settleOnScreen(page, quietMs = 350, maxWaitMs = 4000) {
+export async function settleOnScreen(driver: CaptureDriver, quietMs = 350, maxWaitMs = 4000) {
   if (!quietMs || quietMs <= 0) {
     return;
   }
-  await waitReady(page).catch(() => undefined);
-  await page.evaluate(
-    ([quiet, maxWait]) =>
+  await waitReady(driver).catch(() => undefined);
+  await driver.evaluateAsync(
+    ([quiet, maxWait]: [number, number]) =>
       new Promise<void>((resolve) => {
         const start = performance.now();
         let timer: any;
@@ -124,31 +132,29 @@ export async function settleOnScreen(page, quietMs = 350, maxWaitMs = 4000) {
   );
 }
 
-export async function setSidebarExpanded(page, expanded) {
-  await page.locator(".AppSidebar").waitFor({ timeout: 30_000 });
+export async function setSidebarExpanded(driver: CaptureDriver, expanded: boolean) {
+  await driver.waitForSelector(".AppSidebar", { timeout: 30_000 });
   const desired = expanded ? "yes" : "no";
-  const current = await page.locator(".AppSidebar").first().getAttribute("data-expanded");
+  const current = await driver.getAttribute(".AppSidebar", "data-expanded", { nth: "first" });
   if (current === desired) {
     return;
   }
-  await page.locator(".AppSidebarFooterOverlay button").last().click();
-  await page.waitForFunction(
-    (value) => document.querySelector(".AppSidebar")?.getAttribute("data-expanded") === value,
+  await driver.click(".AppSidebarFooterOverlay button", { nth: "last" });
+  await driver.waitForFunction(
+    (value: string) => document.querySelector(".AppSidebar")?.getAttribute("data-expanded") === value,
     desired,
-    {
-      timeout: 10_000,
-    },
+    { timeout: 10_000 },
   );
 }
 
-export async function resolveFirstId(page, resolver) {
-  await navigate(page, resolver.route);
-  await waitForSelectorCount(page, resolver.selector, 1);
+export async function resolveFirstId(driver: CaptureDriver, resolver: any) {
+  await navigate(driver, resolver.route);
+  await waitForSelectorCount(driver, resolver.selector, 1);
   if (resolver.attr === "text") {
-    const text = await page.locator(resolver.selector).first().innerText();
+    const text = await driver.innerText(resolver.selector, { nth: "first" });
     return text.trim();
   }
-  const value = await page.locator(resolver.selector).first().getAttribute(resolver.attr);
+  const value = await driver.getAttribute(resolver.selector, resolver.attr, { nth: "first" });
   if (!value) {
     throw new Error(`Unable to resolve ${resolver.attr} from ${resolver.selector}`);
   }
@@ -159,54 +165,77 @@ export async function resolveFirstId(page, resolver) {
   return value;
 }
 
-export async function resolveRoute(page, item) {
+export async function resolveRoute(driver: CaptureDriver, item: any) {
   let route = item.route;
-  for (const [name, resolver] of Object.entries(item.resolve || {})) {
-    const value = await resolveFirstId(page, resolver);
+  for (const [name, resolver] of Object.entries((item.resolve || {}) as Record<string, any>)) {
+    const value = await resolveFirstId(driver, resolver);
     route = route.replace(`$${name}`, encodeURIComponent(value));
   }
   return route;
 }
 
-async function moveToLocator(page, locator, duration = 700) {
-  await locator.waitFor({ timeout: 30_000 });
-  await locator.scrollIntoViewIfNeeded();
-  const box = await locator.boundingBox();
+// Move the pointer to the centre of a measured box over `duration` ms of interpolated motion, then
+// settle. Shared by both capture scripts so the recorded cursor track is identical across backends.
+export async function pointerToBox(driver: CaptureDriver, box: Box | null, duration = 700, settleMs = 120) {
   if (!box) {
     throw new Error("Unable to move pointer: element has no bounding box");
   }
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
-    steps: Math.max(8, Math.round(duration / 24)),
+  const steps = Math.max(8, Math.round(duration / 24));
+  await driver.pointerMove(box.x + box.width / 2, box.y + box.height / 2, steps);
+  await driver.pause(settleMs);
+  return box;
+}
+
+// Resolve the first match of `selector`, scroll it into view, and move the pointer onto it.
+export async function moveToSelector(driver: CaptureDriver, selector: string, duration = 700, settleMs = 120) {
+  await driver.waitForSelector(selector, { timeout: 30_000 });
+  const box = await driver.boundingBox(selector, { nth: "first", scrollIntoView: true });
+  return pointerToBox(driver, box, duration, settleMs);
+}
+
+export async function openRowActions(driver: CaptureDriver, rowSelector: string) {
+  await moveToSelector(driver, rowSelector, 800);
+  // The trailing action-menu button lives inside the first matching row; measure it in-page so the
+  // "first row → last button" targeting is one portable query rather than a nested locator.
+  const menuButton = await driver.evaluate<Box | null>((sel: string) => {
+    const row = document.querySelector(sel);
+    if (!row) {
+      return null;
+    }
+    const buttons = row.querySelectorAll("button");
+    const button = buttons[buttons.length - 1];
+    if (!button) {
+      return null;
+    }
+    const rect = button.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  }, rowSelector);
+  await pointerToBox(driver, menuButton, 450);
+  await driver.pointerDown();
+  await driver.pause(80);
+  await driver.pointerUp();
+  await driver.waitForSelector(".bp6-portal .bp6-menu", { timeout: 10_000 });
+}
+
+export async function openNetworkCreate(driver: CaptureDriver) {
+  await driver.evaluate(() => {
+    const button = Array.from(document.querySelectorAll("button")).find(
+      (element) => (element.textContent || "").trim() === "Create",
+    );
+    button?.click();
   });
-  await page.waitForTimeout(120);
-}
-
-export async function openRowActions(page, rowSelector) {
-  const row = page.locator(rowSelector).first();
-  await moveToLocator(page, row, 800);
-  const menuButton = row.locator("button").last();
-  await moveToLocator(page, menuButton, 450);
-  await page.mouse.down();
-  await page.waitForTimeout(80);
-  await page.mouse.up();
-  await page.locator(".bp6-portal .bp6-menu").first().waitFor({ timeout: 10_000 });
-}
-
-export async function openNetworkCreate(page) {
-  await page.getByRole("button", { name: "Create" }).first().click();
-  await page.locator('[data-form="network.create"]').waitFor({ timeout: 10_000 });
+  await driver.waitForSelector('[data-form="network.create"]', { timeout: 10_000 });
 }
 
 // Drive the AI assistant into a rendered generative-UI card for the screenshot: type a prompt and send it.
 // In mock mode the ModelPicker auto-selects a model on first discovery (async), so Send stays disabled until
 // then — wait for it to enable before submitting. A read-only "list" prompt (containers/images/…) resolves to
 // a typed-tool card with no approval step, so the transcript settles on prose + the card without interaction.
-export async function askAssistant(page, prompt) {
-  const input = page.locator(".AIComposerInput").first();
-  await input.waitFor({ timeout: 30_000 });
-  await input.click();
-  await input.fill(prompt);
-  await page.waitForFunction(
+export async function askAssistant(driver: CaptureDriver, prompt: string) {
+  await driver.waitForSelector(".AIComposerInput", { timeout: 30_000 });
+  await driver.click(".AIComposerInput");
+  await driver.fill(".AIComposerInput", prompt);
+  await driver.waitForFunction(
     () => {
       const button = document.querySelector<HTMLButtonElement>(".AIComposerSend");
       return !!button && !button.hasAttribute("disabled") && !button.disabled;
@@ -214,43 +243,42 @@ export async function askAssistant(page, prompt) {
     undefined,
     { timeout: 30_000 },
   );
-  await page.locator(".AIComposerSend").first().click();
+  await driver.click(".AIComposerSend");
   // Wait for the streamed turn to render its typed-tool card (tool-result) before the frame is captured.
-  await page.locator('[data-screen="ai.assistant"] .AICard').first().waitFor({ timeout: 30_000 });
+  await driver.waitForSelector('[data-screen="ai.assistant"] .AICard', { timeout: 30_000 });
 }
 
 // Drive the Build Studio into a completed build for the screenshot: click "Build image" and wait for the run
 // to reach the succeeded state. The studio seeds a starter Containerfile and defaults to a native connection,
 // so the button is enabled on load; in mock mode buildFixtures replays engine-shaped output so the timeline
 // fills and the run succeeds without a real engine.
-export async function runBuild(page) {
-  const button = page.locator(".BuildActionButton").first();
-  await button.waitFor({ timeout: 30_000 });
-  await button.click();
-  await page.locator('[data-region="run"][data-build-status="succeeded"]').first().waitFor({ timeout: 60_000 });
+export async function runBuild(driver: CaptureDriver) {
+  await driver.waitForSelector(".BuildActionButton", { timeout: 30_000 });
+  await driver.click(".BuildActionButton");
+  await driver.waitForSelector('[data-region="run"][data-build-status="succeeded"]', { timeout: 60_000 });
 }
 
 export async function runPreActions(
-  page,
+  driver: CaptureDriver,
   actions: Array<{ action: string; rowSelector?: string; prompt?: string; expanded?: boolean }> = [],
 ) {
   for (const action of actions) {
     if (action.action === "openRowActions") {
-      await openRowActions(page, action.rowSelector);
+      await openRowActions(driver, action.rowSelector!);
     } else if (action.action === "openNetworkCreate") {
-      await openNetworkCreate(page);
+      await openNetworkCreate(driver);
     } else if (action.action === "askAssistant") {
-      await askAssistant(page, action.prompt);
+      await askAssistant(driver, action.prompt!);
     } else if (action.action === "runBuild") {
-      await runBuild(page);
+      await runBuild(driver);
     } else if (action.action === "setSidebarExpanded") {
-      await setSidebarExpanded(page, action.expanded !== false);
+      await setSidebarExpanded(driver, action.expanded !== false);
     } else {
       throw new Error(`Unknown screenshot pre action: ${action.action}`);
     }
   }
 }
 
-export async function captureWindow(page, path) {
-  await page.locator(".App").screenshot({ path, scale: "css" });
+export async function captureWindow(driver: CaptureDriver, path: string) {
+  await driver.screenshotElement(".App", path);
 }

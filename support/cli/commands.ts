@@ -79,14 +79,43 @@ export function runBuildWebsite(): void {
   runEnv("yarn build:website");
 }
 
-export async function runUpdateScreenshots(): Promise<void> {
-  const { main } = await import("@/cli/media/screenshots");
-  await main(["--mode=dev"]);
+// Translate commander options into the argv the media capture scripts parse. `--backend` (or the
+// CONTAINER_DESKTOP_CAPTURE_BACKEND env var read inside the scripts) picks electron vs tauri.
+function mediaArgs(options: {
+  mode?: string;
+  backend?: string;
+  engine?: string;
+  only?: string;
+  clean?: boolean;
+  killStray?: boolean;
+}): string[] {
+  const args = [`--mode=${options.mode ?? "dev"}`];
+  if (options.backend) {
+    args.push(`--backend=${options.backend}`);
+  }
+  if (options.engine) {
+    args.push(`--engine=${options.engine}`);
+  }
+  if (options.only) {
+    args.push(`--only=${options.only}`);
+  }
+  if (options.clean) {
+    args.push("--clean");
+  }
+  if (options.killStray) {
+    args.push("--kill-stray");
+  }
+  return args;
 }
 
-export async function runUpdateDemoReplay(): Promise<void> {
+export async function runUpdateScreenshots(options: Parameters<typeof mediaArgs>[0] = {}): Promise<void> {
+  const { main } = await import("@/cli/media/screenshots");
+  await main(mediaArgs(options));
+}
+
+export async function runUpdateDemoReplay(options: Parameters<typeof mediaArgs>[0] = {}): Promise<void> {
   const { main } = await import("@/cli/media/demoReplay");
-  await main(["--mode=dev"]);
+  await main(mediaArgs(options));
 }
 
 export async function runGenerateEngineIcons(): Promise<void> {
