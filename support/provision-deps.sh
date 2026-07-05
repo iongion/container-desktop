@@ -185,17 +185,20 @@ install_tauri_test_deps() {
 }
 
 install_packaging_tools() {
+  # xdg-utils provides /usr/bin/xdg-open, which the AppImage bundler embeds — its absence fails the
+  # AppImage step even after the app has compiled and the deb/rpm are built (seen on minimal arm
+  # runners). icnsutils builds .icns icon sets; libarchive-tools/bsdtar + rpmbuild + fakeroot stage
+  # the tar/deb/rpm/pacman targets.
   case "$PM" in
     apt)
-      # libarchive-tools provides bsdtar; rpm provides rpmbuild; icnsutils builds .icns icon sets.
-      install_group "packaging tools" libarchive-tools rpm fakeroot icnsutils
+      install_group "packaging tools" libarchive-tools rpm fakeroot icnsutils xdg-utils
       ;;
     dnf|yum)
-      install_group "packaging tools" bsdtar rpm-build fakeroot dpkg
+      install_group "packaging tools" bsdtar rpm-build fakeroot dpkg xdg-utils
       ;;
     pacman)
-      # base-devel already provides bsdtar (libarchive) + fakeroot; add rpmbuild.
-      install_group "packaging tools" rpm-tools
+      # base-devel already provides bsdtar (libarchive) + fakeroot; add rpmbuild + xdg-open.
+      install_group "packaging tools" rpm-tools xdg-utils
       ;;
   esac
 }
