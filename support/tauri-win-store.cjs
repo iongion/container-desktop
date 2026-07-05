@@ -106,10 +106,7 @@ function createStoreManifestObject(identity) {
       ],
       Capabilities: [
         {
-          Capability: [
-            { $: { Name: "internetClient" } },
-            { $: { Name: "privateNetworkClientServer" } },
-          ],
+          Capability: [{ $: { Name: "internetClient" } }, { $: { Name: "privateNetworkClientServer" } }],
           "rescap:Capability": [{ $: { Name: "runFullTrust" } }],
         },
       ],
@@ -168,17 +165,52 @@ function normalizeFormat(format = "appx") {
   return normalized;
 }
 
-function createPackCommand({ format, stageDir, manifestPath, outputPath, exeName }) {
-  if (format === "appx") {
-    return {
-      command: "winapp",
-      args: ["tool", "makeappx", "pack", "/d", stageDir, "/p", outputPath, "/o"],
-    };
-  }
+function createPackCommand({ stageDir, outputPath }) {
+  // makeappx pack builds both .appx and .msix (same OPC package format; the output extension names it).
+  // Invoked DIRECTLY rather than through the @microsoft/winappcli `winapp` wrapper, which swallowed
+  // makeappx's error output and failed on CI runners even though makeappx itself packs the manifest fine.
+  // `command: "makeappx"` is a logical name; runPackCommand resolves the real makeappx.exe at pack time.
   return {
-    command: "winapp",
-    args: ["pack", stageDir, "--manifest", manifestPath, "--output", outputPath, "--executable", exeName],
+    command: "makeappx",
+    args: ["pack", "/d", stageDir, "/p", outputPath, "/o"],
   };
+}
+
+function compareWindowsKitVersions(a, b) {
+  const pa = a.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  const pb = b.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  for (let index = 0; index < Math.max(pa.length, pb.length); index += 1) {
+    const delta = (pa[index] || 0) - (pb[index] || 0);
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return 0;
+}
+
+// Locate makeappx.exe from the Windows 10/11 SDK (highest version, host tools), falling back to PATH.
+// Resolved lazily (only at pack time) so this module still imports on non-Windows for the unit tests.
+function findMakeAppx() {
+  if (process.env.MAKEAPPX_PATH && fs.existsSync(process.env.MAKEAPPX_PATH)) {
+    return process.env.MAKEAPPX_PATH;
+  }
+  const programFilesX86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+  const kitsBin = path.join(programFilesX86, "Windows Kits", "10", "bin");
+  if (fs.existsSync(kitsBin)) {
+    const versions = fs
+      .readdirSync(kitsBin)
+      .filter((name) => /^10\.\d/.test(name))
+      .sort((a, b) => compareWindowsKitVersions(b, a));
+    for (const version of versions) {
+      for (const hostArch of ["x64", "x86"]) {
+        const candidate = path.join(kitsBin, version, hostArch, "makeappx.exe");
+        if (fs.existsSync(candidate)) {
+          return candidate;
+        }
+      }
+    }
+  }
+  return "makeappx.exe";
 }
 
 function createStorePackagePlan(options = {}) {
@@ -195,7 +227,8 @@ function createStorePackagePlan(options = {}) {
   const identity = resolveStoreIdentity({ pkg, arch });
   const stageDir = path.join(releaseDir, "tauri-win-store", arch);
   const assetsDir = path.join(stageDir, "assets");
-  const manifestPath = path.join(stageDir, format === "appx" ? "AppxManifest.xml" : "Package.appxmanifest");
+  // makeappx pack always reads the manifest named AppxManifest.xml from the content dir, for .appx and .msix alike.
+  const manifestPath = path.join(stageDir, "AppxManifest.xml");
   const outputPath = path.join(releaseDir, winArtifactName(arch, pkg.version, format));
   const targetReleaseDir = path.join(projectRoot, "src-tauri", "target", target, "release");
   const files = [
@@ -222,13 +255,7 @@ function createStorePackagePlan(options = {}) {
     outputPath,
     files,
     manifest,
-    packCommand: createPackCommand({
-      format,
-      stageDir,
-      manifestPath,
-      outputPath,
-      exeName: identity.exeName,
-    }),
+    packCommand: createPackCommand({ stageDir, outputPath }),
   };
 }
 
@@ -246,13 +273,22 @@ function stageStorePackage(plan) {
 }
 
 function runPackCommand(plan) {
-  const result = childProcess.spawnSync(plan.packCommand.command, plan.packCommand.args, {
+  const executable = plan.packCommand.command === "makeappx" ? findMakeAppx() : plan.packCommand.command;
+  const { args } = plan.packCommand;
+  console.log(`> ${executable} ${args.join(" ")}`);
+  // stdio inherit so makeappx's own diagnostics reach the log (the winappcli wrapper used to swallow them).
+  const result = childProcess.spawnSync(executable, args, {
     cwd: plan.projectRoot,
     encoding: "utf8",
     stdio: "inherit",
   });
+  if (result.error) {
+    throw new Error(`Failed to launch makeappx (${executable}): ${result.error.message}`);
+  }
   if (result.status !== 0) {
-    throw new Error(`${plan.packCommand.command} ${plan.packCommand.args.join(" ")} failed`);
+    throw new Error(
+      `makeappx pack failed (exit ${result.status}${result.signal ? `, signal ${result.signal}` : ""}): ${executable} ${args.join(" ")}`,
+    );
   }
 }
 

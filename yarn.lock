@@ -1087,11 +1087,6 @@
   dependencies:
     prop-types "^15.7.2"
 
-"@microsoft/winappcli@0.4.0":
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/@microsoft/winappcli/-/winappcli-0.4.0.tgz#925a38a40b9db5af41300b45827b158d85e1f0df"
-  integrity sha512-JgfiSdph5kvennZxcDx79+py+mCzFURD7nwOGRjvJPNmprv6sClN+BG7j/5IFiZLSqMoD3Q/CXc8MKN8TN1ugw==
-
 "@monaco-editor/loader@^1.5.0":
   version "1.6.1"
   resolved "https://registry.yarnpkg.com/@monaco-editor/loader/-/loader-1.6.1.tgz#c99177d87765abf10de31a0086084e714acfbc0f"

@@ -120,7 +120,7 @@ describe("Tauri Windows Store packaging", () => {
     );
   });
 
-  it("uses Microsoft winapp for MSIX and the winapp-hosted MakeAppx tool for literal AppX", () => {
+  it("packs both MSIX and AppX by invoking makeappx directly (not the winappcli wrapper)", () => {
     const msix = store.createStorePackagePlan({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -138,24 +138,22 @@ describe("Tauri Windows Store packaging", () => {
       format: "appx",
     });
 
+    // Both formats stage the same AppxManifest.xml and differ only by the output extension.
+    expect(msix.manifestPath).toBe("/repo/release/tauri-win-store/x64/AppxManifest.xml");
     expect(msix.packCommand).toEqual({
-      command: "winapp",
+      command: "makeappx",
       args: [
         "pack",
+        "/d",
         "/repo/release/tauri-win-store/x64",
-        "--manifest",
-        "/repo/release/tauri-win-store/x64/Package.appxmanifest",
-        "--output",
+        "/p",
         "/repo/release/container-desktop-x64-5.3.18.msix",
-        "--executable",
-        "container-desktop.exe",
+        "/o",
       ],
     });
     expect(appx.packCommand).toEqual({
-      command: "winapp",
+      command: "makeappx",
       args: [
-        "tool",
-        "makeappx",
         "pack",
         "/d",
         "/repo/release/tauri-win-store/x64",
