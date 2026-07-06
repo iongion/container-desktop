@@ -3,7 +3,7 @@ TEMP_DIR:=$(PROJECT_ROOT)/temp
 PART?=patch
 
 
-.PHONY: clean prepare-node prepare check format build-website build-assets demo-record screenshots release test test-app trigger-cd-pipeline
+.PHONY: clean prepare-node prepare check format build-website build-assets screenshots release test test-app trigger-cd-pipeline
 
 clean:
 	@echo "Cleaning build artifacts"
@@ -46,18 +46,8 @@ screenshots:
 	fi; \
 	yarn screenshots
 
-demo-record:
-	@echo "Regenerating website rrweb demo replay"
-	@# nvm is a shell function — source it (as prepare-node does) so the .nvmrc node is used.
-	@if [ -s "$$NVM_DIR/nvm.sh" ]; then \
-		. "$$NVM_DIR/nvm.sh"; \
-		nvm use || nvm install; \
-	fi; \
-	yarn demo:record
-
 build-assets:
 	$(MAKE) screenshots
-	$(MAKE) demo-record
 	$(MAKE) build-website
 
 trigger-cd-pipeline:

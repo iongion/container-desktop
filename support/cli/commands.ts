@@ -113,11 +113,6 @@ export async function runUpdateScreenshots(options: Parameters<typeof mediaArgs>
   await main(mediaArgs(options));
 }
 
-export async function runUpdateDemoReplay(options: Parameters<typeof mediaArgs>[0] = {}): Promise<void> {
-  const { main } = await import("@/cli/media/demoReplay");
-  await main(mediaArgs(options));
-}
-
 export async function runGenerateEngineIcons(): Promise<void> {
   const { main } = await import("@/cli/media/generate-engine-icons");
   await main();

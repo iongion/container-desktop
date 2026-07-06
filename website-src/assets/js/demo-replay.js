@@ -1,36 +1,18 @@
+// Screenshot "pseudo player": pages through an ordered array of captured screenshots with a full
+// transport — play/pause, restart, a scrubber with a cue per frame, a time readout and arrow-key
+// stepping. The manifest (per engine, swapped by theme-switcher.js) is
+// { viewport, frameDurationMs, frames:[{screenshot,title}] }; the shell locks the viewport aspect-ratio
+// so the image never distorts and never letterboxes on resize.
 (() => {
   const mounts = document.querySelectorAll("[data-demo-replay]");
   if (!mounts.length) {
     return;
   }
 
-  function waitForReplayer() {
-    if (typeof window.rrwebReplayer === "function") {
-      return Promise.resolve(window.rrwebReplayer);
-    }
+  const TICK_MS = 100;
 
-    return new Promise((resolve, reject) => {
-      const timer = window.setTimeout(() => reject(new Error("rrweb replay did not load")), 15000);
-      window.addEventListener(
-        "rrweb-replay-ready",
-        () => {
-          window.clearTimeout(timer);
-          if (typeof window.rrwebReplayer === "function") {
-            resolve(window.rrwebReplayer);
-          } else {
-            reject(new Error("rrweb replay export is not a constructor"));
-          }
-        },
-        { once: true },
-      );
-    });
-  }
-
-  function durationOf(events) {
-    if (!Array.isArray(events) || events.length < 2) {
-      return 0;
-    }
-    return events[events.length - 1].timestamp - events[0].timestamp;
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   function formatTime(ms) {
@@ -38,38 +20,6 @@
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = `${totalSeconds % 60}`.padStart(2, "0");
     return `${minutes}:${seconds}`;
-  }
-
-  function resizeReplay(mount, replay, replayer) {
-    const shell = mount.querySelector("[data-demo-replay-shell]");
-    const target = mount.querySelector("[data-demo-replay-player]");
-    if (!shell || !target || !replayer?.wrapper) {
-      return;
-    }
-
-    const sourceWidth = replay.viewport?.width || 1068;
-    const sourceHeight = replay.viewport?.height || 718;
-    const availableWidth = shell.clientWidth || sourceWidth;
-    const scale = Math.min(1, availableWidth / sourceWidth);
-    const scaledWidth = Math.ceil(sourceWidth * scale);
-    const scaledHeight = Math.ceil(sourceHeight * scale);
-    mount.style.setProperty("--demo-replay-source-width", `${sourceWidth}px`);
-    shell.style.aspectRatio = `${sourceWidth} / ${sourceHeight}`;
-    target.style.width = `${scaledWidth}px`;
-    target.style.height = `${scaledHeight}px`;
-    replayer.wrapper.style.width = `${sourceWidth}px`;
-    replayer.wrapper.style.height = `${sourceHeight}px`;
-    replayer.wrapper.style.transform = `scale(${scale})`;
-    replayer.wrapper.style.transformOrigin = "top left";
-    shell.style.height = `${scaledHeight}px`;
-  }
-
-  function currentOffset(replayer, replay) {
-    try {
-      return Math.min(durationOf(replay.events), replayer.getCurrentTime());
-    } catch {
-      return 0;
-    }
   }
 
   function setIconButton(button, label, icon) {
@@ -82,70 +32,21 @@
     button.appendChild(glyph);
   }
 
-  function cursorElement(replayer) {
-    return replayer?.wrapper?.querySelector(".replayer-mouse") || null;
-  }
-
-  function installCursorIdle(replayer, replay) {
-    const sourceWidth = replay.viewport?.width || 1068;
-    const sourceHeight = replay.viewport?.height || 718;
-    let mouse = null;
-    let idleTimer = 0;
-    let observer = null;
-
-    function hide() {
-      window.clearTimeout(idleTimer);
-      const currentMouse = mouse || cursorElement(replayer);
-      currentMouse?.classList.remove("is-moving");
-    }
-
-    function showBriefly() {
-      if (!mouse) {
-        return;
-      }
-      mouse.classList.add("is-moving");
-      window.clearTimeout(idleTimer);
-      idleTimer = window.setTimeout(() => mouse?.classList.remove("is-moving"), 520);
-    }
-
-    function setup() {
-      if (observer) {
-        return true;
-      }
-
-      mouse = cursorElement(replayer);
-      if (!mouse) {
-        return false;
-      }
-
-      mouse.style.left = `${sourceWidth / 2}px`;
-      mouse.style.top = `${sourceHeight / 2}px`;
-      mouse.classList.remove("is-moving");
-      observer = new MutationObserver(() => showBriefly());
-      observer.observe(mouse, { attributes: true, attributeFilter: ["style"] });
-      return true;
-    }
-
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      window.setTimeout(setup, attempt * 50);
-    }
-
-    return { hide };
-  }
-
-  function renderControls(mount, replay, replayer, cursor, poster) {
+  function renderControls(mount, manifest, view) {
     const controls = mount.querySelector("[data-demo-replay-controls]");
     if (!controls) {
-      return { seekTo() {} };
+      return { seekTo() {}, dispose() {} };
     }
 
+    const frameMs = Math.max(1, manifest.frameDurationMs || 3000);
+    const total = Math.max(1, frameMs * manifest.frames.length);
+    let offset = 0;
     let playing = false;
-    const total = Math.max(1, durationOf(replay.events));
+    let timer = 0;
 
     const playButton = document.createElement("button");
     playButton.type = "button";
     playButton.className = "demo-replay-button";
-
     function setPlayButtonState(isPlaying) {
       setIconButton(playButton, isPlaying ? "Pause demo" : "Play demo", isPlaying ? "fa-pause" : "fa-play");
     }
@@ -177,117 +78,103 @@
 
     const markers = document.createElement("div");
     markers.className = "demo-replay-markers";
-    for (const chapter of replay.chapters || []) {
+    manifest.frames.forEach((frame, index) => {
       const marker = document.createElement("span");
       marker.className = "demo-replay-marker";
-      marker.title = chapter.title || chapter.label || chapter.keyword || "";
-      marker.style.left = `${Math.min(100, Math.max(0, (chapter.atMs / total) * 100))}%`;
+      marker.title = frame.title || "";
+      marker.style.left = `${clamp((index * frameMs) / total, 0, 1) * 100}%`;
       markers.appendChild(marker);
-    }
+    });
     seek.append(slider, markers);
 
-    function updateTimeline(offset) {
-      const clamped = Math.max(0, Math.min(total, offset));
-      slider.value = `${clamped}`;
-      slider.style.setProperty("--progress", `${(clamped / total) * 100}%`);
-      time.textContent = `${formatTime(clamped)} / ${formatTime(total)}`;
+    function stop() {
+      playing = false;
+      window.clearInterval(timer);
+      setPlayButtonState(false);
     }
 
-    function seekTo(offset, shouldPlay = playing) {
-      const clamped = Math.max(0, Math.min(total, offset));
-      if (shouldPlay) {
-        playing = true;
-        setPlayButtonState(true);
-        poster.hide();
-        replayer.play(clamped);
-      } else {
-        playing = false;
-        setPlayButtonState(false);
-        poster.hide();
-        replayer.play(clamped);
-        window.requestAnimationFrame(() => {
-          replayer.pause(clamped);
-          cursor.hide();
-        });
+    function render(next) {
+      offset = clamp(next, 0, total);
+      slider.value = `${offset}`;
+      slider.style.setProperty("--progress", `${(offset / total) * 100}%`);
+      time.textContent = `${formatTime(offset)} / ${formatTime(total)}`;
+      view.showFrameAt(offset);
+    }
+
+    function play(from) {
+      const start = from >= total ? 0 : from;
+      render(start);
+      playing = true;
+      setPlayButtonState(true);
+      window.clearInterval(timer);
+      timer = window.setInterval(() => {
+        render(offset + TICK_MS);
+        if (offset >= total) {
+          stop();
+        }
+      }, TICK_MS);
+    }
+
+    function seekTo(next, resumePlaying = playing) {
+      const wasPlaying = resumePlaying;
+      stop();
+      render(next);
+      if (wasPlaying) {
+        play(offset);
       }
-      updateTimeline(clamped);
     }
 
     playButton.addEventListener("click", () => {
-      const offset = currentOffset(replayer, replay);
       if (playing) {
-        replayer.pause();
-        playing = false;
-        setPlayButtonState(false);
-        cursor.hide();
+        stop();
       } else {
-        const nextOffset = offset >= total ? 0 : offset;
-        poster.hide();
-        replayer.play(nextOffset);
-        playing = true;
-        setPlayButtonState(true);
-        updateTimeline(nextOffset);
-        return;
+        play(offset);
       }
-      updateTimeline(offset);
     });
+    restartButton.addEventListener("click", () => seekTo(0, false));
 
-    restartButton.addEventListener("click", () => {
-      seekTo(0, false);
-      cursor.hide();
+    // Dragging the scrubber previews frames live; releasing keeps playing if it was.
+    slider.addEventListener("input", () => {
+      const wasPlaying = playing;
+      stop();
+      render(Number(slider.value));
+      playing = wasPlaying;
     });
-
-    slider.addEventListener("input", () => updateTimeline(Number(slider.value)));
     slider.addEventListener("change", () => seekTo(Number(slider.value)));
 
     markers.addEventListener("click", (event) => {
       const rect = markers.getBoundingClientRect();
-      if (!rect.width) {
-        return;
+      if (rect.width) {
+        seekTo(((event.clientX - rect.left) / rect.width) * total);
       }
-      seekTo(((event.clientX - rect.left) / rect.width) * total);
     });
 
-    controls.replaceChildren(transport, time, seek);
-    updateTimeline(0);
-
-    const progressTimer = window.setInterval(() => {
-      if (!playing) {
-        return;
-      }
-
-      const offset = currentOffset(replayer, replay);
-      updateTimeline(offset);
-      if (offset >= total) {
-        playing = false;
-        setPlayButtonState(false);
-        poster.hide();
-        cursor.hide();
-      }
-    }, 500);
-
-    return { seekTo, dispose: () => window.clearInterval(progressTimer) };
-  }
-
-  function installKeyboardShortcuts(mount, replay, replayer, controls) {
-    const handler = (event) => {
+    const onKeydown = (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
         return;
       }
-
-      const delta = event.key === "ArrowLeft" ? -1000 : 1000;
-      const offset = Math.max(0, Math.min(durationOf(replay.events), currentOffset(replayer, replay) + delta));
-      controls.seekTo(offset);
+      event.preventDefault();
+      const index = Math.floor(offset / frameMs);
+      const nextIndex = clamp(index + (event.key === "ArrowLeft" ? -1 : 1), 0, manifest.frames.length - 1);
+      seekTo(nextIndex * frameMs);
     };
-    mount.addEventListener("keydown", handler);
-    return () => mount.removeEventListener("keydown", handler);
+    mount.addEventListener("keydown", onKeydown);
+
+    controls.replaceChildren(transport, time, seek);
+    render(0);
+
+    return {
+      seekTo,
+      dispose: () => {
+        window.clearInterval(timer);
+        mount.removeEventListener("keydown", onKeydown);
+      },
+    };
   }
 
-  // Per-mount teardown hooks (timer, listeners) + the original poster markup, so a
-  // theme switch can rebuild the player on a different replay without leaking.
   const replayState = new WeakMap();
 
-  function teardownReplay(mount) {
+  function teardown(mount) {
     const state = replayState.get(mount);
     if (!state) {
       return;
@@ -302,95 +189,71 @@
     state.cleanups = [];
   }
 
-  function buildPoster(mount, state) {
-    if (!state.posterHtml) {
-      return null;
-    }
-    const holder = document.createElement("div");
-    holder.innerHTML = state.posterHtml;
-    const poster = holder.firstElementChild;
-    const src = mount.getAttribute("data-demo-poster");
-    const fallbackSrc = mount.getAttribute("data-demo-poster-fallback");
-    if (poster) {
-      if (fallbackSrc) {
-        poster.onerror = () => {
-          poster.onerror = null;
-          poster.setAttribute("src", fallbackSrc);
-        };
-      }
-      if (src) {
-        poster.setAttribute("src", src);
-      }
-    }
-    return poster;
-  }
-
   async function initReplay(mount) {
     const target = mount.querySelector("[data-demo-replay-player]");
-    const replayUrl = mount.getAttribute("data-demo-replay");
-    if (!target || !replayUrl) {
+    const url = mount.getAttribute("data-demo-replay");
+    if (!target || !url) {
       return;
     }
 
     let state = replayState.get(mount);
     if (!state) {
-      state = { cleanups: [], posterHtml: target.querySelector(".demo-replay-poster")?.outerHTML || null };
+      state = { cleanups: [] };
       replayState.set(mount, state);
     }
-    teardownReplay(mount);
+    teardown(mount);
     delete mount.dataset.demoReplayError;
 
-    const Replayer = await waitForReplayer();
-    let response = await fetch(replayUrl);
-    // Until an engine's replay is captured its JSON is absent; fall back to podman's.
+    let response = await fetch(url);
     const fallbackUrl = mount.getAttribute("data-demo-replay-fallback");
-    if (!response.ok && fallbackUrl && fallbackUrl !== replayUrl) {
+    if (!response.ok && fallbackUrl && fallbackUrl !== url) {
       response = await fetch(fallbackUrl);
     }
     if (!response.ok) {
-      throw new Error(`Unable to load replay: ${response.status}`);
+      throw new Error(`Unable to load demo manifest: ${response.status}`);
     }
-    const replay = await response.json();
-    const poster = buildPoster(mount, state);
-    target.replaceChildren();
-    if (poster) {
-      target.appendChild(poster);
+    const manifest = await response.json();
+    if (!Array.isArray(manifest.frames) || manifest.frames.length === 0) {
+      throw new Error("Demo manifest has no frames");
     }
-    target.dataset.replayPoster = "loading";
 
-    const replayer = new Replayer(replay.events, {
-      root: target,
-      speed: 1,
-      skipInactive: false,
-      mouseTail: false,
-      showWarning: false,
-      triggerFocus: false,
-    });
-    replayer.disableInteract();
-    replayer.play(0);
-    replayer.pause(0);
+    // Lock the shell to the capture aspect-ratio: the image then fills it exactly at any width, so it
+    // never distorts and never letterboxes (the source of the pink border at narrow widths).
+    const shell = mount.querySelector("[data-demo-replay-shell]");
+    if (shell && manifest.viewport?.width && manifest.viewport?.height) {
+      shell.style.setProperty("--demo-aspect", `${manifest.viewport.width} / ${manifest.viewport.height}`);
+    }
 
-    resizeReplay(mount, replay, replayer);
-    const cursor = installCursorIdle(replayer, replay);
-    const posterControls = {
-      show() {
-        target.dataset.replayPoster = "loading";
-      },
-      hide() {
-        target.dataset.replayPoster = "hidden";
-      },
-    };
-    const controls = renderControls(mount, replay, replayer, cursor, posterControls);
-    cursor.hide();
-    window.requestAnimationFrame(() => {
-      replayer.pause(0);
-      posterControls.hide();
-      cursor.hide();
-    });
-    const disposeKeys = installKeyboardShortcuts(mount, replay, replayer, controls);
-    const onResize = () => resizeReplay(mount, replay, replayer);
-    window.addEventListener("resize", onResize, { passive: true });
-    state.cleanups.push(controls.dispose, disposeKeys, () => window.removeEventListener("resize", onResize));
+    // Reuse the poster <img> as the frame surface (keeps theme-switcher's element wiring intact).
+    let frame = target.querySelector(".demo-replay-poster");
+    if (!frame) {
+      frame = document.createElement("img");
+      frame.className = "demo-replay-poster";
+      target.appendChild(frame);
+    }
+    frame.classList.add("demo-replay-frame");
+    frame.setAttribute("alt", "Container Desktop demo");
+    frame.decoding = "async";
+
+    // Warm the browser cache so paging between frames never flashes.
+    for (const item of manifest.frames) {
+      const pre = new Image();
+      pre.src = item.screenshot;
+    }
+
+    let currentIndex = -1;
+    function showFrameAt(offsetMs) {
+      const index = clamp(Math.floor(offsetMs / (manifest.frameDurationMs || 3000)), 0, manifest.frames.length - 1);
+      if (index !== currentIndex) {
+        currentIndex = index;
+        frame.setAttribute("src", manifest.frames[index].screenshot);
+      }
+    }
+    showFrameAt(0);
+    target.dataset.replayPoster = "ready";
+
+    const controls = renderControls(mount, manifest, { showFrameAt });
+    state.cleanups.push(controls.dispose);
   }
 
   function runReplay(mount) {
@@ -400,8 +263,7 @@
     });
   }
 
-  // Re-rendered by theme-switcher.js when the swatch selects an engine whose
-  // tutorial replay/poster differ from the one currently shown.
+  // Re-rendered by theme-switcher.js when the swatch selects an engine whose demo manifest differs.
   window.__cdReplayReinit = () => {
     for (const mount of mounts) {
       runReplay(mount);

@@ -18,7 +18,6 @@ import {
   runPublishRelease,
   runRelease,
   runStart,
-  runUpdateDemoReplay,
   runUpdateScreenshots,
   runVersionSync,
   uninstallSelfSignedAppx,
@@ -126,15 +125,6 @@ program
   .action((options) => {
     fetchMsix(options);
   });
-
-program
-  .command("update-demo-replay")
-  .description("Regenerate the website rrweb demo replay")
-  .option("--backend <backend>", "electron | tauri (defaults to CONTAINER_DESKTOP_CAPTURE_BACKEND, else electron)")
-  .option("--engine <engines>", "comma-separated engines to record (podman,docker,unified)")
-  .option("--mode <mode>", "dev | built", "dev")
-  .option("--kill-stray", "kill orphaned capture apps/drivers first", false)
-  .action((options) => runUpdateDemoReplay(options));
 
 program
   .command("update-screenshots")

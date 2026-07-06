@@ -1,7 +1,7 @@
-// Backend-agnostic capture driver: the minimal page-automation surface both capture paths implement —
-// Playwright/CDP (Electron, Chromium) and WebdriverIO/W3C-WebDriver (Tauri, WebKitGTK). The screenshot
-// and demo-replay orchestration (screenshotActions.ts, demoReplay.ts) is written against this port so a
-// single action layer drives either shell; the backend is chosen by CONTAINER_DESKTOP_CAPTURE_BACKEND
+// Backend-agnostic capture driver: the minimal page-automation surface the screenshot capture implements
+// on both shells — Playwright/CDP (Electron, Chromium) and WebdriverIO/W3C-WebDriver (Tauri, WebKitGTK).
+// The screenshot orchestration (screenshotActions.ts) is written against this port so a single action
+// layer drives either shell; the backend is chosen by CONTAINER_DESKTOP_CAPTURE_BACKEND
 // (see ./backend). DOM logic stays inside evaluate() — identical page-side JS on both engines — leaving
 // only a small set of true primitives (pointer, screenshot, injection) backend-specific.
 

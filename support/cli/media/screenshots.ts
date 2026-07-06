@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
+import { writeDemoManifests } from "./demoManifest";
 import { createBackend, resolveCaptureBackend, screenshotOutDir } from "./drivers/backend";
 import type { CaptureBackend, CaptureDriver } from "./drivers/types";
 import {
@@ -185,5 +186,10 @@ export async function main(argv = process.argv.slice(2)) {
       }
     });
     port += 1;
+  }
+  // The website demo is a slideshow of these very screenshots — write its per-engine manifests now that
+  // the shots are captured (the demo is folded into the screenshot run, no separate capture step).
+  if (!args.only) {
+    writeDemoManifests(engines);
   }
 }

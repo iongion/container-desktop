@@ -5,8 +5,8 @@ import type { Box, CaptureDriver, Nth, Viewport } from "./types";
 //  - execute() passes the single arg positionally to match Playwright's evaluate(fn, arg) semantics.
 //  - evaluateAsync() reconstructs the promise-returning page function via indirect eval, because
 //    browser.execute does NOT await a returned Promise (only executeAsync's done-callback does).
-//  - pointerMove() interpolates the motion into N sub-moves over a short duration so rrweb samples a
-//    smooth cursor track (the full-parity requirement), via the W3C Actions API (performActions).
+//  - pointerMove() drives the pointer via the W3C Actions API (performActions) so screenshot
+//    pre-actions can position the cursor over a computed box before clicking (e.g. row action menus).
 // The __name shim (see runtimeShim.ts) must already be injected in the page before any of these run.
 
 const POINTER_ID = "mouse";
@@ -207,7 +207,7 @@ export function createWebdriverDriver(browser: any): CaptureDriver {
     async pointerMove(x, y, steps) {
       const from = lastPointer;
       const count = Math.max(1, steps);
-      // Spread the move over a short window so rrweb (mousemove sampled ~every 20ms) records a smooth path.
+      // Spread the move over a short window (a few interpolated sub-moves) so WebKit settles hover state.
       const totalMs = clamp(Math.round(count * 12), 120, 700);
       const perStep = Math.max(1, Math.round(totalMs / count));
       const actions: any[] = [];
