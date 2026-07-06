@@ -1,0 +1,21 @@
+/* Shared copy-to-clipboard button. The only copy confirmation in the app is the in-button tick that
+   replaces the clipboard icon (never a toast); it pops in briefly so the feedback reads as a small
+   animation, then reverts. */
+.CopyButton.CopyButton--copied .bp6-icon {
+  transform-origin: center;
+  animation: CopyButtonTick 180ms ease-out;
+}
+
+@keyframes CopyButtonTick {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

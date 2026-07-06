@@ -37,12 +37,8 @@
       "@/container-client/*": ["./src/container-client/*"],
       "@/container-provisioning": ["./src/container-provisioning"],
       "@/container-provisioning/*": ["./src/container-provisioning/*"],
-      "@/electron-shell": ["./src/electron-shell"],
-      "@/electron-shell/*": ["./src/electron-shell/*"],
       "@/env": ["./src/env"],
       "@/env/*": ["./src/env/*"],
-      "@/logger": ["./src/logger"],
-      "@/logger/*": ["./src/logger/*"],
       "@/platform": ["./src/platform"],
       "@/platform/*": ["./src/platform/*"],
       "@/resources": ["./src/resources"],
@@ -52,7 +48,9 @@
       "@/utils": ["./src/utils"],
       "@/utils/*": ["./src/utils/*"],
       "@/web-app": ["./src/web-app"],
-      "@/web-app/*": ["./src/web-app/*"]
+      "@/web-app/*": ["./src/web-app/*"],
+      "@/cli": ["./support/cli"],
+      "@/cli/*": ["./support/cli/*"]
     }
   },
   "include": ["src", "tests"]

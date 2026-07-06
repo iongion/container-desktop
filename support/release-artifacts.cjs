@@ -45,11 +45,14 @@ function assetBelongsToRelease(name, version) {
 
 function isWindowsBuilderInstallerAsset(name, version) {
   const unchecksummed = stripChecksumExtension(name);
-  return new Set([
-    winArtifactName("x64", version, "exe"),
-    `${winArtifactName("x64", version, "exe")}.blockmap`,
-    winArtifactName("x64", version, "appx"),
-  ]).has(unchecksummed);
+  const privateWindowsAssets = new Set();
+  for (const arch of ["x64", "arm64"]) {
+    privateWindowsAssets.add(winArtifactName(arch, version, "exe"));
+    privateWindowsAssets.add(`${winArtifactName(arch, version, "exe")}.blockmap`);
+    privateWindowsAssets.add(winArtifactName(arch, version, "appx"));
+    privateWindowsAssets.add(winArtifactName(arch, version, "msix"));
+  }
+  return privateWindowsAssets.has(unchecksummed);
 }
 
 function isBlockmapAsset(name) {
@@ -84,7 +87,10 @@ function skippedReleaseAssets(releaseDir, version) {
   return fs
     .readdirSync(releaseDir)
     .filter((name) => fs.statSync(path.join(releaseDir, name)).isFile())
-    .filter((name) => name.startsWith(APP_NAME) && assetBelongsToRelease(name, version) && !isPublicReleaseAsset(name, version))
+    .filter(
+      (name) =>
+        name.startsWith(APP_NAME) && assetBelongsToRelease(name, version) && !isPublicReleaseAsset(name, version),
+    )
     .sort();
 }
 
@@ -107,6 +113,16 @@ function extractChangelogSection(text, version) {
 
 function sha256File(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+// Write the bare-hex `<file>.sha256` sidecar for a single freshly built artifact. Each Tauri packager
+// calls this as it finishes a file, so building one `package:tauri:*` script by hand yields the same
+// artifact+checksum pairs the full release sweep (writeChecksums) and CI already produce — without a
+// separate `yarn cli checksums` pass. Same format as writeChecksums (64-char hex digest, no newline).
+function writeChecksum(filePath) {
+  const checksumPath = `${filePath}.sha256`;
+  fs.writeFileSync(checksumPath, sha256File(filePath), "utf8");
+  return checksumPath;
 }
 
 function writeChecksums(releaseDir, version) {
@@ -201,7 +217,9 @@ function downloadWorkflowArtifacts({ repo, runIds, releaseDir }) {
 }
 
 function releaseExists(repo, version) {
-  return runCommand("gh", ["release", "view", version, "--repo", repo], { allowFailure: true, quiet: true }).status === 0;
+  return (
+    runCommand("gh", ["release", "view", version, "--repo", repo], { allowFailure: true, quiet: true }).status === 0
+  );
 }
 
 function uploadRelease({ repo, version, title, notesPath, assets, clobber }) {
@@ -426,5 +444,6 @@ module.exports = {
   publish,
   skippedReleaseAssets,
   winArtifactName,
+  writeChecksum,
   writeChecksums,
 };

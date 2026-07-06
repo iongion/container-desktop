@@ -7,7 +7,7 @@ import {
   type SSHHost,
   type WSLDistribution,
 } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 // locals
 const logger = createLogger("container-client.shared");

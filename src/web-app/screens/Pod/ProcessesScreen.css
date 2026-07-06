@@ -24,7 +24,7 @@
   width: calc(100% - 40px);
   min-height: 25px;
 }
-.CommandColumn button[data-action="copy.to.clipboard"] {
+.CommandColumn .CopyButton {
   position: absolute;
   right: -30px;
 }

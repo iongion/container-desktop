@@ -9,7 +9,7 @@ import {
   LOGGING_FILE_MAX_FILES,
   LOGGING_FILE_MAX_SIZE_MB,
   normalizeLoggingFileSettings,
-} from "@/logger/loggingSettings";
+} from "@/platform/logger/loggingSettings";
 import { LOGGING_LEVELS } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";

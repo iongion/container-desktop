@@ -1,11 +1,11 @@
-import { Button, Code, HTMLTable, Intent, NonIdealState } from "@blueprintjs/core";
+import { Code, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { AppLabel } from "@/web-app/components/AppLabel";
+import { CopyButton } from "@/web-app/components/CopyButton";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
-import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
@@ -37,18 +37,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     containerQuery.refetch();
     processesQuery.refetch();
   }, [containerQuery, processesQuery]);
-  const onCopyToClipboardClick = useCallback(
-    async (e) => {
-      const contentNode = e.currentTarget?.parentNode.closest("td");
-      await navigator.clipboard.writeText(contentNode?.getAttribute("data-command") || "");
-      Notification.show({
-        message: t("The command was copied to clipboard"),
-        intent: Intent.SUCCESS,
-      });
-    },
-    [t],
-  );
-
   if (!container) {
     return <ScreenLoader screen={ID} pending={pending} />;
   }
@@ -80,13 +68,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       const processColumnKey = `${pid}-${processColumn}`;
                       if (processColumn.toLowerCase() === "command") {
                         return (
-                          <td key={processColumnKey} data-column={processColumn} data-command={columnValue}>
-                            <Button
-                              onClick={onCopyToClipboardClick}
-                              variant="minimal"
-                              size="small"
+                          <td key={processColumnKey} data-column={processColumn}>
+                            <CopyButton
+                              text={columnValue}
                               title={t("{{command}} (click to copy to clipboard)", { command: columnValue })}
-                              icon={IconNames.CLIPBOARD}
                             />
                           </td>
                         );

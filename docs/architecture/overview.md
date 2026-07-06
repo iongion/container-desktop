@@ -45,8 +45,8 @@ renders the results.
 ## C4 L2 — Containers (runnable pieces)
 
 The app is a Node/TypeScript Electron app (see [`CLAUDE.md`](../../CLAUDE.md) for
-the build model), with Python build tooling (not shown — it builds, it doesn't run
-at app runtime).
+the build model), with a TypeScript build CLI in `support/cli/` (not shown — it
+builds, it doesn't run at app runtime).
 
 The interesting and slightly unusual part is **where the engine logic runs**: the
 `container-client` "backend" executes **in the renderer process**, not the main
@@ -60,12 +60,12 @@ flowchart TB
   subgraph app[container-desktop]
     direction TB
 
-    main["Electron Main process<br/>(electron-shell/main.ts)<br/>window &amp; app lifecycle, terminal,<br/>file dialogs, owns userConfiguration"]:::container
+    main["Electron Main process<br/>(platform/electron/main.ts)<br/>window &amp; app lifecycle, terminal,<br/>file dialogs, owns userConfiguration"]:::container
 
     subgraph rp[Renderer process]
       direction TB
       web["Web-app world<br/>(web-app/ + container-client/)<br/>React UI + engine orchestration"]:::container
-      preload["Preload bridge — Node world<br/>(electron-shell/preload.ts,<br/>platform/node-executor.ts)<br/>Command · FS · Platform · Path · MessageBus"]:::container
+      preload["Preload bridge — Node world<br/>(platform/electron/preload.ts,<br/>platform/electron/command.ts)<br/>Command · FS · Platform · Path · MessageBus"]:::container
     end
   end
 
@@ -83,7 +83,7 @@ flowchart TB
 
 ### The pieces
 
-- **Electron Main process** — `src/electron-shell/main.ts`. Creates the
+- **Electron Main process** — `src/platform/electron/main.ts`. Creates the
   `BrowserWindow`, handles app/window lifecycle and a small set of IPC channels
   (`window.*`, `application.*`, `openTerminal`, `openFileSelector`, `notify`), and
   owns `userConfiguration` (settings persistence). It does **not** broker engine
@@ -93,17 +93,17 @@ flowchart TB
   - **Web-app world** — `src/web-app/` (React UI) plus the bundled
     `src/container-client/` engine logic. This is where a connection is composed
     and driven (see [backend.md](backend.md)). It has no direct Node access.
-  - **Preload bridge** — `src/electron-shell/preload.ts` exposes the real
-    Node-side primitives from `src/platform/` via `contextBridge`:
+  - **Preload bridge** — `src/platform/electron/preload.ts` exposes the real
+    Node-side primitives from `src/platform/electron/` via `contextBridge`:
     `Command` (process spawn, `ProxyRequest` = HTTP over a unix socket / named
     pipe, `StartSSHConnection`), `FS`, `Platform`, `Path`, and `MessageBus`.
     Engine I/O physically happens here, in Node.
 - **Socket bridge (in-process)** — for hosts whose engine socket isn't locally reachable, the
   preload runs an in-process Node bridge server that fronts a local pipe/socket and pumps bytes to
   the engine's own `docker`/`podman system dial-stdio`. `WSLRelayServer`
-  ([`exec/wsl-relay.ts`](../../src/platform/exec/wsl-relay.ts)) fronts a Windows named pipe and
+  ([`exec/wsl-relay.ts`](../../src/platform/electron/exec/wsl-relay.ts)) fronts a Windows named pipe and
   runs `wsl.exe --exec … system dial-stdio` inside the distro (no SSH server in the distro);
-  `SSHStdioBridgeServer` ([`exec/ssh-stdio-bridge.ts`](../../src/platform/exec/ssh-stdio-bridge.ts))
+  `SSHStdioBridgeServer` ([`exec/ssh-stdio-bridge.ts`](../../src/platform/electron/exec/ssh-stdio-bridge.ts))
   runs `system dial-stdio` on a **remote host over SSH**. Linux/macOS remote SSH can also use the
   native `ssh` client's port forward. See [connection-startup.md](connection-startup.md).
 - **External engines** — Podman/Docker REST sockets, plus Apple Container's
@@ -122,10 +122,12 @@ here.
 
 | Piece | Path |
 | --- | --- |
-| Main process | [`src/electron-shell/main.ts`](../../src/electron-shell/main.ts) |
-| Preload bridge | [`src/electron-shell/preload.ts`](../../src/electron-shell/preload.ts) |
-| Node primitives (`Command`) | [`node-executor.ts`](../../src/platform/node-executor.ts) facade + [`platform/exec/`](../../src/platform/exec/) impl modules · [`src/platform/node.ts`](../../src/platform/node.ts) |
-| IPC bus | [`src/electron-shell/shared.ts`](../../src/electron-shell/shared.ts) |
+| Main process | [`src/platform/electron/main.ts`](../../src/platform/electron/main.ts) |
+| Preload bridge | [`src/platform/electron/preload.ts`](../../src/platform/electron/preload.ts) |
+| Electron host ports | [`host.ts`](../../src/platform/electron/host.ts) |
+| Electron command facade | [`command.ts`](../../src/platform/electron/command.ts) + [`exec/`](../../src/platform/electron/exec/) |
+| IPC bus | [`messageBus.ts`](../../src/platform/electron/messageBus.ts) |
 | Engine logic (backend) | [`src/container-client/`](../../src/container-client/) |
 | React renderer (frontend) | [`src/web-app/`](../../src/web-app/) |
-| Socket bridge servers | [`exec/ssh-stdio-bridge.ts`](../../src/platform/exec/ssh-stdio-bridge.ts) · [`exec/wsl-relay.ts`](../../src/platform/exec/wsl-relay.ts) |
+| Platform-port naming | [`platform-ports.md`](platform-ports.md) |
+| Socket bridge servers | [`exec/ssh-stdio-bridge.ts`](../../src/platform/electron/exec/ssh-stdio-bridge.ts) · [`exec/wsl-relay.ts`](../../src/platform/electron/exec/wsl-relay.ts) |

@@ -1,6 +1,6 @@
 import EventEmitter from "eventemitter3";
 import { type CommandExecutionResult, OperatingSystem, type SpawnedProcess } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { runSSHPreflight } from "./diagnostics/ssh-preflight";
 import {
   buildSSHArgs,

@@ -1,6 +1,6 @@
+import http from "node:http";
 import axios from "axios";
 import httpAdapter from "axios/lib/adapters/http.js";
-import http from "node:http";
 
 export function createApiDriver() {
   const httpAgent = new http.Agent({

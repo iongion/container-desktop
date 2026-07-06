@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { DEFAULT_THEME } from "@/web-app/App.config";
 import "@/web-app/App.css";
 import "@/web-app/App.i18n";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { AppBootstrapPhase, AppTheme } from "@/web-app/App.types";
 import { bootTimeline } from "@/web-app/bootTimeline";
 import AppErrorBoundary from "@/web-app/components/AppErrorBoundary";

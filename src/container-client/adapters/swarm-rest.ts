@@ -26,6 +26,7 @@ import type {
   SwarmStack,
   SwarmTask,
 } from "@/env/Types";
+import { toBase64 } from "@/utils/base64";
 import { DOCKER_BASE_URL } from "./baseUrls";
 
 const STACK_NAMESPACE_LABEL = "com.docker.stack.namespace";
@@ -56,19 +57,6 @@ function isNotSwarmManager(error: any): boolean {
     message.includes("not part of a swarm") ||
     message.includes("status code 503")
   );
-}
-
-/** UTF-8 → base64 that works in both Node (dialect/main) and the browser renderer (SwarmAdapter). */
-function toBase64(value: string): string {
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(value, "utf-8").toString("base64");
-  }
-  const bytes = new TextEncoder().encode(value);
-  let binary = "";
-  for (const b of bytes) {
-    binary += String.fromCharCode(b);
-  }
-  return btoa(binary);
 }
 
 async function readList<T>(driver: AxiosInstance, url: string, extra?: Record<string, unknown>): Promise<T[]> {

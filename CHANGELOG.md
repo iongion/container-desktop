@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-07-06
+
+### Changed
+
+- Switch to tauri engine
+- Replace the Python `invoke` build tooling with a home-grown TypeScript CLI (`yarn cli`, in `support/cli/`)
+
 ## [5.3.18] - 2026-07-03
 
 ### Fixed

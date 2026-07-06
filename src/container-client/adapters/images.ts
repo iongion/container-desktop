@@ -2,7 +2,7 @@
 // Images use the driver's default (per-connection) baseURL — no per-call libpod/docker override.
 
 import type { ContainerImage, ContainerImageHistory } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { ResourceAdapter } from "./shared";
 
 const logger = createLogger("client.images");

@@ -9,7 +9,7 @@ import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
 import { usePullFromRegistry } from "./queries";
 import "./SearchResultDrawer.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.registry");
 

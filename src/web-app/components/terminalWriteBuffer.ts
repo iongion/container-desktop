@@ -1,6 +1,8 @@
-// A tiny write coalescer for xterm: batches many small stream chunks into one terminal.write()
-// per animation frame. Prevents xterm thrashing (and any residual flicker) under high log volume.
-// The scheduler is injectable so it is unit-testable without a real animation frame.
+// A tiny write coalescer for xterm: batches many small stream chunks into one terminal.write() per ~frame.
+// Prevents xterm thrashing (and any residual flicker) under high log volume. Drains on a macrotask timer, NOT
+// requestAnimationFrame: WebKitGTK (Tauri) holds pending rAF callbacks while the webview is idle, which would
+// leave streamed logs buffered until an input event (the "logs don't paint until I click" freeze). A timer
+// fires regardless of compositor idle state. The scheduler is injectable so it is unit-testable without timers.
 
 export interface WriteBuffer {
   push: (data: string) => void;
@@ -11,8 +13,8 @@ export interface WriteBuffer {
 
 export function createWriteBuffer(
   flush: (joined: string) => void,
-  schedule: (cb: () => void) => number = (cb) => requestAnimationFrame(cb),
-  cancel: (handle: number) => void = (handle) => cancelAnimationFrame(handle),
+  schedule: (cb: () => void) => number = (cb) => setTimeout(cb, 16) as unknown as number,
+  cancel: (handle: number) => void = (handle) => clearTimeout(handle),
 ): WriteBuffer {
   let pending: string[] = [];
   let handle: number | null = null;

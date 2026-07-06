@@ -1,12 +1,12 @@
-import { Button, H5, HTMLTable, Intent } from "@blueprintjs/core";
+import { H5, HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { OperatingSystem } from "@/env/Types";
 import { isEmpty } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
-import { Notification } from "@/web-app/Notification";
+import { CopyButton } from "@/web-app/components/CopyButton";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from "./ScreenHeader";
@@ -40,7 +40,7 @@ const codeExample = `// This code example demonstrates how to connect to the con
 import axios from "axios"; // npm install axios
 import httpAdapter from "axios/lib/adapters/http.js";
 import http from "node:http";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.connections");
 
@@ -87,15 +87,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     .replaceAll("%LABEL%", selected?.label || "")
     .replaceAll("%SCOPE%", selected?.settings.controller?.scope || "");
 
-  const onCopyToClipboardClick = useCallback(async (e) => {
-    const contentNode = e.currentTarget?.parentNode.closest("tr").querySelector("td:nth-child(2)");
-    await navigator.clipboard.writeText((contentNode?.innerText || "").trim());
-    Notification.show({
-      message: t("The value was copied to clipboard"),
-      intent: Intent.SUCCESS,
-    });
-  }, []);
-
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader
@@ -122,7 +113,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("ID")}</code>
               </td>
               <td>
-                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <CopyButton text={selected?.id || ""} />
                 &nbsp;
                 {selected?.id}
               </td>
@@ -133,7 +124,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("Name")}</code>
               </td>
               <td>
-                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <CopyButton text={selected?.name || ""} />
                 &nbsp;
                 {selected?.name}
               </td>
@@ -144,7 +135,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("Label")}</code>
               </td>
               <td>
-                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <CopyButton text={selected?.label || ""} />
                 &nbsp;
                 {selected?.label}
               </td>
@@ -156,7 +147,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <code>{t("Guest")}</code>
                 </td>
                 <td>
-                  <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                  <CopyButton text={selected?.settings?.controller?.scope || ""} />
                   &nbsp;
                   {selected?.settings?.controller?.scope || ""}
                 </td>
@@ -168,7 +159,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("DOCKER_HOST")}</code>
               </td>
               <td>
-                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <CopyButton text={normalizeConnectionString(selected?.settings?.api?.connection?.uri || "")} />
                 &nbsp;
                 {normalizeConnectionString(selected?.settings?.api?.connection?.uri || "")}
               </td>
@@ -179,7 +170,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <code>{t("DOCKER_HOST - guest")}</code>
               </td>
               <td>
-                <Button size="small" variant="minimal" icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />
+                <CopyButton text={normalizeConnectionString(selected?.settings?.api?.connection?.relay || "")} />
                 &nbsp;
                 {normalizeConnectionString(selected?.settings?.api?.connection?.relay || "")}
               </td>

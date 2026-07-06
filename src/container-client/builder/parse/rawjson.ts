@@ -3,6 +3,7 @@
 // `statuses` (transfer progress, ignored here). Steps are keyed by vertex digest and assigned a stable
 // ordinal on first sight. Partial lines and non-JSON noise are tolerated.
 
+import { fromBase64 } from "@/utils/base64";
 import type { BuildEvent, BuildProgressParser, BuildStep } from "../types";
 
 interface RawVertex {
@@ -26,12 +27,7 @@ const WRITING_IMAGE_RE = /writing image sha256:([0-9a-f]{64})/;
 
 function decodeBase64(value: string): string {
   try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return new TextDecoder().decode(bytes);
+    return fromBase64(value);
   } catch {
     return value;
   }

@@ -52,7 +52,7 @@ export const LOGO_SVG = `<svg class="AppHeaderLogo" viewBox="0 0 940 200" role="
     <path class="AppHeaderLogoPlate AppHeaderLogoPlate--accent" d="M128,94 L198,120 L128,146 L58,120 Z" fill="#14b8a6" stroke="#14b8a6" stroke-width="16" stroke-linejoin="round" />
     <path class="AppHeaderLogoPlate AppHeaderLogoPlate--bright" d="M128,72 L180,92 L128,112 L76,92 Z" fill="#2dd4bf" stroke="#2dd4bf" stroke-width="16" stroke-linejoin="round" />
   </g>
-  <text class="AppHeaderLogoTitle" x="178" y="96" font-family="${LOGO_FONT}" font-weight="800" font-size="56" letter-spacing="-1.8" fill="url(#AppHeaderLogoGrad)">Container Desktop</text>
+  <text class="AppHeaderLogoTitle" x="178" y="96" font-family="${LOGO_FONT}" font-weight="800" font-size="56" letter-spacing="-1.8" fill="#ffffff">Container Desktop</text>
   <text class="AppHeaderLogoTagline AppHeaderLogoTagline--unified" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">Containers desktop companion</text>
   <text class="AppHeaderLogoTagline AppHeaderLogoTagline--podman" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">Podman desktop companion</text>
   <text class="AppHeaderLogoTagline AppHeaderLogoTagline--docker" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">Docker desktop companion</text>

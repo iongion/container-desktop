@@ -2,7 +2,7 @@ import { Callout, Checkbox, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { AIPermissions } from "./AIPermissions";
 import { AIProviderConfig } from "./AIProviderConfig";
 

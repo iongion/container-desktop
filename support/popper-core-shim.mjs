@@ -9,31 +9,33 @@
 // It mirrors lib/index.js exactly, but re-exports every enum EXPLICITLY (rolldown resolves explicit named
 // re-exports without trouble). The sub-path specifiers below are not the bare "@popperjs/core", so the
 // resolveId hook ignores them and they resolve normally — no recursion.
+
+export { createPopper as createPopperBase, detectOverflow, popperGenerator } from "@popperjs/core/lib/createPopper.js";
 export {
-  top,
-  bottom,
-  right,
-  left,
+  afterMain,
+  afterRead,
+  afterWrite,
   auto,
   basePlacements,
-  start,
-  end,
-  clippingParents,
-  viewport,
-  popper,
-  reference,
-  variationPlacements,
-  placements,
-  beforeRead,
-  read,
-  afterRead,
   beforeMain,
-  main,
-  afterMain,
+  beforeRead,
   beforeWrite,
-  write,
-  afterWrite,
+  bottom,
+  clippingParents,
+  end,
+  left,
+  main,
   modifierPhases,
+  placements,
+  popper,
+  read,
+  reference,
+  right,
+  start,
+  top,
+  variationPlacements,
+  viewport,
+  write,
 } from "@popperjs/core/lib/enums.js";
 export {
   applyStyles,
@@ -46,6 +48,5 @@ export {
   popperOffsets,
   preventOverflow,
 } from "@popperjs/core/lib/modifiers/index.js";
-export { createPopper as createPopperBase, detectOverflow, popperGenerator } from "@popperjs/core/lib/createPopper.js";
 export { createPopper } from "@popperjs/core/lib/popper.js";
 export { createPopper as createPopperLite } from "@popperjs/core/lib/popper-lite.js";

@@ -6,11 +6,13 @@ internals and conventions, the canonical guide is [`CLAUDE.md`](../CLAUDE.md).
 
 ## Prerequisites
 
-| Tool   | Version                                           | Notes                                                        |
-| ------ | ------------------------------------------------- | ------------------------------------------------------------ |
-| Node   | **24.16.0**                                       | pinned in [`.nvmrc`](../.nvmrc) — run `nvm use`              |
-| Python | ≥ **3.12** via [`uv`](https://docs.astral.sh/uv/) | runs the `invoke` build tasks                                |
-| Yarn   | **1.x** (classic)                                 | the package manager; do not use npm                          |
+| Tool | Version           | Notes                                           |
+| ---- | ----------------- | ----------------------------------------------- |
+| Node | **24.16.0**       | pinned in [`.nvmrc`](../.nvmrc) — run `nvm use` |
+| Yarn | **1.x** (classic) | the package manager; do not use npm             |
+
+The build/dev/release tooling is a TypeScript CLI in [`support/cli/`](../support/cli/) (commander,
+run via `tsx` — both installed by `yarn`); there is no Python toolchain.
 
 **Linux one-shot:** `bash support/provision-deps.sh` installs the build toolchain
 (auto-detects apt/dnf/pacman). On macOS use [Homebrew](https://brew.sh/); native
@@ -20,10 +22,10 @@ Windows is on you (for WSL, follow the Linux path).
 
 ```bash
 nvm use                                   # Node 24.16.0
-uv run --locked invoke prepare            # or: yarn install --frozen-lockfile
+yarn install --frozen-lockfile            # or: make prepare
 ```
 
-Both install with the lockfile respected — don't use floating installs.
+Installs with the lockfile respected — don't use floating installs.
 
 ## Run (hot reload)
 
@@ -52,8 +54,8 @@ yarn build         # main + preload + renderer
 ```
 
 These four are the gate CI enforces
-([`CIPipeline.yml`](../.github/workflows/CIPipeline.yml), which also runs the Python tooling
-suite). For the test model — the headless harness and the `fakeCommand` recording fake
+([`CIPipeline.yml`](../.github/workflows/CIPipeline.yml); `check-types`/`lint:check`/`test:run`
+also cover the `support/cli/` tooling). For the test model — the headless harness and the `fakeCommand` recording fake
 that let the connection layer run without Electron — see [testing.md](testing.md). Also verify
 behaviour over CDP: the renderer is exposed at `--remote-debugging-port=9222`, so you can
 attach a Playwright client via `--cdp-endpoint http://localhost:9222` to drive the real app
@@ -64,7 +66,7 @@ attach a Playwright client via `--cdp-endpoint http://localhost:9222` to drive t
 ```bash
 yarn build                       # production bundles (ENVIRONMENT=production implied)
 yarn package:linux_x86           # also: mac_arm · win_x86 · linux_arm  (electron-builder)
-inv release                      # full release: build + bundle with production settings
+yarn cli release                 # full release: build + bundle with production settings
 ```
 
 > **Production needs `ENVIRONMENT=production`** (the `build:*` scripts set it). Without

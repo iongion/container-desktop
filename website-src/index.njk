@@ -94,7 +94,7 @@ demoReplay: true
           <div class="dl-package-row">
             <div class="dl-package-kind"><span class="dl-option-head"><span class="dl-option-title">{{ row.title }}</span><span class="dl-option-badge">{{ row.badge }}</span></span></div>
 {% for option in row.options %}
-            <a class="dl-menu-option" href="{{ option.file }}" data-primary="{% if option.id == d.options[0].id %}true{% else %}false{% endif %}" data-format="{{ option.format }}" data-arch="{{ option.arch }}" data-label="{{ option.buttonLabel }}" data-note="{{ option.note | escape }}" data-text="{{ option.label }}">
+            <a class="dl-menu-option" href="{{ option.file }}" data-primary="{% if not d.externalPrimary and option.id == d.options[0].id %}true{% else %}false{% endif %}" data-format="{{ option.format }}" data-arch="{{ option.arch }}" data-label="{{ option.buttonLabel }}" data-note="{{ option.note | escape }}" data-text="{{ option.label }}">
               <span class="dl-arch-meta">{{ option.archLabel }}</span>
             </a>
 {% endfor %}
