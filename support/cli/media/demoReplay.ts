@@ -464,8 +464,8 @@ export async function main(argv = process.argv.slice(2)) {
   }
   let port = DEFAULT_PORT;
   for (const scenario of scenarios) {
-    const outPath = demoOutputPath(kind, scenario.output);
-    const posterPath = demoOutputPath(kind, scenario.poster);
+    const outPath = demoOutputPath(scenario.output);
+    const posterPath = demoOutputPath(scenario.poster);
     mkdirSync(path.dirname(outPath), { recursive: true });
     await withApp(backend, scenario, args.mode, port, async (driver) => {
       await waitReady(driver);

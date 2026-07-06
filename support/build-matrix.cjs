@@ -28,8 +28,13 @@ const REPO = "iongion/container-desktop";
 // download link AND the in-app Windows update check (the /VERSION-Windows_NT
 // endpoint, read by Api.clients.ts), so Windows users are never told about a
 // build they cannot install yet.
-const WINDOWS_INSTALLER_VERSION = "5.3.16";
-const WINDOWS_INSTALLER_WRAPPER = "container-desktop-installer.exe";
+const WINDOWS_INSTALLER_VERSION = "6.0.0";
+// The signed Microsoft Store wrapper is uploaded by hand, one per arch. x64 keeps the historical name;
+// arm64 is the aarch64 wrapper (submit both to the Store to serve native arm64 instead of x64 emulation).
+const WINDOWS_INSTALLER_WRAPPER = {
+  x64: "container-desktop-installer.exe",
+  arm64: "container-desktop-installer-arm64.exe",
+};
 
 // Canonical arches and how they read in the UI.
 const ARCH = {
@@ -191,7 +196,7 @@ const PLATFORMS = {
     meta: "x64 · arm64",
     naming: winArtifactName,
     arches: ["x64", "arm64"],
-    menu: false,
+    menu: true,
     // Primary download is the Microsoft Store (external), wired up in downloadModel.
     primary: { store: true },
     formats: [
@@ -301,7 +306,8 @@ function cdJobsForTarget(target) {
   if (target === "all") return CD_JOBS;
   if (target === "linux") return CD_JOBS.filter((job) => job.target === "linux-x64" || job.target === "linux-arm64");
   if (target === "macos") return CD_JOBS.filter((job) => job.target === "macos-arm64");
-  if (target === "windows") return CD_JOBS.filter((job) => job.target === "windows-x64" || job.target === "windows-arm");
+  if (target === "windows")
+    return CD_JOBS.filter((job) => job.target === "windows-x64" || job.target === "windows-arm");
   return CD_JOBS.filter((job) => job.target === target);
 }
 
@@ -350,19 +356,32 @@ function downloadModel(version, { microsoftStore } = {}) {
     );
 
   const win = PLATFORMS.win;
-  const winGeneratedLinks = win.formats.filter(isPublic).flatMap((format) =>
-    win.arches
-      .map((arch) => optionFor("win", format, arch, version))
-      .filter(Boolean)
-      .map((option) => ({ file: option.file, label: formatByTarget(win, option.format).link })),
-  );
-  const winLinks = [
-    {
-      file: `https://github.com/${REPO}/releases/download/${WINDOWS_INSTALLER_VERSION}/${WINDOWS_INSTALLER_WRAPPER}`,
-      label: "Installer .exe",
-    },
-    ...winGeneratedLinks,
-  ];
+  // Windows uses the same per-arch package menu as Linux. The signed Store wrapper .exe is a hand-uploaded
+  // artifact (pinned version, one file per arch), so it is built by hand here rather than via optionFor,
+  // which only knows the auto-published release assets. The public .zip rows come straight from optionFor.
+  const winInstallerRow = {
+    title: "Installer",
+    badge: ".exe",
+    options: win.arches.map((arch) => ({
+      id: `win-installer-${arch}`,
+      format: "installer",
+      arch,
+      file: `https://github.com/${REPO}/releases/download/${WINDOWS_INSTALLER_VERSION}/${WINDOWS_INSTALLER_WRAPPER[arch]}`,
+      label: `Installer · ${ARCH[arch].label} (.exe)`,
+      archLabel: ARCH[arch].label,
+      badge: ".exe",
+      buttonLabel: "Download .exe",
+      column: ARCH[arch].column,
+      note: "Microsoft Store <b>installer</b>",
+    })),
+  };
+  const winZipRows = win.formats.filter(isPublic).map((format) => ({
+    title: format.title,
+    badge: format.badge,
+    options: win.arches.map((arch) => optionFor("win", format, arch, version)).filter(Boolean),
+  }));
+  const winRows = [winInstallerRow, ...winZipRows];
+  const winOptions = winRows.flatMap((row) => row.options);
 
   return {
     os: [
@@ -396,7 +415,12 @@ function downloadModel(version, { microsoftStore } = {}) {
         file: microsoftStore,
         buttonLabel: "Microsoft Store",
         note: "Install from the <b>Microsoft Store</b>",
-        links: winLinks,
+        // externalPrimary keeps the Store as the fixed primary button: index.njk marks no menu option
+        // as primary, so os-detect.js never rewrites the button to a package download.
+        menu: true,
+        externalPrimary: true,
+        options: winOptions,
+        rows: winRows,
       },
     ],
   };

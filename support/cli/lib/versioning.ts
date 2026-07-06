@@ -53,6 +53,23 @@ export function setManifestVersion(text: string, version: string): string {
   return replaceJsonStringValue(text, "version", version);
 }
 
+/** Update the Tauri `version` field AND the version embedded in `frontendDist`
+ * (`../build/<version>`, the versioned renderer output dir — same pattern as package.json `main`). */
+export function setTauriConfVersion(text: string, version: string): string {
+  const withVersion = replaceJsonStringValue(text, "version", version);
+  return withVersion.replace(
+    /("frontendDist":\s*"\.\.\/build\/)[^/"]*(")/,
+    (_match, prefix, suffix) => `${prefix}${version}${suffix}`,
+  );
+}
+
+/** Update the `[package]` crate version in a Cargo.toml — the first line-anchored `version = "..."`,
+ * which is always the package version ([package] leads the file). Dependency constraints (inline or
+ * under `[dependencies.*]` sub-tables) come later and are left untouched. */
+export function setCargoTomlVersion(text: string, version: string): string {
+  return text.replace(/^version = "[^"]*"/m, `version = "${version}"`);
+}
+
 /** Replace a plaintext VERSION file body, preserving a trailing newline. */
 export function setPlainVersion(text: string, version: string): string {
   const suffix = text.endsWith("\n") ? "\n" : "";

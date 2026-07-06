@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -180,6 +181,23 @@ describe("Tauri native bundle parity", () => {
       expect(fs.statSync(outputPath).size).toBe(fs.statSync(sourcePath).size);
     } finally {
       child.kill("SIGTERM");
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("writes a bare-hex .sha256 sidecar next to each native bundle it collects", () => {
+    const { copyNativeBundle } = loadNativeBundleInternals();
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tauri-native-bundles-checksum-"));
+    try {
+      const sourcePath = path.join(dir, "container-desktop_5.3.18_x64-setup.exe");
+      const outputPath = path.join(dir, "container-desktop-x64-5.3.18.exe");
+      fs.writeFileSync(sourcePath, "native bundle payload");
+
+      copyNativeBundle({ sourcePath, outputPath });
+
+      const expected = crypto.createHash("sha256").update(fs.readFileSync(outputPath)).digest("hex");
+      expect(fs.readFileSync(`${outputPath}.sha256`, "utf8")).toBe(expected);
+    } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });

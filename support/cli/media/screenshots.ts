@@ -164,7 +164,7 @@ export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   const kind = resolveCaptureBackend(args.backend);
   const backend = await createBackend(kind);
-  const outDir = screenshotOutDir(kind);
+  const outDir = screenshotOutDir();
   const engines = resolveEngines(args);
   mkdirSync(outDir, { recursive: true });
   if (args.killStray) {

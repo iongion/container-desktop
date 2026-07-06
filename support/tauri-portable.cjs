@@ -2,11 +2,7 @@
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-const {
-  linuxArtifactName,
-  macArtifactName,
-  winArtifactName,
-} = require("./release-artifacts.cjs");
+const { linuxArtifactName, macArtifactName, winArtifactName, writeChecksum } = require("./release-artifacts.cjs");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const RUST_TARGETS = {
@@ -168,6 +164,7 @@ function runArchiveCommand(plan) {
   if (result.status !== 0) {
     throw new Error(`${command.command} ${command.args.join(" ")} failed`);
   }
+  writeChecksum(plan.outputPath);
 }
 
 function parseArgs(argv) {
@@ -203,7 +200,9 @@ function main() {
   if (args.command === "pack") {
     if (args.dryRun) {
       const cwd = plan.archiveCommand.cwd ? ` (cwd ${plan.archiveCommand.cwd})` : "";
-      console.log(`${plan.archiveCommand.command} ${plan.archiveCommand.args.map((part) => JSON.stringify(part)).join(" ")}${cwd}`);
+      console.log(
+        `${plan.archiveCommand.command} ${plan.archiveCommand.args.map((part) => JSON.stringify(part)).join(" ")}${cwd}`,
+      );
     } else {
       runArchiveCommand(plan);
     }

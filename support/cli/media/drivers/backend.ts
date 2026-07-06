@@ -3,15 +3,13 @@ import { PROJECT_HOME } from "@/cli/lib/paths";
 import { electronBackend } from "../backends/electronBackend";
 import type { CaptureBackend, CaptureBackendKind } from "./types";
 
-// Backend selection + output routing. The recording backend is chosen by CONTAINER_DESKTOP_CAPTURE_BACKEND
-// (electron | tauri, default electron) and can be overridden per-run with --backend. Electron writes the
-// published website assets; Tauri writes a parallel, unpublished set under webdriver/artifacts/capture/ so
-// the two shells can be compared side by side.
-
-const TAURI_CAPTURE_ROOT = path.join("webdriver", "artifacts", "capture");
+// Backend selection + output. The recording backend is chosen by CONTAINER_DESKTOP_CAPTURE_BACKEND
+// (electron | tauri, default tauri) and can be overridden per-run with --backend. BOTH backends write
+// the same published website assets — the Tauri (WebKitGTK/WebDriver) shell is the default producer,
+// with Electron available for a like-for-like comparison via --backend electron.
 
 export function resolveCaptureBackend(override?: string): CaptureBackendKind {
-  const raw = (override || process.env.CONTAINER_DESKTOP_CAPTURE_BACKEND || "electron").toLowerCase();
+  const raw = (override || process.env.CONTAINER_DESKTOP_CAPTURE_BACKEND || "tauri").toLowerCase();
   if (raw !== "electron" && raw !== "tauri") {
     throw new Error(`Unknown capture backend: ${raw} (expected "electron" or "tauri")`);
   }
@@ -27,20 +25,13 @@ export async function createBackend(kind: CaptureBackendKind): Promise<CaptureBa
   return electronBackend;
 }
 
-// Screenshots root: <root>/<engine>/<file>. Electron → published website img; Tauri → capture artifacts.
-export function screenshotOutDir(kind: CaptureBackendKind): string {
-  if (kind === "tauri") {
-    return path.join(PROJECT_HOME, TAURI_CAPTURE_ROOT, "screenshots");
-  }
+// Screenshots root: <root>/<engine>/<file>. Both backends write the published website images.
+export function screenshotOutDir(): string {
   return path.join(PROJECT_HOME, "website-src", "static", "img");
 }
 
-// Demo output path for a scenario's relative asset path (e.g. "website-src/static/replays/podman.json").
-// Electron writes it in place; Tauri re-roots it (stripping the website prefix) under the capture artifacts.
-export function demoOutputPath(kind: CaptureBackendKind, relPath: string): string {
-  if (kind === "tauri") {
-    const stripped = relPath.replace(/^website-src[\\/]+static[\\/]+/, "");
-    return path.join(PROJECT_HOME, TAURI_CAPTURE_ROOT, stripped);
-  }
+// Demo output path for a scenario's relative asset path (e.g. "website-src/static/replays/podman.json"),
+// written in place. Both backends target the same published location.
+export function demoOutputPath(relPath: string): string {
   return path.join(PROJECT_HOME, relPath);
 }

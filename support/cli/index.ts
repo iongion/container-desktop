@@ -2,6 +2,7 @@ import { Command } from "commander";
 import {
   createIcons,
   fetchAppx,
+  fetchMsix,
   installSelfSignedAppx,
   publishMeta,
   runAuditShared,
@@ -106,13 +107,24 @@ program
 
 program
   .command("fetch-appx")
-  .description("Download the Microsoft Store package from a CDPipeline run and verify it")
+  .description("Download the Microsoft Store AppX packages (both arches) from a CDPipeline run and verify them")
   .option("--run-id <id>", "target a specific run (defaults to newest non-expired)")
   .option("--version <version>", "assert the fetched build matches this version")
-  .option("--arch <arch>", "x64 | arm64", "x64")
+  .option("--arch <arch>", "limit to one arch: x64 | arm64 (default: both)")
   .option("--keep", "keep the raw download dir for inspection", false)
   .action((options) => {
     fetchAppx(options);
+  });
+
+program
+  .command("fetch-msix")
+  .description("Download the Microsoft Store MSIX packages (both arches) from a CDPipeline run and verify them")
+  .option("--run-id <id>", "target a specific run (defaults to newest non-expired)")
+  .option("--version <version>", "assert the fetched build matches this version")
+  .option("--arch <arch>", "limit to one arch: x64 | arm64 (default: both)")
+  .option("--keep", "keep the raw download dir for inspection", false)
+  .action((options) => {
+    fetchMsix(options);
   });
 
 program

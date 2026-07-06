@@ -19,6 +19,23 @@ export const WINDOWS_ARTIFACT_NAMES: Record<string, string> = {
 };
 export const WINDOWS_ARTIFACT_NAME = WINDOWS_ARTIFACT_NAMES.x64;
 
+/** Store package format (both are the same OPC container; the Store accepts either). */
+export type StorePackageFormat = "appx" | "msix";
+
+/** Both Windows Store arches, in submission order — the Store listing serves the right one per device. */
+export const WINDOWS_STORE_ARCHES = ["x64", "arm64"];
+
+/** Which arches a fetch should pull: the single one requested, or both when none is given. */
+export function resolveStoreArches(arch?: string): string[] {
+  return arch ? [arch] : [...WINDOWS_STORE_ARCHES];
+}
+
+/** Pick the first Store package of `format` from a list of files. Null when that format is absent
+ * (each Windows CI artifact carries the .appx, .msix, .exe and .zip side by side). */
+export function pickStorePackage(files: string[], format: StorePackageFormat): string | null {
+  return files.filter((file) => file.endsWith(`.${format}`)).sort()[0] ?? null;
+}
+
 const APPX_VERSION_RE = /-(?:x64|arm64)-(.+?)\.appx$/;
 const WINDOWS_STORE_PACKAGE_VERSION_RE = /-(?:x64|arm64)-(.+?)\.(?:appx|msix)$/;
 

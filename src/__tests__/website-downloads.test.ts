@@ -39,6 +39,27 @@ describe("website download model", () => {
     expect(linux.options[0].id).toBe("linux-deb-x64");
   });
 
+  it("gives Windows a per-arch dropdown (installer + zip, both arches) with the Store as the fixed primary", () => {
+    const win = model.os.find((os: { slug: string }) => os.slug === "windows");
+    // Primary button stays the external Microsoft Store; the menu must NOT hijack it (os-detect.js
+    // only rewrites the button from a data-primary option, so externalPrimary suppresses that mark).
+    expect(win.menu).toBe(true);
+    expect(win.externalPrimary).toBe(true);
+    expect(win.file).toBe("https://store.example/app");
+    expect(win.buttonLabel).toBe("Microsoft Store");
+    // Two rows — Installer .exe then Portable .zip — each on Intel + Arm.
+    expect(win.rows.map((r: { badge: string }) => r.badge)).toEqual([".exe", ".zip"]);
+    for (const row of win.rows) {
+      expect(row.options.map((o: { arch: string }) => o.arch)).toEqual(["x64", "arm64"]);
+    }
+    // The signed Store wrapper .exe is hand-uploaded per arch at its own pinned version.
+    const base = `https://github.com/iongion/container-desktop/releases/download/${matrix.WINDOWS_INSTALLER_VERSION}`;
+    expect(win.rows[0].options.map((o: { file: string }) => o.file)).toEqual([
+      `${base}/container-desktop-installer.exe`,
+      `${base}/container-desktop-installer-arm64.exe`,
+    ]);
+  });
+
   it("never offers the unpublished Windows artifacts (Store packages / unsigned .exe)", () => {
     const published = matrix.publicAssetNames(VERSION);
     expect(published.some((name: string) => name.endsWith(".appx"))).toBe(false);

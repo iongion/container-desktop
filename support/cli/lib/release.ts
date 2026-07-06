@@ -4,13 +4,16 @@ import {
   bumpVersion,
   extractChangelogSection,
   promoteChangelog,
+  setCargoTomlVersion,
   setManifestVersion,
   setPackageJsonVersion,
   setPlainVersion,
+  setTauriConfVersion,
 } from "@/cli/lib/versioning";
 
-// Versioning orchestration for the bump / version-sync commands. package.json `version` is the
-// single source of truth; VERSION and public/manifest.json are the derived "synced" files.
+// Versioning orchestration for the bump / version-sync commands. package.json `version` is the single
+// source of truth; VERSION, public/manifest.json and the Tauri manifests (tauri.conf.json + Cargo.toml)
+// are the derived "synced" files — the Rust shell must build at the same version the release publishes.
 
 /** package.json (source of truth) + the files derived from it, rendered at `version`. */
 export function syncedTargets(version: string): Array<[string, string]> {
@@ -18,6 +21,8 @@ export function syncedTargets(version: string): Array<[string, string]> {
     ["package.json", setPackageJsonVersion(readText("package.json"), version)],
     ["VERSION", setPlainVersion(readText("VERSION"), version)],
     ["public/manifest.json", setManifestVersion(readText("public/manifest.json"), version)],
+    ["src-tauri/tauri.conf.json", setTauriConfVersion(readText("src-tauri/tauri.conf.json"), version)],
+    ["src-tauri/Cargo.toml", setCargoTomlVersion(readText("src-tauri/Cargo.toml"), version)],
   ];
 }
 

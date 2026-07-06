@@ -5,9 +5,11 @@ import {
   parseVersion,
   promoteChangelog,
   renderHomebrewRb,
+  setCargoTomlVersion,
   setManifestVersion,
   setPackageJsonVersion,
   setPlainVersion,
+  setTauriConfVersion,
   setWebsiteVersion,
 } from "@/cli/lib/versioning";
 
@@ -69,6 +71,52 @@ describe("setManifestVersion", () => {
     const out = setManifestVersion(text, "5.2.16");
     expect(out).toContain('"manifest_version": 2');
     expect(out).toContain('"version": "5.2.16"');
+  });
+});
+
+describe("setTauriConfVersion", () => {
+  it("updates version AND the version embedded in frontendDist, leaving other keys", () => {
+    const text = [
+      "{",
+      '  "productName": "Container Desktop",',
+      '  "version": "5.2.15",',
+      '  "identifier": "com.iongion.container-desktop.tauri",',
+      '  "build": {',
+      '    "frontendDist": "../build/5.2.15",',
+      '    "devUrl": "http://localhost:3000"',
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+    const out = setTauriConfVersion(text, "6.0.0");
+    expect(out).toContain('"version": "6.0.0"');
+    expect(out).toContain('"frontendDist": "../build/6.0.0"');
+    expect(out).toContain('"identifier": "com.iongion.container-desktop.tauri"');
+    expect(out).toContain('"devUrl": "http://localhost:3000"');
+  });
+});
+
+describe("setCargoTomlVersion", () => {
+  it("updates the [package] version, leaving dependency version constraints", () => {
+    const text = [
+      "[package]",
+      'name = "container-desktop"',
+      'version = "5.2.15"',
+      'edition = "2021"',
+      "",
+      "[dependencies]",
+      'tauri = { version = "2", features = ["tray-icon"] }',
+      "",
+      "[dependencies.serde]",
+      'version = "1.0"',
+      "",
+    ].join("\n");
+    const out = setCargoTomlVersion(text, "6.0.0");
+    expect(out).toContain('version = "6.0.0"');
+    // dependency constraints must be untouched
+    expect(out).toContain('tauri = { version = "2", features = ["tray-icon"] }');
+    expect(out).toContain('version = "1.0"');
+    expect(out).not.toContain('version = "5.2.15"');
   });
 });
 

@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const semver = require("semver");
 const xml2js = require("xml2js");
-const { winArtifactName } = require("./release-artifacts.cjs");
+const { winArtifactName, writeChecksum } = require("./release-artifacts.cjs");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const IDENTITY_NAME = "IonutStoica.ContainerDesktop";
@@ -290,6 +290,7 @@ function runPackCommand(plan) {
       `makeappx pack failed (exit ${result.status}${result.signal ? `, signal ${result.signal}` : ""}): ${executable} ${args.join(" ")}`,
     );
   }
+  console.log(`Checksum: ${writeChecksum(plan.outputPath)}`);
 }
 
 function parseArgs(argv) {

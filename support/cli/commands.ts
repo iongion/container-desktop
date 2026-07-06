@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { auditShared } from "@/cli/lib/audit-shared";
-import { fetchAppx } from "@/cli/lib/fetch-appx";
+import { fetchAppx, fetchMsix } from "@/cli/lib/fetch-appx";
 import { commitRelease } from "@/cli/lib/git";
 import { createIcons } from "@/cli/lib/icons";
 import { PROJECT_HOME, projectVersion, readSourceVersion } from "@/cli/lib/paths";
@@ -158,4 +158,13 @@ export function runPublishRelease(options: {
   });
 }
 
-export { createIcons, fetchAppx, installSelfSignedAppx, publishMeta, runBump, runVersionSync, uninstallSelfSignedAppx };
+export {
+  createIcons,
+  fetchAppx,
+  fetchMsix,
+  installSelfSignedAppx,
+  publishMeta,
+  runBump,
+  runVersionSync,
+  uninstallSelfSignedAppx,
+};

@@ -16,14 +16,14 @@ afterEach(() => {
 });
 
 describe("resolveCaptureBackend", () => {
-  it("defaults to electron when unset", () => {
+  it("defaults to tauri (webdriver) when unset", () => {
     delete process.env[ENV_KEY];
-    expect(resolveCaptureBackend()).toBe("electron");
+    expect(resolveCaptureBackend()).toBe("tauri");
   });
 
   it("reads the env var (case-insensitive)", () => {
-    process.env[ENV_KEY] = "TAURI";
-    expect(resolveCaptureBackend()).toBe("tauri");
+    process.env[ENV_KEY] = "ELECTRON";
+    expect(resolveCaptureBackend()).toBe("electron");
   });
 
   it("prefers an explicit override over the env var", () => {
@@ -37,26 +37,16 @@ describe("resolveCaptureBackend", () => {
 });
 
 describe("output routing", () => {
-  it("keeps the electron screenshot dir on the published website path", () => {
-    expect(screenshotOutDir("electron")).toBe(path.join(PROJECT_HOME, "website-src", "static", "img"));
+  it("writes screenshots to the published website images regardless of backend", () => {
+    expect(screenshotOutDir()).toBe(path.join(PROJECT_HOME, "website-src", "static", "img"));
   });
 
-  it("routes tauri screenshots to the capture artifacts", () => {
-    expect(screenshotOutDir("tauri")).toBe(path.join(PROJECT_HOME, "webdriver", "artifacts", "capture", "screenshots"));
-  });
-
-  it("writes electron demo output in place", () => {
-    expect(demoOutputPath("electron", "website-src/static/replays/podman.json")).toBe(
+  it("writes demo output in place at the published path regardless of backend", () => {
+    expect(demoOutputPath("website-src/static/replays/podman.json")).toBe(
       path.join(PROJECT_HOME, "website-src/static/replays/podman.json"),
     );
-  });
-
-  it("re-roots tauri demo output under the capture artifacts, stripping the website prefix", () => {
-    expect(demoOutputPath("tauri", "website-src/static/replays/podman.json")).toBe(
-      path.join(PROJECT_HOME, "webdriver", "artifacts", "capture", "replays", "podman.json"),
-    );
-    expect(demoOutputPath("tauri", "website-src/static/videos/unified.png")).toBe(
-      path.join(PROJECT_HOME, "webdriver", "artifacts", "capture", "videos", "unified.png"),
+    expect(demoOutputPath("website-src/static/videos/unified.png")).toBe(
+      path.join(PROJECT_HOME, "website-src/static/videos/unified.png"),
     );
   });
 });

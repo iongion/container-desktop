@@ -154,11 +154,12 @@ How you build here, **per change** — not an end-of-task afterthought:
 - **Website capture (screenshots + rrweb demos) runs on either shell.** The two capture scripts
   (`support/cli/media/{screenshots,demoReplay}.ts`) drive a `CaptureDriver` port with two adapters —
   Playwright/CDP (Electron) and WebdriverIO/WebDriver (Tauri, reusing the `test:e2e:tauri` stack).
-  Pick via **`CONTAINER_DESKTOP_CAPTURE_BACKEND=electron|tauri`** (default `electron`) or `--backend`;
-  `yarn screenshots:tauri` / `yarn demo:record:tauri` are shortcuts. Electron writes the published
-  `website-src/static/**` assets; **Tauri writes a separate set under `webdriver/artifacts/capture/`**
-  for side-by-side comparison (needs `CONTAINER_DESKTOP_MOCK=1 yarn tauri:serve` for the debug binary,
-  or a release binary via `CONTAINER_DESKTOP_E2E_APP`).
+  Pick via **`CONTAINER_DESKTOP_CAPTURE_BACKEND=electron|tauri`** (**default `tauri`**) or `--backend`;
+  `yarn screenshots:electron` / `yarn demo:record:electron` are the comparison shortcuts. **Both backends
+  write the same published `website-src/static/**` assets** — Tauri (WebKitGTK/WebDriver) is the default
+  producer, Electron (Playwright/CDP) is available for a like-for-like comparison. Tauri needs
+  `CONTAINER_DESKTOP_MOCK=1 yarn tauri:serve` for the debug binary, or a release binary via
+  `CONTAINER_DESKTOP_E2E_APP`.
 - Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`. **Footgun:** never
   run `pkill -f <pattern>` from a one-liner whose own command text contains `<pattern>` —
   it matches and kills its own shell (silent exit 144). Kill by numeric PID instead.

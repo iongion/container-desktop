@@ -3,6 +3,8 @@ import {
   type GhArtifact,
   parseAppxVersion,
   parseWindowsStorePackageVersion,
+  pickStorePackage,
+  resolveStoreArches,
   selectWindowsArtifact,
   windowsArtifactName,
 } from "@/cli/lib/ci-artifacts";
@@ -75,6 +77,39 @@ describe("parseAppxVersion", () => {
 
   it("returns null for a non-appx name", () => {
     expect(parseAppxVersion("container-desktop-x64-5.3.11.exe")).toBeNull();
+  });
+});
+
+describe("resolveStoreArches", () => {
+  it("fetches both arches when none is requested", () => {
+    expect(resolveStoreArches()).toEqual(["x64", "arm64"]);
+    expect(resolveStoreArches(undefined)).toEqual(["x64", "arm64"]);
+  });
+
+  it("narrows to a single requested arch", () => {
+    expect(resolveStoreArches("x64")).toEqual(["x64"]);
+    expect(resolveStoreArches("arm64")).toEqual(["arm64"]);
+  });
+});
+
+describe("pickStorePackage", () => {
+  const files = [
+    "/dl/container-desktop-x64-5.3.18.exe",
+    "/dl/container-desktop-x64-5.3.18.zip",
+    "/dl/container-desktop-x64-5.3.18.msix",
+    "/dl/container-desktop-x64-5.3.18.appx",
+  ];
+
+  it("picks the appx for the appx format", () => {
+    expect(pickStorePackage(files, "appx")).toBe("/dl/container-desktop-x64-5.3.18.appx");
+  });
+
+  it("picks the msix for the msix format", () => {
+    expect(pickStorePackage(files, "msix")).toBe("/dl/container-desktop-x64-5.3.18.msix");
+  });
+
+  it("returns null when the format is absent", () => {
+    expect(pickStorePackage(["/dl/container-desktop-x64-5.3.18.zip"], "appx")).toBeNull();
   });
 });
 

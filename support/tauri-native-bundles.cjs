@@ -2,11 +2,7 @@
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-const {
-  linuxArtifactName,
-  macArtifactName,
-  winArtifactName,
-} = require("./release-artifacts.cjs");
+const { linuxArtifactName, macArtifactName, winArtifactName, writeChecksum } = require("./release-artifacts.cjs");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const RUST_TARGETS = {
@@ -160,7 +156,16 @@ function createPacmanPlan({ projectRoot, releaseDir, pkg, arch, target }) {
     },
     {
       source: path.join(projectRoot, "src-tauri", "icons", "icon.png"),
-      destination: path.join(packageRoot, "usr", "share", "icons", "hicolor", "512x512", "apps", `${executableName}.png`),
+      destination: path.join(
+        packageRoot,
+        "usr",
+        "share",
+        "icons",
+        "hicolor",
+        "512x512",
+        "apps",
+        `${executableName}.png`,
+      ),
     },
     {
       source: path.join(projectRoot, "LICENSE"),
@@ -244,6 +249,7 @@ function copyNativeBundle(plan) {
     fs.rmSync(plan.outputPath, { force: true });
   }
   fs.copyFileSync(sourcePath, plan.outputPath);
+  writeChecksum(plan.outputPath);
 }
 
 function directorySize(dir) {
@@ -304,6 +310,7 @@ function runArchiveCommand(plan) {
   if (result.status !== 0) {
     throw new Error(`${plan.archiveCommand.command} ${plan.archiveCommand.args.join(" ")} failed`);
   }
+  writeChecksum(plan.outputPath);
 }
 
 function collectNativeBundles(plans, pkg) {
@@ -326,7 +333,10 @@ function parseArgs(argv) {
     } else if (arg === "--platform" || arg === "--arch" || arg === "--target" || arg === "--release-dir") {
       args[arg.slice(2).replace("-", "_")] = argv[++index];
     } else if (arg === "--formats") {
-      args.formats = argv[++index].split(",").map((item) => item.trim()).filter(Boolean);
+      args.formats = argv[++index]
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }

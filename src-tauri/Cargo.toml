@@ -3,7 +3,7 @@
 # different namespace from the npm package (no clash), this crate is never published, and the bundle keeps a
 # distinct identifier (com.iongion.container-desktop.tauri), so the shared name is safe.
 name = "container-desktop"
-version = "5.3.18"
+version = "6.0.0"
 description = "Container Desktop — native Rust (Tauri) shell"
 edition = "2021"
 rust-version = "1.77"
