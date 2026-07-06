@@ -2,6 +2,7 @@ import {
   AnchorButton,
   Button,
   ButtonGroup,
+  Divider,
   HTMLTable,
   Intent,
   Menu,
@@ -299,16 +300,18 @@ export const Screen: AppScreen<ScreenProps> = () => {
         onSearch={populated ? onSearchChange : undefined}
         titleIcon={IconNames.LAYERS}
         rightContent={
-          populated ? (
-            <>
-              {tabStrip}
-              {listActions}
-            </>
-          ) : undefined
+          <>
+            {connectionSelector}
+            {populated ? (
+              <>
+                <Divider />
+                {tabStrip}
+                {listActions}
+              </>
+            ) : null}
+          </>
         }
-      >
-        {connectionSelector}
-      </AppScreenHeader>
+      />
       <div className="AppScreenContent">{content}</div>
       {withInit && connectionId ? (
         <InitializeDrawer connectionId={connectionId} onClose={() => setWithInit(false)} />

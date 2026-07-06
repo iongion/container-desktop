@@ -102,13 +102,18 @@ export function createMessageBus(deps: TauriMessageBusDeps): IMessageBus {
 }
 
 async function openFileSelector(deps: TauriMessageBusDeps, options: any): Promise<unknown> {
-  const defaultPath = (await deps.invoke("get_home_dir").catch(() => undefined)) as string | undefined;
+  // Honor a caller-supplied defaultPath; otherwise base the picker at the app "home" resolved natively
+  // (dev sample dir in development, install dir when packaged), falling back to the user's home directory.
+  const base =
+    options?.defaultPath ||
+    ((await deps.invoke("get_picker_base_dir").catch(() => undefined)) as string | undefined) ||
+    ((await deps.invoke("get_home_dir").catch(() => undefined)) as string | undefined);
   const selected = await deps
     .openFileDialog({
       directory: !!options?.directory,
       multiple: !!options?.multiple,
       filters: options?.filters || undefined,
-      defaultPath,
+      defaultPath: base,
     })
     .catch(() => null);
   const filePaths = selected == null ? [] : Array.isArray(selected) ? selected : [selected];

@@ -130,7 +130,7 @@ export const containerDialect: EngineDialect = {
       getBuilders: async () => [],
       useBuilder: async () => false,
       getComposeProjects: async () => [],
-      composeUp: async () => false,
+      composeUp: async () => ({ created: [], recreated: [], unchanged: [], started: [], orphansRemoved: [] }),
       composeDown: async () => false,
     };
   },

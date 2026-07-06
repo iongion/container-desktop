@@ -6,8 +6,65 @@ import { Application } from "@/container-client/Application";
 import type { ResourceConnectProgress } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import { ContainerEngine } from "@/env/Types";
-import { EngineDataService } from "@/platform/engineDataService";
+import { EngineDataService, pingUntilAvailable } from "@/platform/engineDataService";
 import { __setLoggerLevelForTests, registerLoggerBackend } from "@/platform/logger";
+
+describe("pingUntilAvailable", () => {
+  const noSleep = async () => {};
+
+  it("returns immediately when the first ping succeeds (no retries)", async () => {
+    let calls = 0;
+    const res = await pingUntilAvailable(
+      async () => {
+        calls += 1;
+        return { success: true };
+      },
+      { attempts: 3, delayMs: 10, sleep: noSleep },
+    );
+    expect(res.success).toBe(true);
+    expect(calls).toBe(1);
+  });
+
+  it("retries and recovers when a transient failure clears within the grace window", async () => {
+    let calls = 0;
+    const res = await pingUntilAvailable(
+      async () => {
+        calls += 1;
+        return { success: calls >= 3 };
+      },
+      { attempts: 3, delayMs: 10, sleep: noSleep },
+    );
+    expect(res.success).toBe(true);
+    expect(calls).toBe(3);
+  });
+
+  it("reports failure only after exhausting every attempt", async () => {
+    let calls = 0;
+    const res = await pingUntilAvailable(
+      async () => {
+        calls += 1;
+        return { success: false };
+      },
+      { attempts: 3, delayMs: 10, sleep: noSleep },
+    );
+    expect(res.success).toBe(false);
+    expect(calls).toBe(3);
+  });
+
+  it("treats a thrown ping (e.g. ECONNREFUSED) as a failed attempt and keeps retrying", async () => {
+    let calls = 0;
+    const res = await pingUntilAvailable(
+      async () => {
+        calls += 1;
+        if (calls < 2) throw new Error("connect ECONNREFUSED");
+        return { success: true };
+      },
+      { attempts: 3, delayMs: 10, sleep: noSleep },
+    );
+    expect(res.success).toBe(true);
+    expect(calls).toBe(2);
+  });
+});
 
 describe("EngineDataService state", () => {
   it("starts empty and notifies subscribers on change", () => {

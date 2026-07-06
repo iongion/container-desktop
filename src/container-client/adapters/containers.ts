@@ -10,7 +10,7 @@ import type {
   ContainerStats,
 } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
-import { DOCKER_BASE_URL, LIBPOD_BASE_URL, ResourceAdapter } from "./shared";
+import { DOCKER_BASE_URL, LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS, ResourceAdapter } from "./shared";
 
 const logger = createLogger("client.containers");
 
@@ -178,29 +178,39 @@ export class ContainersAdapter extends ResourceAdapter {
 
   async stop(id: string): Promise<boolean> {
     const driver = await this.driver();
-    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`);
+    // Stop waits the container's grace period server-side (default ~10s, longer if it ignores SIGTERM), so it
+    // needs more than the 3s default request timeout — otherwise the client "fails" while the engine works on.
+    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`, undefined, {
+      timeout: LIFECYCLE_TIMEOUT_MS,
+    });
     return this.isOk(result);
   }
 
   async restart(id: string): Promise<boolean> {
     const driver = await this.driver();
     try {
-      await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`);
+      await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/stop`, undefined, {
+        timeout: LIFECYCLE_TIMEOUT_MS,
+      });
     } catch (error: any) {
       logger.error("Failed to stop container", error);
     }
     await new Promise((resolve) => setTimeout(resolve, 3000));
-    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/restart`);
+    const result = await driver.post<boolean>(`/containers/${encodeURIComponent(id)}/restart`, undefined, {
+      timeout: LIFECYCLE_TIMEOUT_MS,
+    });
     return this.isOk(result);
   }
 
   async remove(id: string): Promise<boolean> {
     const driver = await this.driver();
+    // Force-remove stops the container first (grace period), so it can be slow — see stop().
     const result = await driver.delete<boolean>(`/containers/${encodeURIComponent(id)}`, {
       params: {
         force: true,
         v: true,
       },
+      timeout: LIFECYCLE_TIMEOUT_MS,
     });
     return this.isOk(result);
   }

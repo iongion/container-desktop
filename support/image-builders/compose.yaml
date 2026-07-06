@@ -1,0 +1,93 @@
+# Development-only sample stack for the Stacks (Compose) screen. Loaded automatically in dev so the
+# whole compose import path can be exercised with a single click (parse -> preview -> native up), the
+# same way support/image-builders/{Containerfile,server.js} back the Build Studio's dev sample.
+# NOT shipped. Uses only pre-built images so it deploys natively (no build: step required).
+#
+# Exercised on purpose: multi-service graph, depends_on ordering + a service_healthy health gate, a
+# compose-file healthcheck, container_name override, short + long port syntax, bind + named volumes, env
+# map + list + env_file, multiple networks with DNS aliases, restart policies, cap_drop, working_dir/
+# hostname, and custom labels.
+name: sample-stack
+
+services:
+  web:
+    image: docker.io/library/nginx:alpine
+    container_name: sample-web
+    ports:
+      - "8080:80"
+    volumes:
+      # Relative bind source — resolved against this file's directory, then guest-translated.
+      - ./html:/usr/share/nginx/html:ro
+    environment:
+      - NGINX_ENTRYPOINT_QUIET_LOGS=1
+    depends_on:
+      - api
+    networks:
+      - frontend
+    labels:
+      com.example.tier: frontend
+    restart: unless-stopped
+
+  api:
+    image: docker.io/library/python:3.12-alpine
+    command: ["python", "-m", "http.server", "9000"]
+    working_dir: /srv
+    hostname: api
+    env_file:
+      - ./sample.env
+    environment:
+      DATABASE_URL: postgres://sample:sample@db:5432/sampledb
+      REDIS_URL: redis://cache:6379/0
+    ports:
+      - target: 9000
+        published: 9000
+        protocol: tcp
+    # Long-form: wait until db is HEALTHY (not just started) before starting api. cache only needs to exist.
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    networks:
+      - frontend
+      - backend
+    cap_drop:
+      - ALL
+    restart: on-failure
+
+  db:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: sample
+      POSTGRES_PASSWORD: sample
+      POSTGRES_DB: sampledb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    # Compose-file healthcheck (translated into the libpod create body) so `service_healthy` works even
+    # though the postgres image has no built-in HEALTHCHECK. api waits for this to report healthy.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sample -d sampledb"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 2s
+    restart: unless-stopped
+
+  cache:
+    image: docker.io/library/redis:7-alpine
+    command: ["redis-server", "--appendonly", "no"]
+    networks:
+      # Map form with an extra alias — services reach it as "cache" (service name) or "redis".
+      backend:
+        aliases:
+          - redis
+    restart: unless-stopped
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  db-data:

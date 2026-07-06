@@ -38,7 +38,7 @@ export function flattenGroups(
     const groupKey = `${connId}:${groupName}`;
     const isCollapsed = !!collapse[groupKey];
     items.forEach((container, indexInGroup) => {
-      // The group-header row is emitted once, before the first member of a multi-item group.
+      // The group-header row is emitted once, before the first member of a grouped set.
       if (isPartOfGroup && indexInGroup === 0) {
         rows.push({ kind: "group-header", key: `header:${connId}:${groupName}`, group, connId, groupKey });
       }

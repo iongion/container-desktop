@@ -5,6 +5,11 @@
 // is list-vs-inspect, not Podman-vs-Docker), so it stays shared here. The per-engine modules (podman.ts,
 // docker.ts) compose these and override only `normalizeNetwork`.
 
+import {
+  LABEL_CONTAINER_NUMBER as COMPOSE_CONTAINER_NUMBER_LABEL,
+  COMPOSE_PROJECT_LABELS,
+  LABEL_SERVICE as COMPOSE_SERVICE_LABEL,
+} from "@/container-client/compose/labels";
 import type {
   Container,
   ContainerImage,
@@ -44,10 +49,8 @@ function splitContainerGroupName(containerName: string) {
 // compose writes `com.docker.compose.*`, podman-compose writes `io.podman.compose.project` (+ the
 // docker.compose.service/container-number labels). Prefer the project label over the name-prefix
 // heuristic; keep NameInGroup per-replica-unique (service-number) so scaled services don't render
-// duplicate row names.
-const COMPOSE_PROJECT_LABELS = ["com.docker.compose.project", "io.podman.compose.project"];
-const COMPOSE_SERVICE_LABEL = "com.docker.compose.service";
-const COMPOSE_CONTAINER_NUMBER_LABEL = "com.docker.compose.container-number";
+// duplicate row names. Label keys come from the compose module (single source of truth — the same
+// constants the Stacks translator WRITES, so grouping and orchestration can never drift apart).
 
 function computeComposeGroup(
   labels: { [key: string]: string } | null | undefined,
@@ -63,6 +66,32 @@ function computeComposeGroup(
   const number = labels[COMPOSE_CONTAINER_NUMBER_LABEL] || "";
   const nameInGroup = service ? (number ? `${service}-${number}` : service) : "";
   return { group: project, nameInGroup };
+}
+
+/**
+ * Healthcheck status from the `/containers/json` list `Status` string — zero extra API calls. Handles BOTH
+ * engine formats: podman returns the bare word ("healthy" | "unhealthy" | "starting", or "" for none), docker
+ * a suffix ("Up 2 minutes (healthy)", "(health: starting)"). Returns undefined when there is no healthcheck.
+ * `unhealthy` is matched before `healthy` (it contains it); container states like "Restarting"/"Exited" that
+ * merely contain the letters are excluded by word boundaries.
+ */
+export function parseHealthFromStatus(
+  status: string | undefined | null,
+): "healthy" | "unhealthy" | "starting" | undefined {
+  if (!status) {
+    return undefined;
+  }
+  const value = status.toLowerCase();
+  if (/\bunhealthy\b/.test(value)) {
+    return "unhealthy";
+  }
+  if (/health:\s*starting|^starting$|\(\s*starting\s*\)/.test(value)) {
+    return "starting";
+  }
+  if (/\bhealthy\b/.test(value)) {
+    return "healthy";
+  }
+  return undefined;
 }
 
 /** raw container (list = State string, inspect = State object) → canonical. */
@@ -83,6 +112,14 @@ export const normalizeContainer = (container: Container): Container => {
   } else {
     container.Computed.DecodedState = container.State as ContainerStateList;
   }
+
+  // Healthcheck status: prefer the inspect State.Health.Status when present (inspect payloads), else parse the
+  // list `Status` string (the merged Containers view) — both go through the same word-level parser.
+  const healthFromInspect =
+    typeof container.State === "object"
+      ? (container.State as { Health?: { Status?: string } })?.Health?.Status
+      : undefined;
+  container.Computed.Health = parseHealthFromStatus(healthFromInspect ?? container.Status);
 
   const containerName = normalizeContainerName(`${container.Names?.[0] || container.Name}`);
   if (containerName) {

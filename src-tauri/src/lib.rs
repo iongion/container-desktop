@@ -116,6 +116,7 @@ pub fn run() {
             host::get_darwin_major,
             host::get_env_var,
             host::get_home_dir,
+            host::get_picker_base_dir,
             host::is_flatpak,
             host::get_user_data_path,
             host::fs_read_text_file,

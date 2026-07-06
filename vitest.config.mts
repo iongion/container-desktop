@@ -15,7 +15,7 @@ export default defineConfig({
     // jsdom covers both pure-function tests (normalizers/comparators) and
     // hook tests (renderHook + QueryClientProvider for the invalidation matrix).
     environment: "jsdom",
-    include: ["src/**/*.{test,spec}.{ts,tsx}", "support/cli/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "support/**/*.{test,spec}.{ts,tsx}"],
     // `*.live.test.ts` also ends in `.test.ts`, so it WOULD match the include glob — exclude it
     // explicitly so the real-VM suite never runs in the hermetic/CI run.
     exclude: [...configDefaults.exclude, "src/**/*.live.test.{ts,tsx}"],

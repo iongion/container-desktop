@@ -3,6 +3,7 @@ const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { linuxArtifactName, macArtifactName, winArtifactName, writeChecksum } = require("./release-artifacts.cjs");
+const { stripBundledGraphicsLibs } = require("./appimage-libs.cjs");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const RUST_TARGETS = {
@@ -24,6 +25,7 @@ const LINUX_ARCH = {
     rpm: "x86_64",
     appImageSource: "amd64",
     appImageOutput: "x86_64",
+    appImageArch: "x86_64",
     pacmanOutput: "x64",
     pacmanPackage: "x86_64",
   },
@@ -32,6 +34,7 @@ const LINUX_ARCH = {
     rpm: "aarch64",
     appImageSource: "aarch64",
     appImageOutput: "arm64",
+    appImageArch: "aarch64",
     pacmanOutput: "aarch64",
     pacmanPackage: "aarch64",
   },
@@ -78,12 +81,14 @@ function nativeCopyPlan({ projectRoot, releaseDir, pkg, platform, arch, target, 
     }
     if (format === "AppImage") {
       return {
-        kind: "copy",
+        kind: "appimage",
         platform,
         arch,
         format,
+        archLabel: tokens.appImageArch,
         sourcePath: path.join(root, "appimage", `${pkg.title}_${pkg.version}_${tokens.appImageSource}.AppImage`),
         outputPath: path.join(releaseDir, linuxArtifactName(tokens.appImageOutput, pkg.version, "AppImage")),
+        stageDir: path.join(releaseDir, "tauri-native", `linux-${arch}`, "appimage"),
       };
     }
   }
@@ -252,6 +257,68 @@ function copyNativeBundle(plan) {
   writeChecksum(plan.outputPath);
 }
 
+function runProcess(command, args, options = {}) {
+  const result = childProcess.spawnSync(command, args, { stdio: "inherit", ...options });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`${command} ${args.join(" ")} exited with ${result.status ?? result.signal}`);
+  }
+  return result;
+}
+
+// appimagetool is provisioned onto PATH by support/provision-deps.sh (pinned + sha256-verified).
+// A CONTAINER_DESKTOP_APPIMAGETOOL override lets local/offline builds point at their own copy.
+function resolveAppImageTool() {
+  const override = process.env.CONTAINER_DESKTOP_APPIMAGETOOL;
+  if (override) {
+    if (!fs.existsSync(override)) {
+      throw new Error(`CONTAINER_DESKTOP_APPIMAGETOOL points at a missing file: ${override}`);
+    }
+    return override;
+  }
+  const probe = childProcess.spawnSync("appimagetool", ["--version"], {
+    env: { ...process.env, APPIMAGE_EXTRACT_AND_RUN: "1" },
+    stdio: "ignore",
+  });
+  if (probe.status === 0) {
+    return "appimagetool";
+  }
+  throw new Error(
+    "appimagetool not found on PATH. Install it with `bash support/provision-deps.sh` or set CONTAINER_DESKTOP_APPIMAGETOOL.",
+  );
+}
+
+// Tauri/linuxdeploy AppImages bundle the host's libEGL/libgbm/libwayland-* copies; on newer/rolling
+// distros those clash with the running Mesa/Wayland stack and abort at startup with
+// "Could not create default EGL display: EGL_BAD_PARAMETER". Extract the freshly built AppImage,
+// delete those host-provided libraries, and repack it so the app falls back to the host's copies.
+function repackAppImageWithoutBundledLibs(plan) {
+  const sourcePath = resolveExistingSource(plan.sourcePath);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Missing Tauri native bundle input: ${plan.sourcePath}`);
+  }
+  fs.rmSync(plan.stageDir, { recursive: true, force: true });
+  fs.mkdirSync(plan.stageDir, { recursive: true });
+  fs.chmodSync(sourcePath, 0o755);
+  // --appimage-extract unpacks without FUSE and yields <stageDir>/squashfs-root.
+  runProcess(sourcePath, ["--appimage-extract"], { cwd: plan.stageDir });
+  const appDir = path.join(plan.stageDir, "squashfs-root");
+  const removed = stripBundledGraphicsLibs(appDir);
+  console.log(
+    `AppImage: removed ${removed.length} host-provided graphics lib(s)${removed.length ? ` -> ${removed.join(", ")}` : ""}`,
+  );
+  const appimagetool = resolveAppImageTool();
+  fs.mkdirSync(path.dirname(plan.outputPath), { recursive: true });
+  fs.rmSync(plan.outputPath, { force: true });
+  runProcess(appimagetool, ["--no-appstream", appDir, plan.outputPath], {
+    env: { ...process.env, ARCH: plan.archLabel, APPIMAGE_EXTRACT_AND_RUN: "1" },
+  });
+  fs.chmodSync(plan.outputPath, 0o755);
+  writeChecksum(plan.outputPath);
+}
+
 function directorySize(dir) {
   let total = 0;
   if (!fs.existsSync(dir)) return total;
@@ -317,6 +384,8 @@ function collectNativeBundles(plans, pkg) {
   for (const plan of plans) {
     if (plan.kind === "copy") {
       copyNativeBundle(plan);
+    } else if (plan.kind === "appimage") {
+      repackAppImageWithoutBundledLibs(plan);
     } else if (plan.kind === "pacman") {
       stagePacmanBundle(plan, pkg);
       runArchiveCommand(plan);
@@ -359,7 +428,7 @@ function main() {
     throw new Error(`Unknown command: ${args.command}`);
   }
   for (const plan of plans) {
-    const source = plan.kind === "copy" ? plan.sourcePath : plan.packageRoot;
+    const source = plan.kind === "pacman" ? plan.packageRoot : plan.sourcePath;
     console.log(`${plan.format}: ${source} -> ${plan.outputPath}`);
   }
   if (!args.dryRun) {

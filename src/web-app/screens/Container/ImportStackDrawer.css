@@ -1,0 +1,42 @@
+.ImportStackDrawer .StackPreview {
+  margin-bottom: 10px;
+}
+
+.ImportStackDrawer .StackPreviewHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ImportStackDrawer .StackPreviewName {
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.ImportStackDrawer .StackPreviewServices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ImportStackDrawer .StackPreviewService {
+  padding: 1px 6px;
+  font-size: 11px;
+  color: var(--app-text);
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+
+.ImportStackDrawer .StackPreviewWarnings {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+
+.ImportStackDrawer .StackPodConflicts {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+}

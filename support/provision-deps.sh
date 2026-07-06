@@ -203,11 +203,52 @@ install_packaging_tools() {
   esac
 }
 
+# appimagetool packs the AppImage after a post-build step strips the host-provided graphics libs
+# (libEGL/libgbm/libwayland-*) that otherwise abort startup with EGL_BAD_PARAMETER on rolling distros
+# (see support/appimage-libs.cjs). Tauri builds the AppImage with linuxdeploy's OWN bundled copy, so a
+# standalone appimagetool is not otherwise present. It is a GitHub release binary, not a distro
+# package, so fetch the pinned, checksum-verified build onto PATH. Keep the version/sha in sync with
+# resolveAppImageTool in support/tauri-native-bundles.cjs (which reads it from PATH).
+APPIMAGETOOL_VERSION="1.9.1"
+install_appimagetool() {
+  if command -v appimagetool >/dev/null 2>&1; then
+    log "appimagetool already present: $(command -v appimagetool)"
+    return 0
+  fi
+  local arch sha url tmp
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64) sha="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0" ;;
+    aarch64|arm64) arch="aarch64"; sha="f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158" ;;
+    *) warn "appimagetool: unsupported arch '$arch' — AppImage repack will fail until it is installed"; return 0 ;;
+  esac
+  url="https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-${arch}.AppImage"
+  log "Installing appimagetool ${APPIMAGETOOL_VERSION} (${arch}) -> /usr/local/bin/appimagetool"
+  tmp="$(mktemp)"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL --retry 3 -o "$tmp" "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$tmp" "$url"
+  else
+    warn "appimagetool: neither curl nor wget available — skipping"
+    rm -f "$tmp"
+    return 0
+  fi
+  if ! printf '%s  %s\n' "$sha" "$tmp" | sha256sum -c - >/dev/null 2>&1; then
+    warn "appimagetool: sha256 mismatch for ${url} — not installing"
+    rm -f "$tmp"
+    return 1
+  fi
+  $SUDO install -m 0755 "$tmp" /usr/local/bin/appimagetool
+  rm -f "$tmp"
+}
+
 log "Installing system packages..."
 install_build_toolchain
 install_tauri_linux_deps
 install_tauri_test_deps
 install_packaging_tools
+install_appimagetool
 
 # report per-user toolchains (NOT auto-installed)
 log "Per-user toolchains (install yourself per DEVELOPMENT.md if missing):"

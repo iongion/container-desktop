@@ -1,7 +1,18 @@
-import { Button, ButtonGroup, Code, Divider, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
+import {
+  Button,
+  ButtonGroup,
+  Code,
+  Divider,
+  HTMLTable,
+  Icon,
+  Intent,
+  MenuItem,
+  NonIdealState,
+  Spinner,
+} from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import dayjs from "dayjs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type Container, ContainerStateList } from "@/env/Types";
@@ -10,6 +21,8 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { connectedConnections, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
 import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
@@ -24,12 +37,20 @@ import {
 } from "@/web-app/hooks/useMergedResources";
 import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { pathTo } from "@/web-app/Navigator";
+import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useResourceStore } from "@/web-app/stores/resourceStore";
+import { useStackHandoffStore } from "@/web-app/stores/stackHandoffStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ActionsMenu } from ".";
 import { useContainerBulkActions } from "./bulkActions";
+import { isComposeGroup } from "./composeGroups";
+import { tearDownStack } from "./composeQueries";
 import { type ContainerRowDescriptor, flattenGroups } from "./flattenGroups";
-import { groupContainers } from "./grouping";
+import { groupContainersAcrossConnections } from "./grouping";
+import { aggregateStatus, statusLabel, statusTone } from "./health";
+import { ImportStackDrawer } from "./ImportStackDrawer";
+import { enrichHealth, useComposeHealth } from "./useComposeHealth";
 import "./ManageScreen.css";
 
 export interface ScreenProps extends AppScreenProps {}
@@ -52,6 +73,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [collapse, setCollapse] = useState<{
     [key: string]: boolean | undefined;
   }>({});
+  // Groups with an in-flight lifecycle action (start/stop/restart all, or stack teardown): show a spinner and
+  // disable that group's controls until it settles. A Set so two groups can run independently.
+  const [busyGroups, setBusyGroups] = useState<ReadonlySet<string>>(() => new Set());
+  const markGroupBusy = useCallback((groupKey: string, busy: boolean) => {
+    setBusyGroups((prev) => {
+      const next = new Set(prev);
+      if (busy) {
+        next.add(groupKey);
+      } else {
+        next.delete(groupKey);
+      }
+      return next;
+    });
+  }, []);
+  // Stacks are just compose-labelled container groups, so they live in this list: "Import stack" deploys a
+  // compose file whose result shows up as a group here, tearable down from its group header.
+  const [withImport, setWithImport] = useState(false);
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const { t } = useTranslation();
   const currentConnector = useAppStore((state) => state.currentConnector);
@@ -62,10 +100,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const showEngineColumn = useShowEngineColumn();
   const showEngineRowAccent = useShowEngineRowAccent();
   const merged = useMergedResources("containers");
+  // Compose containers whose health the engine list omitted (podman compat) get it via a scoped inspect;
+  // overlay it before grouping so the row dot + group rollup (both read Computed.Health) work uniformly.
+  const composeHealth = useComposeHealth(merged);
+  const withHealth = useMemo(() => enrichHealth(merged, composeHealth), [merged, composeHealth]);
   // Group WITHIN each connection so identically-named groups on different engines never merge.
   const groups = useMemo(() => {
     const byConnection = new Map<string, MergedContainer[]>();
-    for (const container of merged) {
+    for (const container of withHealth) {
       const list = byConnection.get(container.connectionId);
       if (list) {
         list.push(container);
@@ -73,8 +115,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
         byConnection.set(container.connectionId, [container]);
       }
     }
-    return [...byConnection.values()].flatMap((list) => groupContainers(list, searchTerm, clientSort));
-  }, [merged, searchTerm, clientSort]);
+    return groupContainersAcrossConnections([...byConnection.values()], searchTerm, clientSort);
+  }, [withHealth, searchTerm, clientSort]);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((container: MergedContainer) => mergedKey(container, container.Id), []);
   // Flatten the groups into the exact ordered <tr> sequence (group header + members, collapse-aware),
@@ -105,16 +147,75 @@ export const Screen: AppScreen<ScreenProps> = () => {
   // routing + eligibility of useContainerBulkActions — no compose binary. "start" inherits the existing
   // unpause/restart-for-stopped semantics from bulkActions.
   const runGroupAction = useCallback(
-    async (actionKey: string, containers: MergedContainer[]) => {
+    async (actionKey: string, containers: MergedContainer[], groupKey: string) => {
       const action = bulkActions.find((entry) => entry.key === actionKey);
       if (!action) {
         return;
       }
       const eligible = action.eligible ?? (() => true);
-      await Promise.allSettled(containers.filter(eligible).map((container) => action.run(container)));
-      await bulkRefresh();
+      markGroupBusy(groupKey, true);
+      try {
+        const results = await Promise.allSettled(containers.filter(eligible).map((container) => action.run(container)));
+        await bulkRefresh();
+        const failed = results.filter((r) => r.status === "rejected").length;
+        if (failed > 0) {
+          Notification.show({
+            message: t("{{count}} container(s) could not {{action}}", { count: failed, action: actionKey }),
+            intent: Intent.WARNING,
+          });
+        }
+      } finally {
+        markGroupBusy(groupKey, false);
+      }
     },
-    [bulkActions, bulkRefresh],
+    [bulkActions, bulkRefresh, markGroupBusy, t],
+  );
+  // Import stack (deploy a compose file) targets a Podman engine; its result becomes a compose group in this
+  // very list. Default the drawer to the first connected Podman connection, keeping the user's pick if valid.
+  const connections = useAppStore((state) => state.connections);
+  const activeRuntime = useResourceStore((state) => state.activeRuntime);
+  const podmanConnections = useMemo(
+    () => connectedConnections(connections, activeRuntime, isPodmanConnection),
+    [connections, activeRuntime],
+  );
+  const [importConnId, setImportConnId] = useState("");
+  const composeConnId = podmanConnections.some((c) => c.id === importConnId)
+    ? importConnId
+    : (podmanConnections[0]?.id ?? "");
+  const [handoffText, setHandoffText] = useState<string | null>(null);
+  const openImport = useCallback(() => {
+    setHandoffText(null);
+    setWithImport(true);
+  }, []);
+  const closeImport = useCallback(() => {
+    setWithImport(false);
+    setHandoffText(null);
+  }, []);
+  // AI "Open in Stacks" handoff: raw generated compose text opens the Import drawer pre-filled.
+  const pendingComposeText = useStackHandoffStore((s) => s.pendingComposeText);
+  const setPendingComposeText = useStackHandoffStore((s) => s.setPendingComposeText);
+  useEffect(() => {
+    if (pendingComposeText) {
+      setHandoffText(pendingComposeText);
+      setPendingComposeText(null);
+      setWithImport(true);
+    }
+  }, [pendingComposeText, setPendingComposeText]);
+  // Tear a stack down from its compose-group header — removes the project's containers, networks and pod.
+  const onStackTeardown = useCallback(
+    async (project: string, connId: string, groupKey: string) => {
+      markGroupBusy(groupKey, true);
+      try {
+        await tearDownStack(connId, project);
+        await bulkRefresh();
+        Notification.show({ message: t("Stack {{name}} removed", { name: project }), intent: Intent.SUCCESS });
+      } catch (_error) {
+        Notification.show({ message: t("Could not tear down the stack"), intent: Intent.DANGER });
+      } finally {
+        markGroupBusy(groupKey, false);
+      }
+    },
+    [bulkRefresh, markGroupBusy, t],
   );
   const onContainerFocus = useCallback((e) => {
     const container = e.currentTarget.getAttribute("data-container-key");
@@ -156,6 +257,17 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <Divider />
               </>
             ) : null}
+            {podmanConnections.length > 0 ? (
+              <Button
+                size="small"
+                intent={Intent.SUCCESS}
+                icon={IconNames.IMPORT}
+                text={t("Import stack")}
+                title={t("Import a stack from a compose file")}
+                onClick={openImport}
+              />
+            ) : null}
+            <Divider />
             <ActionsMenu onReload={onReload} />
           </>
         }
@@ -227,6 +339,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   const groupName = containers[0].Computed.Group;
                   const groupKey = descriptor.groupKey;
                   const isCollapsed = !!collapse[groupKey];
+                  // A single aggregate status ball for the group (worst member's tone), before the group name.
+                  const groupStatus = aggregateStatus(containers);
+                  const isGroupBusy = busyGroups.has(groupKey);
                   return (
                     <tr
                       key={key}
@@ -244,6 +359,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
                           text={
                             <>
+                              <span
+                                className="ContainerStatus"
+                                data-tone={groupStatus.tone}
+                                title={groupStatus.label || undefined}
+                              />
                               {group.Icon ? (
                                 <>
                                   <Icon icon={group.Icon} /> &nbsp;
@@ -259,25 +379,31 @@ export const Screen: AppScreen<ScreenProps> = () => {
                           data-prefix-group={groupKey}
                         />
                       </td>
-                      <td colSpan={6}>
+                      <td colSpan={5}>
                         <div className="AppDataTableGroupDetails">
                           <ButtonGroup variant="minimal" data-actions-menu="container-group">
                             <Button
                               icon={IconNames.PLAY}
+                              disabled={isGroupBusy}
                               title={t("Start all in {{name}}", { name: groupName })}
-                              onClick={() => runGroupAction("start", containers)}
+                              onClick={() => runGroupAction("start", containers, groupKey)}
                             />
                             <Button
                               icon={IconNames.STOP}
+                              disabled={isGroupBusy}
                               title={t("Stop all in {{name}}", { name: groupName })}
-                              onClick={() => runGroupAction("stop", containers)}
+                              onClick={() => runGroupAction("stop", containers, groupKey)}
                             />
                             <Button
                               icon={IconNames.RESET}
+                              disabled={isGroupBusy}
                               title={t("Restart all in {{name}}", { name: groupName })}
-                              onClick={() => runGroupAction("restart", containers)}
+                              onClick={() => runGroupAction("restart", containers, groupKey)}
                             />
                           </ButtonGroup>
+                          {isGroupBusy ? (
+                            <Spinner size={16} className="ContainerGroupBusy" aria-label={t("Working…")} />
+                          ) : null}
                           <ul className="ContainerReportStateCounts">
                             <li title={t("Total number of containers in this group")}>
                               # <span>{group.Items.length}</span>
@@ -291,6 +417,40 @@ export const Screen: AppScreen<ScreenProps> = () => {
                             </li>
                           </ul>
                         </div>
+                      </td>
+                      <td data-column="Actions">
+                        {isComposeGroup(group) && groupName ? (
+                          <ConfirmMenu
+                            onConfirm={(_tag, confirmed) => {
+                              if (confirmed) {
+                                onStackTeardown(groupName, containers[0].connectionId, groupKey);
+                              }
+                            }}
+                            tag={groupName}
+                            title={t("Tear down stack {{name}} — remove its containers, networks and pod?", {
+                              name: groupName,
+                            })}
+                          >
+                            <MenuItem
+                              icon={IconNames.PLAY}
+                              text={t("Start all")}
+                              disabled={isGroupBusy}
+                              onClick={() => runGroupAction("start", containers, groupKey)}
+                            />
+                            <MenuItem
+                              icon={IconNames.STOP}
+                              text={t("Stop all")}
+                              disabled={isGroupBusy}
+                              onClick={() => runGroupAction("stop", containers, groupKey)}
+                            />
+                            <MenuItem
+                              icon={IconNames.RESET}
+                              text={t("Restart all")}
+                              disabled={isGroupBusy}
+                              onClick={() => runGroupAction("restart", containers, groupKey)}
+                            />
+                          </ConfirmMenu>
+                        ) : null}
                       </td>
                       <td className="BulkSelectColumn">
                         <SelectionCheckbox
@@ -330,6 +490,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     intent={Intent.SUCCESS}
                     iconName={IconNames.ALIGN_JUSTIFY}
                     title={t("Container logs")}
+                    prefix={
+                      <span
+                        className="ContainerStatus"
+                        data-tone={statusTone(container)}
+                        title={statusLabel(container) || undefined}
+                      />
+                    }
                   />
                 );
                 const containerLayersButton = (
@@ -423,6 +590,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </HTMLTable>
         )}
       </div>
+      {withImport ? (
+        <ImportStackDrawer
+          connectionId={composeConnId}
+          onConnectionChange={setImportConnId}
+          initialText={handoffText ?? undefined}
+          onClose={closeImport}
+        />
+      ) : null}
     </div>
   );
 };

@@ -10,6 +10,13 @@ import type { AxiosInstance } from "axios";
 import type EventEmitter from "eventemitter3";
 
 import type {
+  ComposeChangeSummary,
+  ComposeDownRequest,
+  ComposeProject,
+  ComposeUpRequest,
+} from "@/container-client/compose/types";
+
+import type {
   ApiConnection,
   ApiStartOptions,
   AvailabilityCheck,
@@ -108,11 +115,11 @@ export interface BuildersExtension {
   useBuilder(name: string): Promise<boolean>;
 }
 
-/** `compose` — `docker compose …` (real on Docker as wired; no-op on Podman). */
+/** `compose` — parse a docker-compose file and orchestrate it as native Podman resources (REAL on Podman). */
 export interface ComposeExtension {
-  getComposeProjects(): Promise<any[]>;
-  composeUp(opts?: any): Promise<boolean>;
-  composeDown(opts?: any): Promise<boolean>;
+  getComposeProjects(): Promise<ComposeProject[]>;
+  composeUp(request: ComposeUpRequest): Promise<ComposeChangeSummary>;
+  composeDown(request: ComposeDownRequest): Promise<boolean>;
 }
 
 // The single symmetric facade — every host satisfies ALL of it (real or no-op, gated by capabilities)

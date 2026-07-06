@@ -50,6 +50,34 @@
   display: inline-block;
   border: 1px solid transparent;
 }
+/* Status ball — a single fixed slot rendered inside the name link (rows) and the group button (groups),
+   right before the text value. Always present (never wobbles). Per-tone colors (success/warning/danger) live
+   in the theme files (dark.css/light.css); the icon inherits color via currentColor. Group headers show ONE
+   ball for the group's aggregate (worst) status. */
+/* A CSS-drawn dot (not a Blueprint Icon, whose SVG box misaligns in flex/inline contexts). The fill is
+   currentColor, so the per-tone `color` set in the theme files paints it; it centers as a flex item (row
+   name link) and via vertical-align inline (group button text). */
+[data-table="containers"] .ContainerStatus {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background-color: currentColor;
+  vertical-align: middle;
+}
+/* "muted" = status unknown / not checked — a faded, theme-neutral dot (the muted text token adapts to every
+   engine theme + accent, so it never clashes). */
+[data-table="containers"] .ContainerStatus[data-tone="muted"] {
+  color: var(--app-text-muted);
+  opacity: 0.55;
+}
+/* Spinner shown next to a group's action buttons while a start/stop/restart-all or teardown is in flight. */
+[data-table="containers"] .AppDataTableGroupDetails .ContainerGroupBusy {
+  flex: 0 0 auto;
+  margin: 0 8px;
+}
 /* Status */
 [data-table="containers"] .ContainerReportStateCounts {
   display: inline-block;

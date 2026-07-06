@@ -7,6 +7,9 @@
 // Docker-domain groups (contexts/swarm/builders/compose) are no-ops on Podman. The machine-inspect helper
 // lives in this file.
 
+import { down, listProjects } from "@/container-client/adapters/compose-rest";
+import { getPodLogsViaRest } from "@/container-client/adapters/pods-rest";
+import { composeUp as orchestrateComposeUp } from "@/container-client/compose/orchestrate";
 import { findProgramPath } from "@/container-client/detector";
 import {
   type CommandExecutionResult,
@@ -103,7 +106,7 @@ export const podmanDialect: EngineDialect = {
       contexts: false,
       swarm: false,
       builders: false,
-      compose: false,
+      compose: true,
       registries: true,
       controllerVersion: false,
     },
@@ -395,24 +398,11 @@ export const podmanDialect: EngineDialect = {
 
       // pods (REAL on Podman - libpod)
       getPodLogs: async (id?: any, tail?: any) => {
-        host.logger.debug("Retrieving pod logs", id, tail);
-        const { program, controller } = await host.getSettings();
-        if (isEmpty(program.path)) {
-          host.logger.error("Unable to create machine - program path is empty", program);
-          throw new Error("Program path is empty");
-        }
-        const args = ["pod", "logs"];
-        if (typeof tail !== "undefined") {
-          args.push(`--tail=${tail}`);
-        }
-        args.push("-f", id);
-        let result: CommandExecutionResult;
-        if (host.isScoped()) {
-          result = await host.runScopeCommand(program.path || "", args, controller?.scope || "");
-        } else {
-          result = await host.runHostCommand(program.path || "", args);
-        }
-        return result;
+        // Aggregate member-container logs over the libpod REST socket (there is no pod-logs REST endpoint, and
+        // the `podman pod logs` CLI needs a local binary/`program.path` that API/socket connections lack). This
+        // works everywhere the engine API does — no CLI dependency — so it is the default. See pods-rest.ts.
+        host.logger.debug("Retrieving pod logs (REST aggregation)", id, tail);
+        return getPodLogsViaRest(await host.getApiDriver(), id, typeof tail === "number" ? tail : undefined);
       },
 
       // Docker-domain groups — no-op on Podman (gated false; UI never calls them)
@@ -426,9 +416,21 @@ export const podmanDialect: EngineDialect = {
       swarmLeave: async () => false,
       getBuilders: async () => [],
       useBuilder: async () => false,
-      getComposeProjects: async () => [],
-      composeUp: async () => false,
-      composeDown: async () => false,
+
+      // compose (REAL on Podman — native libpod translation, no external CLI/executor). Delegates to the
+      // pure compose-rest/orchestrate helpers directly with host.getApiDriver() (NOT ComposeAdapter, which
+      // would pull Application into the dialect and recreate the cycle — same reason swarm uses swarm-rest).
+      getComposeProjects: async () => listProjects(await host.getApiDriver()),
+      composeUp: async (request) => {
+        const settings = await host.getSettings().catch(() => undefined);
+        const scope = settings?.controller?.scope ?? "";
+        const resolvePath = (localPath: string) => host.resolveGuestPath(localPath, scope, settings);
+        return orchestrateComposeUp(await host.getApiDriver(), request.model, request, { resolvePath });
+      },
+      composeDown: async (request) => {
+        await down(await host.getApiDriver(), request.project, request);
+        return true;
+      },
     };
   },
 };

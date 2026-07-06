@@ -5,6 +5,7 @@
 // reusable; a different shell replaces THIS file. No other module should touch BrowserWindow directly.
 
 import fs from "node:fs";
+import path from "node:path";
 import { app, BrowserWindow, dialog, nativeImage, shell } from "electron";
 
 import { OperatingSystem } from "@/env/Types";
@@ -199,8 +200,13 @@ export class WindowManager {
       return { canceled: true, filePaths: [] };
     }
     this.deps.logger.debug("IPC - openFileSelector - start", options);
+    // Base every picker at the app "home": the bundled sample dir in development (dev cwd is the repo
+    // root, mirroring the Tauri backend), the install dir when packaged. A caller-supplied defaultPath wins.
+    const pickerBaseDir = app.isPackaged
+      ? path.dirname(app.getPath("exe"))
+      : path.join(app.getAppPath(), "support", "image-builders");
     const selection = await dialog.showOpenDialog(this.window, {
-      defaultPath: app.getPath("home"),
+      defaultPath: options?.defaultPath || pickerBaseDir,
       properties: [options?.directory ? "openDirectory" : "openFile"],
       filters: options?.filters || [],
     });

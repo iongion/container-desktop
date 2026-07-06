@@ -81,6 +81,31 @@ pub fn get_home_dir() -> String {
     }
 }
 
+/// Base directory for native file/dir pickers. In development the dev binary sets its cwd to the repo root
+/// (see run()), so this is the bundled sample dir; when packaged it is the app install dir. Mirrors the
+/// Electron windowManager base so both backends start pickers in the same place.
+#[tauri::command]
+pub fn get_picker_base_dir() -> String {
+    #[cfg(debug_assertions)]
+    {
+        std::env::current_dir()
+            .map(|p| {
+                p.join("support")
+                    .join("image-builders")
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .unwrap_or_default()
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.to_string_lossy().into_owned()))
+            .unwrap_or_default()
+    }
+}
+
 #[tauri::command]
 pub fn is_flatpak() -> bool {
     if !cfg!(target_os = "linux") {

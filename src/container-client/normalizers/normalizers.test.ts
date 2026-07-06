@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { dockerNormalizers } from "./docker";
 import { podmanNormalizers } from "./podman";
+import { parseHealthFromStatus } from "./shared";
 
 // The normalizer guard: feed representative raw Podman + Docker payloads, assert the canonical model.
 // Only `normalizeNetwork` differs between engines; every other transform is shared (verified below).
@@ -108,6 +109,43 @@ describe("normalizeContainer", () => {
     const out = dockerNormalizers.normalizeContainer(raw);
     expect(out.Computed.Group).toBe("plain");
     expect(out.Computed.NameInGroup).toBe("thing");
+  });
+});
+
+describe("parseHealthFromStatus", () => {
+  it("reads podman's bare health word from the list Status", () => {
+    expect(parseHealthFromStatus("healthy")).toBe("healthy");
+    expect(parseHealthFromStatus("unhealthy")).toBe("unhealthy");
+    expect(parseHealthFromStatus("starting")).toBe("starting");
+  });
+
+  it("reads docker's parenthesized health suffix", () => {
+    expect(parseHealthFromStatus("Up 2 minutes (healthy)")).toBe("healthy");
+    expect(parseHealthFromStatus("Up 5 seconds (unhealthy)")).toBe("unhealthy");
+    expect(parseHealthFromStatus("Up 1 second (health: starting)")).toBe("starting");
+  });
+
+  it("is undefined when there is no healthcheck", () => {
+    expect(parseHealthFromStatus("")).toBeUndefined();
+    expect(parseHealthFromStatus(undefined)).toBeUndefined();
+    expect(parseHealthFromStatus("Up 2 minutes")).toBeUndefined();
+  });
+
+  it("does not mistake container states (Restarting/Exited) for health", () => {
+    expect(parseHealthFromStatus("Restarting (1) 2 seconds ago")).toBeUndefined();
+    expect(parseHealthFromStatus("Exited (0) 3 minutes ago")).toBeUndefined();
+  });
+});
+
+describe("normalizeContainer — health", () => {
+  it("populates Computed.Health from the podman list Status", () => {
+    const raw: any = { Id: "h1", Names: ["/db"], State: "running", Status: "healthy", Labels: {} };
+    expect(podmanNormalizers.normalizeContainer(raw).Computed.Health).toBe("healthy");
+  });
+
+  it("leaves Computed.Health undefined without a healthcheck", () => {
+    const raw: any = { Id: "h2", Names: ["/db"], State: "running", Status: "", Labels: {} };
+    expect(podmanNormalizers.normalizeContainer(raw).Computed.Health).toBeUndefined();
   });
 });
 

@@ -85,6 +85,8 @@ export interface OpenFileSelectorOptions {
   directory?: boolean;
   multiple?: boolean;
   filters?: any;
+  /** Starting directory (or file) for the native picker. Honored by both the Electron and Tauri backends. */
+  defaultPath?: string;
 }
 
 export interface OpenTerminalOptions {
@@ -874,6 +876,9 @@ export interface Container {
     Group?: string;
     NameInGroup?: string;
     DecodedState: ContainerStateList;
+    // Healthcheck status parsed from the list `Status` string (podman bare "healthy"; docker "…(healthy)").
+    // Undefined when the container has no healthcheck.
+    Health?: "healthy" | "unhealthy" | "starting";
   };
 }
 

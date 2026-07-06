@@ -30,7 +30,13 @@ import type {
   ResourceSyncSnapshot,
 } from "@/container-client/resourceSyncProtocol";
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
-import type { Connection, ConnectorCapabilities, EngineConnectorAvailability, GlobalUserSettings } from "@/env/Types";
+import type {
+  AvailabilityCheck,
+  Connection,
+  ConnectorCapabilities,
+  EngineConnectorAvailability,
+  GlobalUserSettings,
+} from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import type { TrayMenuData } from "@/platform/trayMenu";
 import { deepMerge } from "@/utils";
@@ -166,6 +172,32 @@ async function settleWithin<T>(promise: Promise<T>, timeoutMs: number): Promise<
         }
       });
   });
+}
+
+// A dropped /events stream can coincide with the engine socket being momentarily busy — e.g. a teardown
+// request burst exhausting its listen backlog, yielding a transient ECONNREFUSED. Pinging once and dropping
+// on the first failure flaps the whole connection to "reconnecting" for a hiccup that clears in seconds.
+// Retry the liveness ping across a short grace window and only conclude the engine is gone if it stays
+// unreachable the whole time. A thrown ping counts as a failed attempt.
+export const EVENTS_DROP_PING_ATTEMPTS = 3;
+export const EVENTS_DROP_PING_DELAY_MS = 2000;
+
+export async function pingUntilAvailable(
+  ping: () => Promise<AvailabilityCheck>,
+  opts: { attempts: number; delayMs: number; sleep?: (ms: number) => Promise<void> },
+): Promise<AvailabilityCheck> {
+  const sleep = opts.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  let last: AvailabilityCheck = { success: false };
+  for (let attempt = 0; attempt < opts.attempts; attempt += 1) {
+    last = await ping().catch(() => ({ success: false }) as AvailabilityCheck);
+    if (last.success) {
+      return last;
+    }
+    if (attempt < opts.attempts - 1) {
+      await sleep(opts.delayMs);
+    }
+  }
+  return last;
 }
 
 // Timeout wrapper that rejects with a timeout error after the specified duration.
@@ -614,7 +646,17 @@ export class EngineDataService {
     if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
       return;
     }
-    const api = await host.isApiRunning().catch(() => ({ success: false }));
+    // Retry the liveness ping across a short grace window so a transient socket hiccup (common during a
+    // teardown request burst) doesn't flap the connection to "reconnecting" for something that clears in
+    // seconds. Only a sustained failure across the whole window counts as a real drop.
+    const api = await pingUntilAvailable(() => host.isApiRunning(), {
+      attempts: EVENTS_DROP_PING_ATTEMPTS,
+      delayMs: EVENTS_DROP_PING_DELAY_MS,
+    });
+    // The grace window is async — bail if the connection was torn down or replaced meanwhile.
+    if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
+      return;
+    }
     if (!api.success) {
       this.handleDrop(connectionId, reason);
       return;

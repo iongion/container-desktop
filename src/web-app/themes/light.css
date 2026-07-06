@@ -20,6 +20,15 @@ body.bp6-light [data-table="containers"] .ContainerState[data-state="created"] {
 body.bp6-light [data-table="containers"] .ContainerState[data-state="stopped"] {
   color: #333;
 }
+body.bp6-light [data-table="containers"] .ContainerStatus[data-tone="success"] {
+  color: #0f9960;
+}
+body.bp6-light [data-table="containers"] .ContainerStatus[data-tone="warning"] {
+  color: #bf7326;
+}
+body.bp6-light [data-table="containers"] .ContainerStatus[data-tone="danger"] {
+  color: #c23030;
+}
 body.bp6-light [data-table="containers"] .ContainerReportStateCounts li {
   background: #efefef;
 }

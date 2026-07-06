@@ -10,6 +10,8 @@ import { useTranslation } from "react-i18next";
 import { AI_CHANNELS, type ChatStreamEvent } from "@/ai-system/core";
 import { AIComposer } from "@/web-app/components/AIComposer";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { pathTo } from "@/web-app/Navigator";
+import { useStackHandoffStore } from "@/web-app/stores/stackHandoffStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import "./GeneratorScreen.css";
@@ -86,6 +88,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     saveAs(new Blob([value], { type: "text/plain;charset=utf-8" }), name);
   };
 
+  // Close the generate → deploy loop: hand the compose text straight to the Stacks Add-Stack drawer.
+  const onOpenInStacks = () => {
+    useStackHandoffStore.getState().setPendingComposeText(value);
+    window.location.href = pathTo("/screens/stacks");
+  };
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <div className="GeneratorHeader">
@@ -107,6 +115,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </HTMLSelect>
         ) : null}
         <Button icon={IconNames.DOWNLOAD} text={t("Save")} onClick={onSave} />
+        {kind === "compose" ? (
+          <Button
+            icon={IconNames.DIAGRAM_TREE}
+            text={t("Open in Stacks")}
+            onClick={onOpenInStacks}
+            disabled={generating || !value.trim()}
+          />
+        ) : null}
       </div>
 
       <div className="GeneratorEditor">

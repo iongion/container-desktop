@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Native Compose stacks — import a `docker-compose.yml` and run it as native Podman containers. A stack is just a compose-labelled container group, so it appears in the **Containers** list: deploy with **Import stack**, tear it down from the group header (compose-parity or single-pod networking, with a single-pod host-port pre-flight)
+- Pod logs now aggregate each member container over the libpod REST API instead of shelling out to `podman pod logs`, so they work on socket/API connections with no local CLI path
+- A container **status dot** in front of every name (rows and compose-group headers) — green running, red unhealthy or crashed (a non-clean exit code), amber starting/paused, neutral grey when cleanly stopped or unknown — combining run state with healthcheck status. Health is read from the engine list or, for **running** compose containers where podman's docker-compat list omits it, an on-demand inspect; a stopped container's stale last-health is ignored so the dot never contradicts its tooltip.
+- Compose `depends_on: { condition: service_healthy }` is now honored on **Import stack** — a dependent waits for its dependency to report healthy before starting, translating a compose-file `healthcheck:` into the container when the image defines none
+- Group actions (start/stop/restart all) and stack teardown now show an inline spinner and disable that group's controls while they run, with a success/failure toast — previously these ran with no feedback at all
+
+### Fixed
+
+- Container lifecycle ops (stop, restart, force-remove) and stack-teardown deletes now use a generous request timeout instead of the 3s default, which used to cut off a slow stop (a container that ignores SIGTERM waits its full grace period before SIGKILL) — the client "failed" while the engine was still working, leaving state inconsistent and, under a teardown request storm, tripping a transient engine disconnect
+- The engine no longer flaps to "reconnecting" on a momentary socket hiccup. When the events stream drops, the liveness ping is now retried across a short grace window and a disconnect is declared only if it stays unreachable the whole time (previously a single failed ping — e.g. a transient `ECONNREFUSED` during a teardown burst — dropped the connection immediately)
+- Importing a stack no longer aborts with libpod's cryptic "container state improper" when a container is left over mid-transition (e.g. still `stopping`) from a run that didn't finish. The start step now waits for it to settle into a startable state and starts it — or, only if it never does, reports a clear, actionable message naming the container and its state
+- Pod infra ("pause") containers are hidden from the Containers list — they're a podman implementation detail, not a user workload (matching how Docker Desktop hides pause containers); a single-pod stack's infra container no longer shows up as a stray `<pod-id>-infra` entry
+- Re-importing a stack in a different deployment mode (single-pod ↔ compose-parity) now tears the existing project down cleanly first, then deploys fresh — instead of recreating each container in place, which stranded orphans and could crash the podman service by force-removing pod members individually. Named volumes are preserved across the switch
+- Stack teardown now removes the project **pod first** (podman's pod-teardown atomically stops and removes its members), instead of force-removing pod-member containers one-by-one — the latter could crash the podman service mid-teardown ("socket hang up", brief engine disconnect)
+- Tearing down a stack now also removes the project's networks. libpod's `/networks/json` names each network with a lowercase `name` field (Docker/volumes use `Name`), which the teardown wasn't reading — so every compose-parity stack silently left its networks behind
+- Container groups (compose projects, pod infrastructure, name-prefix groups) now sort ahead of standalone containers across **all** connected engines — like folders in a file manager — under any sort. Previously, with two engines connected, a second engine's groups could appear below the first engine's standalone containers
+- Linux AppImage no longer aborts at startup with `Could not create default EGL display: EGL_BAD_PARAMETER` on rolling-release distros (Void, Arch, recent Fedora). Packaging now strips the bundled host graphics libraries (`libEGL`/`libGL`/`libgbm`/`libwayland-*`) so the app uses the host's Mesa/Wayland stack
+
 ## [6.0.0] - 2026-07-06
 
 ### Changed
