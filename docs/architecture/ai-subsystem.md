@@ -30,9 +30,9 @@ flowchart TB
     core["core/<br/>pure domain · ports · permission policy · channels"]:::component
     prompt["prompt/<br/>Nunjucks templates (browser build)"]:::component
   end
-  subgraph rt[runtimes/node + adapters/electron — the impl + the wiring]
-    node["runtimes/node<br/>AI-SDK runner · sandbox · key/permission/chat stores · web search"]:::component
-    elec["adapters/electron<br/>IPC glue + composition root"]:::component
+  subgraph rt[runtimes/ + platform/electron — the impl + the wiring]
+    node["runtimes/<br/>AI-SDK runner · sandbox · key/permission/chat stores · web search"]:::component
+    elec["platform/electron<br/>IPC glue + composition roots"]:::component
   end
 
   react --> coreui
@@ -49,10 +49,10 @@ flowchart TB
 `core/` defines the neutral ports — `SandboxRunner`, `AgentRunner`, `BuildAgentTools`,
 `KnowledgeBankLike`, `ModelLister`, `ChatStore`, `AIKeyStore`, `PermissionsStoreLike` — and the **pure
 permission policy** (`permissions.ts`). The `host/` broker orchestrates over those ports and injected
-implementations; it never imports Electron, the AI SDK, Nunjucks, or `node:*`. The Electron composition
-root (`adapters/electron/main/createElectronAISystem.ts`) is the single place that assembles the broker +
-Node runtimes (or the scripted mocks); `main.ts` only injects the Electron surface (`ipcMain` transport,
-`safeStorage`, app paths, the main-window sender guard).
+implementations; it never imports Electron, the AI SDK, Nunjucks, or `node:*`. Each runtime has a
+platform composition root (`platform/electron/aiSystem.ts`) that assembles the
+broker + runtimes (or scripted mocks); the runtime host only injects the shell surface (`ipcMain`/in-realm
+transport, keychain, app paths, sender guard).
 
 The **renderer is one Zustand vanilla store** (`ui/core/stores/aiStore.ts`) created with
 `window.AI`/`window.AIBus` as injected getters — it never touches `window` or React directly;
@@ -277,10 +277,10 @@ list/inspect for images, networks and volumes, and the gated mutations (`startCo
 / `restartContainer` / `pauseContainer` / `unpauseContainer` / `removeContainer`, `pullImage` /
 `removeImage`, `removeNetwork` / `removeVolume`). Each is an AI-SDK tool with a `.strict()` Zod schema (the
 model passes only `{ id }` / `{ reference }`, never a connection override). They reach the real engines
-through the **`EngineOps` port** (`core/engineOps.ts`), implemented MAIN-side by
-`electron-shell/engineOpsAdapter.ts` over the live `EngineDataService` — the same host clients +
-container-client adapters the rest of the app uses — so keys and execution stay in main, exactly like
-`runCommand`. Lifecycle ops route through `EngineDataService.performAction` so the resource snapshot
+through the **`EngineOps` port** (`core/engineOps.ts`), implemented by
+`platform/engineOpsAdapter.ts` over the live `EngineDataService` — the same host clients +
+container-client adapters the rest of the app uses — so keys and execution stay in the runtime-owned engine
+service, exactly like `runCommand`. Lifecycle ops route through `EngineDataService.performAction` so the resource snapshot
 refreshes.
 
 Gating is unchanged from the command path: reads run freely; mutations go through `resolveToolAction`
@@ -344,8 +344,8 @@ analysis → an approval card) and is **resume-aware** — after a resolve it st
 of replaying, mirroring a real model so mock mode never loops on the approval card. A prompt mentioning
 containers / images / networks / volumes scripts a typed-tool demo (e.g. *list my containers* → a
 `ContainersCard`) over a fixture `EngineOps`, so the cards render without a real engine. Wiring is a single
-`mock` flag on `createElectronAISystem`, which swaps the real runner/stores/sandbox/web search for one
-shared `createMockAIDeps()`. Zero impact on production behaviour.
+`mock` flag on the platform `aiSystem.ts` assembler, which swaps the real runner/stores/sandbox/web search for
+one shared `createMockAIDeps()`. Zero impact on production behaviour.
 
 ## Source map
 
@@ -355,15 +355,16 @@ shared `createMockAIDeps()`. Zero impact on production behaviour.
 | `core/channels.ts` | IPC channel names + payload contracts (`ai:chat`, `ai:agent:resolve`, `ai:permissions:*`, …) + `IAI`/`IAIBus` |
 | `core/{ports,types,settings,egress,redact,providers,chatStore,engineOps}.ts` | ports, settings normalization, egress classifier, redaction, provider catalog, chat-session port, **typed engine-ops port** |
 | `host/broker.ts` | `AIBroker` — gates, unified chat handler, resolve/persist/resume (incl. approved typed-tool re-run), permissions channels, per-stream state |
-| `runtimes/node/permissionsStore.ts` | file-backed allow/reject record (fail-closed) |
-| `runtimes/node/agent/{sandbox,sandboxExec,tools,containerTools,agent,webSearch}.ts` | floor + executor, args-array spawn, generic + **typed container tools** (`executeContainerTool`), AI-SDK runner, SSRF-guarded web search |
-| `runtimes/node/{keyStore,languageModel,localModels,credentialsStore}.ts` | key store, model construction/listing, encrypted credentials |
-| `electron-shell/engineOpsAdapter.ts` | the `EngineOps` port implemented over the live `EngineDataService` (typed container ops, main-side) |
+| `runtimes/permissionsStoreCore.ts` | file-backed allow/reject record (fail-closed) |
+| `runtimes/agent/{sandbox,tools,containerTools,agent,webSearch}.ts` | floor + executor, args-array spawn, generic + **typed container tools** (`executeContainerTool`), AI-SDK runner, SSRF-guarded web search |
+| `runtimes/{languageModel,localModels,devKeys}.ts` | model construction/listing; dev API keys (the encrypted key store + credentials are the platform `capabilities/keychain` port + electron `credentialsFs.ts`, injected) |
+| `platform/engineOpsAdapter.ts` | the `EngineOps` port implemented over the live `EngineDataService` (typed container ops) |
 | `prompt/{prompts,renderPrompt,templates/}.ts` | Nunjucks prompt builders + templates |
 | `ui/core/stores/aiStore.ts`, `ui/core/transcript.ts` | the one store + the ordered-timeline reducer (incl. the `tool` card item) |
 | `ui/react/stores/useAIStore.ts` | React hook + the diagnostics-bundle collector |
-| `adapters/electron/main/createElectronAISystem.ts` | composition root (assembles broker + runtimes / mocks; wires `engineOps`) |
-| `adapters/electron/preload/{aiClient,aiBus}.ts` | `window.AI` forwarder + allowlisted stream bus |
+| `platform/electron/aiSystem.ts` | runtime composition roots (assemble broker + runtimes / mocks; wire `engineOps`) |
+| `platform/electron/aiSystemHost.ts` | broker lifecycle hosts |
+| `platform/electron/{aiClient,aiBus}.ts` | `window.AI` forwarder + receive bus |
 | `web-app/screens/AI/AssistantScreen.tsx`, `web-app/components/AIComposer.tsx`, `web-app/screens/Settings/AIPermissions.tsx` | the screens + composer |
 | `web-app/components/ai/cards/` | the generative-UI card registry + cards (Containers/Images/Networks/Volumes/LogViewer/ActionResult) |
 

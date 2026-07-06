@@ -1,5 +1,5 @@
 // Neutral IPC channel + payload contract for the AI subsystem. Shared by the main
-// broker (aiBroker.ts) and the preload forwarder (aiClient.ts) so both agree. No Electron/SDK imports.
+// broker (aiBroker.ts) and the shell client/bus bindings so both agree. No Electron/SDK imports.
 
 import type { ChatMessage } from "./chatStore";
 import type { PermissionsList, PermissionsSnapshot } from "./permissions";
@@ -112,7 +112,7 @@ export interface AgentStreamEvent {
 
 // Preload bridge contracts (IAI / IAIBus)
 // These are type-only declarations owned by core so global.d.ts can import them rather than
-// re-declaring inline. The concrete implementations live in adapters/electron/preload.
+// re-declaring inline. The concrete implementations live in platform/electron/.
 
 export interface IAI {
   status: () => Promise<AIStatus>;

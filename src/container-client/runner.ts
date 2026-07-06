@@ -8,7 +8,7 @@ import type {
   RunnerStopperOptions,
   ServiceOpts,
 } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 /**
  * Minimal host surface the Runner depends on — only the API health check. The composed HostClient satisfies

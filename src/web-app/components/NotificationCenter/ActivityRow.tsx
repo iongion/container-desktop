@@ -1,8 +1,9 @@
-import { Button, Collapse, Icon, type Intent, Tag } from "@blueprintjs/core";
+import { Collapse, Icon, type Intent, Tag } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CopyButton } from "@/web-app/components/CopyButton";
 import type { ActivityEntry } from "@/web-app/stores/activityTypes";
 import { formatRelativeTime } from "./activityFilters";
 import { friendlyEndpoint } from "./endpointLabels";
@@ -104,40 +105,14 @@ function DetailBlock({ label, value, action }: { label: string; value?: string; 
 export function ActivityRow({ entry, count = 1 }: { entry: ActivityEntry; count?: number }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
   const expandable = isExpandable(entry);
   const secondary = secondaryText(entry);
   const duration = formatDuration("durationMs" in entry ? entry.durationMs : undefined);
 
-  const copy = (text: string | undefined, key: string) => {
-    if (!text) {
-      return;
-    }
-    navigator.clipboard?.writeText(text).then(
-      () => {
-        setCopied(key);
-        window.setTimeout(() => setCopied(null), 1500);
-      },
-      () => undefined,
-    );
-  };
-
-  const copyIcon = (key: string) => (copied === key ? IconNames.TICK : IconNames.DUPLICATE);
-
   // Icon-only copy button rendered inline on a DetailBlock's label line (saves the vertical
   // space of a standalone action row); the action text lives in the tooltip.
-  const copyAction = (key: string, text: string | undefined): ReactNode =>
-    text ? (
-      <Button
-        className="ActivityCopyButton"
-        variant="minimal"
-        size="small"
-        icon={copyIcon(key)}
-        title={copied === key ? t("Copied") : t("Copy")}
-        aria-label={t("Copy")}
-        onClick={() => copy(text, key)}
-      />
-    ) : undefined;
+  const copyAction = (text: string | undefined): ReactNode =>
+    text ? <CopyButton text={text} className="ActivityCopyButton" /> : undefined;
 
   const headerInner = (
     <>
@@ -187,7 +162,7 @@ export function ActivityRow({ entry, count = 1 }: { entry: ActivityEntry; count?
           <div className="ActivityRowDetail">
             {entry.kind === "api" ? (
               <>
-                <DetailBlock label={t("Equivalent cURL")} value={entry.curl} action={copyAction("curl", entry.curl)} />
+                <DetailBlock label={t("Equivalent cURL")} value={entry.curl} action={copyAction(entry.curl)} />
                 <DetailBlock label={t("Request body")} value={entry.requestBody} />
                 <DetailBlock label={t("Response body")} value={entry.responseBody} />
                 {entry.error ? <DetailBlock label={t("Error")} value={entry.error} /> : null}
@@ -196,24 +171,16 @@ export function ActivityRow({ entry, count = 1 }: { entry: ActivityEntry; count?
             {entry.kind === "cli" ? (
               entry.status === "error" ? (
                 <>
-                  <DetailBlock
-                    label="stdout"
-                    value={entry.stdoutPreview}
-                    action={copyAction("cmd", entry.commandLine)}
-                  />
+                  <DetailBlock label="stdout" value={entry.stdoutPreview} action={copyAction(entry.commandLine)} />
                   <DetailBlock label="stderr" value={entry.stderrPreview} />
                 </>
               ) : (
                 // Successful commands: show the command (copyable) but not the output.
-                <DetailBlock
-                  label={t("Command")}
-                  value={entry.commandLine}
-                  action={copyAction("cmd", entry.commandLine)}
-                />
+                <DetailBlock label={t("Command")} value={entry.commandLine} action={copyAction(entry.commandLine)} />
               )
             ) : null}
             {entry.kind === "notification" && entry.detail ? (
-              <DetailBlock label={t("Details")} value={entry.detail} action={copyAction("detail", entry.detail)} />
+              <DetailBlock label={t("Details")} value={entry.detail} action={copyAction(entry.detail)} />
             ) : null}
             {entry.kind === "system" ? <DetailBlock label={entry.eventType} value={safeJson(entry.data)} /> : null}
           </div>

@@ -53,3 +53,74 @@ export interface CommandProxyStreamEvent {
 export interface CommandProxyStreamDestroyRequest {
   streamId: string;
 }
+
+const SERIALIZABLE_REQUEST_KEYS = [
+  "method",
+  "url",
+  "baseURL",
+  "params",
+  "data",
+  "headers",
+  "responseType",
+  "timeout",
+] as const;
+
+export function pickSerializableRequest(request: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of SERIALIZABLE_REQUEST_KEYS) {
+    const value = request?.[key];
+    if (value !== undefined) {
+      out[key] = key === "headers" ? plainHeaders(value) : value;
+    }
+  }
+  return out;
+}
+
+export function pickConnection(connection: any): Record<string, unknown> {
+  const api = connection?.settings?.api ?? {};
+  return {
+    id: connection?.id,
+    host: connection?.host,
+    settings: {
+      api: {
+        baseURL: api.baseURL,
+        connection: {
+          uri: api.connection?.uri,
+          relay: api.connection?.relay,
+        },
+      },
+    },
+  };
+}
+
+export function shapeBufferedResponse(response: any): any {
+  const headers = response?.headers ?? {};
+  if (response?.ok) {
+    return { data: response.data, status: response.status, statusText: response.statusText ?? "", headers };
+  }
+  return {
+    __proxyError: true,
+    status: response?.status ?? 0,
+    statusText: response?.statusText ?? "",
+    data: response?.data,
+    headers,
+    message: response?.message,
+  };
+}
+
+function plainHeaders(headers: any): Record<string, string> {
+  const source = headers && typeof headers.toJSON === "function" ? headers.toJSON() : headers;
+  const out: Record<string, string> = {};
+  if (source && typeof source === "object") {
+    for (const [key, value] of Object.entries(source)) {
+      if (value == null) {
+        continue;
+      }
+      const type = typeof value;
+      if (type === "string" || type === "number" || type === "boolean") {
+        out[key] = String(value);
+      }
+    }
+  }
+  return out;
+}

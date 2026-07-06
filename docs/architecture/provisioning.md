@@ -217,8 +217,8 @@ comes back owned by the user, and that inotify fires.
 | Transports (start/list scope) | [`runtimes/transports/`](../../src/container-client/runtimes/transports/) |
 | Target-bound host | `connectHostClient`, `getHostClientFor` · [`Application.ts`](../../src/container-client/Application.ts) |
 | Machine CRUD | `createPodmanMachine` · [`Application.ts`](../../src/container-client/Application.ts) |
-| Streamed exec | `ExecuteStreaming` · [`node-executor.ts`](../../src/platform/node-executor.ts), [`exec/commander.ts`](../../src/platform/exec/commander.ts) |
-| Progress bridge | `resource:progress` · [`resourceBus.ts`](../../src/electron-shell/resourceBus.ts), [`engineDataService.ts`](../../src/electron-shell/engineDataService.ts) |
+| Streamed exec | `ExecuteStreaming` · [`command.ts`](../../src/platform/electron/command.ts), [`exec/commander.ts`](../../src/platform/electron/exec/commander.ts) |
+| Progress bridge | `resource:progress` · [`resourceBus.ts`](../../src/platform/electron/resourceBus.ts), [`engineDataService.ts`](../../src/platform/engineDataService.ts) |
 | Readiness gate | `getAvailability` · [`host-client.ts`](../../src/container-client/runtimes/host-client.ts) |
 | Handoff (startup) | [connection-startup.md](connection-startup.md), [engine-matrix.md](engine-matrix.md) |
 | Linux install idiom | [`support/provision-deps.sh`](../../support/provision-deps.sh) |

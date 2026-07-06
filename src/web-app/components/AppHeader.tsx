@@ -27,7 +27,7 @@ import { AppHeaderLogo } from "./AppHeaderLogo";
 import { ProvisionButton } from "./ProvisioningWizard/ProvisionButton";
 
 import "./AppHeader.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.AppHeader");
 

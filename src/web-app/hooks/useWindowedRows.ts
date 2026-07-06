@@ -16,7 +16,7 @@ import {
 
 const DEFAULT_OVERSCAN = 8;
 
-// --- List scroll restoration (list → detail → back) --------------------------------------------------
+// List scroll restoration (list → detail → back)
 // Uses @tanstack/react-virtual's own state-persistence API — no custom scroll wrangling. On unmount we
 // snapshot the virtualizer's *measured* row sizes (`takeSnapshot()`) plus its `scrollOffset`, keyed per
 // list view; on the next mount we feed them straight back as `initialMeasurementsCache` + `initialOffset`.

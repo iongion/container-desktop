@@ -6,7 +6,7 @@
 // what CI actually publishes. Add a format there and it shows up here for free.
 //
 // site.version tracks package.json, so links always match the current release
-// (tasks.py rebuilds the site on release). The Windows Microsoft Store wrapper
+// (the release flow rebuilds the site on release). The Windows Microsoft Store wrapper
 // is version-pinned inside build-matrix.cjs because it is uploaded by hand and
 // may intentionally lag the generated assets.
 import { createRequire } from "node:module";

@@ -5,7 +5,7 @@ import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "rea
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngine, type EngineThemePreference } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 const logger = createLogger("web.settings");

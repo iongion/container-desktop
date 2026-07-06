@@ -31,7 +31,8 @@ import {
   OperatingSystem,
   type SystemNotification,
 } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { registerHostRuntimeFromGlobals } from "@/platform/hostRuntimeFromGlobals";
+import { createLogger } from "@/platform/logger";
 import { deepMerge, isObject } from "@/utils";
 import { t } from "@/web-app/App.i18n";
 import { AppBootstrapPhase } from "@/web-app/App.types";
@@ -419,6 +420,9 @@ export const useAppStore = create<AppStore>()((set, get) => {
       systemNotifier.transmit("startup.phase", { trace: "Loading user settings" });
       await waitForPreload();
       bootTimeline.mark("preload-ready");
+      // Assemble the host-capability port from the now-present contextBridge'd globals and register it, so
+      // consumers can reach it via getHostRuntime()/awaitHostRuntime() (the Tauri binding registers the same).
+      registerHostRuntimeFromGlobals();
       registerTraySwitchListener(get);
       subscribeConnectProgress();
       const instance = Application.getInstance();
@@ -439,6 +443,7 @@ export const useAppStore = create<AppStore>()((set, get) => {
     },
     startApplication: async () => {
       await waitForPreload();
+      registerHostRuntimeFromGlobals();
       if (get().phase !== AppBootstrapPhase.STARTING) {
         get().resetBootstrapPhases();
       }

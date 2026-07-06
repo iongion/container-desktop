@@ -1,7 +1,7 @@
 # Testing
 
-The verification gate is **type-check · lint · unit tests · production build**, plus the Python
-suite — all enforced on every PR and push to `main` by
+The verification gate is **type-check · lint · unit tests · production build** — all enforced on
+every PR and push to `main` by
 [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml). That is the **CI**
 pipeline; `CDPipeline.yml` is the separate **release/publish** pipeline and runs no checks.
 
@@ -83,21 +83,24 @@ states — no Docker required.
 yarn test:ui
 ```
 
-## Python tooling
+## Build tooling (`support/cli/`)
+
+The `yarn cli` build/dev/release CLI has its own Vitest specs (`support/cli/**/*.test.ts`) that run
+as part of `yarn test:run`, and is type-checked and linted by the same gate:
 
 ```bash
-uv run --locked ruff check tasks.py ./support ./tests
-uv run --locked pytest
+yarn check-types   # tsc (app) + tsc -p support/cli/tsconfig.json
+yarn lint:check    # biome check ./src ./support/cli
+yarn test:run      # includes support/cli/**/*.test.ts
 ```
 
 ## CI jobs
 
-[`CIPipeline.yml`](../.github/workflows/CIPipeline.yml) runs two jobs:
+[`CIPipeline.yml`](../.github/workflows/CIPipeline.yml) runs a single job:
 
-| Job         | Does                                                                                           |
-| ----------- | ---------------------------------------------------------------------------------------------- |
-| **app**     | `yarn check-types` · `yarn lint:check` · `yarn test:run` · `ENVIRONMENT=production yarn build` |
-| **tooling** | `ruff check` · `pytest` (via `uv`)                                                             |
+| Job     | Does                                                                                           |
+| ------- | ---------------------------------------------------------------------------------------------- |
+| **app** | `yarn check-types` · `yarn lint:check` · `yarn test:run` · `ENVIRONMENT=production yarn build` |
 
 ## Source map
 

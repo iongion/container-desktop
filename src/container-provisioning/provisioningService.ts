@@ -10,7 +10,7 @@
 
 import { findProgramPath, findProgramVersion } from "@/container-client/detector";
 import { ContainerEngine, type OperatingSystem, Presence } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { runSteps, type StepExecutor } from "./orchestrator";
 import {
   appleContainerInstallCommands,

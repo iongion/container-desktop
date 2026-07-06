@@ -7,6 +7,7 @@
 import { ContainerEngine } from "@/env/Types";
 import { createEmitterStream } from "@/utils/streamEmitter";
 import { loadEngineFixtures } from "./fixturesLoader";
+import { mockEnvValue } from "./mode";
 import { SWARM_FIXTURE } from "./swarmFixtures";
 
 interface MockApiResponse {
@@ -81,7 +82,7 @@ function imageSearchResults(images: unknown[], rawUrl: string): unknown[] {
 const SWARM_PATHS = new Set(["swarm", "services", "nodes", "tasks", "secrets", "configs"]);
 
 function swarmScenario(): string {
-  return `${process.env.CONTAINER_DESKTOP_MOCK_SWARM ?? "manager"}`.toLowerCase();
+  return (mockEnvValue("CONTAINER_DESKTOP_MOCK_SWARM") || "manager").toLowerCase();
 }
 
 export async function mockApiAdapter(request: any, connection: any): Promise<MockApiResponse> {

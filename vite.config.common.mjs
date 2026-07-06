@@ -91,28 +91,33 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
       cssMinify: minify,
       // One CSS file for the renderer instead of per-component chunks.
       cssCodeSplit: false,
-      rollupOptions: merge.all([rollupOptions || {}, {
-        output: {
-          preserveModules: false,
-          format: outputFormat === "umd" ? "umd" : outputFormat === "cjs" ? "cjs" : "es",
-          // Single file per target: disable chunk splitting so dynamic imports are inlined
-          // into the entry instead of emitting hashed chunk siblings.
-          codeSplitting: false,
-          // Version is the output directory (build/<version>/), not a filename suffix.
-          assetFileNames: `assets/${outputName}.[ext]`,
-          entryFileNames: `${outputName}.${outputExtension}`,
+      rollupOptions: merge.all([
+        rollupOptions || {},
+        {
+          output: {
+            preserveModules: false,
+            format: outputFormat === "umd" ? "umd" : outputFormat === "cjs" ? "cjs" : "es",
+            // Single file per target: disable chunk splitting so dynamic imports are inlined
+            // into the entry instead of emitting hashed chunk siblings.
+            codeSplitting: false,
+            // Version is the output directory (build/<version>/), not a filename suffix.
+            assetFileNames: `assets/${outputName}.[ext]`,
+            entryFileNames: `${outputName}.${outputExtension}`,
+          },
         },
-      }]),
+      ]),
     },
     resolve: merge.all([
       {
         alias: {
+          // Build tooling lives in support/cli (run via tsx, not bundled here); kept in sync
+          // with tsconfig `paths` and vitest so `@/cli/*` resolves everywhere. Must precede the
+          // "@" -> src entry: alias matching is first-hit, and "@" would otherwise swallow "@/cli".
+          "@/cli": path.resolve(__dirname, "support/cli"),
           "@": path.resolve(__dirname, "src"),
           "@/container-client": path.resolve(__dirname, "src/container-client"),
           "@/container-provisioning": path.resolve(__dirname, "src/container-provisioning"),
-          "@/electron-shell": path.resolve(__dirname, "src/electron-shell"),
           "@/env": path.resolve(__dirname, "src/env"),
-          "@/logger": path.resolve(__dirname, "src/logger"),
           "@/platform": path.resolve(__dirname, "src/platform"),
           "@/resources": path.resolve(__dirname, "src/resources"),
           "@/rpc": path.resolve(__dirname, "src/rpc"),

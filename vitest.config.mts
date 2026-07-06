@@ -5,6 +5,8 @@ import { configDefaults, defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      // Must precede "@" -> src: alias matching is first-hit, so "@" would otherwise swallow "@/cli".
+      "@/cli": new URL("./support/cli", import.meta.url).pathname,
       "@": new URL("./src", import.meta.url).pathname,
       "@/ai-system": new URL("./src/ai-system", import.meta.url).pathname,
     },
@@ -13,7 +15,7 @@ export default defineConfig({
     // jsdom covers both pure-function tests (normalizers/comparators) and
     // hook tests (renderHook + QueryClientProvider for the invalidation matrix).
     environment: "jsdom",
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "support/cli/**/*.{test,spec}.{ts,tsx}"],
     // `*.live.test.ts` also ends in `.test.ts`, so it WOULD match the include glob — exclude it
     // explicitly so the real-VM suite never runs in the hermetic/CI run.
     exclude: [...configDefaults.exclude, "src/**/*.live.test.{ts,tsx}"],

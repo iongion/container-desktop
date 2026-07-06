@@ -1,7 +1,3 @@
-**/__pycache__/**
-.pytest_cache/
-.ruff_cache/
-.venv
 bin
 build
 dist
@@ -10,9 +6,7 @@ squashfs-root
 .tmp/
 temp/
 .DS_Store
-.egg-info
 ContainerDesktop.pfx
-src/container_desktop_tools.egg-info
 
 # Worktrees
 .claude/worktrees/
@@ -132,9 +126,13 @@ src/__tests__/live/targets.env
 # Agent local overrides (personal, not shared)
 .claude/settings.local.json
 .claude/REFACTOR_HANDOVER.md
+.claude/PHASE_E_PLAN.md
 
 # Playwright test artifacts
 .playwright-mcp/
 
 # Local scratch — mockups, screenshots, throwaway previews (never committed)
 .scratch/
+
+# WebDriver e2e screenshots/logs (generated)
+webdriver/artifacts/

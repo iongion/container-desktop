@@ -1,0 +1,17 @@
+{
+  "viewport": { "width": 1068, "height": 718 },
+  "frameDurationMs": 3200,
+  "engines": ["podman", "docker", "unified"],
+  "frames": [
+    { "screenshot": "000-Overview.png", "title": "Auto-detects your engine" },
+    { "screenshot": "Containers.png", "title": "Real container workloads" },
+    { "screenshot": "003-ContainerActions.png", "title": "Fast, familiar actions" },
+    { "screenshot": "003-ContainerInspect.png", "title": "Inspect like an operator" },
+    { "screenshot": "Images.png", "title": "Browse images" },
+    { "screenshot": "ImageSecurity.png", "title": "Scan for vulnerabilities" },
+    { "screenshot": "Build.png", "title": "Build images" },
+    { "screenshot": "Pods.png", "title": "Pods for real stacks" },
+    { "screenshot": "ConnectionManager.png", "title": "Local, SSH, WSL & LIMA" },
+    { "screenshot": "AIAssistant.png", "title": "Built-in AI assistant" }
+  ]
+}

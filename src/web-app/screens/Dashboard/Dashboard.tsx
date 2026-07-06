@@ -1,12 +1,12 @@
-import { AnchorButton, Button, FormGroup, HTMLTable, Icon, InputGroup, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, FormGroup, HTMLTable, Icon, InputGroup, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngineHost, ContainerStateList, OperatingSystem } from "@/env/Types";
+import { CopyButton } from "@/web-app/components/CopyButton";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
 import { useMergedResources } from "@/web-app/hooks/useMergedResources";
-import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
@@ -87,17 +87,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
     };
   }, [t, host, osType, scope, program]);
 
-  const onCopyToClipboardClick = useCallback(
-    async (e) => {
-      await navigator.clipboard.writeText(exampleCode);
-      Notification.show({
-        message: t("The command was copied to clipboard"),
-        intent: Intent.SUCCESS,
-      });
-    },
-    [t, exampleCode],
-  );
-
   return (
     <div className="AppScreen" data-screen={ID}>
       <div className="AppScreenContent">
@@ -132,7 +121,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   className="DashboardContainerExampleCode"
                   value={exampleCode}
                   readOnly
-                  rightElement={<Button icon={IconNames.CLIPBOARD} onClick={onCopyToClipboardClick} />}
+                  rightElement={<CopyButton text={exampleCode} />}
                 />
               </FormGroup>
               <AnchorButton

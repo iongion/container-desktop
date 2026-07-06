@@ -7,11 +7,12 @@ import { type ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useRef } from "react";
 
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { AppTheme } from "@/web-app/App.types";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 import { registerFindTarget } from "./Find/findTargets";
+import { preferWebglRenderer } from "./terminalRenderer";
 import { createWriteBuffer } from "./terminalWriteBuffer";
 
 import "@xterm/xterm/css/xterm.css";
@@ -150,7 +151,6 @@ const TerminalImpl: React.FC<TerminalProps> = ({ value, writeMode = "append", on
     }
     viewRef.current = wrapRef.current.querySelector<HTMLDivElement>(".TerminalViewContent") ?? null;
     const fitAddon = new FitAddon();
-    const webglAddon = new WebglAddon();
     const unicode11Addon = new Unicode11Addon();
     const initialFont = resolveTerminalFont(useAppStore.getState().userSettings.font);
     const terminal = new XTermTerminal({
@@ -185,11 +185,17 @@ const TerminalImpl: React.FC<TerminalProps> = ({ value, writeMode = "append", on
       }
       return true;
     });
-    try {
-      terminal.loadAddon(webglAddon);
-      webgl.current = webglAddon;
-    } catch (error: any) {
-      logger.error("Unable to activate web gl", error);
+    // Load the WebGL addon ONLY on a hardware-accelerated GL stack (Electron/Chromium). Under WebKitGTK's
+    // software GL it stalls at mount (the "UI blocks when I open Logs" jank) and renders no faster, so fall
+    // back to xterm's built-in DOM renderer instead (capability-gated in terminalRenderer.ts).
+    if (preferWebglRenderer()) {
+      try {
+        const webglAddon = new WebglAddon();
+        terminal.loadAddon(webglAddon);
+        webgl.current = webglAddon;
+      } catch (error: any) {
+        logger.error("Unable to activate web gl", error);
+      }
     }
     fitAddon.fit();
     terminal.focus();

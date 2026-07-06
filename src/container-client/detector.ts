@@ -1,5 +1,5 @@
 import { type CommandExecutionResult, OperatingSystem, type ProgramOptions } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("container-client.Detector");
 

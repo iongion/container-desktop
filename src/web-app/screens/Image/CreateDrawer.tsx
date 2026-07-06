@@ -27,7 +27,7 @@ import { PortMappingsForm } from "./PortMappingsForm";
 import { useImage } from "./queries";
 
 import "./CreateDrawer.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.image");
 

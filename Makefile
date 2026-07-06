@@ -1,21 +1,13 @@
 PROJECT_ROOT:=$(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TEMP_DIR:=$(PROJECT_ROOT)/temp
-UV_VERSION:=0.6.11
 PART?=patch
 
 
-.PHONY: clean prepare-python prepare-node prepare check format build-website build-assets demo-record screenshots release test test-app test-tooling trigger-cd-pipeline
+.PHONY: clean prepare-node prepare check format build-website build-assets screenshots release test test-app trigger-cd-pipeline
 
 clean:
 	@echo "Cleaning build artifacts"
 	rm -fr bin build
-
-prepare-python:
-	@echo "Preparing the Python environment"
-	@# Install uv only when it is missing. Avoids failing when an active uv-managed .venv has no pip.
-	@command -v uv >/dev/null 2>&1 || python -m pip install --disable-pip-version-check "uv==$(UV_VERSION)"
-	@# Unset VIRTUAL_ENV so uv always targets the project .venv, even when another venv is activated.
-	env -u VIRTUAL_ENV uv sync --locked --dev --no-install-project
 
 prepare-node:
 	@echo "Preparing the Node.js environment"
@@ -29,17 +21,15 @@ prepare-node:
 
 prepare:
 	@echo "Preparing the project - synchronizing dependencies - $(PROJECT_ROOT)"
-	$(MAKE) prepare-python
 	$(MAKE) prepare-node
 	mkdir -p "$(TEMP_DIR)"
 
 check:
-	@echo "Checking the project"
-	uv run --locked ruff check --fix tasks.py ./support ./tests
+	@echo "Checking the project (Biome lint + fix, incl. support/cli)"
+	yarn lint
 
 format:
-	@echo "Formatting the project"
-	uv run --locked ruff format tasks.py ./support ./tests
+	@echo "Formatting the project (Biome, incl. support/cli)"
 	yarn format
 
 build-website:
@@ -56,18 +46,8 @@ screenshots:
 	fi; \
 	yarn screenshots
 
-demo-record:
-	@echo "Regenerating website rrweb demo replay"
-	@# nvm is a shell function — source it (as prepare-node does) so the .nvmrc node is used.
-	@if [ -s "$$NVM_DIR/nvm.sh" ]; then \
-		. "$$NVM_DIR/nvm.sh"; \
-		nvm use || nvm install; \
-	fi; \
-	yarn demo:record
-
 build-assets:
 	$(MAKE) screenshots
-	$(MAKE) demo-record
 	$(MAKE) build-website
 
 trigger-cd-pipeline:
@@ -82,21 +62,23 @@ trigger-cd-pipeline:
 # site from the mock backend, then commits/tags/pushes everything as one release
 # commit and triggers the cloud pipeline for that tag. CDPipeline no longer rebuilds
 # or commits the website — it just deploys the website/ committed here. Unlike
-# `inv release` (which builds/bundles locally), this drives the cloud pipeline that
+# `yarn cli release` (which builds/bundles locally), this drives the cloud pipeline that
 # builds every OS target and publishes the GitHub release. Override the bump size with
 # `make release PART=minor` (default: patch). Aborts if CHANGELOG.md [Unreleased] is
 # empty, so document the release first.
 release: test
 	@echo "Releasing: bump ($(PART)) → build-assets → commit → trigger CDPipeline"
-	uv run --locked invoke bump --part=$(PART) --perform --no-commit
+	@if [ -s "$$NVM_DIR/nvm.sh" ]; then . "$$NVM_DIR/nvm.sh"; nvm use || nvm install; fi; \
+	yarn cli bump --part=$(PART) --perform --no-commit
 	$(MAKE) build-assets
-	uv run --locked invoke commit-release
+	@if [ -s "$$NVM_DIR/nvm.sh" ]; then . "$$NVM_DIR/nvm.sh"; nvm use || nvm install; fi; \
+	yarn cli commit-release
 	$(MAKE) trigger-cd-pipeline
 
-# Run the same verification set as CIPipeline.yml, locally. Mirrors its two jobs:
-# app (types/lint/tests/build) and tooling (Python). Run `make prepare` first if
-# dependencies are not installed.
-test: test-app test-tooling
+# Run the same verification set as CIPipeline.yml, locally. The CLI unit tests, type-check and
+# lint of support/cli all run inside test-app (yarn test:run / check-types / lint:check), so a
+# single app job mirrors CI. Run `make prepare` first if dependencies are not installed.
+test: test-app
 	@echo "All CI checks passed locally"
 
 test-app:
@@ -110,8 +92,3 @@ test-app:
 	yarn lint:check && \
 	yarn test:run && \
 	ENVIRONMENT=production yarn build
-
-test-tooling:
-	@echo "Tooling — ruff check (no fixes) + pytest (like CIPipeline)"
-	uv run --locked ruff check tasks.py ./support ./tests
-	uv run --locked pytest

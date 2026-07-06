@@ -19,8 +19,12 @@ on:
         options:
           - all
           - linux
+          - linux-x64
+          - linux-arm64
           - macos
-          - windows
+          - macos-arm64
+          - windows-arm
+          - windows-x64
       publish-release:
         description: "Publish GitHub release after all production targets build"
         required: true
@@ -37,13 +41,46 @@ permissions:
   actions: read
 
 jobs:
+  plan-bundle:
+    timeout-minutes: 5
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+
+    steps:
+      - name: Clone Repository (latest)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref == 'latest'
+      - name: Clone Repository (custom ref)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref != 'latest'
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Build target matrix
+        id: matrix
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const matrix = require("./support/build-matrix.cjs");
+
+          const jobs = matrix.cdJobsForTarget(process.env.TARGET);
+          if (!jobs.length) {
+            throw new Error(`No CD jobs for target '${process.env.TARGET}'`);
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ include: jobs })}\n`);
+          NODE
+        env:
+          TARGET: ${{ github.event.inputs.target }}
+
   bundle:
     timeout-minutes: 60
+    needs: plan-bundle
 
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJson(github.event.inputs.target == 'all' && '[{"target":"linux","os":"ubuntu-latest"},{"target":"macos","os":"macos-latest"},{"target":"windows","os":"windows-latest"}]' || github.event.inputs.target == 'linux' && '[{"target":"linux","os":"ubuntu-latest"}]' || github.event.inputs.target == 'macos' && '[{"target":"macos","os":"macos-latest"}]' || '[{"target":"windows","os":"windows-latest"}]') }}
+      matrix: ${{ fromJson(needs.plan-bundle.outputs.matrix) }}
 
     runs-on: ${{ matrix.os }}
 
@@ -52,9 +89,6 @@ jobs:
       CD: true
       NODE_ENV: ${{github.event.inputs.stage}}
       ENVIRONMENT: ${{github.event.inputs.stage}}
-      PYTHONIOENCODING: utf-8
-      PYTHONUTF8: "1"
-      UV_VERSION: "0.6.11"
 
     steps:
       - name: Clone Repository (latest)
@@ -70,29 +104,23 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           registry-url: "https://npm.pkg.github.com"
-      - name: Use Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
-        with:
-          python-version-file: ".python-version"
-      - name: Install uv
-        run: python -m pip install --disable-pip-version-check "uv==${{ env.UV_VERSION }}"
       - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: uv run --locked invoke prepare
-      - name: Build ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: uv run --locked invoke build
-        env:
-          TARGET: ${{matrix.target}}
+        run: yarn install --frozen-lockfile --production=false
+      - name: Use Rust ${{ matrix.rustTarget }}
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add ${{ matrix.rustTarget }}
       - name: Install Linux packaging deps
-        if: matrix.target == 'linux'
-        # bsdtar (libarchive-tools) is required by fpm to build the pacman target
-        # (.MTREE via `bsdtar --format=mtree`); it is not preinstalled on ubuntu-latest.
-        run: sudo apt-get update -y && sudo apt-get install -y libarchive-tools
+        if: startsWith(matrix.target, 'linux-')
+        run: bash support/provision-deps.sh
       - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
-        run: uv run --locked invoke bundle
+        run: yarn cli bundle
         env:
           TARGET: ${{matrix.target}}
+          PACKAGE_SCRIPT: ${{ matrix.packageScript }}
       - name: Checksum ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
-        run: uv run --locked invoke checksums
+        run: yarn cli checksums
       - name: Publish ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

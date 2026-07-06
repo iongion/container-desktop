@@ -32,7 +32,7 @@ export default ({ mode, command }) => {
   config.build.target = `node${cache.node}`;
   config.build.lib = {
     name: "main",
-    entry: "src/electron-shell/main.ts",
+    entry: "src/platform/electron/main.ts",
     formats: [outputFormat]
   };
   // Only electron itself is provided by the runtime and must stay external. The

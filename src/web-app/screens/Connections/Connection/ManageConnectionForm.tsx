@@ -38,7 +38,7 @@ import { EngineSelect } from "./EngineSelect";
 import { OSTypeSelect } from "./OSTypeSelect";
 import { ScopeSelect } from "./ScopeSelect";
 import "./ManageConnectionForm.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.connections");
 

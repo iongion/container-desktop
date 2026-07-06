@@ -202,7 +202,7 @@ function findCatalog(repo: string): ImageCatalogEntry {
 export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, counts: EngineCounts): LogicalDataset {
   const labelKeys = composeLabelKeys(engine);
 
-  // ---- Networks: default bridge, one per project template, then padding to the target ----
+  // Networks: default bridge, one per project template, then padding to the target
   const networks: LogicalNetwork[] = [];
   const projectNetwork = new Map<string, LogicalNetwork>();
   const usedNetworkNames = new Set<string>();
@@ -258,7 +258,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     makeNetwork(name, false);
   }
 
-  // ---- Images: created lazily as services reference them, then padded to the target ----
+  // Images: created lazily as services reference them, then padded to the target
   const imageByRef = new Map<string, LogicalImage>();
   const makeImage = (entry: ImageCatalogEntry, tag: string): LogicalImage => {
     const ref = `${entry.repo}:${tag}`;
@@ -291,7 +291,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     return makeImage(entry, tag);
   };
 
-  // ---- Containers: project services (with replicas) + standalone singletons, exactly counts.containers ----
+  // Containers: project services (with replicas) + standalone singletons, exactly counts.containers
   const containers: LogicalContainer[] = [];
   let hostPortSeq = 8080;
 
@@ -409,7 +409,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     containers.push(buildContainer(`${appName}-1`, appName, "app", 1, image, defaultNet));
   }
 
-  // ---- Images list: the images actually used + padding (unused, Containers=0) to the target ----
+  // Images list: the images actually used + padding (unused, Containers=0) to the target
   const images: LogicalImage[] = [...imageByRef.values()];
   let catalogPad = 0;
   while (images.length < counts.images && catalogPad < IMAGE_CATALOG.length * 6) {
@@ -424,7 +424,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     images.push(makeImage(entry, tag));
   }
 
-  // ---- Pods (Podman only): self-contained infra + member refs, status consistent with members ----
+  // Pods (Podman only): self-contained infra + member refs, status consistent with members
   const pods: LogicalPod[] = [];
   for (let podIndex = 0; podIndex < counts.pods; podIndex += 1) {
     const base = POD_BASES[podIndex % POD_BASES.length];
@@ -439,7 +439,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     );
   }
 
-  // ---- Volumes ----
+  // Volumes
   const volumes: LogicalVolume[] = [];
   const usedVolumeNames = new Set<string>();
   let volumeIndex = 0;
@@ -461,7 +461,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     });
   }
 
-  // ---- Secrets ----
+  // Secrets
   const secrets: LogicalSecret[] = [];
   const usedSecretNames = new Set<string>();
   let secretIndex = 0;
@@ -478,7 +478,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     secrets.push({ idHex: hex(faker, 24), name, createdAt, updatedAt: createdAt });
   }
 
-  // ---- Machines (Podman only) ----
+  // Machines (Podman only)
   const machines: LogicalMachine[] = [];
   for (let machineIndex = 0; machineIndex < counts.machines; machineIndex += 1) {
     const isDefault = machineIndex === 0;
@@ -498,7 +498,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     });
   }
 
-  // ---- Registries (config-backed map: 1 system default + counts.registries custom hosts) ----
+  // Registries (config-backed map: 1 system default + counts.registries custom hosts)
   const registries: LogicalRegistry[] = [];
   const usedRegistryNames = new Set<string>();
   let registryIndex = 0;

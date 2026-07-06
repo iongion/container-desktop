@@ -2,8 +2,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type ContainerLogsStream, ContainersAdapter } from "@/container-client/adapters/containers";
 import { createContainerLogDecoder } from "@/container-client/logs";
+import { createLogger } from "@/platform/logger";
 import type { TerminalHandle } from "@/web-app/components/Terminal";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+
+const logger = createLogger("web.useContainerLogStream");
+
+// Time-to-first-byte instrumentation for the log stream. `connectMs` = click→stream handle open (JS setup +
+// host establishment + Rust stream open), `firstDataMs` = click→first rendered chunk. Stashed on window so a
+// live-debug session (or the WebDriver perf harness) can read the breakdown without devtools — the same debug-
+// handle convention the Tauri bridge uses (__trayController, __resourceSyncHost). Cheap; kept on always.
+interface LogStreamTiming {
+  container?: string;
+  startedAt: number;
+  connectMs?: number;
+  firstDataMs?: number;
+}
 
 export type ContainerLogStreamStatus = "idle" | "connecting" | "live" | "ended" | "error";
 
@@ -66,6 +80,8 @@ export function useContainerLogStream(connectionId: string, containerId: string 
     const decoder = createContainerLogDecoder();
     setStatus("connecting");
     setError(undefined);
+    const timing: LogStreamTiming = { container: containerId, startedAt: performance.now() };
+    (window as any).__logStreamTiming = timing;
 
     void reloadGeneration;
     // Bind the adapter to THIS connection's host (mirrors queries.ts / bulkActions.ts). Without it the
@@ -81,10 +97,16 @@ export function useContainerLogStream(connectionId: string, containerId: string 
         }
         stream.current = nextStream;
         setStatus("live");
+        timing.connectMs = performance.now() - timing.startedAt;
+        logger.debug("log stream open", "connectMs", Math.round(timing.connectMs));
         addStreamListener(
           nextStream,
           "data",
           (chunk) => {
+            if (timing.firstDataMs === undefined) {
+              timing.firstDataMs = performance.now() - timing.startedAt;
+              logger.debug("log stream first data", "firstDataMs", Math.round(timing.firstDataMs));
+            }
             const decoded = decoder.push(chunk);
             if (decoded) {
               terminal.current?.write(decoded);

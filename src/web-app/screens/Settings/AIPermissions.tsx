@@ -12,7 +12,7 @@ import { Application } from "@/container-client/Application";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 
 import "./AIPermissions.css";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.settings");
 

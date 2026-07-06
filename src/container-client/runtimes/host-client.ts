@@ -33,7 +33,7 @@ import {
   type SystemPruneReport,
   type SystemResetReport,
 } from "@/env/Types";
-import { createLogger } from "@/logger";
+import { createLogger } from "@/platform/logger";
 import { deepMerge, isEmpty } from "@/utils";
 import { findProgramPath, findProgramVersion, isWindowsProgramPath } from "../detector";
 import type { EngineDialect, HostContext, HostProfile, Transport } from "./composition";

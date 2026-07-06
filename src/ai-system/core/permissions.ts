@@ -75,7 +75,7 @@ export function resolveToolAction(opts: {
 }
 
 // Permission cache (the user-managed allow/reject record)
-// A dedicated, app-global, versioned file in user-data (see runtimes/node/permissionsStore). Commands are
+// A dedicated, app-global, versioned file in user-data (see runtimes/permissionsStoreCore). Commands are
 // keyed by exact program+args; the internet (web search) is a single switch since queries vary.
 export const AI_PERMISSIONS_VERSION = "1.0.0";
 
@@ -108,7 +108,7 @@ export function cachedVerdict(cache: Pick<AIPermissionsCache, "allowed" | "block
 }
 
 // Permission store PORT
-// The capability the broker depends on; implemented by runtimes/node/permissionsStore against a file.
+// The capability the broker depends on; implemented by runtimes/permissionsStoreCore over the FS port.
 // Read is FAIL-CLOSED — a corrupt/unreadable file surfaces status:"error" with an empty cache so the
 // broker can force "ask" rather than silently dropping the user's blocked rules.
 export type PermissionsLoadStatus = "ok" | "missing" | "error";

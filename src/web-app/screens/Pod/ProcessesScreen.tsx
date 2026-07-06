@@ -1,11 +1,11 @@
-import { Button, HTMLTable, Intent } from "@blueprintjs/core";
+import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { PodProcessReport } from "@/env/Types";
+import { CopyButton } from "@/web-app/components/CopyButton";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
-import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
@@ -27,18 +27,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const processesQuery = usePodProcesses(connectionId, id);
   const pod = podQuery.data;
   const pending = podQuery.isLoading || podQuery.isFetching || processesQuery.isLoading || processesQuery.isFetching;
-
-  const onCopyToClipboardClick = useCallback(
-    async (e) => {
-      const code = e.currentTarget.parentNode.querySelector("code");
-      await navigator.clipboard.writeText(code.innerText);
-      Notification.show({
-        message: t("The command was copied to clipboard"),
-        intent: Intent.SUCCESS,
-      });
-    },
-    [t],
-  );
 
   const processes = useMemo(() => {
     let report: PodProcessReport = { Processes: [], Titles: [] };
@@ -82,14 +70,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       title === "COMMAND" ? (
                         <div className="CommandColumn">
                           <code title={text}>{text}</code>
-                          <Button
-                            size="small"
-                            variant="minimal"
-                            icon={IconNames.CLIPBOARD}
-                            data-action="copy.to.clipboard"
-                            title={t("Copy to clipboard")}
-                            onClick={onCopyToClipboardClick}
-                          />
+                          <CopyButton text={text} title={t("Copy to clipboard")} />
                         </div>
                       ) : (
                         text

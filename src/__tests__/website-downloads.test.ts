@@ -39,13 +39,36 @@ describe("website download model", () => {
     expect(linux.options[0].id).toBe("linux-deb-x64");
   });
 
-  it("never offers the unpublished Windows artifacts (.appx / unsigned .exe)", () => {
+  it("gives Windows a per-arch dropdown (installer + zip, both arches) with the Store as the fixed primary", () => {
+    const win = model.os.find((os: { slug: string }) => os.slug === "windows");
+    // Primary button stays the external Microsoft Store; the menu must NOT hijack it (os-detect.js
+    // only rewrites the button from a data-primary option, so externalPrimary suppresses that mark).
+    expect(win.menu).toBe(true);
+    expect(win.externalPrimary).toBe(true);
+    expect(win.file).toBe("https://store.example/app");
+    expect(win.buttonLabel).toBe("Microsoft Store");
+    // Two rows — Installer .exe then Portable .zip — each on Intel + Arm.
+    expect(win.rows.map((r: { badge: string }) => r.badge)).toEqual([".exe", ".zip"]);
+    for (const row of win.rows) {
+      expect(row.options.map((o: { arch: string }) => o.arch)).toEqual(["x64", "arm64"]);
+    }
+    // The signed Store Web Installer stub is architecture-neutral — one hand-uploaded file (at its own
+    // pinned version) serves BOTH arches, so the Intel and Arm columns link to the same download.
+    const base = `https://github.com/iongion/container-desktop/releases/download/${matrix.WINDOWS_INSTALLER_VERSION}`;
+    expect(win.rows[0].options.map((o: { file: string }) => o.file)).toEqual([
+      `${base}/container-desktop-installer.exe`,
+      `${base}/container-desktop-installer.exe`,
+    ]);
+  });
+
+  it("never offers the unpublished Windows artifacts (Store packages / unsigned .exe)", () => {
     const published = matrix.publicAssetNames(VERSION);
     expect(published.some((name: string) => name.endsWith(".appx"))).toBe(false);
+    expect(published.some((name: string) => name.endsWith(".msix"))).toBe(false);
     expect(published.some((name: string) => name.endsWith(".exe"))).toBe(false);
   });
 
-  it("keeps electron-builder targets and the website in lockstep", () => {
+  it("keeps legacy Electron builder targets compatible with public formats", () => {
     for (const platform of ["linux", "mac", "win"] as const) {
       const targets = matrix.electronBuilderTargets(platform);
       const publicTargets = matrix.PLATFORMS[platform].formats
@@ -57,7 +80,7 @@ describe("website download model", () => {
     expect(matrix.electronBuilderTargets("linux")).toEqual(["deb", "rpm", "tar.gz", "AppImage", "pacman"]);
   });
 
-  it("uses the per-format arch tokens electron-builder actually emits", () => {
+  it("uses the per-format arch tokens published artifacts keep for parity", () => {
     // Regression guard for the tokens verified against real release assets.
     expect(linkedAssetNames()).toContain(`container-desktop-linux-amd64-${VERSION}.deb`);
     expect(linkedAssetNames()).toContain(`container-desktop-linux-aarch64-${VERSION}.rpm`);

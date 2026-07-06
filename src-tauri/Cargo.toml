@@ -1,0 +1,72 @@
+[package]
+# Same product as the Electron app — "container-desktop" is the one project. Cargo crate names live in a
+# different namespace from the npm package (no clash), this crate is never published, and the bundle keeps a
+# distinct identifier (com.iongion.container-desktop.tauri), so the shared name is safe.
+name = "container-desktop"
+version = "6.0.0"
+description = "Container Desktop — native Rust (Tauri) shell"
+edition = "2021"
+rust-version = "1.77"
+
+# Keep the binary small: the "smallest bundle" north star for this spike.
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+
+[lib]
+# `_lib` suffix (Tauri convention) avoids a binary/lib name clash on Windows; kept free of "tauri".
+name = "container_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# tray-icon + image-png: native system tray (Phase D). devtools: the footer console button, prod-enabled to
+# match Electron's unconditional devTools:true (revisited for release hardening in Phase F).
+tauri = { version = "2", features = ["tray-icon", "image-png", "devtools"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Obfuscate secrets in the degraded-vault keychain fallback file (Electron basic_text parity) — NOT encryption,
+# the 0600 perms are the real protection; base64 just keeps keys off disk in plaintext. Already in the tree
+# (tauri/reqwest pull it), so declaring it direct adds nothing to the binary.
+base64 = "0.22"
+# Native shell parity (Phase D): dialogs (openFileSelector), opener (external links + reveal storage folder),
+# process (relaunch/exit), window-state (persist bounds), single-instance (focus the first launch).
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-window-state = "2"
+# Persistent file logging (Rust-slim phase): the file transport the renderer's @/platform/logger façade
+# was missing under Tauri. The JS side forwards already level-gated records via @tauri-apps/plugin-log; this
+# writes them to the SAME userData/logs/container-desktop.log that logging_open / logging_reveal reveal.
+tauri-plugin-log = "2"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+# Async process exec (Command.Execute + the streaming/background process port). "time" bounds the proxy
+# stream-open; "sync" the kill channel + bridge registry; "macros" the pump's select!; "net" the SSH/WSL
+# dial-stdio bridge's local UnixListener / named-pipe server.
+tokio = { version = "1", features = ["process", "io-util", "net", "rt", "time", "sync", "macros"] }
+# HTTP/1 client for the engine API proxy (ICommand.ProxyRequest). reqwest natively forces requests over a
+# LOCAL transport — ClientBuilder::unix_socket (Linux/macOS, since 0.12.23) and ClientBuilder::windows_named_pipe
+# (Windows, since 0.12.27) — so ONE client API covers both platforms (no hand-rolled dial / query-encoding).
+# Lean build: default features off for the engine local-socket path; add stream for /events + logs?follow, and
+# rustls/socks for the Settings proxy reachability tester (not for engine socket traffic).
+reqwest = { version = "0.13", default-features = false, features = ["stream", "rustls", "socks"] }
+futures-util = { version = "0.3", default-features = false }
+# Query-string encoding (the same crate reqwest's .query() uses internally; that method is gated out by our
+# default-features = false, so we build the query onto the URL directly).
+serde_urlencoded = "0.7"
+# AI provider-key store (Phase E): per-provider secrets in the OS vault — Windows Credential Manager, macOS
+# Keychain, Linux Secret Service. The Secret Service backend is pure-Rust (zbus + RustCrypto via crypto-rust),
+# so Linux needs no libsecret C library at build or runtime.
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+
+# Unix signal delivery for ExecuteStreaming/BackgroundService kill (SIGTERM/SIGKILL by pid — tokio's
+# Child::kill is SIGKILL-only). Windows uses taskkill by pid instead.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

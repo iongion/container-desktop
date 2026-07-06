@@ -8,6 +8,7 @@
 // wslpath; Lima/machine/SSH identity). The guest temp dir doubles as the cancel/cleanup marker.
 
 import { ContainerEngine } from "@/env/Types";
+import { toBase64 } from "@/utils/base64";
 import { buildAppleArgs } from "../builder/flags/apple";
 import { buildDockerArgs } from "../builder/flags/docker";
 import { buildPodmanArgs } from "../builder/flags/podman";
@@ -66,17 +67,6 @@ async function writeAuthoredContainerfile(options: ImageBuildOptions): Promise<s
   const file = await Path.join(dir, `Containerfile.${options.connectionId || "default"}.${tempCounter}`);
   await FS.writeTextFile(file, options.containerfileContent ?? "");
   return file;
-}
-
-// UTF-8 → base64 without Node's Buffer (this adapter runs in the renderer). Used to inject the authored
-// Containerfile into the guest for scoped/remote builds via `printf '%s' <b64> | base64 -d`.
-function toBase64(text: string): string {
-  const bytes = new TextEncoder().encode(text);
-  let binary = "";
-  for (let index = 0; index < bytes.length; index += 1) {
-    binary += String.fromCharCode(bytes[index]);
-  }
-  return btoa(binary);
 }
 
 export class BuildAdapter extends ResourceAdapter {

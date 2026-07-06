@@ -126,7 +126,7 @@ A few features span the whole app rather than a single screen:
   a right-side drawer opened from the footer bell. `Notification.show()` toasts are teed into
   the in-renderer `systemNotifier` bus; on top of that, every engine **API** call (intercepted
   in [`Api.clients.ts`](../../src/container-client/Api.clients.ts)) and every **CLI** invocation
-  (captured in the preload [`activityBus.ts`](../../src/electron-shell/activityBus.ts) and
+  (captured by [`activityBus.ts`](../../src/platform/activityBus.ts) and
   bridged over `contextBridge`) is recorded. A capped, **in-memory, non-persisted** Zustand
   store ([`activityStore.ts`](../../src/web-app/stores/activityStore.ts)) feeds two filterable,
   date-ordered tabs (Notifications · Activity); activity rows show status/duration and expand to
@@ -153,7 +153,7 @@ A few features span the whole app rather than a single screen:
 | Live logs                      | [`container-client/logs.ts`](../../src/container-client/logs.ts) · [`components/LiveLogBadge.tsx`](../../src/web-app/components/LiveLogBadge.tsx)                                                                                          |
 | Native bridge                  | [`Native.ts`](../../src/web-app/Native.ts)                                                                                                                                                                                                 |
 | Navigation / env               | [`Navigator.ts`](../../src/web-app/Navigator.ts) · [`Environment.ts`](../../src/web-app/Environment.ts)                                                                                                                                    |
-| Notification Center / Activity | [`components/NotificationCenter/`](../../src/web-app/components/NotificationCenter/) · [`stores/activityStore.ts`](../../src/web-app/stores/activityStore.ts) · [`electron-shell/activityBus.ts`](../../src/electron-shell/activityBus.ts) |
+| Notification Center / Activity | [`components/NotificationCenter/`](../../src/web-app/components/NotificationCenter/) · [`stores/activityStore.ts`](../../src/web-app/stores/activityStore.ts) · [`platform/activityBus.ts`](../../src/platform/activityBus.ts) |
 | Query layer                    | [`domain/queryClient.ts`](../../src/web-app/domain/queryClient.ts) · [`domain/queries.ts`](../../src/web-app/domain/queries.ts)                                                                                                            |
 | Screens                        | [`screens/`](../../src/web-app/screens/)                                                                                                                                                                                                   |
 | Stores                         | [`stores/`](../../src/web-app/stores/)                                                                                                                                                                                                     |

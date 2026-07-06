@@ -206,6 +206,17 @@
     applyDetection();
   }
 
+  // Manual page only: land the visitor on their detected OS section, unless they deep-linked to a
+  // specific anchor. The guide-os headers are id="windows|macos|linux" — exactly detectOs() lowercased
+  // — and their CSS scroll-margin-top clears the sticky header. No-op on pages without those sections.
+  function scrollToDetectedGuide() {
+    if (location.hash) return;
+    var section = document.getElementById(os.toLowerCase());
+    if (section && section.classList.contains("guide-os")) {
+      section.scrollIntoView({ behavior: "auto" });
+    }
+  }
+
   hb = document.getElementById("heroDownload");
   menus = document.querySelectorAll(".dl-package-menu");
   for (i = 0; i < menus.length; i += 1) {
@@ -222,6 +233,7 @@
   }
   document.addEventListener("click", onDocumentClick);
   applyDetection();
+  scrollToDetectedGuide();
   if (navigator.userAgentData?.getHighEntropyValues) {
     navigator.userAgentData
       .getHighEntropyValues(["platform", "architecture", "bitness"])

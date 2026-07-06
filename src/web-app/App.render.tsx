@@ -10,8 +10,7 @@ import { Helmet, HelmetProvider } from "react-helmet-async";
 
 import { isMockMode } from "@/container-client/mock/mode";
 import { Environments } from "@/env/Types";
-import { registerLoggerBackend } from "@/logger";
-import { electronLogRendererBackend } from "@/logger/backends/electronLogRenderer";
+import { type LoggerBackend, registerLoggerBackend } from "@/platform/logger";
 
 import { App } from "./App";
 import { I18nContextProvider } from "./App.i18n";
@@ -20,11 +19,13 @@ import { CURRENT_ENVIRONMENT } from "./Environment";
 
 dayjs.extend(relativeTime);
 
-export function renderApplication() {
-  // Renderer composition root: install the Electron logging adapter so this window's logs forward to
-  // main (where the single LOCAL file lives). Console stays with the @/logger façade; if the user has
-  // not enabled file logging, main simply drops the forwarded records.
-  registerLoggerBackend(electronLogRendererBackend);
+export function renderApplication(opts?: { loggerBackend?: LoggerBackend }) {
+  // Renderer composition root. The shell-selection root (index.tsx) hands us the shell's log backend
+  // (Electron: renderer→main forwarder; Tauri: none yet) so this file stays backend-free. Console stays
+  // with the @/platform/logger façade; if file logging is off, main simply drops the forwarded records.
+  if (opts?.loggerBackend) {
+    registerLoggerBackend(opts.loggerBackend);
+  }
   const container = document.getElementById("root");
   const root = createRoot(container!);
   const showDevtools = CURRENT_ENVIRONMENT === Environments.DEVELOPMENT && !isMockMode();
