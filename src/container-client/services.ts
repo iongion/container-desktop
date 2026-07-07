@@ -1,5 +1,5 @@
 import EventEmitter from "eventemitter3";
-import { type CommandExecutionResult, OperatingSystem, type SpawnedProcess } from "@/env/Types";
+import { type CommandExecutionResult, type HostExecOptions, OperatingSystem, type SpawnedProcess } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import { runSSHPreflight } from "./diagnostics/ssh-preflight";
 import {
@@ -27,7 +27,7 @@ export interface ISSHClient {
   on: (event: string, listener: (...args: any[]) => void, context?: any) => void;
   emit: (event: string, ...args: any[]) => boolean;
   connect: (params: SSHClientConnection) => Promise<void>;
-  execute: (command: string[]) => Promise<CommandExecutionResult>;
+  execute: (command: string[], opts?: HostExecOptions) => Promise<CommandExecutionResult>;
   executeStreaming: (command: string[]) => Promise<StreamHandle>;
   startTunnel: (config: {
     localAddress: string;
@@ -94,8 +94,13 @@ export class SSHClient implements ISSHClient {
     );
     this.em.emit("error", { output, report });
   }
-  async execute(command: string[]) {
-    return await Command.Execute(this.cli, buildSSHArgs(this.params, command), { timeout: SSH_COMMAND_TIMEOUT_MS });
+  async execute(command: string[], opts?: HostExecOptions) {
+    // The local `ssh` process forwards its stdin to the remote command, so piping `opts.input` here delivers a
+    // secret (e.g. a registry token for `login --password-stdin`) to the remote engine without exposing it in argv.
+    return await Command.Execute(this.cli, buildSSHArgs(this.params, command), {
+      timeout: SSH_COMMAND_TIMEOUT_MS,
+      input: opts?.input,
+    });
   }
   async executeStreaming(command: string[]): Promise<StreamHandle> {
     // A build streams for as long as it takes — no command timeout (unlike execute()).

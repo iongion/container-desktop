@@ -13,6 +13,7 @@ import {
   type CommandExecutionResult,
   type ControllerScope,
   type EngineConnectorSettings,
+  type HostExecOptions,
   OperatingSystem,
   type RunnerStopperOptions,
   type StartupStatus,
@@ -53,10 +54,11 @@ export class PodmanMachineTransport implements Transport {
     args: string[],
     scope: string,
     settings?: EngineConnectorSettings,
+    execOpts?: HostExecOptions,
   ): Promise<CommandExecutionResult> {
     const { controller } = settings || (await host.getSettings());
     const hostLauncher = controller?.path || controller?.name || "";
-    return await host.runHostCommand(hostLauncher, this.buildScopeArgv(scope, program, args), settings);
+    return await host.runHostCommand(hostLauncher, this.buildScopeArgv(scope, program, args), settings, execOpts);
   }
 
   async runScopeCommandStreaming(

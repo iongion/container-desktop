@@ -5,7 +5,9 @@
 }
 .ConnectionSelect .ConnectionSelectButton {
   width: 100%;
-  padding: 0;
+  /* Keep Blueprint's standard button padding so the engine icon and the trailing caret are inset from the
+     trigger's border instead of flush against it (the `inline` header variant re-zeroes left/right below). */
+  padding: 5px 10px;
 }
 .ConnectionSelect .ConnectionSelectButton.bp6-button {
   display: flex;

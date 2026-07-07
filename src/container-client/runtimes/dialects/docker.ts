@@ -136,6 +136,9 @@ export const dockerDialect: EngineDialect = {
       // (`docker compose version`) surfaces a clear error rather than the matrix under-claiming the capability.
       compose: true,
       registries: false,
+      // Registry trust is real on Docker (login + certs.d CA install + daemon.json insecure/mirrors), though
+      // partial vs Podman — no per-registry search-order and system-wide writes need elevation (matrix footnote).
+      registryTrust: true,
       controllerVersion: false,
     },
   } satisfies CapabilityDescriptor,
@@ -171,7 +174,7 @@ export const dockerDialect: EngineDialect = {
 
   async getSystemInfo(
     host: HostContext,
-    connection?: Connection,
+    _connection?: Connection,
     customFormat?: string,
     customSettings?: EngineConnectorSettings,
   ): Promise<SystemInfo> {

@@ -40,6 +40,11 @@ export async function exec_launcher_async(
   if (opts?.timeout !== undefined) {
     payload.timeoutMs = opts.timeout;
   }
+  // Secret-bearing stdin (registry `login --password-stdin`, `cat > ca.crt`) — piped to the child by the Rust
+  // side (host.rs), never placed in argv or logged.
+  if (opts?.input !== undefined) {
+    payload.input = opts.input;
+  }
   return deps.invoke("command_execute", payload);
 }
 

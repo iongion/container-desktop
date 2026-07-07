@@ -25,6 +25,9 @@ type CommandExecuteRequest struct {
 	Env       map[string]string `json:"env"`
 	Isolate   bool              `json:"isolate"`
 	TimeoutMs uint64            `json:"timeoutMs"`
+	// Input is piped to the child's stdin (registry `login --password-stdin`, `cat > ca.crt`) so secrets never
+	// appear in argv or logs. Empty string ⇒ no stdin (identical to the prior behavior).
+	Input string `json:"input"`
 }
 
 // CommandExecutionResult mirrors src-tauri/src/host.rs CommandExecutionResult (and @/env/Types) field-for-field.
@@ -67,6 +70,10 @@ func (s *ExecService) Execute(req CommandExecuteRequest) CommandExecutionResult 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	// Pipe secret-bearing stdin (registry `login --password-stdin`, `cat > ca.crt`) — never in argv or logs.
+	if req.Input != "" {
+		cmd.Stdin = strings.NewReader(req.Input)
+	}
 	err := cmd.Run()
 
 	if ctx.Err() == context.DeadlineExceeded {

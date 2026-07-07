@@ -1,4 +1,5 @@
 import { AISettingsForm } from "./AISettingsForm";
+import { AirGapPolicyPanel } from "./panels/AirGapPolicyPanel";
 import { AppearancePanel } from "./panels/AppearancePanel";
 import { ConfigPanel } from "./panels/ConfigPanel";
 import { LoggingPanel } from "./panels/LoggingPanel";
@@ -11,6 +12,7 @@ export const SETTINGS_PANELS: Record<string, React.FC> = {
   appearance: AppearancePanel,
   startup: StartupPanel,
   network: NetworkPanel,
+  policy: AirGapPolicyPanel,
   ai: AISettingsForm,
   config: ConfigPanel,
   logging: LoggingPanel,

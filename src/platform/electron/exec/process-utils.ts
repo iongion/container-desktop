@@ -14,6 +14,9 @@ export interface WrapperOpts extends SpawnOptionsWithoutStdio {
   isolate?: boolean;
   // Terminate + resolve once collected stdout OR stderr reaches this many bytes (sandbox memory-exhaustion guard).
   maxCollectBytes?: number;
+  // Data piped to the child's stdin (non-detached execs only — the detached path uses stdio:"ignore", no stdin).
+  // Keeps secret-bearing input (registry `login --password-stdin`, `cat > ca.crt`) OUT of argv and logs.
+  input?: string;
 }
 
 export function killProcess(proc: ChildProcessWithoutNullStreams, signal?: NodeJS.Signals | number) {

@@ -51,6 +51,7 @@ export const containerDialect: EngineDialect = {
       builders: false,
       compose: false,
       registries: false,
+      registryTrust: false,
       controllerVersion: false,
     },
   } satisfies CapabilityDescriptor,

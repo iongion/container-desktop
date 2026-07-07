@@ -19,6 +19,7 @@ import type {
   ControllerScope,
   DialStdioBridge,
   EngineConnectorSettings,
+  HostExecOptions,
   OperatingSystem,
   RunnerStopperOptions,
   StartupStatus,
@@ -86,6 +87,7 @@ export interface Transport {
     args: string[],
     scope: string,
     settings?: EngineConnectorSettings,
+    execOpts?: HostExecOptions,
   ): Promise<CommandExecutionResult>;
   /** Streaming scoped exec — the scope wrapper streamed via Command.ExecuteStreaming (NativeTransport throws). */
   runScopeCommandStreaming(

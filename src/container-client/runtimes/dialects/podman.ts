@@ -108,6 +108,7 @@ export const podmanDialect: EngineDialect = {
       builders: false,
       compose: true,
       registries: true,
+      registryTrust: true,
       controllerVersion: false,
     },
   } satisfies CapabilityDescriptor,
@@ -168,7 +169,7 @@ export const podmanDialect: EngineDialect = {
 
   async getSystemInfo(
     host: HostContext,
-    connection?: Connection,
+    _connection?: Connection,
     customFormat?: string,
     customSettings?: EngineConnectorSettings,
   ): Promise<SystemInfo> {

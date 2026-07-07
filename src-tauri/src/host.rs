@@ -6,6 +6,8 @@
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
+use std::process::Stdio;
+use tokio::io::AsyncWriteExt;
 
 // Platform
 
@@ -241,6 +243,9 @@ pub struct ExecOptions {
     pub clear_env: bool,
     /// Wall-clock limit; None or 0 means no limit. On timeout the child is killed and a failed result returned.
     pub timeout_ms: Option<u64>,
+    /// Piped to the child's stdin (registry `login --password-stdin`, `cat > ca.crt`) so secrets never appear in
+    /// argv or logs. None/empty ⇒ no stdin, identical to the prior behavior.
+    pub input: Option<String>,
 }
 
 /// Spawn `program args…` to completion and capture stdout/stderr/exit — the ONE place a child process is run
@@ -267,7 +272,25 @@ pub async fn run_command(program: &str, args: &[String], options: ExecOptions) -
     // A GUI app must not flash a console window per engine CLI call on Windows.
     crate::spawn_hidden::no_window_tokio(&mut cmd);
 
-    let run = cmd.output();
+    // When stdin input is provided (secret-bearing: registry `login --password-stdin`, `cat > ca.crt`), pipe it to
+    // the child and collect output via spawn + wait_with_output; the secret reaches the program through the pipe,
+    // never argv or logs. Without input this is exactly the prior cmd.output() path.
+    let stdin_input = options.input.clone().unwrap_or_default();
+    let run = async {
+        if stdin_input.is_empty() {
+            cmd.output().await
+        } else {
+            cmd.stdin(Stdio::piped());
+            cmd.stdout(Stdio::piped());
+            cmd.stderr(Stdio::piped());
+            let mut child = cmd.spawn()?;
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(stdin_input.as_bytes()).await?;
+                stdin.shutdown().await?;
+            }
+            child.wait_with_output().await
+        }
+    };
     let outcome = match options.timeout_ms {
         Some(ms) if ms > 0 => match tokio::time::timeout(std::time::Duration::from_millis(ms), run).await {
             Ok(result) => result,
@@ -317,11 +340,12 @@ pub async fn command_execute(
     env: Option<HashMap<String, String>>,
     isolate: Option<bool>,
     timeout_ms: Option<u64>,
+    input: Option<String>,
 ) -> CommandExecutionResult {
     run_command(
         &launcher,
         &args,
-        ExecOptions { cwd, env: env.unwrap_or_default(), clear_env: isolate.unwrap_or(false), timeout_ms },
+        ExecOptions { cwd, env: env.unwrap_or_default(), clear_env: isolate.unwrap_or(false), timeout_ms, input },
     )
     .await
 }
@@ -364,6 +388,7 @@ mod tests {
             Some(env),
             Some(true),
             None,
+            None,
         )
         .await;
 
@@ -384,10 +409,32 @@ mod tests {
             Some(env),
             Some(true),
             Some(100),
+            None,
         )
         .await;
         assert!(!out.success);
         assert!(out.stderr.contains("timed out"), "expected timeout, got: {}", out.stderr);
+    }
+
+    // Stdin `input` is piped to the child and the SECRET never appears in argv — the property the registry
+    // `login --password-stdin` path relies on. `cat` echoes only what it reads from stdin.
+    #[tokio::test]
+    async fn command_execute_pipes_stdin_input_and_keeps_it_out_of_argv() {
+        let mut env = HashMap::new();
+        env.insert("PATH".to_string(), std::env::var("PATH").unwrap_or_default());
+        let out = command_execute(
+            "cat".to_string(),
+            vec![],
+            None,
+            Some(env),
+            Some(true),
+            None,
+            Some("s3cr3t-token".to_string()),
+        )
+        .await;
+        assert!(out.success, "stdin exec failed: {}", out.stderr);
+        assert_eq!(out.stdout, "s3cr3t-token", "stdin was not delivered to the child");
+        assert!(!out.command.contains("s3cr3t-token"), "secret leaked into argv/command: {}", out.command);
     }
 
     // Mirrors Electron's Number.parseInt(os.release().split(".")[0]) — the Darwin kernel major that gates

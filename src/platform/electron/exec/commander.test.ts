@@ -12,7 +12,7 @@ vi.mock("@/platform/electron/host", async () => {
   return { ...actual, Platform: { ...actual.Platform, isFlatpak: vi.fn(async () => false) } };
 });
 
-import { exec_service, logSafeOpts } from "./commander";
+import { exec_launcher_async, exec_service, logSafeOpts } from "./commander";
 
 function fakeChild(pid = 4242) {
   const child = new EventEmitter() as any;
@@ -54,6 +54,42 @@ describe("commander logSafeOpts", () => {
     const opts = { encoding: "utf-8", cwd: "/tmp" };
     expect(logSafeOpts(opts)).toBe(opts);
     expect(logSafeOpts(undefined)).toBeUndefined();
+  });
+});
+
+describe("exec_launcher_async stdin", () => {
+  it("pipes opts.input to the child's stdin and keeps the secret out of argv", async () => {
+    const child = fakeChild(321);
+    spawnMock.mockReturnValue(child);
+    const secret = "s3cr3t-token";
+
+    const promise = exec_launcher_async(
+      "podman",
+      ["login", "registry.example.com", "--username", "alice", "--password-stdin"],
+      { input: secret },
+    );
+    // Let wrapSpawnAsync's async chain attach handlers + write stdin, then signal exit so the promise resolves.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    child.emit("exit", 0);
+    const result = await promise;
+
+    expect(result.success).toBe(true);
+    // The token was piped to stdin (never argv) — the property `login --password-stdin` depends on.
+    expect(child.stdin.end).toHaveBeenCalledWith(secret);
+    const [, spawnArgs] = spawnMock.mock.calls[0];
+    expect(JSON.stringify(spawnArgs)).not.toContain(secret);
+  });
+
+  it("does not write stdin when no input is provided", async () => {
+    const child = fakeChild(322);
+    spawnMock.mockReturnValue(child);
+
+    const promise = exec_launcher_async("podman", ["ps"]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    child.emit("exit", 0);
+    await promise;
+
+    expect(child.stdin.end).not.toHaveBeenCalled();
   });
 });
 

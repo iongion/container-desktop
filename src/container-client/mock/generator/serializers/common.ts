@@ -3,7 +3,7 @@
 // and the image-ref string helpers. Pure transforms (no faker): any per-item variation is derived
 // deterministically from the logical object's hex id so output stays stable.
 
-import { ContainerEngine, type RegistriesMap } from "@/env/Types";
+import { ContainerEngine, type RegistriesMap, type RegistryAuthInfo, type RegistryTlsState } from "@/env/Types";
 import type { LogicalContainer, LogicalDataset, LogicalImage, LogicalMachine, LogicalSecret } from "../model";
 import { LOG_TEMPLATES, VULN_SAMPLES, vulnerabilityDescription } from "../pools";
 
@@ -58,8 +58,43 @@ export function serializeMachines(machines: LogicalMachine[]): unknown[] {
   }));
 }
 
+// Well-known public registries → realistic sign-in state for the demo (Hub rate-limits anonymous pulls,
+// quay uses a user login, ghcr a PAT, gcr/gitlab a CI robot). Everything else defaults to anonymous.
+const DEMO_REGISTRY_AUTH: Record<string, RegistryAuthInfo> = {
+  "docker.io": { kind: "anonymous", rateLimited: true },
+  "quay.io": { kind: "user", account: "ion" },
+  "ghcr.io": { kind: "pat", account: "ion" },
+  "gcr.io": { kind: "robot", account: "ci" },
+  "registry.gitlab.com": { kind: "robot", account: "ci" },
+};
+
+// A generated host that reads as an internal mirror — the synthetic repeats (foo-2.example.com), anything
+// with an explicit port, or an internal/corp TLD. These carry the self-signed/insecure + mirror-of cases.
+function isInternalMirrorHost(name: string): boolean {
+  const host = name.split("/")[0];
+  return /-\d+\.example\.com$/.test(host) || /:\d+$/.test(host) || /\.(local|internal|corp|lan)\b/.test(host);
+}
+
+// Deterministic (no faker) demo trust for a generated registry so the Registries & Trust table exercises
+// every TLS/auth/mirror pill. Real connections get their trust from registries.conf/auth.json once wired
+// (handover Steps 3-4); this only shapes mock data.
+export function demoRegistryTrust(
+  name: string,
+  index: number,
+  isPodman: boolean,
+): { tls: RegistryTlsState; auth: RegistryAuthInfo; mirrorOf?: string } {
+  if (isInternalMirrorHost(name)) {
+    return {
+      tls: isPodman ? "self-signed" : "insecure",
+      auth: index % 2 === 0 ? { kind: "robot", account: "ci" } : { kind: "anonymous" },
+      mirrorOf: "docker.io",
+    };
+  }
+  return { tls: "verify", auth: DEMO_REGISTRY_AUTH[name] ?? { kind: "anonymous" } };
+}
+
 /** RegistriesMap: a system "Configuration" default (enabled only for Podman, matching getRegistriesMap) +
- *  the generated custom registry hosts. */
+ *  the generated custom registry hosts, each with deterministic demo trust (TLS/auth/mirror). */
 export function serializeRegistriesMap(dataset: LogicalDataset): RegistriesMap {
   const isPodman = dataset.engine === ContainerEngine.PODMAN;
   const created = iso(dataset.registries[0]?.createdAt ?? new Date(0));
@@ -76,7 +111,7 @@ export function serializeRegistriesMap(dataset: LogicalDataset): RegistriesMap {
         engine: [ContainerEngine.PODMAN, ContainerEngine.DOCKER, ContainerEngine.APPLE],
       },
     ],
-    custom: dataset.registries.map((registry) => ({
+    custom: dataset.registries.map((registry, index) => ({
       id: registry.id,
       name: registry.name,
       created: iso(registry.createdAt),
@@ -85,6 +120,7 @@ export function serializeRegistriesMap(dataset: LogicalDataset): RegistriesMap {
       isRemovable: registry.isRemovable,
       isSystem: registry.isSystem,
       engine: registry.engines,
+      ...demoRegistryTrust(registry.name, index, isPodman),
     })),
   };
 }

@@ -30,6 +30,10 @@
 .ManageConnectionForm {
   position: relative;
 }
+/* The drawer is dense — Blueprint's default 15px FormGroup gap is too airy here; tighten every group. */
+.ManageConnectionForm .bp6-form-group {
+  margin-bottom: 5px;
+}
 .ManageConnectionForm .AppDrawerPendingIndicator {
   position: fixed;
   width: 180px;
@@ -48,4 +52,129 @@
 }
 .ManageConnectionForm .AppDrawerPendingIndicator span {
   padding-left: 10px;
+}
+
+/* Per-connection trust — collapsible Proxy + Certificates advanced sections. The toggle recedes (like the
+   receding nav chrome) so it reads as an advanced disclosure, not a primary field. */
+.ConnTrustSection {
+  margin-top: 6px;
+  border-top: 1px solid var(--app-border);
+}
+.ConnTrustToggle.bp6-button {
+  padding-left: 0;
+  color: var(--app-text-muted);
+  font-weight: 600;
+}
+.ConnTrustToggle.bp6-button:hover {
+  color: var(--app-text);
+}
+/* Fill the button text so the summary chip can sit hard against the right edge (opposite the label). */
+.ConnTrustToggle.bp6-button .bp6-button-text {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+}
+.ConnTrustToggleText {
+  margin-right: 8px;
+}
+.ConnTrustChip.bp6-tag {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+.ConnTrustBody {
+  padding: 4px 2px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ConnTrustHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--app-text-muted);
+}
+.ConnTrustHint a {
+  color: var(--app-accent-text);
+}
+.ConnTrustCallout.bp6-callout {
+  font-size: 12px;
+}
+
+/* The proxy fields (shared with Settings→Network) wrap in that wide panel; the drawer is narrower, so keep
+   Protocol · Host · Port and Username · Password each on one row — sized by semantic ProxyField classes (not
+   nth-child). Protocol/Port are compact + equal; Host fills the middle but is capped so it never dominates.
+   The controls use Blueprint `fill` so their inputs shrink to the group instead of overflowing it. */
+.ManageConnectionForm .AppSettingsNetworkEndpoint,
+.ManageConnectionForm .AppSettingsNetworkCredentials {
+  flex-wrap: nowrap;
+  column-gap: 8px;
+}
+.ManageConnectionForm .ProxyField--protocol,
+.ManageConnectionForm .ProxyField--port {
+  flex: 0 0 80px;
+}
+.ManageConnectionForm .ProxyField--host {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ManageConnectionForm .ProxyField--username,
+.ManageConnectionForm .ProxyField--password {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Certificate list — a compact per-row list (host input · filename · remove), NOT a grouped table. */
+.ConnCertList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ConnCertRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ConnCertRow .ConnCertHost {
+  flex: 1 1 auto;
+}
+.ConnCertFile {
+  flex: 0 1 auto;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--app-text-muted);
+}
+
+/* Drop-zone — moved from the old Certificates panel (.TrustDropzone) and renamed to avoid a duplicate class. */
+.ConnCertDropzone {
+  flex: 0 0 auto;
+  width: 100%;
+  border: 1.5px dashed var(--app-border);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--app-text-muted);
+  font: inherit;
+  font-size: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+.ConnCertDropzone:hover {
+  border-color: var(--app-accent);
+  color: var(--app-text);
+}
+.ConnCertDropzone .bp6-icon {
+  color: var(--app-text-muted);
+}
+.ConnCertDropzoneHint {
+  font-size: 11px;
+}
+.ConnCertLink {
+  color: var(--app-accent-text);
+  cursor: pointer;
 }

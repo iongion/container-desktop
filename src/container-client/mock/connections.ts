@@ -92,7 +92,9 @@ function mockConnection(opts: MockConnectionOptions): Connection {
     description: opts.description,
     engine: opts.engine,
     host: opts.host,
-    readonly: true,
+    // Only the built-in "System <engine>" connections are read-only (system defaults, not editable). The
+    // remote SSH/WSL/LIMA samples are editable so the Connection Manager (and its edit form) can be exercised.
+    readonly: opts.name.startsWith("System"),
     settings: mockSettings(opts.engine, opts.uri, opts.autoStart, opts.controller),
   };
 }
@@ -131,6 +133,16 @@ export function buildMockConnections(): Connection[] {
       host: ContainerEngineHost.DOCKER_NATIVE,
       uri: "unix:///var/run/docker.sock",
       autoStart: engines.includes(ContainerEngine.DOCKER),
+    }),
+    // System connections list first, in engine order: Podman, Docker, Container (Apple).
+    mockConnection({
+      id: MOCK_CONTAINER_SYSTEM_ID,
+      name: "System Container",
+      label: "Container", // Apple Container
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_NATIVE,
+      uri: "/Users/demo/.socktainer/container.sock",
+      autoStart: engines.includes(ContainerEngine.APPLE),
     }),
     mockConnection({
       id: "mock.podman.ssh",
@@ -192,16 +204,7 @@ export function buildMockConnections(): Connection[] {
       autoStart: false,
       controller: controller("limactl", "docker-lima"),
     }),
-    // Container mock connections
-    mockConnection({
-      id: MOCK_CONTAINER_SYSTEM_ID,
-      name: "System Container",
-      label: "Container", // Apple Container
-      engine: ContainerEngine.APPLE,
-      host: ContainerEngineHost.APPLE_NATIVE,
-      uri: "/Users/demo/.socktainer/container.sock",
-      autoStart: engines.includes(ContainerEngine.APPLE),
-    }),
+    // Container SSH sample (the System Container connection is listed first, with the other system engines).
     mockConnection({
       id: "mock.container.ssh",
       name: "Container SSH remote",

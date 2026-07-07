@@ -1,28 +1,37 @@
 import {
   Button,
   ButtonGroup,
+  Callout,
   Classes,
+  Collapse,
   Divider,
   FormGroup,
+  Icon,
   InputGroup,
   Intent,
+  Radio,
+  RadioGroup,
   Spinner,
   SpinnerSize,
   Switch,
   Tab,
   Tabs,
+  Tag,
   UL,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import classNames from "classnames";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { ContainerEngineOptions, createConnectorBy, type HostClientFacade } from "@/container-client";
 import { Application } from "@/container-client/Application";
+import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
 import {
   type Connection,
+  type ConnectionProxyMode,
+  type ConnectionProxySettings,
   type Connector,
   ContainerEngine,
   ContainerEngineHost,
@@ -31,8 +40,12 @@ import {
   type Program,
 } from "@/env/Types";
 import { deepMerge, isEmpty } from "@/utils";
+import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { Notification } from "@/web-app/Notification";
+import { ProxyConfigFields } from "@/web-app/screens/Settings/panels/ProxyConfigFields";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { connectionProxySummary, isGuestHost, makeCertAuthorityFromFile } from "./connectionTrust";
+import { saveConnectionTrust } from "./connectionTrustActions";
 import { EngineHostSelect } from "./EngineHostSelect";
 import { EngineSelect } from "./EngineSelect";
 import { OSTypeSelect } from "./OSTypeSelect";
@@ -76,6 +89,16 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
   const scopes = useWatch({ control, name: "scopes" });
   const program = useWatch({ control, name: "settings.program" });
   const controller = useWatch({ control, name: "settings.controller" });
+  // Registry trust — Proxy + Certificates advanced sections (per-connection). `settings.certificates` carries
+  // the CA id so RHF's default keyName would clash — key the field array under `fieldId` instead.
+  const proxySettings = useWatch({ control, name: "settings.proxy" });
+  const globalProxy = useAppStore((state) => state.userSettings?.proxy);
+  const certFields = useFieldArray({ control, name: "settings.certificates", keyName: "fieldId" });
+  const certFileInputRef = useRef<HTMLInputElement>(null);
+  const [proxyOpen, setProxyOpen] = useState(
+    () => !!connection?.settings?.proxy && connection.settings.proxy.mode !== "inherit",
+  );
+  const [certsOpen, setCertsOpen] = useState(() => (connection?.settings?.certificates?.length ?? 0) > 0);
   const controllerScopeName = useWatch({
     control,
     name: "settings.controller.scope",
@@ -301,11 +324,22 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
     }
     try {
       setPending(true);
+      const previousSettings = connection?.settings;
+      let connectionId = data.id;
       if (mode === "create") {
-        await createConnection(data);
+        const created = await createConnection(data);
+        connectionId = created?.id ?? data.id;
       } else {
         await updateConnection({ id: data.id, connection: data });
       }
+      // Persisting settings.* alone doesn't touch the engine — project the trust bits (CAs, registries.conf,
+      // guest proxy) into the connected engine. Best-effort: never fails the save (deferred to connect time).
+      await saveConnectionTrust(
+        connectionId,
+        mode === "create" ? undefined : previousSettings,
+        data.settings,
+        globalProxy,
+      );
       onClose();
     } catch (error: any) {
       logger.error("Unable to create connection", error);
@@ -317,6 +351,25 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
       setPending(false);
     }
   });
+
+  // Read dropped/selected PEM files and append them as CA entries (host is set per-row in the form). The PEM
+  // content rides on the record so the writer can install it into certs.d on save.
+  const onCertFilesSelected = useCallback(
+    async (files: FileList | null) => {
+      if (!files) {
+        return;
+      }
+      for (const file of Array.from(files)) {
+        try {
+          const pem = await file.text();
+          certFields.append(makeCertAuthorityFromFile(file.name, pem, ""));
+        } catch (error: any) {
+          logger.error("Unable to read certificate file", error);
+        }
+      }
+    },
+    [certFields],
+  );
 
   // Events
   const onHostOSTypeChange = useCallback((e: OperatingSystem) => {
@@ -995,6 +1048,180 @@ export const ManageConnectionForm: React.FC<ManageConnectionFormProps> = ({
               }}
             />
           </FormGroup>
+        ) : null}
+
+        {/* Registry trust — per-connection Proxy override of the global proxy */}
+        {host ? (
+          <div className="ConnTrustSection">
+            <Button
+              className="ConnTrustToggle"
+              variant="minimal"
+              alignText="left"
+              fill
+              icon={proxyOpen ? IconNames.CHEVRON_DOWN : IconNames.CHEVRON_RIGHT}
+              onClick={() => setProxyOpen((open) => !open)}
+              text={
+                <>
+                  <span className="ConnTrustToggleText">{t("Proxy")}</span>
+                  <Tag minimal round className="ConnTrustChip">
+                    {connectionProxySummary(proxySettings, globalProxy)}
+                  </Tag>
+                </>
+              }
+            />
+            <Collapse isOpen={proxyOpen}>
+              <div className="ConnTrustBody">
+                <Controller
+                  control={control}
+                  name="settings.proxy"
+                  rules={{
+                    validate: (value) => {
+                      const per = value as ConnectionProxySettings | undefined;
+                      if (per?.mode !== "override") {
+                        return true;
+                      }
+                      return validateProxy(per.config).ok || (t("Enter a valid proxy host and port") as string);
+                    },
+                  }}
+                  render={({ field: { onChange, value } }) => {
+                    const per = value as ConnectionProxySettings | undefined;
+                    const proxyMode: ConnectionProxyMode = per?.mode ?? "inherit";
+                    const overrideInvalid = proxyMode === "override" && !validateProxy(per?.config).ok;
+                    return (
+                      <>
+                        {isGuestHost(host) && proxyMode !== "off" ? (
+                          <p className="ConnTrustHint">
+                            {t("The proxy is injected into the guest engine service when you save.")}
+                          </p>
+                        ) : null}
+                        <RadioGroup
+                          selectedValue={proxyMode}
+                          onChange={(event) => {
+                            const nextMode = event.currentTarget.value as ConnectionProxyMode;
+                            if (nextMode === "override") {
+                              onChange({
+                                mode: "override",
+                                config: per?.config ?? normalizeProxyConfig({ mode: "manual" }),
+                              });
+                            } else {
+                              onChange({ mode: nextMode });
+                            }
+                          }}
+                        >
+                          <Radio label={t("Inherit the global proxy")} value="inherit" />
+                          <Radio label={t("Override for this connection")} value="override" />
+                          <Radio label={t("No proxy for this connection")} value="off" />
+                        </RadioGroup>
+                        {proxyMode === "override" ? (
+                          <ProxyConfigFields
+                            value={per?.config ?? normalizeProxyConfig({ mode: "manual" })}
+                            onChange={(config) => onChange({ mode: "override", config })}
+                            disabled={pending}
+                          />
+                        ) : null}
+                        {overrideInvalid ? (
+                          <Callout intent={Intent.DANGER} icon={IconNames.ERROR} className="ConnTrustCallout">
+                            {t("Enter a valid proxy host and port.")}
+                          </Callout>
+                        ) : null}
+                      </>
+                    );
+                  }}
+                />
+              </div>
+            </Collapse>
+          </div>
+        ) : null}
+
+        {/* Registry trust — per-connection custom CAs (installed into the engine's certs.d) */}
+        {host ? (
+          <div className="ConnTrustSection">
+            <Button
+              className="ConnTrustToggle"
+              variant="minimal"
+              alignText="left"
+              fill
+              icon={certsOpen ? IconNames.CHEVRON_DOWN : IconNames.CHEVRON_RIGHT}
+              onClick={() => setCertsOpen((open) => !open)}
+              text={
+                <>
+                  <span className="ConnTrustToggleText">{t("Certificate authorities")}</span>
+                  <Tag minimal round className="ConnTrustChip">
+                    {certFields.fields.length}
+                  </Tag>
+                </>
+              }
+            />
+            <Collapse isOpen={certsOpen}>
+              <div className="ConnTrustBody">
+                {certFields.fields.length === 0 ? (
+                  <p className="ConnTrustHint">{t("No custom CAs — uses the system trust store.")}</p>
+                ) : (
+                  <div className="ConnCertList">
+                    {certFields.fields.map((field, index) => (
+                      <div className="ConnCertRow" key={field.fieldId}>
+                        <Icon icon={IconNames.ENDORSED} size={14} />
+                        <Controller
+                          control={control}
+                          name={`settings.certificates.${index}.host`}
+                          render={({ field: hostField }) => (
+                            <InputGroup
+                              className="ConnCertHost"
+                              fill
+                              placeholder={t("registry host, e.g. registry.local:5000")}
+                              value={hostField.value || ""}
+                              onChange={hostField.onChange}
+                              onBlur={hostField.onBlur}
+                            />
+                          )}
+                        />
+                        <span className="TrustMono ConnCertFile" title={field.fileName}>
+                          {field.fileName}
+                        </span>
+                        <ConfirmMenu
+                          tag={index}
+                          title={t("Remove this CA?")}
+                          onConfirm={(tagValue, confirmed) => {
+                            if (confirmed) {
+                              certFields.remove(tagValue);
+                            }
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="ConnCertDropzone"
+                  onClick={() => certFileInputRef.current?.click()}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    onCertFilesSelected(event.dataTransfer.files);
+                  }}
+                >
+                  <Icon icon={IconNames.CLOUD_UPLOAD} size={20} />
+                  <div>
+                    {t("Drag a .pem / .crt here, or ")}
+                    <span className="ConnCertLink">{t("browse")}</span>
+                  </div>
+                  <div className="ConnCertDropzoneHint">{t("Set the registry host each CA secures, then save.")}</div>
+                </button>
+                <input
+                  ref={certFileInputRef}
+                  type="file"
+                  accept=".pem,.crt,.cer,.cert"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={(event) => {
+                    onCertFilesSelected(event.currentTarget.files);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </div>
+            </Collapse>
+          </div>
         ) : null}
 
         {host ? (

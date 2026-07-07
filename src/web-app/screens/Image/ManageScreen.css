@@ -41,3 +41,8 @@
 .AppDataTable[data-table="images"] .ContainerImageRegistry {
   padding-top: 3px;
 }
+
+/* Small gap after the "Search images" CTA so it doesn't butt up against the "Build image" button. */
+.ImageSearchImagesButton {
+  margin-right: 5px;
+}

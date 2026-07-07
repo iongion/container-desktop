@@ -2,10 +2,30 @@ package main
 
 import (
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+// Execute pipes Input to the child's stdin (the registry `login --password-stdin` path) and never leaks the
+// secret into argv/command. `cat` echoes only what it reads from stdin.
+func TestExecuteStdinInputStaysOutOfArgv(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses cat")
+	}
+	secret := "s3cr3t-token"
+	res := (&ExecService{}).Execute(CommandExecuteRequest{Launcher: "cat", Input: secret})
+	if !res.Success {
+		t.Fatalf("execute failed: %s", res.Stderr)
+	}
+	if res.Stdout != secret {
+		t.Errorf("stdout = %q, want %q (stdin not delivered to child)", res.Stdout, secret)
+	}
+	if strings.Contains(res.Command, secret) {
+		t.Errorf("secret leaked into command/argv: %q", res.Command)
+	}
+}
 
 // Hermetic ProcessService test: spawn a shell that writes stdout+stderr and exits 3, assert the streamed
 // data/exit/close events over "stream://<channel>". emit is injected (no running webview).

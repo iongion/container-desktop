@@ -32,11 +32,26 @@ import { loadEngineFixtures } from "@/container-client/mock/fixturesLoader";
 import { getMockEngine, isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
 import { normalizeProxyConfig, type ProxyConfig } from "@/container-client/proxy";
+import { buildLoginArgs, buildLogoutArgs } from "@/container-client/registryTrust/auth";
+import { buildCaRemoveCommand, caCertTarget } from "@/container-client/registryTrust/certsd";
+import {
+  dockerDaemonJsonPath,
+  registriesConfPath,
+  type TrustPathContext,
+} from "@/container-client/registryTrust/paths";
+import { serializeSystemdProxyDropin } from "@/container-client/registryTrust/proxyResolution";
+import {
+  mergeDockerDaemonJson,
+  mergeManagedRegistries,
+  parsePodmanRegistriesConf,
+  stringifyPodmanRegistriesConf,
+} from "@/container-client/registryTrust/registriesConf";
 import { buildRemoteConnectionsFromEnv, resolveRemoteEnvConnections } from "@/container-client/remote-env";
 import {
   type ApplicationEnvironment,
   type CommandExecutionResult,
   type Connection,
+  type ConnectionProxySettings,
   type ConnectOptions,
   type Connector,
   type ContainerConnectOptions,
@@ -54,8 +69,10 @@ import {
   OperatingSystem,
   type Program,
   type RegistriesMap,
+  type Registry,
   type RegistryPullOptions,
   type RegistrySearchOptions,
+  type RegistryTrustEntry,
   StartupStatus,
   type SubscriptionOptions,
 } from "@/env/Types";
@@ -807,7 +824,7 @@ export class Application {
     const host = opts?.host || (this._currentContainerEngineHostClient as HostClientFacade | undefined);
     const isPodman = host?.ENGINE === ContainerEngine.PODMAN;
     const customRegistriesPath = await Path.join(await this.userConfiguration.getStoragePath(), "registries.json");
-    const registriesMap = {
+    const registriesMap: RegistriesMap = {
       default: AUTOMATIC_REGISTRIES.map((it) => (it.id === "system" && !isPodman ? { ...it, enabled: false } : it)),
       custom: PROPOSED_REGISTRIES,
     };
@@ -815,6 +832,50 @@ export class Application {
       const custom = JSON.parse(await FS.readTextFile(customRegistriesPath));
       if (custom.length) {
         registriesMap.custom = custom;
+      }
+    }
+    // Merge the connection's MANAGED trust set (settings.registries) so the table shows real TLS/auth/mirror
+    // state and surfaces managed endpoints not otherwise listed. Absence = honest defaults (verify/anonymous).
+    // Guard getSettings' presence — some callers pass a minimal host (e.g. only { ENGINE }).
+    const managed =
+      typeof host?.getSettings === "function"
+        ? ((await host.getSettings().catch(() => undefined))?.registries ?? [])
+        : [];
+    if (managed.length) {
+      const byName = new Map(managed.map((m) => [m.name, m]));
+      const apply = (registry: Registry): Registry => {
+        const m = byName.get(registry.name);
+        return m
+          ? {
+              ...registry,
+              tls: m.tls,
+              auth: m.auth ?? registry.auth,
+              mirrorOf: m.mirrorOf,
+              weight: m.order,
+              enabled: m.enabled,
+            }
+          : registry;
+      };
+      registriesMap.default = registriesMap.default.map(apply);
+      registriesMap.custom = registriesMap.custom.map(apply);
+      const present = new Set([...registriesMap.default, ...registriesMap.custom].map((r) => r.name));
+      for (const m of managed) {
+        if (present.has(m.name)) {
+          continue;
+        }
+        registriesMap.custom.push({
+          id: m.name,
+          name: m.name,
+          created: new Date().toISOString(),
+          weight: m.order,
+          enabled: m.enabled,
+          isRemovable: true,
+          isSystem: false,
+          engine: host ? [host.ENGINE] : [],
+          tls: m.tls,
+          auth: m.auth,
+          mirrorOf: m.mirrorOf,
+        });
       }
     }
     return registriesMap;
@@ -920,6 +981,261 @@ export class Application {
       result = await host.runHostCommand(program.path || program.name, ["image", "pull", image]);
     }
     return result;
+  }
+
+  // registry trust — sign in / out. The credential is piped to the engine's stdin via `--password-stdin`
+  // (HostExecOptions.input), so it NEVER appears in argv, `ps`, or the Activity log. The app persists only the
+  // display-only auth state (kind/account) on the connection; the secret itself lives solely in the engine's
+  // auth.json and is discarded here.
+  async registryLogin(opts: {
+    host?: HostClientFacade;
+    registry: string;
+    username: string;
+    secret: string;
+    insecure?: boolean;
+  }): Promise<CommandExecutionResult> {
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
+    const { program, controller } = await host.getSettings();
+    const launcher = program.path || program.name;
+    // Only Podman honors a per-login TLS flag; Docker relies on daemon.json insecure-registries instead.
+    const tlsVerify = host.ENGINE === ContainerEngine.PODMAN && opts.insecure ? false : undefined;
+    const args = buildLoginArgs(opts.registry, opts.username, { tlsVerify });
+    if (host.isScoped()) {
+      return await host.runScopeCommand(launcher, args, controller?.scope || "", undefined, { input: opts.secret });
+    }
+    return await host.runHostCommand(launcher, args, undefined, { input: opts.secret });
+  }
+
+  async registryLogout(opts: { host?: HostClientFacade; registry: string }): Promise<CommandExecutionResult> {
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
+    const { program, controller } = await host.getSettings();
+    const launcher = program.path || program.name;
+    const args = buildLogoutArgs(opts.registry);
+    if (host.isScoped()) {
+      return await host.runScopeCommand(launcher, args, controller?.scope || "");
+    }
+    return await host.runHostCommand(launcher, args);
+  }
+
+  // registry trust — engine config projection (registries.conf / daemon.json / certs.d) + per-connection persist.
+  // NATIVE hosts read/write via the FS global; SCOPED hosts (WSL/LIMA/SSH) read via `cat` and write via
+  // `sh -c 'mkdir -p … && cat > …'` with the content piped over stdin (so config/PEM never touch argv or logs).
+
+  private async trustPathContext(host: HostClientFacade): Promise<TrustPathContext> {
+    const settings = await host.getSettings();
+    let home = "";
+    if (host.isScoped()) {
+      const scope = settings.controller?.scope || "";
+      // Resolve the GUEST home (rootless paths live under it). getScopeEnvironmentVariable is on the concrete
+      // HostClient (HostContext), not the facade interface — read it defensively.
+      const getter = (
+        host as HostClientFacade & { getScopeEnvironmentVariable?: (s: string, v: string) => Promise<string> }
+      ).getScopeEnvironmentVariable;
+      if (getter) {
+        home = await getter.call(host, scope, "HOME").catch(() => "");
+      }
+      if (!home) {
+        home = "/root";
+      }
+    } else {
+      home = await Platform.getHomeDir();
+    }
+    return { engine: host.ENGINE, rootfull: !!settings.rootfull, home };
+  }
+
+  private async readTrustFile(host: HostClientFacade, path: string): Promise<string> {
+    if (host.isScoped()) {
+      const { controller } = await host.getSettings();
+      const result = await host.runScopeCommand("cat", [path], controller?.scope || "");
+      return result.success ? result.stdout || "" : "";
+    }
+    return (await FS.isFilePresent(path)) ? await FS.readTextFile(path) : "";
+  }
+
+  private async writeTrustFile(
+    host: HostClientFacade,
+    dir: string,
+    file: string,
+    content: string,
+    opts?: { sudo?: boolean },
+  ): Promise<CommandExecutionResult> {
+    if (host.isScoped()) {
+      const { controller } = await host.getSettings();
+      const q = (v: string) => `'${v.replace(/'/g, `'\\''`)}'`;
+      const script = `mkdir -p ${q(dir)} && cat > ${q(file)}`;
+      const launcher = opts?.sudo ? "sudo" : "sh";
+      const args = opts?.sudo ? ["sh", "-c", script] : ["-c", script];
+      return await host.runScopeCommand(launcher, args, controller?.scope || "", undefined, { input: content });
+    }
+    await FS.mkdir(dir, { recursive: true });
+    await FS.writeTextFile(file, content);
+    return { pid: null, code: 0, success: true, stdout: "", stderr: "", command: `write ${file}` };
+  }
+
+  /**
+   * Project the connection's MANAGED registry set into the engine's config (podman registries.conf / docker
+   * daemon.json). READ-MODIFY-WRITE — a malformed existing file ABORTS the write (never overwritten). Returns
+   * `restartNeeded` (docker daemon.json changes only take effect after a daemon restart).
+   */
+  async writeRegistryConfig(opts: {
+    host?: HostClientFacade;
+    registries: RegistryTrustEntry[];
+    removedLocations?: string[];
+  }): Promise<{ success: boolean; restartNeeded: boolean; stderr?: string }> {
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
+    const ctx = await this.trustPathContext(host);
+    const removed = opts.removedLocations || [];
+
+    if (host.ENGINE === ContainerEngine.PODMAN) {
+      const path = registriesConfPath(ctx);
+      if (!path) {
+        return { success: true, restartNeeded: false };
+      }
+      const existingText = await this.readTrustFile(host, path);
+      let text: string;
+      try {
+        const merged = mergeManagedRegistries(parsePodmanRegistriesConf(existingText), opts.registries, removed);
+        text = stringifyPodmanRegistriesConf(merged);
+      } catch (error: any) {
+        return {
+          success: false,
+          restartNeeded: false,
+          stderr: `registries.conf is malformed: ${error?.message ?? error}`,
+        };
+      }
+      const result = await this.writeTrustFile(host, await Path.dirname(path), path, text);
+      return { success: result.success, restartNeeded: false, stderr: result.stderr };
+    }
+
+    if (host.ENGINE === ContainerEngine.DOCKER) {
+      const path = dockerDaemonJsonPath(ctx);
+      if (!path) {
+        return { success: true, restartNeeded: false };
+      }
+      const existingText = await this.readTrustFile(host, path);
+      let text: string;
+      try {
+        text = mergeDockerDaemonJson(existingText, opts.registries);
+      } catch (error: any) {
+        return { success: false, restartNeeded: false, stderr: `daemon.json is malformed: ${error?.message ?? error}` };
+      }
+      // /etc/docker needs elevation in a guest; docker must restart to pick up daemon.json.
+      const result = await this.writeTrustFile(host, await Path.dirname(path), path, text, { sudo: host.isScoped() });
+      return { success: result.success, restartNeeded: true, stderr: result.stderr };
+    }
+
+    return { success: true, restartNeeded: false };
+  }
+
+  /** Install a custom CA into the engine's certs.d (PEM piped over stdin, never argv). */
+  async importCA(opts: {
+    host?: HostClientFacade;
+    registryHost: string;
+    pem: string;
+  }): Promise<CommandExecutionResult> {
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
+    const target = caCertTarget(await this.trustPathContext(host), opts.registryHost);
+    if (!target) {
+      return {
+        pid: null,
+        code: 0,
+        success: false,
+        stdout: "",
+        stderr: "CA install is not supported on this engine",
+        command: "",
+      };
+    }
+    const sudo = host.ENGINE === ContainerEngine.DOCKER && host.isScoped();
+    return await this.writeTrustFile(host, target.dir, target.file, opts.pem, { sudo });
+  }
+
+  async removeCA(opts: { host?: HostClientFacade; registryHost: string }): Promise<CommandExecutionResult> {
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
+    const target = caCertTarget(await this.trustPathContext(host), opts.registryHost);
+    if (!target) {
+      return { pid: null, code: 0, success: true, stdout: "", stderr: "", command: "" };
+    }
+    const cmd = buildCaRemoveCommand(target, { sudo: host.ENGINE === ContainerEngine.DOCKER && host.isScoped() });
+    if (host.isScoped()) {
+      const { controller } = await host.getSettings();
+      return await host.runScopeCommand(cmd.launcher, cmd.args, controller?.scope || "");
+    }
+    return await host.runHostCommand(cmd.launcher, cmd.args);
+  }
+
+  /** Persist the connection's managed registry set (desired state) + refresh the cached host so reads are fresh. */
+  async setConnectionRegistries(opts: { connectionId: string; registries: RegistryTrustEntry[] }): Promise<void> {
+    const conn = (await this.getConnectionsFromConfiguration()).find((c) => c.id === opts.connectionId);
+    if (!conn?.settings) {
+      return;
+    }
+    await this.updateConnection(opts.connectionId, { settings: { ...conn.settings, registries: opts.registries } });
+    await this.refreshCachedHostSettings(opts.connectionId);
+  }
+
+  /** Persist the connection's proxy override + refresh the cached host. Effective proxy is renderer-computed. */
+  async setConnectionProxy(opts: { connectionId: string; proxy: ConnectionProxySettings }): Promise<void> {
+    const conn = (await this.getConnectionsFromConfiguration()).find((c) => c.id === opts.connectionId);
+    if (!conn?.settings) {
+      return;
+    }
+    await this.updateConnection(opts.connectionId, { settings: { ...conn.settings, proxy: opts.proxy } });
+    await this.refreshCachedHostSettings(opts.connectionId);
+  }
+
+  // Evict staleness: the cached HostClient's settings are set at creation (engineHost.ts), so after a settings
+  // write its getSettings()/getRegistriesMap read would be STALE. Re-apply the persisted settings (correction #6).
+  private async refreshCachedHostSettings(connectionId: string): Promise<void> {
+    const host = this.getHostClientFor(connectionId);
+    if (!host) {
+      return;
+    }
+    const conn = (await this.getConnectionsFromConfiguration()).find((c) => c.id === connectionId);
+    if (conn?.settings) {
+      await host.setSettings(conn.settings);
+    }
+  }
+
+  /** Inject the effective proxy into a SCOPED guest's engine service via a systemd drop-in (written over stdin,
+   * so credentials never touch argv), then daemon-reload. Native hosts already inherit the app's proxy env. */
+  async applyProxyToGuest(opts: {
+    host?: HostClientFacade;
+    config: ProxyConfig;
+    serviceName?: string;
+  }): Promise<CommandExecutionResult> {
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      throw new Error("No active engine connection");
+    }
+    if (!host.isScoped()) {
+      return { pid: null, code: 0, success: true, stdout: "", stderr: "", command: "native host — no guest drop-in" };
+    }
+    const { controller } = await host.getSettings();
+    const scope = controller?.scope || "";
+    const service = opts.serviceName || (host.ENGINE === ContainerEngine.DOCKER ? "docker" : "podman");
+    const dir = `/etc/systemd/system/${service}.service.d`;
+    const file = `${dir}/http-proxy.conf`;
+    const dropin = serializeSystemdProxyDropin(opts.config);
+    if (!dropin) {
+      return await host.runScopeCommand("sudo", ["sh", "-c", `rm -f '${file}' && systemctl daemon-reload`], scope);
+    }
+    const script = `mkdir -p '${dir}' && cat > '${file}' && systemctl daemon-reload`;
+    return await host.runScopeCommand("sudo", ["sh", "-c", script], scope, undefined, { input: dropin });
   }
 
   // Main

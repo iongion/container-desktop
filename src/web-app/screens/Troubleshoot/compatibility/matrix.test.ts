@@ -18,6 +18,7 @@ const podmanCaps = (extOver: Partial<ConnectorCapabilities["extensions"]> = {}):
     builders: false,
     compose: true,
     registries: true,
+    registryTrust: true,
     controllerVersion: false,
     ...extOver,
   },
@@ -35,6 +36,7 @@ const dockerCaps = (): ConnectorCapabilities => ({
     builders: false,
     compose: true,
     registries: false,
+    registryTrust: true,
     controllerVersion: false,
   },
 });
@@ -51,6 +53,7 @@ const containerCaps = (): ConnectorCapabilities => ({
     builders: false,
     compose: false,
     registries: false,
+    registryTrust: false,
     controllerVersion: false,
   },
 });
@@ -161,7 +164,7 @@ describe("buildCompatibilityMatrix", () => {
       rt({ id: "c", engine: "container", capabilities: containerCaps() }),
     ]);
     expect(cellsOf(m, "compose")).toEqual([{ kind: "yes" }, { kind: "yes" }, { kind: "no" }]);
-    expect(cellsOf(m, "registries")).toEqual([{ kind: "yes" }, { kind: "planned", footnote: 1 }, { kind: "no" }]);
+    expect(cellsOf(m, "registries")).toEqual([{ kind: "yes" }, { kind: "partial", footnote: 1 }, { kind: "no" }]);
     expect(cellsOf(m, "contexts")).toEqual([{ kind: "no" }, { kind: "partial", footnote: 3 }, { kind: "no" }]);
     expect(cellsOf(m, "imagebuild").map((c) => c.kind)).toEqual(["yes", "yes", "yes"]);
     expect(cellsOf(m, "testcontainers")).toEqual([

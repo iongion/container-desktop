@@ -235,11 +235,24 @@ export interface EngineConnectorSettings {
   controller?: Controller;
   rootfull: boolean;
   mode: "mode.automatic" | "mode.manual";
+  // Per-connection registry trust (Registries & Trust screen + the connection form's advanced sections). All
+  // optional: absence = honest defaults (verify TLS, system CA, inherit the global proxy). These are the app's
+  // MANAGED set only — the writers read-modify-write registries.conf/certs.d and never wipe user/system entries.
+  registries?: RegistryTrustEntry[];
+  certificates?: CertAuthority[];
+  proxy?: ConnectionProxySettings;
 }
 
 export interface EngineUserSettingsOptions {
   id: string; // host client instance id
   settings: Partial<EngineConnectorSettings>;
+}
+
+// Extra per-exec options threaded to the underlying process — DISTINCT from EngineConnectorSettings so it never
+// clobbers the settings arg. `input` is piped to the child's stdin (registry `login --password-stdin`,
+// `cat > ca.crt`) so secret-bearing input never appears in argv or logs. Honored by all three exec backends.
+export interface HostExecOptions {
+  input?: string;
 }
 
 export interface EngineApiOptions {
@@ -460,7 +473,15 @@ export interface ConnectorCapabilities {
   events: boolean;
   sort: Record<string, "client" | "server">;
   extensions: Record<
-    "machines" | "kube" | "contexts" | "swarm" | "builders" | "compose" | "registries" | "controllerVersion",
+    | "machines"
+    | "kube"
+    | "contexts"
+    | "swarm"
+    | "builders"
+    | "compose"
+    | "registries"
+    | "registryTrust"
+    | "controllerVersion",
     boolean
   >;
 }
@@ -1101,6 +1122,15 @@ export interface Network {
   subnets: NetworkSubnet[];
 }
 
+// Transport trust for a registry endpoint (matches the Registries & Trust screen's TLS pill).
+export type RegistryTlsState = "verify" | "self-signed" | "insecure";
+// Sign-in state for a registry (auth.json). `anonymous` + `rateLimited` renders "anonymous · rate-limited".
+export interface RegistryAuthInfo {
+  kind: "anonymous" | "user" | "pat" | "robot";
+  account?: string;
+  rateLimited?: boolean;
+}
+
 export interface Registry {
   id: string;
   name: string;
@@ -1110,6 +1140,47 @@ export interface Registry {
   isRemovable: boolean;
   isSystem: boolean;
   engine: ContainerEngine[];
+  // Optional trust/display state for the Registries & Trust screen. Populated by the mock generator today
+  // (demo variety) and by registries.conf/auth.json parsing once wired (handover Steps 3-4); absent on real
+  // connections until then, so the UI falls back to honest defaults (verify TLS, anonymous auth, no mirror).
+  tls?: RegistryTlsState;
+  auth?: RegistryAuthInfo;
+  mirrorOf?: string;
+}
+
+// Per-connection registry trust (persisted under EngineConnectorSettings.registries — the app's MANAGED
+// set, desired state). Serialized into registries.conf/daemon.json by the registryTrust writers.
+export interface RegistryTrustEntry {
+  name: string;
+  tls: RegistryTlsState;
+  mirrorOf?: string;
+  order: number;
+  enabled: boolean;
+  // Display-only sign-in state ({kind, account}) — NEVER a secret. The credential lives only in the engine's
+  // auth.json (written via `login --password-stdin`); the app keeps nothing.
+  auth?: RegistryAuthInfo;
+}
+
+// A custom CA the connection trusts (installed into the engine's certs.d). Carries the PEM CONTENT so the
+// writer can install it on save/connect; fingerprint/expires/status are populated only when the cert is
+// parsed (pure-JS X.509). `installedAt` is an ISO timestamp.
+export interface CertAuthority {
+  id: string;
+  host: string;
+  fileName: string;
+  fingerprint?: string;
+  installedAt: string;
+  pem?: string;
+  expires?: string;
+  status?: "trusted" | "expiring" | "expired";
+}
+
+// Per-connection proxy override. `inherit` = use the global GlobalUserSettings.proxy; `override` = use `config`;
+// `off` = no proxy for this connection. `config` is only meaningful when mode === "override".
+export type ConnectionProxyMode = "inherit" | "override" | "off";
+export interface ConnectionProxySettings {
+  mode: ConnectionProxyMode;
+  config?: ProxyConfig;
 }
 
 export interface RegistriesMap {

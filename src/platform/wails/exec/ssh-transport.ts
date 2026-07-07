@@ -31,7 +31,11 @@ export interface SSHHostLike {
 }
 
 export interface SSHClientDeps {
-  execute: (launcher: string, args: string[], opts?: { timeout?: number }) => Promise<CommandExecutionResult>;
+  execute: (
+    launcher: string,
+    args: string[],
+    opts?: { timeout?: number; input?: string },
+  ) => Promise<CommandExecutionResult>;
   executeStreaming: (launcher: string, args: string[], opts?: any) => Promise<StreamHandle>;
   osType: string;
 }
@@ -78,7 +82,8 @@ export async function startSSHConnection(deps: SSHClientDeps, host: SSHHostLike,
     connect: async (params) => {
       connected = isEstablished(await probe(params));
     },
-    execute: (command) => deps.execute(cli, buildSSHArgs(credentials, command), { timeout: SSH_COMMAND_TIMEOUT_MS }),
+    execute: (command, opts) =>
+      deps.execute(cli, buildSSHArgs(credentials, command), { timeout: SSH_COMMAND_TIMEOUT_MS, input: opts?.input }),
     executeStreaming: (command) => deps.executeStreaming(cli, buildSSHArgs(credentials, command)),
     // Data plane is Go-owned in the Wails shell (proxy.go bridges the dial-stdio / -NL tunnel), so the JS
     // client never manages tunnels. Inert — never reached, since Command.ProxyRequest is the Go proxy bridge.

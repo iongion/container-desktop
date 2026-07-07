@@ -498,19 +498,12 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     });
   }
 
-  // Registries (config-backed map: 1 system default + counts.registries custom hosts)
+  // Registries — the genuine well-known + private hosts (REGISTRY_HOSTS), each once. No synthetic
+  // `foo-2.example.com` padding rounds: the mock shows only real registry names, capped at the host list.
   const registries: LogicalRegistry[] = [];
-  const usedRegistryNames = new Set<string>();
-  let registryIndex = 0;
-  while (registries.length < counts.registries) {
-    const host = REGISTRY_HOSTS[registryIndex % REGISTRY_HOSTS.length];
-    const round = Math.floor(registryIndex / REGISTRY_HOSTS.length);
-    registryIndex += 1;
-    const name = round === 0 ? host : `${host.split(".")[0]}-${round + 1}.example.com`;
-    if (usedRegistryNames.has(name)) {
-      continue;
-    }
-    usedRegistryNames.add(name);
+  const registryHostCount = Math.min(counts.registries, REGISTRY_HOSTS.length);
+  for (let registryIndex = 0; registryIndex < registryHostCount; registryIndex += 1) {
+    const name = REGISTRY_HOSTS[registryIndex];
     registries.push({
       id: name,
       name,

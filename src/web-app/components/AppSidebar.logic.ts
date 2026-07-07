@@ -14,6 +14,7 @@ function emptyCapabilities(): ConnectorCapabilities {
       builders: false,
       compose: false,
       registries: false,
+      registryTrust: false,
       controllerVersion: false,
     },
   };
@@ -52,6 +53,7 @@ export function resolveAvailabilityConnector(
         builders: acc.extensions.builders || info.capabilities?.extensions?.builders === true,
         compose: acc.extensions.compose || info.capabilities?.extensions?.compose === true,
         registries: acc.extensions.registries || info.capabilities?.extensions?.registries === true,
+        registryTrust: acc.extensions.registryTrust || info.capabilities?.extensions?.registryTrust === true,
         controllerVersion:
           acc.extensions.controllerVersion || info.capabilities?.extensions?.controllerVersion === true,
       },

@@ -1,19 +1,14 @@
-import { Button, FormGroup, HTMLSelect, InputGroup, Intent, NumericInput, Switch, TextArea } from "@blueprintjs/core";
+import { Button, FormGroup, Intent, Switch } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import {
-  normalizeProxyConfig,
-  type ProxyConfig,
-  type ProxyMode,
-  type ProxyProtocol,
-  validateProxy,
-} from "@/container-client/proxy";
+import { normalizeProxyConfig, type ProxyConfig, type ProxyMode, validateProxy } from "@/container-client/proxy";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { saveProxyAfterReachabilityTest } from "./networkProxyActions";
+import { ProxyConfigFields } from "./ProxyConfigFields";
 
 export const NetworkPanel: React.FC = () => {
   const { t } = useTranslation();
@@ -30,10 +25,6 @@ export const NetworkPanel: React.FC = () => {
   useEffect(() => {
     setDraft(persisted);
   }, [persisted]);
-
-  const updateDraft = useCallback(<K extends keyof ProxyConfig>(key: K, value: ProxyConfig[K]) => {
-    setDraft((current) => ({ ...current, [key]: value }));
-  }, []);
 
   const saveProxy = useCallback(
     async (next: ProxyConfig) => {
@@ -73,30 +64,6 @@ export const NetworkPanel: React.FC = () => {
     [draft],
   );
 
-  const onProtocolChange = useCallback(
-    (event: ChangeEvent<HTMLSelectElement>) => updateDraft("protocol", event.currentTarget.value as ProxyProtocol),
-    [updateDraft],
-  );
-  const onHostChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => updateDraft("host", event.currentTarget.value),
-    [updateDraft],
-  );
-  const onPortChange = useCallback(
-    (value: number) => updateDraft("port", Number.isFinite(value) ? value : 0),
-    [updateDraft],
-  );
-  const onUsernameChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => updateDraft("username", event.currentTarget.value),
-    [updateDraft],
-  );
-  const onPasswordChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => updateDraft("password", event.currentTarget.value),
-    [updateDraft],
-  );
-  const onBypassChange = useCallback(
-    (event: ChangeEvent<HTMLTextAreaElement>) => updateDraft("bypass", event.currentTarget.value.split(/\n/)),
-    [updateDraft],
-  );
   const onSave = useCallback(() => saveProxy(normalizeProxyConfig(draft)), [draft, saveProxy]);
   const onTest = useCallback(async () => {
     const next = normalizeProxyConfig(draft);
@@ -137,51 +104,7 @@ export const NetworkPanel: React.FC = () => {
         </div>
       </FormGroup>
 
-      <div className="AppSettingsNetworkEndpoint">
-        <FormGroup label={t("Protocol")} labelFor="proxyProtocol">
-          <HTMLSelect id="proxyProtocol" value={draft.protocol} disabled={!manual} onChange={onProtocolChange}>
-            <option value="http">HTTP</option>
-            <option value="https">HTTPS</option>
-            <option value="socks5">SOCKS5</option>
-          </HTMLSelect>
-        </FormGroup>
-        <FormGroup label={t("Host")} labelFor="proxyHost">
-          <InputGroup id="proxyHost" value={draft.host} disabled={!manual} fill onChange={onHostChange} />
-        </FormGroup>
-        <FormGroup label={t("Port")} labelFor="proxyPort">
-          <NumericInput
-            id="proxyPort"
-            value={draft.port || ""}
-            disabled={!manual}
-            allowNumericCharactersOnly
-            min={0}
-            max={65535}
-            stepSize={1}
-            minorStepSize={1}
-            onValueChange={onPortChange}
-          />
-        </FormGroup>
-      </div>
-
-      <div className="AppSettingsNetworkCredentials">
-        <FormGroup label={t("Username")} labelFor="proxyUsername">
-          <InputGroup id="proxyUsername" value={draft.username} disabled={!manual} fill onChange={onUsernameChange} />
-        </FormGroup>
-        <FormGroup label={t("Password")} labelFor="proxyPassword">
-          <InputGroup
-            id="proxyPassword"
-            type="password"
-            value={draft.password}
-            disabled={!manual}
-            fill
-            onChange={onPasswordChange}
-          />
-        </FormGroup>
-      </div>
-
-      <FormGroup label={t("Bypass hosts")} labelFor="proxyBypass">
-        <TextArea id="proxyBypass" value={draft.bypass.join("\n")} disabled={!manual} fill onChange={onBypassChange} />
-      </FormGroup>
+      <ProxyConfigFields value={draft} onChange={setDraft} disabled={!manual} />
 
       <div className="AppSettingsNetworkActions">
         <Button

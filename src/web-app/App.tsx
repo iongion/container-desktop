@@ -59,7 +59,7 @@ import { Screen as PodInspectScreen } from "@/web-app/screens/Pod/InspectScreen"
 import { Screen as PodLogsScreen } from "@/web-app/screens/Pod/LogsScreen";
 import { Screen as PodsScreen } from "@/web-app/screens/Pod/ManageScreen";
 import { Screen as PodProcessesScreen } from "@/web-app/screens/Pod/ProcessesScreen";
-import { Screen as RegistriesScreen } from "@/web-app/screens/Registry/ManageScreen";
+import { Screen as RegistriesScreen } from "@/web-app/screens/Registry/RegistriesTrustScreen";
 import { Screen as SecretInspectScreen } from "@/web-app/screens/Secret/InspectScreen";
 import { Screen as SecretsScreen } from "@/web-app/screens/Secret/ManageScreen";
 import { Screen as UserSettingsScreen } from "@/web-app/screens/Settings/UserSettingsScreen";

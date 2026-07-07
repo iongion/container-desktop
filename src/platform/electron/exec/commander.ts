@@ -125,7 +125,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
         };
         const command = (child as any).command;
         let timeout: ReturnType<typeof setTimeout> | undefined;
-        const processResolve = (from, data) => {
+        const processResolve = (from: string, data: any) => {
           if (resolved) {
             return;
           }
@@ -174,6 +174,16 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
           (result as any).error = error;
           processResolve("error", error);
         });
+        // Pipe secret-bearing stdin (e.g. `login --password-stdin`, `cat > ca.crt`) to the child, then EOF so the
+        // program stops reading. Non-detached only — the detached path spawns with stdio:"ignore" (no stdin
+        // stream). Any write error surfaces via the "error" handler above. The secret never touches argv or logs.
+        if (typeof opts?.input === "string" && !spawnOpts.detached) {
+          try {
+            child.stdin?.end(opts.input);
+          } catch (error: any) {
+            logger.error(command, "stdin write failed", error?.message ?? error);
+          }
+        }
         child.stdout?.on("data", (data) => {
           // maxCollect (sandbox only) caps in-flight output so a runaway child can't exhaust memory; over the cap
           // we terminate + resolve. Engine execs pass no cap, so this is a no-op for them (unbounded, as before).
@@ -202,7 +212,7 @@ export async function exec_launcher_async(launcher: string, launcherArgs: string
   });
 }
 
-export async function exec_launcher(launcher, launcherArgs, opts?: WrapperOpts) {
+export async function exec_launcher(launcher: string, launcherArgs: string[], opts?: WrapperOpts) {
   return await exec_launcher_async(launcher, launcherArgs, opts);
 }
 
@@ -301,23 +311,23 @@ export async function exec_service(programPath: string, programArgs: string[], o
     setTimeout(() => em.emit("ready", wrap_process(proc, child)), 0);
   } else {
     // Handle
-    const onProcessError = (child, error) => {
+    const onProcessError = (_child: ChildProcessWithoutNullStreams | undefined, error: any) => {
       logger.error("Child process error", error.code, error.message);
       em.emit("error", { type: "process.error", code: error.code });
     };
-    const onProcessExit = (child, code) => {
+    const onProcessExit = (_child: ChildProcessWithoutNullStreams | undefined, code: number | null) => {
       em.emit("exit", { code, managed: isManagedExit });
       isManagedExit = false;
     };
-    const onProcessClose = (child, code) => {
+    const onProcessClose = (_child: ChildProcessWithoutNullStreams | undefined, code: number | null) => {
       em.emit("close", { code });
     };
-    const onProcessData = (child, from, data) => {
+    const onProcessData = (child: ChildProcessWithoutNullStreams | undefined, from: string, data: any) => {
       if (from !== "stdout") {
         if (from === "stderr") {
-          logger.warn("Child process data", child.pid, from, data);
+          logger.warn("Child process data", child?.pid, from, data);
         } else {
-          logger.debug("Child process data", child.pid, from, data);
+          logger.debug("Child process data", child?.pid, from, data);
         }
       }
       em.emit("data", { from, data });
@@ -381,6 +391,6 @@ export async function exec_service(programPath: string, programArgs: string[], o
     }
   }
   return {
-    on: (event, listener, context?: any) => em.on(event, listener, context),
+    on: (event: string, listener: (...args: any[]) => void, context?: any) => em.on(event, listener, context),
   };
 }

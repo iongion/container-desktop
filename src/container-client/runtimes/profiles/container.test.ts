@@ -23,6 +23,7 @@ const BASE: CapabilityDescriptor = {
     builders: false,
     compose: false,
     registries: false,
+    registryTrust: false,
     controllerVersion: false,
   },
 };

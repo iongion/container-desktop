@@ -1,9 +1,9 @@
-import { AnchorButton, Code, Divider, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
+import { AnchorButton, Button, Code, Divider, HTMLTable, Icon, Intent, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import dayjs from "dayjs";
 import prettyBytes from "pretty-bytes";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ContainerImage } from "@/env/Types";
@@ -27,6 +27,7 @@ import {
 } from "@/web-app/hooks/useMergedResources";
 import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { getBuildUrl, isBuildSupported } from "@/web-app/screens/Build/Navigation";
+import { SearchImagesDrawer } from "@/web-app/screens/Registry/SearchImagesDrawer";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -107,6 +108,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const buildSupported = nativeBuildConnections.length > 0;
   const buildConnId = nativeBuildConnections[0]?.id;
 
+  // "Search images" CTA — searches REMOTE registries (Docker Hub, …) and pulls. It belongs on the Images list
+  // (we search for images to pull), opening the shared registry-search drawer.
+  const [searchDrawerOpen, setSearchDrawerOpen] = useState(false);
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <AppScreenHeader
@@ -127,6 +132,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <Divider />
               </>
             ) : null}
+            <Button
+              className="ImageSearchImagesButton"
+              icon={IconNames.SEARCH}
+              text={t("Search online")}
+              title={t("Search your configured registries (Docker Hub, …) for images to pull")}
+              onClick={() => setSearchDrawerOpen(true)}
+            />
             <AnchorButton
               intent={Intent.PRIMARY}
               icon={IconNames.BUILD}
@@ -261,6 +273,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           </HTMLTable>
         )}
       </div>
+      {searchDrawerOpen ? <SearchImagesDrawer onClose={() => setSearchDrawerOpen(false)} /> : null}
     </div>
   );
 };

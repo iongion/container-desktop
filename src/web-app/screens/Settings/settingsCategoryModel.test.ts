@@ -14,6 +14,7 @@ describe("settingsCategoryModel", () => {
       "config",
       "logging",
       "network",
+      "policy",
       "startup",
     ]);
   });

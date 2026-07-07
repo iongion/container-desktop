@@ -9,32 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Engine compatibility matrix** — a new **Troubleshoot → Compatibility** sub-screen comparing what each engine supports side by side (Podman / Docker / Apple container as columns; capabilities as rows: API dialect, pods/secrets/networks, Compose, Kube YAML, machine lifecycle, Swarm, Docker contexts, registry management, image build, live events, testcontainers). It reads the capabilities already computed at connect time — disconnected engines still show their known baseline, and roadmap gaps are marked "planned", never "broken"
-- Native Compose stacks — import a `docker-compose.yml` and run it as native Podman containers. A stack is just a compose-labelled container group, so it appears in the **Containers** list: deploy with **Import stack**, tear it down from the group header (compose-parity or single-pod networking, with a single-pod host-port pre-flight)
-- **Import stack** now also targets **Docker** — it shells `docker compose up`/`down` (Podman keeps its native libpod translation), so a Docker compose file deploys and tears down from the same drawer and shows up in the Containers list as a stack; the pod-networking choice is Podman-only and hidden for Docker
-- Pod logs now aggregate each member container over the libpod REST API instead of shelling out to `podman pod logs`, so they work on socket/API connections with no local CLI path
-- A container **status dot** in front of every name (rows and compose-group headers) — green running, red unhealthy or crashed (a non-clean exit code), amber starting/paused, neutral grey when cleanly stopped or unknown — combining run state with healthcheck status. Health is read from the engine list or, for **running** compose containers where podman's docker-compat list omits it, an on-demand inspect; a stopped container's stale last-health is ignored so the dot never contradicts its tooltip.
-- Compose `depends_on: { condition: service_healthy }` is now honored on **Import stack** — a dependent waits for its dependency to report healthy before starting, translating a compose-file `healthcheck:` into the container when the image defines none
-- Group actions (start/stop/restart all) and stack teardown now show an inline spinner and disable that group's controls while they run, with a success/failure toast — previously these ran with no feedback at all
-- Wails v3 (Go) desktop backend alongside Electron + Tauri, at full Tauri parity — cross-builds every format from one Linux host (Linux tar.gz/deb/rpm/pacman/AppImage, Windows portable zip + NSIS installer, macOS tar.gz/dmg) except the Microsoft Store appx/msix, which build on Windows runners
-- Wails native-shell parity with Tauri: single-instance (a 2nd launch focuses the running window), window-bounds persistence across launches, a true process relaunch, hide-to-tray on close, a persistent file log (`userData/logs`), and the OS-keychain 0600 degraded fallback
-- Wails: window stays hidden until the renderer is ready (reveal-on-ready like Tauri/Electron), eliminating the blank-window startup flash
-- Single source of truth for app branding/packaging metadata (`support/app-metadata.cjs`) shared by Electron, Tauri and Wails; `version-sync` renamed to `sync-manifests` (now syncs metadata too, keeps the old alias)
-- Per-backend release pipelines `CDPipeline.{Tauri,Electron,Wails}.yml` (data-driven from `build-matrix.cjs`); Tauri stays the default publisher, Electron packaging restored alongside
-- Wails remote-control/E2E driver `support/wails-mcp.mjs` (Wails analog of `cdp.mjs`/`wdio.conf.js`) over the built-in MCP server (`WAILS_MCP=1 yarn wails:dev:mcp`, `-tags mcp`) — JS eval, DOM inspection, and X11 PNG screenshots
-- Wails website-screenshot capture backend alongside Electron/Tauri (`--backend=wails`) — MCP `js_eval` drives the shared action layer, screenshots via X11 grab
+- **Per-connection registry trust** — global **Registries** screen; real per-engine backends: sign-in (`login --password-stdin`), add/remove (`registries.conf`/`daemon.json`), CAs (`certs.d`) + proxy in the connection form; registry search → Images
+- **Engine compatibility matrix** — a **Troubleshoot → Compatibility** sub-screen comparing engine capabilities side by side (Podman/Docker/Apple), read from connect-time capabilities
+- **Native Compose stacks** — import a `docker-compose.yml` and run it as native Podman containers, shown in **Containers** as a compose group (compose-parity or single-pod networking)
+- **Import stack** also targets **Docker** (`docker compose up`/`down`; Podman keeps its native libpod translation); the pod-networking choice is Podman-only
+- Pod logs aggregate members over the libpod REST API instead of `podman pod logs`, so they work on socket/API connections with no local CLI
+- A container **status dot** on every name/group header — run state + healthcheck (green running · red unhealthy/crashed · amber starting/paused · grey stopped)
+- Compose `depends_on: { condition: service_healthy }` is honored on **Import stack** — a dependent waits for its dependency to report healthy
+- Group actions (start/stop/restart all) and stack teardown show an inline spinner + success/failure toast while running
+- **Wails v3 (Go) desktop backend** alongside Electron + Tauri at full parity — cross-builds every format from one Linux host except the Store appx/msix (Windows)
+- Wails native-shell parity: single-instance focus, window-bounds persistence, true relaunch, hide-to-tray, persistent file log, OS-keychain 0600 fallback
+- Wails: window stays hidden until the renderer is ready (reveal-on-ready), removing the blank-window startup flash
+- Single source of truth for branding/packaging metadata (`support/app-metadata.cjs`) shared by all three backends; `version-sync` → `sync-manifests` (alias kept)
+- Per-backend release pipelines `CDPipeline.{Tauri,Electron,Wails}.yml` (from `build-matrix.cjs`); Tauri stays the default publisher
+- Wails remote-control/E2E driver `support/wails-mcp.mjs` over the built-in MCP server (JS eval, DOM inspection, X11 screenshots)
+- Wails website-screenshot capture backend (`--backend=wails`) via MCP `js_eval` + X11 grab
 
 ### Fixed
 
-- Container lifecycle ops (stop, restart, force-remove) and stack-teardown deletes now use a generous request timeout instead of the 3s default, which used to cut off a slow stop (a container that ignores SIGTERM waits its full grace period before SIGKILL) — the client "failed" while the engine was still working, leaving state inconsistent and, under a teardown request storm, tripping a transient engine disconnect
-- The engine no longer flaps to "reconnecting" on a momentary socket hiccup. When the events stream drops, the liveness ping is now retried across a short grace window and a disconnect is declared only if it stays unreachable the whole time (previously a single failed ping — e.g. a transient `ECONNREFUSED` during a teardown burst — dropped the connection immediately)
-- Importing a stack no longer aborts with libpod's cryptic "container state improper" when a container is left over mid-transition (e.g. still `stopping`) from a run that didn't finish. The start step now waits for it to settle into a startable state and starts it — or, only if it never does, reports a clear, actionable message naming the container and its state
-- Pod infra ("pause") containers are hidden from the Containers list — they're a podman implementation detail, not a user workload (matching how Docker Desktop hides pause containers); a single-pod stack's infra container no longer shows up as a stray `<pod-id>-infra` entry
-- Re-importing a stack in a different deployment mode (single-pod ↔ compose-parity) now tears the existing project down cleanly first, then deploys fresh — instead of recreating each container in place, which stranded orphans and could crash the podman service by force-removing pod members individually. Named volumes are preserved across the switch
-- Stack teardown now removes the project **pod first** (podman's pod-teardown atomically stops and removes its members), instead of force-removing pod-member containers one-by-one — the latter could crash the podman service mid-teardown ("socket hang up", brief engine disconnect)
-- Tearing down a stack now also removes the project's networks. libpod's `/networks/json` names each network with a lowercase `name` field (Docker/volumes use `Name`), which the teardown wasn't reading — so every compose-parity stack silently left its networks behind
-- Container groups (compose projects, pod infrastructure, name-prefix groups) now sort ahead of standalone containers across **all** connected engines — like folders in a file manager — under any sort. Previously, with two engines connected, a second engine's groups could appear below the first engine's standalone containers
-- Linux AppImage no longer aborts at startup with `Could not create default EGL display: EGL_BAD_PARAMETER` on rolling-release distros (Void, Arch, recent Fedora). Packaging now strips the bundled host graphics libraries (`libEGL`/`libGL`/`libgbm`/`libwayland-*`) so the app uses the host's Mesa/Wayland stack
+- Container lifecycle ops (stop/restart/force-remove) + stack teardowns use a generous timeout instead of the 3s default — a slow SIGTERM stop no longer "fails" client-side while the engine is still working
+- The engine no longer flaps to "reconnecting" on a momentary socket hiccup — the liveness ping is retried across a short grace window before a disconnect is declared
+- Importing a stack no longer aborts with libpod's "container state improper" for a leftover mid-transition container — the start step waits for it to settle
+- Pod infra ("pause") containers are hidden from the Containers list (a podman detail, like Docker Desktop) — no more stray `<pod-id>-infra` entry
+- Re-importing a stack in a different mode (single-pod ↔ compose-parity) tears the old project down first, then redeploys; named volumes are preserved
+- Stack teardown removes the project **pod first** (atomic stop+remove) instead of force-removing members one-by-one, which could crash the podman service
+- Stack teardown also removes the project's networks — libpod names them with a lowercase `name` field the teardown wasn't reading
+- Container groups now sort ahead of standalone containers across **all** connected engines under any sort
+- Linux AppImage no longer aborts at startup with `EGL_BAD_PARAMETER` on rolling-release distros — packaging strips the bundled host graphics libs so it uses the host's Mesa/Wayland stack
 
 ## [6.0.0] - 2026-07-06
 

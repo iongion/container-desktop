@@ -45,7 +45,7 @@ export interface CompatibilityMatrix {
 // Footnotes keep the honesty explicit: ◷ planned / ⚠ partial cells reference these, so a "no" never
 // masquerades as "doesn't work".
 export const FOOTNOTES: Record<number, string> = {
-  1: "Planned — registry login / mirrors / TLS management is not yet wired for Docker (Podman manages registries natively today).",
+  1: "Docker registry trust is partial — login, CA install, and insecure/mirror config (daemon.json) work; there is no per-registry search-order (Docker lacks it) and system-wide writes may need elevation. Podman manages registries natively.",
   2: "Podman machine lifecycle runs on a native/vendor install, not over SSH — none of this engine's connections are local.",
   3: "Docker contexts are inspected read-only today; switching contexts is planned.",
   4: "testcontainers isn't detected yet — it runs against any Docker-API socket (Podman exposes a Docker-compatible one too).",
@@ -69,6 +69,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
       builders: false,
       compose: true,
       registries: true,
+      registryTrust: true,
       controllerVersion: false,
     },
   },
@@ -84,6 +85,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
       builders: false,
       compose: true,
       registries: false,
+      registryTrust: true,
       controllerVersion: false,
     },
   },
@@ -99,6 +101,7 @@ const BASE_CAPABILITIES: Record<string, ConnectorCapabilities> = {
       builders: false,
       compose: false,
       registries: false,
+      registryTrust: false,
       controllerVersion: false,
     },
   },
@@ -195,10 +198,10 @@ const CATALOG: { title: string; caps: CapSpec[] }[] = [
         key: "registries",
         label: "Registry management",
         note: "login / mirrors / TLS",
-        compute: gated(
-          (c) => c.extensions.registries,
-          (v) => (isDocker(v) ? planned(1) : NO),
-        ),
+        // Podman manages registry trust fully (registries.conf + certs.d + auth.json). Docker's is partial —
+        // login + CA install + daemon.json insecure/mirrors work, but there is no per-registry search-order and
+        // system-wide writes may need elevation → footnote 1. Apple has none.
+        compute: (v) => (v.capabilities.extensions.registryTrust ? (isDocker(v) ? partial(1) : YES) : NO),
       },
     ],
   },
@@ -239,6 +242,7 @@ function emptyCapabilities(): ConnectorCapabilities {
       builders: false,
       compose: false,
       registries: false,
+      registryTrust: false,
       controllerVersion: false,
     },
   };
@@ -266,6 +270,7 @@ function unionCapabilities(group: ConnectionRuntimeInfo[]): ConnectorCapabilitie
         builders: acc.extensions.builders || c.extensions.builders === true,
         compose: acc.extensions.compose || c.extensions.compose === true,
         registries: acc.extensions.registries || c.extensions.registries === true,
+        registryTrust: acc.extensions.registryTrust || c.extensions.registryTrust === true,
         controllerVersion: acc.extensions.controllerVersion || c.extensions.controllerVersion === true,
       },
     };

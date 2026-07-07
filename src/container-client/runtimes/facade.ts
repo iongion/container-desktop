@@ -29,6 +29,7 @@ import type {
   CreateMachineOptions,
   EngineConnectorAvailability,
   EngineConnectorSettings,
+  HostExecOptions,
   ILogger,
   PodmanMachine,
   PodmanMachineInspect,
@@ -57,6 +58,7 @@ export type EngineExtension =
   | "builders"
   | "compose"
   | "registries"
+  | "registryTrust"
   | "controllerVersion";
 
 export type ApiSurface = "docker" | "libpod";
@@ -174,7 +176,12 @@ export interface HostClientFacade
   stopScopeByName(name: string): Promise<boolean>;
 
   // commands / detection
-  runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings): Promise<CommandExecutionResult>;
+  runHostCommand(
+    program: string,
+    args?: string[],
+    settings?: EngineConnectorSettings,
+    execOpts?: HostExecOptions,
+  ): Promise<CommandExecutionResult>;
   /** Streaming twin of runHostCommand (Command.ExecuteStreaming) — the scoped/remote build streams its wrapper CLI through this. */
   runHostCommandStreaming(program: string, args?: string[], settings?: EngineConnectorSettings): Promise<StreamHandle>;
   runScopeCommand(
@@ -182,6 +189,7 @@ export interface HostClientFacade
     args: string[],
     scope: string,
     settings?: EngineConnectorSettings,
+    execOpts?: HostExecOptions,
   ): Promise<CommandExecutionResult>;
   /** Streaming scoped exec — the scope wrapper streamed via Command.ExecuteStreaming (Native throws). */
   runScopeCommandStreaming(

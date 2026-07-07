@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { type FakeCommandHandle, installFakeCommand, type RecordedCall } from "@/__tests__/setup/fakeCommand";
 import { getDefaultConnectors } from "@/container-client/connection";
 import { createComposedHostClient } from "@/container-client/runtimes/registry";
-import { ContainerEngine, ContainerEngineHost, type EngineConnectorSettings, OperatingSystem } from "@/env/Types";
+import {
+  ContainerEngine,
+  ContainerEngineHost,
+  type EngineConnectorSettings,
+  type HostExecOptions,
+  OperatingSystem,
+} from "@/env/Types";
 
 // A scoped command flows client.runScopeCommand → transport.runScopeCommand → host.runHostCommand →
 // Command.Execute(launcher, args). The fake records that final Execute, so these tests pin the exact
@@ -19,6 +25,7 @@ async function recordScopeCommand(opts: {
   scope: string;
   program: string;
   args: string[];
+  execOpts?: HostExecOptions;
 }): Promise<RecordedCall> {
   const connector = getDefaultConnectors(opts.osType).find((c) => c.engine === opts.engine && c.host === opts.host);
   if (!connector) {
@@ -31,7 +38,7 @@ async function recordScopeCommand(opts: {
   };
   await client.setSettings(settings);
   fake = installFakeCommand();
-  await client.runScopeCommand(opts.program, opts.args, opts.scope, settings);
+  await client.runScopeCommand(opts.program, opts.args, opts.scope, settings, opts.execOpts);
   return fake.calls[0];
 }
 
@@ -76,5 +83,22 @@ describe("transport scoped-exec argv", () => {
     });
     expect(call.launcher).toBe("podman");
     expect(call.args).toEqual(["machine", "ssh", "podman-machine-default", "-o", "LogLevel=ERROR", "podman", "ps"]);
+  });
+
+  it("threads execOpts.input (a secret) to the final Command.Execute stdin, never into argv", async () => {
+    const secret = "s3cr3t-token";
+    const call = await recordScopeCommand({
+      osType: OperatingSystem.Windows,
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+      controllerName: "wsl",
+      scope: "Ubuntu-24.04",
+      program: "podman",
+      args: ["login", "registry.example.com", "--username", "alice", "--password-stdin"],
+      execOpts: { input: secret },
+    });
+    // The secret arrives via opts.input (piped to the child's stdin), NOT anywhere in the launcher/argv.
+    expect(call.opts?.input).toBe(secret);
+    expect(JSON.stringify([call.launcher, ...call.args])).not.toContain(secret);
   });
 });

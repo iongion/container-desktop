@@ -1,0 +1,483 @@
+/* Registries & Trust — single-section screen (the grouped registries table). Per-connection Certificates +
+ * Proxy moved to the connection edit form, so there is no category rail anymore.
+ *
+ * The grouped-by-connection table REUSES the app's resource-table grouping (same as the Containers screen):
+ * .AppDataTable + .AppDataTableGroupRow / .AppDataTableGroupName (caret toggle) / .AppDataTableGroupDetails,
+ * collapse keyed on data-prefix-group, the group band from --app-group-bg (tokens.css). This file only adds
+ * the registry-specific column widths + pills. Anti-wobble is the app's own trick: the name column is greedy
+ * (width:100%) so every other column stays pinned at its set width regardless of which rows are visible.
+ * Theme tokens only. Also shared (globally bundled) by the Settings Air-gap panel + the Search-images drawer. */
+
+/* Panel area fills the space and does NOT scroll itself — the table inside manages its own scroll. */
+.TrustPanelWrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px;
+}
+
+/* Search-images drawer — the registry-search bar (registry select · term input · Search). The select and
+   button keep their natural content width (flex: 0 0 auto) so their icon + label never get squeezed against
+   the edges; only the term input flexes to fill the row. */
+.SearchImagesWrap {
+  overflow: auto;
+}
+.SearchImagesBar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.SearchImagesBar > .bp6-html-select,
+.SearchImagesBar > .bp6-button {
+  flex: 0 0 auto;
+}
+.SearchImagesBar > .bp6-input-group {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Panel = a fixed heading strip (title + note) over a table that takes the full remaining width/height and
+   manages its own scroll (sticky header) — exactly like the Containers list (table not boxed in a card). */
+.TrustPanel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 10px;
+}
+
+.TrustPanelHead {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.TrustPanelHeadText h5 {
+  margin: 0 0 3px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Screen-header variant — the section title + note relocated into the AppScreenHeader left slot (replacing the
+   plain "Registries & Trust" title). Stacked + compact so both lines sit in the navbar; keeps the .TrustNote
+   muted styling. The note stays a single line (truncated, full text on hover) so it never grows the header. */
+/* Sign-in drawer — a touch of separation below the security callout, before the submit button. */
+.RegistryLoginNote.bp6-callout {
+  margin-bottom: 5px;
+}
+
+.TrustHeaderText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+.TrustHeaderText h5 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.TrustHeaderText .TrustNote {
+  line-height: 1.3;
+  max-width: 720px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Table scroll container — takes the remaining height and scrolls; the .AppDataTable sticky thead (App.css)
+   keeps the header fixed while the body scrolls. */
+.TrustTableScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Registries table — every column except the first (Registry name) and last (Actions) is horizontally centered
+   (header + body). The group-header cell is a single colSpan td (`:first-child` of its row) so it's untouched. */
+.TrustTable[data-table="trust-registries"] thead th:not(:first-child):not(:last-child),
+.TrustTable[data-table="trust-registries"] tbody td:not(:first-child):not(:last-child) {
+  text-align: center;
+}
+.TrustTable[data-table="trust-registries"] tbody td:not(:first-child):not(:last-child) .TrustPill {
+  justify-content: center;
+}
+
+/* Card (used by the Air-gap panel in Settings and the certificates drop-zone). */
+.TrustCard {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  padding: 14px 16px;
+  overflow: hidden;
+}
+
+.TrustCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.TrustCardHead h5 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.TrustNote {
+  font-size: 11.5px;
+  color: var(--app-text-muted);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 900px;
+}
+
+.TrustNote code {
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-text-muted) 18%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.TrustNote b {
+  color: var(--app-text);
+}
+
+/* ── Table tweaks layered on .AppDataTable (reused grouping). Square corners (no border/radius of its own —
+ *    the wrapping card provides the frame), left-aligned cells, name column absorbs the slack. ── */
+/* Auto layout + the app's shrink-to-fit "1px" trick: each content column grows to its min-content (its
+   pill/text) and no further, so columns hug their content and the fluid name column soaks up the slack. No
+   table-layout:fixed — that made every column a wide fixed slot, wasting space and squeezing the name. */
+.TrustTable.AppDataTable thead tr th,
+.TrustTable.AppDataTable tbody tr td {
+  text-align: left;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Name column is greedy — takes all the width the content columns don't. */
+.TrustTable.AppDataTable thead th:first-child,
+.TrustTable.AppDataTable tbody td:first-child {
+  width: 100%;
+  min-width: 200px;
+}
+
+/* Every content column (not the name, not the Actions) shrinks to fit via the app's 1px trick. Position-based
+   so it works regardless of column set / SortableColumnHeader's data-column attr. */
+.TrustTable.AppDataTable thead th:not(:first-child):not([data-column="Actions"]),
+.TrustTable.AppDataTable tbody td:not(:first-child):not([data-column="Actions"]) {
+  width: 1px;
+}
+
+/* The ONE genuinely fixed column: the login/logout actions. A fixed min-width so "Log in" (icon+text) and
+   "Log out" (text) occupy the same slot, and so it never collapses to nothing when every group is closed
+   (its header is empty, so the 1px trick alone would shrink it away). */
+.TrustTable.AppDataTable :is(th, td)[data-column="Actions"] {
+  width: 118px !important;
+  min-width: 118px;
+  text-align: right;
+}
+/* Certificates / Proxy have no login/logout — their trailing column shrinks to fit like the content ones. */
+.TrustTable.AppDataTable.TrustTable--certs :is(th, td)[data-column="Actions"],
+.TrustTable.AppDataTable.TrustTable--proxy :is(th, td)[data-column="Actions"] {
+  width: 1px !important;
+  min-width: 0;
+}
+
+/* Group toggle fills the (greedy) name cell so the whole band is one click target; its contents — caret,
+   engine icon, name, meta — are a single aligned flex row (scoped so the shared Containers grouping is
+   untouched). */
+.TrustTable.AppDataTable .AppDataTableGroupName .bp6-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.TrustTable.AppDataTable .AppDataTableGroupName .bp6-button .bp6-button-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Engine label + count are pushed to the right of the full-width group button (name stays left); the count
+   sits just after the engine label. */
+.TrustGroupMeta {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Count follows the engine label (both on the right). */
+.TrustGroupSum {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+/* Registry / host name cell. */
+.TrustRegName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.TrustRegName .bp6-icon {
+  color: var(--app-text-muted);
+  flex: 0 0 auto;
+}
+
+.TrustRegNameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.TrustRegSub {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  font-weight: 400;
+}
+
+.TrustMuted {
+  color: var(--app-text-muted);
+}
+
+.TrustMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.TrustOrder {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+
+/* Row actions right-aligned; the auth button keeps a fixed min-width so "Log out" (no icon) and "→ Log in"
+   (with icon) occupy the same slot and the trailing ⋯ never shifts row-to-row. */
+.TrustRowActions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.TrustActionAuth.bp6-button {
+  flex: 0 0 auto;
+  min-width: 78px;
+  justify-content: center;
+}
+
+/* Certificate column: the actionable "Trust cert" affordance (self-signed / insecure) lives in its own fixed
+   column so it always sits in the same place — no raggedness — next to the verified / unverified badges. */
+.TrustCertAction.bp6-button {
+  justify-content: flex-start;
+}
+
+/* ── Pills (TLS · auth · status) — one class, four intents, matching the mockup .pill. ── */
+.TrustPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.TrustPill .bp6-icon {
+  flex: 0 0 auto;
+}
+
+.TrustPill--ok {
+  background: color-mix(in srgb, var(--app-intent-success-rest) 20%, transparent);
+  color: var(--app-intent-success-text);
+}
+
+.TrustPill--warn {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 20%, transparent);
+  color: var(--app-intent-warning-text);
+}
+
+.TrustPill--err {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 20%, transparent);
+  color: var(--app-intent-danger-text);
+}
+
+.TrustPill--off {
+  background: color-mix(in srgb, var(--app-text-muted) 22%, transparent);
+  color: var(--app-text-muted);
+}
+
+/* Pill icon inherits the pill's intent color (Blueprint would otherwise re-tint standalone icons). */
+.TrustPill.TrustPill--ok .bp6-icon,
+.TrustPill.TrustPill--warn .bp6-icon,
+.TrustPill.TrustPill--err .bp6-icon {
+  color: currentColor;
+}
+
+/* Warning-tinted inline action (Trust cert). */
+.TrustAction--warn.bp6-button {
+  color: var(--app-intent-warning-text);
+}
+
+/* ── Diagnosis stripe (proxy / air-gap) — colored left border, icon chip, body; pinned below the table. ── */
+.TrustDiagnosis {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 13px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-text-muted);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.TrustDiagnosis--warn {
+  border-left-color: var(--app-intent-warning-rest);
+}
+
+.TrustDiagnosis--ok {
+  border-left-color: var(--app-intent-success-rest);
+}
+
+.TrustDiagnosisIcon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.TrustDiagnosis--warn .TrustDiagnosisIcon {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 20%, transparent);
+  color: var(--app-intent-warning-text);
+}
+
+.TrustDiagnosis--ok .TrustDiagnosisIcon {
+  background: color-mix(in srgb, var(--app-intent-success-rest) 20%, transparent);
+  color: var(--app-intent-success-text);
+}
+
+.TrustDiagnosisIcon .bp6-icon {
+  color: currentColor;
+}
+
+.TrustDiagnosisBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.TrustDiagnosisBody h5 {
+  margin: 0 0 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.TrustDiagnosisBody p {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.TrustDiagnosisBody code {
+  background: color-mix(in srgb, var(--app-text-muted) 18%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ── Air-gap policy (Settings) — switch rows + allowed-registry rows. ── */
+.TrustSwitchRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.TrustSwitchRow:last-child {
+  border-bottom: none;
+}
+
+.TrustSwitchRow .bp6-control {
+  margin: 0;
+}
+
+/* Checked switch tracks the engine accent (Blueprint's default is a neutral fill). */
+.TrustSwitchRow .bp6-switch input:checked ~ .bp6-control-indicator {
+  background: var(--app-accent);
+}
+
+.TrustSwitchText .t {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.TrustSwitchText .d {
+  font-size: 11.5px;
+  color: var(--app-text-muted);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+.TrustSwitchText .d code {
+  background: color-mix(in srgb, var(--app-text-muted) 18%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.TrustAllowRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  background: var(--app-bg);
+}
+
+.TrustAllowRow:last-child {
+  margin-bottom: 0;
+}
+
+.TrustAllowRow .bp6-icon {
+  color: var(--app-text-muted);
+}
+
+.TrustAllowRow .an {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.TrustAllowRow .as {
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+
+.TrustAllowRow .TrustPill {
+  margin-left: auto;
+}
+
+.TrustAllowRow.is-blocked {
+  opacity: 0.6;
+}

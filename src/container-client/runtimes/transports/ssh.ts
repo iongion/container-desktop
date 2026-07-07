@@ -14,6 +14,7 @@ import {
   type CommandExecutionResult,
   type ControllerScope,
   type EngineConnectorSettings,
+  type HostExecOptions,
   OperatingSystem,
   type ServiceOpts,
   StartupStatus,
@@ -44,11 +45,20 @@ export class SSHTransport implements Transport {
     return false;
   }
 
-  async runScopeCommand(_host: HostContext, program: string, args: string[]): Promise<CommandExecutionResult> {
+  async runScopeCommand(
+    _host: HostContext,
+    program: string,
+    args: string[],
+    _scope?: string,
+    _settings?: EngineConnectorSettings,
+    execOpts?: HostExecOptions,
+  ): Promise<CommandExecutionResult> {
     if (!this._connection?.isConnected()) {
       throw new Error("SSH connection is not established");
     }
-    const result = await this._connection.execute([quoteScopeProgram(program), ...args]);
+    // OpenSSH forwards our local process's stdin to the remote program, so `execOpts.input` (a secret piped for
+    // `login --password-stdin`) reaches the remote engine without ever appearing in the remote argv.
+    const result = await this._connection.execute([quoteScopeProgram(program), ...args], execOpts);
     return result;
   }
 

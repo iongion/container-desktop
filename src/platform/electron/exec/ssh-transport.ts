@@ -4,7 +4,13 @@ import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import type { EventEmitter } from "eventemitter3";
 import { type ISSHClient, SSHClient, type SSHClientConnection } from "@/container-client/services";
 import { buildSSHArgs } from "@/container-client/ssh-args";
-import { type ApiDriverConfig, type Connection, OperatingSystem, type ServiceOpts } from "@/env/Types";
+import {
+  type ApiDriverConfig,
+  type Connection,
+  type HostExecOptions,
+  OperatingSystem,
+  type ServiceOpts,
+} from "@/env/Types";
 import { Platform } from "@/platform/electron/host";
 import { createLogger } from "@/platform/logger";
 import { expandHome } from "@/utils";
@@ -136,7 +142,7 @@ export async function startSSHConnection(host: SSHHost, opts?: Partial<ServiceOp
       resolve({
         isConnected: () => connection.isConnected(),
         connect: async (params: SSHClientConnection) => await connection.connect(params),
-        execute: async (command: string[]) => await connection.execute(command),
+        execute: async (command: string[], opts?: HostExecOptions) => await connection.execute(command, opts),
         executeStreaming: async (command: string[]) => await connection.executeStreaming(command),
         startStdioBridge: async (params: { localAddress: string; command: string[] }) => {
           // Per client connection, open a raw `ssh <host> -- <command>` channel (Buffers, never utf-8-decoded)

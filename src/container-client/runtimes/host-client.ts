@@ -23,6 +23,7 @@ import {
   type ControllerScope,
   type EngineConnectorAvailability,
   type EngineConnectorSettings,
+  type HostExecOptions,
   type ILogger,
   OperatingSystem,
   type Program,
@@ -238,8 +239,9 @@ export class HostClient implements HostContext {
     args: string[],
     scope: string,
     settings?: EngineConnectorSettings,
+    execOpts?: HostExecOptions,
   ): Promise<CommandExecutionResult> {
-    return this.transport.runScopeCommand(this, program, args, scope, settings);
+    return this.transport.runScopeCommand(this, program, args, scope, settings, execOpts);
   }
 
   runScopeCommandStreaming(
@@ -273,12 +275,27 @@ export class HostClient implements HostContext {
 
   // Generic host helpers.
 
-  async runHostCommand(program: string, args?: string[], settings?: EngineConnectorSettings) {
+  async runHostCommand(
+    program: string,
+    args?: string[],
+    _settings?: EngineConnectorSettings,
+    execOpts?: HostExecOptions,
+  ) {
     const commandLauncher =
       this.osType === OperatingSystem.Windows && !program.endsWith(".exe") ? `${program}.exe` : program;
     const commandLine = [commandLauncher].concat(args || []).join(" ");
     this.logger.debug(this.id, ">> Running host command", commandLine);
-    const result = await Command.Execute(commandLauncher, args || [], this.isScoped() ? undefined : { proxyEnv: true });
+    // Base exec opts preserve the prior behavior (host-side proxy env when unscoped); `input` is added only when a
+    // caller pipes secret stdin (registry `login --password-stdin`, `cat > ca.crt`) so it never touches argv/logs.
+    const executeOpts: { proxyEnv?: boolean; input?: string } = this.isScoped() ? {} : { proxyEnv: true };
+    if (execOpts?.input !== undefined) {
+      executeOpts.input = execOpts.input;
+    }
+    const result = await Command.Execute(
+      commandLauncher,
+      args || [],
+      Object.keys(executeOpts).length > 0 ? executeOpts : undefined,
+    );
     this.logger.debug(this.id, "<< Running host command", commandLine, {
       success: result.success,
       code: result.code,

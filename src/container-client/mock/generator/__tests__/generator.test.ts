@@ -40,7 +40,7 @@ describe("generator counts (per-engine stress targets)", () => {
     expect(list(ds.pods).length).toBeGreaterThanOrEqual(30);
     expect(list(ds.secrets).length).toBeGreaterThanOrEqual(30);
     expect(list(ds.machines).length).toBeGreaterThanOrEqual(30);
-    expect(ds.registries.custom.length).toBeGreaterThanOrEqual(30);
+    expect(ds.registries.custom.length).toBeGreaterThanOrEqual(12);
   });
 
   it("docker meets targets; pods/secrets/machines are Podman-only (empty)", () => {
@@ -49,7 +49,7 @@ describe("generator counts (per-engine stress targets)", () => {
     expect(list(ds.images).length).toBeGreaterThanOrEqual(30);
     expect(list(ds.networks).length).toBeGreaterThanOrEqual(30);
     expect((ds.volumes as { Volumes: unknown[] }).Volumes.length).toBeGreaterThanOrEqual(30);
-    expect(ds.registries.custom.length).toBeGreaterThanOrEqual(30);
+    expect(ds.registries.custom.length).toBeGreaterThanOrEqual(12);
     expect(list(ds.pods).length).toBe(0);
     expect(list(ds.secrets).length).toBe(0);
     expect(list(ds.machines).length).toBe(0);

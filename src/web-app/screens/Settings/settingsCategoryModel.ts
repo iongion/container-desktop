@@ -17,6 +17,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   { id: "config", title: "Configuration", icon: IconNames.COG },
   { id: "logging", title: "Logging", icon: IconNames.CONSOLE },
   { id: "network", title: "Network", icon: IconNames.GLOBE_NETWORK },
+  { id: "policy", title: "Air-gap & policy", icon: IconNames.SHIELD },
   { id: "startup", title: "Startup & behavior", icon: IconNames.POWER },
 ];
 
