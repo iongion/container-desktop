@@ -1972,6 +1972,11 @@
     convert-source-map "^2.0.0"
     tinyrainbow "^3.1.0"
 
+"@wailsio/runtime@3.0.0-alpha.96":
+  version "3.0.0-alpha.96"
+  resolved "https://registry.yarnpkg.com/@wailsio/runtime/-/runtime-3.0.0-alpha.96.tgz#b287ff4853ebc90bf19bb6283df3ec09fdb48298"
+  integrity sha512-Vj682pT1yzJHHNvay6D4C5Uc8KSO3rx98n5kYFeAWUt80Cm9JKmYeCaWOO3Tx/Z9cdZb7LXnJuPIQddOAb6jLQ==
+
 "@wdio/cli@9.29.1":
   version "9.29.1"
   resolved "https://registry.yarnpkg.com/@wdio/cli/-/cli-9.29.1.tgz#31498a8a7bf9d02bc056ef48758f3c8ed3963d68"

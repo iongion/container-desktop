@@ -26,6 +26,7 @@
 
 .NotificationSwitch button {
   -webkit-app-region: no-drag;
+  --wails-draggable: no-drag;
 }
 /* Segmented switcher = Blueprint ButtonGroup; the framework renders the active state.
    The active button is tinted per engine in themes/podman.css + docker.css. */

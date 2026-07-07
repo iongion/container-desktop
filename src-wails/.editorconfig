@@ -1,0 +1,11 @@
+# Go uses tabs (gofmt/gofumpt). Scoped to the Wails Go module so it never fights the repo's
+# 2-space TS/Biome style. Complements the root editor settings.
+root = false
+
+[*.go]
+indent_style = tab
+indent_size = 4
+
+[*.{yml,yaml,json}]
+indent_style = space
+indent_size = 2

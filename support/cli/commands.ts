@@ -8,7 +8,7 @@ import { commitRelease } from "@/cli/lib/git";
 import { createIcons } from "@/cli/lib/icons";
 import { PROJECT_HOME, projectVersion, readSourceVersion } from "@/cli/lib/paths";
 import { type EnvOverrides, runEnv } from "@/cli/lib/process";
-import { runBump, runVersionSync } from "@/cli/lib/release";
+import { runBump, runManifestSync } from "@/cli/lib/release";
 import { publishMeta } from "@/cli/lib/release-meta";
 import { executeBundle } from "@/cli/lib/remote-build";
 import { installSelfSignedAppx, uninstallSelfSignedAppx } from "@/cli/lib/self-signed-appx";
@@ -160,6 +160,6 @@ export {
   installSelfSignedAppx,
   publishMeta,
   runBump,
-  runVersionSync,
+  runManifestSync,
   uninstallSelfSignedAppx,
 };

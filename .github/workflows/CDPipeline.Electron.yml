@@ -1,4 +1,14 @@
-name: CDPipeline
+# CDPipeline.Electron — the original Electron release pipeline, restored beside CDPipeline.Tauri (default) and
+# CDPipeline.Wails. Same data-driven shape as the others: the matrix comes from build-matrix.cjs
+# (ELECTRON_CD_JOBS via electronCdJobsForTarget), and each per-OS runner packages natively with electron-builder
+# (the retained package:electron:* scripts). NO Rust (unlike Tauri). Electron's authentic set is 4 targets
+# (linux x64/arm64, macOS arm64, windows x64 — no Windows-on-ARM, no Intel mac; confirmed across all of 5.x).
+#
+# Tauri stays the DEFAULT publisher: here `publish-release` defaults to FALSE, so a manual Electron run builds +
+# uploads artifacts for local testing without touching the canonical GitHub release, until Wails/Electron are
+# promoted after local validation. Flip the input to true to publish an Electron release + deploy the site.
+
+name: CDPipeline.Electron
 
 on:
   workflow_dispatch:
@@ -23,13 +33,12 @@ on:
           - linux-arm64
           - macos
           - macos-arm64
-          - windows-arm
           - windows-x64
       publish-release:
-        description: "Publish GitHub release after all production targets build"
+        description: "Publish GitHub release after all production targets build (Tauri is the default publisher)"
         required: true
         type: boolean
-        default: true
+        default: false
       replace-release:
         description: "Delete and recreate the GitHub release before publishing"
         required: true
@@ -65,9 +74,9 @@ jobs:
           const fs = require("node:fs");
           const matrix = require("./support/build-matrix.cjs");
 
-          const jobs = matrix.cdJobsForTarget(process.env.TARGET);
+          const jobs = matrix.electronCdJobsForTarget(process.env.TARGET);
           if (!jobs.length) {
-            throw new Error(`No CD jobs for target '${process.env.TARGET}'`);
+            throw new Error(`No Electron CD jobs for target '${process.env.TARGET}'`);
           }
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ include: jobs })}\n`);
           NODE
@@ -106,14 +115,13 @@ jobs:
           registry-url: "https://npm.pkg.github.com"
       - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
         run: yarn install --frozen-lockfile --production=false
-      - name: Use Rust ${{ matrix.rustTarget }}
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-          rustup target add ${{ matrix.rustTarget }}
       - name: Install Linux packaging deps
         if: startsWith(matrix.target, 'linux-')
         run: bash support/provision-deps.sh
+      # Electron packages a prebuilt app: build main+preload+renderer first (production via the job ENVIRONMENT),
+      # then electron-builder bundles build/<version>/ per matrix.packageScript. Mirrors the 5.x build→bundle split.
+      - name: Build ${{github.event.inputs.stage}} ${{matrix.target}}
+        run: yarn build
       - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
         run: yarn cli bundle
         env:
@@ -170,12 +178,8 @@ jobs:
           fi
           node "${args[@]}"
 
-  # Deploy the website only AFTER the release assets are published, so the
-  # download links never point at not-yet-uploaded assets. The site is built and
-  # committed LOCALLY by `make release` (screenshots + demo videos + website/ all
-  # land in the release commit), so this job only DEPLOYS what is already committed
-  # on main — it never rebuilds or mutates the repo. pages.yml still handles
-  # standalone website/doc pushes unrelated to releases.
+  # Deploy the website only AFTER release assets publish (same as CDPipeline.Tauri). Gated on publish-release,
+  # which defaults false here — so a normal Electron build/test run never redeploys the site.
   publish-pages:
     timeout-minutes: 15
     needs: publish-release
@@ -183,13 +187,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # Deploy-only: Pages scopes, no contents:write (this job never commits).
     permissions:
       pages: write
       id-token: write
 
-    # Share the Pages concurrency group with pages.yml so a release deploy and a
-    # standalone website/doc deploy never run at the same time.
     concurrency:
       group: pages
       cancel-in-progress: false
@@ -202,8 +203,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      # Deploy website/ exactly as committed on main by the release commit (the
-      # bumped version + freshly regenerated site/screenshots/demo videos).
       - name: Clone Repository (main)
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -213,11 +212,6 @@ jobs:
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
-          # Name the artifact per run-attempt. Artifacts persist across a run's
-          # attempts, so re-running ONLY this job would leave the previous attempt's
-          # upload behind and deploy-pages aborts when it finds >1 artifact of the
-          # same name ("Multiple artifacts named github-pages ..."). A per-attempt
-          # name keeps each re-run pointing at exactly its own artifact.
           name: github-pages-${{ github.run_attempt }}
           path: website
       - name: Deploy to GitHub Pages

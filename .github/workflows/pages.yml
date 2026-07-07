@@ -4,7 +4,7 @@ name: Deploy website to GitHub Pages
 # (replaces the classic "deploy from branch /docs" source so the folder can be
 # named freely). The custom domain is preserved through website/CNAME.
 #
-# Pages deploys ONLY as part of a release: CDPipeline.yml's publish-pages job runs
+# Pages deploys ONLY as part of a release: CDPipeline.Tauri.yml's publish-pages job runs
 # this content after the release assets are published. There is intentionally no
 # push trigger, so merging website/doc changes to main does not deploy on its own
 # — cut a release, or run this workflow manually below, to publish them.
@@ -36,7 +36,7 @@ jobs:
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
-          # Per-attempt name — see CDPipeline.yml's publish-pages for the full why:
+          # Per-attempt name — see CDPipeline.Tauri.yml's publish-pages for the full why:
           # re-running a single deploy job would otherwise stack a duplicate
           # github-pages artifact and deploy-pages aborts on >1 of the same name.
           name: github-pages-${{ github.run_attempt }}

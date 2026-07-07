@@ -88,7 +88,7 @@ describe("Tauri release matrix", () => {
   });
 
   it("wires CD to explicit Tauri package jobs instead of the Electron build/bundle path", () => {
-    const workflow = fs.readFileSync(path.join(projectRoot, ".github/workflows/CDPipeline.yml"), "utf8");
+    const workflow = fs.readFileSync(path.join(projectRoot, ".github/workflows/CDPipeline.Tauri.yml"), "utf8");
 
     expect(workflow).toContain("- windows-arm");
     expect(workflow).toContain("- windows-x64");

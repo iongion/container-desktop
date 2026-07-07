@@ -18,13 +18,23 @@ const rootEl = document.getElementById("root");
 
 async function boot() {
   bootTimeline.mark("script-start");
-  // Shell selection: under Tauri there is no Electron preload, so install the Tauri host bridge (the same
-  // window.* globals, backed by the native Rust port) before rendering. Under Electron the preload already
-  // exposed those globals, so this branch is skipped.
+  // Shell selection: under Wails/Tauri there is no Electron preload, so install the matching host bridge (the
+  // same window.* globals, backed by the native Go/Rust port) before rendering. Under Electron the preload
+  // already exposed those globals, so those branches are skipped. Wails is checked FIRST: it also sets
+  // window.Preloaded, and isElectronRuntime() excludes both the Wails and Tauri markers to stay exclusive.
+  const { isWailsRuntime } = await import("@/platform/wails/detect");
   const { isTauriRuntime } = await import("@/platform/tauri/detect");
   const { isElectronRuntime } = await import("@/platform/electron/detect");
   let loggerBackend: LoggerBackend | undefined;
-  if (isTauriRuntime()) {
+  if (isWailsRuntime()) {
+    const { installWailsHostBridge } = await import("@/platform/wails/bridge");
+    await installWailsHostBridge();
+    bootTimeline.mark("wails-bridge-installed");
+    // Symmetric to the Tauri/Electron backends: route the façade's persisted records to the Wails log backend
+    // (a Phase-1 no-op until the Go LogService lands). Dynamic so it never loads under the other shells.
+    const { wailsLogBackend } = await import("@/platform/wails/log/wailsLog");
+    loggerBackend = wailsLogBackend;
+  } else if (isTauriRuntime()) {
     const { installTauriHostBridge } = await import("@/platform/tauri/bridge");
     await installTauriHostBridge();
     bootTimeline.mark("tauri-bridge-installed");

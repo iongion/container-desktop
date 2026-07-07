@@ -447,4 +447,7 @@ if (require.main === module) {
 
 module.exports = {
   createNativeBundlePlans,
+  // Reused by the Wails packager (support/cli/lib/wails-package.ts) so the pacman .PKGINFO format is single-sourced
+  // across both backends — the Arch dep list (gtk3/webkit2gtk/libappindicator-gtk3) and field layout stay identical.
+  pacmanInfo,
 };
