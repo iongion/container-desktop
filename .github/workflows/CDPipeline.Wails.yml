@@ -1,0 +1,77 @@
+# Wails (Go) desktop backend — cross-build packaging pipeline. ADDITIVE: it does not touch the Electron/Tauri
+# CIPipeline/CDPipeline, and Wails is intentionally kept out of the public website/release matrix (build-matrix.cjs
+# PLATFORMS) while Tauri remains the publish-default.
+#
+# The matrix is DATA-DRIVEN from build-matrix.cjs WAILS_CD_JOBS (single source of truth, guarded by
+# support/cli/__tests__/wails-cd-jobs.test.ts). The Go-over-Rust win: Windows is purego (CGO_ENABLED=0), so ONE
+# ubuntu runner cross-compiles the Windows .exes (portable zip + NSIS installer) AND builds the native Linux binary
+# — no windows runner / cargo-xwin for those (CDPipeline.Tauri needs a windows-latest runner). linux-arm64 (arm64
+# cgo gtk3) and macOS (Cocoa cgo) still get their own runners, mirroring the Tauri per-OS split. The ONLY thing
+# that can't cross-build from Linux is the Microsoft Store appx/msix (makeappx is Windows-SDK only), so those two
+# `windows-store-*` jobs run on native Windows runners with a `formats` override.
+
+name: CDPipeline.Wails
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which CD jobs to run: all | linux-and-windows | linux-arm64 | macos-arm64"
+        type: string
+        default: "all"
+
+permissions:
+  contents: read
+
+jobs:
+  # Emit the WAILS_CD_JOBS matrix (filtered by the `target` input) as JSON. Needs only node + the repo — no deps.
+  setup:
+    runs-on: ubuntu-24.04
+    outputs:
+      jobs: ${{ steps.matrix.outputs.jobs }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: matrix
+        run: |
+          node -e "const{wailsCdJobsForTarget}=require('./support/build-matrix.cjs');console.log('jobs='+JSON.stringify(wailsCdJobsForTarget(process.argv[1]||'all')))" "${{ inputs.target }}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: setup
+    name: ${{ matrix.id }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.setup.outputs.jobs) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "src-wails/go.mod"
+      - name: Provision Linux build + packaging deps (GTK3 stack = Tauri's, appindicator for the tray, rpmbuild)
+        if: runner.os == 'Linux'
+        run: bash support/provision-deps.sh
+      - name: Install JS deps
+        run: yarn install --frozen-lockfile
+      - name: Stage the shared renderer (production) into src-wails/frontend/dist
+        run: yarn wails:renderer
+      - name: Package targets (${{ join(matrix.targets, ', ') }})
+        # matrix.formats is set ONLY for the Windows Store jobs (appx/msix on native Windows runners — makeappx is
+        # Windows-SDK only); every other job passes no formats, so the packager builds each target's default set
+        # (TARGETS[...].formats — tar.gz/deb/rpm/AppImage/pacman on Linux, tar.gz/dmg on mac, zip/nsis on Windows).
+        # bash (Git Bash ships on the Windows runners) so the loop syntax works on the windows-store jobs too.
+        shell: bash
+        run: |
+          for target in ${{ join(matrix.targets, ' ') }}; do
+            echo "::group::package $target"
+            npx tsx support/cli/lib/wails-package.ts "$target" ${{ join(matrix.formats, ' ') }}
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wails-${{ matrix.id }}
+          path: release/container-desktop-*
+          if-no-files-found: error

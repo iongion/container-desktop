@@ -13,7 +13,7 @@ import {
 import { PROJECT_HOME, projectVersion, REPO_SLUG } from "@/cli/lib/paths";
 import { capture, run, shellQuote } from "@/cli/lib/process";
 
-// Download the Microsoft Store packages (AppX/MSIX) from a CDPipeline run without a local build. The
+// Download the Microsoft Store packages (AppX/MSIX) from a CDPipeline.Tauri run without a local build. The
 // Windows CD job keeps them OFF the public GitHub release, so they only live inside each run's per-arch
 // Windows upload artifact. Fetches with `gh`, verifies the sidecar checksum and drops them in release/.
 // fetchAppx/fetchMsix pull BOTH arches by default — a multi-arch Store submission needs x64 + arm64.
@@ -72,7 +72,7 @@ function fetchStorePackage(format: StorePackageFormat, arch: string, dir: string
     if (artifact === null) {
       throw new Error(
         `No downloadable '${artifactName}' artifact found ` +
-          "(none built yet, or all expired -- re-run CDPipeline for the windows target).",
+          "(none built yet, or all expired -- re-run CDPipeline.Tauri for the windows target).",
       );
     }
     runId = String(artifact.workflow_run?.id);

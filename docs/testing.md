@@ -3,7 +3,7 @@
 The verification gate is **type-check · lint · unit tests · production build** — all enforced on
 every PR and push to `main` by
 [`.github/workflows/CIPipeline.yml`](../.github/workflows/CIPipeline.yml). That is the **CI**
-pipeline; `CDPipeline.yml` is the separate **release/publish** pipeline and runs no checks.
+pipeline; the `CDPipeline.*` files (`CDPipeline.Tauri.yml` default, plus `.Electron` / `.Wails`) are the separate **release/publish** pipelines and run no checks.
 
 ## JS/TS — Vitest
 

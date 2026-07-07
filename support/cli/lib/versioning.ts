@@ -63,6 +63,17 @@ export function setTauriConfVersion(text: string, version: string): string {
   );
 }
 
+/** Sync the Tauri app-identity fields — `productName`, `identifier` and the main-window `title` — from
+ * the shared source of truth (support/app-metadata.cjs). tauri.conf.json is a DERIVED file: version +
+ * frontendDist are handled by setTauriConfVersion; window geometry / icons stay authored in the file.
+ * Each key occurs once at top level (title once, in the single window), so the first-match replace is
+ * exact. */
+export function setTauriConfMetadata(text: string, meta: { product: string; identifier: string }): string {
+  let out = replaceJsonStringValue(text, "productName", meta.product);
+  out = replaceJsonStringValue(out, "identifier", meta.identifier);
+  return replaceJsonStringValue(out, "title", meta.product);
+}
+
 /** Update the `[package]` crate version in a Cargo.toml — the first line-anchored `version = "..."`,
  * which is always the package version ([package] leads the file). Dependency constraints (inline or
  * under `[dependencies.*]` sub-tables) come later and are left untouched. */

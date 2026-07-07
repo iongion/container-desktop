@@ -1,0 +1,27 @@
+# golangci-lint v2 config for the Wails host shell. Formatting is gofumpt (stricter gofmt) + goimports;
+# linters are the standard set plus a few high-signal extras. Run: golangci-lint run (from src-wails/).
+version: "2"
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose # unclosed HTTP response bodies (the engine proxy data plane, Phase 2)
+    - gocritic
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/iongion/container-desktop/src-wails

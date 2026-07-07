@@ -1,6 +1,6 @@
 name: CIPipeline
 
-# Continuous-integration gate (companion to CDPipeline.yml, which builds/packages releases).
+# Continuous-integration gate (companion to the CDPipeline.* release pipelines, which build/package releases).
 # The release pipeline runs no checks, so this guards every PR and push to main with the full
 # verification set: type-check, lint, unit tests and a production build. The support/cli tooling is
 # type-checked, linted and unit-tested as part of the same app job (check-types / lint:check / test:run).

@@ -1,0 +1,228 @@
+name: CDPipeline.Tauri
+
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: "Git ref"
+        required: true
+        default: "latest"
+      stage:
+        description: "Stage"
+        required: true
+        default: "production"
+      target:
+        description: "Target"
+        required: true
+        type: choice
+        default: "all"
+        options:
+          - all
+          - linux
+          - linux-x64
+          - linux-arm64
+          - macos
+          - macos-arm64
+          - windows-arm
+          - windows-x64
+      publish-release:
+        description: "Publish GitHub release after all production targets build"
+        required: true
+        type: boolean
+        default: true
+      replace-release:
+        description: "Delete and recreate the GitHub release before publishing"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  plan-bundle:
+    timeout-minutes: 5
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+
+    steps:
+      - name: Clone Repository (latest)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref == 'latest'
+      - name: Clone Repository (custom ref)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref != 'latest'
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Build target matrix
+        id: matrix
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const matrix = require("./support/build-matrix.cjs");
+
+          const jobs = matrix.cdJobsForTarget(process.env.TARGET);
+          if (!jobs.length) {
+            throw new Error(`No CD jobs for target '${process.env.TARGET}'`);
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ include: jobs })}\n`);
+          NODE
+        env:
+          TARGET: ${{ github.event.inputs.target }}
+
+  bundle:
+    timeout-minutes: 60
+    needs: plan-bundle
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan-bundle.outputs.matrix) }}
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      CI: true
+      CD: true
+      NODE_ENV: ${{github.event.inputs.stage}}
+      ENVIRONMENT: ${{github.event.inputs.stage}}
+
+    steps:
+      - name: Clone Repository (latest)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref == 'latest'
+      - name: Clone Repository (custom ref)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref != 'latest'
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Use Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: ".nvmrc"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Prepare app ${{github.event.inputs.stage}} ${{matrix.target}}
+        run: yarn install --frozen-lockfile --production=false
+      - name: Use Rust ${{ matrix.rustTarget }}
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add ${{ matrix.rustTarget }}
+      - name: Install Linux packaging deps
+        if: startsWith(matrix.target, 'linux-')
+        run: bash support/provision-deps.sh
+      - name: Bundle ${{github.event.inputs.stage}} ${{matrix.target}}
+        run: yarn cli bundle
+        env:
+          TARGET: ${{matrix.target}}
+          PACKAGE_SCRIPT: ${{ matrix.packageScript }}
+      - name: Checksum ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
+        run: yarn cli checksums
+      - name: Publish ${{github.event.inputs.stage}} ${{matrix.target}} artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: container-desktop-${{ matrix.target }}
+          path: release/container-desktop*
+          if-no-files-found: error
+
+  publish-release:
+    timeout-minutes: 30
+    needs: bundle
+    if: github.event.inputs.target == 'all' && github.event.inputs.stage == 'production' && github.event.inputs.publish-release == 'true'
+
+    runs-on: ubuntu-latest
+
+    env:
+      CI: true
+      GH_TOKEN: ${{ github.token }}
+      REPLACE_RELEASE: ${{ github.event.inputs.replace-release }}
+
+    steps:
+      - name: Clone Repository (latest)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref == 'latest'
+      - name: Clone Repository (custom ref)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        if: github.event.inputs.git-ref != 'latest'
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Use Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: ".nvmrc"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Download build artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: container-desktop-*
+          path: release
+          merge-multiple: true
+      - name: Publish GitHub release
+        run: |
+          args=(support/release-artifacts.cjs publish --perform --allow-ci)
+          if [ "$REPLACE_RELEASE" = "true" ]; then
+            args+=(--replace)
+          else
+            args+=(--clobber)
+          fi
+          node "${args[@]}"
+
+  # Deploy the website only AFTER the release assets are published, so the
+  # download links never point at not-yet-uploaded assets. The site is built and
+  # committed LOCALLY by `make release` (screenshots + demo videos + website/ all
+  # land in the release commit), so this job only DEPLOYS what is already committed
+  # on main — it never rebuilds or mutates the repo. pages.yml still handles
+  # standalone website/doc pushes unrelated to releases.
+  publish-pages:
+    timeout-minutes: 15
+    needs: publish-release
+    if: github.event.inputs.target == 'all' && github.event.inputs.stage == 'production' && github.event.inputs.publish-release == 'true'
+
+    runs-on: ubuntu-latest
+
+    # Deploy-only: Pages scopes, no contents:write (this job never commits).
+    permissions:
+      pages: write
+      id-token: write
+
+    # Share the Pages concurrency group with pages.yml so a release deploy and a
+    # standalone website/doc deploy never run at the same time.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    env:
+      CI: true
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # Deploy website/ exactly as committed on main by the release commit (the
+      # bumped version + freshly regenerated site/screenshots/demo videos).
+      - name: Clone Repository (main)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: main
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          # Name the artifact per run-attempt. Artifacts persist across a run's
+          # attempts, so re-running ONLY this job would leave the previous attempt's
+          # upload behind and deploy-pages aborts when it finds >1 artifact of the
+          # same name ("Multiple artifacts named github-pages ..."). A per-attempt
+          # name keeps each re-run pointing at exactly its own artifact.
+          name: github-pages-${{ github.run_attempt }}
+          path: website
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+          timeout: 1200000 # 20 min — ride out slow GitHub Pages deploys (default 10)

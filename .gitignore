@@ -26,6 +26,20 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Rust
 support/container-desktop-relay/target
 
+# Wails (src-wails): ignore build OUTPUT + staged renderer; keep the Wails build CONFIG dir tracked
+# (the global `build` pattern above would otherwise swallow src-wails/build/).
+/src-wails/bin/
+/src-wails/frontend/dist/
+# Tray icons are STAGED here from the single source src/resources/icons by `yarn wails:assets` (go:embed can't
+# traverse `..`), so they are build output — not committed.
+/src-wails/assets/
+# `go build`/`go build ./...` in the single-main-package dir writes an executable named after the dir — never
+# commit it (compile-checks should use `go build -o /dev/null ./...`; real builds go to bin/ via yarn wails:build).
+/src-wails/src-wails
+/src-wails/src-wails.exe
+!/src-wails/build/
+!/src-wails/build/**
+
 # Runtime data
 pids
 *.pid
@@ -127,6 +141,7 @@ src/__tests__/live/targets.env
 .claude/settings.local.json
 .claude/REFACTOR_HANDOVER.md
 .claude/PHASE_E_PLAN.md
+.claude/WAILS_HANDOVER.md
 
 # Playwright test artifacts
 .playwright-mcp/

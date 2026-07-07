@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Wails v3 (Go) desktop backend alongside Electron + Tauri, at full Tauri parity — cross-builds every format from one Linux host (Linux tar.gz/deb/rpm/pacman/AppImage, Windows portable zip + NSIS installer, macOS tar.gz/dmg) except the Microsoft Store appx/msix, which build on Windows runners
+- Wails native-shell parity with Tauri: single-instance (a 2nd launch focuses the running window), window-bounds persistence across launches, a true process relaunch, hide-to-tray on close, a persistent file log (`userData/logs`), and the OS-keychain 0600 degraded fallback
+- Wails: window stays hidden until the renderer is ready (reveal-on-ready like Tauri/Electron), eliminating the blank-window startup flash
+- Single source of truth for app branding/packaging metadata (`support/app-metadata.cjs`) shared by Electron, Tauri and Wails; `version-sync` renamed to `sync-manifests` (now syncs metadata too, keeps the old alias)
+- Per-backend release pipelines `CDPipeline.{Tauri,Electron,Wails}.yml` (data-driven from `build-matrix.cjs`); Tauri stays the default publisher, Electron packaging restored alongside
+- Wails remote-control/E2E driver `support/wails-mcp.mjs` (Wails analog of `cdp.mjs`/`wdio.conf.js`) over the built-in MCP server (`WAILS_MCP=1 yarn wails:dev:mcp`, `-tags mcp`) — JS eval, DOM inspection, and X11 PNG screenshots
+- Wails website-screenshot capture backend alongside Electron/Tauri (`--backend=wails`) — MCP `js_eval` drives the shared action layer, screenshots via X11 grab
+
 ## [6.0.0] - 2026-07-06
 
 ### Changed

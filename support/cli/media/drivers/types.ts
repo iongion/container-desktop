@@ -62,7 +62,7 @@ export interface LaunchOptions {
   port: number;
 }
 
-export type CaptureBackendKind = "electron" | "tauri";
+export type CaptureBackendKind = "electron" | "tauri" | "wails";
 
 export interface CaptureBackend {
   readonly kind: CaptureBackendKind;
