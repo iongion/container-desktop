@@ -545,8 +545,19 @@
   },
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
+  "go.vetOnSave": "package",
+  "gopls": {
+    "formatting.gofumpt": true,
+    "ui.diagnostic.staticcheck": true
+  },
   "[go]": {
-    "editor.defaultFormatter": "golang.go"
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
   },
   "js/ts.preferences.importModuleSpecifier": "non-relative",
   "js/ts.tsdk.path": "node_modules/typescript/lib",

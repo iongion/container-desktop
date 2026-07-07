@@ -26,8 +26,9 @@ TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
   `Native.ts`, `Environment.ts`
 - `src/container-client/` — engine API clients/adapters · `src/utils/` · `src/env/`
   (logging façade lives in `src/platform/logger/`)
-- `src/platform/` + `src-tauri/` — runtime ports: shared brokers/services live at
-  `src/platform/*`; `electron/` and `tauri/` align host, command, exec, buses, tray, runtime, AI.
+- `src/platform/` + `src-tauri/` + `src-wails/` — runtime ports: shared brokers/services live at
+  `src/platform/*`; `electron/`, `tauri/` and `wails/` (Go backend) align host, command,
+  exec, buses, tray, runtime, AI. Packaging/branding metadata is centralized in `support/app-metadata.cjs`.
 - `src/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/prompt/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · **`support/cli/`** (the `yarn cli` build/dev/release
@@ -56,11 +57,13 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   `yarn cli publish-release --run-id <actions-run-id>` dry-run,
   then add `--perform`. The Microsoft Store wrapper is optional and can be
   copied into `release/container-desktop-installer.exe` when available.
-  `CDPipeline.yml` can also publish after all production targets build; use its
-  `replace-release` input to delete/recreate the same version cleanly.
+  `CDPipeline.Tauri.yml` (the default release pipeline; `CDPipeline.Electron.yml` /
+  `CDPipeline.Wails.yml` are the alternates) can also publish after all production
+  targets build; use its `replace-release` input to delete/recreate the same version cleanly.
 - **Build/dev/release CLI:** `yarn cli <command>` (commander + tsx; source in `support/cli/`) — the
-  home-grown replacement for the old Python `invoke` tasks: `bundle`, `bump`, `version-sync`,
-  `release`, `commit-release`, `publish-release`, `publish-meta`, `fetch-appx`, `checksums`,
+  home-grown replacement for the old Python `invoke` tasks: `bundle`, `bump`, `sync-manifests`
+  (alias `version-sync` — syncs version + shared app metadata from `support/app-metadata.cjs` into the
+  derived manifests), `release`, `commit-release`, `publish-release`, `publish-meta`, `fetch-appx`, `checksums`,
   `create-icons`, … (run `yarn cli` to list them). Lint/format the tooling with `make check` /
   `make format` (Biome).
 - Linux system deps (one-shot): `bash support/provision-deps.sh`

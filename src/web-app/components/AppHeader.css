@@ -2,7 +2,8 @@
   height: var(--app-header-height, 50px);
   margin: 0;
   padding: 0;
-  -webkit-app-region: drag;
+  -webkit-app-region: drag; /* Electron/WebView2 (Chromium) */
+  --wails-draggable: drag; /* Wails on WebKitGTK, which ignores -webkit-app-region */
 }
 .AppHeader .bp6-navbar {
   display: flex;
@@ -37,6 +38,7 @@
 }
 .AppHeaderActions {
   -webkit-app-region: no-drag;
+  --wails-draggable: no-drag;
   display: inline-flex;
   align-items: center;
 }

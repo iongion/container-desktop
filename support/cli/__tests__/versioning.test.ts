@@ -9,6 +9,7 @@ import {
   setManifestVersion,
   setPackageJsonVersion,
   setPlainVersion,
+  setTauriConfMetadata,
   setTauriConfVersion,
   setWebsiteVersion,
 } from "@/cli/lib/versioning";
@@ -93,6 +94,42 @@ describe("setTauriConfVersion", () => {
     expect(out).toContain('"frontendDist": "../build/6.0.0"');
     expect(out).toContain('"identifier": "com.iongion.container-desktop.tauri"');
     expect(out).toContain('"devUrl": "http://localhost:3000"');
+  });
+});
+
+describe("setTauriConfMetadata", () => {
+  it("syncs productName, identifier and window title from the shared metadata, leaving version + geometry", () => {
+    const text = [
+      "{",
+      '  "productName": "Old Product",',
+      '  "version": "6.0.0",',
+      '  "identifier": "com.old.id",',
+      '  "app": {',
+      '    "windows": [',
+      "      {",
+      '        "label": "main",',
+      '        "title": "Old Product",',
+      '        "width": 1280,',
+      '        "backgroundColor": "#171c26"',
+      "      }",
+      "    ]",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+    const out = setTauriConfMetadata(text, {
+      product: "Container Desktop",
+      identifier: "com.iongion.container-desktop.tauri",
+    });
+    expect(out).toContain('"productName": "Container Desktop"');
+    expect(out).toContain('"identifier": "com.iongion.container-desktop.tauri"');
+    expect(out).toContain('"title": "Container Desktop"');
+    // version + window geometry must be untouched
+    expect(out).toContain('"version": "6.0.0"');
+    expect(out).toContain('"width": 1280');
+    expect(out).toContain('"backgroundColor": "#171c26"');
+    expect(out).not.toContain("Old Product");
+    expect(out).not.toContain("com.old.id");
   });
 });
 

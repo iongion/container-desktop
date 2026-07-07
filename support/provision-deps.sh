@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
 # provision-deps.sh - Install the Linux *system* packages required to build and
-# bundle Container Desktop with Tauri. The Linux build emits tar.gz + deb + rpm +
-# AppImage + pacman, so it needs GTK/WebKit development headers plus packaging
-# tooling (bsdtar, rpmbuild, fakeroot).
+# bundle Container Desktop with Tauri (GTK3 + WebKitGTK 4.1) and Wails v3
+# (GTK4 + WebKitGTK 6.0). The Linux build emits tar.gz + deb + rpm + AppImage +
+# pacman, so it needs GTK/WebKit development headers plus packaging tooling
+# (bsdtar, rpmbuild, fakeroot).
 #
 # It is idempotent: re-running only installs what is missing.
 #
@@ -163,6 +164,31 @@ install_tauri_linux_deps() {
   esac
 }
 
+# Wails v3 native BUILD dependencies. Wails v3 (alpha) targets GTK4 + WebKitGTK 6.0 on Linux —
+# newer than Tauri's GTK3 + WebKitGTK 4.1 — so it needs its own headers (verified against
+# `wails3 doctor` on Ubuntu 26.04). Names differ per distro; install_group degrades per-package.
+install_wails_linux_deps() {
+  # Wails' DEFAULT Linux build here is `-tags gtk3` (GTK3 + webkit2gtk-4.1 — Tauri's EXACT stack), the STABLE path
+  # where frameless window drag works. The default GTK4 + WebKitGTK-6.0 path is EXPERIMENTAL and its window drag is
+  # unimplemented upstream (wails #4957), so we do not ship it. Wails therefore needs the SAME deps as Tauri (+ the
+  # ayatana appindicator for the native SystemTray). To build the experimental `-tags gtk4` path instead, install
+  # gtk4 + webkitgtk-6.0 by hand (apt: libgtk-4-dev libwebkitgtk-6.0-dev).
+  case "$PM" in
+    apt)
+      install_group "Wails build deps (GTK3 stack, shared with Tauri)" \
+        libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+      ;;
+    dnf|yum)
+      install_group "Wails build deps (GTK3 stack)" \
+        gtk3-devel webkit2gtk4.1-devel libappindicator-gtk3-devel
+      ;;
+    pacman)
+      install_group "Wails build deps (GTK3 stack)" \
+        gtk3 webkit2gtk-4.1 libayatana-appindicator
+      ;;
+  esac
+}
+
 # WebDriver/e2e dependencies — needed to RUN the WebdriverIO capture/e2e suite (tauri-driver →
 # WebKitWebDriver), NOT to build the app. Kept separate and best-effort so a distro that lacks them
 # (or names them differently) can never block the build. The WebKitWebDriver package name varies by
@@ -188,17 +214,18 @@ install_packaging_tools() {
   # xdg-utils provides /usr/bin/xdg-open, which the AppImage bundler embeds — its absence fails the
   # AppImage step even after the app has compiled and the deb/rpm are built (seen on minimal arm
   # runners). icnsutils builds .icns icon sets; libarchive-tools/bsdtar + rpmbuild + fakeroot stage
-  # the tar/deb/rpm/pacman targets.
+  # the tar/deb/rpm/pacman targets; nsis (makensis) cross-builds the Windows installer .exe; zip stages
+  # the portable Windows archive. (appimagetool is fetched separately below — it is not in distro repos.)
   case "$PM" in
     apt)
-      install_group "packaging tools" libarchive-tools rpm fakeroot icnsutils xdg-utils
+      install_group "packaging tools" libarchive-tools rpm fakeroot icnsutils xdg-utils nsis zip
       ;;
     dnf|yum)
-      install_group "packaging tools" bsdtar rpm-build fakeroot dpkg xdg-utils
+      install_group "packaging tools" bsdtar rpm-build fakeroot dpkg xdg-utils zip
       ;;
     pacman)
-      # base-devel already provides bsdtar (libarchive) + fakeroot; add rpmbuild + xdg-open.
-      install_group "packaging tools" rpm-tools xdg-utils
+      # base-devel already provides bsdtar (libarchive) + fakeroot; add rpmbuild + xdg-open + nsis + zip.
+      install_group "packaging tools" rpm-tools xdg-utils nsis zip
       ;;
   esac
 }
@@ -246,6 +273,7 @@ install_appimagetool() {
 log "Installing system packages..."
 install_build_toolchain
 install_tauri_linux_deps
+install_wails_linux_deps
 install_tauri_test_deps
 install_packaging_tools
 install_appimagetool

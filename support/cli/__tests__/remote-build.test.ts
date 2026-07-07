@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  collectSourceEntries,
   executeBundle,
   loadLocalBuildBoxes,
   posixBuildScript,
@@ -141,6 +142,37 @@ describe("remote scripts", () => {
     expect(windowsScript).toContain("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }");
     expect(posixScript).toContain("remote_yarn() {");
     expect(posixScript).toContain('corepack yarn "$@"');
+  });
+});
+
+describe("collectSourceEntries — remote source archive contents", () => {
+  it("keeps sources but excludes generated build output (src-wails bin/ + frontend/dist, src-tauri/target)", () => {
+    const root = makeTmp({});
+    const write = (rel: string) => {
+      const abs = path.join(root, rel);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, "x");
+    };
+    write("package.json");
+    write("src-wails/main.go");
+    write("src-wails/go.mod");
+    write("src-wails/bin/container-desktop-linux-amd64");
+    write("src-wails/frontend/dist/index.html");
+    write("src-tauri/src/lib.rs");
+    write("src-tauri/target/release/app");
+    write("node_modules/pkg/index.js");
+
+    const entries = collectSourceEntries(root);
+
+    // real sources are archived (sent to the remote build box)
+    expect(entries).toEqual(
+      expect.arrayContaining(["package.json", "src-wails/main.go", "src-wails/go.mod", "src-tauri/src/lib.rs"]),
+    );
+    // regenerated-on-the-box build output is excluded to keep the archive lean
+    expect(entries).not.toContain("src-wails/bin/container-desktop-linux-amd64");
+    expect(entries).not.toContain("src-wails/frontend/dist/index.html");
+    expect(entries).not.toContain("src-tauri/target/release/app");
+    expect(entries).not.toContain("node_modules/pkg/index.js");
   });
 });
 
