@@ -434,13 +434,13 @@
   dependencies:
     tslib "~2.6.2"
 
-"@blueprintjs/core@6.17.0", "@blueprintjs/core@^6.17.0":
-  version "6.17.0"
-  resolved "https://registry.yarnpkg.com/@blueprintjs/core/-/core-6.17.0.tgz#8f3dae4a505baece57863f9357362d474cd37c68"
-  integrity sha512-ocatKcGPzJjFXGu8CR+IAJDgldwj7Pif3rq5659qYAqFApqsSOe7lgNgrQxYdx2gawMRmVy+Xb4I4KkQbERZ1w==
+"@blueprintjs/core@6.17.1", "@blueprintjs/core@^6.17.1":
+  version "6.17.1"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/core/-/core-6.17.1.tgz#336439ca492b26e99527161284f094a9cef6ddba"
+  integrity sha512-fRGphamWAyz34GWygyisFk7ki8qiYNL+/V/8S/jU1Kr3x0yKAAIIEzh+aUNy3zViZ8eehgngqrVGdiRA6RYlnA==
   dependencies:
     "@blueprintjs/colors" "^5.1.16"
-    "@blueprintjs/icons" "^6.12.0"
+    "@blueprintjs/icons" "^6.13.0"
     "@floating-ui/react" "^0.27.13"
     "@popperjs/core" "^2.11.8"
     classnames "^2.3.1"
@@ -449,23 +449,23 @@
     react-transition-group "^4.4.5"
     tslib "~2.6.2"
 
-"@blueprintjs/icons@6.12.0", "@blueprintjs/icons@^6.12.0":
-  version "6.12.0"
-  resolved "https://registry.yarnpkg.com/@blueprintjs/icons/-/icons-6.12.0.tgz#f3710da94be287f4276d26320b19b9496c83dde9"
-  integrity sha512-lQWyGesMlzaKK8YpFfzb+cWjPGRbgkXh5Fs+cbmrwI5bCYimMAzvqRIOD1o+0krI+6DQOi/LWWT+5oJkIpgTZQ==
+"@blueprintjs/icons@6.13.0", "@blueprintjs/icons@^6.13.0":
+  version "6.13.0"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/icons/-/icons-6.13.0.tgz#7481070b55d0a88f6cc7a4059379ce9723610318"
+  integrity sha512-wEQgADFPwufKiKeF/L5K21bKgouuIbIdYPvMPFv2tt7reSuCEftX0dZpga+21JY4KvEJIz+xtVJoqMmXBesiwQ==
   dependencies:
     change-case "^4.1.2"
     classnames "^2.3.1"
     tslib "~2.6.2"
 
-"@blueprintjs/select@6.3.1":
-  version "6.3.1"
-  resolved "https://registry.yarnpkg.com/@blueprintjs/select/-/select-6.3.1.tgz#d9bdc96c3caeb651fa3458a243121d904fcd1caa"
-  integrity sha512-kc+/DLVnnassu78cSzCPgshAX4kgK4PXmbXWMYOXMI4pQ1HCxKl7L/PRN+kb+TMdwGTMQfuXAjRyJTMrSlzkSw==
+"@blueprintjs/select@6.3.2":
+  version "6.3.2"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/select/-/select-6.3.2.tgz#388985c915bef2ca712c5154d3c06e50f74f8ecb"
+  integrity sha512-crYvHV64FmJDii3f7zaYASGZ4nLVc31NzE/bLSrnqadfsuwqkV5i+lP/dF80yZ4TRXHn/1ATSmJI8AKb7l9q/Q==
   dependencies:
     "@blueprintjs/colors" "^5.1.16"
-    "@blueprintjs/core" "^6.17.0"
-    "@blueprintjs/icons" "^6.12.0"
+    "@blueprintjs/core" "^6.17.1"
+    "@blueprintjs/icons" "^6.13.0"
     classnames "^2.3.1"
     tslib "~2.6.2"
 
@@ -2239,10 +2239,10 @@ agent-base@^7.1.0, agent-base@^7.1.2:
   resolved "https://registry.yarnpkg.com/agent-base/-/agent-base-7.1.4.tgz#e3cd76d4c548ee895d3c3fd8dc1f6c5b9032e7a8"
   integrity sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==
 
-ai@7.0.15:
-  version "7.0.15"
-  resolved "https://registry.yarnpkg.com/ai/-/ai-7.0.15.tgz#89c6e848928fab6dc3309db7685f6b0d799ca609"
-  integrity sha512-7406MUy9O5sIhwOgxEWuoj+td3XUGgG96SBt6pmBU4t4sQ2fpnDx5UnHaXT2HUTXl5GorbWz/MfCrSPRz0QJqw==
+ai@7.0.16:
+  version "7.0.16"
+  resolved "https://registry.yarnpkg.com/ai/-/ai-7.0.16.tgz#a1b241b4bd450ae96f6fca15dc7413842c1f9851"
+  integrity sha512-OuA+uz6ZUVId+SVeB5bThi25Ofee/FmLvffAA368tlgqYCe2qAhqZUpfHL0dd9QC/iPiszdvCQYENJavSo/0gw==
   dependencies:
     "@ai-sdk/gateway" "4.0.12"
     "@ai-sdk/provider" "4.0.2"
