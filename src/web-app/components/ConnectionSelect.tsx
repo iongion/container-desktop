@@ -22,7 +22,12 @@ import { connectedConnections, pickActiveConnection } from "./ConnectionSelect.l
 
 import "./ConnectionSelect.css";
 
-export { connectedConnections, isDockerConnection, isPodmanConnection } from "./ConnectionSelect.logic";
+export {
+  connectedConnections,
+  isComposeConnection,
+  isDockerConnection,
+  isPodmanConnection,
+} from "./ConnectionSelect.logic";
 
 const renderConnection: ItemRenderer<Connection> = (item, { handleClick, handleFocus, modifiers }) => {
   if (!modifiers.matchesPredicate) {

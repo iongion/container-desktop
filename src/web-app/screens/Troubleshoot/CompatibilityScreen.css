@@ -1,0 +1,231 @@
+/* Engine Compatibility matrix — Troubleshoot sub-screen. Merged/global comparison: connections as COLUMNS,
+   capabilities as ROWS. All color/spacing from the global --app-* tokens (theme-tracked; never hardcoded). */
+
+.AppScreen[data-screen="troubleshoot.compatibility"] .AppScreenContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.CompatibilityMatrix {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* summary + legend strip */
+.CompatSumBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 6px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 12.5px;
+}
+.CompatSpacer {
+  margin-left: auto;
+}
+.CompatLegend {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 11.5px;
+  color: var(--app-text-muted);
+}
+.CompatLegend .lg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* cell markers — icons inherit currentColor from the mark class so they read bright, never muted */
+.CompatMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.CompatMark.yes {
+  color: var(--app-intent-success-text);
+}
+.CompatMark.warn {
+  color: var(--app-intent-warning-text);
+}
+.CompatMark.no {
+  color: var(--app-text-muted);
+  opacity: 0.7;
+}
+.CompatMark.soon {
+  color: var(--app-accent-text);
+}
+.CompatMark sup {
+  font-size: 9px;
+  color: var(--app-text-muted);
+  margin-left: 1px;
+}
+
+.CompatVal {
+  font-family: var(--monospace-font, ui-monospace, "SFMono-Regular", Menlo, monospace);
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--app-accent) 16%, transparent);
+  color: var(--app-accent-text);
+}
+
+/* the matrix */
+.CompatMatrixWrap {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  overflow: auto;
+}
+table.CompatMatrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+table.CompatMatrix th,
+table.CompatMatrix td {
+  border-bottom: 1px solid var(--app-border);
+  padding: 9px 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+table.CompatMatrix thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--app-surface-strong);
+}
+table.CompatMatrix .capcol,
+table.CompatMatrix td.cap {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--app-surface);
+  min-width: 230px;
+}
+table.CompatMatrix thead th.capcol {
+  z-index: 4;
+  background: var(--app-surface-strong);
+}
+table.CompatMatrix td.cap {
+  font-weight: 500;
+}
+table.CompatMatrix td.cap .capnote {
+  display: block;
+  font-size: 10.5px;
+  color: var(--app-text-muted);
+  font-weight: 400;
+  margin-top: 1px;
+}
+table.CompatMatrix .conn {
+  min-width: 168px;
+}
+
+.CompatMatrix .ch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.CompatMatrix .ch .EngineCell .EngineCellIcon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+}
+.CompatMatrix .ch .chn {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--app-text);
+}
+.CompatMatrix .ch .cht {
+  font-size: 10.5px;
+  color: var(--app-text-muted);
+}
+.CompatMatrix .ch .chvs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.CompatMatrix .ch .chv {
+  font-size: 10.5px;
+  color: var(--app-text-muted);
+  font-family: var(--monospace-font, ui-monospace, "SFMono-Regular", Menlo, monospace);
+}
+.CompatMatrix .ch .chv.na {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* disconnected engine column: dim the header (its cells show the engine's known base capabilities) */
+table.CompatMatrix th.conn[data-connected="no"] .ch .EngineCell,
+table.CompatMatrix th.conn[data-connected="no"] .ch .chn {
+  opacity: 0.55;
+}
+.CompatMatrix .ch .chpill {
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--app-intent-success-rest) 22%, transparent);
+  color: var(--app-intent-success-text);
+}
+
+/* category group rows */
+table.CompatMatrix tr.cat td {
+  position: sticky;
+  left: 0;
+  background: var(--app-chrome);
+  text-align: left;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-text-muted);
+  font-weight: 700;
+  padding: 7px 12px;
+}
+table.CompatMatrix tbody tr:hover td:not(.cap) {
+  background: color-mix(in srgb, var(--app-accent) 6%, transparent);
+}
+table.CompatMatrix tbody tr:hover td.cap {
+  background: color-mix(in srgb, var(--app-accent) 9%, transparent);
+}
+
+/* insight callout + footnotes */
+.CompatInsight.bp6-callout {
+  border-left: 3px solid var(--app-accent);
+}
+.CompatInsight h5 {
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.CompatInsight p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--app-text);
+}
+.CompatFoot {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--app-text-muted);
+  line-height: 1.6;
+  padding: 2px 4px;
+}
+.CompatFoot .CompatFootLine b {
+  color: var(--app-text);
+  margin-right: 4px;
+}

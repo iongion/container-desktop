@@ -128,6 +128,12 @@ export interface ComposeDownOptions {
   removeVolumes?: boolean;
 }
 
+/** Where the compose file to deploy lives on disk. Docker shells `docker compose -f <path>` (it parses the
+ * file itself); Podman ignores this and deploys the parsed `model` via libpod translation. */
+export interface ComposeSource {
+  path: string;
+}
+
 /** The host-facade request shapes (typed `composeUp`/`composeDown` params). */
 export interface ComposeUpRequest extends ComposeUpOptions {
   model: ComposeProjectModel;

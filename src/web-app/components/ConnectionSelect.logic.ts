@@ -36,3 +36,8 @@ export const isPodmanConnection = (connection: Connection): boolean => connectio
 // Eligibility predicate for Docker-only domains (swarm). Excludes the Apple `container` engine, which has
 // a Docker-compatible API surface but does NOT implement swarm.
 export const isDockerConnection = (connection: Connection): boolean => connection.engine === ContainerEngine.DOCKER;
+
+// Eligibility predicate for engines that can deploy a compose stack: Podman (native libpod translation) or
+// Docker (`docker compose` CLI). Excludes Apple `container`, which has no compose support.
+export const isComposeConnection = (connection: Connection): boolean =>
+  connection.engine === ContainerEngine.PODMAN || connection.engine === ContainerEngine.DOCKER;

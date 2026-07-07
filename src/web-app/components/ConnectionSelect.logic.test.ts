@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { type Connection, ContainerEngine } from "@/env/Types";
 
-import { connectedConnections, isPodmanConnection, pickActiveConnection } from "./ConnectionSelect.logic";
+import {
+  connectedConnections,
+  isComposeConnection,
+  isPodmanConnection,
+  pickActiveConnection,
+} from "./ConnectionSelect.logic";
 
 const conn = (id: string, engine: ContainerEngine): Connection => ({ id, name: id, engine }) as Connection;
 
@@ -31,6 +36,14 @@ describe("connectedConnections", () => {
       { id: "docker.system", running: true },
     ];
     expect(connectedConnections(connections, runtime, isPodmanConnection)).toEqual([podman]);
+  });
+});
+
+describe("isComposeConnection", () => {
+  it("accepts Podman and Docker but not Apple container", () => {
+    expect(isComposeConnection(podman)).toBe(true);
+    expect(isComposeConnection(docker)).toBe(true);
+    expect(isComposeConnection(conn("apple", ContainerEngine.APPLE))).toBe(false);
   });
 });
 

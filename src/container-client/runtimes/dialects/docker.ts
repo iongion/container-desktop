@@ -6,7 +6,8 @@
 // Docker; contexts are wired to the existing `docker context inspect` command (their capability flag flips on
 // when `docker context ls/use` are added); swarm is REAL via the Docker REST API (the swarm-rest owner,
 // driven by host.getApiDriver() — no SwarmAdapter/Application import, so no app-singleton cycle);
-// builders/compose stay no-op until their CLI is wired. The context-inspect helper lives in this file.
+// builders stay no-op until their CLI is wired; compose is served by the renderer's ComposeAdapter (it shells
+// the `docker compose` v2 CLI), NOT the facade stubs below. The context-inspect helper lives in this file.
 
 import * as swarm from "@/container-client/adapters/swarm-rest";
 import {
@@ -130,7 +131,10 @@ export const dockerDialect: EngineDialect = {
       // the daemon is not a swarm manager (503), so the UI degrades gracefully off a single static flag.
       swarm: true,
       builders: false,
-      compose: false,
+      // Compose is real via the bundled `docker compose` v2 plugin — the renderer's ComposeAdapter shells it
+      // (up/down). Advertised statically like swarm: if the plugin is somehow absent, the deploy pre-flight
+      // (`docker compose version`) surfaces a clear error rather than the matrix under-claiming the capability.
+      compose: true,
       registries: false,
       controllerVersion: false,
     },

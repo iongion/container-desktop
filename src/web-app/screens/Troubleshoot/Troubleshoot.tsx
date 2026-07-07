@@ -8,6 +8,7 @@ import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { usePruneSystem, useResetSystem } from "./queries";
+import { ScreenHeader } from "./ScreenHeader";
 import "./Troubleshoot.css";
 import { createLogger } from "@/platform/logger";
 
@@ -165,6 +166,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   );
   return (
     <div className="AppScreen" data-screen={ID}>
+      <ScreenHeader currentScreen={ID} />
       <div className="AppScreenContent">
         <HTMLTable compact striped data-table="troubleshoot.actions">
           <tbody>

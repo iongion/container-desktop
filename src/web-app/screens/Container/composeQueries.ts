@@ -8,7 +8,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { ComposeAdapter } from "@/container-client/adapters/compose";
-import type { ComposeProjectModel, ComposeUpOptions } from "@/container-client/compose/types";
+import type { ComposeProjectModel, ComposeSource, ComposeUpOptions } from "@/container-client/compose/types";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
@@ -30,8 +30,15 @@ async function refreshComposeDomains(connId: string): Promise<void> {
 export const useComposeUp = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ model, options }: { model: ComposeProjectModel; options?: ComposeUpOptions }) =>
-      (await composeAdapter(connId)).up(model, options),
+    mutationFn: async ({
+      model,
+      options,
+      source,
+    }: {
+      model: ComposeProjectModel;
+      options?: ComposeUpOptions;
+      source?: ComposeSource;
+    }) => (await composeAdapter(connId)).up(model, options, source),
     onSuccess: async () => {
       await refreshComposeDomains(connId);
       qc.invalidateQueries({ queryKey: ["containers"] });

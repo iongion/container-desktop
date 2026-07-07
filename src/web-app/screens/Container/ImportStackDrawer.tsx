@@ -23,9 +23,15 @@ import { Environments } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import { extractApiErrorText } from "@/utils/apiError";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
-import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
+import {
+  ConnectionSelect,
+  isComposeConnection,
+  isDockerConnection,
+  isPodmanConnection,
+} from "@/web-app/components/ConnectionSelect";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
+import { useAppStore } from "@/web-app/stores/appStore";
 
 import { useComposeUp } from "./composeQueries";
 import "./ImportStackDrawer.css";
@@ -59,6 +65,11 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
     const [parseError, setParseError] = useState("");
     const [pending, setPending] = useState(false);
     const composeUp = useComposeUp(connectionId);
+
+    // Docker deploys by shelling `docker compose -f <file>` (it has no pods), so pod-mode is Podman-only.
+    const connections = useAppStore((s) => s.connections);
+    const isDocker = connections.some((c) => c.id === connectionId && isDockerConnection(c));
+    const effectivePodMode = !isDocker && podMode;
 
     const parseFrom = useCallback(async (input: { path: string } | { text: string }, name: string) => {
       try {
@@ -123,12 +134,18 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
         return;
       }
       // Guard the keyboard/header submit paths too — single-pod host-port collisions would fail the engine.
-      if (podMode && detectPodPortConflicts(model).length > 0) {
+      if (effectivePodMode && detectPodPortConflicts(model).length > 0) {
         return;
       }
       setPending(true);
       try {
-        const summary = await composeUp.mutateAsync({ model, options: { podMode } });
+        // Docker shells `docker compose -f <file>` (it parses the file itself), so pass the source path;
+        // Podman ignores `source` and deploys the parsed model via libpod.
+        const summary = await composeUp.mutateAsync({
+          model,
+          options: { podMode: effectivePodMode },
+          source: filePath ? { path: filePath } : undefined,
+        });
         Notification.show({
           intent: Intent.SUCCESS,
           message: t("Stack {{name}} is up", { name: model.name }),
@@ -156,11 +173,11 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
           timeout: 8000,
         });
       }
-    }, [model, onClose, podMode, composeUp, t]);
+    }, [model, onClose, effectivePodMode, filePath, composeUp, t]);
 
     // Single-pod pre-flight: two services can't publish the same host port in one shared-netns pod — the
     // engine's pod create would fail, so surface the collision and block Import before that happens.
-    const podConflicts = podMode && model ? detectPodPortConflicts(model) : [];
+    const podConflicts = effectivePodMode && model ? detectPodPortConflicts(model) : [];
 
     return (
       <AppDrawer
@@ -187,9 +204,9 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
             <ConnectionSelect
               value={connectionId}
               onChange={onConnectionChange}
-              filter={isPodmanConnection}
+              filter={initialText ? isPodmanConnection : isComposeConnection}
               disabled={pending}
-              label={t("Podman engine")}
+              label={t(initialText ? "Podman engine" : "Container engine")}
             />
             <div className="AppDataForm">
               {!initialText && (
@@ -225,16 +242,18 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
                   disabled={pending}
                 />
               </FormGroup>
-              <FormGroup label={t("Networking")}>
-                <RadioGroup
-                  selectedValue={podMode ? "pod" : "parity"}
-                  onChange={(e) => setPodMode(e.currentTarget.value === "pod")}
-                  disabled={pending}
-                >
-                  <Radio value="parity" label={t("Compose parity — shared network, DNS by service name")} />
-                  <Radio value="pod" label={t("Single pod — services talk over localhost")} />
-                </RadioGroup>
-              </FormGroup>
+              {!isDocker && (
+                <FormGroup label={t("Networking")}>
+                  <RadioGroup
+                    selectedValue={podMode ? "pod" : "parity"}
+                    onChange={(e) => setPodMode(e.currentTarget.value === "pod")}
+                    disabled={pending}
+                  >
+                    <Radio value="parity" label={t("Compose parity — shared network, DNS by service name")} />
+                    <Radio value="pod" label={t("Single pod — services talk over localhost")} />
+                  </RadioGroup>
+                </FormGroup>
+              )}
               {podConflicts.length ? (
                 <Callout intent={Intent.DANGER} title={t("Port conflicts prevent single-pod mode")}>
                   <ul className="StackPodConflicts">

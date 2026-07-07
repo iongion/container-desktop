@@ -65,6 +65,7 @@ import { Screen as SecretsScreen } from "@/web-app/screens/Secret/ManageScreen";
 import { Screen as UserSettingsScreen } from "@/web-app/screens/Settings/UserSettingsScreen";
 import { Screen as SwarmScreen } from "@/web-app/screens/Swarm/ManageScreen";
 import { Screen as SwarmInspectScreen } from "@/web-app/screens/Swarm/SwarmInspectScreen";
+import { Screen as CompatibilityScreen } from "@/web-app/screens/Troubleshoot/CompatibilityScreen";
 import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Troubleshoot";
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
@@ -110,6 +111,7 @@ const Screens = [
   ConnectionInfoScreen,
   SystemInfoScreen,
   TroubleshootScreen,
+  CompatibilityScreen,
 ];
 
 // TanStack Router (hash history, explicit/manual route tree — no plugin/codegen, no data-loaders).
