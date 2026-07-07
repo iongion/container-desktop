@@ -48,4 +48,31 @@ describe("platform runtime layout", () => {
     expect(leftOnly(electron, tauri)).toEqual(["credentialsFs"]);
     expect(leftOnly(tauri, electron)).toEqual(["invoke"]);
   });
+
+  // Wails is the second webview backend (a twin of Tauri): its src/platform/wails/ binding mirrors
+  // src/platform/tauri/ file-for-file, differing only in the native seam (bridge.ts). So it must be a FULL
+  // mirror of Tauri's module set — no module present in one and missing in the other, at every level.
+  it("keeps Tauri and Wails top-level concepts fully aligned", () => {
+    const tauri = moduleNames("tauri");
+    const wails = moduleNames("wails");
+
+    expect(leftOnly(tauri, wails)).toEqual([]);
+    expect(leftOnly(wails, tauri)).toEqual([]);
+  });
+
+  it("keeps Tauri and Wails command exec modules fully aligned", () => {
+    const tauri = moduleNames("tauri/exec");
+    const wails = moduleNames("wails/exec");
+
+    expect(leftOnly(tauri, wails)).toEqual([]);
+    expect(leftOnly(wails, tauri)).toEqual([]);
+  });
+
+  it("keeps Tauri and Wails AI/security capability modules fully aligned", () => {
+    const tauri = moduleNames("tauri/capabilities");
+    const wails = moduleNames("wails/capabilities");
+
+    expect(leftOnly(tauri, wails)).toEqual([]);
+    expect(leftOnly(wails, tauri)).toEqual([]);
+  });
 });

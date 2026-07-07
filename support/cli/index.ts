@@ -14,12 +14,12 @@ import {
   runClean,
   runCommitRelease,
   runGenerateEngineIcons,
+  runManifestSync,
   runPrepare,
   runPublishRelease,
   runRelease,
   runStart,
   runUpdateScreenshots,
-  runVersionSync,
   uninstallSelfSignedAppx,
 } from "@/cli/commands";
 import { readSourceVersion } from "@/cli/lib/paths";
@@ -74,12 +74,13 @@ program
   .action(runCommitRelease);
 
 program
-  .command("version-sync")
-  .description("Write the source version into all synced files (drift repair, no bump)")
+  .command("sync-manifests")
+  .alias("version-sync")
+  .description("Write the source version + shared app metadata into all derived manifests (drift repair, no bump)")
   .option("--version <version>", "version to sync (defaults to package.json)")
   .option("--perform", "write files (otherwise dry-run)", false)
   .action((options) => {
-    runVersionSync({ version: options.version, perform: options.perform });
+    runManifestSync({ version: options.version, perform: options.perform });
   });
 
 program
@@ -106,7 +107,7 @@ program
 
 program
   .command("fetch-appx")
-  .description("Download the Microsoft Store AppX packages (both arches) from a CDPipeline run and verify them")
+  .description("Download the Microsoft Store AppX packages (both arches) from a CDPipeline.Tauri run and verify them")
   .option("--run-id <id>", "target a specific run (defaults to newest non-expired)")
   .option("--version <version>", "assert the fetched build matches this version")
   .option("--arch <arch>", "limit to one arch: x64 | arm64 (default: both)")
@@ -117,7 +118,7 @@ program
 
 program
   .command("fetch-msix")
-  .description("Download the Microsoft Store MSIX packages (both arches) from a CDPipeline run and verify them")
+  .description("Download the Microsoft Store MSIX packages (both arches) from a CDPipeline.Tauri run and verify them")
   .option("--run-id <id>", "target a specific run (defaults to newest non-expired)")
   .option("--version <version>", "assert the fetched build matches this version")
   .option("--arch <arch>", "limit to one arch: x64 | arm64 (default: both)")

@@ -51,8 +51,8 @@ build-assets:
 	$(MAKE) build-website
 
 trigger-cd-pipeline:
-	@V=$$(cat VERSION); echo "Triggering CDPipeline for $$V"; \
-	gh workflow run CDPipeline.yml --ref main \
+	@V=$$(cat VERSION); echo "Triggering CDPipeline.Tauri for $$V"; \
+	gh workflow run CDPipeline.Tauri.yml --ref main \
 		-f git-ref=$$V -f stage=production -f target=all \
 		-f publish-release=true -f replace-release=false
 
@@ -60,7 +60,7 @@ trigger-cd-pipeline:
 # INSIDE the release commit. Runs the full local CI gate, bumps the version WITHOUT
 # committing, regenerates the deterministic screenshots + demo replay and the static
 # site from the mock backend, then commits/tags/pushes everything as one release
-# commit and triggers the cloud pipeline for that tag. CDPipeline no longer rebuilds
+# commit and triggers the cloud pipeline for that tag. CDPipeline.Tauri no longer rebuilds
 # or commits the website — it just deploys the website/ committed here. Unlike
 # `yarn cli release` (which builds/bundles locally), this drives the cloud pipeline that
 # builds every OS target and publishes the GitHub release. Override the bump size with

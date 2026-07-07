@@ -9,6 +9,10 @@ const xml2js = require("xml2js");
 const pkg = require("./package.json");
 const { linuxArtifactName, macArtifactName, winArtifactName } = require("./support/release-artifacts.cjs");
 const { electronBuilderTargets } = require("./support/build-matrix.cjs");
+// Single source of truth for app branding + packaging metadata — shared with wails-package.ts and,
+// via `yarn cli sync-manifests`, src-tauri/tauri.conf.json. Identifiers/icons/categories/maintainer
+// live there so the three backends never drift.
+const appMeta = require("./support/app-metadata.cjs");
 // module
 const version = pkg.version;
 const semverVersion = semver.parse(version);
@@ -41,20 +45,20 @@ dotenv.config({ path: path.join(PROJECT_HOME, `.env.${ENVIRONMENT}.local`), over
 
 // injected
 const year = dayjs().format("YYYY");
-const identityName = "IonutStoica.ContainerDesktop";
+const identityName = appMeta.identifiers.windowsIdentity;
 const applicationId = identityName;
-const displayName = pkg.title;
+const displayName = appMeta.product;
 const releaseName = `${displayName} ${version}`;
-const author = (pkg.author || "").replace(/\s+/g, ".");
+const author = (appMeta.author || "").replace(/\s+/g, ".");
 const publisher = process.env.PUBLISHER || `CN=${author}`;
 const publisherDisplayName = process.env.PUBLISHER_DISPLAY_NAME || pkg.author;
 const config = {
-  appId: "container-desktop.iongion.github.io",
-  productName: process.platform === "linux" ? pkg.name : displayName,
+  appId: appMeta.identifiers.electronAppId,
+  productName: process.platform === "linux" ? appMeta.name : displayName,
   buildNumber,
   buildVersion,
   artifactName: winArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
-  copyright: `Copyright (c) ${year} ${pkg.author}`,
+  copyright: appMeta.copyright(year),
   releaseInfo: {
     releaseName,
     releaseDate: dayjs().format("MMM DD, YYYY"),
@@ -83,8 +87,8 @@ const config = {
   publish: null,
   mac: {
     artifactName: macArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
-    category: "public.app-category.developer-tools",
-    icon: "icons/appIcon.icns",
+    category: appMeta.categories.mac,
+    icon: `icons/${appMeta.icons.mac}`,
     target: tgzOnly ? "tar.gz" : electronBuilderTargets("mac"),
     type: "development",
     entitlements: "entitlements.mac.plist",
@@ -107,7 +111,7 @@ const config = {
     target: tgzOnly ? ["tar.gz"] : electronBuilderTargets("win"),
     // certificateFile: "ContainerDesktop.pfx",
     // See https://stackoverflow.com/questions/61736021/icon-sizes-for-uwp-apps-universal-windows-platform-appx
-    icon: "icons/icon.ico",
+    icon: `icons/${appMeta.icons.win}`,
   },
   appxManifestCreated: async (appxPath) => {
     const manifest = await xml2js.parseStringPromise(fs.readFileSync(appxPath, "utf8").toString());
@@ -137,16 +141,16 @@ const config = {
   },
   linux: {
     artifactName: linuxArtifactName(electronBuilderArchMacro, version, electronBuilderExtMacro),
-    executableName: "container-desktop",
+    executableName: appMeta.name,
     // Match the installed .desktop filename to Electron's app_id / WM_CLASS so
     // desktop environments associate running windows with the launcher entry
     // (icon, taskbar pinning, window grouping). Derives from desktopName in
     // package.json, falling back to executableName. Default becomes true in v27.
     syncDesktopName: true,
-    maintainer: publisher,
-    icon: "icons/appIcon-unified.png",
+    maintainer: appMeta.maintainer,
+    icon: `icons/${appMeta.icons.linux}`,
     target: electronBuilderTargets("linux"),
-    category: "Development;System;Utility",
+    category: appMeta.categories.freedesktop,
     desktop: {
       entry: displayName,
     },

@@ -348,9 +348,14 @@ if (require.main === module) {
 }
 
 module.exports = {
+  // STORE_ASSETS + the manifest/identity/pack helpers are reused by the Wails packager
+  // (support/cli/lib/wails-package.ts) so a Wails-built Store package has the SAME identity (IdentityName,
+  // version, assets, manifest) as the Tauri-built one — the Store re-signs either interchangeably.
+  STORE_ASSETS,
   createPackCommand,
   createStoreManifest,
   createStorePackagePlan,
+  findMakeAppx,
   normalizeFormat,
   resolveStoreIdentity,
 };
