@@ -1,6 +1,7 @@
-import { Button, Icon } from "@blueprintjs/core";
+import { Icon } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import prettyBytes from "pretty-bytes";
+import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ReachabilityDiagnosis } from "@/container-client/reachability/model";
@@ -23,33 +24,46 @@ const LEVEL_CLASS: Record<VerdictLevel, string> = {
   unreachable: "err",
 };
 
-interface ConnectionCardProps {
+interface ConnectionHealthHeaderProps {
   card: FleetConnection;
   /** Effective verdict (runtime folded with panel issues) — drives the pill + border. */
   level: VerdictLevel;
   diagnoses: ReachabilityDiagnosis[];
-  expanded: boolean;
-  onToggle: () => void;
-  onRecheck: () => void;
+  collapsible?: boolean;
+  expanded?: boolean;
+  onToggle?: () => void;
 }
 
-// One connection = one collapsible group card. Header carries the engine glyph, name, transport subtitle,
-// verdict pill, vitals and per-connection actions; the verdict tints the left border. The body composes the
-// health panels (added per increment: connection-path, machine, networking, bind-mounts, diagnostics).
-export function ConnectionCard({ card, level, diagnoses, expanded, onToggle, onRecheck }: ConnectionCardProps) {
+interface ConnectionHealthContentProps {
+  card: FleetConnection;
+  level: VerdictLevel;
+  diagnoses: ReachabilityDiagnosis[];
+}
+
+export function ConnectionHealthHeader({
+  card,
+  level,
+  diagnoses,
+  collapsible = false,
+  expanded = true,
+  onToggle,
+}: ConnectionHealthHeaderProps) {
   const { t } = useTranslation();
   const snapshot = useResourceStore((state) => state.byConnection[card.id]);
   const containers = snapshot?.containers?.items?.length ?? 0;
   const images = snapshot?.images?.items?.length ?? 0;
   const klass = LEVEL_CLASS[level];
-  const hops = derivePath(card);
-  const failingHop = hops.find((hop) => hop.state === "err");
-  const df = useSystemDf(card.id).data;
-  const machinesCap = !!(
-    card.connector?.capabilities?.extensions?.machines ?? card.runtime.capabilities?.extensions?.machines
-  );
-  const hasMachine = card.transport === "vm" && machinesCap;
-  const machineScope = card.connector?.settings?.controller?.scope ?? card.connection?.settings?.controller?.scope;
+  const canCollapse = collapsible && !!onToggle;
+  const onHeaderClick = canCollapse && onToggle ? () => onToggle() : undefined;
+  const onHeaderKeyDown =
+    canCollapse && onToggle
+      ? (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onToggle();
+          }
+        }
+      : undefined;
 
   const pillText =
     level === "unreachable"
@@ -69,94 +83,99 @@ export function ConnectionCard({ card, level, diagnoses, expanded, onToggle, onR
           .join(" · ");
 
   return (
-    <div className={`ConnCard ${klass}${expanded ? "" : " collapsed"}`}>
-      {/* The whole header toggles collapse (matches the mockup); clicks on the actions are ignored. A semantic
-          <button> can't wrap the nested action buttons, so this is a keyboard-accessible role="button" div. */}
-      {/* biome-ignore lint/a11y/useSemanticElements: div-as-button — a real <button> can't contain the actions */}
+    <>
+      {/* The whole header toggles collapse when enabled. */}
+      {/* biome-ignore lint/a11y/useSemanticElements: div-as-button — a real <button> would not fit this layout */}
       <div
-        className="ConnHead"
-        role="button"
-        tabIndex={0}
+        className={`ConnHead ${klass}${canCollapse && !expanded ? " collapsed" : ""}`}
+        role={canCollapse ? "button" : undefined}
+        tabIndex={canCollapse ? 0 : undefined}
         title={card.name}
-        onClick={(event) => {
-          if (!(event.target as HTMLElement).closest(".acts")) {
-            onToggle();
-          }
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onToggle();
-          }
-        }}
+        onClick={onHeaderClick}
+        onKeyDown={onHeaderKeyDown}
       >
-        <Icon className="chev" icon={IconNames.CHEVRON_DOWN} />
+        {canCollapse ? <Icon className="chev" icon={IconNames.CHEVRON_DOWN} /> : null}
         <EngineCell engine={card.engine} connectionName={card.name} />
         <span className="cn">{card.name}</span>
         <span className="ct">{card.subtitle}</span>
         <span className={`vpill ${klass}`}>{pillText}</span>
         <span className="vitals">{vitals}</span>
-        <span className="acts">
-          <Button variant="minimal" size="small" icon={IconNames.REFRESH} title={t("Re-check")} onClick={onRecheck} />
-        </span>
       </div>
-      <div className="ConnBody">
-        {diagnoses.map((diagnosis) => (
-          <Diagnosis key={`${diagnosis.tone}-${diagnosis.headline}`} diagnosis={diagnosis} />
-        ))}
-        <div className="subCard">
-          <div className="CardHead">
-            <h5>{t("Connection path")}</h5>
-            {level === "unreachable" && failingHop ? (
-              <span className="pathBroken">{t("broken at {{hop}}", { hop: failingHop.name })}</span>
-            ) : null}
-          </div>
-          <ChainPipe hops={hops} />
+    </>
+  );
+}
+
+export function ConnectionHealthContent({ card, level, diagnoses }: ConnectionHealthContentProps) {
+  const { t } = useTranslation();
+  const snapshot = useResourceStore((state) => state.byConnection[card.id]);
+  const containers = snapshot?.containers?.items?.length ?? 0;
+  const images = snapshot?.images?.items?.length ?? 0;
+  const hops = derivePath(card);
+  const failingHop = hops.find((hop) => hop.state === "err");
+  const df = useSystemDf(card.id).data;
+  const machinesCap = !!(
+    card.connector?.capabilities?.extensions?.machines ?? card.runtime.capabilities?.extensions?.machines
+  );
+  const hasMachine = card.transport === "vm" && machinesCap;
+  const machineScope = card.connector?.settings?.controller?.scope ?? card.connection?.settings?.controller?.scope;
+
+  return (
+    <>
+      {diagnoses.map((diagnosis) => (
+        <Diagnosis key={`${diagnosis.tone}-${diagnosis.headline}`} diagnosis={diagnosis} />
+      ))}
+      <div className="subCard">
+        <div className="CardHead">
+          <h5>{t("Connection path")}</h5>
+          {level === "unreachable" && failingHop ? (
+            <span className="pathBroken">{t("broken at {{hop}}", { hop: failingHop.name })}</span>
+          ) : null}
         </div>
-        <div className="grid2">
-          {hasMachine ? (
-            <MachinePanel connectionId={card.id} scope={machineScope} df={df} />
-          ) : (
-            <div className="subCard">
-              <div className="CardHead">
-                <h5>{t("Runtime")}</h5>
-                <span className="statePill remote">{card.transportLabel}</span>
-              </div>
-              <div className="kv">
+        <ChainPipe hops={hops} />
+      </div>
+      <div className="grid2">
+        {hasMachine ? (
+          <MachinePanel connectionId={card.id} scope={machineScope} df={df} />
+        ) : (
+          <div className="subCard">
+            <div className="CardHead">
+              <h5>{t("Runtime")}</h5>
+              <span className="statePill remote">{card.transportLabel}</span>
+            </div>
+            <div className="kv">
+              <span>
+                {t("Containers")} <b>{containers}</b>
+              </span>
+              <span>
+                {t("Images")} <b>{images}</b>
+              </span>
+              {card.version ? (
                 <span>
-                  {t("Containers")} <b>{containers}</b>
+                  {t("Version")} <b>{card.version}</b>
                 </span>
+              ) : null}
+              {df && df.imagesSize > 0 ? (
                 <span>
-                  {t("Images")} <b>{images}</b>
+                  {t("Disk")} <b>{prettyBytes(df.imagesSize)}</b>
+                  {df.imagesReclaimable > 0 ? (
+                    <span className="muted">
+                      {" · "}
+                      {prettyBytes(df.imagesReclaimable)} {t("reclaimable")}
+                    </span>
+                  ) : null}
                 </span>
-                {card.version ? (
-                  <span>
-                    {t("Version")} <b>{card.version}</b>
-                  </span>
-                ) : null}
-                {df && df.imagesSize > 0 ? (
-                  <span>
-                    {t("Disk")} <b>{prettyBytes(df.imagesSize)}</b>
-                    {df.imagesReclaimable > 0 ? (
-                      <span className="muted">
-                        {" · "}
-                        {prettyBytes(df.imagesReclaimable)} {t("reclaimable")}
-                      </span>
-                    ) : null}
-                  </span>
-                ) : null}
-              </div>
-              {card.verdict.reasons.length > 0 ? (
-                <div className="kv">
-                  <span className="muted">{card.verdict.reasons.join(" · ")}</span>
-                </div>
               ) : null}
             </div>
-          )}
-          <NetworkingPanel connectionId={card.id} />
-        </div>
-        <BindMountsPanel connectionId={card.id} />
+            {card.verdict.reasons.length > 0 ? (
+              <div className="kv">
+                <span className="muted">{card.verdict.reasons.join(" · ")}</span>
+              </div>
+            ) : null}
+          </div>
+        )}
+        <NetworkingPanel connectionId={card.id} />
       </div>
-    </div>
+      <BindMountsPanel connectionId={card.id} />
+    </>
   );
 }

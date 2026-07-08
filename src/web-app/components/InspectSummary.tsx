@@ -1,24 +1,13 @@
-import { H5, HTMLTable } from "@blueprintjs/core";
+import { H5 } from "@blueprintjs/core";
 import type React from "react";
 
 import { t } from "@/i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
-import { CopyButton } from "@/web-app/components/CopyButton";
+import { PropertyValueTable, type PropertyValueTableRow } from "@/web-app/components/PropertyValueTable";
 
 import "./InspectSummary.css";
 
-export interface InspectSummaryRow {
-  // Stable React key for the row.
-  key: string;
-  // Already-translated property label (left column).
-  label: string;
-  // Already-formatted display value (prettyBytes / dayjs / yes-no / plain text).
-  value: React.ReactNode;
-  // When set, a CopyButton copying this raw text is rendered before the value.
-  copyText?: string;
-  // Monospace the value cell (ids, digests, paths, mountpoints).
-  mono?: boolean;
-}
+export type InspectSummaryRow = PropertyValueTableRow;
 
 export interface InspectSummaryProps {
   rows: InspectSummaryRow[];
@@ -30,36 +19,7 @@ export interface InspectSummaryProps {
 // Extracted from the inline table on ConnectionInfoScreen so all inspects share one implementation and
 // look. Callers omit absent/engine-specific rows entirely (no "—" placeholders).
 export function InspectSummary({ rows, dataTable }: InspectSummaryProps) {
-  return (
-    <HTMLTable compact striped interactive className="AppDataTable InspectSummary" data-table={dataTable}>
-      <thead>
-        <tr>
-          <th data-column="Property">{t("Property")}</th>
-          <th data-column="Value">{t("Value")}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.key}>
-            <td>
-              <code>{row.label}</code>
-            </td>
-            <td className={row.mono ? "InspectSummaryValue InspectSummaryValue--mono" : "InspectSummaryValue"}>
-              {row.copyText === undefined ? null : (
-                <>
-                  <CopyButton text={row.copyText} />
-                  &nbsp;
-                </>
-              )}
-              {row.value}
-            </td>
-            <td></td>
-          </tr>
-        ))}
-      </tbody>
-    </HTMLTable>
-  );
+  return <PropertyValueTable rows={rows} dataTable={dataTable} className="InspectSummary" />;
 }
 
 export interface InspectRawJsonProps {

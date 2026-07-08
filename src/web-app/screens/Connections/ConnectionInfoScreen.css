@@ -11,33 +11,3 @@
   /* Matches the table header (also --app-surface-strong) in both themes; engine code-chips live in docker/podman.css. */
   background: var(--app-surface-strong);
 }
-
-[data-table="connections.connection-info"] tr td {
-  text-align: left;
-  font-family: var(--monospace-font);
-}
-[data-table="connections.connection-info"] tr td {
-  text-align: left;
-  font-family: var(--monospace-font);
-}
-[data-table="connections.connection-info"] tr td:first-child {
-  width: 1px;
-  font-weight: bold;
-}
-[data-table="connections.connection-info"] tr th:nth-child(2),
-[data-table="connections.connection-info"] tr td:nth-child(2) {
-  width: 100%;
-  text-align: left;
-}
-[data-table="connections.connection-info"] tr td code:first-child {
-  border: 1px solid transparent;
-  padding: 4px;
-  display: block;
-  border-radius: 5px;
-}
-[data-table="connections.connection-info"] tr td code:first-child {
-  border: 1px solid transparent;
-  padding: 4px;
-  display: block;
-  border-radius: 5px;
-}

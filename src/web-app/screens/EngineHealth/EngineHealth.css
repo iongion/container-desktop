@@ -1,4 +1,4 @@
-/* Engine Health cockpit — GLOBAL fleet view, grouped by connection. Ported from the approved mockup
+/* Engine Health cockpit — scoped connection health view. Ported from the approved mockup
    (.scratch/engine-health-cockpit/index.html), scoped under .EngineHealth and driven entirely by --app-*
    theme tokens (unified/teal chrome; per-connection identity = engine glyph + verdict-colored left border). */
 
@@ -12,13 +12,7 @@
   gap: 10px;
   overflow: auto;
 }
-/* Keep the cards at their natural height so the content area scrolls instead of squishing/clipping them (the
-   cards use overflow:hidden for their rounded corners, which would crop under flex compression). */
-.EngineHealth .ConnCard {
-  flex-shrink: 0;
-}
-
-/* Fleet-status widget — lives inline in the single ScreenHeader (beside Copy diagnostics + Re-run) */
+/* Legacy fleet-status widget styles kept for any diagnostics header reuse. */
 .EngineHealth .EngineHealthHead {
   display: flex;
   align-items: center;
@@ -74,38 +68,36 @@
   background: var(--app-text-muted);
 }
 
-/* Connection group card (connection = the group) */
-.EngineHealth .ConnCard {
+.EngineHealth .ConnHead {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
-  border-radius: 0;
-  overflow: hidden;
-}
-.EngineHealth .ConnHead {
   display: flex;
   align-items: center;
   gap: 11px;
   padding: 12px 15px;
-  cursor: pointer;
   border-left: 3px solid var(--app-text-muted);
+  flex-shrink: 0;
 }
-.EngineHealth .ConnCard.ok .ConnHead {
+.EngineHealth .ConnHead[role="button"] {
+  cursor: pointer;
+}
+.EngineHealth .ConnHead.ok {
   border-left-color: var(--app-intent-success-rest);
 }
-.EngineHealth .ConnCard.warn .ConnHead {
+.EngineHealth .ConnHead.warn {
   border-left-color: var(--app-intent-warning-rest);
 }
-.EngineHealth .ConnCard.err .ConnHead {
+.EngineHealth .ConnHead.err {
   border-left-color: var(--app-intent-danger-rest);
 }
-.EngineHealth .ConnHead:hover {
+.EngineHealth .ConnHead[role="button"]:hover {
   background: color-mix(in srgb, var(--app-accent) 6%, transparent);
 }
 .EngineHealth .ConnHead .chev {
   color: var(--app-text-muted);
   transition: transform 0.12s ease;
 }
-.EngineHealth .ConnCard.collapsed .ConnHead .chev {
+.EngineHealth .ConnHead.collapsed .chev {
   transform: rotate(-90deg);
 }
 .EngineHealth .ConnHead .EngineCell {
@@ -146,25 +138,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.EngineHealth .ConnHead .acts {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex: 0 0 auto;
-}
-.EngineHealth .ConnBody {
-  padding: 12px 15px 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-top: 1px solid var(--app-border);
-}
-.EngineHealth .ConnCard.collapsed .ConnBody {
-  display: none;
-}
-
-/* Sub-cards inside a connection body */
+/* Health content panels render directly in the page content flow. */
 .EngineHealth .subCard {
   background: var(--app-bg);
   border: 1px solid var(--app-border);

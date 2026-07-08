@@ -1,15 +1,17 @@
-import { H5, HTMLTable } from "@blueprintjs/core";
+import { H5 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useState } from "react";
+import { useCallback } from "react";
 import { OperatingSystem } from "@/env/Types";
 import i18n, { t } from "@/i18n";
 import { isEmpty } from "@/utils";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
-import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
-import { CopyButton } from "@/web-app/components/CopyButton";
+import { PropertyValueTable, type PropertyValueTableRow } from "@/web-app/components/PropertyValueTable";
+import { useRouteParams } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { ScreenHeader } from "./ScreenHeader";
+import { ConnectionDetailsActionsMenu } from "./ActionsMenu";
+import { getConnectionCrumbs, getConnectionsUrl } from "./Navigation";
 import "./ConnectionInfoScreen.css";
 
 interface ScreenProps extends AppScreenProps {}
@@ -65,18 +67,32 @@ function normalizeConnectionString(host: string) {
 }
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = decodeURIComponent(id || "");
   const connections = useAppStore((state) => state.connections);
-  const currentConnector = useAppStore((state) => state.currentConnector);
+  const refreshConnections = useAppStore((state) => state.getConnections);
   const osType = useAppStore((state) => state.osType);
-  // Always-merged workspace: pick WHICH connected connection to inspect (defaults to the primary).
-  const [connectionId, setConnectionId] = useState("");
-  const selected = connections.find((item) => item.id === connectionId) ?? currentConnector;
+  const selected = connections.find((item) => item.id === connectionId);
+  const title = selected?.name || connectionId;
+  const onReload = useCallback(() => {
+    void refreshConnections();
+  }, [refreshConnections]);
   const isScoped = !isEmpty(selected?.settings.controller?.scope || "");
+  const hostDockerHost = normalizeConnectionString(selected?.settings?.api?.connection?.uri || "");
+  const guestDockerHost = normalizeConnectionString(selected?.settings?.api?.connection?.relay || "");
+  const rows: PropertyValueTableRow[] = [
+    { key: "id", label: t("ID"), value: selected?.id || "" },
+    { key: "name", label: t("Name"), value: selected?.name || "" },
+    { key: "label", label: t("Label"), value: selected?.label || "" },
+    ...(isScoped ? [{ key: "guest", label: t("Guest"), value: selected?.settings?.controller?.scope || "" }] : []),
+    { key: "docker-host", label: t("DOCKER_HOST"), value: hostDockerHost },
+    { key: "docker-host-guest", label: t("DOCKER_HOST - guest"), value: guestDockerHost },
+  ];
   const source = (isScoped ? `${codeExample}${scopedCodeExample}` : `${codeExample}`)
     // Host
-    .replaceAll("%HOST_DOCKER_HOST%", normalizeConnectionString(selected?.settings?.api?.connection?.uri || ""))
+    .replaceAll("%HOST_DOCKER_HOST%", hostDockerHost)
     // Scope
-    .replaceAll("%SCOPE_DOCKER_HOST%", selected?.settings?.api?.connection?.relay || "")
+    .replaceAll("%SCOPE_DOCKER_HOST%", guestDockerHost)
     // Scope
     .replaceAll("%BASE_URL%", JSON.stringify(selected?.settings?.api?.baseURL || "http://localhost"))
     // Environment
@@ -89,95 +105,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader
-        currentScreen={ID}
-        centerContent={
-          <>
-            <div className="ScreenHeaderSpacer" />
-            <ConnectionSelect value={connectionId} onChange={setConnectionId} inline />
-          </>
+      <AppScreenHeader
+        withoutSearch
+        withBack
+        listRoutePath={getConnectionsUrl("manage")}
+        listRouteIcon={IconNames.DATA_CONNECTION}
+        titleIcon={IconNames.DATA_CONNECTION}
+        titleText={title}
+        breadcrumbs={getConnectionCrumbs(title, View, connectionId)}
+        rightContent={
+          <ConnectionDetailsActionsMenu connectionId={connectionId} currentScreen={ID} onReload={onReload} />
         }
       />
       <div className="AppScreenContent">
-        <HTMLTable compact striped interactive className="AppDataTable" data-table="connections.connection-info">
-          <thead>
-            <tr>
-              <th data-column="Property">{t("Property")}</th>
-              <th data-column="Value">{t("Value")}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>{t("ID")}</code>
-              </td>
-              <td>
-                <CopyButton text={selected?.id || ""} />
-                &nbsp;
-                {selected?.id}
-              </td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>
-                <code>{t("Name")}</code>
-              </td>
-              <td>
-                <CopyButton text={selected?.name || ""} />
-                &nbsp;
-                {selected?.name}
-              </td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>
-                <code>{t("Label")}</code>
-              </td>
-              <td>
-                <CopyButton text={selected?.label || ""} />
-                &nbsp;
-                {selected?.label}
-              </td>
-              <td></td>
-            </tr>
-            {isScoped ? (
-              <tr>
-                <td>
-                  <code>{t("Guest")}</code>
-                </td>
-                <td>
-                  <CopyButton text={selected?.settings?.controller?.scope || ""} />
-                  &nbsp;
-                  {selected?.settings?.controller?.scope || ""}
-                </td>
-                <td></td>
-              </tr>
-            ) : null}
-            <tr>
-              <td>
-                <code>{t("DOCKER_HOST")}</code>
-              </td>
-              <td>
-                <CopyButton text={normalizeConnectionString(selected?.settings?.api?.connection?.uri || "")} />
-                &nbsp;
-                {normalizeConnectionString(selected?.settings?.api?.connection?.uri || "")}
-              </td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>
-                <code>{t("DOCKER_HOST - guest")}</code>
-              </td>
-              <td>
-                <CopyButton text={normalizeConnectionString(selected?.settings?.api?.connection?.relay || "")} />
-                &nbsp;
-                {normalizeConnectionString(selected?.settings?.api?.connection?.relay || "")}
-              </td>
-              <td></td>
-            </tr>
-          </tbody>
-        </HTMLTable>
+        <PropertyValueTable rows={rows} dataTable="connections.connection-info" />
         <H5>{t("Connection code example")}</H5>
         <div className="CodeEditor ConnectionCodeEditor">
           <CodeEditor mode="javascript" value={source} />
@@ -190,7 +131,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/connections/${View}`,
+  Path: `/screens/connections/$id/${View}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,

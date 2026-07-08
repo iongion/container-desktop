@@ -1,15 +1,17 @@
 import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useState } from "react";
+import { useCallback } from "react";
 
 import i18n, { t } from "@/i18n";
-import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
+import { useRouteParams } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { ConnectionDetailsActionsMenu } from "./ActionsMenu";
+import { getConnectionCrumbs, getConnectionsUrl } from "./Navigation";
 import { useSystemInfo } from "./queries";
-import { ScreenHeader } from "./ScreenHeader";
 import { buildSystemInfoSummary } from "./systemInfoSummary";
 
 import "./SystemInfoScreen.css";
@@ -21,17 +23,19 @@ export const View = "system-info";
 export const Title = i18n.t("System info");
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = decodeURIComponent(id || "");
   const connections = useAppStore((state) => state.connections);
   const provisioned = useAppStore((state) => state.provisioned);
   const running = useAppStore((state) => state.running);
-  const currentConnector = useAppStore((state) => state.currentConnector);
-  // Always-merged workspace: pick WHICH connected connection to inspect (defaults to the primary), mirroring
-  // the Connection info screen. The query targets the selected connection's host (see useSystemInfo).
-  const [connectionId, setConnectionId] = useState("");
-  const selected = connections.find((item) => item.id === connectionId) ?? currentConnector;
-  const systemInfoQuery = useSystemInfo(selected?.id || "", provisioned && running);
-  const systemInfo = systemInfoQuery.data;
+  const selected = connections.find((item) => item.id === connectionId);
+  const title = selected?.name || connectionId;
+  const systemInfoQuery = useSystemInfo(connectionId, provisioned && running);
+  const { data: systemInfo, refetch } = systemInfoQuery;
   const pending = systemInfoQuery.isLoading || systemInfoQuery.isFetching;
+  const onReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   let contentWidget: React.ReactNode | null = null;
   if (pending) {
@@ -59,13 +63,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader
-        currentScreen={ID}
-        centerContent={
-          <>
-            <div className="ScreenHeaderSpacer" />
-            <ConnectionSelect value={connectionId} onChange={setConnectionId} inline />
-          </>
+      <AppScreenHeader
+        withoutSearch
+        withBack
+        listRoutePath={getConnectionsUrl("manage")}
+        listRouteIcon={IconNames.DATA_CONNECTION}
+        titleIcon={IconNames.DATA_CONNECTION}
+        titleText={title}
+        breadcrumbs={getConnectionCrumbs(title, View, connectionId)}
+        rightContent={
+          <ConnectionDetailsActionsMenu connectionId={connectionId} currentScreen={ID} onReload={onReload} />
         }
       />
       <div className="AppScreenContent">{contentWidget}</div>
@@ -76,7 +83,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/connections/${View}`,
+  Path: `/screens/connections/$id/${View}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,

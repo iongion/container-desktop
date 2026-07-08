@@ -72,6 +72,15 @@
 .PlatformConnectionName {
   font-size: 12px;
 }
+.PlatformConnectionNameLink {
+  color: var(--app-text);
+  display: block;
+  text-decoration: underline;
+}
+.PlatformConnectionNameLink:hover,
+.PlatformConnectionNameLink:focus {
+  color: var(--app-accent);
+}
 .PlatformConnectionDescription {
   padding-top: 5px;
   color: var(--app-text-muted);

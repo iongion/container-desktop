@@ -14,6 +14,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { getFirstUnavailableReason } from "@/web-app/utils/availability";
 import { ActionsMenu } from "./ActionsMenu";
 import { ManageConnectionDrawer } from "./Connection";
+import { getConnectionUrl } from "./Navigation";
 import { ScreenHeader } from "./ScreenHeader";
 import "./ManageScreen.css";
 import i18n from "@/i18n";
@@ -249,7 +250,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader currentScreen={ID} rightContent={headerActions} />
+      <ScreenHeader rightContent={headerActions} />
       <div className="AppScreenContent">
         {contentWidget}
         <div className="AppSettingsEngineManager">
@@ -288,7 +289,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     >
                       <td>{index + 1}.</td>
                       <td>
-                        <p className="PlatformConnectionName">{connection.name}</p>
+                        <a
+                          className="PlatformConnectionName PlatformConnectionNameLink"
+                          href={getConnectionUrl(connection.id, "connection-info")}
+                        >
+                          {connection.name}
+                        </a>
                         {connection.description ? (
                           <p className="PlatformConnectionDescription">{connection.description}</p>
                         ) : null}

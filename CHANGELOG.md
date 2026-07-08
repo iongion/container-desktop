@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Connection detail pages are now scoped per connection, with Engine health/Connection info/System info routes and shared sortable Property/Value tables.
 - Footer shows engine versions as an inline label beside the connection status; the separate engine-versions dropdown and its popover are gone
 - Image Security → Vulnerabilities is now a two-column panel (severity donut + filters beside the findings table); the scanner/database line moved to a panel footer, and a clean scan shows an all-clear ring
 - Image Security → SBOM is now a sortable, virtualized package table (Package / Version / Type / License) with Export SPDX / CycloneDX in its header; the license-type breakdown moved to its own Licenses panel

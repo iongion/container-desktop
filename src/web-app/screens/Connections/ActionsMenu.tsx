@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Intent, MenuDivider, MenuItem } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, Intent, MenuDivider, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,18 +6,26 @@ import { useTranslation } from "react-i18next";
 import type { Connection } from "@/env/Types";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ConnectIcon, DisconnectIcon } from "@/web-app/components/icons/ConnectionIcons";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 
 import "./ActionsMenu.css";
 import { createLogger } from "@/platform/logger";
+import { getConnectionUrl } from "./Navigation";
 
 const logger = createLogger("web.connections");
 
 interface ActionsMenuProps {
   connection: Connection;
   onEdit?: (connection: Connection) => void;
+}
+
+interface ConnectionDetailsActionsMenuProps {
+  connectionId: string;
+  currentScreen: string;
+  onReload: () => void;
 }
 
 interface PerformActionOptions {
@@ -160,4 +168,39 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
       <ButtonGroup>{removeWidget}</ButtonGroup>
     </>
   );
+};
+
+export const ConnectionDetailsActionsMenu: React.FC<ConnectionDetailsActionsMenuProps> = ({
+  connectionId,
+  currentScreen,
+  onReload,
+}: ConnectionDetailsActionsMenuProps) => {
+  const { t } = useTranslation();
+  const navigation = (
+    <ButtonGroup>
+      <AnchorButton
+        variant="minimal"
+        active={currentScreen === "connections.health"}
+        icon={IconNames.PULSE}
+        text={t("Engine health")}
+        href={getConnectionUrl(connectionId, "health")}
+      />
+      <AnchorButton
+        variant="minimal"
+        active={currentScreen === "connections.connection-info"}
+        icon={IconNames.POWER}
+        text={t("Connection info")}
+        href={getConnectionUrl(connectionId, "connection-info")}
+      />
+      <AnchorButton
+        variant="minimal"
+        active={currentScreen === "connections.system-info"}
+        icon={IconNames.EYE_OPEN}
+        text={t("System info")}
+        href={getConnectionUrl(connectionId, "system-info")}
+      />
+    </ButtonGroup>
+  );
+
+  return <ResourceListActions navigation={navigation} onReload={onReload} />;
 };

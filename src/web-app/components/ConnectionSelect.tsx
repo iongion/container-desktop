@@ -58,7 +58,7 @@ export interface ConnectionSelectProps {
   filter?: (connection: Connection) => boolean;
   disabled?: boolean;
   label?: string;
-  // Render the label beside the Select (used in the Connection info header) instead of stacked above it.
+  // Render the label beside the Select instead of stacked above it.
   inline?: boolean;
 }
 

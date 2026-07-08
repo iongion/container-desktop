@@ -1,0 +1,49 @@
+/* Shared sortable Property/Value table used by Connection info and Inspect summaries. */
+.AppDataTable.PropertyValueTable {
+  flex: 0 0 auto;
+}
+
+.AppDataTable.PropertyValueTable tr td {
+  text-align: left;
+}
+
+.AppDataTable.PropertyValueTable tr th:first-child,
+.AppDataTable.PropertyValueTable tr td:first-child {
+  width: 1px !important;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.AppDataTable.PropertyValueTable tr th:nth-child(2),
+.AppDataTable.PropertyValueTable tr td:nth-child(2) {
+  width: 100% !important;
+  text-align: left;
+}
+
+.AppDataTable.PropertyValueTable tr td code:first-child {
+  display: block;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+
+.PropertyValueTableProperty,
+.PropertyValueTableProperty code:first-child {
+  font-family: inherit;
+}
+
+.PropertyValueTableProperty code:first-child {
+  font-size: 12px;
+}
+
+.PropertyValueTableValue {
+  font-family: var(--monospace-font);
+}
+
+.AppDataTable.PropertyValueTable .SortableColumnHeaderLabel {
+  justify-content: flex-start;
+}
+
+.PropertyValueTableValue--mono {
+  font-family: var(--monospace-font);
+}

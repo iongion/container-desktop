@@ -1,36 +1,39 @@
-import { Button, NonIdealState } from "@blueprintjs/core";
+import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/i18n";
-import { CopyButton } from "@/web-app/components/CopyButton";
+import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useMergedResources } from "@/web-app/hooks/useMergedResources";
-import { ScreenHeader } from "@/web-app/screens/Connections/ScreenHeader";
+import { useRouteParams } from "@/web-app/Navigator";
+import { ConnectionDetailsActionsMenu } from "@/web-app/screens/Connections/ActionsMenu";
+import { getConnectionCrumbs, getConnectionsUrl } from "@/web-app/screens/Connections/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
-import { ConnectionCard } from "./ConnectionCard";
+import { ConnectionHealthContent, ConnectionHealthHeader } from "./ConnectionCard";
 import { buildFleet } from "./fleet";
-import { buildDiagnoses, type FleetEntry, foldLevel, serializeDiagnostics, summarizeEntries } from "./issues";
+import { buildDiagnoses, type FleetEntry, foldLevel } from "./issues";
 import { engineHealthKeys } from "./queries";
 import { findSubnetOverlaps } from "./subnets";
 import "./EngineHealth.css";
 
-// A Connections sub-screen (reached via the Connections section tab bar, not the sidebar).
 export const ID = "connections.health";
+export const View = "health";
+export const Title = i18n.t("Engine health");
 
 interface ScreenProps extends AppScreenProps {}
 
 // Domains the cockpit's panels read; a re-check nudges main to refresh them + invalidates the df query.
 const HEALTH_PANEL_DOMAINS = ["networks", "containers", "volumes"] as const;
 
-// Engine Health — the GLOBAL fleet-health cockpit (all connections at once, grouped by connection). Unified
-// theme, NO ConnectionSelect. Each connection is a collapsible card (verdict-colored border; healthy collapsed).
 export const Screen: AppScreen<ScreenProps> = () => {
+  const { id } = useRouteParams<{ id: string }>();
+  const connectionId = decodeURIComponent(id || "");
   const { t } = useTranslation();
   const qc = useQueryClient();
   const activeRuntime = useResourceStore((state) => state.activeRuntime);
@@ -59,20 +62,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
       }),
     [fleet, allNetworks],
   );
-  const summary = useMemo(() => summarizeEntries(entries), [entries]);
-  const diagnostics = useMemo(() => serializeDiagnostics(entries), [entries]);
-
-  // Collapse state: healthy cards collapse by default; a user toggle overrides that per connection.
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
-  const isExpanded = useCallback(
-    (entry: FleetEntry) => overrides[entry.card.id] ?? entry.level !== "healthy",
-    [overrides],
-  );
-  const toggle = useCallback(
-    (entry: FleetEntry) =>
-      setOverrides((prev) => ({ ...prev, [entry.card.id]: !(prev[entry.card.id] ?? entry.level !== "healthy") })),
-    [],
-  );
+  const selectedEntry = entries.find((entry) => entry.card.id === connectionId);
+  const title = selectedEntry?.card.name || connectionId;
 
   const recheck = useCallback(
     (id: string) => {
@@ -81,58 +72,46 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [qc],
   );
-  const rerunAll = useCallback(() => {
-    for (const entry of entries) {
-      recheck(entry.card.id);
-    }
-  }, [entries, recheck]);
-
-  // Single header: the shared Connections tab bar (left) + the fleet-status widget, Copy diagnostics and Re-run
-  // (right). No separate summary strip.
-  const headerActions = (
-    <div className="EngineHealthHead">
-      <span className="fleetCounts">
-        <span className="fb ok">
-          <span className="dot ok" />
-          <b>{summary.healthy}</b> {t("healthy")}
-        </span>
-        <span className="fb warn">
-          <span className="dot warn" />
-          <b>{summary.degraded}</b> {t("degraded")}
-        </span>
-        <span className="fb err">
-          <span className="dot err" />
-          <b>{summary.unreachable}</b> {t("unreachable")}
-        </span>
-        <span className="fbCount">{t("{{count}} connections", { count: summary.total })}</span>
-      </span>
-      <CopyButton icon={IconNames.DUPLICATE} variant="minimal" text={diagnostics} title={t("Copy diagnostics")} />
-      <Button variant="minimal" icon={IconNames.REFRESH} title={t("Re-run all checks")} onClick={rerunAll} />
-    </div>
-  );
+  const onReload = useCallback(() => {
+    recheck(connectionId);
+  }, [connectionId, recheck]);
 
   return (
     <div className="AppScreen EngineHealth" data-screen={ID}>
-      <ScreenHeader currentScreen={ID} rightContent={headerActions} />
+      <AppScreenHeader
+        withoutSearch
+        withBack
+        listRoutePath={getConnectionsUrl("manage")}
+        listRouteIcon={IconNames.DATA_CONNECTION}
+        titleIcon={IconNames.DATA_CONNECTION}
+        titleText={title}
+        breadcrumbs={getConnectionCrumbs(title, View, connectionId)}
+        rightContent={
+          <ConnectionDetailsActionsMenu connectionId={connectionId} currentScreen={ID} onReload={onReload} />
+        }
+      />
       <div className="AppScreenContent">
-        {entries.length === 0 ? (
+        {selectedEntry ? (
+          <>
+            <ConnectionHealthHeader
+              key={`${selectedEntry.card.id}-header`}
+              card={selectedEntry.card}
+              level={selectedEntry.level}
+              diagnoses={selectedEntry.diagnoses}
+            />
+            <ConnectionHealthContent
+              key={`${selectedEntry.card.id}-content`}
+              card={selectedEntry.card}
+              level={selectedEntry.level}
+              diagnoses={selectedEntry.diagnoses}
+            />
+          </>
+        ) : (
           <NonIdealState
             icon={IconNames.PULSE}
-            title={t("No connected engines")}
-            description={<p>{t("Connect an engine to see its fleet health here.")}</p>}
+            title={t("Connection health unavailable")}
+            description={<p>{t("Connect this engine to see its health here.")}</p>}
           />
-        ) : (
-          entries.map((entry) => (
-            <ConnectionCard
-              key={entry.card.id}
-              card={entry.card}
-              level={entry.level}
-              diagnoses={entry.diagnoses}
-              expanded={isExpanded(entry)}
-              onToggle={() => toggle(entry)}
-              onRecheck={() => recheck(entry.card.id)}
-            />
-          ))
         )}
       </div>
     </div>
@@ -140,9 +119,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = i18n.t("Engine Health");
+Screen.Title = Title;
 Screen.Route = {
-  Path: "/screens/connections/health",
+  Path: `/screens/connections/$id/${View}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.PULSE,
