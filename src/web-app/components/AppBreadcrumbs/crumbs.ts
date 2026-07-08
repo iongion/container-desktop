@@ -1,14 +1,21 @@
+import type { BreadcrumbProps } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
+import { mdiNetwork } from "@mdi/js";
+import * as ReactIcon from "@mdi/react";
+import { createElement } from "react";
+
 import { pathTo } from "@/web-app/Navigator";
 
 /**
  * One crumb in a breadcrumb trail. `textKey` is a translatable label (a section/tab name), resolved with
  * `t()` inside AppBreadcrumbs; `text` is a literal value (a resource name) that must NEVER be translated.
  * Keeping that distinction here lets every trail builder stay pure (no i18n dependency) and trivially
- * unit-testable, while i18n stays centralized in the render component. Breadcrumbs are text-only (no icons).
+ * unit-testable, while i18n stays centralized in the render component.
  */
 export interface AppBreadcrumb {
   textKey?: string;
   text?: string;
+  icon?: BreadcrumbProps["icon"];
   href?: string;
   current?: boolean;
 }
@@ -22,21 +29,25 @@ export type RootCrumbId = "containers" | "images" | "pods" | "machines" | "netwo
 
 // The canonical section roots. Labels double as i18n keys. Hardcoded (stable) rather than read from the
 // Screens registry, which would create an import cycle through App.tsx.
-const ROOT_CRUMBS: Record<RootCrumbId, { labelKey: string; path: string }> = {
-  containers: { labelKey: "Containers", path: "/screens/containers" },
-  images: { labelKey: "Images", path: "/screens/images" },
-  pods: { labelKey: "Pods", path: "/screens/pods" },
-  machines: { labelKey: "Machines", path: "/screens/machines" },
-  networks: { labelKey: "Networks", path: "/screens/networks" },
-  volumes: { labelKey: "Volumes", path: "/screens/volumes" },
-  secrets: { labelKey: "Secrets", path: "/screens/secrets" },
-  swarm: { labelKey: "Swarm", path: "/screens/swarm" },
+const ROOT_CRUMBS: Record<RootCrumbId, { labelKey: string; path: string; icon: BreadcrumbProps["icon"] }> = {
+  containers: { labelKey: "Containers", path: "/screens/containers", icon: IconNames.CUBE },
+  images: { labelKey: "Images", path: "/screens/images", icon: IconNames.BOX },
+  pods: { labelKey: "Pods", path: "/screens/pods", icon: IconNames.CUBE_ADD },
+  machines: { labelKey: "Machines", path: "/screens/machines", icon: IconNames.HEAT_GRID },
+  networks: {
+    labelKey: "Networks",
+    path: "/screens/networks",
+    icon: createElement(ReactIcon.Icon, { className: "ReactIcon", path: mdiNetwork, size: 0.75 }),
+  },
+  volumes: { labelKey: "Volumes", path: "/screens/volumes", icon: IconNames.DATABASE },
+  secrets: { labelKey: "Secrets", path: "/screens/secrets", icon: IconNames.KEY },
+  swarm: { labelKey: "Swarm", path: "/screens/swarm", icon: IconNames.LAYERS },
 };
 
 /** The leading crumb for a section — links to its list screen, preserving the owning connection. */
 export function rootCrumb(rootId: RootCrumbId, connId?: string): AppBreadcrumb {
   const spec = ROOT_CRUMBS[rootId];
-  return { textKey: spec.labelKey, href: pathTo(spec.path, undefined, { connId }) };
+  return { textKey: spec.labelKey, icon: spec.icon, href: pathTo(spec.path, undefined, { connId }) };
 }
 
 /**

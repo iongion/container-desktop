@@ -1,3 +1,4 @@
+import { IconNames } from "@blueprintjs/icons";
 import { type AppBreadcrumb, crumb } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 
@@ -16,7 +17,7 @@ const CONNECTION_VIEW_LABELS: Record<string, string> = {
 };
 
 export const getConnectionCrumbs = (name: string, view: string, id: string): AppBreadcrumb[] => [
-  crumb({ textKey: "Connections", href: getConnectionsUrl("manage") }),
+  crumb({ textKey: "Connections", icon: IconNames.DATA_CONNECTION, href: getConnectionsUrl("manage") }),
   crumb({
     text: name,
     href: view === "connection-info" ? undefined : getConnectionUrl(id, "connection-info"),

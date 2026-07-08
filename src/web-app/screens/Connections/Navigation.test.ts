@@ -1,3 +1,4 @@
+import { IconNames } from "@blueprintjs/icons";
 import { describe, expect, it } from "vitest";
 import { getConnectionCrumbs, getConnectionUrl } from "./Navigation";
 
@@ -12,7 +13,11 @@ describe("connections navigation", () => {
     const crumbs = getConnectionCrumbs("System Podman", "connection-info", "system-default.podman");
 
     expect(crumbs).toEqual([
-      { textKey: "Connections", href: expect.stringContaining("#/screens/connections/manage") },
+      {
+        textKey: "Connections",
+        icon: IconNames.DATA_CONNECTION,
+        href: expect.stringContaining("#/screens/connections/manage"),
+      },
       { text: "System Podman" },
       { textKey: "Connection info", current: true },
     ]);
@@ -22,7 +27,11 @@ describe("connections navigation", () => {
     const crumbs = getConnectionCrumbs("System Podman", "system-info", "system-default.podman");
 
     expect(crumbs).toEqual([
-      { textKey: "Connections", href: expect.stringContaining("#/screens/connections/manage") },
+      {
+        textKey: "Connections",
+        icon: IconNames.DATA_CONNECTION,
+        href: expect.stringContaining("#/screens/connections/manage"),
+      },
       {
         text: "System Podman",
         href: expect.stringContaining("#/screens/connections/system-default.podman/connection-info"),
@@ -37,7 +46,11 @@ describe("connections navigation", () => {
 
     expect(new URL(url).hash).toBe("#/screens/connections/System%20Podman/health");
     expect(crumbs).toEqual([
-      { textKey: "Connections", href: expect.stringContaining("#/screens/connections/manage") },
+      {
+        textKey: "Connections",
+        icon: IconNames.DATA_CONNECTION,
+        href: expect.stringContaining("#/screens/connections/manage"),
+      },
       { text: "System Podman", href: expect.stringContaining("#/screens/connections/System%20Podman/connection-info") },
       { textKey: "Engine health", current: true },
     ]);

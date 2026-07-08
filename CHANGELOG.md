@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Inspect Tree | JSON viewer** — the raw-configuration block on every resource **Inspect** screen (containers, images, volumes, networks, pods, machines, secrets, swarm, system info) gains a **Tree | JSON** toggle: a native Blueprint collapsible tree over the whole payload (all branches collapsed, drill-down) with the JSON code editor one click away; unparseable/incomplete JSON falls back to the raw text
+- **Inspect Tree | JSON viewer** — the raw-configuration block on every resource **Inspect** screen (containers, images, volumes, networks, pods, machines, secrets, swarm, system info) gains a **Tree | JSON** toggle: a native Blueprint collapsible tree over the whole payload, expand/collapse all, selectable labels, and the JSON code editor one click away; unparseable/incomplete JSON falls back to the raw text
 - **Per-connection registry trust** — global **Registries** screen grouped by connection; real per-engine backends: sign-in (`login --password-stdin`), add/remove (`registries.conf`/`daemon.json`), CAs (`certs.d`) + proxy in the connection form; remote image search/pull lives on **Images**
 - **Engine compatibility matrix** — a **Troubleshoot → Compatibility** sub-screen comparing engine capabilities side by side (Podman/Docker/Apple), read from connect-time capabilities
 - **Native Compose stacks** — import a `docker-compose.yml` into Podman as native containers, shown in **Containers** as a compose group (compose-parity or single-pod networking)
@@ -17,14 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A container **status dot** on container rows and group headers — run state + healthcheck (green running · red unhealthy/crashed · amber starting/paused · grey stopped)
 - Compose `depends_on: { condition: service_healthy }` is honored on **Import stack** — a dependent waits for its dependency to report healthy
 - Group actions (start/stop/restart all) and stack teardown show inline busy state and failure feedback while running
-- **Wails v3 (Go) desktop backend** alongside Electron + Tauri at full parity — cross-builds every format from one Linux host except the Store appx/msix (Windows)
+- **Wails v3 (Go) desktop backend** alongside Electron + Tauri at packaging parity — Linux x64 and Windows portable/NSIS cross-build from Linux; Linux arm64, macOS, and Store appx/msix use native runners
 - Wails native-shell parity: single-instance focus, window-bounds persistence, true relaunch, hide-to-tray, persistent file log, OS-keychain 0600 fallback
 - Wails: window stays hidden until the renderer is ready (reveal-on-ready), removing the blank-window startup flash
 - Single source of truth for branding/packaging metadata (`support/app-metadata.cjs`) shared by all three backends; `version-sync` → `sync-manifests` (alias kept)
 - Per-backend release pipelines `CDPipeline.{Tauri,Electron,Wails}.yml` (from `build-matrix.cjs`); Tauri stays the default publisher
 - Wails remote-control/E2E driver `support/wails-mcp.mjs` over the built-in MCP server (JS eval, DOM inspection, X11 screenshots)
 - Wails website-screenshot capture backend (`--backend=wails`) via MCP `js_eval` + X11 grab
-- **Mounts inspector** — global connection-grouped container → mount tree with sizes and mock probe results
+- **Mounts inspector** — global connection-grouped container → mount tree with sizes and probe results
 - **Reachability debugger** — a **Networks → Reachability** sub-screen: transport-aware trace pinpoints where a port · service→service · reach-out · DNS check breaks, with a copyable fix
 - **Image Security supply-chain tab** — per-image **Security** view: cosign signature/provenance verified on open, copyable digest, and a button-triggered Trivy pass for vulnerabilities + SBOM (SPDX/CycloneDX export) — scans on demand, not on navigate
 - **Signature sign-in recovery** — an auth-required cosign verify offers a **Sign in to verify** action (real `cosign login --password-stdin`, cosign's own keychain so Podman is covered too) that resumes verification on success; the Log in button shows only when cosign isn't already authenticated, and a header **Recheck** button re-verifies on demand
@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Collapsed sidebar labels ellipsize instead of overflowing the rail
 - Property/Value inspect tables render at compact density
 - Container Inspect shows Environment variables and Ports as their own copy-enabled Property/Value tables; drops Name (already in the breadcrumbs) and the ports row from the identity summary
+- JSON viewer defaults its title to **Tree view** in tree mode and **Raw configuration** in JSON mode
+- Breadcrumb trails show the sidebar icon on the root crumb only, including Connections
+- AppScreenHeader back buttons have consistent spacing
+- Network, Secret, and Volume detail action menus keep the owning connection
 - Connection detail pages are now scoped per connection, with row-menu links, shared breadcrumbs, refresh, and Engine health/Connection info/System info navigation
 - Connections now uses the standard entity search field on the list page
 - Footer shows engine versions as an inline label beside the connection status; the separate engine-versions dropdown and its popover are gone

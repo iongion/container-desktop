@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildJsonTree, safeParseJson } from "./jsonTree";
 
 describe("buildJsonTree", () => {
-  it("returns one top-level node per object key, in insertion order", () => {
+  it("returns one top-level node per object key, preserving the payload's order", () => {
     const tree = buildJsonTree({ a: 1, b: { c: "x" }, d: [true, null] });
     expect(tree.map((n) => n.key)).toEqual(["a", "b", "d"]);
   });

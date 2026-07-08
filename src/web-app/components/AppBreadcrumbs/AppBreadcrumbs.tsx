@@ -17,8 +17,9 @@ interface AppBreadcrumbsProps {
 export const AppBreadcrumbs: React.FC<AppBreadcrumbsProps> = ({ items }) => {
   const { t } = useTranslation();
   const bpItems: BreadcrumbProps[] = items
-    .map((item) => ({
+    .map((item, index) => ({
       text: item.textKey ? t(item.textKey) : (item.text ?? ""),
+      icon: index === 0 ? item.icon : undefined,
       href: item.current ? undefined : item.href,
       current: item.current,
     }))

@@ -71,7 +71,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       titleIcon={IconNames.GRAPH}
       titleText={network.name || network.id || ""}
       breadcrumbs={getNetworkCrumbs(network.name || network.id || "", connId)}
-      rightContent={<ActionsMenu withoutCreate network={network} />}
+      rightContent={<ActionsMenu withoutCreate network={network} connectionId={connId} />}
     />
   );
 };

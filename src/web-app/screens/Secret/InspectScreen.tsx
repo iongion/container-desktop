@@ -51,7 +51,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         titleText={secret.Spec.Name}
         titleIcon={IconNames.KEY}
         breadcrumbs={getSecretCrumbs(secret.Spec.Name, connectionId)}
-        rightContent={<SecretActionsMenu secret={secret} withoutCreate />}
+        rightContent={<SecretActionsMenu secret={secret} connectionId={connectionId} withoutCreate />}
       />
       <div className="AppScreenContent">
         <InspectSummary rows={buildSecretSummary(secret)} dataTable="secret.inspect-summary" />

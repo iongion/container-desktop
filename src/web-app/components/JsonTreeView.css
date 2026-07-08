@@ -3,12 +3,14 @@
    this file): Blueprint's stock ~22px/level is too wide for deeply-nested inspect JSON. */
 .JsonTree .bp6-tree-node-label {
   font-family: var(--monospace-font);
-  font-size: 12px;
+  font-size: 11px;
+  user-select: text;
 }
 .JsonTree .JsonTreeLabel {
   display: inline-flex;
   align-items: baseline;
   min-width: 0;
+  user-select: text;
 }
 .JsonTree .jkey {
   color: var(--app-text);

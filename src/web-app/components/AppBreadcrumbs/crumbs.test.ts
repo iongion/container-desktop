@@ -1,14 +1,19 @@
+import { IconNames } from "@blueprintjs/icons";
+import { mdiNetwork } from "@mdi/js";
+import type React from "react";
+import { isValidElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { getContainerCrumbs } from "@/web-app/screens/Container/Navigation";
 import { getSwarmCrumbs } from "@/web-app/screens/Swarm/Navigation";
 import { getVolumeCrumbs } from "@/web-app/screens/Volume/Navigation";
-import { crumb, rootCrumb } from "./crumbs";
+import { crumb, type RootCrumbId, rootCrumb } from "./crumbs";
 
 describe("rootCrumb", () => {
-  it("builds a root crumb with a translatable label and a list href carrying connId", () => {
+  it("builds a root crumb with a translatable label, sidebar icon, and a list href carrying connId", () => {
     const c = rootCrumb("containers", "c1");
     expect(c.textKey).toBe("Containers");
+    expect(c.icon).toBe(IconNames.CUBE);
     expect(c.href).toContain("#/screens/containers");
     expect(c.href).toContain("connId=c1");
     expect(c.current).toBeFalsy();
@@ -21,7 +26,27 @@ describe("rootCrumb", () => {
     expect(c.href).not.toContain("connId");
   });
 
-  it("resolves the networks root to a text-only crumb", () => {
+  it("uses the sidebar icon for every entity root", () => {
+    const sidebarIcons: Array<[RootCrumbId, unknown]> = [
+      ["containers", IconNames.CUBE],
+      ["images", IconNames.BOX],
+      ["pods", IconNames.CUBE_ADD],
+      ["machines", IconNames.HEAT_GRID],
+      ["volumes", IconNames.DATABASE],
+      ["secrets", IconNames.KEY],
+      ["swarm", IconNames.LAYERS],
+    ];
+
+    for (const [rootId, icon] of sidebarIcons) {
+      expect(rootCrumb(rootId).icon).toBe(icon);
+    }
+
+    const networkIcon = rootCrumb("networks").icon;
+    expect(isValidElement(networkIcon)).toBe(true);
+    expect((networkIcon as React.ReactElement<{ path: string }>).props.path).toBe(mdiNetwork);
+  });
+
+  it("resolves the networks root to its list crumb", () => {
     const c = rootCrumb("networks");
     expect(c.textKey).toBe("Networks");
     expect(c.href).toContain("#/screens/networks");

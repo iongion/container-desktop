@@ -35,7 +35,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         titleText={volume.Name}
         titleIcon={IconNames.DATABASE}
         breadcrumbs={getVolumeCrumbs(volume.Name, connectionId)}
-        rightContent={<VolumeActionsMenu volume={volume} withoutCreate />}
+        rightContent={<VolumeActionsMenu volume={volume} connectionId={connectionId} withoutCreate />}
       />
       <div className="AppScreenContent">
         <InspectSummary rows={buildVolumeSummary(volume)} dataTable="volume.inspect-summary" />

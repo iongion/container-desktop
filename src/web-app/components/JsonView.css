@@ -33,3 +33,8 @@
 .JsonViewParseWarning {
   margin: 8px;
 }
+
+/* Expand/collapse-all toggle sits before the title; keep its icon bright (minimal buttons render muted). */
+.JsonViewExpandToggle .bp6-icon {
+  color: var(--app-text);
+}

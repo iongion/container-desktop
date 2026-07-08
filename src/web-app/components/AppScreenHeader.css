@@ -8,6 +8,10 @@
   align-items: center;
 }
 
+.AppScreenHeader .bp6-navbar-heading {
+  margin-right: 8px;
+}
+
 .AppScreenHeader > .bp6-navbar,
 .AppScreenHeader .bp6-navbar-group,
 .AppScreenHeader .NavbarCenter,

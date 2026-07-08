@@ -1,5 +1,5 @@
 import { Tree, type TreeNodeInfo } from "@blueprintjs/core";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useReducer, useRef } from "react";
 
 import { buildJsonTree, type JsonTreeNodeModel, type JsonValueKind } from "./jsonTree";
 
@@ -7,7 +7,8 @@ import "./JsonTreeView.css";
 
 // Reusable, schema-free viewer that renders ARBITRARY JSON as a native Blueprint <Tree>: caret-only
 // (no node icons), all branches collapsed, drill-down on click. Controlled-tree state follows the
-// official Blueprint tree example (clone + Tree.nodeFromPath on expand/collapse).
+// official Blueprint tree example (clone + Tree.nodeFromPath on expand/collapse). Exposes an imperative
+// handle so a host toolbar can expand/collapse every branch at once.
 
 const KIND_CLASS: Record<JsonValueKind, string> = {
   object: "",
@@ -53,13 +54,23 @@ function toTreeNodes(models: JsonTreeNodeModel[]): TreeNodeInfo[] {
 
 type NodePath = number[];
 type TreeState = TreeNodeInfo[];
-type TreeAction = { type: "RESET"; nodes: TreeState } | { type: "SET_EXPANDED"; path: NodePath; isExpanded: boolean };
+type TreeAction =
+  | { type: "RESET"; nodes: TreeState }
+  | { type: "SET_EXPANDED"; path: NodePath; isExpanded: boolean }
+  | { type: "SET_ALL"; isExpanded: boolean };
 
 function cloneNodes(nodes: TreeState): TreeState {
   return nodes.map((node) => ({
     ...node,
     childNodes: node.childNodes ? cloneNodes(node.childNodes) : node.childNodes,
   }));
+}
+
+function forEachNode(nodes: TreeState, callback: (node: TreeNodeInfo) => void) {
+  for (const node of nodes) {
+    callback(node);
+    if (node.childNodes) forEachNode(node.childNodes, callback);
+  }
 }
 
 function treeReducer(state: TreeState, action: TreeAction): TreeState {
@@ -69,6 +80,15 @@ function treeReducer(state: TreeState, action: TreeAction): TreeState {
     case "SET_EXPANDED": {
       const next = cloneNodes(state);
       Tree.nodeFromPath(action.path, next).isExpanded = action.isExpanded;
+      return next;
+    }
+    case "SET_ALL": {
+      const next = cloneNodes(state);
+      forEachNode(next, (node) => {
+        if (node.childNodes) {
+          node.isExpanded = action.isExpanded;
+        }
+      });
       return next;
     }
     default:
@@ -82,7 +102,15 @@ export interface JsonTreeViewProps {
   className?: string;
 }
 
-export function JsonTreeView({ data, className }: JsonTreeViewProps) {
+export interface JsonTreeViewHandle {
+  expandAll: () => void;
+  collapseAll: () => void;
+}
+
+export const JsonTreeView = forwardRef<JsonTreeViewHandle, JsonTreeViewProps>(function JsonTreeView(
+  { data, className },
+  ref,
+) {
   const [nodes, dispatch] = useReducer(treeReducer, data, (initial) => toTreeNodes(buildJsonTree(initial)));
 
   // Rebuild (collapsed) only when the underlying data actually changes — not on every render.
@@ -94,6 +122,15 @@ export function JsonTreeView({ data, className }: JsonTreeViewProps) {
     }
     dispatch({ type: "RESET", nodes: toTreeNodes(buildJsonTree(data)) });
   }, [data]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      expandAll: () => dispatch({ type: "SET_ALL", isExpanded: true }),
+      collapseAll: () => dispatch({ type: "SET_ALL", isExpanded: false }),
+    }),
+    [],
+  );
 
   const handleExpand = useCallback((_node: TreeNodeInfo, path: NodePath) => {
     dispatch({ type: "SET_EXPANDED", path, isExpanded: true });
@@ -117,4 +154,4 @@ export function JsonTreeView({ data, className }: JsonTreeViewProps) {
       onNodeClick={handleClick}
     />
   );
-}
+});
