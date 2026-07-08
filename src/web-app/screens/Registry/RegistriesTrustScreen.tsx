@@ -1,4 +1,3 @@
-import { Button, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -6,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { t } from "@/web-app/App.i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { RegistriesPanel } from "./panels/RegistriesPanel";
@@ -29,20 +29,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
       <AppScreenHeader
         withoutSearch
         rightContent={
-          <>
-            <Button
-              intent={Intent.PRIMARY}
-              icon={IconNames.PLUS}
-              text={t("Add registry")}
-              onClick={() => openDialog("add-registry")}
-            />
-            <Button
-              variant="minimal"
-              icon={IconNames.REFRESH}
-              title={t("Reload current list")}
-              onClick={() => qc.invalidateQueries({ queryKey: ["registries"] })}
-            />
-          </>
+          <ResourceListActions
+            actions={{ icon: IconNames.PLUS, text: t("Add registry"), onClick: () => openDialog("add-registry") }}
+            onReload={() => qc.invalidateQueries({ queryKey: ["registries"] })}
+          />
         }
       >
         <div className="AppScreenHeaderText TrustHeaderText">

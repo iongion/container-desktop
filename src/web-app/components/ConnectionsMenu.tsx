@@ -14,7 +14,7 @@ import { mdiStarOutline } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useTranslation } from "react-i18next";
 
-import { ConnectIcon, DisconnectIcon } from "@/web-app/components/icons/ConnectionIcons";
+import { ConnectedIcon, DisconnectIcon } from "@/web-app/components/icons/ConnectionIcons";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 
@@ -32,9 +32,9 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
 
   const runtimeById = new Map(activeRuntime.map((info) => [info.id, info]));
 
-  // Action glyphs: custom link / broken-link for connect/disconnect (color = status, see statusIntent), mdi
-  // star for "make primary".
-  const connectIcon = <ConnectIcon />;
+  // Status/action glyphs: solid link for connected, broken-link for disconnected/idle (color = status, see
+  // statusIntent), mdi star for "make primary".
+  const connectedIcon = <ConnectedIcon />;
   const disconnectIcon = <DisconnectIcon />;
   const primaryIcon = <ReactIcon.Icon className="ReactIcon" path={mdiStarOutline} size={0.7} />;
 
@@ -101,7 +101,7 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
                     <Button
                       size="small"
                       intent={statusIntent}
-                      icon={disconnectIcon}
+                      icon={connectedIcon}
                       title={t("Disconnect")}
                       disabled={pending}
                       onClick={(e) => {
@@ -113,7 +113,7 @@ export const ConnectionsMenu: React.FC<{ children: React.ReactNode }> = ({ child
                     <Button
                       size="small"
                       intent={statusIntent}
-                      icon={connectIcon}
+                      icon={disconnectIcon}
                       title={t("Connect")}
                       disabled={pending}
                       onClick={(e) => {

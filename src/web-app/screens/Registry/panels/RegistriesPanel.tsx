@@ -1,12 +1,18 @@
 import { Button, HTMLTable, Icon, type IconName, Intent, NonIdealState, Spinner } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { Fragment, useCallback, useState } from "react";
+import { mdiCubeUnfolded } from "@mdi/js";
+import { useCallback, useMemo, useState } from "react";
 
 import type { Registry, RegistryAuthInfo, RegistryTlsState } from "@/env/Types";
 import { t } from "@/web-app/App.i18n";
+import { AppLabel } from "@/web-app/components/AppLabel";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { EngineCell, engineLabel } from "@/web-app/components/EngineCell";
+import type { ConnectionGroup } from "@/web-app/components/groupedTable/flattenConnectionGroups";
+import { useGroupedVirtualRows } from "@/web-app/components/groupedTable/useGroupedVirtualRows";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
+import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
+import { useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
 import { AddRegistryDialog } from "../AddRegistryDialog";
 import { RegistryLoginDialog } from "../RegistryLoginDialog";
 import {
@@ -19,7 +25,7 @@ import {
   sortRegistryRows,
 } from "../registryTrustView";
 import { useAddRegistry, useRegistryLogin, useRegistryLogout, useRemoveRegistry } from "../trustMutations";
-import { useConnectionRegistryGroups } from "../trustQueries";
+import { type ConnectionRegistryGroup, useConnectionRegistryGroups } from "../trustQueries";
 import { scopeKey, useTrustStore } from "../trustStore";
 import { TrustPill, type TrustPillTone } from "./TrustPill";
 
@@ -33,6 +39,17 @@ const TLS_PILL: Record<RegistryTlsState, { tone: TrustPillTone; icon: IconName; 
   "self-signed": { tone: "warn", icon: IconNames.WARNING_SIGN, label: "self-signed" },
   insecure: { tone: "err", icon: IconNames.WARNING_SIGN, label: "insecure" },
 };
+
+const COLUMN_COUNT = 7;
+
+type RegistryVirtualRow = RegistryRow & {
+  connectionId: string;
+  engine: string;
+};
+
+interface RegistryVirtualGroup extends ConnectionGroup<RegistryVirtualRow> {
+  connection: ConnectionRegistryGroup["connection"];
+}
 
 function AuthPill({ auth }: { auth: RegistryAuthInfo }) {
   const label = registryAuthLabel(auth);
@@ -82,16 +99,10 @@ export const RegistriesPanel: React.FC = () => {
   const registryLogout = useRegistryLogout();
   const registryAdd = useAddRegistry();
   const registryRemove = useRemoveRegistry();
-  const [collapse, setCollapse] = useState<Record<string, boolean>>({});
+  const showEngineRowAccent = useShowEngineRowAccent();
   const [sort, setSort] = useState<RegistrySort | undefined>();
   const [loginTarget, setLoginTarget] = useState<{ connectionId: string; name: string } | null>(null);
 
-  const onGroupToggleClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    const key = e.currentTarget.getAttribute("data-prefix-group");
-    if (key) {
-      setCollapse((prev) => ({ ...prev, [key]: !prev[key] }));
-    }
-  }, []);
   const toggleSort = useCallback((field: string) => {
     setSort((prev) =>
       prev?.field === field
@@ -102,29 +113,48 @@ export const RegistriesPanel: React.FC = () => {
   const dir = (field: string) => (sort?.field === field ? sort.dir : undefined);
 
   // Merge fetched registries with session add/remove/login overlays, then build the sortable rows per group.
-  const rowsFor = (connectionId: string, fetched: Registry[]): RegistryRow[] => {
-    const extra: Registry[] = (added[connectionId] ?? []).map((r) => ({
-      id: r.name,
-      name: r.name,
-      created: "",
-      weight: 0,
-      enabled: true,
-      isRemovable: true,
-      isSystem: false,
-      engine: [],
-      tls: r.tls,
-      mirrorOf: r.mirrorOf,
-    }));
-    const merged = [...fetched, ...extra].filter((r) => !removed[scopeKey(connectionId, r.name)]);
-    const rows = merged.map((registry, index) => {
-      const override = authOverrides[scopeKey(connectionId, registry.name)];
-      const effective = override ? { ...registry, auth: override } : registry;
-      return { registry, view: registryTrustView(effective, index) };
+  const rowsFor = useCallback(
+    (connectionId: string, fetched: Registry[]): RegistryRow[] => {
+      const extra: Registry[] = (added[connectionId] ?? []).map((r) => ({
+        id: r.name,
+        name: r.name,
+        created: "",
+        weight: 0,
+        enabled: true,
+        isRemovable: true,
+        isSystem: false,
+        engine: [],
+        tls: r.tls,
+        mirrorOf: r.mirrorOf,
+      }));
+      const merged = [...fetched, ...extra].filter((r) => !removed[scopeKey(connectionId, r.name)]);
+      const rows = merged.map((registry, index) => {
+        const override = authOverrides[scopeKey(connectionId, registry.name)];
+        const effective = override ? { ...registry, auth: override } : registry;
+        return { registry, view: registryTrustView(effective, index) };
+      });
+      return sortRegistryRows(rows, sort);
+    },
+    [added, authOverrides, removed, sort],
+  );
+  const registryGroups = useMemo<RegistryVirtualGroup[]>(
+    () =>
+      groups.map((group) => ({
+        key: group.connection.id,
+        connection: group.connection,
+        items: rowsFor(group.connection.id, group.registries).map((row) => ({
+          ...row,
+          connectionId: group.connection.id,
+          engine: group.connection.engine,
+        })),
+      })),
+    [groups, rowsFor],
+  );
+  const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
+    useGroupedVirtualRows({
+      groups: registryGroups,
+      getRowKey: (row, group) => `${group.key}:${row.registry.id}`,
     });
-    return sortRegistryRows(rows, sort);
-  };
-
-  let stripe = 0;
 
   return (
     <div className="TrustPanel">
@@ -137,7 +167,7 @@ export const RegistriesPanel: React.FC = () => {
           description={t("Connect an engine to manage its registries and sign-in.")}
         />
       ) : (
-        <div className="TrustTableScroll">
+        <div className="TrustTableScroll" ref={scrollElementRef}>
           <HTMLTable
             compact
             interactive
@@ -145,10 +175,10 @@ export const RegistriesPanel: React.FC = () => {
             data-windowed="true"
             data-table="trust-registries"
           >
-            <thead>
+            <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="registry" direction={dir("registry")} onSort={toggleSort}>
-                  {t("Registry")}
+                  <AppLabel iconPath={mdiCubeUnfolded} text={t("Registry")} />
                 </SortableColumnHeader>
                 <SortableColumnHeader field="tls" direction={dir("tls")} onSort={toggleSort}>
                   {t("TLS")}
@@ -169,18 +199,26 @@ export const RegistriesPanel: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {groups.map((group) => {
-                const connectionId = group.connection.id;
-                const isCollapsed = !!collapse[connectionId];
-                const rows = rowsFor(connectionId, group.registries);
-                return (
-                  <Fragment key={connectionId}>
-                    <tr className="AppDataTableGroupRow">
-                      <td className="AppDataTableGroupName" colSpan={7}>
+              <VirtualSpacerRow height={paddingTop} columnCount={COLUMN_COUNT} />
+              {items.map(({ row: descriptor, index, key }) => {
+                const striped = index % 2 === 0 ? "true" : undefined;
+                if (descriptor.kind === "group-header") {
+                  const group = descriptor.group as RegistryVirtualGroup;
+                  const connectionId = group.connection.id;
+                  const isGroupCollapsed = isCollapsed(connectionId);
+                  return (
+                    <tr
+                      key={key}
+                      ref={measureRef}
+                      data-index={index}
+                      className="AppDataTableGroupRow"
+                      data-engine-row={showEngineRowAccent ? group.connection.engine : undefined}
+                    >
+                      <td className="AppDataTableGroupName" colSpan={COLUMN_COUNT}>
                         <Button
                           fill
                           variant="minimal"
-                          icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
+                          icon={isGroupCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
                           onClick={onGroupToggleClick}
                           data-prefix-group={connectionId}
                           title={t("{{name}} registries", { name: group.connection.name })}
@@ -190,92 +228,95 @@ export const RegistriesPanel: React.FC = () => {
                               <span className="buttonTextLabel">{group.connection.name}</span>
                               <span className="TrustGroupMeta">{engineLabel(group.connection.engine)}</span>
                               <span className="TrustGroupSum">
-                                {rows.length} {rows.length === 1 ? t("registry") : t("registries")}
+                                {group.items.length} {group.items.length === 1 ? t("registry") : t("registries")}
                               </span>
                             </>
                           }
                         />
                       </td>
                     </tr>
-                    {!isCollapsed &&
-                      rows.map(({ registry, view }, index) => {
-                        const tls = TLS_PILL[view.tls];
-                        const striped = stripe++ % 2 === 0 ? "true" : undefined;
-                        const linkLocation = index === 0 ? "first" : index === rows.length - 1 ? "last" : undefined;
-                        return (
-                          <tr key={registry.id} data-prefix-group={connectionId} data-striped={striped}>
-                            <td>
-                              <div className="AppDataTableGroupLink" data-link-location={linkLocation}>
-                                <div className="AppDataTableGroupLinkVertical" />
-                                <div className="AppDataTableGroupLinkHorizontal" />
-                              </div>
-                              <span className="TrustRegName">
-                                <Icon icon={IconNames.CUBE} size={14} />
-                                <span className="TrustRegNameText">{registry.name}</span>
-                                {isPrivateRegistry(registry.name) ? (
-                                  <span className="TrustRegSub">{t("private")}</span>
-                                ) : null}
-                              </span>
-                            </td>
-                            <td>
-                              <TrustPill tone={tls.tone} icon={tls.icon}>
-                                {t(tls.label)}
-                              </TrustPill>
-                            </td>
-                            <td>
-                              <AuthPill auth={view.auth} />
-                            </td>
-                            <td>
-                              <CertBadge tls={view.tls} />
-                            </td>
-                            <td>
-                              {view.mirrorOf ? (
-                                <span className="TrustMono">{view.mirrorOf}</span>
-                              ) : (
-                                <span className="TrustMuted">—</span>
-                              )}
-                            </td>
-                            <td>
-                              <span className="TrustOrder">{view.order}</span>
-                            </td>
-                            <td data-column="Actions">
-                              <div className="TrustRowActions">
-                                <Button
-                                  className="TrustActionAuth"
-                                  variant="minimal"
-                                  size="small"
-                                  intent={view.loggedIn ? Intent.SUCCESS : Intent.NONE}
-                                  text={view.loggedIn ? t("Log out") : t("Log in")}
-                                  onClick={() => {
-                                    if (view.loggedIn) {
-                                      logout(connectionId, registry.name);
-                                      registryLogout.mutate({ connectionId, registry: registry.name });
-                                    } else {
-                                      setLoginTarget({ connectionId, name: registry.name });
-                                    }
-                                  }}
-                                />
-                                <ConfirmMenu
-                                  tag={{ connectionId, name: registry.name }}
-                                  title={t("Remove {{name}}?", { name: registry.name })}
-                                  onConfirm={(tagValue, confirmed) => {
-                                    if (confirmed) {
-                                      removeRegistry(tagValue.connectionId, tagValue.name);
-                                      registryRemove.mutate({
-                                        connectionId: tagValue.connectionId,
-                                        name: tagValue.name,
-                                      });
-                                    }
-                                  }}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </Fragment>
+                  );
+                }
+                const { registry, view, connectionId, engine } = descriptor.item;
+                const tls = TLS_PILL[view.tls];
+                const linkLocation = descriptor.isFirst ? "first" : descriptor.isLast ? "last" : undefined;
+                return (
+                  <tr
+                    key={key}
+                    ref={measureRef}
+                    data-index={index}
+                    data-prefix-group={connectionId}
+                    data-striped={striped}
+                    data-engine-row={showEngineRowAccent ? engine : undefined}
+                  >
+                    <td>
+                      <div className="AppDataTableGroupLink" data-link-location={linkLocation}>
+                        <div className="AppDataTableGroupLinkVertical" />
+                        <div className="AppDataTableGroupLinkHorizontal" />
+                      </div>
+                      <span className="TrustRegName">
+                        <Icon icon={IconNames.CUBE} size={14} />
+                        <span className="TrustRegNameText">{registry.name}</span>
+                        {isPrivateRegistry(registry.name) ? <span className="TrustRegSub">{t("private")}</span> : null}
+                      </span>
+                    </td>
+                    <td>
+                      <TrustPill tone={tls.tone} icon={tls.icon}>
+                        {t(tls.label)}
+                      </TrustPill>
+                    </td>
+                    <td>
+                      <AuthPill auth={view.auth} />
+                    </td>
+                    <td>
+                      <CertBadge tls={view.tls} />
+                    </td>
+                    <td>
+                      {view.mirrorOf ? (
+                        <span className="TrustMono">{view.mirrorOf}</span>
+                      ) : (
+                        <span className="TrustMuted">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="TrustOrder">{view.order}</span>
+                    </td>
+                    <td data-column="Actions">
+                      <div className="TrustRowActions">
+                        <Button
+                          className="TrustActionAuth"
+                          variant="minimal"
+                          size="small"
+                          intent={view.loggedIn ? Intent.SUCCESS : Intent.NONE}
+                          text={view.loggedIn ? t("Log out") : t("Log in")}
+                          onClick={() => {
+                            if (view.loggedIn) {
+                              logout(connectionId, registry.name);
+                              registryLogout.mutate({ connectionId, registry: registry.name });
+                            } else {
+                              setLoginTarget({ connectionId, name: registry.name });
+                            }
+                          }}
+                        />
+                        <ConfirmMenu
+                          tag={{ connectionId, name: registry.name }}
+                          title={t("Remove {{name}}?", { name: registry.name })}
+                          onConfirm={(tagValue, confirmed) => {
+                            if (confirmed) {
+                              removeRegistry(tagValue.connectionId, tagValue.name);
+                              registryRemove.mutate({
+                                connectionId: tagValue.connectionId,
+                                name: tagValue.name,
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
                 );
               })}
+              <VirtualSpacerRow height={paddingBottom} columnCount={COLUMN_COUNT} />
             </tbody>
           </HTMLTable>
         </div>

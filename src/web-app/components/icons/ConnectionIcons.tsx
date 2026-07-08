@@ -1,7 +1,6 @@
-// Custom monochrome connect/disconnect icons used by EVERY connect/disconnect action in the app. Pure inline
-// SVG drawn with `stroke="currentColor"` so each glyph inherits the host button's color (styleable, theme-
-// aware) and stays crisp at 16px. The universal "link" metaphor: two link-ends joined by a bar = connected;
-// the bar broken with a gap = disconnected.
+// Custom monochrome connection-state/action icons. Inline SVGs inherit the host button's color (styleable,
+// theme-aware) and stay crisp at 16px. The universal "link" metaphor: a solid joined link = connected; the bar
+// broken with a gap = disconnected.
 
 export interface ConnectionIconProps {
   size?: number;
@@ -19,6 +18,23 @@ const COMMON = {
   // stray space below it inside buttons). Keeps every connect/disconnect button tightly sized + centered.
   style: { display: "block" },
 };
+
+const SOLID_COMMON = {
+  viewBox: "0 0 24 24",
+  fill: "currentColor",
+  style: { display: "block" },
+};
+
+// Connected: same chain silhouette as ConnectIcon, but filled solid so the success-colored state reads as whole.
+export function ConnectedIcon({ size = 16, className }: ConnectionIconProps) {
+  return (
+    <svg className={className} width={size} height={size} aria-hidden="true" focusable="false" {...SOLID_COMMON}>
+      <path d="M7 6h4.25v4H7a2 2 0 0 0 0 4h4.25v4H7A6 6 0 1 1 7 6Z" />
+      <path d="M12.75 6H17a6 6 0 1 1 0 12h-4.25v-4H17a2 2 0 1 0 0-4h-4.25V6Z" />
+      <path d="M8 10.25h8v3.5H8z" />
+    </svg>
+  );
+}
 
 // Connected: a whole chain link — two hooks joined by an unbroken middle bar.
 export function ConnectIcon({ size = 16, className }: ConnectionIconProps) {

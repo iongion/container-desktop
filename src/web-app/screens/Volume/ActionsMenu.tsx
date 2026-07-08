@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import type { Volume } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -18,6 +19,7 @@ const logger = createLogger("web.volume");
 export interface VolumeActionsMenuProps {
   volume?: Volume;
   connectionId?: string;
+  navigation?: React.ReactNode;
   withoutCreate?: boolean;
   onReload?: () => void;
 }
@@ -25,6 +27,7 @@ export interface VolumeActionsMenuProps {
 export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
   volume,
   connectionId: connectionIdProp,
+  navigation,
   withoutCreate,
   onReload,
 }: VolumeActionsMenuProps) => {
@@ -101,23 +104,31 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
   ) : undefined;
   return (
     <>
-      <ButtonGroup className={volume ? "ResourceItemInlineActionsMenu" : undefined}>
-        {startButton}
-        {onReload && (
-          <>
-            {startButton ? <Divider /> : null}
-            <Button
-              size="small"
-              variant="minimal"
-              intent={Intent.NONE}
-              title={t("Reload current list")}
-              icon={IconNames.REFRESH}
-              onClick={onReload}
-            />
-          </>
-        )}
-        {removeWidget}
-      </ButtonGroup>
+      {!volume && onReload ? (
+        <ResourceListActions
+          actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
+          navigation={navigation}
+          onReload={onReload}
+        />
+      ) : (
+        <ButtonGroup className={volume ? "ResourceItemInlineActionsMenu" : undefined}>
+          {startButton}
+          {onReload && (
+            <>
+              {startButton ? <Divider /> : null}
+              <Button
+                size="small"
+                variant="minimal"
+                intent={Intent.NONE}
+                title={t("Reload current list")}
+                icon={IconNames.REFRESH}
+                onClick={onReload}
+              />
+            </>
+          )}
+          {removeWidget}
+        </ButtonGroup>
+      )}
       {withCreate && <CreateDrawer onClose={onCreateVolumeClose} />}
     </>
   );

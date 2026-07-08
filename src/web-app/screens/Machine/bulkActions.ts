@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import type { PodmanMachine } from "@/env/Types";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
+import type { MergedResource } from "@/web-app/hooks/useMergedResources";
 import { machineKeys } from "./queries";
 
 // Mirrors Machine/ActionsMenu.tsx: a machine is running when its State is "running" or the Running flag is set.
@@ -27,6 +28,8 @@ export const machineCanRestart = (_machine: PodmanMachine) => true;
 // Remove mirrors the per-row guard, which is always enabled.
 export const machineCanRemove = (_machine: PodmanMachine) => true;
 
+type MergedMachine = MergedResource<PodmanMachine>;
+
 async function resolveMachineHost(connId: string) {
   const host = await resolveConnectionHost(connId);
   if (!host) {
@@ -35,31 +38,31 @@ async function resolveMachineHost(connId: string) {
   return host;
 }
 
-export function useMachineBulkActions(connId: string): {
-  actions: BulkAction<PodmanMachine>[];
-  getId: (item: PodmanMachine) => string;
+export function useMachineBulkActions(): {
+  actions: BulkAction<MergedMachine>[];
+  getId: (item: MergedMachine) => string;
   refresh: () => Promise<void>;
 } {
   const { t } = useTranslation();
   const qc = useQueryClient();
   return useMemo(() => {
     const refresh = async () => {
-      qc.invalidateQueries({ queryKey: machineKeys.list(connId) });
+      qc.invalidateQueries({ queryKey: machineKeys.lists() });
     };
-    const actions: BulkAction<PodmanMachine>[] = [
+    const actions: BulkAction<MergedMachine>[] = [
       {
         key: "stop",
         label: t("Stop"),
         icon: IconNames.STOP,
         eligible: (m) => machineCanStop(m),
-        run: async (m) => (await resolveMachineHost(connId)).stopPodmanMachine(m.Name),
+        run: async (m) => (await resolveMachineHost(m.connectionId)).stopPodmanMachine(m.Name),
       },
       {
         key: "restart",
         label: t("Restart"),
         icon: IconNames.RESET,
         eligible: (m) => machineCanRestart(m),
-        run: async (m) => (await resolveMachineHost(connId)).restartPodmanMachine(m.Name),
+        run: async (m) => (await resolveMachineHost(m.connectionId)).restartPodmanMachine(m.Name),
       },
       {
         key: "remove",
@@ -68,9 +71,9 @@ export function useMachineBulkActions(connId: string): {
         intent: Intent.DANGER,
         destructive: true,
         eligible: (m) => machineCanRemove(m),
-        run: async (m) => (await resolveMachineHost(connId)).removePodmanMachine(m.Name),
+        run: async (m) => (await resolveMachineHost(m.connectionId)).removePodmanMachine(m.Name),
       },
     ];
-    return { actions, getId: (item: PodmanMachine) => item.Name, refresh };
-  }, [connId, qc, t]);
+    return { actions, getId: (item: MergedMachine) => `${item.connectionId}:${item.Name}`, refresh };
+  }, [qc, t]);
 }

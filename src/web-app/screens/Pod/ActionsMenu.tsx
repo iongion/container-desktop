@@ -1,4 +1,4 @@
-import { AnchorButton, Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
+import { AnchorButton, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { type Pod, PodStatusList } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -224,27 +225,14 @@ export const ListActionsMenu: React.FC<ListActionsMenuProps> = ({ withoutCreate,
   const onCreateSecretClose = useCallback(() => {
     setWithCreate(false);
   }, []);
-  const startButton = withoutCreate ? null : (
-    <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
-  );
   return (
     <>
-      <ButtonGroup>
-        {startButton}
-        {onReload && (
-          <>
-            {startButton ? <Divider /> : null}
-            <Button
-              size="small"
-              variant="minimal"
-              intent={Intent.NONE}
-              title={t("Reload current list")}
-              icon={IconNames.REFRESH}
-              onClick={onReload}
-            />
-          </>
-        )}
-      </ButtonGroup>
+      {onReload ? (
+        <ResourceListActions
+          actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
+          onReload={onReload}
+        />
+      ) : null}
       {withCreate && <CreateDrawer onClose={onCreateSecretClose} />}
     </>
   );

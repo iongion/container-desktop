@@ -8,6 +8,7 @@ import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+import { getVolumesUrl } from "@/web-app/screens/Volume/Navigation";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
 import { useContainer } from "./queries";
@@ -19,6 +20,7 @@ interface InspectGroupValues {
 interface InspectGroup {
   name: string;
   title: string;
+  href?: string;
   items: InspectGroupValues[];
 }
 
@@ -80,7 +82,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       title: t("Environment variables"),
       items: environmentVariables,
     },
-    { name: "mounts", title: t("Mounts"), items: volumeMounts },
+    { name: "mounts", title: t("Mounts"), href: getVolumesUrl("mounts"), items: volumeMounts },
     { name: "ports", title: t("Ports"), items: containerPorts },
   ];
   return (
@@ -132,7 +134,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
               return (
                 <React.Fragment key={group.name}>
                   <tr key={`group_${group.name}`} data-table-row="group.name" data-section-group={group.name}>
-                    <td colSpan={2}>{group.title}</td>
+                    <td colSpan={2}>
+                      {group.href ? (
+                        <a className="ContainerInspectGroupLink" href={group.href}>
+                          {group.title}
+                        </a>
+                      ) : (
+                        group.title
+                      )}
+                    </td>
                   </tr>
                   {items}
                 </React.Fragment>

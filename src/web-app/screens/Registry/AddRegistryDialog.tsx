@@ -81,7 +81,7 @@ export function AddRegistryDialog({
           <ButtonGroup fill>
             <Button
               type="submit"
-              intent={Intent.PRIMARY}
+              intent={Intent.SUCCESS}
               icon={IconNames.PLUS}
               text={t("Add registry")}
               disabled={!canSubmit}

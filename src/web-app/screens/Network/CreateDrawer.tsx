@@ -57,7 +57,7 @@ export const FormActions: React.FC<FormActionsProps> = ({ pending }: FormActions
       <ButtonGroup fill>
         <Button
           disabled={pending || !formState.isValid}
-          intent={Intent.PRIMARY}
+          intent={Intent.SUCCESS}
           icon={IconNames.GRAPH}
           title={t("Click to launch creation")}
           text={t("Create")}

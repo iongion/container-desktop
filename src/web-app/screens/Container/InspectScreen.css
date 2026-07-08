@@ -44,6 +44,13 @@
   border-top: 1px solid var(--app-border);
   border-bottom: 1px solid var(--app-border);
 }
+[data-table="container.inspect"] .ContainerInspectGroupLink {
+  color: var(--app-accent-text);
+  text-decoration: none;
+}
+[data-table="container.inspect"] .ContainerInspectGroupLink:hover {
+  text-decoration: underline;
+}
 [data-table="container.inspect"] tr td[colspan="2"] {
   width: auto !important;
 }

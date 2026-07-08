@@ -133,7 +133,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
               <Button
                 type="submit"
                 disabled={pending}
-                intent={Intent.PRIMARY}
+                intent={Intent.SUCCESS}
                 icon={IconNames.DATABASE}
                 title={t("Click to launch creation")}
                 text={t("Create")}

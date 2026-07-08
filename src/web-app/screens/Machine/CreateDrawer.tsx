@@ -201,7 +201,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({ onClose }: CreateDra
           <ButtonGroup fill>
             <Button
               disabled={pending}
-              intent={Intent.PRIMARY}
+              intent={Intent.SUCCESS}
               icon={IconNames.HEAT_GRID}
               title={t("Click to launch creation")}
               text={t("Create")}

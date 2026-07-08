@@ -1,0 +1,14 @@
+.ResourceListActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ResourceListActionsNavigation {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ResourceListActionsReload {
+  min-width: 42px;
+}

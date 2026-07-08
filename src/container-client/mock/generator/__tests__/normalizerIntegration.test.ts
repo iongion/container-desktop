@@ -5,6 +5,7 @@ import { type Container, ContainerEngine, type ContainerImage } from "@/env/Type
 import { groupContainers } from "@/web-app/screens/Container/grouping";
 
 import { buildEngineDataset } from "../index";
+import { buildMountGroups } from "@/web-app/screens/Volume/mounts/mountRows";
 
 const list = (value: unknown): any[] => value as any[];
 
@@ -66,5 +67,29 @@ describe("generated raw data survives the real normalizers", () => {
       expect(network.driver).toBeTruthy();
       expect(network.id).toBeTruthy();
     }
+  });
+
+  it("docker generated volume mounts match listed volumes so the Mounts inspector can show sizes", () => {
+    const ds = buildEngineDataset(ContainerEngine.DOCKER);
+    const containers = list(ds.containers).map((raw) => ({
+      ...dockerNormalizers.normalizeContainer(raw as Container),
+      connectionId: "mock.docker.system",
+      connectionName: "System Docker",
+      engine: "docker",
+    }));
+    const volumes = list((ds.volumes as { Volumes: unknown[] }).Volumes).map((raw) => ({
+      ...dockerNormalizers.normalizeVolume(raw as any),
+      connectionId: "mock.docker.system",
+      connectionName: "System Docker",
+      engine: "docker",
+    }));
+
+    const groups = buildMountGroups(containers, volumes, "");
+    const mountRows = groups.flatMap((group) => group.items).filter((item) => item.kind === "mount");
+    const volumeRows = mountRows.filter((item) => item.kind === "mount" && item.mount.type === "volume");
+    const sizedRows = volumeRows.filter((item) => item.kind === "mount" && typeof item.mount.size === "number");
+
+    expect(volumeRows.length).toBeGreaterThan(0);
+    expect(sizedRows.length).toBe(volumeRows.length);
   });
 });

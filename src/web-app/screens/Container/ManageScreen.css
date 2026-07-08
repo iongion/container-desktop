@@ -1,17 +1,22 @@
+.ContainersTreeTable.AppDataTable thead tr th,
+.ContainersTreeTable.AppDataTable tbody tr td {
+  font-size: 12px;
+}
+
 [data-screen="containers"] .AppScreenContent th:nth-child(3),
-[data-screen="containers"] .AppScreenContent td:nth-child(3),
+[data-screen="containers"] .AppScreenContent tbody tr:not(.AppDataTableGroupRow) td:nth-child(3),
 [data-screen="containers"] .AppScreenContent th:nth-child(4),
-[data-screen="containers"] .AppScreenContent td:nth-child(4) {
+[data-screen="containers"] .AppScreenContent tbody tr:not(.AppDataTableGroupRow) td:nth-child(4) {
   width: 70px;
 }
 [data-screen="containers"] .AppScreenContent th:nth-child(5),
-[data-screen="containers"] .AppScreenContent td:nth-child(5),
+[data-screen="containers"] .AppScreenContent tbody tr:not(.AppDataTableGroupRow) td:nth-child(5),
 [data-screen="containers"] .AppScreenContent th:nth-child(7),
-[data-screen="containers"] .AppScreenContent td:nth-child(7) {
+[data-screen="containers"] .AppScreenContent tbody tr:not(.AppDataTableGroupRow) td:nth-child(7) {
   width: 140px;
 }
 [data-table="containers"] thead th:nth-child(2),
-[data-table="containers"] tbody td:nth-child(2) {
+[data-table="containers"] tbody tr:not(.AppDataTableGroupRow) td:nth-child(2) {
   text-align: left;
   /* Fixed width so windowing can't resize the Image column as rows scroll in/out — only the Name
      column (first child) is fluid. min-width is the hard floor (a plain width is just a hint under
@@ -21,13 +26,44 @@
   min-width: 240px;
   max-width: 240px;
 }
-/* Actions column (second-to-last; selection column is always last) stays shrink-to-fit. */
-[data-table="containers"] thead th:nth-last-child(2),
-[data-table="containers"] tbody tr:not(.AppDataTableGroupRow) td:nth-last-child(2) {
+/* Actions column stays shrink-to-fit even when the optional Appearance-controlled Engine column is visible. */
+[data-table="containers"] :is(th, td)[data-column="Actions"] {
   width: 1px !important;
+  min-width: 36px;
 }
 [data-table="containers"] tbody tr {
   position: relative;
+}
+[data-table="containers"] .ContainerConnectionMeta {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+[data-table="containers"] .ContainerConnectionSum {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+[data-table="containers"] .ContainerConnectionRow .AppDataTableGroupName .bp6-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+[data-table="containers"] .ContainerConnectionRow .AppDataTableGroupName .bp6-button .bp6-button-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  overflow: hidden;
+}
+[data-table="containers"] tbody tr.ContainerGroupRow td:first-child,
+[data-table="containers"] tbody tr.ContainerConnectionLeafRow td:first-child {
+  padding-left: 30px;
+}
+[data-table="containers"] tbody tr.ContainerNestedRow td:first-child {
+  padding-left: 62px;
+}
+[data-table="containers"] tbody tr.ContainerNestedRow .ContainerLeafLink {
+  left: 23px;
 }
 [data-table="containers"] .ContainerLogsButton,
 [data-table="containers"] .ContainerLayersButton {

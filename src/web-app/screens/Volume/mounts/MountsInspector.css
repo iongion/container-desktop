@@ -1,0 +1,89 @@
+/* Mounts inspector — the mount-specific styling layered on the shared grouped+virtualized table. Theme tokens
+   only; grouping / anti-wobble / scroll live in the shared groupedTable.css imported below. The tree has three
+   levels: connection (group header) → container branch (level 2, connector under the group caret) → mount leaf
+   (level 3, connector centered under the container cube above). */
+@import "../../../components/groupedTable/groupedTable.css";
+
+/* Type · Backend · Mode · Owner · Health — centered header + cell (columns 2-6). The tree column (1) stays left. */
+.MountsTable.AppDataTable thead th:nth-child(n + 2),
+.MountsTable.AppDataTable tbody td:nth-child(n + 2) {
+  text-align: center;
+}
+
+/* Level 3 (mount leaf): indented deeper than the container branch, with its tree connector centered under the
+   container's cube icon above (the branch connector stays at the group-caret column). The terminal shape
+   (data-link-location="last", vertical cropped to 50%) is the app's own rule — reused for the last / only mount
+   in a container. */
+/* Container branch: nudge the cube a touch left so it sits closer to its branch tick. */
+.MountsTable tbody tr.MountContainerRow td:first-child {
+  padding-left: 26px;
+}
+.MountsTable tbody tr.MountLeaf td:first-child {
+  padding-left: 62px;
+}
+/* Mount-leaf connector pipe, centered under the (nudged) container cube above. The continuing left trunk
+   (.MountTrunk) stays at the group-caret column (base .AppDataTableGroupLink left: 5px). */
+.MountsTable tbody tr.MountLeaf .MountLeafLink {
+  left: 32px;
+}
+.MountsTable tbody tr.MountLeafGlobalSort td:first-child {
+  padding-left: 10px;
+}
+
+.MountGlobalCell {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.34fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.MountGlobalContainerLink {
+  max-width: 220px;
+}
+
+/* Mount path: "<source> → <destination>" (monospace). */
+.MountPath {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.MountPath .MountSrc,
+.MountPath .MountArrow {
+  color: var(--app-text-muted);
+}
+.MountPath .MountDst {
+  color: var(--app-text);
+}
+
+/* bind / volume tag. */
+.MountTag {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--app-text-muted) 20%, transparent);
+  color: var(--app-text-muted);
+  text-transform: none;
+}
+
+.MountMode {
+  font-size: 11px;
+  color: var(--app-text);
+}
+.MountMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.MountMuted {
+  color: var(--app-text-muted);
+}
+.MountHealth {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--app-intent-success-rest) 20%, transparent);
+  color: var(--app-intent-success-text);
+}

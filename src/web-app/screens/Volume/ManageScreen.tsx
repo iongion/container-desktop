@@ -1,44 +1,42 @@
-import { Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
+import { Button, Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiScrewdriver } from "@mdi/js";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Volume } from "@/env/Types";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
-import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
+import { EngineCell, engineLabel } from "@/web-app/components/EngineCell";
+import { useGroupedVirtualRows } from "@/web-app/components/groupedTable/useGroupedVirtualRows";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
-  type MergedResource,
   mergedKey,
   useMergedResources,
   useResourceReload,
-  useShowEngineColumn,
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
-import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
+import { compareSortValues, type SortSelectors } from "@/web-app/utils/comparators";
 import { VolumeActionsMenu } from ".";
 import { useVolumeBulkActions } from "./bulkActions";
 import { getVolumeUrl } from "./Navigation";
+import { ScreenHeaderSectionsTabBar } from "./ScreenHeader";
+import { groupVolumesByConnection, type MergedVolume, type VolumeConnectionGroup } from "./volumeGroups";
 import "./ManageScreen.css";
 
 export const ID = "volumes";
 
 export interface ScreenProps extends AppScreenProps {}
 
-// Always-merged workspace: rows come from every connected engine, each carrying its engine/connection.
-type MergedVolume = MergedResource<Volume>;
+const COLUMN_COUNT = 5;
 
 const createVolumeSearchFilter = (searchTerm: string) => {
   const query = searchTerm.toLowerCase();
@@ -66,28 +64,35 @@ export const Screen: AppScreen<ScreenProps> = () => {
     currentConnector?.capabilities?.sort,
   );
   const volumeSnapshot = useMergedResources("volumes");
-  const volumes = useMemo(() => {
-    const items = searchTerm ? volumeSnapshot.filter(createVolumeSearchFilter(searchTerm)) : volumeSnapshot;
-    return clientSort
-      ? sortByField(items, clientSort, volumeSortSelectors)
-      : [...items].sort((a, b) => sortAlphaNum(a.Name, b.Name));
-  }, [clientSort, volumeSnapshot, searchTerm]);
+  const filteredVolumes = useMemo(
+    () => (searchTerm ? volumeSnapshot.filter(createVolumeSearchFilter(searchTerm)) : volumeSnapshot),
+    [volumeSnapshot, searchTerm],
+  );
+  const compareVolumes = useCallback(
+    (a: MergedVolume, b: MergedVolume) => {
+      if (clientSort) {
+        const selector = volumeSortSelectors[clientSort.field];
+        if (selector) {
+          return (clientSort.dir === "asc" ? 1 : -1) * compareSortValues(selector(a), selector(b));
+        }
+      }
+      return sortAlphaNum(a.Name, b.Name);
+    },
+    [clientSort],
+  );
+  const groups = useMemo(
+    () => groupVolumesByConnection(filteredVolumes, compareVolumes),
+    [compareVolumes, filteredVolumes],
+  );
+  const visibleItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((volume: MergedVolume) => mergedKey(volume, volume.Name), []);
-  const visibleIds = useMemo(() => volumes.map(getRowId), [volumes, getRowId]);
+  const visibleIds = useMemo(() => visibleItems.map(getRowId), [visibleItems, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useVolumeBulkActions();
-  const showEngineColumn = useShowEngineColumn();
+  const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
+    useGroupedVirtualRows({ groups, getRowKey: (volume) => getRowId(volume) });
   const showEngineRowAccent = useShowEngineRowAccent();
-  const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
-  const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
-    rows: volumes,
-    getScrollElement,
-    getRowKey: getRowId,
-    scrollMargin,
-    enabled: volumes.length > 0,
-  });
-  const columnCount = 5 + (showEngineColumn ? 1 : 0);
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("volumes");
 
@@ -102,7 +107,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             {selection.count > 0 ? (
               <>
                 <BulkActionsBar
-                  items={volumes}
+                  items={visibleItems}
                   getId={getRowId}
                   selectedIds={selection.selectedIds}
                   actions={bulkActions}
@@ -112,19 +117,28 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <Divider />
               </>
             ) : null}
-            <VolumeActionsMenu onReload={onReload} />
+            <VolumeActionsMenu
+              navigation={<ScreenHeaderSectionsTabBar isActive={(screen) => screen === "volumes.manage"} />}
+              onReload={onReload}
+            />
           </>
         }
       />
       <div className="AppScreenContent" ref={scrollElementRef}>
-        {volumes.length === 0 ? (
+        {groups.length === 0 ? (
           <NonIdealState
             icon={IconNames.GEOSEARCH}
             title={t("No results")}
             description={<p>{t("There are no volumes")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact className="AppDataTable" data-windowed="true" data-table="volumes">
+          <HTMLTable
+            interactive
+            compact
+            className="AppDataTable GroupedTable VolumesTable"
+            data-windowed="true"
+            data-table="volumes"
+          >
             <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
@@ -153,22 +167,75 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
-                <EngineColumnHeader visible={showEngineColumn} />
               </tr>
             </thead>
             <tbody>
-              <VirtualSpacerRow height={paddingTop} columnCount={columnCount} />
-              {items.map(({ row: volume, index, key }) => {
+              <VirtualSpacerRow height={paddingTop} columnCount={COLUMN_COUNT} />
+              {items.map(({ row: descriptor, index, key }) => {
+                const striped = index % 2 === 0 ? "true" : undefined;
+                if (descriptor.kind === "group-header") {
+                  const group = descriptor.group as VolumeConnectionGroup;
+                  const collapsed = isCollapsed(group.key);
+                  const groupIds = group.items.map(getRowId);
+                  const groupSelectedCount = groupIds.reduce((n, id) => n + (selection.isSelected(id) ? 1 : 0), 0);
+                  const groupChecked = groupIds.length > 0 && groupSelectedCount === groupIds.length;
+                  const groupIndeterminate = groupSelectedCount > 0 && groupSelectedCount < groupIds.length;
+                  return (
+                    <tr
+                      key={key}
+                      ref={measureRef}
+                      data-index={index}
+                      data-striped={striped}
+                      className="AppDataTableGroupRow"
+                      data-engine-row={showEngineRowAccent ? group.connection.engine : undefined}
+                    >
+                      <td className="AppDataTableGroupName" colSpan={COLUMN_COUNT - 1}>
+                        <Button
+                          variant="minimal"
+                          icon={collapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
+                          onClick={onGroupToggleClick}
+                          data-prefix-group={group.key}
+                          title={t("{{name}} volumes", { name: group.connection.name })}
+                          text={
+                            <>
+                              <EngineCell engine={group.connection.engine} connectionName={group.connection.name} />
+                              <span className="buttonTextLabel">{group.connection.name}</span>
+                              <span className="GroupedTableGroupMeta">{engineLabel(group.connection.engine)}</span>
+                              <span className="GroupedTableGroupSum">
+                                {group.items.length} {group.items.length === 1 ? t("volume") : t("volumes")}
+                              </span>
+                            </>
+                          }
+                        />
+                      </td>
+                      <td className="BulkSelectColumn">
+                        <SelectionCheckbox
+                          checked={groupChecked}
+                          indeterminate={groupIndeterminate}
+                          onChange={() => selection.toggleMany(groupIds)}
+                          title={t("Select all in group")}
+                        />
+                      </td>
+                    </tr>
+                  );
+                }
+                const volume = descriptor.item;
                 const rowId = key;
+                const linkLocation = descriptor.isFirst ? "first" : descriptor.isLast ? "last" : undefined;
                 return (
                   <tr
                     key={key}
                     ref={measureRef}
                     data-index={index}
-                    data-striped={index % 2 === 0 ? "true" : undefined}
+                    data-prefix-group={volume.connectionId}
+                    data-striped={striped}
                     data-engine-row={showEngineRowAccent ? volume.engine : undefined}
                   >
                     <td>
+                      <div className="AppDataTableGroupLink" data-link-location={linkLocation}>
+                        <div className="AppDataTableGroupLinkVertical" />
+                        <div className="AppDataTableGroupLinkHorizontal" />
+                      </div>
                       <AppDataTableLink
                         className="PodDetailsButton"
                         fillCell
@@ -189,15 +256,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         onChange={() => selection.toggle(rowId)}
                       />
                     </td>
-                    <EngineColumnCell
-                      visible={showEngineColumn}
-                      engine={volume.engine}
-                      connectionName={volume.connectionName}
-                    />
                   </tr>
                 );
               })}
-              <VirtualSpacerRow height={paddingBottom} columnCount={columnCount} />
+              <VirtualSpacerRow height={paddingBottom} columnCount={COLUMN_COUNT} />
             </tbody>
           </HTMLTable>
         )}
@@ -213,4 +275,5 @@ Screen.Route = {
 };
 Screen.Metadata = {
   LeftIcon: IconNames.DATABASE,
+  Tooltip: "Volumes and mounts",
 };

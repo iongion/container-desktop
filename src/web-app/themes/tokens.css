@@ -604,6 +604,16 @@ body.bp6-dark[data-engine] .AppLabelIcon {
   color: var(--app-text);
 }
 
+/* …EXCEPT a framework (.bp6-icon) or mdi (.ReactIcon) icon EMBEDDED IN A STATUS BADGE/PILL/CHIP, which takes the
+   badge's own (text) color — the badge sets `color`, so its icon must follow it (currentColor) to match the label,
+   NOT the standalone bright fill above. The mdi↔framework alignment still governs every truly-standalone icon;
+   engine glyphs are CSS masks (not .bp6-icon/.ReactIcon), so they stay untouched. Higher specificity (0,5,1) than
+   the standalone rule (0,4,1), so it wins. */
+body.bp6-dark[data-engine] :is(.TrustPill, .ConnTrustChip, .SecuritySeverityBadge, .LiveLogBadge)
+  :is(.bp6-icon, .bp6-icon-standard, .bp6-icon-large, .ReactIcon):not([class*="bp6-intent-"]) {
+  color: currentColor;
+}
+
 body[data-engine]
   :is(.bp6-callout, .bp6-toast, .bp6-tooltip, .bp6-progress-bar, .bp6-slider-progress, .bp6-spinner):is(
     .bp6-intent-primary,

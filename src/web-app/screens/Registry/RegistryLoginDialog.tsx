@@ -95,7 +95,7 @@ export function RegistryLoginDialog({
           <ButtonGroup fill>
             <Button
               type="submit"
-              intent={Intent.PRIMARY}
+              intent={Intent.SUCCESS}
               icon={IconNames.LOG_IN}
               text={t("Sign in")}
               disabled={!canSubmit}

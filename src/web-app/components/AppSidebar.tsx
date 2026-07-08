@@ -61,7 +61,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ disabled, screens, curre
             return (
               <AnchorButton
                 disabled={disabled || isDisabled}
-                title={isDisabled ? t("This feature is not available for current host") : undefined}
+                title={
+                  isDisabled
+                    ? t("This feature is not available for current host")
+                    : Screen.Metadata?.Tooltip
+                      ? t(Screen.Metadata.Tooltip)
+                      : undefined
+                }
                 active={currentScreen?.ID === Screen.ID}
                 href={pathTo(Screen.Route.Path)}
                 text={t(Screen.Title)}

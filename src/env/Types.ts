@@ -970,6 +970,9 @@ export interface Volume {
   Options: { [key: string]: string };
   Scope: string;
   Status: { [key: string]: string };
+  // Present only when the engine's volume list is queried with sizes (Docker `?size=true` → UsageData). Podman's
+  // libpod list omits it, so it stays undefined there.
+  UsageData?: { Size: number; RefCount: number };
 }
 
 export interface ContainerImagePortMapping {

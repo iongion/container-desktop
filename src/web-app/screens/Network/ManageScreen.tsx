@@ -1,4 +1,4 @@
-import { Code, Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
+import { Button, Code, Divider, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiDns, mdiEthernet, mdiInfinity, mdiNetwork, mdiScrewdriver } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -12,7 +12,9 @@ import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
-import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
+import { EngineCell, engineLabel } from "@/web-app/components/EngineCell";
+import type { ConnectionGroup } from "@/web-app/components/groupedTable/flattenConnectionGroups";
+import { useGroupedVirtualRows } from "@/web-app/components/groupedTable/useGroupedVirtualRows";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { sortAlphaNum } from "@/web-app/domain/utils";
@@ -22,13 +24,11 @@ import {
   mergedKey,
   useMergedResources,
   useResourceReload,
-  useShowEngineColumn,
   useShowEngineRowAccent,
 } from "@/web-app/hooks/useMergedResources";
-import { useTableScroll, useWindowedRows } from "@/web-app/hooks/useWindowedRows";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-import { type SortSelectors, sortByField } from "@/web-app/utils/comparators";
+import { compareSortValues, type SortSelectors } from "@/web-app/utils/comparators";
 
 import { ActionsMenu } from ".";
 import { useNetworkBulkActions } from "./bulkActions";
@@ -41,6 +41,15 @@ export const ID = "networks";
 
 // Always-merged workspace: rows come from every connected engine, each carrying its engine/connection.
 type MergedNetwork = MergedResource<Network>;
+interface NetworkConnectionGroup extends ConnectionGroup<MergedNetwork> {
+  connection: {
+    id: string;
+    name: string;
+    engine: string;
+  };
+}
+
+const COLUMN_COUNT = 9;
 
 const createNetworkSearchFilter = (searchTerm: string) => {
   const query = searchTerm.toLowerCase();
@@ -73,28 +82,56 @@ export const Screen: AppScreen<ScreenProps> = () => {
     currentConnector?.capabilities?.sort,
   );
   const networkSnapshot = useMergedResources("networks");
-  const networks = useMemo(() => {
-    const items = searchTerm ? networkSnapshot.filter(createNetworkSearchFilter(searchTerm)) : networkSnapshot;
-    return clientSort
-      ? sortByField(items, clientSort, networkSortSelectors)
-      : [...items].sort((a, b) => sortAlphaNum(a.name, b.name));
-  }, [clientSort, networkSnapshot, searchTerm]);
+  const filteredNetworks = useMemo(
+    () => (searchTerm ? networkSnapshot.filter(createNetworkSearchFilter(searchTerm)) : networkSnapshot),
+    [networkSnapshot, searchTerm],
+  );
+  const compareNetworks = useCallback(
+    (a: MergedNetwork, b: MergedNetwork) => {
+      if (clientSort) {
+        const selector = networkSortSelectors[clientSort.field];
+        if (selector) {
+          return (clientSort.dir === "asc" ? 1 : -1) * compareSortValues(selector(a), selector(b));
+        }
+      }
+      return sortAlphaNum(a.name, b.name);
+    },
+    [clientSort],
+  );
+  const groups = useMemo(() => {
+    const byConnection = new Map<string, NetworkConnectionGroup>();
+    for (const network of filteredNetworks) {
+      let group = byConnection.get(network.connectionId);
+      if (!group) {
+        group = {
+          key: network.connectionId,
+          connection: {
+            id: network.connectionId,
+            name: network.connectionName,
+            engine: `${network.engine}`,
+          },
+          items: [],
+        };
+        byConnection.set(network.connectionId, group);
+      }
+      group.items.push(network);
+    }
+    const list = [...byConnection.values()];
+    for (const group of list) {
+      group.items.sort(compareNetworks);
+    }
+    list.sort((a, b) => sortAlphaNum(a.connection.name, b.connection.name));
+    return list;
+  }, [compareNetworks, filteredNetworks]);
+  const networks = useMemo(() => groups.flatMap((group) => group.items), [groups]);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((network: MergedNetwork) => mergedKey(network, network.id), []);
   const visibleIds = useMemo(() => networks.map(getRowId), [networks, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useNetworkBulkActions();
-  const showEngineColumn = useShowEngineColumn();
   const showEngineRowAccent = useShowEngineRowAccent();
-  const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
-  const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
-    rows: networks,
-    getScrollElement,
-    getRowKey: getRowId,
-    scrollMargin,
-    enabled: networks.length > 0,
-  });
-  const columnCount = 9 + (showEngineColumn ? 1 : 0);
+  const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
+    useGroupedVirtualRows({ groups, getRowKey: (network) => getRowId(network) });
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("networks");
 
@@ -124,14 +161,20 @@ export const Screen: AppScreen<ScreenProps> = () => {
         }
       />
       <div className="AppScreenContent" ref={scrollElementRef}>
-        {networks.length === 0 ? (
+        {groups.length === 0 ? (
           <NonIdealState
             icon={IconNames.GEOSEARCH}
             title={t("No results")}
             description={<p>{t("There are no networks")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact className="AppDataTable" data-windowed="true" data-table="networks">
+          <HTMLTable
+            interactive
+            compact
+            className="AppDataTable GroupedTable"
+            data-windowed="true"
+            data-table="networks"
+          >
             <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
@@ -185,13 +228,61 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     title={t("Select all")}
                   />
                 </th>
-                <EngineColumnHeader visible={showEngineColumn} />
               </tr>
             </thead>
             <tbody>
-              <VirtualSpacerRow height={paddingTop} columnCount={columnCount} />
-              {items.map(({ row: network, index, key }) => {
+              <VirtualSpacerRow height={paddingTop} columnCount={COLUMN_COUNT} />
+              {items.map(({ row: descriptor, index, key }) => {
+                const striped = index % 2 === 0 ? "true" : undefined;
+                if (descriptor.kind === "group-header") {
+                  const group = descriptor.group as NetworkConnectionGroup;
+                  const collapsed = isCollapsed(group.key);
+                  const groupIds = group.items.map(getRowId);
+                  const groupSelectedCount = groupIds.reduce((n, id) => n + (selection.isSelected(id) ? 1 : 0), 0);
+                  const groupChecked = groupIds.length > 0 && groupSelectedCount === groupIds.length;
+                  const groupIndeterminate = groupSelectedCount > 0 && groupSelectedCount < groupIds.length;
+                  return (
+                    <tr
+                      key={key}
+                      ref={measureRef}
+                      data-index={index}
+                      data-striped={striped}
+                      className="AppDataTableGroupRow"
+                      data-engine-row={showEngineRowAccent ? group.connection.engine : undefined}
+                    >
+                      <td className="AppDataTableGroupName" colSpan={COLUMN_COUNT - 1}>
+                        <Button
+                          variant="minimal"
+                          icon={collapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
+                          onClick={onGroupToggleClick}
+                          data-prefix-group={group.key}
+                          title={t("{{name}} networks", { name: group.connection.name })}
+                          text={
+                            <>
+                              <EngineCell engine={group.connection.engine} connectionName={group.connection.name} />
+                              <span className="buttonTextLabel">{group.connection.name}</span>
+                              <span className="GroupedTableGroupMeta">{engineLabel(group.connection.engine)}</span>
+                              <span className="GroupedTableGroupSum">
+                                {group.items.length} {group.items.length === 1 ? t("network") : t("networks")}
+                              </span>
+                            </>
+                          }
+                        />
+                      </td>
+                      <td className="BulkSelectColumn">
+                        <SelectionCheckbox
+                          checked={groupChecked}
+                          indeterminate={groupIndeterminate}
+                          onChange={() => selection.toggleMany(groupIds)}
+                          title={t("Select all in group")}
+                        />
+                      </td>
+                    </tr>
+                  );
+                }
+                const network = descriptor.item;
                 const rowId = key;
+                const linkLocation = descriptor.isFirst ? "first" : descriptor.isLast ? "last" : undefined;
                 const creationDate =
                   typeof network.created === "string" ? dayjs(network.created) : dayjs(Number(network.created) * 1000);
                 return (
@@ -199,11 +290,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     key={key}
                     ref={measureRef}
                     data-index={index}
-                    data-striped={index % 2 === 0 ? "true" : undefined}
+                    data-prefix-group={network.connectionId}
+                    data-striped={striped}
                     data-network={network.id}
                     data-engine-row={showEngineRowAccent ? network.engine : undefined}
                   >
                     <td>
+                      <div className="AppDataTableGroupLink" data-link-location={linkLocation}>
+                        <div className="AppDataTableGroupLinkVertical" />
+                        <div className="AppDataTableGroupLinkHorizontal" />
+                      </div>
                       <AppDataTableLink
                         className="InspectNetworkButton"
                         fillCell
@@ -231,15 +327,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                         onChange={() => selection.toggle(rowId)}
                       />
                     </td>
-                    <EngineColumnCell
-                      visible={showEngineColumn}
-                      engine={network.engine}
-                      connectionName={network.connectionName}
-                    />
                   </tr>
                 );
               })}
-              <VirtualSpacerRow height={paddingBottom} columnCount={columnCount} />
+              <VirtualSpacerRow height={paddingBottom} columnCount={COLUMN_COUNT} />
             </tbody>
           </HTMLTable>
         )}

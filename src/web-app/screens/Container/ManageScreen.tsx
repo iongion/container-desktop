@@ -23,9 +23,11 @@ import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { BulkActionsBar, SelectionCheckbox, useBulkSelection } from "@/web-app/components/Bulk";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { connectedConnections, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
-import { EngineColumnCell, EngineColumnHeader } from "@/web-app/components/EngineCell";
+import { EngineCell, EngineColumnCell, EngineColumnHeader, engineLabel } from "@/web-app/components/EngineCell";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
+import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
@@ -46,8 +48,8 @@ import { ActionsMenu } from ".";
 import { useContainerBulkActions } from "./bulkActions";
 import { isComposeGroup } from "./composeGroups";
 import { tearDownStack } from "./composeQueries";
-import { type ContainerRowDescriptor, flattenGroups } from "./flattenGroups";
-import { groupContainersAcrossConnections } from "./grouping";
+import { type ContainerConnectionGroup, type ContainerRowDescriptor, flattenGroups } from "./flattenGroups";
+import { groupContainers } from "./grouping";
 import { aggregateStatus, statusLabel, statusTone } from "./health";
 import { ImportStackDrawer } from "./ImportStackDrawer";
 import { enrichHealth, useComposeHealth } from "./useComposeHealth";
@@ -59,6 +61,7 @@ export const ID = "containers";
 
 // Always-merged: rows from every connected engine, each carrying its engine/connection.
 type MergedContainer = MergedResource<Container>;
+const COLUMN_COUNT = 8;
 
 // Stable (module-level) virtualizer callbacks — avoids re-creating them per render.
 const getDescriptorKey = (descriptor: ContainerRowDescriptor): string => descriptor.key;
@@ -104,8 +107,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   // overlay it before grouping so the row dot + group rollup (both read Computed.Health) work uniformly.
   const composeHealth = useComposeHealth(merged);
   const withHealth = useMemo(() => enrichHealth(merged, composeHealth), [merged, composeHealth]);
-  // Group WITHIN each connection so identically-named groups on different engines never merge.
-  const groups = useMemo(() => {
+  // Three-level tree: Connection → existing container group → container leaves. Group WITHIN each connection
+  // so identically-named groups on different engines never merge.
+  const connectionGroups = useMemo<ContainerConnectionGroup[]>(() => {
     const byConnection = new Map<string, MergedContainer[]>();
     for (const container of withHealth) {
       const list = byConnection.get(container.connectionId);
@@ -115,13 +119,33 @@ export const Screen: AppScreen<ScreenProps> = () => {
         byConnection.set(container.connectionId, [container]);
       }
     }
-    return groupContainersAcrossConnections([...byConnection.values()], searchTerm, clientSort);
+    const groups: ContainerConnectionGroup[] = [];
+    for (const containers of byConnection.values()) {
+      const first = containers[0];
+      const containerGroups = groupContainers(containers, searchTerm, clientSort);
+      if (first && containerGroups.length > 0) {
+        groups.push({
+          key: first.connectionId,
+          connection: {
+            id: first.connectionId,
+            name: first.connectionName,
+            engine: `${first.engine}`,
+          },
+          groups: containerGroups,
+        });
+      }
+    }
+    groups.sort((a, b) => sortAlphaNum(a.connection.name, b.connection.name));
+    return groups;
   }, [withHealth, searchTerm, clientSort]);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((container: MergedContainer) => mergedKey(container, container.Id), []);
   // Flatten the groups into the exact ordered <tr> sequence (group header + members, collapse-aware),
   // then window it — only the visible rows reach the DOM. Replaces the progressive-reveal hook.
-  const rows = useMemo(() => flattenGroups(groups, collapse, getRowId), [groups, collapse, getRowId]);
+  const rows = useMemo(
+    () => flattenGroups(connectionGroups, collapse, getRowId),
+    [connectionGroups, collapse, getRowId],
+  );
   const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
   const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
     rows,
@@ -129,10 +153,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
     getRowKey: getDescriptorKey,
     estimateRowHeight: estimateContainerRowHeight,
     scrollMargin,
-    enabled: groups.length > 0,
+    enabled: connectionGroups.length > 0,
   });
-  const columnCount = 8 + (showEngineColumn ? 1 : 0);
-  const visibleItems = useMemo(() => groups.flatMap((group) => group.Items) as MergedContainer[], [groups]);
+  const columnCount = COLUMN_COUNT + (showEngineColumn ? 1 : 0);
+  const visibleItems = useMemo(
+    () =>
+      connectionGroups.flatMap((connectionGroup) =>
+        connectionGroup.groups.flatMap((group) => group.Items),
+      ) as MergedContainer[],
+    [connectionGroups],
+  );
   const visibleIds = useMemo(() => visibleItems.map(getRowId), [visibleItems, getRowId]);
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useContainerBulkActions();
@@ -257,30 +287,37 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <Divider />
               </>
             ) : null}
-            {podmanConnections.length > 0 ? (
-              <Button
-                size="small"
-                intent={Intent.SUCCESS}
-                icon={IconNames.IMPORT}
-                text={t("Import stack")}
-                title={t("Import a stack from a compose file")}
-                onClick={openImport}
-              />
-            ) : null}
-            <Divider />
-            <ActionsMenu onReload={onReload} />
+            <ResourceListActions
+              actions={
+                podmanConnections.length > 0
+                  ? {
+                      icon: IconNames.IMPORT,
+                      text: t("Import stack"),
+                      title: t("Import a stack from a compose file"),
+                      onClick: openImport,
+                    }
+                  : undefined
+              }
+              onReload={onReload}
+            />
           </>
         }
       />
       <div className="AppScreenContent" ref={scrollElementRef}>
-        {groups.length === 0 ? (
+        {connectionGroups.length === 0 ? (
           <NonIdealState
             icon={IconNames.GEOSEARCH}
             title={t("No results")}
             description={<p>{t("There are no containers")}</p>}
           />
         ) : (
-          <HTMLTable compact interactive className="AppDataTable" data-windowed="true" data-table="containers">
+          <HTMLTable
+            compact
+            interactive
+            className="AppDataTable ContainersTreeTable"
+            data-windowed="true"
+            data-table="containers"
+          >
             <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
@@ -329,6 +366,73 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <VirtualSpacerRow height={paddingTop} columnCount={columnCount} />
               {items.map(({ row: descriptor, index, key }) => {
                 const striped = index % 2 === 0 ? "true" : undefined;
+                if (descriptor.kind === "connection-header") {
+                  const connectionGroup = descriptor.connectionGroup;
+                  const containers = connectionGroup.groups.flatMap((group) => group.Items) as MergedContainer[];
+                  const connectionIds = containers.map(getRowId);
+                  const connectionSelectedCount = connectionIds.reduce(
+                    (n, id) => n + (selection.isSelected(id) ? 1 : 0),
+                    0,
+                  );
+                  const connectionChecked =
+                    connectionIds.length > 0 && connectionSelectedCount === connectionIds.length;
+                  const connectionIndeterminate =
+                    connectionSelectedCount > 0 && connectionSelectedCount < connectionIds.length;
+                  const containerCount = containers.length;
+                  const isCollapsed = !!collapse[descriptor.connectionKey];
+                  return (
+                    <tr
+                      key={key}
+                      ref={measureRef}
+                      data-index={index}
+                      data-striped={striped}
+                      className="AppDataTableGroupRow ContainerConnectionRow"
+                      data-engine-row={showEngineRowAccent ? connectionGroup.connection.engine : undefined}
+                      onFocus={onContainerFocus}
+                      onMouseOver={onGroupMouseOver}
+                    >
+                      <td className="AppDataTableGroupName" colSpan={COLUMN_COUNT - 1}>
+                        <Button
+                          variant="minimal"
+                          icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
+                          text={
+                            <>
+                              <EngineCell
+                                engine={connectionGroup.connection.engine}
+                                connectionName={connectionGroup.connection.name}
+                              />
+                              <span className="buttonTextLabel">{connectionGroup.connection.name}</span>
+                              <span className="ContainerConnectionMeta">
+                                {engineLabel(connectionGroup.connection.engine)}
+                              </span>
+                              <span className="ContainerConnectionSum">
+                                {containerCount} {containerCount === 1 ? t("container") : t("containers")}
+                              </span>
+                            </>
+                          }
+                          title={t("{{name}} containers", {
+                            name: connectionGroup.connection.name,
+                          })}
+                          onClick={onGroupToggleClick}
+                          data-prefix-group={descriptor.connectionKey}
+                        />
+                      </td>
+                      <td className="BulkSelectColumn">
+                        <SelectionCheckbox
+                          checked={connectionChecked}
+                          indeterminate={connectionIndeterminate}
+                          onChange={() => selection.toggleMany(connectionIds)}
+                          title={t("Select all in connection")}
+                        />
+                      </td>
+                      <EngineColumnCell
+                        visible={showEngineColumn}
+                        engine={connectionGroup.connection.engine}
+                        connectionName={connectionGroup.connection.name}
+                      />
+                    </tr>
+                  );
+                }
                 if (descriptor.kind === "group-header") {
                   const group = descriptor.group;
                   const containers = group.Items as MergedContainer[];
@@ -347,13 +451,23 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       key={key}
                       ref={measureRef}
                       data-index={index}
+                      data-prefix-group={descriptor.connectionKey}
                       data-striped={striped}
-                      className="AppDataTableGroupRow"
+                      className="AppDataTableGroupRow ContainerGroupRow"
                       data-engine-row={showEngineRowAccent ? containers[0].engine : undefined}
                       onFocus={onContainerFocus}
                       onMouseOver={onGroupMouseOver}
                     >
                       <td className="AppDataTableGroupName">
+                        <div
+                          className="AppDataTableGroupLink ContainerConnectionLink"
+                          data-link-location={
+                            descriptor.isLastInConnection && !descriptor.hasVisibleChildren ? "last" : undefined
+                          }
+                        >
+                          <div className="AppDataTableGroupLinkVertical" />
+                          <div className="AppDataTableGroupLinkHorizontal" />
+                        </div>
                         <Button
                           variant="minimal"
                           icon={isCollapsed ? IconNames.CARET_RIGHT : IconNames.CARET_DOWN}
@@ -516,18 +630,34 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   linkLocation = "last";
                 }
                 const groupLink = isPartOfGroup ? (
-                  <div className="AppDataTableGroupLink" data-link-location={linkLocation}>
-                    <div className="AppDataTableGroupLinkVertical"></div>
-                    <div className="AppDataTableGroupLinkHorizontal"></div>
+                  <>
+                    {descriptor.isLastGroupInConnection ? null : (
+                      <div className="AppDataTableGroupLink ContainerConnectionTrunk">
+                        <div className="AppDataTableGroupLinkVertical" />
+                      </div>
+                    )}
+                    <div className="AppDataTableGroupLink ContainerLeafLink" data-link-location={linkLocation}>
+                      <div className="AppDataTableGroupLinkVertical" />
+                      <div className="AppDataTableGroupLinkHorizontal" />
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className="AppDataTableGroupLink ContainerConnectionLink"
+                    data-link-location={descriptor.isLastGroupInConnection ? "last" : undefined}
+                  >
+                    <div className="AppDataTableGroupLinkVertical" />
+                    <div className="AppDataTableGroupLinkHorizontal" />
                   </div>
-                ) : undefined;
+                );
                 return (
                   <tr
                     key={key}
                     ref={measureRef}
                     data-index={index}
                     data-striped={striped}
-                    data-prefix-group={isPartOfGroup ? groupName : undefined}
+                    data-prefix-group={isPartOfGroup ? descriptor.groupKey : descriptor.connectionKey}
+                    className={isPartOfGroup ? "ContainerNestedRow" : "ContainerConnectionLeafRow"}
                     data-container={container.Id}
                     data-container-key={rowId}
                     data-engine-row={showEngineRowAccent ? container.engine : undefined}

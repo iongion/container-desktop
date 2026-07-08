@@ -16,6 +16,7 @@ import {
   serializeSecurityReport,
   serializeStats,
 } from "./common";
+import { serializeMounts } from "./mounts";
 
 const VOLUME_ROOT = "/var/lib/docker/volumes";
 
@@ -67,11 +68,7 @@ function listContainer(container: LogicalContainer): unknown {
     Pid: container.pid,
     Ports: ports(container),
     Labels: container.labels,
-    Mounts: container.mounts.map((mount) => ({
-      Type: "volume",
-      Name: mount.volumeName,
-      Destination: mount.destination,
-    })),
+    Mounts: serializeMounts(container.mounts, VOLUME_ROOT),
     NetworkSettings: { Networks: { [container.network.name]: networkEntry(container, false) } },
   };
 }
@@ -124,21 +121,13 @@ function inspectContainer(container: LogicalContainer): unknown {
       NetworkMode: container.network.name,
       PortBindings: portBindings(container),
       Mounts: container.mounts.map((mount) => ({
-        Type: "volume",
-        Source: mount.volumeName,
+        Type: mount.type,
+        Source: mount.type === "bind" ? mount.source : mount.volumeName,
         Target: mount.destination,
+        ReadOnly: !!mount.readOnly,
       })),
     },
-    Mounts: container.mounts.map((mount) => ({
-      Type: "volume",
-      Name: mount.volumeName,
-      Source: `${VOLUME_ROOT}/${mount.volumeName}/_data`,
-      Destination: mount.destination,
-      Driver: "local",
-      Mode: "rw",
-      RW: true,
-      Propagation: "",
-    })),
+    Mounts: serializeMounts(container.mounts, VOLUME_ROOT),
     Ports: ports(container),
     NetworkSettings: {
       Ports: portBindings(container),
@@ -195,6 +184,7 @@ function dockerVolumes(dataset: LogicalDataset): { Volumes: unknown[]; Warnings:
       Name: volume.name,
       Options: {},
       Scope: "local",
+      UsageData: { Size: volume.sizeBytes, RefCount: 1 },
     })),
     Warnings: null,
   };

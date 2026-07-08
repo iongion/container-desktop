@@ -130,7 +130,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = memo(
             <ButtonGroup fill>
               <Button
                 disabled={pending}
-                intent={Intent.PRIMARY}
+                intent={Intent.SUCCESS}
                 icon={IconNames.KEY}
                 title={t("Click to launch creation")}
                 text={t("Create")}

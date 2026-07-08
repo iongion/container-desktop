@@ -69,6 +69,7 @@ import { Screen as CompatibilityScreen } from "@/web-app/screens/Troubleshoot/Co
 import { Screen as TroubleshootScreen } from "@/web-app/screens/Troubleshoot/Troubleshoot";
 import { Screen as VolumeInspectScreen } from "@/web-app/screens/Volume/InspectScreen";
 import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
+import { Screen as MountsScreen } from "@/web-app/screens/Volume/mounts/MountsScreen";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 
@@ -106,6 +107,7 @@ const Screens = [
   SecretInspectScreen,
   VolumesScreen,
   VolumeInspectScreen,
+  MountsScreen,
   UserSettingsScreen,
   ConnectionsScreen,
   ConnectionInfoScreen,

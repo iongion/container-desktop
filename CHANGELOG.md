@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-backend release pipelines `CDPipeline.{Tauri,Electron,Wails}.yml` (from `build-matrix.cjs`); Tauri stays the default publisher
 - Wails remote-control/E2E driver `support/wails-mcp.mjs` over the built-in MCP server (JS eval, DOM inspection, X11 screenshots)
 - Wails website-screenshot capture backend (`--backend=wails`) via MCP `js_eval` + X11 grab
+- **Mounts inspector** — per-connection container → mount tree with sizes and mock probe results
+- Connection-grouped list views for Images, Registries, Pods, Machines, Networks, Secrets, Volumes and Swarm
+- Containers list now nests connection → group → container while keeping the Appearance-controlled Engine column
 
 ### Fixed
 
@@ -36,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stack teardown also removes the project's networks — libpod names them with a lowercase `name` field the teardown wasn't reading
 - Container groups now sort ahead of standalone containers across **all** connected engines under any sort
 - Linux AppImage no longer aborts at startup with `EGL_BAD_PARAMETER` on rolling-release distros — packaging strips the bundled host graphics libs so it uses the host's Mesa/Wayland stack
+- List headers/actions are unified: standalone CTAs, nav tabs before minimal refresh/more, centered non-name columns
+- Connection menu uses a solid green connected glyph instead of the broken-link outline
 
 ## [6.0.0] - 2026-07-06
 

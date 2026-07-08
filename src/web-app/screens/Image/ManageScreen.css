@@ -1,3 +1,5 @@
+@import "../../components/groupedTable/groupedTable.css";
+
 .AppDataTable[data-table="images"] th {
   padding-left: var(--app-data-table-items-padding);
   padding-right: var(--app-data-table-items-padding);

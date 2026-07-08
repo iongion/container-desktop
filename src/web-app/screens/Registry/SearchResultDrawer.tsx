@@ -95,7 +95,7 @@ export const SearchResultDrawer: React.FC<SearchResultDrawerProps> = ({
             <Button
               type="submit"
               disabled={pending}
-              intent={Intent.PRIMARY}
+              intent={Intent.SUCCESS}
               icon={IconNames.DOWNLOAD}
               title={t("Click to launch retrieval")}
               text={t("Pull latest")}

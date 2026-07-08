@@ -16,6 +16,7 @@ import {
   serializeSecurityReport,
   serializeStats,
 } from "./common";
+import { serializeMounts } from "./mounts";
 
 const VOLUME_ROOT = "/var/lib/containers/storage/volumes";
 
@@ -57,7 +58,7 @@ function listContainer(container: LogicalContainer): unknown {
     Pid: container.pid,
     Ports: ports(container),
     Labels: container.labels,
-    Mounts: container.mounts.map((mount) => `${VOLUME_ROOT}/${mount.volumeName}/_data`),
+    Mounts: serializeMounts(container.mounts, VOLUME_ROOT),
     Networks: [container.network.name],
     Pod: "",
     PodName: "",
@@ -94,14 +95,7 @@ function inspectContainer(container: LogicalContainer): unknown {
     Ports: ports(container),
     Labels: container.labels,
     HostConfig: { PortBindings: portBindings(container) },
-    Mounts: container.mounts.map((mount) => ({
-      Type: "volume",
-      Name: mount.volumeName,
-      Source: `${VOLUME_ROOT}/${mount.volumeName}/_data`,
-      Destination: mount.destination,
-      Mode: "rw",
-      RW: true,
-    })),
+    Mounts: serializeMounts(container.mounts, VOLUME_ROOT),
     Networks: [container.network.name],
     NetworkSettings: {
       Networks: {

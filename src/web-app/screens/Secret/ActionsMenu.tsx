@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import type { Secret } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -99,23 +100,30 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
   ) : undefined;
   return (
     <>
-      <ButtonGroup className={secret ? "ResourceItemInlineActionsMenu" : undefined}>
-        {startButton}
-        {onReload && (
-          <>
-            {startButton ? <Divider /> : null}
-            <Button
-              size="small"
-              variant="minimal"
-              intent={Intent.NONE}
-              title={t("Reload current list")}
-              icon={IconNames.REFRESH}
-              onClick={onReload}
-            />
-          </>
-        )}
-        {removeWidget}
-      </ButtonGroup>
+      {!secret && onReload ? (
+        <ResourceListActions
+          actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
+          onReload={onReload}
+        />
+      ) : (
+        <ButtonGroup className={secret ? "ResourceItemInlineActionsMenu" : undefined}>
+          {startButton}
+          {onReload && (
+            <>
+              {startButton ? <Divider /> : null}
+              <Button
+                size="small"
+                variant="minimal"
+                intent={Intent.NONE}
+                title={t("Reload current list")}
+                icon={IconNames.REFRESH}
+                onClick={onReload}
+              />
+            </>
+          )}
+          {removeWidget}
+        </ButtonGroup>
+      )}
       {withCreate && <CreateDrawer onClose={onCreateSecretClose} />}
     </>
   );

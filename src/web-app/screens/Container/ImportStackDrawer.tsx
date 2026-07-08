@@ -295,7 +295,7 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
               <Button
                 type="submit"
                 disabled={pending || !model || podConflicts.length > 0}
-                intent={Intent.PRIMARY}
+                intent={Intent.SUCCESS}
                 icon={IconNames.IMPORT}
                 title={t("Import the stack")}
                 text={t("Import")}

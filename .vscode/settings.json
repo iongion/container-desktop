@@ -396,6 +396,7 @@
     "rootfs",
     "rootfull",
     "rpmbuild",
+    "rprivate",
     "Rsvg",
     "RUNTIMES",
     "rustc",

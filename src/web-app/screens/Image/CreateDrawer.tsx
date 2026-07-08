@@ -234,7 +234,7 @@ export const CreateDrawer: React.FC<CreateDrawerProps> = ({
               <Button
                 type="submit"
                 disabled={pending}
-                intent={Intent.PRIMARY}
+                intent={Intent.SUCCESS}
                 icon={IconNames.CUBE_ADD}
                 title={t("Click to launch creation")}
                 text={t("Create and start")}

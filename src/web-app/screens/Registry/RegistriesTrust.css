@@ -101,13 +101,13 @@
   overflow: auto;
 }
 
-/* Registries table — every column except the first (Registry name) and last (Actions) is horizontally centered
-   (header + body). The group-header cell is a single colSpan td (`:first-child` of its row) so it's untouched. */
-.TrustTable[data-table="trust-registries"] thead th:not(:first-child):not(:last-child),
-.TrustTable[data-table="trust-registries"] tbody td:not(:first-child):not(:last-child) {
+/* Registries table — every column except the first (Registry name) is horizontally centered (header + body).
+   The group-header cell is a single colSpan td (`:first-child` of its row) so it's untouched. */
+.TrustTable[data-table="trust-registries"] thead th:not(:first-child),
+.TrustTable[data-table="trust-registries"] tbody td:not(:first-child) {
   text-align: center;
 }
-.TrustTable[data-table="trust-registries"] tbody td:not(:first-child):not(:last-child) .TrustPill {
+.TrustTable[data-table="trust-registries"] tbody td:not(:first-child) .TrustPill {
   justify-content: center;
 }
 
@@ -179,13 +179,20 @@
   width: 1px;
 }
 
+/* TLS and Certificate contain wider pills/buttons than their header labels. Keep their measured max-content
+   footprint even when virtualization/collapse temporarily removes the widest rows from the DOM. */
+.TrustTable[data-table="trust-registries"] :is(th, td):nth-child(2),
+.TrustTable[data-table="trust-registries"] :is(th, td):nth-child(4) {
+  min-width: 104px;
+}
+
 /* The ONE genuinely fixed column: the login/logout actions. A fixed min-width so "Log in" (icon+text) and
    "Log out" (text) occupy the same slot, and so it never collapses to nothing when every group is closed
    (its header is empty, so the 1px trick alone would shrink it away). */
 .TrustTable.AppDataTable :is(th, td)[data-column="Actions"] {
   width: 118px !important;
   min-width: 118px;
-  text-align: right;
+  text-align: center;
 }
 /* Certificates / Proxy have no login/logout — their trailing column shrinks to fit like the content ones. */
 .TrustTable.AppDataTable.TrustTable--certs :is(th, td)[data-column="Actions"],

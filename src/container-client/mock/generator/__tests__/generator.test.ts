@@ -113,6 +113,14 @@ describe("generator per-engine raw shapes", () => {
     expect(Array.isArray((docker.volumes as { Volumes: unknown[] }).Volumes)).toBe(true);
   });
 
+  it("volumes: docker carries UsageData size; podman list omits Docker-only UsageData", () => {
+    const dockerVolume = (docker.volumes as { Volumes: any[] }).Volumes[0];
+    const podmanVolume = list(podman.volumes)[0];
+    expect(dockerVolume.UsageData).toMatchObject({ Size: expect.any(Number), RefCount: 1 });
+    expect(dockerVolume.UsageData.Size).toBeGreaterThan(0);
+    expect(podmanVolume.UsageData).toBeUndefined();
+  });
+
   it("networks: podman is canonical lowercase, docker is PascalCase with IPAM/EnabledIPv6", () => {
     const pn = list(podman.networks)[0];
     expect(pn.name && pn.driver && pn.id).toBeTruthy();

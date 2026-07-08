@@ -282,7 +282,7 @@ export const InitializeDrawer: React.FC<InitializeDrawerProps> = ({ connectionId
               <Button
                 type="submit"
                 disabled={pending}
-                intent={Intent.PRIMARY}
+                intent={Intent.SUCCESS}
                 icon={IconNames.PLUS}
                 title={t("Click to initialize the Swarm")}
                 text={t("Initialize Swarm")}

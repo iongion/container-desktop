@@ -1,0 +1,70 @@
+/* Shared styling for connection-grouped, virtualized tables (Mounts, Volumes, Registries) — the anti-wobble
+ * column contract + group-header layout, lifted from the registries table so every grouped table matches.
+ * The base group band / tree-link connectors (.AppDataTableGroupRow / .AppDataTableGroupName /
+ * .AppDataTableGroupLink) and the windowed sticky-header (.AppDataTable[data-windowed]) are the app's own global
+ * rules (App.css) — this file only adds the column widths + the group-header button fill. Theme tokens only.
+ *
+ * Add `GroupedTable` alongside `AppDataTable` on the <table>; wrap it in `.GroupedTableScroll`. */
+
+/* The scroll container: takes the remaining height and scrolls; the .AppDataTable sticky thead keeps the header
+   fixed while the body scrolls (same as the Containers/Registries lists — table not boxed in a card). */
+.GroupedTableScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Anti-wobble contract: the first (name) column is greedy so it soaks up all slack, every other content column
+   shrinks to fit its content via the app's 1px trick. Because the thead th carry these widths, collapsing every
+   group (zero child rows) can't move a column. Applied to BOTH thead th and tbody td. */
+.GroupedTable.AppDataTable thead tr th,
+.GroupedTable.AppDataTable tbody tr td {
+  text-align: left;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.GroupedTable.AppDataTable thead th:first-child,
+.GroupedTable.AppDataTable tbody td:first-child {
+  width: 100%;
+  min-width: 200px;
+}
+.GroupedTable.AppDataTable thead th:not(:first-child):not([data-column="Actions"]),
+.GroupedTable.AppDataTable tbody td:not(:first-child):not([data-column="Actions"]) {
+  width: 1px;
+}
+.GroupedTable.AppDataTable thead th:not(:first-child),
+.GroupedTable.AppDataTable tbody td:not(:first-child) {
+  text-align: center;
+}
+/* Opt-in fixed trailing Actions column (screens that have one add data-column="Actions" + this width). Kept out
+   of the shrink-to-fit rule above so an empty-header actions column never collapses to nothing when all groups
+   are closed. Screens without actions simply never set data-column="Actions", so their last column shrinks. */
+.GroupedTable.AppDataTable :is(th, td)[data-column="Actions"] {
+  text-align: center;
+}
+
+/* The group-header toggle fills its (greedy) name cell so the whole band is one click target; its contents —
+   caret, engine glyph, name, meta — are one aligned flex row. */
+.GroupedTable.AppDataTable .AppDataTableGroupName .bp6-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+.GroupedTable.AppDataTable .AppDataTableGroupName .bp6-button .bp6-button-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Engine label + item count sit at the right of the full-width group button (name stays left). */
+.GroupedTableGroupMeta {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.GroupedTableGroupSum {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}

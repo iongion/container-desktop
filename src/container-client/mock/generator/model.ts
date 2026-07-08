@@ -65,8 +65,11 @@ export interface LogicalPort {
 }
 
 export interface LogicalMount {
-  volumeName: string;
+  type: "bind" | "volume";
+  volumeName?: string;
+  source?: string;
   destination: string;
+  readOnly?: boolean;
 }
 
 export interface LogicalContainer {
@@ -113,6 +116,7 @@ export interface LogicalVolume {
   name: string;
   driver: string;
   createdAt: Date;
+  sizeBytes: number;
   labels: Record<string, string>;
 }
 
@@ -350,14 +354,44 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
       });
     }
 
+    // idHex is drawn here (moved up from the literal below, ahead of the no-faker mount block, so the faker
+    // draw ORDER is unchanged and the dataset stays byte-stable). Its first byte seeds a deterministic
+    // per-container mount spread: most containers get 1-2, some 0, a few up to the realistic cap of 5 — a mix
+    // of named volume, rw source bind and ro config/secret binds, like a real engine's list mounts.
+    const idHex = hex(faker, 64);
+    const mountSpread = Number.parseInt(idHex.slice(0, 2) || "0", 16);
+    const isStateful = ["db", "cache", "redis", "warehouse", "queue"].includes(service);
     const mounts: LogicalMount[] = [];
-    if (["db", "cache", "redis", "warehouse", "queue"].includes(service)) {
-      mounts.push({ volumeName: `${project}-${service}`, destination: mountDestination(image.repo) });
+    if (isStateful) {
+      mounts.push({ type: "volume", volumeName: `${project}-${service}`, destination: mountDestination(image.repo) });
+    } else if (mountSpread % 4 !== 0) {
+      // app/service container: bind-mounts its source tree (rw) — the classic dev inner-loop mount.
+      mounts.push({ type: "bind", source: `/home/dev/src/${project}/${service}`, destination: "/app" });
+    }
+    if (mountSpread % 3 === 0) {
+      // a dependency volume kept off the host bind (e.g. node_modules).
+      mounts.push({ type: "volume", volumeName: `${project}-${service}-deps`, destination: "/app/node_modules" });
+    }
+    if (mountSpread % 5 === 0) {
+      // a read-only config bind.
+      mounts.push({
+        type: "bind",
+        source: `/etc/${project}/${service}.conf`,
+        destination: "/etc/app/config.conf",
+        readOnly: true,
+      });
+    }
+    if (mountSpread % 7 === 0) {
+      // a read-only secrets / TLS bind.
+      mounts.push({ type: "bind", source: `/etc/${project}/tls`, destination: "/run/secrets", readOnly: true });
+    }
+    if (mounts.length > 5) {
+      mounts.length = 5;
     }
 
     const host = network.nextHost++;
     const container: LogicalContainer = {
-      idHex: hex(faker, 64),
+      idHex,
       project,
       service,
       replica,
@@ -442,6 +476,33 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
   // Volumes
   const volumes: LogicalVolume[] = [];
   const usedVolumeNames = new Set<string>();
+  const mountedVolumeProjects = new Map<string, string>();
+  for (const container of containers) {
+    for (const mount of container.mounts) {
+      if (mount.type === "volume" && mount.volumeName && !mountedVolumeProjects.has(mount.volumeName)) {
+        mountedVolumeProjects.set(mount.volumeName, container.project);
+      }
+    }
+  }
+
+  const addVolume = (name: string, project: string): void => {
+    if (usedVolumeNames.has(name)) {
+      return;
+    }
+    usedVolumeNames.add(name);
+    volumes.push({
+      name,
+      driver: "local",
+      createdAt: faker.date.recent({ days: 21 }),
+      sizeBytes: faker.number.int({ min: 1_000_000, max: 12_000_000_000 }),
+      labels: { [labelKeys.project]: project },
+    });
+  };
+
+  for (const [name, project] of mountedVolumeProjects) {
+    addVolume(name, project);
+  }
+
   let volumeIndex = 0;
   while (volumes.length < counts.volumes) {
     const stem = VOLUME_STEMS[volumeIndex % VOLUME_STEMS.length];
@@ -449,16 +510,7 @@ export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, co
     const project = PROJECT_TEMPLATES[volumeIndex % PROJECT_TEMPLATES.length].name;
     volumeIndex += 1;
     const name = round === 0 ? `${project}-${stem}` : `${project}-${stem}-${round + 1}`;
-    if (usedVolumeNames.has(name)) {
-      continue;
-    }
-    usedVolumeNames.add(name);
-    volumes.push({
-      name,
-      driver: "local",
-      createdAt: faker.date.recent({ days: 21 }),
-      labels: { [labelKeys.project]: project },
-    });
+    addVolume(name, project);
   }
 
   // Secrets
