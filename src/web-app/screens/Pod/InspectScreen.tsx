@@ -1,6 +1,6 @@
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/i18n";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -8,6 +8,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
+import { buildPodSummary } from "./inspectSummary";
 import { usePod } from "./queries";
 
 export const ID = "pod.inspect";
@@ -30,7 +31,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader pod={pod} currentScreen={ID} />
       <div className="AppScreenContent">
-        <CodeEditor value={`${JSON.stringify(pod || {}, null, 2)}`} mode="json" />
+        <InspectSummary rows={buildPodSummary(pod)} dataTable="pod.inspect-summary" />
+        <InspectRawJson value={JSON.stringify(pod || {}, null, 2)} />
       </div>
     </div>
   );

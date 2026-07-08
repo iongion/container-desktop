@@ -3,14 +3,15 @@ import { IconNames } from "@blueprintjs/icons";
 import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/env/Types";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { connectedConnections, isDockerConnection } from "@/web-app/components/ConnectionSelect";
+import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
+import { buildSwarmSummary } from "./inspectSummary";
 import { ServicesTable } from "./ManageScreen";
 import { getSwarmCrumbs, getSwarmTabUrl, type SwarmInspectSegment } from "./Navigation";
 import { type SwarmInspectKind, useRemoveService, useScaleService, useSwarmInspect, useSwarmServices } from "./queries";
@@ -103,7 +104,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
         breadcrumbs={getSwarmCrumbs(kind, title, connectionId)}
       />
       <div className="AppScreenContent">
-        <CodeEditor value={JSON.stringify(entity, null, 2)} />
+        <InspectSummary rows={buildSwarmSummary(entity, inspectKind)} dataTable="swarm.inspect-summary" />
+        <InspectRawJson value={JSON.stringify(entity, null, 2)} />
       </div>
     </div>
   );

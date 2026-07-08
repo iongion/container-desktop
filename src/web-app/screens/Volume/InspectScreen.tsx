@@ -1,7 +1,7 @@
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -9,6 +9,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { VolumeActionsMenu } from ".";
 import "./InspectScreen.css";
+import { buildVolumeSummary } from "./inspectSummary";
 import { getVolumeCrumbs } from "./Navigation";
 import { useVolume } from "./queries";
 
@@ -37,7 +38,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
         rightContent={<VolumeActionsMenu volume={volume} withoutCreate />}
       />
       <div className="AppScreenContent">
-        <CodeEditor value={JSON.stringify(volume, null, 2)} />
+        <InspectSummary rows={buildVolumeSummary(volume)} dataTable="volume.inspect-summary" />
+        <InspectRawJson value={JSON.stringify(volume, null, 2)} />
       </div>
     </div>
   );

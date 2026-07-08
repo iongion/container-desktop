@@ -3,13 +3,14 @@ import { IconNames } from "@blueprintjs/icons";
 import { useState } from "react";
 
 import i18n, { t } from "@/i18n";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
+import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { useSystemInfo } from "./queries";
 import { ScreenHeader } from "./ScreenHeader";
+import { buildSystemInfoSummary } from "./systemInfoSummary";
 
 import "./SystemInfoScreen.css";
 
@@ -37,7 +38,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
     contentWidget = <ScreenLoader screen={ID} pending={pending} />;
   } else {
     if (provisioned && running) {
-      contentWidget = <CodeEditor value={JSON.stringify(systemInfo, null, 2)} />;
+      contentWidget = (
+        <>
+          <InspectSummary rows={buildSystemInfoSummary(systemInfo, selected?.engine)} dataTable="system-info.summary" />
+          <InspectRawJson value={JSON.stringify(systemInfo, null, 2)} />
+        </>
+      );
     } else {
       contentWidget = (
         <NonIdealState

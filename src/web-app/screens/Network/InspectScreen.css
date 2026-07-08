@@ -1,17 +1,4 @@
-.NetworkInspectDisplay {
-  font-size: 12px;
-  color: #ccc;
-  line-height: 1.4em;
-}
-[data-table="network.inspect"] tr td {
-  text-align: left;
-  font-family: var(--monospace-font);
-}
-[data-table="network.inspect"] tr td:first-child {
-  width: 50%;
-}
-[data-table="network.inspect"] [data-table-row="group.name"] td {
-  background: #000;
-  font-family: sans-serif;
-  font-size: 18px;
-}
+/* Network inspect styling now comes from the shared InspectSummary component
+   (components/InspectSummary.css). The former `[data-table="network.inspect"]` / `.NetworkInspectDisplay`
+   rules were dead (this screen renders the shared summary table + raw JSON, not a grouped
+   `network.inspect` table) and used hardcoded colors, so they were removed. */

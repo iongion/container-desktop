@@ -112,3 +112,15 @@
   font-weight: normal;
   color: var(--app-text);
 }
+
+/* Container inspect stacks THREE sections (summary + Env/Mounts/Ports groups + raw JSON), so the content
+   area scrolls and the JSON frame is bounded (rather than flex-filling) — otherwise tall groups would
+   squeeze the editor to zero. Higher specificity than the shared `.InspectCodeEditor` rule, so no tie. */
+.AppScreen[data-screen="container.inspect"] .AppScreenContent {
+  overflow: auto;
+}
+.AppScreen[data-screen="container.inspect"] .InspectCodeEditor {
+  flex: 0 0 auto;
+  min-height: 320px;
+  max-height: 50vh;
+}

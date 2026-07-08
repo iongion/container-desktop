@@ -3,6 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { CopyButton } from "@/web-app/components/CopyButton";
+import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
@@ -12,6 +13,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
 import i18n from "@/i18n";
+import { buildContainerSummary } from "./inspectSummary";
 import { useContainer } from "./queries";
 
 interface InspectGroupValues {
@@ -90,6 +92,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
+        <InspectSummary rows={buildContainerSummary(container)} dataTable="container.inspect-summary" />
         <HTMLTable compact striped className="AppDataTable" data-table="container.inspect">
           <tbody>
             {groups.map((group) => {
@@ -151,6 +154,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             })}
           </tbody>
         </HTMLTable>
+        <InspectRawJson value={JSON.stringify(container, null, 2)} />
       </div>
     </div>
   );

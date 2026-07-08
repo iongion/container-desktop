@@ -1,12 +1,13 @@
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/i18n";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { ScreenHeader } from ".";
+import { buildMachineSummary } from "./inspectSummary";
 import { useMachine } from "./queries";
 
 import "./InspectScreen.css";
@@ -30,7 +31,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader machine={machine} connectionId={connectionId} currentScreen={ID} />
       <div className="AppScreenContent">
-        <CodeEditor value={JSON.stringify(machine, null, 2)} />
+        <InspectSummary rows={buildMachineSummary(machine)} dataTable="machine.inspect-summary" />
+        <InspectRawJson value={JSON.stringify(machine, null, 2)} />
       </div>
     </div>
   );

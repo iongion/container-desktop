@@ -50,8 +50,6 @@ const SEVERITY_LABELS: Record<(typeof SEVERITIES)[number], string> = {
   UNKNOWN: i18n.t("Unknown"),
 };
 const SEVERITY_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
-// How many SBOM packages to preview inline before the "+N more" honesty line (Export ships the full document).
-const SBOM_PREVIEW_LIMIT = 12;
 
 // Severity donut colours, aligned to the unified theme's intents (this per-image screen is always unified).
 const SEVERITY_COLORS: Record<string, string> = {
@@ -136,6 +134,27 @@ function sortFindingsBy(findings: SecurityFinding[], sort: { field: string; dir:
   });
 }
 
+// Column sort for the SBOM package table — string compare on the chosen field, tie-broken by package name.
+function sortSbomBy(packages: SbomPackage[], sort: { field: string; dir: "asc" | "desc" }): SbomPackage[] {
+  const mul = sort.dir === "asc" ? 1 : -1;
+  const text = (pkg: SbomPackage) => {
+    switch (sort.field) {
+      case "version":
+        return pkg.version || "";
+      case "type":
+        return pkg.type || "";
+      case "license":
+        return pkg.license || "";
+      default:
+        return pkg.name || "";
+    }
+  };
+  return [...packages].sort((a, b) => {
+    const delta = text(a).localeCompare(text(b));
+    return delta !== 0 ? mul * delta : (a.name || "").localeCompare(b.name || "");
+  });
+}
+
 function findingKey(group: SecurityReportResultGroup, vulnerability: SecurityVulnerability): string {
   return (
     vulnerability.guid ||
@@ -195,6 +214,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const [loginOpen, setLoginOpen] = useState(false);
   // Column sort for the (virtualized) findings table; severity-first by default, like the entity lists.
   const [sort, setSort] = useState<{ field: string; dir: "asc" | "desc" }>({ field: "severity", dir: "asc" });
+  // Column sort for the (virtualized) SBOM package table; by package name by default.
+  const [sbomSort, setSbomSort] = useState<{ field: string; dir: "asc" | "desc" }>({ field: "name", dir: "asc" });
   const { id } = useRouteParams<{ id: string }>();
   const { connId } = useRouteSearch<{ connId?: string }>();
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
@@ -276,6 +297,38 @@ export const Screen: AppScreen<ScreenProps> = () => {
     scrollMargin,
     estimateRowHeight: () => 84,
     enabled: scanned,
+  });
+
+  // The SBOM inventory is its own virtualized table, using the same scroll/windowing machinery as the findings.
+  const sortedSbom = useMemo(() => sortSbomBy(sbomPackages, sbomSort), [sbomPackages, sbomSort]);
+  const toggleSbomSort = useCallback((field: string) => {
+    setSbomSort((current) =>
+      current.field === field ? { field, dir: current.dir === "asc" ? "desc" : "asc" } : { field, dir: "asc" },
+    );
+  }, []);
+  const sbomSortDirection = useCallback(
+    (field: string) => (sbomSort.field === field ? sbomSort.dir : undefined),
+    [sbomSort],
+  );
+  const {
+    scrollElementRef: sbomScrollRef,
+    theadRef: sbomTheadRef,
+    scrollMargin: sbomScrollMargin,
+    getScrollElement: getSbomScrollElement,
+  } = useTableScroll();
+  const getSbomRowKey = useCallback((pkg: SbomPackage) => `${pkg.name}@${pkg.version}@${pkg.type}`, []);
+  const {
+    items: sbomItems,
+    paddingTop: sbomPaddingTop,
+    paddingBottom: sbomPaddingBottom,
+    measureRef: sbomMeasureRef,
+  } = useWindowedRows({
+    rows: sortedSbom,
+    getScrollElement: getSbomScrollElement,
+    getRowKey: getSbomRowKey,
+    scrollMargin: sbomScrollMargin,
+    estimateRowHeight: () => 33,
+    enabled: scanned && sbomPackages.length > 0,
   });
 
   // Donut slices for the severity + license distributions (Mend-style).
@@ -504,56 +557,37 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 description={<p>{t("An internal error occurred, please report the issue.")}</p>}
               />
             ) : scanned ? (
-              <>
-                <div className="SecurityVulnOverview">
-                  <Donut slices={severitySlices} centerValue={totalCount} centerLabel={t("findings")} size={172} />
-                  <div className="SecurityVulnMeta">
-                    <div className="SecuritySeverityFilters">
-                      {SEVERITIES.map((severity) => {
-                        const active = selectedSeverities.includes(severity);
-                        const count = severityCount(counts, severity);
-                        return (
-                          <Switch
-                            key={severity}
-                            className="SecuritySeverityFilter"
-                            checked={active}
-                            onChange={() => toggleSeverityFilter(severity)}
-                            aria-label={t("Filter by {{severity}}", { severity: t(SEVERITY_LABELS[severity]) })}
-                            labelElement={
-                              <span className="SecuritySeverityFilterLabel" data-empty={count === 0 ? "yes" : "no"}>
-                                <span className="SecuritySeverityCountPill" data-severity={severity}>
-                                  {count}
-                                </span>
-                                <span className="SecuritySeverityFilterText">{t(SEVERITY_LABELS[severity])}</span>
+              <div className="SecurityVulnLayout">
+                <div className="SecurityVulnAside">
+                  <Donut
+                    slices={severitySlices}
+                    centerValue={totalCount}
+                    centerLabel={t("findings")}
+                    size={172}
+                    showEmptyTrack
+                  />
+                  <div className="SecuritySeverityFilters">
+                    {SEVERITIES.map((severity) => {
+                      const active = selectedSeverities.includes(severity);
+                      const count = severityCount(counts, severity);
+                      return (
+                        <Switch
+                          key={severity}
+                          className="SecuritySeverityFilter"
+                          checked={active}
+                          onChange={() => toggleSeverityFilter(severity)}
+                          aria-label={t("Filter by {{severity}}", { severity: t(SEVERITY_LABELS[severity]) })}
+                          labelElement={
+                            <span className="SecuritySeverityFilterLabel" data-empty={count === 0 ? "yes" : "no"}>
+                              <span className="SecuritySeverityCountPill" data-severity={severity}>
+                                {count}
                               </span>
-                            }
-                          />
-                        );
-                      })}
-                    </div>
-                    <div className="SecurityScannerMeta">
-                      <span>
-                        {t("Scanner")} <strong>{report?.scanner?.name || "trivy"}</strong>
-                        {report?.scanner?.version ? <code>{report.scanner.version}</code> : null}
-                      </span>
-                      <span>
-                        {t("Database")} <strong>{report?.scanner?.database?.VulnerabilityDB?.Version || "—"}</strong>
-                      </span>
-                      <span>
-                        {t("Updated")}{" "}
-                        <strong>{formatRelativeDate(report?.scanner?.database?.VulnerabilityDB?.UpdatedAt)}</strong>
-                      </span>
-                      <AnchorButton
-                        className="SecurityExternalLink"
-                        icon={IconNames.LINK}
-                        href="https://trivy.dev"
-                        target="_blank"
-                        rel="noopener"
-                        size="small"
-                        variant="minimal"
-                        text="trivy.dev"
-                      />
-                    </div>
+                              <span className="SecuritySeverityFilterText">{t(SEVERITY_LABELS[severity])}</span>
+                            </span>
+                          }
+                        />
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="SecurityFindingsScroll" ref={scrollElementRef}>
@@ -678,7 +712,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </tbody>
                   </HTMLTable>
                 </div>
-              </>
+              </div>
             ) : (
               <div className="SecurityRunPrompt">
                 <Icon icon={IconNames.HELP} size={22} className="SecurityRunPromptIcon" />
@@ -693,76 +727,163 @@ export const Screen: AppScreen<ScreenProps> = () => {
               </div>
             )}
           </div>
+          {scanned ? (
+            <div className="SecurityPanelFooter">
+              <div className="SecurityScannerMeta">
+                <span>
+                  {t("Scanner")} <strong>{report?.scanner?.name || "trivy"}</strong>
+                  {report?.scanner?.version ? <code>{report.scanner.version}</code> : null}
+                </span>
+                <span>
+                  {t("Database")} <strong>{report?.scanner?.database?.VulnerabilityDB?.Version || "—"}</strong>
+                </span>
+                <span>
+                  {t("Updated")}{" "}
+                  <strong>{formatRelativeDate(report?.scanner?.database?.VulnerabilityDB?.UpdatedAt)}</strong>
+                </span>
+                <AnchorButton
+                  className="SecurityExternalLink"
+                  icon={IconNames.LINK}
+                  href="https://trivy.dev"
+                  target="_blank"
+                  rel="noopener"
+                  size="small"
+                  variant="minimal"
+                  text="trivy.dev"
+                />
+              </div>
+            </div>
+          ) : null}
         </section>
 
-        {/* SBOM (Trivy output) — produced by the same scan; preview + export. */}
+        {/* SBOM (Trivy output) — the full package inventory as a virtualized table; export lives in the header. */}
         <section className="SecurityPanel">
           <h5 className="SecurityPanelTitle">
             <Icon icon={IconNames.DIAGRAM_TREE} />
             <span>{t("SBOM")}</span>
             <span className="SecurityPanelHint">Trivy · SPDX / CycloneDX</span>
+            {scanned && sbomPackages.length ? (
+              <ButtonGroup className="SecuritySbomExport" variant="outlined">
+                <Button
+                  icon={IconNames.EXPORT}
+                  text={t("Export SPDX")}
+                  onClick={() => onExport("spdx-json")}
+                  disabled={exportSbom.isPending}
+                  size="small"
+                />
+                <Button
+                  icon={IconNames.EXPORT}
+                  text={t("Export CycloneDX")}
+                  onClick={() => onExport("cyclonedx")}
+                  disabled={exportSbom.isPending}
+                  size="small"
+                />
+              </ButtonGroup>
+            ) : null}
           </h5>
           <div className="SecurityPanelBody">
             {scanned && sbomPackages.length ? (
-              <>
-                <div className="SecuritySbomList">
-                  {sbomPackages.slice(0, SBOM_PREVIEW_LIMIT).map((pkg) => (
-                    <div className="SecuritySbomRow" key={`${pkg.name}@${pkg.version}@${pkg.type}`}>
-                      <span className="SecurityMono">{pkg.name}</span>
-                      <span className="SecurityMuted SecurityMono">{pkg.version}</span>
-                      <span className="SecurityMuted">{pkg.license || "—"}</span>
-                    </div>
-                  ))}
-                </div>
-                {sbomPackages.length > SBOM_PREVIEW_LIMIT ? (
-                  <div className="SecurityMuted SecuritySbomMore">
-                    {t("+{{count}} more packages", { count: sbomPackages.length - SBOM_PREVIEW_LIMIT })}
-                  </div>
-                ) : null}
-                {licenseSlices.length ? (
-                  <div className="SecurityLicenseDist">
-                    <Donut
-                      slices={licenseSlices}
-                      centerValue={licenseSlices.length}
-                      centerLabel={t("license types")}
-                      size={172}
-                    />
-                    <div className="SecurityLicenseLegend">
-                      {licenseSlices.map((slice) => (
-                        <div className="SecurityLicenseLegendItem" key={slice.key}>
-                          <span className="SecurityLicenseSwatch" style={{ background: slice.color }} />
-                          <span className="SecurityLicenseName" title={slice.label}>
-                            {slice.label}
-                          </span>
-                          <span className="SecurityLicenseCount">×{slice.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <ButtonGroup className="SecuritySbomActions" variant="outlined">
-                  <Button
-                    icon={IconNames.EXPORT}
-                    text={t("Export SPDX")}
-                    onClick={() => onExport("spdx-json")}
-                    disabled={exportSbom.isPending}
-                    size="small"
-                  />
-                  <Button
-                    icon={IconNames.EXPORT}
-                    text={t("Export CycloneDX")}
-                    onClick={() => onExport("cyclonedx")}
-                    disabled={exportSbom.isPending}
-                    size="small"
-                  />
-                </ButtonGroup>
-              </>
+              <div className="SecurityFindingsScroll" ref={sbomScrollRef}>
+                <HTMLTable
+                  compact
+                  interactive
+                  className="AppDataTable SecuritySbomTable"
+                  data-windowed="true"
+                  data-table="image.sbom.packages"
+                >
+                  <colgroup>
+                    <col className="SecuritySbomColumnName" />
+                    <col className="SecuritySbomColumnVersion" />
+                    <col className="SecuritySbomColumnType" />
+                    <col className="SecuritySbomColumnLicense" />
+                  </colgroup>
+                  <thead ref={sbomTheadRef}>
+                    <tr>
+                      <SortableColumnHeader field="name" direction={sbomSortDirection("name")} onSort={toggleSbomSort}>
+                        {t("Package")}
+                      </SortableColumnHeader>
+                      <SortableColumnHeader
+                        field="version"
+                        direction={sbomSortDirection("version")}
+                        onSort={toggleSbomSort}
+                      >
+                        {t("Version")}
+                      </SortableColumnHeader>
+                      <SortableColumnHeader field="type" direction={sbomSortDirection("type")} onSort={toggleSbomSort}>
+                        {t("Type")}
+                      </SortableColumnHeader>
+                      <SortableColumnHeader
+                        field="license"
+                        direction={sbomSortDirection("license")}
+                        onSort={toggleSbomSort}
+                      >
+                        {t("License")}
+                      </SortableColumnHeader>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <VirtualSpacerRow height={sbomPaddingTop} columnCount={4} />
+                    {sbomItems.map(({ row: pkg, index, key }) => {
+                      const striped = index % 2 === 0 ? "true" : undefined;
+                      return (
+                        <tr key={key} ref={sbomMeasureRef} data-index={index} data-striped={striped}>
+                          <td className="SecuritySbomCellName SecurityMono">{pkg.name}</td>
+                          <td className="SecuritySbomCellVersion SecurityMono">{pkg.version}</td>
+                          <td className="SecuritySbomCellType">{pkg.type}</td>
+                          <td className="SecuritySbomCellLicense">{pkg.license || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                    <VirtualSpacerRow height={sbomPaddingBottom} columnCount={4} />
+                  </tbody>
+                </HTMLTable>
+              </div>
             ) : (
               <div className="SecurityRunPrompt">
                 <Icon icon={IconNames.DIAGRAM_TREE} size={22} className="SecurityRunPromptIcon" />
                 <div className="SecurityRunPromptText">
                   <b>{t("Generated with the scan")}</b>
                   <div className="SecurityMuted">{t("The Trivy pass emits the SBOM after scan")}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Licenses — the SBOM's license-type breakdown, in its own panel. */}
+        <section className="SecurityPanel">
+          <h5 className="SecurityPanelTitle">
+            <Icon icon={IconNames.PIE_CHART} />
+            <span>{t("Licenses")}</span>
+            <span className="SecurityPanelHint">Trivy</span>
+          </h5>
+          <div className="SecurityPanelBody">
+            {scanned && licenseSlices.length ? (
+              <div className="SecurityLicenseDist">
+                <Donut
+                  slices={licenseSlices}
+                  centerValue={licenseSlices.length}
+                  centerLabel={t("license types")}
+                  size={172}
+                />
+                <div className="SecurityLicenseLegend">
+                  {licenseSlices.map((slice) => (
+                    <div className="SecurityLicenseLegendItem" key={slice.key}>
+                      <span className="SecurityLicenseSwatch" style={{ background: slice.color }} />
+                      <span className="SecurityLicenseName" title={slice.label}>
+                        {slice.label}
+                      </span>
+                      <span className="SecurityLicenseCount">×{slice.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="SecurityRunPrompt">
+                <Icon icon={IconNames.PIE_CHART} size={22} className="SecurityRunPromptIcon" />
+                <div className="SecurityRunPromptText">
+                  <b>{t("License breakdown")}</b>
+                  <div className="SecurityMuted">{t("Summarized from the SBOM after a scan")}</div>
                 </div>
               </div>
             )}

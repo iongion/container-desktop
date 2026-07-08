@@ -176,12 +176,11 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   fill: currentColor !important;
 }
 
-/* Findings footer — the single Expand all / Collapse control. */
-.SecurityFindingsFootRow td {
-  padding: 6px 8px !important;
-  border-top: 1px solid var(--app-border) !important;
+/* Panel footer — a muted metadata line pinned below the body (mirrors Build Studio's .panel-footer). */
+.SecurityPanelFooter {
+  padding: 8px 12px;
+  border-top: 1px solid var(--app-border);
   background: var(--app-surface);
-  text-align: center !important;
 }
 
 /* Key/value facts. */
@@ -270,32 +269,48 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   color: var(--app-text);
 }
 
-/* SBOM preview. */
-.SecuritySbomRow {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 10px;
-  padding: 4px 0;
-  border-top: 1px solid var(--app-border);
+/* SBOM — the package inventory as a virtualized table (reuses .SecurityFindingsScroll's box). Package name is the
+   only flexible column; version / type / license shrink to content. */
+.AppDataTable[data-table="image.sbom.packages"] {
+  width: 100%;
+  min-width: 620px;
+  color: var(--app-text);
+  table-layout: auto;
 }
 
-.SecuritySbomRow:first-child {
-  border-top: 0;
+.AppDataTable[data-table="image.sbom.packages"] .SecuritySbomColumnName {
+  width: 100%;
 }
 
-.SecuritySbomMore {
-  margin-top: 8px;
-  font-size: 12px;
+.AppDataTable[data-table="image.sbom.packages"] .SecuritySbomColumnVersion,
+.AppDataTable[data-table="image.sbom.packages"] .SecuritySbomColumnType,
+.AppDataTable[data-table="image.sbom.packages"] .SecuritySbomColumnLicense {
+  width: 1px;
 }
 
-.SecuritySbomActions {
-  margin-top: 14px;
+.SecuritySbomCellVersion,
+.SecuritySbomCellType,
+.SecuritySbomCellLicense {
+  color: var(--app-text-muted);
+  white-space: nowrap;
+}
+
+/* Export buttons sit in the SBOM panel header after the hint; undo the title's uppercase on their labels. */
+.SecurityPanelTitle .SecuritySbomExport {
+  margin-left: 12px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* Distribution donut (recharts) with a centered total overlaid in the hole. */
 .SecurityDonut {
   position: relative;
   flex: 0 0 auto;
+}
+
+/* The centered total is a later DOM sibling than the chart, so lift the hover tooltip above it. */
+.SecurityDonut .recharts-tooltip-wrapper {
+  z-index: 5;
 }
 
 .SecurityDonutCenter {
@@ -323,38 +338,53 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   text-transform: uppercase;
 }
 
-/* Vulnerabilities: severity donut on the left, filter chips + total on the right. */
-.SecurityVulnOverview {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 12px;
+/* All-clear ring drawn for a clean scan (0 findings) via Donut's showEmptyTrack, so the empty state still reads
+   as a chart. Stroke is a theme token, so it re-tints per engine/mode — recharts can't (it sets `fill` as an SVG
+   attribute, where var() does not resolve). Geometry (r=40, stroke-width=18) matches the recharts ring. */
+.SecurityDonutTrack {
+  width: 100%;
+  height: 100%;
 }
 
-/* Right column beside the donut: filter chips, then the scanner meta directly under them. */
-.SecurityVulnMeta {
-  flex: 1;
-  min-width: 0;
+.SecurityDonutTrack circle {
+  fill: none;
+  stroke: color-mix(in srgb, var(--app-intent-success-rest) 45%, var(--app-surface-strong));
+}
+
+/* Vulnerabilities: two columns in one row — chart + filters aside (left), findings table (right). */
+.AppScreen[data-screen="image.security"] .SecurityVulnLayout {
+  display: grid;
+  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* Left column: donut (centered) above the severity filters. No divider — the table carries its own border. */
+.SecurityVulnAside {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 16px;
 }
 
-.SecurityVulnMeta .SecuritySeverityFilters {
+.SecurityVulnAside .SecuritySeverityFilters {
+  width: 100%;
   margin-bottom: 0;
 }
 
-.SecurityVulnMeta .SecurityScannerMeta {
-  margin-top: 0;
+/* Narrow: stack the columns. */
+@media (max-width: 900px) {
+  .AppScreen[data-screen="image.security"] .SecurityVulnLayout {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* SBOM licenses — Mend layout: donut on the left, multi-column license-name legend on the right. */
+/* Licenses panel — Mend layout: donut on the left, multi-column license-name legend on the right. */
 .SecurityLicenseDist {
   display: flex;
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  margin-top: 14px;
 }
 
 .SecurityLicenseLegend {
@@ -397,20 +427,9 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 .AppScreen[data-screen="image.security"] .SecuritySeverityFilters {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 8px;
   margin-bottom: 10px;
-}
-
-.SecurityScanTotal {
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.SecurityScanTotalLabel {
-  color: var(--app-text-muted);
-  font-size: 12px;
 }
 
 .SecuritySeverityBadge,
@@ -457,6 +476,11 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 120px;
+  max-width: 120px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .SecuritySeverityFilterText {
@@ -469,7 +493,7 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
+  min-width: 35px;
   height: 18px;
   padding: 0 7px;
   border-radius: 999px;
@@ -551,7 +575,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 10px;
   color: var(--app-text-muted);
   font-size: 11px;
 }

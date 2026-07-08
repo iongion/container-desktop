@@ -16,10 +16,14 @@ interface DonutProps {
   centerValue: number | string;
   centerLabel: string;
   size?: number;
+  // When there are no non-zero slices, draw a faint full "all-clear" ring instead of an empty hole, so the
+  // donut still reads as a chart. The ring is colored via the .SecurityDonutTrack CSS class (theme token) — its
+  // geometry (r=40, strokeWidth=18 in a 100×100 viewBox) matches recharts' innerRadius 62% / outerRadius 98%.
+  showEmptyTrack?: boolean;
 }
 
 // A compact donut with a centered total. Zero-value slices are dropped so empty severities don't render a sliver.
-export const Donut: React.FC<DonutProps> = ({ slices, centerValue, centerLabel, size = 172 }) => {
+export const Donut: React.FC<DonutProps> = ({ slices, centerValue, centerLabel, size = 172, showEmptyTrack }) => {
   // recharts 3 reads each sector's colour from the datum's `fill` (the `<Cell>` child is deprecated).
   const data = slices.filter((slice) => slice.value > 0).map((slice) => ({ ...slice, fill: slice.color }));
   return (
@@ -51,6 +55,10 @@ export const Donut: React.FC<DonutProps> = ({ slices, centerValue, centerLabel, 
             />
           </PieChart>
         </ResponsiveContainer>
+      ) : showEmptyTrack ? (
+        <svg className="SecurityDonutTrack" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="40" fill="none" strokeWidth="18" />
+        </svg>
       ) : null}
       <div className="SecurityDonutCenter">
         <span className="SecurityDonutValue">{centerValue}</span>

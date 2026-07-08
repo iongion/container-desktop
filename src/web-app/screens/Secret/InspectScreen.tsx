@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -11,6 +11,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { SecretActionsMenu } from ".";
 import "./InspectScreen.css";
+import { buildSecretSummary } from "./inspectSummary";
 import { getSecretCrumbs } from "./Navigation";
 import { useSecret } from "./queries";
 
@@ -53,7 +54,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
         rightContent={<SecretActionsMenu secret={secret} withoutCreate />}
       />
       <div className="AppScreenContent">
-        <CodeEditor value={JSON.stringify(secret, null, 2)} />
+        <InspectSummary rows={buildSecretSummary(secret)} dataTable="secret.inspect-summary" />
+        <InspectRawJson value={JSON.stringify(secret, null, 2)} />
       </div>
     </div>
   );

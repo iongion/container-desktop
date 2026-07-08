@@ -1,0 +1,42 @@
+/* Shared summary table + raw-JSON layout for every resource Inspect screen.
+   Mirrors the proven ConnectionInfoScreen recipe; theme tokens only (no hardcoded colors). */
+
+/* Property column shrinks to its content and is bold; value column fills the rest. */
+.AppDataTable.InspectSummary tr td:first-child {
+  width: 1px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.AppDataTable.InspectSummary tr th:nth-child(2),
+.AppDataTable.InspectSummary tr td:nth-child(2) {
+  width: 100%;
+  text-align: left;
+}
+.AppDataTable.InspectSummary .InspectSummaryValue--mono {
+  font-family: var(--monospace-font);
+}
+
+/* Stacked layout inside the flex-column .AppScreenContent: the summary table and the section header sit
+   at their natural height and never shrink; the raw-JSON frame absorbs the remaining space so Monaco
+   (height:100%) fills it and scrolls internally. Because the table/header cannot shrink, the default
+   `overflow:visible` on the content area (CodeEditor.css) is harmless here — nothing overflows. */
+.InspectSummary,
+.InspectSectionTitle {
+  flex: 0 0 auto;
+}
+/* Element-qualified so it beats Blueprint's `.bp6-heading` default size (a bare `.InspectSectionTitle`
+   ties on specificity and loses). Compact section label matching the app's other headers. */
+h5.InspectSectionTitle {
+  margin: 0;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  /* Matches the table header surface in both themes. */
+  background: var(--app-surface-strong);
+}
+.InspectCodeEditor {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 1px solid var(--app-border);
+}
