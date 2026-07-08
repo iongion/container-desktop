@@ -1,0 +1,266 @@
+/* Engine Health cockpit — GLOBAL fleet view, grouped by connection. Ported from the approved mockup
+   (.scratch/engine-health-cockpit/index.html), scoped under .EngineHealth and driven entirely by --app-*
+   theme tokens (unified/teal chrome; per-connection identity = engine glyph + verdict-colored left border). */
+
+/* Separate the first card from the header (the shared section header has no bottom margin of its own). */
+.EngineHealth .AppScreenHeader {
+  margin-bottom: 10px;
+}
+.EngineHealth .AppScreenContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+/* Keep the cards at their natural height so the content area scrolls instead of squishing/clipping them (the
+   cards use overflow:hidden for their rounded corners, which would crop under flex compression). */
+.EngineHealth .ConnCard {
+  flex-shrink: 0;
+}
+
+/* Fleet-status widget — lives inline in the single ScreenHeader (beside Copy diagnostics + Re-run) */
+.EngineHealth .EngineHealthHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.EngineHealth .EngineHealthHead .fleetCounts {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+}
+.EngineHealth .EngineHealthHead .fb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--app-text);
+}
+.EngineHealth .EngineHealthHead .fb b {
+  font-size: 14px;
+}
+.EngineHealth .EngineHealthHead .fb.ok b {
+  color: var(--app-intent-success-text);
+}
+.EngineHealth .EngineHealthHead .fb.warn b {
+  color: var(--app-intent-warning-text);
+}
+.EngineHealth .EngineHealthHead .fb.err b {
+  color: var(--app-intent-danger-text);
+}
+.EngineHealth .EngineHealthHead .fbCount {
+  color: var(--app-text-muted);
+  padding-left: 2px;
+}
+
+/* Status dots (shared inside the cockpit) */
+.EngineHealth .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+.EngineHealth .dot.ok {
+  background: var(--app-intent-success-rest);
+}
+.EngineHealth .dot.warn {
+  background: var(--app-intent-warning-rest);
+}
+.EngineHealth .dot.err {
+  background: var(--app-intent-danger-rest);
+}
+.EngineHealth .dot.idle {
+  background: var(--app-text-muted);
+}
+
+/* Connection group card (connection = the group) */
+.EngineHealth .ConnCard {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 0;
+  overflow: hidden;
+}
+.EngineHealth .ConnHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 15px;
+  cursor: pointer;
+  border-left: 3px solid var(--app-text-muted);
+}
+.EngineHealth .ConnCard.ok .ConnHead {
+  border-left-color: var(--app-intent-success-rest);
+}
+.EngineHealth .ConnCard.warn .ConnHead {
+  border-left-color: var(--app-intent-warning-rest);
+}
+.EngineHealth .ConnCard.err .ConnHead {
+  border-left-color: var(--app-intent-danger-rest);
+}
+.EngineHealth .ConnHead:hover {
+  background: color-mix(in srgb, var(--app-accent) 6%, transparent);
+}
+.EngineHealth .ConnHead .chev {
+  color: var(--app-text-muted);
+  transition: transform 0.12s ease;
+}
+.EngineHealth .ConnCard.collapsed .ConnHead .chev {
+  transform: rotate(-90deg);
+}
+.EngineHealth .ConnHead .EngineCell {
+  flex: 0 0 auto;
+}
+.EngineHealth .ConnHead .cn {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--app-text);
+}
+.EngineHealth .ConnHead .ct {
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+.EngineHealth .ConnHead .vpill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.EngineHealth .vpill.ok {
+  background: color-mix(in srgb, var(--app-intent-success-rest) 22%, transparent);
+  color: var(--app-intent-success-text);
+}
+.EngineHealth .vpill.warn {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 22%, transparent);
+  color: var(--app-intent-warning-text);
+}
+.EngineHealth .vpill.err {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 22%, transparent);
+  color: var(--app-intent-danger-text);
+}
+.EngineHealth .ConnHead .vitals {
+  font-size: 12px;
+  color: var(--app-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.EngineHealth .ConnHead .acts {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.EngineHealth .ConnBody {
+  padding: 12px 15px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--app-border);
+}
+.EngineHealth .ConnCard.collapsed .ConnBody {
+  display: none;
+}
+
+/* Sub-cards inside a connection body */
+.EngineHealth .subCard {
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 0;
+  padding: 12px 14px;
+}
+.EngineHealth .CardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 11px;
+  gap: 10px;
+}
+.EngineHealth .CardHead h5 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--app-text);
+}
+.EngineHealth .grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 10px;
+}
+.EngineHealth .statePill {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.EngineHealth .statePill.running {
+  background: color-mix(in srgb, var(--app-intent-success-rest) 22%, transparent);
+  color: var(--app-intent-success-text);
+}
+.EngineHealth .statePill.remote {
+  background: color-mix(in srgb, var(--app-text-muted) 24%, transparent);
+  color: var(--app-text-muted);
+}
+.EngineHealth .kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 12px;
+  color: var(--app-text);
+}
+.EngineHealth .kv b {
+  color: var(--app-text);
+}
+.EngineHealth .kv .muted {
+  color: var(--app-text-muted);
+}
+.EngineHealth .cardActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.EngineHealth .pathBroken {
+  font-size: 12px;
+  color: var(--app-intent-danger-text);
+}
+
+/* Inner data tables (custom networks, bind mounts) */
+.EngineHealth table.AppDataTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+.EngineHealth table.AppDataTable th,
+.EngineHealth table.AppDataTable td {
+  padding: 6px 8px;
+  font-size: 11px;
+  text-align: left;
+  border-bottom: 1px solid var(--app-border);
+}
+.EngineHealth table.AppDataTable thead th {
+  color: var(--app-text-muted);
+  font-weight: 600;
+}
+.EngineHealth table.AppDataTable tbody tr:last-child td {
+  border-bottom: none;
+}
+.EngineHealth .subnetCode {
+  margin-right: 6px;
+}
+.EngineHealth .netok {
+  color: var(--app-intent-success-text);
+}
+.EngineHealth .netwarn {
+  color: var(--app-intent-warning-text);
+}
+
+/* Squared panels on this screen (user preference) — also flattens the shared ChainPipe hops + Diagnosis stripe
+   here without changing them on the reachability screen. Pills/dots/icon chips keep their shape. */
+.EngineHealth .ChainPipe .hop,
+.EngineHealth .ChainPipe .remoteWrap,
+.EngineHealth .Diagnosis {
+  border-radius: 0;
+}

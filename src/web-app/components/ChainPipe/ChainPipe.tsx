@@ -4,9 +4,12 @@ import { useTranslation } from "react-i18next";
 
 import type { ReachabilityHop } from "@/container-client/reachability/model";
 
-// ChainPipe — the reachability trace pipeline: fixed-width hops left→right, arrows colored by the transition,
-// the break highlighted. SSH-remote hops (hop.remote) nest inside a dashed "remote host" wrapper — the port
-// lives on the remote host, not the laptop. Ported from the locked mockup (.scratch/port-dns-debugger).
+import "./ChainPipe.css";
+
+// ChainPipe — a horizontal trace of fixed-width hops left→right, arrows colored by the transition, the break
+// highlighted. Remote hops (hop.remote) nest inside a dashed "remote host" wrapper. Shared component: the
+// reachability debugger renders a container/host path; the Engine Health cockpit renders an engine-connection
+// path (Host → socket → API → Engine). Both feed it `ReachabilityHop[]`.
 
 type ArrowState = "ok" | "warn" | "dead";
 

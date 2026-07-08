@@ -207,6 +207,18 @@ describe("normalizeNetwork (the engine delta)", () => {
     });
   });
 
+  it("docker — maps IPAM.Config subnets to the canonical subnets[] (drops entries without a Subnet)", () => {
+    const raw: any = {
+      Driver: "bridge",
+      Id: "netid",
+      Name: "mynet",
+      IPAM: { Config: [{ Subnet: "10.89.0.0/24", Gateway: "10.89.0.1" }, { Gateway: "no-subnet" }] },
+    };
+    expect(dockerNormalizers.normalizeNetwork(raw).subnets).toEqual([
+      { subnet: "10.89.0.0/24", gateway: "10.89.0.1", lease_range: { start_ip: "", end_ip: "" } },
+    ]);
+  });
+
   it("podman — libpod network is already canonical → passthrough (same reference)", () => {
     const raw: any = { driver: "podman", id: "x", name: "podman", internal: false };
     expect(podmanNormalizers.normalizeNetwork(raw)).toBe(raw);

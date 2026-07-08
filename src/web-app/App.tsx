@@ -46,6 +46,7 @@ import { Screen as ContainerProcessesScreen } from "@/web-app/screens/Container/
 import { Screen as ContainerStatsScreen } from "@/web-app/screens/Container/StatsScreen";
 import { Screen as ContainerTerminalScreen } from "@/web-app/screens/Container/TerminalScreen";
 import { Screen as DashboardScreen } from "@/web-app/screens/Dashboard";
+import { Screen as EngineHealthScreen } from "@/web-app/screens/EngineHealth/ManageScreen";
 import { Screen as ImageInspectScreen } from "@/web-app/screens/Image/InspectScreen";
 import { Screen as ImageLayersScreen } from "@/web-app/screens/Image/LayersScreen";
 import { Screen as ImagesScreen } from "@/web-app/screens/Image/ManageScreen";
@@ -100,6 +101,7 @@ const Screens = [
   PodGenerateKubeScreen,
   MachinesScreen,
   MachineInspectScreen,
+  EngineHealthScreen,
   SwarmScreen,
   SwarmInspectScreen,
   NetworksScreen,

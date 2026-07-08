@@ -555,6 +555,17 @@ export interface SystemInfo {
   version: SystemVersion;
 }
 
+// Image disk-usage summarized from GET /system/df — docker (LayersSize + Images[].Size/SharedSize/Containers)
+// and libpod (ImagesSize + Images[].UniqueSize/Containers) normalized to one shape (see adapters/systemDf.ts).
+export interface SystemDf {
+  /** Total on-disk bytes of image layers. */
+  imagesSize: number;
+  /** Bytes reclaimable by removing images no container references. */
+  imagesReclaimable: number;
+  imagesCount: number;
+  reclaimableCount: number;
+}
+
 export interface ContextInspect {
   Name: string;
   Metadata: any;

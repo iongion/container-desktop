@@ -32,17 +32,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connection-grouped list views for Images, Registries, Pods, Machines, Networks, Secrets, Volumes and Swarm
 - Containers list now nests connection → group → container while keeping the Appearance-controlled Engine column
 - **Human-friendly Inspect summaries** — every resource Inspect (Containers, Images, Pods, Machines, Networks, Secrets, Volumes, plus Swarm and Connection → System info) now shows a key-fields Property/Value table (cross-engine-common fields, per-row copy) above the raw JSON viewer
+- **Engine Health cockpit** — a new **Health** view under **Connections** (its own section tab): a global fleet view (all connections at once, grouped by connection), each engine a collapsible card with a verdict pill + verdict-colored border — connection-path pipeline that breaks at the failing hop, runtime/machine vitals with image disk usage (`/system/df`), custom networks with client-side subnet-overlap detection, bind mounts, and plain-language diagnoses with copyable fixes; a single header combines the fleet-status widget with Copy diagnostics + Re-run
 
 ### Changed
 
 - Footer shows engine versions as an inline label beside the connection status; the separate engine-versions dropdown and its popover are gone
 - Image Security → Vulnerabilities is now a two-column panel (severity donut + filters beside the findings table); the scanner/database line moved to a panel footer, and a clean scan shows an all-clear ring
 - Image Security → SBOM is now a sortable, virtualized package table (Package / Version / Type / License) with Export SPDX / CycloneDX in its header; the license-type breakdown moved to its own Licenses panel
+- The reachability debugger's connection-path pipeline and diagnosis stripe are now shared components (reused by the Engine Health cockpit); the diagnosis "Why does this happen?" link now renders
 
 ### Fixed
 
 - Cross-platform id generation — `crypto.randomUUID` replaced by a Web-Crypto (`getRandomValues`) v4 UUID that works in every desktop webview (WebKitGTK/WebView2), not only Chromium
 - cosign version detection called `cosign --version` (unsupported → activity-log error); now runs `cosign version` and reads `GitVersion` from its banner
+- Docker networks now expose their IPAM subnets (previously always empty), so subnet-aware views (Networks, Engine Health overlap detection) work on Docker as they do on Podman
 - Container lifecycle ops (stop/restart/force-remove) + stack teardowns use a generous timeout instead of the 3s default — a slow SIGTERM stop no longer "fails" client-side while the engine is still working
 - The engine no longer flaps to "reconnecting" on a momentary socket hiccup — the liveness ping is retried across a short grace window before a disconnect is declared
 - Importing a stack no longer aborts with libpod's "container state improper" for a leftover mid-transition container — the start step waits for it to settle

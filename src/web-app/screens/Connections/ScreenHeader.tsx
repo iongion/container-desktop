@@ -30,6 +30,13 @@ export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProp
       />
       <AnchorButton
         variant="minimal"
+        active={isActive ? isActive("connections.health") : false}
+        icon={IconNames.PULSE}
+        text={t("Health")}
+        href={getConnectionsUrl("health")}
+      />
+      <AnchorButton
+        variant="minimal"
         disabled={!isRunning}
         active={isActive ? isActive("connections.connection-info") : false}
         icon={IconNames.POWER}

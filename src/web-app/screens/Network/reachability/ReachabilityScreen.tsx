@@ -1,5 +1,4 @@
 import {
-  Button,
   Icon,
   type IconName,
   InputGroup,
@@ -26,14 +25,14 @@ import { RESOURCE_SYNC } from "@/container-client/resourceSyncProtocol";
 import type { Container } from "@/env/Types";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { CopyButton } from "@/web-app/components/CopyButton";
+import { ChainPipe } from "@/web-app/components/ChainPipe/ChainPipe";
+import { Diagnosis } from "@/web-app/components/Diagnosis/Diagnosis";
 import { EngineCell } from "@/web-app/components/EngineCell";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { type MergedResource, mergedKey, useMergedResources } from "@/web-app/hooks/useMergedResources";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeaderSectionsTabBar } from "../ScreenHeader";
-import { ChainPipe } from "./ChainPipe";
 import "./Reachability.css";
 
 export const ID = "networks.reachability";
@@ -81,27 +80,6 @@ const toneIntent = (tone: ReachabilityTone): Intent =>
   tone === "ok" ? Intent.SUCCESS : tone === "warn" ? Intent.WARNING : Intent.DANGER;
 
 // Render a string with markdown backtick spans as inline <code> (headlines/explanations carry them).
-function CodeText({ text }: { text: string }) {
-  // Split on backticks; odd segments are `code`. Key by the segment's byte offset (stable + unique) so we never
-  // key by array index (the text is static, but Biome forbids index keys).
-  const segments: { key: string; code: boolean; value: string }[] = [];
-  let offset = 0;
-  text.split("`").forEach((part, index) => {
-    segments.push({ key: `s${offset}`, code: index % 2 === 1, value: part });
-    offset += part.length + 1;
-  });
-  return (
-    <>
-      {segments.map((segment) =>
-        segment.code ? (
-          <code key={segment.key}>{segment.value}</code>
-        ) : (
-          <Fragment key={segment.key}>{segment.value}</Fragment>
-        ),
-      )}
-    </>
-  );
-}
 
 function ContainerChip({
   label,
@@ -509,43 +487,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
               <ChainPipe hops={report.hops} remoteLabel={remoteLabel} />
             </section>
 
-            {diagnosis ? (
-              <div className={`Diagnosis ${diagnosis.tone}`}>
-                <div className="dico">
-                  <Icon icon={diagnosis.icon as IconName} />
-                </div>
-                <div className="dbody">
-                  <h5>
-                    <CodeText text={diagnosis.headline} />
-                  </h5>
-                  <p>
-                    <CodeText text={diagnosis.explanation} />
-                  </p>
-                  {diagnosis.fixCommand ? (
-                    <div className="fixcmd">
-                      <span className="cmd">{diagnosis.fixCommand}</span>
-                      <CopyButton text={diagnosis.fixCommand} title={t("Copy fix command")} />
-                    </div>
-                  ) : null}
-                  {diagnosis.actions.some((action) => action.href) ? (
-                    <div className="fixrow">
-                      {diagnosis.actions
-                        .filter((action) => action.href)
-                        .map((action) => (
-                          <Button
-                            key={action.id}
-                            size="small"
-                            variant="minimal"
-                            icon={action.icon as IconName}
-                            text={action.text}
-                            onClick={() => openHref(action.href)}
-                          />
-                        ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
+            {diagnosis ? <Diagnosis diagnosis={diagnosis} onAction={openHref} /> : null}
 
             <section className="Card ReachabilityProbes">
               <div className="CardHead">

@@ -1,0 +1,97 @@
+/* Diagnosis stripe — shared, self-contained + theme-tokened so it renders the same under any screen root
+   (reachability debugger, Engine Health cockpit). Colored left border by tone; icon chip; fix command + actions. */
+
+.Diagnosis {
+  display: flex;
+  gap: 13px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-text-muted);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.Diagnosis.err {
+  border-left-color: var(--app-intent-danger-rest);
+}
+.Diagnosis.warn {
+  border-left-color: var(--app-intent-warning-rest);
+}
+.Diagnosis.ok {
+  border-left-color: var(--app-intent-success-rest);
+}
+.Diagnosis .dico {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.Diagnosis.err .dico {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 20%, transparent);
+  color: var(--app-intent-danger-text);
+}
+.Diagnosis.warn .dico {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 20%, transparent);
+  color: var(--app-intent-warning-text);
+}
+.Diagnosis.ok .dico {
+  background: color-mix(in srgb, var(--app-intent-success-rest) 20%, transparent);
+  color: var(--app-intent-success-text);
+}
+.Diagnosis .dbody {
+  flex: 1;
+  min-width: 0;
+}
+.Diagnosis h5 {
+  margin: 0 0 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.Diagnosis p {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.Diagnosis code {
+  background: color-mix(in srgb, var(--app-text-muted) 18%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.Diagnosis .fixcmd {
+  margin-top: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  padding: 6px 8px 6px 11px;
+}
+.Diagnosis .fixcmd .cmd {
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--app-text);
+}
+.Diagnosis .fixrow {
+  margin-top: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.Diagnosis .fixrow .learn {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--app-accent-text);
+  cursor: pointer;
+  text-decoration: none;
+}
+.Diagnosis .fixrow .learn:hover {
+  text-decoration: underline;
+}

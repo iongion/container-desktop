@@ -18,6 +18,10 @@ import {
 
 /** Docker network (PascalCase) → canonical lowercase Network. */
 export const normalizeNetwork = (it: any): Network => {
+  // Docker carries subnets in IPAM.Config[] ({ Subnet, Gateway }); map them to the canonical `subnets` shape
+  // (libpod is already canonical) so consumers like the Networks screen and the Engine Health subnet-overlap
+  // check see them. IPRange is a sub-allocation range, not a lease start/end, so lease_range stays empty.
+  const ipamConfig = Array.isArray(it.IPAM?.Config) ? it.IPAM.Config : [];
   return {
     dns_enabled: false,
     driver: it.Driver,
@@ -29,7 +33,13 @@ export const normalizeNetwork = (it: any): Network => {
     name: it.Name,
     network_interface: "n/a",
     options: {},
-    subnets: [],
+    subnets: ipamConfig
+      .filter((entry: any) => entry?.Subnet)
+      .map((entry: any) => ({
+        subnet: `${entry.Subnet}`,
+        gateway: `${entry.Gateway ?? ""}`,
+        lease_range: { start_ip: "", end_ip: "" },
+      })),
     created: it.Created,
   };
 };
