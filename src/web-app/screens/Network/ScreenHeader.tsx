@@ -1,11 +1,45 @@
+import { AnchorButton, ButtonGroup } from "@blueprintjs/core";
 import { type IconName, IconNames } from "@blueprintjs/icons";
+import { useTranslation } from "react-i18next";
 
 import type { Network } from "@/env/Types";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
-import { getNetworkCrumbs } from "./Navigation";
+import { getNetworkCrumbs, getNetworksUrl } from "./Navigation";
+
+import "./ScreenHeader.css";
+
+interface ScreenHeaderSectionsTabBarProps {
+  isActive?: (screen: string) => boolean;
+}
+
+// The Networks navbar tab navigator — mirrors screens/Volume/ScreenHeader.tsx (one shared section tab bar), two
+// sections: the Networks list and the Reachability debugger. Dropped into each screen's AppScreenHeader.
+export const ScreenHeaderSectionsTabBar: React.FC<ScreenHeaderSectionsTabBarProps> = ({
+  isActive,
+}: ScreenHeaderSectionsTabBarProps) => {
+  const { t } = useTranslation();
+  return (
+    <ButtonGroup className="NetworkHeaderTabs">
+      <AnchorButton
+        variant="minimal"
+        active={isActive ? isActive("networks.manage") : false}
+        icon={IconNames.HEAT_GRID}
+        text={t("Networks")}
+        href={getNetworksUrl("manage")}
+      />
+      <AnchorButton
+        variant="minimal"
+        active={isActive ? isActive("networks.reachability") : false}
+        icon={IconNames.GLOBE_NETWORK}
+        text={t("Reachability")}
+        href={getNetworksUrl("reachability")}
+      />
+    </ButtonGroup>
+  );
+};
 
 // Screen header
 

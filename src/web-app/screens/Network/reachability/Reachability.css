@@ -1,0 +1,442 @@
+/* Reachability debugger — ported from the locked mockup (.scratch/port-dns-debugger/index.html), scoped under
+   .Reachability and driven entirely by the app's --app-* theme tokens (unified/global view). */
+
+/* separate the first panel from the screen header (the content otherwise sits flush against it) */
+.Reachability .AppScreenHeader {
+  margin-bottom: 10px;
+}
+.Reachability .AppScreenContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+
+.Reachability .Card {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.Reachability .Card .CardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.Reachability .Card .CardHead h5 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.Reachability .muted {
+  color: var(--app-text-muted);
+}
+
+/* query bar */
+.Reachability .checkTabs {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 3px;
+}
+.Reachability .checkTabs .ct {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+}
+.Reachability .checkTabs .ct .bp6-icon {
+  color: var(--app-text-muted);
+}
+.Reachability .checkTabs .ct.active {
+  background: color-mix(in srgb, var(--app-accent) 20%, transparent);
+  color: var(--app-accent-text);
+}
+.Reachability .checkTabs .ct.active .bp6-icon {
+  color: var(--app-accent-text);
+}
+
+.Reachability .qexpr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* the check-type bar lives in the screen header (left), so give it a tidy inline footprint there */
+.Reachability .AppScreenHeader .checkTabs {
+  margin: 0;
+}
+.Reachability .qchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  box-sizing: border-box;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--app-text);
+}
+.Reachability .qchip .lbl {
+  color: var(--app-text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.Reachability .qchipButton {
+  cursor: pointer;
+}
+.Reachability .qchipButton .qchipName {
+  font-weight: 600;
+}
+.Reachability .qchip .EngineCell {
+  width: 14px;
+  height: 14px;
+}
+/* the embedded input must not add its own height — the chip's fixed 34px + center alignment owns it, so the
+   free-text chips line up with the FROM/CONTAINER/PORT dropdown chips */
+.Reachability .qchipInput .bp6-input-group,
+.Reachability .qchipInput .bp6-input-group .bp6-input {
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+}
+.Reachability .qchipWide {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.Reachability .qchipPort {
+  flex: 0 0 90px;
+}
+.Reachability .qarrow {
+  color: var(--app-text-muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.Reachability .qhint {
+  margin-top: 9px;
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+.Reachability .qhint code {
+  color: var(--app-text);
+}
+
+/* trace pipeline */
+.Reachability .traceHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 11px;
+}
+.Reachability .traceHead .lt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.Reachability .traceHead .lt h5 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* the verdict is a Blueprint Tag, sized to the mockup's compact pill (11px / 700, round, tinted via minimal) */
+.Reachability .verdictTag.bp6-tag {
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 0;
+  padding: 3px 11px;
+  white-space: nowrap;
+}
+
+.Reachability .ChainPipe {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+.Reachability .hop {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+  padding: 11px 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-bg);
+  position: relative;
+}
+.Reachability .hop .hicon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--app-accent) 18%, transparent);
+  color: var(--app-accent-text);
+  margin-bottom: 2px;
+}
+.Reachability .hop .hname {
+  font-weight: 600;
+  font-size: 12px;
+}
+.Reachability .hop .hmeta {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  line-height: 1.3;
+}
+.Reachability .hop .hstate {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.Reachability .hop.err {
+  border-color: var(--app-intent-danger-rest);
+  box-shadow: 0 0 0 1px var(--app-intent-danger-rest);
+}
+.Reachability .hop.err .hicon {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 22%, transparent);
+  color: var(--app-intent-danger-text);
+}
+.Reachability .hop.warn {
+  border-color: var(--app-intent-warning-rest);
+  box-shadow: 0 0 0 1px var(--app-intent-warning-rest);
+}
+.Reachability .hop.warn .hicon {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 22%, transparent);
+  color: var(--app-intent-warning-text);
+}
+.Reachability .hop.dead {
+  opacity: 0.4;
+}
+.Reachability .arrow {
+  flex: 0 0 22px;
+  align-self: center;
+  height: 2px;
+  background: var(--app-intent-success-rest);
+  position: relative;
+}
+.Reachability .arrow::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -3px;
+  border-left: 6px solid var(--app-intent-success-rest);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+.Reachability .arrow.dead {
+  opacity: 0.4;
+  background: var(--app-text-muted);
+}
+.Reachability .arrow.dead::after {
+  border-left-color: var(--app-text-muted);
+}
+.Reachability .arrow.warn {
+  background: var(--app-intent-warning-rest);
+}
+.Reachability .arrow.warn::after {
+  border-left-color: var(--app-intent-warning-rest);
+}
+.Reachability .remoteWrap {
+  position: relative;
+  flex: 0 0 auto;
+  border: 1px dashed var(--app-border);
+  border-radius: 9px;
+  padding: 16px 6px 6px;
+  display: flex;
+  align-items: stretch;
+}
+.Reachability .remoteWrap .rtag {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  z-index: 2;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-text-muted);
+  background: var(--app-surface);
+  padding: 0 7px;
+}
+
+.Reachability .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+.Reachability .dot.ok {
+  background: var(--app-intent-success-rest);
+}
+.Reachability .dot.warn {
+  background: var(--app-intent-warning-rest);
+}
+.Reachability .dot.err {
+  background: var(--app-intent-danger-rest);
+}
+.Reachability .dot.idle {
+  background: var(--app-text-muted);
+}
+
+/* diagnosis stripe */
+.Reachability .Diagnosis {
+  display: flex;
+  gap: 13px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-text-muted);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.Reachability .Diagnosis.err {
+  border-left-color: var(--app-intent-danger-rest);
+}
+.Reachability .Diagnosis.warn {
+  border-left-color: var(--app-intent-warning-rest);
+}
+.Reachability .Diagnosis.ok {
+  border-left-color: var(--app-intent-success-rest);
+}
+.Reachability .Diagnosis .dico {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.Reachability .Diagnosis.err .dico {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 20%, transparent);
+  color: var(--app-intent-danger-text);
+}
+.Reachability .Diagnosis.warn .dico {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 20%, transparent);
+  color: var(--app-intent-warning-text);
+}
+.Reachability .Diagnosis.ok .dico {
+  background: color-mix(in srgb, var(--app-intent-success-rest) 20%, transparent);
+  color: var(--app-intent-success-text);
+}
+.Reachability .Diagnosis .dbody {
+  flex: 1;
+  min-width: 0;
+}
+.Reachability .Diagnosis h5 {
+  margin: 0 0 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.Reachability .Diagnosis p {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.Reachability .Diagnosis code,
+.Reachability .qhint code,
+.Reachability .hop code {
+  background: color-mix(in srgb, var(--app-text-muted) 18%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.Reachability .fixcmd {
+  margin-top: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  padding: 6px 8px 6px 11px;
+}
+.Reachability .fixcmd .cmd {
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--app-text);
+}
+.Reachability .fixrow {
+  margin-top: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* probe log */
+.Reachability .ReachabilityProbes table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.Reachability .ReachabilityProbes th,
+.Reachability .ReachabilityProbes td {
+  padding: 7px 10px;
+  font-size: 11.5px;
+  text-align: left;
+  border-bottom: 1px solid var(--app-border);
+  vertical-align: top;
+}
+.Reachability .ReachabilityProbes thead th {
+  color: var(--app-text-muted);
+  font-weight: 600;
+}
+.Reachability .ReachabilityProbes .pcmd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--app-text);
+}
+.Reachability .ReachabilityProbes .presult {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.Reachability .ReachabilityProbes .presult.ok {
+  color: var(--app-intent-success-text);
+}
+.Reachability .ReachabilityProbes .presult.err {
+  color: var(--app-intent-danger-text);
+}
+.Reachability .ReachabilityProbes .presult.warn {
+  color: var(--app-intent-warning-text);
+}
+.Reachability .ReachabilityProbes .presult.dead {
+  color: var(--app-text-muted);
+}
+.Reachability .ReachabilityProbes .smoking {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 9%, transparent);
+}
+.Reachability .ReachabilityProbes .smoking.w {
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 10%, transparent);
+}
+.Reachability .ReachabilityProbes .probeCol {
+  width: 34px;
+  text-align: center;
+}
+
+.ReachabilityPickerMenu {
+  max-height: 320px;
+  overflow: auto;
+}

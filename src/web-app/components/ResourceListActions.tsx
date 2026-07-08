@@ -1,4 +1,4 @@
-import { AnchorButton, Button, ButtonGroup, Intent, type ButtonProps } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, type ButtonProps, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import type React from "react";
 import { useTranslation } from "react-i18next";

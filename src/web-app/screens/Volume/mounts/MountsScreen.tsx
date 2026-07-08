@@ -5,13 +5,13 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  mountProbeKey,
-  RESOURCE_SYNC,
   type MountProbeResponse,
   type MountProbeResult,
+  mountProbeKey,
+  RESOURCE_SYNC,
 } from "@/container-client/resourceSyncProtocol";
-import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
+import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { EngineCell, engineLabel } from "@/web-app/components/EngineCell";
@@ -271,14 +271,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   );
                 }
                 const row = item.mount;
-                const probe = probeResults[
-                  mountProbeKey({
-                    connectionId: row.connectionId,
-                    containerId: row.containerId,
-                    source: row.source,
-                    destination: row.destination,
-                  })
-                ];
+                const probe =
+                  probeResults[
+                    mountProbeKey({
+                      connectionId: row.connectionId,
+                      containerId: row.containerId,
+                      source: row.source,
+                      destination: row.destination,
+                    })
+                  ];
                 return (
                   <tr
                     key={key}
@@ -358,11 +359,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </td>
                     <td>
                       {probe ? (
-                        <span
-                          className="MountHealth"
-                          data-health={probe.healthy ? "ok" : "error"}
-                          title={probe.error}
-                        >
+                        <span className="MountHealth" data-health={probe.healthy ? "ok" : "error"} title={probe.error}>
                           {probe.healthy ? `${t("OK")} ${probe.latencyMs}ms` : t("Failed")}
                         </span>
                       ) : (

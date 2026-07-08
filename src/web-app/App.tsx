@@ -54,6 +54,7 @@ import { Screen as MachineInspectScreen } from "@/web-app/screens/Machine/Inspec
 import { Screen as MachinesScreen } from "@/web-app/screens/Machine/ManageScreen";
 import { Screen as NetworkInspectScreen } from "@/web-app/screens/Network/InspectScreen";
 import { Screen as NetworksScreen } from "@/web-app/screens/Network/ManageScreen";
+import { Screen as ReachabilityScreen } from "@/web-app/screens/Network/reachability/ReachabilityScreen";
 import { Screen as PodGenerateKubeScreen } from "@/web-app/screens/Pod/GenerateKubeScreen";
 import { Screen as PodInspectScreen } from "@/web-app/screens/Pod/InspectScreen";
 import { Screen as PodLogsScreen } from "@/web-app/screens/Pod/LogsScreen";
@@ -103,6 +104,7 @@ const Screens = [
   SwarmInspectScreen,
   NetworksScreen,
   NetworkInspectScreen,
+  ReachabilityScreen,
   SecretsScreen,
   SecretInspectScreen,
   VolumesScreen,

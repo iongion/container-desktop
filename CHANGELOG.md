@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wails remote-control/E2E driver `support/wails-mcp.mjs` over the built-in MCP server (JS eval, DOM inspection, X11 screenshots)
 - Wails website-screenshot capture backend (`--backend=wails`) via MCP `js_eval` + X11 grab
 - **Mounts inspector** — per-connection container → mount tree with sizes and mock probe results
+- **Reachability debugger** — a **Networks → Reachability** sub-screen: transport-aware trace pinpoints where a port · service→service · reach-out · DNS check breaks, with a copyable fix
 - Connection-grouped list views for Images, Registries, Pods, Machines, Networks, Secrets, Volumes and Swarm
 - Containers list now nests connection → group → container while keeping the Appearance-controlled Engine column
 

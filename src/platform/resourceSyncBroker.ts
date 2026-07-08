@@ -8,9 +8,11 @@
 
 import type { ResourceDomain } from "@/container-client/resourceDomains";
 import {
-  RESOURCE_SYNC,
   type MountProbeRequest,
   type MountProbeResponse,
+  RESOURCE_SYNC,
+  type ReachabilityProbeRequest,
+  type ReachabilityProbeResponse,
   type ResourceConnectProgress,
   type ResourceRefreshRequest,
   type ResourceSwitchRequest,
@@ -29,6 +31,7 @@ export interface ResourceSyncBrokerDeps {
     connectAll?(): Promise<void>;
     disconnectOne?(connectionId: string): Promise<void>;
     probeMounts?(request?: MountProbeRequest): Promise<MountProbeResponse>;
+    probeReachability?(request: ReachabilityProbeRequest): Promise<ReachabilityProbeResponse>;
     subscribeProgress?(cb: (progress: ResourceConnectProgress) => void): () => void;
   };
   /** Register an invoke (request/response) handler — wraps ipcMain.handle in production. */
@@ -96,6 +99,13 @@ export class ResourceSyncBroker {
       }
       logger.debug("ipc: probeMounts", payload);
       return await this.deps.service.probeMounts?.(payload);
+    });
+    this.deps.onInvoke(RESOURCE_SYNC.probeReachability, async (event, payload: ReachabilityProbeRequest) => {
+      if (!this.deps.isAllowedSender(event)) {
+        return false;
+      }
+      logger.debug("ipc: probeReachability", payload);
+      return await this.deps.service.probeReachability?.(payload);
     });
     this.unsubscribe = this.deps.service.subscribe(() => this.queueSnapshotBroadcast());
     // Per-connection connect/reconnect progress lines: pushed on their own channel (decoupled from the

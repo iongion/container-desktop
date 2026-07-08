@@ -89,7 +89,7 @@
     "package:tauri:linux_tgz:x64": "yarn tauri:renderer && tauri build --no-bundle --target x86_64-unknown-linux-gnu && node support/tauri-portable.cjs pack --platform linux --arch x64 --target x86_64-unknown-linux-gnu",
     "package:tauri:linux_tgz:arm64": "yarn tauri:renderer && node support/tauri-build.cjs build --no-bundle --target aarch64-unknown-linux-gnu && node support/tauri-portable.cjs pack --platform linux --arch arm64 --target aarch64-unknown-linux-gnu",
     "check-types": "tsc && tsc -p support/cli/tsconfig.json",
-    "lint": "biome lint --write ./src ./support/cli",
+    "lint": "biome check --write ./src ./support/cli",
     "format": "biome format --write ./src ./support/cli",
     "lint:check": "biome check ./src ./support/cli",
     "audit:shared": "tsx support/cli/index.ts audit-shared",

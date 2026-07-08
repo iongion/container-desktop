@@ -585,7 +585,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 const container = descriptor.container;
                 const { isPartOfGroup, isFirst, isLast } = descriptor;
                 const rowId = key;
-                const groupName = container.Computed.Group;
+                const _groupName = container.Computed.Group;
                 const creationDate =
                   typeof container.Created === "string"
                     ? dayjs(container.Created)

@@ -34,6 +34,7 @@ import { ActionsMenu } from ".";
 import { useNetworkBulkActions } from "./bulkActions";
 import "./ManageScreen.css";
 import { getNetworkUrl } from "./Navigation";
+import { ScreenHeaderSectionsTabBar } from "./ScreenHeader";
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -156,7 +157,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 <Divider />
               </>
             ) : null}
-            <ActionsMenu onReload={onReload} />
+            <ActionsMenu
+              navigation={<ScreenHeaderSectionsTabBar isActive={(screen) => screen === "networks.manage"} />}
+              onReload={onReload}
+            />
           </>
         }
       />
@@ -346,4 +350,5 @@ Screen.Route = {
 };
 Screen.Metadata = {
   LeftIcon: <ReactIcon.Icon className="ReactIcon" path={mdiNetwork} size={0.75} />,
+  Tooltip: "Networks and reachability",
 };

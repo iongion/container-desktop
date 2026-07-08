@@ -35,8 +35,8 @@ import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { sortAlphaNum } from "@/web-app/domain/utils";
-import { useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
+import { useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
 import { useRouteSearch } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -47,14 +47,14 @@ import { compareSortValues, type SortSelectors } from "@/web-app/utils/comparato
 import { InitializeDrawer } from "./InitializeDrawer";
 import { getSwarmInspectUrl, getSwarmTabUrl, type SwarmTab } from "./Navigation";
 import {
+  swarmKeys,
+  swarmRetry,
   useRemoveNode,
   useRemoveService,
   useRemoveSwarmConfig,
   useRemoveSwarmSecret,
   useScaleService,
   useSwarmLeave,
-  swarmKeys,
-  swarmRetry,
   useUpdateNode,
 } from "./queries";
 
@@ -301,7 +301,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
     ]) {
       query.refetch();
     }
-  }, [configsQueries, infoQueries, nodesQueries, populatedConnectionIds, secretsQueries, servicesQueries, stacksQueries]);
+  }, [
+    configsQueries,
+    infoQueries,
+    nodesQueries,
+    populatedConnectionIds,
+    secretsQueries,
+    servicesQueries,
+    stacksQueries,
+  ]);
 
   // "Initialize Swarm" opens the InitializeDrawer form (advertise NIC + listen host/port + force-new-cluster)
   // instead of firing the mutation blind — which 400s on multi-NIC hosts that can't auto-pick an advertise addr.
@@ -826,11 +834,7 @@ const GroupedServicesTable: React.FC<{
             <SortableColumnHeader field="mode" direction={getColumnSortDirection("mode")} onSort={onColumnSort}>
               {t("Mode")}
             </SortableColumnHeader>
-            <SortableColumnHeader
-              field="replicas"
-              direction={getColumnSortDirection("replicas")}
-              onSort={onColumnSort}
-            >
+            <SortableColumnHeader field="replicas" direction={getColumnSortDirection("replicas")} onSort={onColumnSort}>
               {t("Replicas")}
             </SortableColumnHeader>
             <SortableColumnHeader field="image" direction={getColumnSortDirection("image")} onSort={onColumnSort}>
@@ -929,11 +933,7 @@ const GroupedNodesTable: React.FC<{
       >
         <thead ref={theadRef}>
           <tr>
-            <SortableColumnHeader
-              field="hostname"
-              direction={getColumnSortDirection("hostname")}
-              onSort={onColumnSort}
-            >
+            <SortableColumnHeader field="hostname" direction={getColumnSortDirection("hostname")} onSort={onColumnSort}>
               <AppLabel iconName={IconNames.DIAGRAM_TREE} text={t("Hostname")} />
             </SortableColumnHeader>
             <SortableColumnHeader field="role" direction={getColumnSortDirection("role")} onSort={onColumnSort}>
@@ -1060,11 +1060,7 @@ const GroupedStacksTable: React.FC<{
             <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={onColumnSort}>
               <AppLabel iconName={IconNames.LAYERS} text={t("Name")} />
             </SortableColumnHeader>
-            <SortableColumnHeader
-              field="services"
-              direction={getColumnSortDirection("services")}
-              onSort={onColumnSort}
-            >
+            <SortableColumnHeader field="services" direction={getColumnSortDirection("services")} onSort={onColumnSort}>
               {t("Services")}
             </SortableColumnHeader>
             <SortableColumnHeader

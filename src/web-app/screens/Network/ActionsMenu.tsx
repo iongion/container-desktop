@@ -20,6 +20,7 @@ const logger = createLogger("web.network");
 interface ActionsMenuProps {
   network?: Network;
   connectionId?: string;
+  navigation?: React.ReactNode;
   withoutCreate?: boolean;
   onReload?: () => void;
 }
@@ -34,6 +35,7 @@ interface PerformActionOptions {
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   network,
   connectionId: connectionIdProp,
+  navigation,
   withoutCreate,
   onReload,
 }: ActionsMenuProps) => {
@@ -114,6 +116,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       {!network && onReload ? (
         <ResourceListActions
           actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
+          navigation={navigation}
           onReload={onReload}
         />
       ) : (

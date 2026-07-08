@@ -3,6 +3,7 @@
 // both processes import it without pulling in Zustand/Electron.
 
 import type { ConnectorCapabilities } from "@/env/Types";
+import type { ReachabilityCheckType, ReachabilityReport } from "./reachability/model";
 import type { ResourceDomain } from "./resourceDomains";
 
 export type ConnectionPhase = "idle" | "starting" | "ready" | "failed" | "reconnecting";
@@ -88,6 +89,7 @@ export const RESOURCE_SYNC = {
   connectAll: "resource:connect-all", // renderer → main (invoke): connect every auto-start connection, await
   disconnect: "resource:disconnect", // renderer → main (invoke): disconnect one connection by id
   probeMounts: "resource:probe-mounts", // renderer → main (invoke): run mount path probes for current cached mounts
+  probeReachability: "resource:probe-reachability", // renderer → main (invoke): run one reachability probe for a framed question
 } as const;
 
 export interface ResourceRefreshRequest {
@@ -125,5 +127,24 @@ export interface MountProbeResponse {
 export function mountProbeKey(identity: MountProbeIdentity): string {
   return JSON.stringify([identity.connectionId, identity.containerId, identity.source, identity.destination]);
 }
+
+// Reachability debugger — one probe run for a single framed question ("can X reach Y?"). Main resolves the
+// target's facts (container name/IP/networks, transport, connection name) from its cached resources, runs the
+// tractable probes, and returns the assembled report (buildReachabilityReport). Mirrors the probeMounts pattern.
+export interface ReachabilityProbeRequest {
+  connectionId: string;
+  checkType: ReachabilityCheckType;
+  fromContainerId?: string; // undefined = from the host
+  targetContainerId?: string;
+  serviceName?: string;
+  hostPort?: number;
+  containerPort?: number;
+  protocol?: string;
+  externalHost?: string;
+  externalPort?: number;
+  lookupName?: string;
+}
+
+export type ReachabilityProbeResponse = ReachabilityReport;
 
 export type ResourceSyncChannel = (typeof RESOURCE_SYNC)[keyof typeof RESOURCE_SYNC];
