@@ -10,6 +10,7 @@ import {
   mountProbeKey,
   RESOURCE_SYNC,
 } from "@/container-client/resourceSyncProtocol";
+import i18n from "@/i18n";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -26,12 +27,13 @@ import { getContainerUrl } from "@/web-app/screens/Container/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useSortStore } from "@/web-app/stores/sortStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
+
 import { ScreenHeaderSectionsTabBar } from "../ScreenHeader";
 import { buildMountGroups, type MountGroup, type MountSort } from "./mountRows";
 import "./MountsInspector.css";
 
 export const ID = "volumes.mounts";
-export const Title = "Mounts";
+export const Title = i18n.t("Mounts");
 
 const COLUMN_COUNT = 7;
 const MOUNT_SORT_CAPABILITIES = { [`${ID}.*`]: "client" } as const;

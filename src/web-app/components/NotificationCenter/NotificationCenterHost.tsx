@@ -75,7 +75,7 @@ export function NotificationCenterHost() {
                 intent={paused ? "warning" : "none"}
                 icon={paused ? IconNames.PLAY : IconNames.PAUSE}
                 title={paused ? t("Resume recording") : t("Pause recording")}
-                aria-label="toggle-pause"
+                aria-label={paused ? t("Resume recording") : t("Pause recording")}
                 onClick={togglePause}
               />
             ) : null}
@@ -84,7 +84,7 @@ export function NotificationCenterHost() {
               size="small"
               icon={IconNames.TRASH}
               title={t("Clear")}
-              aria-label="clear-activity"
+              aria-label={t("Clear activity")}
               onClick={() => clear(activeTab)}
             />
           </div>

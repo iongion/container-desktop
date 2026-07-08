@@ -20,9 +20,10 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import "./AssistantScreen.css";
+import i18n from "@/i18n";
 
 export const ID = "ai.assistant";
-export const Title = "Assistant";
+export const Title = i18n.t("Assistant");
 
 export interface ScreenProps extends AppScreenProps {}
 

@@ -9,6 +9,7 @@ import semver from "semver";
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
 import type { ConnectorCapabilities } from "@/env/Types";
 import { ContainerEngine } from "@/env/Types";
+import i18n from "@/i18n";
 
 export type CellKind = "yes" | "partial" | "no" | "planned" | "value";
 
@@ -45,10 +46,16 @@ export interface CompatibilityMatrix {
 // Footnotes keep the honesty explicit: ◷ planned / ⚠ partial cells reference these, so a "no" never
 // masquerades as "doesn't work".
 export const FOOTNOTES: Record<number, string> = {
-  1: "Docker registry trust is partial — login, CA install, and insecure/mirror config (daemon.json) work; there is no per-registry search-order (Docker lacks it) and system-wide writes may need elevation. Podman manages registries natively.",
-  2: "Podman machine lifecycle runs on a native/vendor install, not over SSH — none of this engine's connections are local.",
-  3: "Docker contexts are inspected read-only today; switching contexts is planned.",
-  4: "testcontainers isn't detected yet — it runs against any Docker-API socket (Podman exposes a Docker-compatible one too).",
+  1: i18n.t(
+    "Docker registry trust is partial — login, CA install, and insecure/mirror config (daemon.json) work; there is no per-registry search-order (Docker lacks it) and system-wide writes may need elevation. Podman manages registries natively.",
+  ),
+  2: i18n.t(
+    "Podman machine lifecycle runs on a native/vendor install, not over SSH — none of this engine's connections are local.",
+  ),
+  3: i18n.t("Docker contexts are inspected read-only today; switching contexts is planned."),
+  4: i18n.t(
+    "testcontainers isn't detected yet — it runs against any Docker-API socket (Podman exposes a Docker-compatible one too).",
+  ),
 };
 
 // The matrix always shows every supported engine as a column (podman, docker, container). A disconnected engine
@@ -145,49 +152,49 @@ interface CapSpec {
 
 const CATALOG: { title: string; caps: CapSpec[] }[] = [
   {
-    title: "API surface",
+    title: i18n.t("API surface"),
     caps: [
       {
         key: "dialect",
-        label: "API dialect",
-        note: "wire protocol the app speaks",
+        label: i18n.t("API dialect"),
+        note: i18n.t("wire protocol the app speaks"),
         compute: (v) => value(isPodman(v) ? "libpod" : "docker"),
       },
     ],
   },
   {
-    title: "Resources",
+    title: i18n.t("Resources"),
     caps: [
-      { key: "pods", label: "Pods", compute: flag((c) => c.resources.pods) },
-      { key: "secrets", label: "Secrets", compute: flag((c) => c.resources.secrets) },
-      { key: "networks", label: "Networks", compute: flag((c) => c.resources.networks) },
+      { key: "pods", label: i18n.t("Pods"), compute: flag((c) => c.resources.pods) },
+      { key: "secrets", label: i18n.t("Secrets"), compute: flag((c) => c.resources.secrets) },
+      { key: "networks", label: i18n.t("Networks"), compute: flag((c) => c.resources.networks) },
     ],
   },
   {
-    title: "Orchestration & extensions",
+    title: i18n.t("Orchestration & extensions"),
     caps: [
       {
         key: "compose",
-        label: "Compose",
-        note: "native up/down lifecycle",
+        label: i18n.t("Compose"),
+        note: i18n.t("native up/down lifecycle"),
         // Real on Podman (libpod translation) and Docker (`docker compose` via ComposeAdapter); Apple has none.
         compute: flag((c) => c.extensions.compose),
       },
-      { key: "kube", label: "Generate Kube YAML", compute: flag((c) => c.extensions.kube) },
+      { key: "kube", label: i18n.t("Generate Kube YAML"), compute: flag((c) => c.extensions.kube) },
       {
         key: "machines",
-        label: "Machine lifecycle",
-        note: "create/start/stop the VM",
+        label: i18n.t("Machine lifecycle"),
+        note: i18n.t("create/start/stop the VM"),
         // Podman CAN manage machines on a native install, so its absence is transport-driven → footnote.
         compute: gated(
           (c) => c.extensions.machines,
           (v) => (isPodman(v) ? noFn(2) : NO),
         ),
       },
-      { key: "swarm", label: "Swarm", compute: flag((c) => c.extensions.swarm) },
+      { key: "swarm", label: i18n.t("Swarm"), compute: flag((c) => c.extensions.swarm) },
       {
         key: "contexts",
-        label: "Docker contexts",
+        label: i18n.t("Docker contexts"),
         // Docker has read-only context inspect wired (partial); switching is planned. Other engines: N/A.
         compute: gated(
           (c) => c.extensions.contexts,
@@ -196,8 +203,8 @@ const CATALOG: { title: string; caps: CapSpec[] }[] = [
       },
       {
         key: "registries",
-        label: "Registry management",
-        note: "login / mirrors / TLS",
+        label: i18n.t("Registry management"),
+        note: i18n.t("login / mirrors / TLS"),
         // Podman manages registry trust fully (registries.conf + certs.d + auth.json). Docker's is partial —
         // login + CA install + daemon.json insecure/mirrors work, but there is no per-registry search-order and
         // system-wide writes may need elevation → footnote 1. Apple has none.
@@ -206,23 +213,23 @@ const CATALOG: { title: string; caps: CapSpec[] }[] = [
     ],
   },
   {
-    title: "Observability",
-    caps: [{ key: "events", label: "Live events stream", compute: flag((c) => c.events) }],
+    title: i18n.t("Observability"),
+    caps: [{ key: "events", label: i18n.t("Live events stream"), compute: flag((c) => c.events) }],
   },
   {
-    title: "Dev tooling",
+    title: i18n.t("Dev tooling"),
     caps: [
       {
         key: "imagebuild",
-        label: "Image build",
-        note: "Build Studio — build & tag images",
+        label: i18n.t("Image build"),
+        note: i18n.t("Build Studio — build & tag images"),
         // Ships on every engine via Build Studio (podman `build`, docker `buildx build`, apple `container build`).
         compute: () => YES,
       },
       {
         key: "testcontainers",
-        label: "testcontainers",
-        note: "Docker-API socket for test runners",
+        label: i18n.t("testcontainers"),
+        note: i18n.t("Docker-API socket for test runners"),
         compute: () => planned(4),
       },
     ],

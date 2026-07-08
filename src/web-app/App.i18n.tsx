@@ -1,43 +1,21 @@
-import i18n from "i18next";
 import React, { useCallback, useContext } from "react";
 import { initReactI18next } from "react-i18next";
 
-import { DEFAULT_LANGUAGE } from "@/web-app/App.config";
+import {
+  ensureI18nInitialized,
+  getCurrentLanguage,
+  i18n,
+  storeCurrentLanguage,
+  TRANSLATIONS,
+  t as translate,
+} from "@/i18n";
 import { Languages } from "@/web-app/App.resources";
-import en from "./translations/en.json";
 
-export const TRANSLATIONS = ["en", "ro"];
+export { getCurrentLanguage, TRANSLATIONS };
+
 export const TRANSLATION_LANGUAGES = Languages.filter((it) => TRANSLATIONS.includes(it["639-1"]));
 
-export const getCurrentLanguage = () => {
-  const storedLanguage = localStorage.getItem("i18nextLng");
-  if (!storedLanguage) {
-    return (i18n as any).language || DEFAULT_LANGUAGE;
-  }
-  return storedLanguage;
-};
-
-(i18n as any)
-  .use(initReactI18next) // passes i18n down to react-i18next
-  .init({
-    debug: false,
-    returnNull: false,
-    initImmediate: false,
-    preload: [],
-    fallbackLng: DEFAULT_LANGUAGE,
-    lng: getCurrentLanguage(),
-    // ns: ["translations"],
-    // defaultNS: "translations",
-    keySeparator: false, // we use content as keys
-    resources: {
-      en: {
-        translation: en,
-      },
-    },
-    interpolation: {
-      escapeValue: false,
-    },
-  });
+ensureI18nInitialized([initReactI18next]);
 
 export interface II18nContext {
   currentLanguage: string;
@@ -56,7 +34,7 @@ export const I18nContextProvider: React.FC<{ children?: React.ReactNode }> = ({ 
       value={{
         currentLanguage,
         setCurrentLanguage: (lang: any) => {
-          localStorage.setItem("i18nextLng", lang);
+          storeCurrentLanguage(lang);
           (i18n as any).changeLanguage(lang);
           setCurrentLanguage(lang);
         },
@@ -86,6 +64,6 @@ export const useTranslate = () => {
   };
 };
 
-export const t = (key: string, rest?: any) => (i18n as any).t(key, rest, { lng: getCurrentLanguage() });
+export const t = translate;
 
 export default { t };

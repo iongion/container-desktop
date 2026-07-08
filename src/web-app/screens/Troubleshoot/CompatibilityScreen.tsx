@@ -2,7 +2,7 @@ import { Callout, Icon, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { Fragment } from "react";
 
-import { t } from "@/web-app/App.i18n";
+import i18n, { t } from "@/i18n";
 import { EngineCell, engineLabel } from "@/web-app/components/EngineCell";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -14,7 +14,7 @@ interface ScreenProps extends AppScreenProps {}
 
 export const ID = "troubleshoot.compatibility";
 export const View = "compatibility";
-export const Title = "Compatibility";
+export const Title = i18n.t("Compatibility");
 
 function CompatibilityCell({ cell }: { cell: MatrixCell }) {
   const sup = cell.footnote ? <sup>{cell.footnote}</sup> : null;

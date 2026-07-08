@@ -23,7 +23,7 @@ import {
   type SSHHost,
   type WSLDistribution,
 } from "@/env/Types";
-import i18n from "@/web-app/App.i18n";
+import i18n from "@/i18n";
 
 import "./ScopeSelect.css";
 

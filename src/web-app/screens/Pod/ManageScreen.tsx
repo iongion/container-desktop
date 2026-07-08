@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Connector, Pod } from "@/env/Types";
+import i18n from "@/i18n";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -324,7 +325,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Pods";
+Screen.Title = i18n.t("Pods");
 Screen.Route = {
   Path: `/screens/${ID}`,
 };

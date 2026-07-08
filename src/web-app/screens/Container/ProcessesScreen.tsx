@@ -2,6 +2,7 @@ import { Code, HTMLTable, NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { CopyButton } from "@/web-app/components/CopyButton";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -9,9 +10,9 @@ import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
+import { useContainer, useContainerProcesses } from "./queries";
 
 import "./ProcessesScreen.css";
-import { useContainer, useContainerProcesses } from "./queries";
 
 interface ScreenProps extends AppScreenProps {}
 
@@ -100,7 +101,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Container Processes";
+Screen.Title = i18n.t("Container Processes");
 Screen.Route = {
   Path: "/screens/container/$id/processes",
 };

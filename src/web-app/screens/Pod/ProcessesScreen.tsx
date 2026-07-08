@@ -3,6 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { PodProcessReport } from "@/env/Types";
+import i18n from "@/i18n";
 import { CopyButton } from "@/web-app/components/CopyButton";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
@@ -99,7 +100,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Pod processes";
+Screen.Title = i18n.t("Pod processes");
 Screen.Route = {
   Path: "/screens/pod/$id/processes",
 };

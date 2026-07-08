@@ -10,6 +10,8 @@
 // Native menus can't host inline buttons, progress bars, or live updates, so per-item actions are
 // fly-out submenus and stats are dropped. Long lists are capped with a "Show all … in app" escape.
 
+import i18n from "@/i18n";
+
 // Neutral, electron-free menu-item shape — the subset this projection actually produces. Electron's
 // TrayController casts it to MenuItemConstructorOptions at the Menu.buildFromTemplate boundary; the Tauri
 // TrayController flattens it into a serializable node tree. Keeps this pure projection at the platform root.
@@ -60,18 +62,18 @@ function containerActions(state: string): Action[] {
   switch (state.toLowerCase()) {
     case "running":
       return [
-        { kind: "container.pause", title: "Pause" },
-        { kind: "container.stop", title: "Stop" },
-        { kind: "container.restart", title: "Restart" },
+        { kind: "container.pause", title: i18n.t("Pause") },
+        { kind: "container.stop", title: i18n.t("Stop") },
+        { kind: "container.restart", title: i18n.t("Restart") },
       ];
     case "paused":
       return [
-        { kind: "container.unpause", title: "Resume" },
-        { kind: "container.stop", title: "Stop" },
-        { kind: "container.restart", title: "Restart" },
+        { kind: "container.unpause", title: i18n.t("Resume") },
+        { kind: "container.stop", title: i18n.t("Stop") },
+        { kind: "container.restart", title: i18n.t("Restart") },
       ];
     default:
-      return [{ kind: "container.start", title: "Start" }];
+      return [{ kind: "container.start", title: i18n.t("Start") }];
   }
 }
 
@@ -79,27 +81,27 @@ function podActions(status: string): Action[] {
   switch (status.toLowerCase()) {
     case "running":
       return [
-        { kind: "pod.pause", title: "Pause" },
-        { kind: "pod.stop", title: "Stop" },
-        { kind: "pod.restart", title: "Restart" },
+        { kind: "pod.pause", title: i18n.t("Pause") },
+        { kind: "pod.stop", title: i18n.t("Stop") },
+        { kind: "pod.restart", title: i18n.t("Restart") },
       ];
     case "paused":
       return [
-        { kind: "pod.unpause", title: "Resume" },
-        { kind: "pod.stop", title: "Stop" },
+        { kind: "pod.unpause", title: i18n.t("Resume") },
+        { kind: "pod.stop", title: i18n.t("Stop") },
       ];
     default:
-      return [{ kind: "pod.start", title: "Start" }];
+      return [{ kind: "pod.start", title: i18n.t("Start") }];
   }
 }
 
 function machineActions(running: boolean): Action[] {
   return running
     ? [
-        { kind: "machine.stop", title: "Stop" },
-        { kind: "machine.restart", title: "Restart" },
+        { kind: "machine.stop", title: i18n.t("Stop") },
+        { kind: "machine.restart", title: i18n.t("Restart") },
       ]
-    : [{ kind: "machine.start", title: "Start" }];
+    : [{ kind: "machine.start", title: i18n.t("Start") }];
 }
 
 // One resource row, scoped to its owning connection: a single action collapses to a flat `Verb "name"` item;
@@ -114,7 +116,10 @@ function resourceItem(
 ): Item {
   if (actions.length === 1) {
     const only = actions[0];
-    return { label: `${only.title} "${name}"`, click: () => onAction(only.kind, id, connectionId) };
+    return {
+      label: i18n.t('{{action}} "{{name}}"', { action: only.title, name }),
+      click: () => onAction(only.kind, id, connectionId),
+    };
   }
   return {
     label: name,
@@ -126,7 +131,7 @@ function resourceItem(
 function capped(rows: Item[], total: number, onShowApp: TrayMenuHandlers["onShowApp"]): Item[] {
   const out = rows.slice(0, LIST_CAP);
   if (total > LIST_CAP) {
-    out.push({ label: `Show all ${total} in app…`, click: () => onShowApp() });
+    out.push({ label: i18n.t("Show all {{total}} in app…", { total }), click: () => onShowApp() });
   }
   return out;
 }
@@ -146,26 +151,32 @@ function connectionSections(
   const body: Item[] = [];
   if (running.length > 0) {
     const rows = running.map((c) => resourceItem(c.name, c.id, containerActions(c.state), id, onAction));
-    body.push({ label: `Running (${running.length})`, submenu: capped(rows, running.length, onShowApp) });
+    body.push({
+      label: i18n.t("Running ({{count}})", { count: running.length }),
+      submenu: capped(rows, running.length, onShowApp),
+    });
   }
   if (stopped.length > 0) {
     const rows = stopped.map((c) => resourceItem(c.name, c.id, containerActions(c.state), id, onAction));
-    body.push({ label: `Stopped (${stopped.length})`, submenu: capped(rows, stopped.length, onShowApp) });
+    body.push({
+      label: i18n.t("Stopped ({{count}})", { count: stopped.length }),
+      submenu: capped(rows, stopped.length, onShowApp),
+    });
   }
   if (connection.pods.length > 0) {
     body.push({
-      label: "Pods",
+      label: i18n.t("Pods"),
       submenu: connection.pods.map((p) => resourceItem(p.name, p.id, podActions(p.status), id, onAction)),
     });
   }
   if (connection.machines.length > 0) {
     body.push({
-      label: "Machines",
+      label: i18n.t("Machines"),
       submenu: connection.machines.map((m) => resourceItem(m.name, m.name, machineActions(m.running), id, onAction)),
     });
   }
   if (body.length === 0) {
-    body.push({ label: "No resources", enabled: false });
+    body.push({ label: i18n.t("No resources"), enabled: false });
   }
   return body;
 }
@@ -176,7 +187,7 @@ export function buildTrayMenuTemplate(data: TrayMenuData, handlers: TrayMenuHand
 
   const connected = data.connections.filter((c) => c.running);
   if (connected.length === 0) {
-    items.push({ label: "Connecting…", enabled: false });
+    items.push({ label: i18n.t("Connecting…"), enabled: false });
   } else if (connected.length === 1) {
     // Single engine: render its sections flat (the familiar single-connection layout).
     const only = connected[0];
@@ -185,7 +196,7 @@ export function buildTrayMenuTemplate(data: TrayMenuData, handlers: TrayMenuHand
     items.push(...connectionSections(only, onAction, onShowApp));
   } else {
     // Multiple engines: a summary line, then one `name — engine ▸` section per connected engine.
-    items.push({ label: `● ${connected.length} engines connected`, enabled: false });
+    items.push({ label: i18n.t("● {{count}} engines connected", { count: connected.length }), enabled: false });
     items.push({ type: "separator" });
     for (const connection of connected) {
       items.push({
@@ -196,7 +207,7 @@ export function buildTrayMenuTemplate(data: TrayMenuData, handlers: TrayMenuHand
   }
 
   items.push({ type: "separator" });
-  items.push({ label: "Open main window", click: () => onShowApp() });
-  items.push({ label: "Quit", click: () => onQuit() });
+  items.push({ label: i18n.t("Open main window"), click: () => onShowApp() });
+  items.push({ label: i18n.t("Quit"), click: () => onQuit() });
   return items;
 }

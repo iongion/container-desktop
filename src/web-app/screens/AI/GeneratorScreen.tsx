@@ -15,9 +15,10 @@ import { useStackHandoffStore } from "@/web-app/stores/stackHandoffStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import "./GeneratorScreen.css";
+import i18n from "@/i18n";
 
 export const ID = "ai.generator";
-export const Title = "Generator";
+export const Title = i18n.t("Generator");
 
 // Static starting points (no AI required). The AI step refines/replaces the editor content.
 const DOCKERFILE_TEMPLATES: Record<string, string> = {

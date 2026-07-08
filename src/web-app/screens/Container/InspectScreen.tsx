@@ -11,6 +11,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
+import i18n from "@/i18n";
 import { useContainer } from "./queries";
 
 interface InspectGroupValues {
@@ -156,7 +157,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Container Inspect";
+Screen.Title = i18n.t("Container Inspect");
 Screen.Route = {
   Path: "/screens/container/$id/inspect",
 };

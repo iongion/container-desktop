@@ -9,6 +9,7 @@ import { PROBE_PROGRAMS } from "@/container-provisioning/provisioningService";
 import { preferredEngine } from "@/container-provisioning/targetDefaults";
 import type { DetectedProgram } from "@/container-provisioning/types";
 import { Presence } from "@/env/Types";
+import i18n from "@/i18n";
 import { engineLabel } from "@/web-app/components/EngineCell";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 
@@ -27,9 +28,9 @@ const PROBE_LABELS: Record<string, string> = {
 // Programs that only exist on one platform — still listed on other OSes for consistency, but disabled with
 // the reason instead of being probed (podman/docker/ssh work everywhere, so they're never disabled).
 const PROBE_ONLY_ON: Record<string, string> = {
-  container: "macOS only",
-  limactl: "macOS only",
-  wsl: "Windows only",
+  container: i18n.t("macOS only"),
+  limactl: i18n.t("macOS only"),
+  wsl: i18n.t("Windows only"),
 };
 
 // Step 1 — probe the machine and tick each program off as its check resolves (never a single blocking

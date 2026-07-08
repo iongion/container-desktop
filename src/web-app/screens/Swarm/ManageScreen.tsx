@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 
 import { SwarmAdapter } from "@/container-client/adapters/swarm";
 import type { Connector, SwarmConfig, SwarmNode, SwarmSecret, SwarmService, SwarmStack } from "@/env/Types";
+import i18n from "@/i18n";
 import { extractApiErrorText } from "@/utils/apiError";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
@@ -98,11 +99,11 @@ const CONFIG_SORT_CAPABILITIES = {
   [`${CONFIGS_SORT_SCOPE}.created`]: "client",
 } as const;
 const TAB_LABELS: Record<SwarmTab, string> = {
-  services: "Services",
-  nodes: "Nodes",
-  stacks: "Stacks",
-  secrets: "Secrets",
-  configs: "Configs",
+  services: i18n.t("Services"),
+  nodes: i18n.t("Nodes"),
+  stacks: i18n.t("Stacks"),
+  secrets: i18n.t("Secrets"),
+  configs: i18n.t("Configs"),
 };
 
 type SwarmConnectionMeta = {
@@ -1390,7 +1391,7 @@ export const ServicesTable: React.FC<{
 };
 
 Screen.ID = ID;
-Screen.Title = "Swarm";
+Screen.Title = i18n.t("Swarm");
 Screen.Route = {
   Path: "/screens/swarm",
 };

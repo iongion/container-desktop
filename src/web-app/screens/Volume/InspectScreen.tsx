@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -12,7 +13,7 @@ import { getVolumeCrumbs } from "./Navigation";
 import { useVolume } from "./queries";
 
 export const ID = "volume.inspect";
-export const Title = "Volume Inspect";
+export const Title = i18n.t("Volume Inspect");
 
 export interface ScreenProps extends AppScreenProps {}
 export const Screen: AppScreen<ScreenProps> = () => {

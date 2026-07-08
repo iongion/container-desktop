@@ -9,6 +9,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 
 import "./GenerateKubeScreen.css";
+import i18n from "@/i18n";
 import { useContainer, useContainerKube } from "./queries";
 
 export const ID = "container.kube";
@@ -54,7 +55,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Container kube";
+Screen.Title = i18n.t("Container kube");
 Screen.Route = {
   Path: "/screens/container/$id/kube",
 };

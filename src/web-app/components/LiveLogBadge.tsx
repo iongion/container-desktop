@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+
 import "./LiveLogBadge.css";
 
 export type LogStatus = "connecting" | "live" | "ended" | "error" | "snapshot";
@@ -11,15 +13,15 @@ export interface LogBadgeDescriptor {
 export function describeLogStatus(status: LogStatus): LogBadgeDescriptor {
   switch (status) {
     case "live":
-      return { label: "LIVE", tone: "live", pulsing: true };
+      return { label: i18n.t("LIVE"), tone: "live", pulsing: true };
     case "connecting":
-      return { label: "CONNECTING", tone: "connecting", pulsing: true };
+      return { label: i18n.t("CONNECTING"), tone: "connecting", pulsing: true };
     case "ended":
-      return { label: "ENDED", tone: "ended", pulsing: false };
+      return { label: i18n.t("ENDED"), tone: "ended", pulsing: false };
     case "error":
-      return { label: "ERROR", tone: "error", pulsing: false };
+      return { label: i18n.t("ERROR"), tone: "error", pulsing: false };
     default:
-      return { label: "SNAPSHOT", tone: "snapshot", pulsing: false };
+      return { label: i18n.t("SNAPSHOT"), tone: "snapshot", pulsing: false };
   }
 }
 

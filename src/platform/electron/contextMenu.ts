@@ -12,6 +12,8 @@ import {
   shell,
 } from "electron";
 
+import i18n from "@/i18n";
+
 export interface ContextMenuOptions {
   window: BrowserWindow;
   showInspectElement?: boolean;
@@ -56,9 +58,9 @@ function buildTemplate(
     const linkURL = props.linkURL;
     separate();
     template.push(
-      { label: "Copy Link Address", click: () => clipboard.writeText(linkURL) },
+      { label: i18n.t("Copy Link Address"), click: () => clipboard.writeText(linkURL) },
       {
-        label: "Open Link in Browser",
+        label: i18n.t("Open Link in Browser"),
         enabled: !externalOpenDisabled(),
         click: () => void shell.openExternal(linkURL),
       },
@@ -68,16 +70,16 @@ function buildTemplate(
   if (props.mediaType === "image") {
     const srcURL = props.srcURL;
     separate();
-    template.push({ label: "Copy Image", click: () => window.webContents.copyImageAt(props.x, props.y) });
+    template.push({ label: i18n.t("Copy Image"), click: () => window.webContents.copyImageAt(props.x, props.y) });
     if (srcURL) {
-      template.push({ label: "Save Image As…", click: () => window.webContents.downloadURL(srcURL) });
+      template.push({ label: i18n.t("Save Image As…"), click: () => window.webContents.downloadURL(srcURL) });
     }
   }
 
   if (options.showInspectElement ?? true) {
     separate();
     template.push({
-      label: "Inspect Element",
+      label: i18n.t("Inspect Element"),
       click: () => {
         window.webContents.inspectElement(props.x, props.y);
         if (window.webContents.isDevToolsOpened()) {

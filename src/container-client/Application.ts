@@ -76,6 +76,7 @@ import {
   StartupStatus,
   type SubscriptionOptions,
 } from "@/env/Types";
+import i18n from "@/i18n";
 import { getWindowsPipePath } from "@/platform";
 import { createLogger, getLevel, setLevel } from "@/platform/logger";
 import { normalizeLoggingFileSettings } from "@/platform/logger/loggingSettings";
@@ -777,21 +778,21 @@ export class Application {
               } catch (error: any) {
                 this.logger.error("Error during output parsing", error.message, analysis);
                 report.fault = {
-                  detail: "Error during output parsing",
+                  detail: i18n.t("Error during output parsing"),
                   message: error.message,
                 };
               }
             } else {
               this.logger.error("Analysis failed", analysis);
               report.fault = {
-                detail: "Analysis failed",
+                detail: i18n.t("Analysis failed"),
                 message: report.stderr,
               };
             }
           } catch (error: any) {
             this.logger.error("Error during scanning process", error.message);
             report.fault = {
-              detail: "Error during scanning process",
+              detail: i18n.t("Error during scanning process"),
               message: error.message,
             };
           }
@@ -802,7 +803,7 @@ export class Application {
     } catch (error: any) {
       this.logger.error("Error during scanner detection", error.message);
       report.fault = {
-        detail: "Error during scanner detection",
+        detail: i18n.t("Error during scanner detection"),
         message: error.message,
       };
     }

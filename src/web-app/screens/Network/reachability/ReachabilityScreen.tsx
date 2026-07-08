@@ -24,6 +24,7 @@ import {
 } from "@/container-client/reachability/model";
 import { RESOURCE_SYNC } from "@/container-client/resourceSyncProtocol";
 import type { Container } from "@/env/Types";
+import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CopyButton } from "@/web-app/components/CopyButton";
 import { EngineCell } from "@/web-app/components/EngineCell";
@@ -36,7 +37,7 @@ import { ChainPipe } from "./ChainPipe";
 import "./Reachability.css";
 
 export const ID = "networks.reachability";
-export const Title = "Reachability";
+export const Title = i18n.t("Reachability");
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -61,10 +62,10 @@ interface PickableGroup {
 }
 
 const CHECK_TABS: { id: ReachabilityCheckType; label: string; icon: IconName }[] = [
-  { id: "published-port", label: "Published port", icon: IconNames.IMPORT },
-  { id: "service-to-service", label: "Service → service", icon: IconNames.EXCHANGE },
-  { id: "reach-out", label: "Reach out", icon: IconNames.GLOBE },
-  { id: "dns-lookup", label: "DNS lookup", icon: IconNames.SEARCH_TEMPLATE },
+  { id: "published-port", label: i18n.t("Published port"), icon: IconNames.IMPORT },
+  { id: "service-to-service", label: i18n.t("Service → service"), icon: IconNames.EXCHANGE },
+  { id: "reach-out", label: i18n.t("Reach out"), icon: IconNames.GLOBE },
+  { id: "dns-lookup", label: i18n.t("DNS lookup"), icon: IconNames.SEARCH_TEMPLATE },
 ];
 
 const containerDisplayName = (container: Container): string => {

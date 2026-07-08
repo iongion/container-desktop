@@ -3,7 +3,7 @@
 import { Intent, ProgressBar } from "@blueprintjs/core";
 import dayjs from "dayjs";
 import { useEffect, useRef } from "react";
-import i18n from "@/web-app/App.i18n";
+import i18n from "@/i18n";
 import { useAppStore } from "@/web-app/stores/appStore";
 // module
 import "./AppLoading.css";

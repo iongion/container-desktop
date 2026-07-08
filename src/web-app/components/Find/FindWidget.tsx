@@ -1,6 +1,7 @@
 import { Button, InputGroup } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import type React from "react";
+import { useTranslation } from "react-i18next";
 
 export interface FindWidgetProps {
   query: string;
@@ -33,6 +34,7 @@ export const FindWidget: React.FC<FindWidgetProps> = ({
   inputRef,
   style,
 }: FindWidgetProps) => {
+  const { t } = useTranslation();
   const hasQuery = query.length > 0;
   const noMatches = hasQuery && count === 0;
   return (
@@ -48,20 +50,20 @@ export const FindWidget: React.FC<FindWidgetProps> = ({
         inputRef={inputRef}
         value={query}
         leftIcon={IconNames.SEARCH}
-        placeholder="Find"
-        aria-label="Find in view"
+        placeholder={t("Find")}
+        aria-label={t("Find in view")}
         onChange={(event) => onQueryChange(event.currentTarget.value)}
       />
       <span className="ContainerFindWidgetCount" aria-live="polite">
-        {hasQuery ? (count ? `${index}/${count}` : "No results") : ""}
+        {hasQuery ? (count ? `${index}/${count}` : t("No results")) : ""}
       </span>
       <Button
         className="ContainerFindWidgetCase"
         size="small"
         variant="minimal"
         active={caseSensitive}
-        title="Match case"
-        aria-label="Match case"
+        title={t("Match case")}
+        aria-label={t("Match case")}
         text="Aa"
         onClick={onToggleCase}
       />
@@ -69,8 +71,8 @@ export const FindWidget: React.FC<FindWidgetProps> = ({
         size="small"
         variant="minimal"
         icon={IconNames.CHEVRON_UP}
-        title="Previous match (Shift+Enter)"
-        aria-label="Previous match"
+        title={t("Previous match (Shift+Enter)")}
+        aria-label={t("Previous match")}
         disabled={!count}
         onClick={onPrevious}
       />
@@ -78,8 +80,8 @@ export const FindWidget: React.FC<FindWidgetProps> = ({
         size="small"
         variant="minimal"
         icon={IconNames.CHEVRON_DOWN}
-        title="Next match (Enter)"
-        aria-label="Next match"
+        title={t("Next match (Enter)")}
+        aria-label={t("Next match")}
         disabled={!count}
         onClick={onNext}
       />
@@ -87,8 +89,8 @@ export const FindWidget: React.FC<FindWidgetProps> = ({
         size="small"
         variant="minimal"
         icon={IconNames.CROSS}
-        title="Close (Esc)"
-        aria-label="Close find"
+        title={t("Close (Esc)")}
+        aria-label={t("Close find")}
         onClick={onClose}
       />
     </search>

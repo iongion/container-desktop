@@ -39,6 +39,7 @@
       "@/container-provisioning/*": ["./src/container-provisioning/*"],
       "@/env": ["./src/env"],
       "@/env/*": ["./src/env/*"],
+      "@/i18n": ["./src/i18n"],
       "@/platform": ["./src/platform"],
       "@/platform/*": ["./src/platform/*"],
       "@/resources": ["./src/resources"],

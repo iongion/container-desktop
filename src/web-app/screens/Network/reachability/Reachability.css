@@ -15,8 +15,7 @@
 .Reachability .Card {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
-  border-radius: 8px;
-  padding: 14px 16px;
+  padding: 10px 12px;
 }
 .Reachability .Card .CardHead {
   display: flex;

@@ -1,4 +1,5 @@
 import type { ContainerImage } from "@/env/Types";
+import i18n from "@/i18n";
 import { type AppBreadcrumb, tabbedCrumbs } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 
@@ -25,8 +26,8 @@ export const imageDisplayName = (image: Pick<ContainerImage, "Name" | "Tag" | "F
 
 // Sub-tab label per view segment (keys match the ActionsMenu wording).
 const IMAGE_VIEW_LABELS: Record<string, string> = {
-  layers: "Layers",
-  security: "Security",
+  layers: i18n.t("Layers"),
+  security: i18n.t("Security"),
 };
 
 /** Canonical image trail: `Images > name` on inspect; `Images > name > Tab` on a sub-tab. */

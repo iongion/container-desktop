@@ -2,7 +2,7 @@ import { Button, Icon, Switch } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useState } from "react";
 
-import { t } from "@/web-app/App.i18n";
+import { t } from "@/i18n";
 // App-wide supply-chain policy — reuses the Registries & Trust design language (cards / switch rows /
 // allow rows / diagnosis stripe) so the two surfaces read as one system.
 import "../../Registry/RegistriesTrust.css";
@@ -11,9 +11,9 @@ import "../../Registry/RegistriesTrust.css";
 // the whole workspace: offline pull gate, run-only-signed (cosign), and the allowed-registry allowlist. A
 // design preview until the policy backend wires in (handover Step 5); toggles are local-only for now.
 const ALLOWED_REGISTRIES: { name: string; note: string; allowed: boolean }[] = [
-  { name: "registry.corp.local:5000", note: "mirror · internal", allowed: true },
-  { name: "quay.io", note: "base images", allowed: true },
-  { name: "docker.io", note: "public", allowed: false },
+  { name: "registry.corp.local:5000", note: t("mirror · internal"), allowed: true },
+  { name: "quay.io", note: t("base images"), allowed: true },
+  { name: "docker.io", note: t("public"), allowed: false },
 ];
 
 export const AirGapPolicyPanel: React.FC = () => {

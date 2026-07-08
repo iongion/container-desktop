@@ -4,7 +4,7 @@ import { mdiCubeUnfolded } from "@mdi/js";
 import { useCallback, useMemo, useState } from "react";
 
 import type { Registry, RegistryAuthInfo, RegistryTlsState } from "@/env/Types";
-import { t } from "@/web-app/App.i18n";
+import { t } from "@/i18n";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { EngineCell, engineLabel } from "@/web-app/components/EngineCell";

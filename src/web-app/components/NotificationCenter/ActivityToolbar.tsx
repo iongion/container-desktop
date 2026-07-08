@@ -2,6 +2,7 @@ import { type ActionProps, Button, ButtonGroup, InputGroup, type Intent } from "
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
+import i18n from "@/i18n";
 import { type ActivityTab, useActivityStore } from "@/web-app/stores/activityStore";
 import {
   ACTIVITY_SEVERITIES,
@@ -23,10 +24,10 @@ const SEVERITY_INTENT: Record<ActivitySeverity, Intent> = {
   error: "danger",
 };
 const KIND_LABEL: Record<ActivityKind, string> = {
-  notification: "Notifications",
-  api: "API",
-  cli: "CLI",
-  system: "System",
+  notification: i18n.t("Notifications"),
+  api: i18n.t("API"),
+  cli: i18n.t("CLI"),
+  system: i18n.t("System"),
 };
 
 // A single compact filter bar: the search field carries the kind + severity toggles as its
@@ -63,7 +64,7 @@ export function ActivityToolbar({ tab, showKinds = false }: { tab: ActivityTab; 
             icon={SEVERITY_ICON[severity]}
             intent={SEVERITY_INTENT[severity]}
             title={t(severity)}
-            aria-label={severity}
+            aria-label={t(severity)}
             onClick={() => toggleSeverity(tab, severity)}
           />
         ))}

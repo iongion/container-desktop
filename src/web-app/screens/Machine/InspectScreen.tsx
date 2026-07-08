@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import i18n from "@/i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
@@ -11,7 +12,7 @@ import { useMachine } from "./queries";
 import "./InspectScreen.css";
 
 export const ID = "machine.inspect";
-export const Title = "Machine Inspect";
+export const Title = i18n.t("Machine Inspect");
 
 export interface ScreenProps extends AppScreenProps {}
 

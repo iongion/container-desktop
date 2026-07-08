@@ -3,6 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { mdiEmoticonSad } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import React from "react";
+import i18n from "@/i18n";
 import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.AppErrorBoundary");
@@ -68,7 +69,7 @@ export default class AppErrorBoundary extends React.Component<
                       variant="minimal"
                       icon={IconNames.DASHBOARD}
                       onClick={this.onGoToDashboardClick}
-                      text={this.props.dashboard ?? "Go to Dashboard"}
+                      text={this.props.dashboard ?? i18n.t("Go to Dashboard")}
                     />
                   </div>
                   <Button

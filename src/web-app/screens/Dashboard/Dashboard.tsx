@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngineHost, ContainerStateList, OperatingSystem } from "@/env/Types";
+import i18n from "@/i18n";
 import { CopyButton } from "@/web-app/components/CopyButton";
 import { CONTAINER_DOCS_EXAMPLE_CODE, CONTAINER_DOCS_URL } from "@/web-app/Environment";
 import { useMergedResources } from "@/web-app/hooks/useMergedResources";
@@ -13,7 +14,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import "./Dashboard.css";
 
 export const ID = "dashboard";
-export const Title = "Dashboard";
+export const Title = i18n.t("Dashboard");
 
 export interface ScreenProps extends AppScreenProps {}
 

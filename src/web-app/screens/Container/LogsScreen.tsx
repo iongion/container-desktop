@@ -1,6 +1,7 @@
 import { Callout } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { isContainerRunning } from "@/container-client/adapters/containers";
 import { LiveLogBadge, type LogStatus } from "@/web-app/components/LiveLogBadge";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -10,6 +11,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
+import i18n from "@/i18n";
 import { useContainer, useContainerLogs } from "./queries";
 import { useContainerLogStream } from "./useContainerLogStream";
 
@@ -18,6 +20,7 @@ interface ScreenProps extends AppScreenProps {}
 export const ID = "container.logs";
 
 export const Screen: AppScreen<ScreenProps> = () => {
+  const { t } = useTranslation();
   const { id } = useRouteParams<{ id: string }>();
   const { connId } = useRouteSearch<{ connId?: string }>();
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
@@ -48,7 +51,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
-        {stream.error ? <Callout intent="warning">Live log stream failed: {stream.error}</Callout> : null}
+        {stream.error ? (
+          <Callout intent="warning">{t("Live log stream failed: {{error}}", { error: stream.error })}</Callout>
+        ) : null}
         {running ? (
           <Terminal writeMode="append" onReady={stream.setTerminal} overlay={<LiveLogBadge status={badgeStatus} />} />
         ) : (
@@ -64,7 +69,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Container Logs";
+Screen.Title = i18n.t("Container Logs");
 Screen.Route = {
   Path: "/screens/container/$id/logs",
 };

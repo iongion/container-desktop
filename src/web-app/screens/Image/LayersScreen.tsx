@@ -1,13 +1,13 @@
 import { IconNames } from "@blueprintjs/icons";
+import i18n from "@/i18n";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { LayerInspector } from "@/web-app/screens/Build/LayerInspector";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
-
 import { ScreenHeader } from ".";
-import "./LayersScreen.css";
 import { useImage, useImageHistory } from "./queries";
+import "./LayersScreen.css";
 
 export const ID = "image.layers";
 
@@ -40,7 +40,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Image Layers";
+Screen.Title = i18n.t("Image Layers");
 Screen.Route = {
   Path: "/screens/image/$id/layers",
 };

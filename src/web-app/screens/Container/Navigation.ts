@@ -1,4 +1,5 @@
 import type { Container } from "@/env/Types";
+import i18n from "@/i18n";
 import { type AppBreadcrumb, tabbedCrumbs } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 
@@ -9,11 +10,11 @@ export const getContainerUrl = (id: string, view: string, connId?: string) => {
 // Sub-tab label per view segment (keys match the ActionsMenu wording). The default/inspect view has no
 // entry — there the resource name itself is the current leaf.
 const CONTAINER_VIEW_LABELS: Record<string, string> = {
-  logs: "Logs",
-  stats: "Stats",
-  processes: "Processes",
-  kube: "Kube",
-  terminal: "Terminal",
+  logs: i18n.t("Logs"),
+  stats: i18n.t("Stats"),
+  processes: i18n.t("Processes"),
+  kube: i18n.t("Kube"),
+  terminal: i18n.t("Terminal"),
 };
 
 /**

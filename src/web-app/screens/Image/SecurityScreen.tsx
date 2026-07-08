@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
+import i18n from "@/i18n";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -13,17 +14,17 @@ import "./SecurityScreen.css";
 import { useImage, useImageSecurity } from "./queries";
 
 export const ID = "image.security";
-export const Title = "Image Security";
+export const Title = i18n.t("Image Security");
 
 export interface ScreenProps extends AppScreenProps {}
 
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"] as const;
 const SEVERITY_LABELS: Record<(typeof SEVERITIES)[number], string> = {
-  CRITICAL: "Critical",
-  HIGH: "High",
-  MEDIUM: "Medium",
-  LOW: "Low",
-  UNKNOWN: "Unknown",
+  CRITICAL: i18n.t("Critical"),
+  HIGH: i18n.t("High"),
+  MEDIUM: i18n.t("Medium"),
+  LOW: i18n.t("Low"),
+  UNKNOWN: i18n.t("Unknown"),
 };
 const SEVERITY_RANK: Record<string, number> = {
   CRITICAL: 0,

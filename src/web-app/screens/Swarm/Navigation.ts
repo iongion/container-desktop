@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { type AppBreadcrumb, crumb, rootCrumb } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 
@@ -16,11 +17,11 @@ export const getSwarmInspectUrl = (kind: SwarmInspectSegment, id: string, connId
 
 // Section label per swarm entity kind (keys match the tab strip wording).
 const SWARM_KIND_LABELS: Record<SwarmInspectSegment, string> = {
-  services: "Services",
-  nodes: "Nodes",
-  stacks: "Stacks",
-  secrets: "Secrets",
-  configs: "Configs",
+  services: i18n.t("Services"),
+  nodes: i18n.t("Nodes"),
+  stacks: i18n.t("Stacks"),
+  secrets: i18n.t("Secrets"),
+  configs: i18n.t("Configs"),
 };
 
 /**

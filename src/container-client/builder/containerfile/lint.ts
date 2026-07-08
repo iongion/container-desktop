@@ -3,6 +3,8 @@
 // headline cache rule — copying the whole context before installing dependencies is the most common reason
 // a build stops caching.
 
+import i18n from "@/i18n";
+
 import type { CfInstruction, ContainerfileAst, LintFinding } from "../types";
 
 const KNOWN_INSTRUCTIONS = new Set([
@@ -48,7 +50,7 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
     findings.push({
       ruleId: "CF001",
       severity: "error",
-      message: "No FROM instruction — a Containerfile must start from a base image.",
+      message: i18n.t("No FROM instruction — a Containerfile must start from a base image."),
       range: { start: 0, end: 0 },
     });
   }
@@ -61,9 +63,12 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
       findings.push({
         ruleId: "CF002",
         severity: "warning",
-        message: `Base image "${ref}" is ${isLatest ? "pinned to :latest" : "untagged"} — pin a specific tag or digest for reproducible builds.`,
+        message: i18n.t('Base image "{{ref}}" is {{state}} — pin a specific tag or digest for reproducible builds.', {
+          ref,
+          state: isLatest ? i18n.t("pinned to :latest") : i18n.t("untagged"),
+        }),
         range: stage.instructions[0].range,
-        fixHint: "Use an explicit version tag, e.g. node:20-alpine.",
+        fixHint: i18n.t("Use an explicit version tag, e.g. node:20-alpine."),
       });
     }
   }
@@ -74,7 +79,7 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
       findings.push({
         ruleId: "CF005",
         severity: "error",
-        message: `Unknown instruction "${instruction.rawKeyword}".`,
+        message: i18n.t('Unknown instruction "{{instruction}}".', { instruction: instruction.rawKeyword }),
         range: instruction.range,
       });
       continue;
@@ -93,9 +98,9 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
         findings.push({
           ruleId: "CF003",
           severity: "warning",
-          message: "Package install without cleaning the package cache in the same RUN grows the layer.",
+          message: i18n.t("Package install without cleaning the package cache in the same RUN grows the layer."),
           range: instruction.range,
-          fixHint: "Append the matching cleanup (e.g. rm -rf /var/lib/apt/lists/*) to this RUN.",
+          fixHint: i18n.t("Append the matching cleanup (e.g. rm -rf /var/lib/apt/lists/*) to this RUN."),
         });
       }
       // CF006: prefer WORKDIR over a bare `cd`.
@@ -103,7 +108,7 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
         findings.push({
           ruleId: "CF006",
           severity: "info",
-          message: "Use WORKDIR instead of `RUN cd` — cd does not persist to later instructions.",
+          message: i18n.t("Use WORKDIR instead of `RUN cd` — cd does not persist to later instructions."),
           range: instruction.range,
         });
       }
@@ -118,7 +123,7 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
         findings.push({
           ruleId: "CF004",
           severity: "info",
-          message: "Prefer COPY over ADD for local files (ADD has surprising archive/URL semantics).",
+          message: i18n.t("Prefer COPY over ADD for local files (ADD has surprising archive/URL semantics)."),
           range: instruction.range,
         });
       }
@@ -130,7 +135,7 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
         findings.push({
           ruleId: "CF009",
           severity: "warning",
-          message: "Secret-looking value in an ENV/ARG is baked into the image — use --secret mounts instead.",
+          message: i18n.t("Secret-looking value in an ENV/ARG is baked into the image — use --secret mounts instead."),
           range: instruction.range,
         });
       }
@@ -150,9 +155,9 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
         findings.push({
           ruleId: "CF007",
           severity: "warning",
-          message: "COPY . . before installing dependencies busts the layer cache on every source change.",
+          message: i18n.t("COPY . . before installing dependencies busts the layer cache on every source change."),
           range: stage.instructions[wholeContextCopyIndex].range,
-          fixHint: "Copy the manifest (package.json, requirements.txt…) and install first, then COPY the rest.",
+          fixHint: i18n.t("Copy the manifest (package.json, requirements.txt…) and install first, then COPY the rest."),
         });
       }
     }
@@ -164,7 +169,7 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
     findings.push({
       ruleId: "CF008",
       severity: "info",
-      message: "No USER set — the image runs as root. Add a non-root USER for the runtime stage.",
+      message: i18n.t("No USER set — the image runs as root. Add a non-root USER for the runtime stage."),
       range: lastStage.instructions[0].range,
     });
   }
@@ -174,7 +179,7 @@ export function lint(ast: ContainerfileAst): LintFinding[] {
     findings.push({
       ruleId: "CF010",
       severity: "info",
-      message: "No HEALTHCHECK — the runtime cannot tell whether the container is healthy.",
+      message: i18n.t("No HEALTHCHECK — the runtime cannot tell whether the container is healthy."),
       range: { start: 0, end: 0 },
     });
   }

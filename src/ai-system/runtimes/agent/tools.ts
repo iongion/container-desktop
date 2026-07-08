@@ -10,6 +10,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { AgentToolDeps, KnowledgeEntry, SandboxCommand } from "@/ai-system/core";
 import { commandKey, resolveToolAction } from "@/ai-system/core";
+import i18n from "@/i18n";
 import { createContainerTools } from "./containerTools";
 import { isFloorBlocked } from "./sandbox";
 
@@ -17,11 +18,13 @@ export const runCommandInput = z
   .object({
     program: z
       .string()
-      .describe("The executable to run, e.g. 'podman' or 'docker'. A bare program name, never a path or shell."),
+      .describe(
+        i18n.t("The executable to run, e.g. 'podman' or 'docker'. A bare program name, never a path or shell."),
+      ),
     args: z
       .array(z.string())
       .default([])
-      .describe("Arguments as an array of separate strings (never a single shell line)."),
+      .describe(i18n.t("Arguments as an array of separate strings (never a single shell line).")),
   })
   .strict();
 
@@ -46,7 +49,7 @@ export async function runCommandTool(deps: AgentToolDeps, input: { program: stri
   const action = resolveToolAction({ mode: deps.mode, floorBlocked: floor.blocked, cached });
 
   if (action === "reject") {
-    const reason = floor.reason ?? "Rejected by your saved permissions.";
+    const reason = floor.reason ?? i18n.t("Rejected by your saved permissions.");
     deps.onEvent?.({ type: "rejected", program: command.program, args: command.args, reason });
     return { ok: false, rejected: true, reason } as const;
   }
@@ -57,13 +60,14 @@ export async function runCommandTool(deps: AgentToolDeps, input: { program: stri
       kind: "command",
       program: command.program,
       args: command.args,
-      reason: "Requires your approval before it runs.",
+      reason: i18n.t("Requires your approval before it runs."),
     });
     return {
       ok: false,
       awaitingApproval: true,
-      reason:
+      reason: i18n.t(
         "This command requires the user's approval before it runs. Do NOT assume it ran or invent its output — stop and let the user decide.",
+      ),
     } as const;
   }
 
@@ -102,21 +106,29 @@ export async function webSearchTool(deps: AgentToolDeps, input: { query: string 
   // single web verdict, not per-query rules.
   const action = resolveToolAction({ mode: deps.mode, floorBlocked: false, cached: deps.webVerdict });
   if (action === "reject") {
-    deps.onEvent?.({ type: "rejected", program: "web search", args: [input.query], reason: "Web search is blocked." });
-    return { awaitingApproval: false, text: "Web search is blocked by the user's permissions; do not retry it." };
+    deps.onEvent?.({
+      type: "rejected",
+      program: i18n.t("web search"),
+      args: [input.query],
+      reason: i18n.t("Web search is blocked."),
+    });
+    return {
+      awaitingApproval: false,
+      text: i18n.t("Web search is blocked by the user's permissions; do not retry it."),
+    };
   }
   if (action === "ask") {
     deps.onEvent?.({
       type: "approval-request",
       actionId: nextActionId(),
       kind: "web",
-      program: "web search",
+      program: i18n.t("web search"),
       args: [input.query],
-      reason: "Wants to search the web.",
+      reason: i18n.t("Wants to search the web."),
     });
     return {
       awaitingApproval: true,
-      text: "Web search requires the user's approval. Do NOT invent results — stop and let the user decide.",
+      text: i18n.t("Web search requires the user's approval. Do NOT invent results — stop and let the user decide."),
     };
   }
   const result = await deps.webSearch(input.query);
@@ -131,21 +143,23 @@ export function createAgentTools(deps: AgentToolDeps): Record<string, any> {
     // First-class typed container tools (list/inspect/logs/lifecycle/…) when an engine surface is wired.
     ...createContainerTools(deps),
     runCommand: tool({
-      description:
+      description: i18n.t(
         "Run a command on the host to inspect or fix the user's container setup. Depending on the user's permission settings the command may run, be surfaced for the user to approve, or be rejected — never assume it ran; use its returned output. Provide a bare program and an args array — no shell, pipes, or redirects.",
+      ),
       inputSchema: runCommandInput,
       execute: (input) => runCommandTool(deps, input),
     }),
     searchKnowledge: tool({
-      description: "Search the built-in Podman/Docker/WSL/SSH troubleshooting knowledge bank for known fixes.",
+      description: i18n.t("Search the built-in Podman/Docker/WSL/SSH troubleshooting knowledge bank for known fixes."),
       inputSchema: searchKnowledgeInput,
       execute: (input) => searchKnowledgeTool(deps, input),
     }),
   };
   if (deps.webSearch) {
     tools.webSearch = tool({
-      description:
+      description: i18n.t(
         "Search the public web for a container error message or fix. Use only when local knowledge is insufficient.",
+      ),
       inputSchema: webSearchInput,
       execute: (input) => webSearchTool(deps, input),
     });

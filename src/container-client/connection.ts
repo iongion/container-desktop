@@ -7,7 +7,10 @@ import {
   OperatingSystem,
   Presence,
 } from "@/env/Types";
+import i18n from "@/i18n";
 import { deepMerge } from "@/utils";
+
+const NOT_CHECKED = i18n.t("Not checked");
 
 // Podman - common
 export const PODMAN_PROGRAM = "podman";
@@ -34,17 +37,17 @@ export const DEFAULT_CONTAINER_RUNTIME = ContainerEngine.PODMAN;
 export const ContainerEngineOptions: ContainerEngineOption[] = [
   {
     engine: ContainerEngine.PODMAN,
-    label: "Podman",
+    label: i18n.t("Podman"),
     present: Presence.UNKNOWN,
   },
   {
     engine: ContainerEngine.DOCKER,
-    label: "Docker",
+    label: i18n.t("Docker"),
     present: Presence.UNKNOWN,
   },
   {
     engine: ContainerEngine.APPLE,
-    label: "Container",
+    label: i18n.t("Container"),
     present: Presence.UNKNOWN,
   },
 ];
@@ -111,18 +114,18 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_NATIVE,
       id: createConnectorId("default", ContainerEngineHost.PODMAN_NATIVE),
-      label: "Native",
+      label: i18n.t("Native"),
       description: "",
-      notes: "Podman native is only available on Linux",
+      notes: i18n.t("Podman native is only available on Linux"),
       availability: {
         enabled: osType === OperatingSystem.Linux,
         api: false,
         host: false,
         program: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -137,8 +140,8 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
       id: createConnectorId("default", ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR),
-      label: "Podman machine virtualization",
-      description: "Using podman machine virtualization",
+      label: i18n.t("Podman machine virtualization"),
+      description: i18n.t("Using podman machine virtualization"),
       availability: {
         enabled: true,
         api: false,
@@ -146,10 +149,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -168,9 +171,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
       id: createConnectorId("default", ContainerEngineHost.PODMAN_VIRTUALIZED_WSL),
-      label: "Custom WSL distribution",
+      label: i18n.t("Custom WSL distribution"),
       description: "",
-      notes: "Podman from WSL is only available on Windows",
+      notes: i18n.t("Podman from WSL is only available on Windows"),
       availability: {
         enabled: osType === OperatingSystem.Windows,
         api: false,
@@ -178,10 +181,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -200,9 +203,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
       id: createConnectorId("default", ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA),
-      label: "Custom LIMA instance",
+      label: i18n.t("Custom LIMA instance"),
       description: "",
-      notes: "Podman from LIMA is only available on MacOS",
+      notes: i18n.t("Podman from LIMA is only available on MacOS"),
       availability: {
         enabled: osType === OperatingSystem.MacOS,
         api: false,
@@ -210,10 +213,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -232,9 +235,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.PODMAN,
       host: ContainerEngineHost.PODMAN_REMOTE,
       id: createConnectorId("default", ContainerEngineHost.PODMAN_REMOTE),
-      label: "Remote SSH connection",
+      label: i18n.t("Remote SSH connection"),
       description: "",
-      notes: "Remote SSH connection is not yet available",
+      notes: i18n.t("Remote SSH connection is not yet available"),
       availability: {
         enabled: true,
         api: false,
@@ -242,10 +245,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -265,18 +268,18 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_NATIVE,
       id: createConnectorId("default", ContainerEngineHost.DOCKER_NATIVE),
-      label: "Native",
-      description: "Docker native",
-      notes: "Docker native is only available on Linux",
+      label: i18n.t("Native"),
+      description: i18n.t("Docker native"),
+      notes: i18n.t("Docker native is only available on Linux"),
       availability: {
         enabled: osType === OperatingSystem.Linux,
         api: false,
         host: false,
         program: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -291,17 +294,18 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
       id: createConnectorId("default", ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR),
-      label: osType === OperatingSystem.MacOS ? "Docker virtualization or COLIMA" : "Docker virtualization",
-      description: "Using docker virtualization",
+      label:
+        osType === OperatingSystem.MacOS ? i18n.t("Docker virtualization or COLIMA") : i18n.t("Docker virtualization"),
+      description: i18n.t("Using docker virtualization"),
       availability: {
         enabled: true,
         api: false,
         host: false,
         program: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -316,9 +320,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
       id: createConnectorId("default", ContainerEngineHost.DOCKER_VIRTUALIZED_WSL),
-      label: "Custom WSL distribution",
+      label: i18n.t("Custom WSL distribution"),
       description: "",
-      notes: "Docker from WSL is only available on Windows",
+      notes: i18n.t("Docker from WSL is only available on Windows"),
       availability: {
         enabled: osType === OperatingSystem.Windows,
         api: false,
@@ -326,10 +330,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -348,9 +352,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
       id: createConnectorId("default", ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA),
-      label: "Custom LIMA instance",
+      label: i18n.t("Custom LIMA instance"),
       description: "",
-      notes: "Docker from LIMA is only available on MacOS",
+      notes: i18n.t("Docker from LIMA is only available on MacOS"),
       availability: {
         enabled: osType === OperatingSystem.MacOS,
         api: false,
@@ -358,10 +362,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -380,9 +384,9 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.DOCKER,
       host: ContainerEngineHost.DOCKER_REMOTE,
       id: createConnectorId("default", ContainerEngineHost.DOCKER_REMOTE),
-      label: "Remote SSH connection",
+      label: i18n.t("Remote SSH connection"),
       description: "",
-      notes: "Remote SSH connection is not yet available",
+      notes: i18n.t("Remote SSH connection is not yet available"),
       availability: {
         enabled: true,
         api: false,
@@ -390,10 +394,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -413,18 +417,18 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.APPLE,
       host: ContainerEngineHost.APPLE_NATIVE,
       id: createConnectorId("default", ContainerEngineHost.APPLE_NATIVE),
-      label: "Native",
+      label: i18n.t("Native"),
       description: "",
-      notes: "Apple Container native is only available on macOS (Apple Silicon)",
+      notes: i18n.t("Apple Container native is only available on macOS (Apple Silicon)"),
       availability: {
         enabled: osType === OperatingSystem.MacOS,
         api: false,
         host: false,
         program: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({
@@ -439,7 +443,7 @@ export function getDefaultConnectors(osType: OperatingSystem) {
       engine: ContainerEngine.APPLE,
       host: ContainerEngineHost.APPLE_REMOTE,
       id: createConnectorId("default", ContainerEngineHost.APPLE_REMOTE),
-      label: "Remote SSH connection",
+      label: i18n.t("Remote SSH connection"),
       description: "",
       notes: "",
       availability: {
@@ -449,10 +453,10 @@ export function getDefaultConnectors(osType: OperatingSystem) {
         program: false,
         controller: false,
         report: {
-          host: "Not checked",
-          program: "Not checked",
-          api: "Not checked",
-          controller: "Not checked",
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
         },
       },
       settings: createConnectorSettings({

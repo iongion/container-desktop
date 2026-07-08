@@ -5,13 +5,14 @@ import { useTranslation } from "react-i18next";
 import { capabilitiesFor, WIZARD_ENGINES } from "@/container-provisioning/platform";
 import { preferredEngine, targetFor } from "@/container-provisioning/targetDefaults";
 import { ContainerEngine } from "@/env/Types";
+import i18n from "@/i18n";
 import { engineLabel } from "@/web-app/components/EngineCell";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 
 const ENGINE_TAGLINE: Record<string, string> = {
-  podman: "Daemonless, rootless-first.",
-  docker: "The familiar workflow.",
-  container: "Apple's native runtime — no VM.",
+  podman: i18n.t("Daemonless, rootless-first."),
+  docker: i18n.t("The familiar workflow."),
+  container: i18n.t("Apple's native runtime — no VM."),
 };
 
 // The card title shown in the wizard. Apple's engine wire-name is bare "container"; spell it out here so a
@@ -21,11 +22,11 @@ function cardTitle(engine: ContainerEngine): string {
 }
 
 const STRATEGY_BLURB: Record<string, string> = {
-  "reuse.installed": "Reuse the engine already installed on your machine — nothing to create.",
-  "apple.container": "Use Apple's native container runtime — Apple-silicon Mac only (experimental).",
-  "colima.lima": "Create a lightweight Linux VM (Lima) to run the engine.",
-  "wsl.import": "Import a WSL distro to run the engine inside.",
-  "native.install": "Install the engine + compose natively on this machine.",
+  "reuse.installed": i18n.t("Reuse the engine already installed on your machine — nothing to create."),
+  "apple.container": i18n.t("Use Apple's native container runtime — Apple-silicon Mac only (experimental)."),
+  "colima.lima": i18n.t("Create a lightweight Linux VM (Lima) to run the engine."),
+  "wsl.import": i18n.t("Import a WSL distro to run the engine inside."),
+  "native.install": i18n.t("Install the engine + compose natively on this machine."),
 };
 
 // Step 2 — pick the engine (per-OS default pre-selected). Selecting one derives the whole target

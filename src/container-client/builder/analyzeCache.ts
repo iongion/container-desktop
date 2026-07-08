@@ -4,6 +4,8 @@
 // cache breaks every later step IN THAT STAGE rebuilds, but an independent stage (its steps still cached)
 // is untouched — detected by stopping the cascade at the next cached step or the next FROM.
 
+import i18n from "@/i18n";
+
 import type { BuildStep, CacheAnalysis, CacheBreaker, CacheBreakerCause, ContainerfileAst } from "./types";
 
 // Strip the engine's step-label decoration (`[1/4]`, `#3`, `STEP 1/4:`) to the bare instruction.
@@ -29,27 +31,31 @@ function classify(kw: string): { cause: CacheBreakerCause; fixHint: string } {
     case "ADD":
       return {
         cause: "context-changed",
-        fixHint:
+        fixHint: i18n.t(
           "A file this step copies changed. Copy just the dependency manifest before this, install, then copy the rest.",
+        ),
       };
     case "RUN":
       return {
         cause: "command-changed",
-        fixHint:
+        fixHint: i18n.t(
           "The command text or an earlier layer changed. Keep volatile commands late and pin what they depend on.",
+        ),
       };
     case "FROM":
       return {
         cause: "base-image-updated",
-        fixHint: "The base image was re-pulled. Pin it to a digest to keep the cache stable.",
+        fixHint: i18n.t("The base image was re-pulled. Pin it to a digest to keep the cache stable."),
       };
     case "ARG":
       return {
         cause: "build-arg-changed",
-        fixHint: "A build-arg this step uses changed. Declare ARGs as late as possible so they invalidate less.",
+        fixHint: i18n.t(
+          "A build-arg this step uses changed. Declare ARGs as late as possible so they invalidate less.",
+        ),
       };
     default:
-      return { cause: "unknown", fixHint: "This layer was rebuilt — inspect its inputs to see what changed." };
+      return { cause: "unknown", fixHint: i18n.t("This layer was rebuilt — inspect its inputs to see what changed.") };
   }
 }
 
@@ -71,7 +77,9 @@ export function analyzeCache(steps: BuildStep[], ast?: ContainerfileAst): CacheA
   if (ast) {
     const match = ast.instructions.find((instruction) => coreInstruction(instruction.raw).startsWith(name));
     if (match?.flags?.from) {
-      hint = `This step copies from stage "${match.flags.from}", which rebuilt — fix the cache break there first.`;
+      hint = i18n.t('This step copies from stage "{{stage}}", which rebuilt — fix the cache break there first.', {
+        stage: match.flags.from,
+      });
     }
   }
 

@@ -2,6 +2,7 @@ import { Button, ButtonGroup, Icon, Intent } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
+import i18n from "@/i18n";
 import { useProvisioningStore, WIZARD_STEPS } from "@/web-app/stores/provisioningStore";
 
 import { EngineStep } from "./steps/EngineStep";
@@ -15,13 +16,13 @@ import { VolumesStep } from "./steps/VolumesStep";
 import "./ProvisioningWizard.css";
 
 const STEP_LABELS: Record<(typeof WIZARD_STEPS)[number], string> = {
-  "system-check": "System check",
-  engine: "Choose engine",
-  resources: "Resources",
-  volumes: "Folders & permissions",
-  review: "Review",
-  execute: "Provision",
-  ready: "Ready",
+  "system-check": i18n.t("System check"),
+  engine: i18n.t("Choose engine"),
+  resources: i18n.t("Resources"),
+  volumes: i18n.t("Folders & permissions"),
+  review: i18n.t("Review"),
+  execute: i18n.t("Provision"),
+  ready: i18n.t("Ready"),
 };
 
 const STEP_COMPONENTS: Record<(typeof WIZARD_STEPS)[number], React.FC> = {
@@ -35,13 +36,13 @@ const STEP_COMPONENTS: Record<(typeof WIZARD_STEPS)[number], React.FC> = {
 };
 
 const STEP_SUBTITLES: Record<(typeof WIZARD_STEPS)[number], string> = {
-  "system-check": "We'll look at what's already installed.",
-  engine: "Pick the container engine to set up.",
-  resources: "Size the virtual machine.",
-  volumes: "Share host folders with correct permissions — automatically.",
-  review: "Here's exactly what will happen.",
-  execute: "Setting things up.",
-  ready: "You're ready to run containers.",
+  "system-check": i18n.t("We'll look at what's already installed."),
+  engine: i18n.t("Pick the container engine to set up."),
+  resources: i18n.t("Size the virtual machine."),
+  volumes: i18n.t("Share host folders with correct permissions — automatically."),
+  review: i18n.t("Here's exactly what will happen."),
+  execute: i18n.t("Setting things up."),
+  ready: i18n.t("You're ready to run containers."),
 };
 
 // Full-screen wizard body: themed step rail + content stage + footer (Skip in the rail, equal-width

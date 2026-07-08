@@ -4,6 +4,8 @@
 // "What I checked" probe log. The diagnostic reasoning lives HERE (not in the prober) so it is unit-tested; the
 // prober only gathers observations. Headline/explanation carry inline `code` spans as markdown backticks.
 
+import i18n from "@/i18n";
+
 import type {
   ReachabilityCheckType,
   ReachabilityDiagnosis,
@@ -77,53 +79,87 @@ export interface ReachabilityObservations {
 
 type ReportCore = Omit<ReachabilityReport, "probeSummary">;
 
-const engineDnsName = (engine: string): string => (engine === "podman" ? "aardvark-dns" : "embedded DNS");
+const engineDnsName = (engine: string): string =>
+  engine === "podman" ? i18n.t("aardvark-dns") : i18n.t("embedded DNS");
 const remoteIpOf = (label?: string): string => `${label ?? ""}`.split("@").pop() || `${label ?? ""}`;
 const dial = (ok: boolean): "ok" | "err" => (ok ? "ok" : "err");
 
 // container IP → a /16 CIDR guess, for the VPN split-tunnel fix hint (best-effort, host-side subnet isn't gathered).
 const guessSubnet = (ip?: string): string => {
   const octets = `${ip ?? ""}`.split(".");
-  return octets.length === 4 ? `${octets[0]}.${octets[1]}.0.0/16` : "your container subnet";
+  return octets.length === 4 ? `${octets[0]}.${octets[1]}.0.0/16` : i18n.t("your container subnet");
 };
 
 function buildPublishedPort(facts: ReachabilityFacts, obs: ReachabilityObservations): ReportCore {
   const { engine, transport, target } = facts;
   const cport = target.containerPort ?? 0;
   const hostPort = target.hostPort ?? 0;
-  const container = target.containerName ?? "the container";
+  const container = target.containerName ?? i18n.t("the container");
 
   // SSH-remote is its own flow: the SSH connection tunnels the API only, so `-p` binds on the REMOTE host and
   // `localhost` on the laptop reaches nothing. The remote hops nest inside the dashed "remote host" wrapper.
   if (transport === "ssh") {
-    const remoteHost = facts.remoteHostLabel ?? "the remote host";
+    const remoteHost = facts.remoteHostLabel ?? i18n.t("the remote host");
     const remoteIp = remoteIpOf(facts.remoteHostLabel);
     const hops: ReachabilityHop[] = [
-      { id: "host", icon: "desktop", name: facts.from.label, meta: "your laptop · nothing bound", state: "warn" },
-      { id: "ssh", icon: "globe-network", name: "SSH tunnel", meta: "API only", state: "ok", remote: true },
       {
-        id: "remote-port",
-        icon: "import",
-        name: `:${hostPort} on remote`,
-        meta: `0.0.0.0:${hostPort} (there)`,
+        id: "host",
+        icon: "desktop",
+        name: facts.from.label,
+        meta: i18n.t("your laptop · nothing bound"),
+        state: "warn",
+      },
+      {
+        id: "ssh",
+        icon: "globe-network",
+        name: i18n.t("SSH tunnel"),
+        meta: i18n.t("API only"),
         state: "ok",
         remote: true,
       },
-      { id: "container", icon: "tick", name: `${container}:${cport}`, meta: "listening", state: "ok", remote: true },
+      {
+        id: "remote-port",
+        icon: "import",
+        name: i18n.t(":{{hostPort}} on remote", { hostPort }),
+        meta: i18n.t("0.0.0.0:{{hostPort}} (there)", { hostPort }),
+        state: "ok",
+        remote: true,
+      },
+      {
+        id: "container",
+        icon: "tick",
+        name: i18n.t("{{container}}:{{containerPort}}", { container, containerPort: cport }),
+        meta: i18n.t("listening"),
+        state: "ok",
+        remote: true,
+      },
     ];
-    const verdict: ReachabilityVerdict = { tone: "warn", text: "Published on the remote host, not your laptop" };
+    const verdict: ReachabilityVerdict = {
+      tone: "warn",
+      text: i18n.t("Published on the remote host, not your laptop"),
+    };
     const diagnosis: ReachabilityDiagnosis = {
       tone: "warn",
       icon: "warning-sign",
-      headline: `The engine is remote — the port is published on \`${remoteIp}\`, not your laptop`,
-      explanation: `The SSH connection tunnels the ${engine} API only, not published ports. \`-p ${hostPort}:${cport}\` bound \`0.0.0.0:${hostPort}\` on the remote host, where \`${container}\` is listening — so \`${facts.from.label}\` here reaches nothing. Open it on the remote IP, or forward the port over SSH.`,
+      headline: i18n.t("The engine is remote — the port is published on `{{remoteIp}}`, not your laptop", {
+        remoteIp,
+      }),
+      explanation: i18n.t(
+        "The SSH connection tunnels the {{engine}} API only, not published ports. `-p {{hostPort}}:{{containerPort}}` bound `0.0.0.0:{{hostPort}}` on the remote host, where `{{container}}` is listening — so `{{from}}` here reaches nothing. Open it on the remote IP, or forward the port over SSH.",
+        { engine, hostPort, containerPort: cport, container, from: facts.from.label },
+      ),
       fixCommand: `ssh -L ${hostPort}:localhost:${hostPort} ${remoteHost}`,
       actions: [
-        { id: "forward-ssh", icon: "data-connection", text: `Forward ${hostPort} over SSH`, primary: true },
+        {
+          id: "forward-ssh",
+          icon: "data-connection",
+          text: i18n.t("Forward {{hostPort}} over SSH", { hostPort }),
+          primary: true,
+        },
         {
           id: "open-remote",
           icon: "globe",
-          text: `Open http://${remoteIp}:${hostPort}`,
+          text: i18n.t("Open http://{{remoteIp}}:{{hostPort}}", { remoteIp, hostPort }),
           href: `http://${remoteIp}:${hostPort}`,
         },
       ],
@@ -133,7 +169,7 @@ function buildPublishedPort(facts: ReachabilityFacts, obs: ReachabilityObservati
       {
         id: "host-dial",
         command: `curl -sS -m2 http://localhost:${hostPort}  (laptop)`,
-        result: obs.hostDial?.detail ?? "Connection refused — nothing bound locally",
+        result: obs.hostDial?.detail ?? i18n.t("Connection refused — nothing bound locally"),
         state: "warn",
       },
       {
@@ -145,19 +181,24 @@ function buildPublishedPort(facts: ReachabilityFacts, obs: ReachabilityObservati
       {
         id: "remote-dial",
         command: `ssh ${remoteHost} curl -sS localhost:${hostPort}`,
-        result: obs.remoteDial?.detail ?? "HTTP/1.1 200 OK",
+        result: obs.remoteDial?.detail ?? i18n.t("HTTP/1.1 200 OK"),
         state: "ok",
         smoking: "warn",
       },
-      { id: "ssh-tunnel", command: "ssh tunnel (API)", result: obs.sshTunnel?.detail ?? "up", state: "ok" },
+      {
+        id: "ssh-tunnel",
+        command: "ssh tunnel (API)",
+        result: obs.sshTunnel?.detail ?? i18n.t("up"),
+        state: "ok",
+      },
     ];
     return {
       verdict,
-      pathLabel: "laptop → SSH → remote host → container",
+      pathLabel: i18n.t("laptop → SSH → remote host → container"),
       hops,
       diagnosis,
       probes,
-      remoteLabel: `remote host · ${remoteHost}`,
+      remoteLabel: i18n.t("remote host · {{remoteHost}}", { remoteHost }),
     };
   }
 
@@ -165,42 +206,52 @@ function buildPublishedPort(facts: ReachabilityFacts, obs: ReachabilityObservati
   // "bound to loopback inside the container" (nothing on 0.0.0.0), the most-cited published-port pain.
   const boundOk = obs.listeningInside ? obs.listeningInside.bind === "all" : true;
   const hops: ReachabilityHop[] = [
-    { id: "host", icon: "desktop", name: facts.from.label, meta: "host client", state: "ok" },
-    { id: "port", icon: "import", name: "Port binding", meta: `0.0.0.0:${hostPort}`, state: "ok" },
+    { id: "host", icon: "desktop", name: facts.from.label, meta: i18n.t("host client"), state: "ok" },
+    {
+      id: "port",
+      icon: "import",
+      name: i18n.t("Port binding"),
+      meta: `0.0.0.0:${hostPort}`,
+      state: "ok",
+    },
   ];
   if (transport === "vm") {
     hops.push({
       id: "vm",
       icon: "heat-grid",
-      name: "VM forward",
-      meta: obs.vmForward?.detail ?? "gvproxy",
+      name: i18n.t("VM forward"),
+      meta: obs.vmForward?.detail ?? i18n.t("gvproxy"),
       state: "ok",
     });
   } else if (transport === "wsl") {
-    hops.push({ id: "wsl", icon: "heat-grid", name: "WSL relay", meta: "localhost", state: "ok" });
+    hops.push({ id: "wsl", icon: "heat-grid", name: i18n.t("WSL relay"), meta: i18n.t("localhost"), state: "ok" });
   }
   hops.push({
     id: "net",
     icon: "graph",
-    name: `${engine} net`,
-    meta: target.containerIp ?? "container",
+    name: i18n.t("{{engine}} net", { engine }),
+    meta: target.containerIp ?? i18n.t("container"),
     state: "ok",
   });
   hops.push({
     id: "container",
     icon: boundOk ? "tick" : "cross",
-    name: `:${cport} in ${container}`,
-    meta: boundOk ? "listening" : "refused",
+    name: i18n.t(":{{containerPort}} in {{container}}", { containerPort: cport, container }),
+    meta: boundOk ? i18n.t("listening") : i18n.t("refused"),
     state: boundOk ? "ok" : "err",
   });
 
   const pathLabel =
-    transport === "vm" ? "host → VM → container" : transport === "wsl" ? "host → WSL → container" : "host → container";
+    transport === "vm"
+      ? i18n.t("host → VM → container")
+      : transport === "wsl"
+        ? i18n.t("host → WSL → container")
+        : i18n.t("host → container");
   const probes: ReachabilityProbe[] = [
     {
       id: "host-dial",
       command: `curl -sS -m2 http://localhost:${hostPort}`,
-      result: obs.hostDial?.detail ?? (boundOk ? "HTTP/1.1 200 OK" : "Connection reset by peer"),
+      result: obs.hostDial?.detail ?? (boundOk ? i18n.t("HTTP/1.1 200 OK") : i18n.t("Connection reset by peer")),
       state: dial(obs.hostDial?.ok ?? boundOk),
     },
     {
@@ -214,14 +265,14 @@ function buildPublishedPort(facts: ReachabilityFacts, obs: ReachabilityObservati
     probes.push({
       id: "vm-forward",
       command: `gvproxy forward ${hostPort}`,
-      result: obs.vmForward?.detail ?? "active · host → VM",
+      result: obs.vmForward?.detail ?? i18n.t("active · host → VM"),
       state: "ok",
     });
   }
   probes.push({
     id: "container-ping",
-    command: `ping -c1 ${target.containerIp ?? "the container"}`,
-    result: obs.containerPing?.detail ?? "reachable",
+    command: `ping -c1 ${target.containerIp ?? i18n.t("the container")}`,
+    result: obs.containerPing?.detail ?? i18n.t("reachable"),
     state: "ok",
   });
   probes.push({
@@ -229,37 +280,55 @@ function buildPublishedPort(facts: ReachabilityFacts, obs: ReachabilityObservati
     command: `${engine} exec ${container} ss -tlnp`,
     result:
       obs.listeningInside?.detail ??
-      (boundOk ? `LISTEN 0.0.0.0:${cport}` : `LISTEN 127.0.0.1:${cport}  ← localhost only`),
+      (boundOk
+        ? i18n.t("LISTEN 0.0.0.0:{{containerPort}}", { containerPort: cport })
+        : i18n.t("LISTEN 127.0.0.1:{{containerPort}}  ← localhost only", { containerPort: cport })),
     state: boundOk ? "ok" : "err",
     smoking: boundOk ? undefined : "err",
   });
 
   if (boundOk) {
     return {
-      verdict: { tone: "ok", text: "Reachable end-to-end" },
+      verdict: { tone: "ok", text: i18n.t("Reachable end-to-end") },
       pathLabel,
       hops,
       diagnosis: {
         tone: "ok",
         icon: "tick-circle",
-        headline: "Reachable end-to-end",
-        explanation: `\`${facts.from.label}\` reaches \`${container}:${cport}\`; the service is listening on \`0.0.0.0:${cport}\` and answered. Nothing to fix.`,
+        headline: i18n.t("Reachable end-to-end"),
+        explanation: i18n.t(
+          "`{{from}}` reaches `{{container}}:{{containerPort}}`; the service is listening on `0.0.0.0:{{containerPort}}` and answered. Nothing to fix.",
+          { from: facts.from.label, container, containerPort: cport },
+        ),
         actions: [],
       },
       probes,
     };
   }
   return {
-    verdict: { tone: "err", text: "Refused at the container" },
+    verdict: { tone: "err", text: i18n.t("Refused at the container") },
     pathLabel,
     hops,
     diagnosis: {
       tone: "err",
       icon: "error",
-      headline: `Nothing is listening on \`0.0.0.0:${cport}\` inside \`${container}\``,
-      explanation: `The forward reaches the container fine, but the service is bound to \`127.0.0.1:${cport}\` — so it rejects the connection arriving on the container's network interface. Bind the service to \`0.0.0.0\` (all interfaces).`,
+      headline: i18n.t("Nothing is listening on `0.0.0.0:{{containerPort}}` inside `{{container}}`", {
+        containerPort: cport,
+        container,
+      }),
+      explanation: i18n.t(
+        "The forward reaches the container fine, but the service is bound to `127.0.0.1:{{containerPort}}` — so it rejects the connection arriving on the container's network interface. Bind the service to `0.0.0.0` (all interfaces).",
+        { containerPort: cport },
+      ),
       fixCommand: `listen 0.0.0.0:${cport}   # in ${container}'s app/server bind config`,
-      actions: [{ id: "open-config", icon: "manually-entered-data", text: `Open ${container} config`, primary: true }],
+      actions: [
+        {
+          id: "open-config",
+          icon: "manually-entered-data",
+          text: i18n.t("Open {{container}} config", { container }),
+          primary: true,
+        },
+      ],
       learnMore: true,
     },
     probes,
@@ -268,7 +337,7 @@ function buildPublishedPort(facts: ReachabilityFacts, obs: ReachabilityObservati
 
 function buildServiceToService(facts: ReachabilityFacts, obs: ReachabilityObservations): ReportCore {
   const { engine } = facts;
-  const service = facts.target.serviceName ?? "the service";
+  const service = facts.target.serviceName ?? i18n.t("the service");
   const cport = facts.target.containerPort ?? 0;
   const fromNetworks = obs.fromNetworks ?? [];
   const targetNetworks = obs.targetNetworks ?? [];
@@ -280,22 +349,22 @@ function buildServiceToService(facts: ReachabilityFacts, obs: ReachabilityObserv
       id: "from",
       icon: "cube",
       name: facts.from.label,
-      meta: fromNetworks[0] ? `on ${fromNetworks[0]}` : undefined,
+      meta: fromNetworks[0] ? i18n.t("on {{network}}", { network: fromNetworks[0] }) : undefined,
       state: "ok",
     },
-    { id: "dns", icon: "search-template", name: engineDnsName(engine), meta: "up", state: "ok" },
+    { id: "dns", icon: "search-template", name: engineDnsName(engine), meta: i18n.t("up"), state: "ok" },
     {
       id: "resolve",
       icon: resolved ? "tick" : "cross",
-      name: `resolve "${service}"`,
-      meta: resolved ? "resolved" : "NXDOMAIN",
+      name: i18n.t('resolve "{{service}}"', { service }),
+      meta: resolved ? i18n.t("resolved") : i18n.t("NXDOMAIN"),
       state: resolved ? "ok" : "err",
     },
     {
       id: "service",
       icon: "cube",
       name: `${service}:${cport}`,
-      meta: resolved ? "reachable" : "—",
+      meta: resolved ? i18n.t("reachable") : "—",
       state: resolved ? "ok" : "dead",
     },
   ];
@@ -303,7 +372,7 @@ function buildServiceToService(facts: ReachabilityFacts, obs: ReachabilityObserv
     {
       id: "getent",
       command: `${engine} exec ${facts.from.label} getent hosts ${service}`,
-      result: obs.nameResolves?.detail ?? (resolved ? (fromNetworks[0] ?? "resolved") : "(not found)"),
+      result: obs.nameResolves?.detail ?? (resolved ? (fromNetworks[0] ?? i18n.t("resolved")) : i18n.t("(not found)")),
       state: resolved ? "ok" : "err",
       smoking: resolved ? undefined : "err",
     },
@@ -316,42 +385,67 @@ function buildServiceToService(facts: ReachabilityFacts, obs: ReachabilityObserv
     {
       id: "target-nets",
       command: `networks of ${service}`,
-      result: `${targetNetworks.join(", ") || "—"}${shared ? "" : `  ← not shared with ${facts.from.label}`}`,
+      result: `${targetNetworks.join(", ") || "—"}${
+        shared ? "" : i18n.t("  ← not shared with {{from}}", { from: facts.from.label })
+      }`,
       state: shared ? "ok" : "warn",
       smoking: shared ? undefined : "warn",
     },
-    { id: "shared", command: "shared network?", result: shared ? "yes" : "none", state: shared ? "ok" : "err" },
+    {
+      id: "shared",
+      command: i18n.t("shared network?"),
+      result: shared ? i18n.t("yes") : i18n.t("none"),
+      state: shared ? "ok" : "err",
+    },
   ];
   if (resolved) {
     return {
-      verdict: { tone: "ok", text: "Resolves and reachable" },
-      pathLabel: "container → container",
+      verdict: { tone: "ok", text: i18n.t("Resolves and reachable") },
+      pathLabel: i18n.t("container → container"),
       hops,
       diagnosis: {
         tone: "ok",
         icon: "tick-circle",
-        headline: `\`${facts.from.label}\` can reach \`${service}\``,
-        explanation: `\`${service}\` resolves on a network shared with \`${facts.from.label}\` and answered on port ${cport}. Nothing to fix.`,
+        headline: i18n.t("`{{from}}` can reach `{{service}}`", { from: facts.from.label, service }),
+        explanation: i18n.t(
+          "`{{service}}` resolves on a network shared with `{{from}}` and answered on port {{containerPort}}. Nothing to fix.",
+          { service, from: facts.from.label, containerPort: cport },
+        ),
         actions: [],
       },
       probes,
     };
   }
   return {
-    verdict: { tone: "err", text: "Name doesn't resolve" },
-    pathLabel: "container → container",
+    verdict: { tone: "err", text: i18n.t("Name doesn't resolve") },
+    pathLabel: i18n.t("container → container"),
     hops,
     diagnosis: {
       tone: "err",
       icon: "error",
-      headline: `\`${service}\` and \`${facts.from.label}\` aren't on a shared network`,
-      explanation: `${engine}'s DNS only resolves container names within the same network. \`${facts.from.label}\` is on \`${fromNetworks.join(", ") || "no network"}\`; \`${service}\` is only on \`${targetNetworks.join(", ") || "another network"}\` — no overlap, so the name can't resolve. Attach one to the other's network.`,
+      headline: i18n.t("`{{service}}` and `{{from}}` aren't on a shared network", {
+        service,
+        from: facts.from.label,
+      }),
+      explanation: i18n.t(
+        "{{engine}}'s DNS only resolves container names within the same network. `{{from}}` is on `{{fromNetworks}}`; `{{service}}` is only on `{{targetNetworks}}` — no overlap, so the name can't resolve. Attach one to the other's network.",
+        {
+          engine,
+          from: facts.from.label,
+          fromNetworks: fromNetworks.join(", ") || i18n.t("no network"),
+          service,
+          targetNetworks: targetNetworks.join(", ") || i18n.t("another network"),
+        },
+      ),
       fixCommand: `${engine} network connect ${fromNetworks[0] ?? "<network>"} ${service}`,
       actions: [
         {
           id: "connect",
           icon: "link",
-          text: `Connect ${service} to ${fromNetworks[0] ?? "the network"}`,
+          text: i18n.t("Connect {{service}} to {{network}}", {
+            service,
+            network: fromNetworks[0] ?? i18n.t("the network"),
+          }),
           primary: true,
         },
       ],
@@ -363,7 +457,7 @@ function buildServiceToService(facts: ReachabilityFacts, obs: ReachabilityObserv
 
 function buildReachOut(facts: ReachabilityFacts, obs: ReachabilityObservations): ReportCore {
   const { engine } = facts;
-  const host = facts.target.externalHost ?? "the host";
+  const host = facts.target.externalHost ?? i18n.t("the host");
   const port = facts.target.externalPort ?? 443;
   const fromIp = facts.from.containerIp ?? facts.target.containerIp;
   const viaVpn = obs.route?.viaVpn ?? false;
@@ -376,23 +470,23 @@ function buildReachOut(facts: ReachabilityFacts, obs: ReachabilityObservations):
     {
       id: "dns",
       icon: "search-template",
-      name: "DNS",
-      meta: obs.egressDns?.ok === false ? "fail" : "resolves",
+      name: i18n.t("DNS"),
+      meta: obs.egressDns?.ok === false ? i18n.t("fail") : i18n.t("resolves"),
       state: obs.egressDns?.ok === false ? "err" : "ok",
     },
-    { id: "gateway", icon: "graph", name: "net gateway", meta: undefined, state: "ok" },
+    { id: "gateway", icon: "graph", name: i18n.t("net gateway"), meta: undefined, state: "ok" },
     {
       id: "route",
       icon: viaVpn ? "shield" : "globe",
-      name: "host route",
-      meta: viaVpn ? `captured by ${dev}` : "direct",
+      name: i18n.t("host route"),
+      meta: viaVpn ? i18n.t("captured by {{dev}}", { dev }) : i18n.t("direct"),
       state: viaVpn ? "err" : "ok",
     },
     {
       id: "external",
       icon: "globe",
       name: host,
-      meta: egressOk ? "reachable" : "— timeout",
+      meta: egressOk ? i18n.t("reachable") : i18n.t("— timeout"),
       state: egressOk ? "ok" : "dead",
     },
   ];
@@ -400,13 +494,13 @@ function buildReachOut(facts: ReachabilityFacts, obs: ReachabilityObservations):
     {
       id: "egress",
       command: `${engine} exec ${facts.from.label} curl -sS -m3 https://${host}`,
-      result: obs.egress?.detail ?? (egressOk ? "HTTP/1.1 200 OK" : "timed out after 3s"),
+      result: obs.egress?.detail ?? (egressOk ? i18n.t("HTTP/1.1 200 OK") : i18n.t("timed out after 3s")),
       state: dial(egressOk),
     },
     {
       id: "egress-dns",
       command: `${engine} exec ${facts.from.label} getent hosts ${host}`,
-      result: obs.egressDns?.detail ?? "resolved (DNS is fine)",
+      result: obs.egressDns?.detail ?? i18n.t("resolved (DNS is fine)"),
       state: "ok",
     },
   ];
@@ -414,52 +508,75 @@ function buildReachOut(facts: ReachabilityFacts, obs: ReachabilityObservations):
     probes.push({
       id: "route",
       command: `ip route get ${fromIp ?? host}`,
-      result: `${obs.route?.detail ?? `dev ${dev}`}  ← via VPN, not the bridge`,
+      result: i18n.t("{{route}}  ← via VPN, not the bridge", { route: obs.route?.detail ?? `dev ${dev}` }),
       state: "err",
       smoking: "err",
     });
     probes.push({
       id: "tunnels",
-      command: "active tunnels",
-      result: tunnel ? `${tunnel.name} · ${tunnel.app ?? "VPN"} · routes ${(tunnel.routes ?? []).join(", ")}` : "none",
+      command: i18n.t("active tunnels"),
+      result: tunnel
+        ? i18n.t("{{name}} · {{app}} · routes {{routes}}", {
+            name: tunnel.name,
+            app: tunnel.app ?? i18n.t("VPN"),
+            routes: (tunnel.routes ?? []).join(", "),
+          })
+        : i18n.t("none"),
       state: "warn",
       smoking: "warn",
     });
     return {
-      verdict: { tone: "err", text: "Blackholed by VPN" },
-      pathLabel: "container → internet",
+      verdict: { tone: "err", text: i18n.t("Blackholed by VPN") },
+      pathLabel: i18n.t("container → internet"),
       hops,
       diagnosis: {
         tone: "err",
         icon: "error",
-        headline: "A VPN is capturing your container subnet",
-        explanation: `\`${dev}\`${tunnel?.app ? ` (${tunnel.app})` : ""} installed full-tunnel routes ${(tunnel?.routes ?? ["0.0.0.0/1", "128.0.0.0/1"]).join(" + ")}, which swallow traffic leaving your container's subnet — so container egress is dropped while the VPN is up. Add a split-tunnel exclusion, or move the network onto a range the VPN doesn't claim.`,
+        headline: i18n.t("A VPN is capturing your container subnet"),
+        explanation: i18n.t(
+          "`{{dev}}`{{app}} installed full-tunnel routes {{routes}}, which swallow traffic leaving your container's subnet — so container egress is dropped while the VPN is up. Add a split-tunnel exclusion, or move the network onto a range the VPN doesn't claim.",
+          {
+            dev,
+            app: tunnel?.app ? ` (${tunnel.app})` : "",
+            routes: (tunnel?.routes ?? ["0.0.0.0/1", "128.0.0.0/1"]).join(" + "),
+          },
+        ),
         fixCommand: `sudo route -n add -net ${guessSubnet(fromIp)} -interface bridge100`,
-        actions: [{ id: "resubnet", icon: "graph", text: `Re-subnet ${engine} net`, primary: true }],
+        actions: [
+          { id: "resubnet", icon: "graph", text: i18n.t("Re-subnet {{engine}} net", { engine }), primary: true },
+        ],
         learnMore: true,
       },
       probes,
     };
   }
   return {
-    verdict: egressOk ? { tone: "ok", text: `Reachable · ${host}` } : { tone: "err", text: "Unreachable" },
-    pathLabel: "container → internet",
+    verdict: egressOk
+      ? { tone: "ok", text: i18n.t("Reachable · {{host}}", { host }) }
+      : { tone: "err", text: i18n.t("Unreachable") },
+    pathLabel: i18n.t("container → internet"),
     hops,
     diagnosis: egressOk
       ? {
           tone: "ok",
           icon: "tick-circle",
-          headline: `\`${facts.from.label}\` can reach \`${host}\``,
-          explanation: `Egress to \`${host}:${port}\` succeeded — DNS resolved and the route left the container network cleanly. Nothing to fix.`,
+          headline: i18n.t("`{{from}}` can reach `{{host}}`", { from: facts.from.label, host }),
+          explanation: i18n.t(
+            "Egress to `{{host}}:{{port}}` succeeded — DNS resolved and the route left the container network cleanly. Nothing to fix.",
+            { host, port },
+          ),
           actions: [],
         }
       : {
           tone: "err",
           icon: "error",
-          headline: `\`${facts.from.label}\` can't reach \`${host}\``,
+          headline: i18n.t("`{{from}}` can't reach `{{host}}`", { from: facts.from.label, host }),
           explanation:
             obs.egress?.detail ??
-            `The connection to \`${host}:${port}\` failed. Check the container's egress route and DNS.`,
+            i18n.t("The connection to `{{host}}:{{port}}` failed. Check the container's egress route and DNS.", {
+              host,
+              port,
+            }),
           actions: [],
           learnMore: true,
         },
@@ -469,16 +586,16 @@ function buildReachOut(facts: ReachabilityFacts, obs: ReachabilityObservations):
 
 function buildDnsLookup(facts: ReachabilityFacts, obs: ReachabilityObservations): ReportCore {
   const { engine } = facts;
-  const name = facts.target.lookupName ?? facts.target.serviceName ?? "the name";
+  const name = facts.target.lookupName ?? facts.target.serviceName ?? i18n.t("the name");
   const resolved = obs.nameResolves?.ok ?? false;
   const hops: ReachabilityHop[] = [
     { id: "from", icon: "cube", name: facts.from.label, state: "ok" },
-    { id: "dns", icon: "search-template", name: engineDnsName(engine), meta: "up", state: "ok" },
+    { id: "dns", icon: "search-template", name: engineDnsName(engine), meta: i18n.t("up"), state: "ok" },
     {
       id: "resolve",
       icon: resolved ? "tick" : "cross",
-      name: `resolve "${name}"`,
-      meta: resolved ? (obs.nameResolves?.detail ?? "resolved") : "NXDOMAIN",
+      name: i18n.t('resolve "{{name}}"', { name }),
+      meta: resolved ? (obs.nameResolves?.detail ?? i18n.t("resolved")) : i18n.t("NXDOMAIN"),
       state: resolved ? "ok" : "err",
     },
   ];
@@ -486,28 +603,36 @@ function buildDnsLookup(facts: ReachabilityFacts, obs: ReachabilityObservations)
     {
       id: "getent",
       command: `${engine} exec ${facts.from.label} getent hosts ${name}`,
-      result: obs.nameResolves?.detail ?? (resolved ? "resolved" : "(not found)"),
+      result: obs.nameResolves?.detail ?? (resolved ? i18n.t("resolved") : i18n.t("(not found)")),
       state: resolved ? "ok" : "err",
       smoking: resolved ? undefined : "err",
     },
   ];
   return {
-    verdict: resolved ? { tone: "ok", text: "Resolves" } : { tone: "err", text: "Name doesn't resolve" },
-    pathLabel: "container → DNS",
+    verdict: resolved
+      ? { tone: "ok", text: i18n.t("Resolves") }
+      : { tone: "err", text: i18n.t("Name doesn't resolve") },
+    pathLabel: i18n.t("container → DNS"),
     hops,
     diagnosis: resolved
       ? {
           tone: "ok",
           icon: "tick-circle",
-          headline: `\`${name}\` resolves`,
-          explanation: `\`${facts.from.label}\` resolved \`${name}\` via ${engineDnsName(engine)}. Nothing to fix.`,
+          headline: i18n.t("`{{name}}` resolves", { name }),
+          explanation: i18n.t("`{{from}}` resolved `{{name}}` via {{dns}}. Nothing to fix.", {
+            from: facts.from.label,
+            name,
+            dns: engineDnsName(engine),
+          }),
           actions: [],
         }
       : {
           tone: "err",
           icon: "error",
-          headline: `\`${name}\` does not resolve from \`${facts.from.label}\``,
-          explanation: `The lookup returned NXDOMAIN. If it's a container name, attach both containers to a shared network; if it's an external name, check the container's DNS servers.`,
+          headline: i18n.t("`{{name}}` does not resolve from `{{from}}`", { name, from: facts.from.label }),
+          explanation: i18n.t(
+            "The lookup returned NXDOMAIN. If it's a container name, attach both containers to a shared network; if it's an external name, check the container's DNS servers.",
+          ),
           actions: [],
           learnMore: true,
         },
@@ -526,8 +651,19 @@ const BUILDERS: Record<ReachabilityCheckType, (facts: ReachabilityFacts, obs: Re
 export function buildReachabilityReport(facts: ReachabilityFacts, obs: ReachabilityObservations): ReachabilityReport {
   const core = BUILDERS[facts.checkType](facts, obs);
   const seconds = Math.max(0, obs.elapsedMs) / 1000;
-  const probeSummary = `${core.probes.length} ${core.probes.length === 1 ? "probe" : "probes"} · ${seconds.toFixed(1)} s`;
+  const probeSummary = i18n.t("{{count}} {{label}} · {{seconds}} s", {
+    count: core.probes.length,
+    label: core.probes.length === 1 ? i18n.t("probe") : i18n.t("probes"),
+    seconds: seconds.toFixed(1),
+  });
   // The connection is the head of the path (e.g. "System Docker → host → container") — it owns the trace, so it
   // reads as the first leg rather than a separate badge.
-  return { ...core, pathLabel: `${facts.connectionName} → ${core.pathLabel}`, probeSummary };
+  return {
+    ...core,
+    pathLabel: i18n.t("{{connectionName}} → {{pathLabel}}", {
+      connectionName: facts.connectionName,
+      pathLabel: core.pathLabel,
+    }),
+    probeSummary,
+  };
 }

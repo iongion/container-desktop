@@ -3,7 +3,7 @@ import { mdiCubeUnfolded } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { t } from "@/web-app/App.i18n";
+import i18n, { t } from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -52,7 +52,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Registries";
+Screen.Title = i18n.t("Registries");
 Screen.Route = {
   Path: `/screens/${ID}`,
 };

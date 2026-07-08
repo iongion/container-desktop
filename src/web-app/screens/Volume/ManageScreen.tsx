@@ -4,7 +4,7 @@ import { mdiScrewdriver } from "@mdi/js";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-
+import i18n from "@/i18n";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -25,6 +25,7 @@ import {
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { compareSortValues, type SortSelectors } from "@/web-app/utils/comparators";
+
 import { VolumeActionsMenu } from ".";
 import { useVolumeBulkActions } from "./bulkActions";
 import { getVolumeUrl } from "./Navigation";
@@ -269,11 +270,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Volumes";
+Screen.Title = i18n.t("Volumes");
 Screen.Route = {
   Path: `/screens/${ID}`,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.DATABASE,
-  Tooltip: "Volumes and mounts",
+  Tooltip: i18n.t("Volumes and mounts"),
 };

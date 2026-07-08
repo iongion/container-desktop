@@ -16,6 +16,7 @@ import { ActionsMenu } from "./ActionsMenu";
 import { ManageConnectionDrawer } from "./Connection";
 import { ScreenHeader } from "./ScreenHeader";
 import "./ManageScreen.css";
+import i18n from "@/i18n";
 
 // Screen
 const isAutoDetectEnabled = false;
@@ -24,7 +25,7 @@ interface ScreenProps extends AppScreenProps {}
 
 export const ID = "connections.manage";
 export const View = "manage";
-export const Title = "Connections";
+export const Title = i18n.t("Connections");
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();

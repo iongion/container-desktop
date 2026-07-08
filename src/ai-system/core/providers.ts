@@ -2,6 +2,7 @@
 // base URL, model, and whether a key is required. The actual AI-SDK LanguageModel is built from
 // this by createLanguageModel() in the runtime layer. See.
 
+import i18n from "@/i18n";
 import type { AIAuthScheme, AIAuthSettings, AISettings } from "./types";
 
 // "local" and "openai-compatible" both build via @ai-sdk/openai-compatible; the difference is reach:
@@ -45,7 +46,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   // LM Studio first — the default. Its server lists every local model and hot-loads any on request.
   {
     id: "lmstudio",
-    label: "LM Studio",
+    label: i18n.t("LM Studio"),
     kind: "local",
     cloud: false,
     aggregator: false,
@@ -58,7 +59,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   // llama.cpp binds ONE model at launch via `-m` and can't switch at runtime → single read-only model.
   {
     id: "llamacpp",
-    label: "llama.cpp",
+    label: i18n.t("llama.cpp"),
     kind: "local",
     cloud: false,
     aggregator: false,
@@ -69,7 +70,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   },
   {
     id: "anthropic",
-    label: "Anthropic",
+    label: i18n.t("Anthropic"),
     kind: "anthropic",
     cloud: true,
     aggregator: false,
@@ -80,7 +81,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   },
   {
     id: "openai",
-    label: "OpenAI",
+    label: i18n.t("OpenAI"),
     kind: "openai",
     cloud: true,
     aggregator: false,
@@ -91,7 +92,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   },
   {
     id: "deepseek",
-    label: "DeepSeek",
+    label: i18n.t("DeepSeek"),
     kind: "openai-compatible",
     cloud: true,
     aggregator: false,
@@ -102,7 +103,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   },
   {
     id: "glm",
-    label: "GLM (Zhipu)",
+    label: i18n.t("GLM (Zhipu)"),
     kind: "openai-compatible",
     cloud: true,
     aggregator: false,
@@ -113,7 +114,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   },
   {
     id: "minimax",
-    label: "MiniMax",
+    label: i18n.t("MiniMax"),
     kind: "openai-compatible",
     cloud: true,
     aggregator: false,
@@ -125,7 +126,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   // OpenRouter last — an aggregator/proxy in front of many of the others; its ids are vendor-prefixed.
   {
     id: "openrouter",
-    label: "OpenRouter",
+    label: i18n.t("OpenRouter"),
     kind: "openai-compatible",
     cloud: true,
     aggregator: true,

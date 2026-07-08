@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { type AppBreadcrumb, tabbedCrumbs } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 
@@ -7,9 +8,9 @@ export const getPodUrl = (id: string, view: string, connId?: string) => {
 
 // Sub-tab label per view segment (keys match the ActionsMenu wording).
 const POD_VIEW_LABELS: Record<string, string> = {
-  logs: "Logs",
-  processes: "Processes",
-  kube: "Kube",
+  logs: i18n.t("Logs"),
+  processes: i18n.t("Processes"),
+  kube: i18n.t("Kube"),
 };
 
 /** Canonical pod trail: `Pods > name` on inspect; `Pods > name > Tab` on a sub-tab. */

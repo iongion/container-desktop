@@ -31,10 +31,10 @@ import {
   OperatingSystem,
   type SystemNotification,
 } from "@/env/Types";
+import { t } from "@/i18n";
 import { registerHostRuntimeFromGlobals } from "@/platform/hostRuntimeFromGlobals";
 import { createLogger } from "@/platform/logger";
 import { deepMerge, isObject } from "@/utils";
-import { t } from "@/web-app/App.i18n";
 import { AppBootstrapPhase } from "@/web-app/App.types";
 import { bootTimeline, logBootSummary } from "@/web-app/bootTimeline";
 import { queryClient } from "@/web-app/domain/queryClient";

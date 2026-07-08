@@ -3,19 +3,19 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTimeout } from "usehooks-ts";
-
+import i18n from "@/i18n";
+import { createLogger } from "@/platform/logger";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 
 import { usePruneSystem, useResetSystem } from "./queries";
 import { ScreenHeader } from "./ScreenHeader";
 import "./Troubleshoot.css";
-import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("web.troubleshoot");
 
 export const ID = "troubleshoot";
-export const Title = "Troubleshoot";
+export const Title = i18n.t("Troubleshoot");
 
 export interface ScreenProps extends AppScreenProps {}
 

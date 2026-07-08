@@ -45,11 +45,11 @@ export const OSTypeSelect: React.FC<OSTypeSelectProps> = ({
   return (
     <div className="ConnectionEntitySelect OSTypeSelect">
       <HTMLSelect {...inputProps} disabled={pending || disabled} fill value={osType} onChange={onItemSelect}>
-        <option value={OperatingSystem.Browser}>Browser</option>
-        <option value={OperatingSystem.MacOS}>MacOS</option>
-        <option value={OperatingSystem.Linux}>Linux</option>
-        <option value={OperatingSystem.Unknown}>Unknown</option>
-        <option value={OperatingSystem.Windows}>Windows</option>
+        <option value={OperatingSystem.Browser}>{t("Browser")}</option>
+        <option value={OperatingSystem.MacOS}>{t("MacOS")}</option>
+        <option value={OperatingSystem.Linux}>{t("Linux")}</option>
+        <option value={OperatingSystem.Unknown}>{t("Unknown")}</option>
+        <option value={OperatingSystem.Windows}>{t("Windows")}</option>
       </HTMLSelect>
       {withoutDetect ? null : (
         <>

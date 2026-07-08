@@ -6,6 +6,7 @@
 // No Electron/AI-SDK/node:* imports.
 
 import type { KnowledgeDomain, KnowledgeEntry } from "@/ai-system/core";
+import i18n from "@/i18n";
 
 export type { KnowledgeDomain, KnowledgeEntry };
 
@@ -24,76 +25,89 @@ const BUILTIN_SEED: KnowledgeEntry[] = [
   {
     id: "podman-rootless-socket",
     domain: "podman",
-    title: "Rootless Podman API socket not available",
-    symptom: "Cannot connect to Podman socket / unix:///run/user/<uid>/podman/podman.sock no such file",
-    solution: "Enable the user API service so the rootless socket exists, then point clients at it via DOCKER_HOST.",
+    title: i18n.t("Rootless Podman API socket not available"),
+    symptom: i18n.t("Cannot connect to Podman socket / unix:///run/user/<uid>/podman/podman.sock no such file"),
+    solution: i18n.t(
+      "Enable the user API service so the rootless socket exists, then point clients at it via DOCKER_HOST.",
+    ),
     commands: ["systemctl --user enable --now podman.socket", "systemctl --user status podman.socket"],
     tags: ["socket", "rootless", "connection", "DOCKER_HOST"],
   },
   {
     id: "podman-shortname",
     domain: "podman",
-    title: "Short-name image did not resolve",
-    symptom: "Error: short-name resolution / image name is ambiguous when pulling",
-    solution: "Use a fully-qualified image reference (registry/namespace/name:tag) instead of a bare short name.",
+    title: i18n.t("Short-name image did not resolve"),
+    symptom: i18n.t("Error: short-name resolution / image name is ambiguous when pulling"),
+    solution: i18n.t(
+      "Use a fully-qualified image reference (registry/namespace/name:tag) instead of a bare short name.",
+    ),
     commands: ["podman pull docker.io/library/alpine:latest"],
     tags: ["pull", "registry", "short-name", "image"],
   },
   {
     id: "docker-daemon-connection",
     domain: "docker",
-    title: "Cannot connect to the Docker daemon",
-    symptom: "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
-    solution:
+    title: i18n.t("Cannot connect to the Docker daemon"),
+    symptom: i18n.t(
+      "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+    ),
+    solution: i18n.t(
       "Start the Docker service (or Docker Desktop) and verify it is listening; check DOCKER_HOST is not pointing elsewhere.",
+    ),
     commands: ["systemctl --user status docker", "docker version"],
     tags: ["daemon", "socket", "connection", "permission denied"],
   },
   {
     id: "docker-socket-permission",
     domain: "docker",
-    title: "Permission denied on the Docker socket",
-    symptom: "permission denied while trying to connect to the Docker daemon socket /var/run/docker.sock",
-    solution:
+    title: i18n.t("Permission denied on the Docker socket"),
+    symptom: i18n.t("permission denied while trying to connect to the Docker daemon socket /var/run/docker.sock"),
+    solution: i18n.t(
       "Add your user to the docker group (then re-login), or use a rootless engine. Avoid chmod 777 on the socket.",
+    ),
     commands: ["sudo usermod -aG docker $USER"],
     tags: ["permission denied", "socket", "group", "rootless"],
   },
   {
     id: "wsl-distro-not-running",
     domain: "wsl",
-    title: "WSL distribution not running / stale state",
-    symptom: "WSL: the distribution is stopped, hangs, or the engine inside WSL is unreachable",
-    solution: "List distros and their state, then restart WSL to clear stuck state before starting the engine again.",
+    title: i18n.t("WSL distribution not running / stale state"),
+    symptom: i18n.t("WSL: the distribution is stopped, hangs, or the engine inside WSL is unreachable"),
+    solution: i18n.t(
+      "List distros and their state, then restart WSL to clear stuck state before starting the engine again.",
+    ),
     commands: ["wsl -l -v", "wsl --shutdown"],
     tags: ["wsl", "distribution", "restart", "stopped"],
   },
   {
     id: "wsl-docker-integration",
     domain: "wsl",
-    title: "Docker not visible inside WSL",
-    symptom: "docker command works on Windows but not inside the WSL distro",
-    solution:
+    title: i18n.t("Docker not visible inside WSL"),
+    symptom: i18n.t("docker command works on Windows but not inside the WSL distro"),
+    solution: i18n.t(
       "Enable Docker Desktop WSL integration for the distro (Settings → Resources → WSL integration), or run a native engine inside WSL.",
+    ),
     tags: ["wsl", "docker desktop", "integration"],
   },
   {
     id: "ssh-publickey-denied",
     domain: "ssh",
-    title: "SSH Permission denied (publickey)",
-    symptom: "Permission denied (publickey) when connecting to a remote engine over SSH",
-    solution:
+    title: i18n.t("SSH Permission denied (publickey)"),
+    symptom: i18n.t("Permission denied (publickey) when connecting to a remote engine over SSH"),
+    solution: i18n.t(
       "Confirm the right IdentityFile is offered and the key is loaded in the agent; verify the public key is in the remote authorized_keys.",
+    ),
     commands: ["ssh-add -l", "ssh -v <host>"],
     tags: ["ssh", "publickey", "identity", "auth"],
   },
   {
     id: "ssh-host-key-changed",
     domain: "ssh",
-    title: "SSH host key verification failed",
-    symptom: "Host key verification failed / REMOTE HOST IDENTIFICATION HAS CHANGED",
-    solution:
+    title: i18n.t("SSH host key verification failed"),
+    symptom: i18n.t("Host key verification failed / REMOTE HOST IDENTIFICATION HAS CHANGED"),
+    solution: i18n.t(
       "If the host legitimately changed, remove the stale known_hosts entry and reconnect to accept the new key.",
+    ),
     commands: ["ssh-keygen -R <host>"],
     tags: ["ssh", "known_hosts", "host key"],
   },

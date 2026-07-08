@@ -4,14 +4,15 @@ import prettyBytes from "pretty-bytes";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { isContainerRunning } from "@/container-client/adapters/containers";
+import i18n from "@/i18n";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
+import { useContainer, useContainerStats } from "./queries";
 
 import "./StatsScreen.css";
-import { useContainer, useContainerStats } from "./queries";
 
 interface ScreenProps extends AppScreenProps {}
 
@@ -78,7 +79,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Container Stats";
+Screen.Title = i18n.t("Container Stats");
 Screen.Route = {
   Path: "/screens/container/$id/stats",
 };

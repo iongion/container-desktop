@@ -1,6 +1,7 @@
 import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -16,7 +17,7 @@ import { useSecret } from "./queries";
 export interface ScreenProps extends AppScreenProps {}
 
 export const ID = "secret.inspect";
-export const Title = "Secret Inspect";
+export const Title = i18n.t("Secret Inspect");
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();

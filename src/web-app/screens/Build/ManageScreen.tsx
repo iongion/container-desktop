@@ -25,6 +25,7 @@ import { BUILD_ID, BUILD_ROUTE, getBuildCrumbs, isBuildSupported, isRemoteBuildH
 import { useStartBuild } from "./useBuildStreaming";
 
 import "./Build.css";
+import i18n from "@/i18n";
 
 export const ID = BUILD_ID;
 export interface ScreenProps extends AppScreenProps {}
@@ -184,7 +185,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Build";
+Screen.Title = i18n.t("Build");
 Screen.Route = {
   Path: BUILD_ROUTE,
 };

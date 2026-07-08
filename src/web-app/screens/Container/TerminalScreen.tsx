@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import i18n from "@/i18n";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
@@ -34,7 +35,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Container Terminal";
+Screen.Title = i18n.t("Container Terminal");
 Screen.Route = {
   Path: "/screens/container/$id/terminal",
 };

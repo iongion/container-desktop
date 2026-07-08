@@ -2,7 +2,7 @@ import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useState } from "react";
 
-import { t } from "@/web-app/App.i18n";
+import i18n, { t } from "@/i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -17,7 +17,7 @@ interface ScreenProps extends AppScreenProps {}
 
 export const ID = "connections.system-info";
 export const View = "system-info";
-export const Title = "System info";
+export const Title = i18n.t("System info");
 
 export const Screen: AppScreen<ScreenProps> = () => {
   const connections = useAppStore((state) => state.connections);

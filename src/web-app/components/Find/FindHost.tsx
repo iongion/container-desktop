@@ -9,6 +9,7 @@
 import { type HotkeyConfig, useHotkeys } from "@blueprintjs/core";
 import { useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { createDomFindEngine } from "./domFindEngine";
 import "./Find.css";
@@ -38,6 +39,7 @@ function computePosition(root: HTMLElement | null): WidgetPosition {
 }
 
 export const FindHost: React.FC = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -149,15 +151,15 @@ export const FindHost: React.FC = () => {
         combo: "mod+f",
         global: true,
         allowInInput: true,
-        label: "Find in current view",
-        group: "Find",
+        label: t("Find in current view"),
+        group: t("Find"),
         onKeyDown: onTrigger,
       },
       {
         combo: "escape",
         allowInInput: true,
-        label: "Close find",
-        group: "Find",
+        label: t("Close find"),
+        group: t("Find"),
         onKeyDown: () => {
           if (open) {
             closeOverlay();
@@ -167,8 +169,8 @@ export const FindHost: React.FC = () => {
       {
         combo: "enter",
         allowInInput: true,
-        label: "Next match",
-        group: "Find",
+        label: t("Next match"),
+        group: t("Find"),
         onKeyDown: () => {
           if (open) {
             goNext();
@@ -178,8 +180,8 @@ export const FindHost: React.FC = () => {
       {
         combo: "shift+enter",
         allowInInput: true,
-        label: "Previous match",
-        group: "Find",
+        label: t("Previous match"),
+        group: t("Find"),
         onKeyDown: () => {
           if (open) {
             goPrevious();
@@ -187,7 +189,7 @@ export const FindHost: React.FC = () => {
         },
       },
     ],
-    [onTrigger, open, closeOverlay, goNext, goPrevious],
+    [t, onTrigger, open, closeOverlay, goNext, goPrevious],
   );
   const { handleKeyDown, handleKeyUp } = useHotkeys(hotkeys);
 

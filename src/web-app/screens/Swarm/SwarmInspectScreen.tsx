@@ -1,6 +1,7 @@
 import { IconNames } from "@blueprintjs/icons";
 
 import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/env/Types";
+import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { connectedConnections, isDockerConnection } from "@/web-app/components/ConnectionSelect";
@@ -15,7 +16,7 @@ import { getSwarmCrumbs, getSwarmTabUrl, type SwarmInspectSegment } from "./Navi
 import { type SwarmInspectKind, useRemoveService, useScaleService, useSwarmInspect, useSwarmServices } from "./queries";
 
 export const ID = "swarm.inspect";
-export const Title = "Swarm Inspect";
+export const Title = i18n.t("Swarm Inspect");
 
 const STACK_NAMESPACE_LABEL = "com.docker.stack.namespace";
 

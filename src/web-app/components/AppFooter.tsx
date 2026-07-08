@@ -2,7 +2,7 @@ import { Alignment, Button, Intent, Navbar, NavbarDivider, NavbarGroup, NavbarHe
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { Application } from "@/container-client/Application";
-import i18n from "@/web-app/App.i18n";
+import i18n from "@/i18n";
 import { AppTheme } from "@/web-app/App.types";
 import { ConnectionsMenu } from "@/web-app/components/ConnectionsMenu";
 import { buildEngineInventory, EngineVersionsMenu } from "@/web-app/components/EngineVersionsMenu";

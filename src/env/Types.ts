@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+
 export interface SpawnedProcess {
   pid: any;
   code: any;
@@ -994,8 +996,8 @@ export interface ContainerImageMount {
 
 export const MOUNT_TYPES = ["bind", "tmpfs", "volume", "image", "devpts"];
 export const MOUNT_ACCESS = [
-  { title: "Read only", type: "ro" },
-  { title: "Read / Write", type: "rw" },
+  { title: i18n.t("Read only"), type: "ro" },
+  { title: i18n.t("Read / Write"), type: "rw" },
 ];
 
 export enum PodStatusList {

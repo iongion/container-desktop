@@ -2,8 +2,8 @@ import { H5, HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useState } from "react";
 import { OperatingSystem } from "@/env/Types";
+import i18n, { t } from "@/i18n";
 import { isEmpty } from "@/utils";
-import { t } from "@/web-app/App.i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { CopyButton } from "@/web-app/components/CopyButton";
@@ -16,7 +16,7 @@ interface ScreenProps extends AppScreenProps {}
 
 export const ID = "connections.connection-info";
 export const View = "connection-info";
-export const Title = "Connection info";
+export const Title = i18n.t("Connection info");
 
 const scopedCodeExample = `
 /*

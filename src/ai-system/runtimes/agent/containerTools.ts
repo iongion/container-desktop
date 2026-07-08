@@ -13,6 +13,7 @@ import { z } from "zod";
 import type { AgentToolDeps, EngineOps } from "@/ai-system/core";
 import { redactPayload, redactText, resolveToolAction, toolKey } from "@/ai-system/core";
 import type { Container, ContainerImage, ContainerStats, Network, Volume } from "@/env/Types";
+import i18n from "@/i18n";
 
 // Input schemas — `.strict()` so the model can pass ONLY the declared fields (never a connection override
 // it shouldn't, never an extra option). `listContainersInput` is exported for the wiring test.
@@ -90,42 +91,44 @@ interface ContainerToolSpec {
 
 const SPECS: Record<string, ContainerToolSpec> = {
   listConnections: {
-    description:
+    description: i18n.t(
       "List the configured container-engine connections (id, name, engine, running). Pass a connection's id as `connectionId` on other tools to target a specific engine; omit it to use the primary connection.",
+    ),
     inputSchema: noArgs,
     gated: false,
-    title: () => "List connections",
+    title: () => i18n.t("List connections"),
     run: async (ops) => {
       const items = ops.listConnections();
       return { ok: true, result: items, summary: items };
     },
   },
   listContainers: {
-    description: "List containers (all states) for a connection. Returns id, name, image and state.",
+    description: i18n.t("List containers (all states) for a connection. Returns id, name, image and state."),
     inputSchema: connRef,
     gated: false,
-    title: () => "List containers",
+    title: () => i18n.t("List containers"),
     run: async (ops, args) => {
       const items = await ops.listContainers({ connectionId: args.connectionId });
       return { ok: true, result: items, summary: items.map(summariseContainer) };
     },
   },
   inspectContainer: {
-    description: "Inspect one container by id or name; returns its full configuration and state.",
+    description: i18n.t("Inspect one container by id or name; returns its full configuration and state."),
     inputSchema: entityRef,
     gated: false,
-    title: (args) => `Inspect container ${short(args.id)}`,
+    title: (args) => i18n.t("Inspect container {{id}}", { id: short(args.id) }),
     run: async (ops, args) => {
       const item = await ops.inspectContainer({ connectionId: args.connectionId, id: args.id });
       return { ok: !!item, result: item ?? null, summary: item ? summariseContainer(item) : { error: "not found" } };
     },
   },
   getContainerLogs: {
-    description:
+    description: i18n.t(
       "Fetch recent logs for a container. `tail` caps the number of lines (default 200); `since` is an optional timestamp.",
+    ),
     inputSchema: logsInput,
     gated: false,
-    title: (args) => `Logs for ${short(args.id)}`,
+    title: (args) => i18n.t("Logs for {{id}}", { id: short(args.id) }),
     run: async (ops, args) => {
       const text = await ops.getContainerLogs({
         connectionId: args.connectionId,
@@ -137,70 +140,70 @@ const SPECS: Record<string, ContainerToolSpec> = {
     },
   },
   getContainerStats: {
-    description: "Get a one-shot CPU/memory usage snapshot for a container.",
+    description: i18n.t("Get a one-shot CPU/memory usage snapshot for a container."),
     inputSchema: entityRef,
     gated: false,
-    title: (args) => `Stats for ${short(args.id)}`,
+    title: (args) => i18n.t("Stats for {{id}}", { id: short(args.id) }),
     run: async (ops, args) => {
       const stats = await ops.getContainerStats({ connectionId: args.connectionId, id: args.id });
       return { ok: true, result: stats, summary: summariseStats(stats) };
     },
   },
   listImages: {
-    description: "List images for a connection. Returns id, name, tag and size.",
+    description: i18n.t("List images for a connection. Returns id, name, tag and size."),
     inputSchema: connRef,
     gated: false,
-    title: () => "List images",
+    title: () => i18n.t("List images"),
     run: async (ops, args) => {
       const items = await ops.listImages({ connectionId: args.connectionId });
       return { ok: true, result: items, summary: items.map(summariseImage) };
     },
   },
   inspectImage: {
-    description: "Inspect one image by id or name; returns its full configuration.",
+    description: i18n.t("Inspect one image by id or name; returns its full configuration."),
     inputSchema: entityRef,
     gated: false,
-    title: (args) => `Inspect image ${short(args.id)}`,
+    title: (args) => i18n.t("Inspect image {{id}}", { id: short(args.id) }),
     run: async (ops, args) => {
       const item = await ops.inspectImage({ connectionId: args.connectionId, id: args.id });
       return { ok: !!item, result: item ?? null, summary: item ? summariseImage(item) : { error: "not found" } };
     },
   },
   listNetworks: {
-    description: "List networks for a connection. Returns id, name and driver.",
+    description: i18n.t("List networks for a connection. Returns id, name and driver."),
     inputSchema: connRef,
     gated: false,
-    title: () => "List networks",
+    title: () => i18n.t("List networks"),
     run: async (ops, args) => {
       const items = await ops.listNetworks({ connectionId: args.connectionId });
       return { ok: true, result: items, summary: items.map(summariseNetwork) };
     },
   },
   inspectNetwork: {
-    description: "Inspect one network by id or name.",
+    description: i18n.t("Inspect one network by id or name."),
     inputSchema: entityRef,
     gated: false,
-    title: (args) => `Inspect network ${short(args.id)}`,
+    title: (args) => i18n.t("Inspect network {{id}}", { id: short(args.id) }),
     run: async (ops, args) => {
       const item = await ops.inspectNetwork({ connectionId: args.connectionId, id: args.id });
       return { ok: true, result: item, summary: summariseNetwork(item) };
     },
   },
   listVolumes: {
-    description: "List volumes for a connection. Returns name, driver and mountpoint.",
+    description: i18n.t("List volumes for a connection. Returns name, driver and mountpoint."),
     inputSchema: connRef,
     gated: false,
-    title: () => "List volumes",
+    title: () => i18n.t("List volumes"),
     run: async (ops, args) => {
       const items = await ops.listVolumes({ connectionId: args.connectionId });
       return { ok: true, result: items, summary: items.map(summariseVolume) };
     },
   },
   inspectVolume: {
-    description: "Inspect one volume by name.",
+    description: i18n.t("Inspect one volume by name."),
     inputSchema: entityRef,
     gated: false,
-    title: (args) => `Inspect volume ${short(args.id)}`,
+    title: (args) => i18n.t("Inspect volume {{id}}", { id: short(args.id) }),
     run: async (ops, args) => {
       const item = await ops.inspectVolume({ connectionId: args.connectionId, id: args.id });
       return { ok: true, result: item, summary: summariseVolume(item) };
@@ -224,64 +227,64 @@ const ENTITY_MUTATIONS: ReadonlyArray<{
     name: "startContainer",
     method: "startContainer",
     op: "start",
-    label: "Start container",
-    description: "Start a container by id or name.",
+    label: i18n.t("Start container"),
+    description: i18n.t("Start a container by id or name."),
   },
   {
     name: "stopContainer",
     method: "stopContainer",
     op: "stop",
-    label: "Stop container",
-    description: "Stop a running container by id or name.",
+    label: i18n.t("Stop container"),
+    description: i18n.t("Stop a running container by id or name."),
   },
   {
     name: "restartContainer",
     method: "restartContainer",
     op: "restart",
-    label: "Restart container",
-    description: "Restart a container by id or name.",
+    label: i18n.t("Restart container"),
+    description: i18n.t("Restart a container by id or name."),
   },
   {
     name: "pauseContainer",
     method: "pauseContainer",
     op: "pause",
-    label: "Pause container",
-    description: "Pause a running container by id or name.",
+    label: i18n.t("Pause container"),
+    description: i18n.t("Pause a running container by id or name."),
   },
   {
     name: "unpauseContainer",
     method: "unpauseContainer",
     op: "unpause",
-    label: "Unpause container",
-    description: "Resume a paused container by id or name.",
+    label: i18n.t("Unpause container"),
+    description: i18n.t("Resume a paused container by id or name."),
   },
   {
     name: "removeContainer",
     method: "removeContainer",
     op: "remove",
-    label: "Remove container",
-    description: "Remove a container (forced) by id or name. Destructive.",
+    label: i18n.t("Remove container"),
+    description: i18n.t("Remove a container (forced) by id or name. Destructive."),
   },
   {
     name: "removeImage",
     method: "removeImage",
     op: "remove",
-    label: "Remove image",
-    description: "Remove an image by id or name. Destructive.",
+    label: i18n.t("Remove image"),
+    description: i18n.t("Remove an image by id or name. Destructive."),
   },
   {
     name: "removeNetwork",
     method: "removeNetwork",
     op: "remove",
-    label: "Remove network",
-    description: "Remove a network by id or name. Destructive.",
+    label: i18n.t("Remove network"),
+    description: i18n.t("Remove a network by id or name. Destructive."),
   },
   {
     name: "removeVolume",
     method: "removeVolume",
     op: "remove",
-    label: "Remove volume",
-    description: "Remove a volume by name. Destructive.",
+    label: i18n.t("Remove volume"),
+    description: i18n.t("Remove a volume by name. Destructive."),
   },
 ];
 
@@ -290,7 +293,7 @@ for (const m of ENTITY_MUTATIONS) {
     description: m.description,
     inputSchema: entityRef,
     gated: true,
-    title: (args) => `${m.label} ${short(args.id)}`,
+    title: (args) => i18n.t("{{label}} {{id}}", { label: m.label, id: short(args.id) }),
     run: async (ops, args) => {
       const call = ops[m.method] as (a: { connectionId?: string; id: string }) => Promise<boolean>;
       const ok = !!(await call({ connectionId: args.connectionId, id: args.id }));
@@ -301,10 +304,10 @@ for (const m of ENTITY_MUTATIONS) {
 }
 
 SPECS.pullImage = {
-  description: "Pull an image by reference (e.g. docker.io/library/nginx:latest). Reaches the network.",
+  description: i18n.t("Pull an image by reference (e.g. docker.io/library/nginx:latest). Reaches the network."),
   inputSchema: pullImageInput,
   gated: true,
-  title: (args) => `Pull ${args.reference}`,
+  title: (args) => i18n.t("Pull {{reference}}", { reference: args.reference }),
   run: async (ops, args) => {
     const ok = await ops.pullImage({ connectionId: args.connectionId, reference: args.reference });
     const payload = { ok, op: "pull", id: args.reference };
@@ -327,7 +330,7 @@ export interface EngineToolOutcome {
 export async function executeContainerTool(engineOps: EngineOps, name: string, args: any): Promise<EngineToolOutcome> {
   const spec = SPECS[name];
   if (!spec) {
-    throw new Error(`Unknown container tool: ${name}`);
+    throw new Error(i18n.t("Unknown container tool: {{name}}", { name }));
   }
   const raw = await spec.run(engineOps, args ?? {});
   return {
@@ -343,7 +346,7 @@ export async function executeContainerTool(engineOps: EngineOps, name: string, a
 export async function runContainerTool(deps: AgentToolDeps, name: string, args: any): Promise<unknown> {
   const spec = SPECS[name];
   if (!spec || !deps.engineOps) {
-    throw new Error(`Container tool unavailable: ${name}`);
+    throw new Error(i18n.t("Container tool unavailable: {{name}}", { name }));
   }
   const title = spec.title(args ?? {});
   // Gated mutations: the user's permission mode (not a heuristic) decides run / ask / reject. On "ask" we
@@ -352,7 +355,7 @@ export async function runContainerTool(deps: AgentToolDeps, name: string, args: 
     const cached = deps.cacheLookup?.(toolKey(name, args ?? {}));
     const action = resolveToolAction({ mode: deps.mode, floorBlocked: false, cached });
     if (action === "reject") {
-      const reason = "Blocked by your saved permissions.";
+      const reason = i18n.t("Blocked by your saved permissions.");
       deps.onEvent?.({ type: "rejected", program: name, args: argDisplay(args), reason });
       return { ok: false, rejected: true, reason };
     }
@@ -363,7 +366,7 @@ export async function runContainerTool(deps: AgentToolDeps, name: string, args: 
         kind: "tool",
         program: name,
         args: argDisplay(args),
-        reason: "Requires your approval before it runs.",
+        reason: i18n.t("Requires your approval before it runs."),
         tool: name,
         toolArgs: (args ?? {}) as Record<string, unknown>,
         title,
@@ -371,8 +374,9 @@ export async function runContainerTool(deps: AgentToolDeps, name: string, args: 
       return {
         ok: false,
         awaitingApproval: true,
-        reason:
+        reason: i18n.t(
           "This action requires the user's approval before it runs. Do NOT assume it ran or invent its outcome — stop and let the user decide.",
+        ),
       };
     }
     // action === "run" → execute below (allow mode, or a remembered allow).

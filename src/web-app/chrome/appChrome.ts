@@ -6,14 +6,16 @@
 //     via the EJS context, so the frameless window stays draggable / minimizable / closable even if the React
 //     app hangs before mounting its own header (the chrome can't depend on the thing that may have failed).
 //
-// This module is intentionally dependency-free (plain strings/data, mdi glyph paths inlined) so the Vite
-// config can import it at config-load time without pulling app/runtime code into the Node build.
+// This module avoids React/runtime app state (plain strings/data, mdi glyph paths inlined) so the Vite
+// config can import it at config-load time while still sharing the same i18next labels as the live app.
 //
 // Boot vs React rendering of the SAME logo markup:
 //   • LOGO_SVG carries the app's CSS classes (re-themed per engine by AppHeaderLogo.css once React is up)
 //     AND literal `unified`-dark presentation attributes (fill/stroke/stop-color/font-*) as boot defaults.
 //     Presentation attributes are the lowest-priority paint source, so app CSS overrides them when loaded,
 //     while at boot — before any app CSS — they are what render. One markup, correct in both worlds.
+
+import i18n from "../../i18n";
 
 export interface WindowControl {
   /** IPC channel sent on window.MessageBus — handled by registerAppControlIpc in the main process. */
@@ -24,11 +26,11 @@ export interface WindowControl {
 }
 
 export const WINDOW_CONTROLS: WindowControl[] = [
-  { action: "window.minimize", label: "Minimize", mdiPath: "M20,14H4V10H20" },
-  { action: "window.maximize", label: "Maximize", mdiPath: "M4,4H20V20H4V4M6,8V18H18V8H6Z" },
+  { action: "window.minimize", label: i18n.t("Minimize"), mdiPath: "M20,14H4V10H20" },
+  { action: "window.maximize", label: i18n.t("Maximize"), mdiPath: "M4,4H20V20H4V4M6,8V18H18V8H6Z" },
   {
     action: "window.close",
-    label: "Close",
+    label: i18n.t("Close"),
     mdiPath:
       "M13.46,12L19,17.54V19H17.54L12,13.46L6.46,19H5V17.54L10.54,12L5,6.46V5H6.46L12,10.54L17.54,5H19V6.46L13.46,12Z",
   },
@@ -37,9 +39,13 @@ export const WINDOW_CONTROLS: WindowControl[] = [
 // `unified`-dark brand palette (mirrors tokens.css / AppHeaderLogo.css defaults). Baked into LOGO_SVG as boot
 // defaults; AppHeaderLogo.css re-themes per engine when React mounts.
 const LOGO_FONT = "Montserrat, 'Helvetica Neue', Arial, sans-serif";
+const LOGO_TITLE = i18n.t("Container Desktop");
+const LOGO_TAGLINE_UNIFIED = i18n.t("Containers desktop companion");
+const LOGO_TAGLINE_PODMAN = i18n.t("Podman desktop companion");
+const LOGO_TAGLINE_DOCKER = i18n.t("Docker desktop companion");
 
-export const LOGO_SVG = `<svg class="AppHeaderLogo" viewBox="0 0 940 200" role="img" aria-label="Container Desktop" focusable="false" xmlns="http://www.w3.org/2000/svg">
-  <title>Container Desktop</title>
+export const LOGO_SVG = `<svg class="AppHeaderLogo" viewBox="0 0 940 200" role="img" aria-label="${LOGO_TITLE}" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <title>${LOGO_TITLE}</title>
   <defs>
     <linearGradient id="AppHeaderLogoGrad" x1="0" x2="1" y1="0" y2="0.3">
       <stop class="AppHeaderLogoGradStop0" offset="0.18" stop-color="#ffffff" />
@@ -52,10 +58,10 @@ export const LOGO_SVG = `<svg class="AppHeaderLogo" viewBox="0 0 940 200" role="
     <path class="AppHeaderLogoPlate AppHeaderLogoPlate--accent" d="M128,94 L198,120 L128,146 L58,120 Z" fill="#14b8a6" stroke="#14b8a6" stroke-width="16" stroke-linejoin="round" />
     <path class="AppHeaderLogoPlate AppHeaderLogoPlate--bright" d="M128,72 L180,92 L128,112 L76,92 Z" fill="#2dd4bf" stroke="#2dd4bf" stroke-width="16" stroke-linejoin="round" />
   </g>
-  <text class="AppHeaderLogoTitle" x="178" y="96" font-family="${LOGO_FONT}" font-weight="800" font-size="56" letter-spacing="-1.8" fill="#ffffff">Container Desktop</text>
-  <text class="AppHeaderLogoTagline AppHeaderLogoTagline--unified" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">Containers desktop companion</text>
-  <text class="AppHeaderLogoTagline AppHeaderLogoTagline--podman" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">Podman desktop companion</text>
-  <text class="AppHeaderLogoTagline AppHeaderLogoTagline--docker" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">Docker desktop companion</text>
+  <text class="AppHeaderLogoTitle" x="178" y="96" font-family="${LOGO_FONT}" font-weight="800" font-size="56" letter-spacing="-1.8" fill="#ffffff">${LOGO_TITLE}</text>
+  <text class="AppHeaderLogoTagline AppHeaderLogoTagline--unified" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">${LOGO_TAGLINE_UNIFIED}</text>
+  <text class="AppHeaderLogoTagline AppHeaderLogoTagline--podman" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">${LOGO_TAGLINE_PODMAN}</text>
+  <text class="AppHeaderLogoTagline AppHeaderLogoTagline--docker" x="180" y="137" font-family="${LOGO_FONT}" font-weight="500" font-size="26" letter-spacing="0.2" fill="#7c98a1">${LOGO_TAGLINE_DOCKER}</text>
 </svg>`;
 
 const BOOT_CONTROL_BUTTONS = WINDOW_CONTROLS.map((control) => {

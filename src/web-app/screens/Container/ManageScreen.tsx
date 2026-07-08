@@ -54,6 +54,7 @@ import { aggregateStatus, statusLabel, statusTone } from "./health";
 import { ImportStackDrawer } from "./ImportStackDrawer";
 import { enrichHealth, useComposeHealth } from "./useComposeHealth";
 import "./ManageScreen.css";
+import i18n from "@/i18n";
 
 export interface ScreenProps extends AppScreenProps {}
 
@@ -733,7 +734,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 };
 
 Screen.ID = ID;
-Screen.Title = "Containers";
+Screen.Title = i18n.t("Containers");
 Screen.Route = {
   Path: `/screens/${ID}`,
 };

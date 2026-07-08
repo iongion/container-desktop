@@ -7,6 +7,7 @@ import { createStore } from "zustand/vanilla";
 
 import type { AgentStreamEvent, ChatSession, DiagnosticsBundle, ResolveDecision } from "@/ai-system/core";
 import { AI_CHANNELS, getChatStore } from "@/ai-system/core";
+import i18n from "@/i18n";
 import {
   hasPendingApproval,
   itemsFromMessages,
@@ -18,6 +19,7 @@ import {
 } from "../transcript";
 
 const uid = () => `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+const NEW_CHAT_TITLE = i18n.t("New chat");
 
 export interface AIStoreDeps {
   /** Preload bridge — a getter for window.AI, evaluated at call time so tests can swap it. */
@@ -58,7 +60,7 @@ export function createAIStore(deps: AIStoreDeps) {
         return;
       }
       const messages = messagesFromItems(get().timelines[sessionId] ?? []);
-      const title = session.title === "New chat" && messages[0] ? messages[0].content.slice(0, 48) : session.title;
+      const title = session.title === NEW_CHAT_TITLE && messages[0] ? messages[0].content.slice(0, 48) : session.title;
       const updated: ChatSession = { ...session, title, updatedAt: Date.now(), messages };
       set((s) => ({ sessions: s.sessions.map((x) => (x.id === sessionId ? updated : x)) }));
       void getChatStore().saveSession(updated);
@@ -74,7 +76,7 @@ export function createAIStore(deps: AIStoreDeps) {
 
       newSession: () => {
         const now = Date.now();
-        const session: ChatSession = { id: uid(), title: "New chat", createdAt: now, updatedAt: now, messages: [] };
+        const session: ChatSession = { id: uid(), title: NEW_CHAT_TITLE, createdAt: now, updatedAt: now, messages: [] };
         set((s) => ({
           sessions: [...s.sessions, session],
           activeSessionId: session.id,

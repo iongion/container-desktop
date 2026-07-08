@@ -8,8 +8,8 @@
 
 import { Intent } from "@blueprintjs/core";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
+import i18n from "@/i18n";
 import { createLogger } from "@/platform/logger";
-import i18n from "@/web-app/App.i18n";
 import { formatQueryErrorMessage } from "@/web-app/domain/queryError";
 import CurrentEnvironment, { POLL_RATE_DEFAULT } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
