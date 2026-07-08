@@ -9,14 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Per-connection registry trust** — global **Registries** screen; real per-engine backends: sign-in (`login --password-stdin`), add/remove (`registries.conf`/`daemon.json`), CAs (`certs.d`) + proxy in the connection form; registry search → Images
+- **Inspect Tree | JSON viewer** — the raw-configuration block on every resource **Inspect** screen (containers, images, volumes, networks, pods, machines, secrets, swarm, system info) gains a **Tree | JSON** toggle: a native Blueprint collapsible tree over the whole payload (all branches collapsed, drill-down) with the JSON code editor one click away; unparseable/incomplete JSON falls back to the raw text
+- **Per-connection registry trust** — global **Registries** screen grouped by connection; real per-engine backends: sign-in (`login --password-stdin`), add/remove (`registries.conf`/`daemon.json`), CAs (`certs.d`) + proxy in the connection form; remote image search/pull lives on **Images**
 - **Engine compatibility matrix** — a **Troubleshoot → Compatibility** sub-screen comparing engine capabilities side by side (Podman/Docker/Apple), read from connect-time capabilities
-- **Native Compose stacks** — import a `docker-compose.yml` and run it as native Podman containers, shown in **Containers** as a compose group (compose-parity or single-pod networking)
-- **Import stack** also targets **Docker** (`docker compose up`/`down`; Podman keeps its native libpod translation); the pod-networking choice is Podman-only
+- **Native Compose stacks** — import a `docker-compose.yml` into Podman as native containers, shown in **Containers** as a compose group (compose-parity or single-pod networking)
 - Pod logs aggregate members over the libpod REST API instead of `podman pod logs`, so they work on socket/API connections with no local CLI
-- A container **status dot** on every name/group header — run state + healthcheck (green running · red unhealthy/crashed · amber starting/paused · grey stopped)
+- A container **status dot** on container rows and group headers — run state + healthcheck (green running · red unhealthy/crashed · amber starting/paused · grey stopped)
 - Compose `depends_on: { condition: service_healthy }` is honored on **Import stack** — a dependent waits for its dependency to report healthy
-- Group actions (start/stop/restart all) and stack teardown show an inline spinner + success/failure toast while running
+- Group actions (start/stop/restart all) and stack teardown show inline busy state and failure feedback while running
 - **Wails v3 (Go) desktop backend** alongside Electron + Tauri at full parity — cross-builds every format from one Linux host except the Store appx/msix (Windows)
 - Wails native-shell parity: single-instance focus, window-bounds persistence, true relaunch, hide-to-tray, persistent file log, OS-keychain 0600 fallback
 - Wails: window stays hidden until the renderer is ready (reveal-on-ready), removing the blank-window startup flash
@@ -24,23 +24,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-backend release pipelines `CDPipeline.{Tauri,Electron,Wails}.yml` (from `build-matrix.cjs`); Tauri stays the default publisher
 - Wails remote-control/E2E driver `support/wails-mcp.mjs` over the built-in MCP server (JS eval, DOM inspection, X11 screenshots)
 - Wails website-screenshot capture backend (`--backend=wails`) via MCP `js_eval` + X11 grab
-- **Mounts inspector** — per-connection container → mount tree with sizes and mock probe results
+- **Mounts inspector** — global connection-grouped container → mount tree with sizes and mock probe results
 - **Reachability debugger** — a **Networks → Reachability** sub-screen: transport-aware trace pinpoints where a port · service→service · reach-out · DNS check breaks, with a copyable fix
 - **Image Security supply-chain tab** — per-image **Security** view: cosign signature/provenance verified on open, copyable digest, and a button-triggered Trivy pass for vulnerabilities + SBOM (SPDX/CycloneDX export) — scans on demand, not on navigate
 - **Signature sign-in recovery** — an auth-required cosign verify offers a **Sign in to verify** action (real `cosign login --password-stdin`, cosign's own keychain so Podman is covered too) that resumes verification on success; the Log in button shows only when cosign isn't already authenticated, and a header **Recheck** button re-verifies on demand
 - Security tab: the source **registry** shows as a column on the image identity bar, severity filters are per-severity toggle switches with solid count pills, and the findings table shows a centered empty state when a scan is clean or filtered to nothing
 - Connection-grouped list views for Images, Registries, Pods, Machines, Networks, Secrets, Volumes and Swarm
 - Containers list now nests connection → group → container while keeping the Appearance-controlled Engine column
-- **Human-friendly Inspect summaries** — every resource Inspect (Containers, Images, Pods, Machines, Networks, Secrets, Volumes, plus Swarm and Connection → System info) now shows a key-fields Property/Value table (cross-engine-common fields, per-row copy) above the raw JSON viewer
-- **Engine Health cockpit** — a new **Health** view under **Connections** (its own section tab): a global fleet view (all connections at once, grouped by connection), each engine a collapsible card with a verdict pill + verdict-colored border — connection-path pipeline that breaks at the failing hop, runtime/machine vitals with image disk usage (`/system/df`), custom networks with client-side subnet-overlap detection, bind mounts, and plain-language diagnoses with copyable fixes; a single header combines the fleet-status widget with Copy diagnostics + Re-run
+- **Human-friendly Property/Value tables** — Connection info and every resource Inspect (Containers, Images, Pods, Machines, Networks, Secrets, Volumes, plus Swarm and Connection → System info) now share sortable Property/Value tables with per-row copy and Property ascending by default
+- **Engine health** — a per-connection detail page from **Connections**: one engine at a time, with a verdict header and connection-path pipeline that breaks at the failing hop, runtime/machine vitals with image disk usage (`/system/df`), custom networks with client-side subnet-overlap detection, bind mounts, and plain-language diagnoses with copyable fixes
 
 ### Changed
 
-- Connection detail pages are now scoped per connection, with Engine health/Connection info/System info routes and shared sortable Property/Value tables.
+- Localization: en.json is now the complete source catalog (every `t()` key extracted); all language catalogs share the identical key set; container state/health badges, table headers, action menus and more are now translatable, with expanded coverage for French, Spanish, Italian, Portuguese, Romanian and Japanese
+- Container state and health now render through the translation layer instead of raw engine strings
+- "Explore more in the docs" links to the Container Desktop manual (container-desktop.com/manual) regardless of engine
+- Collapsed sidebar labels ellipsize instead of overflowing the rail
+- Property/Value inspect tables render at compact density
+- Container Inspect shows Environment variables and Ports as their own copy-enabled Property/Value tables; drops Name (already in the breadcrumbs) and the ports row from the identity summary
+- Connection detail pages are now scoped per connection, with row-menu links, shared breadcrumbs, refresh, and Engine health/Connection info/System info navigation
+- Connections now uses the standard entity search field on the list page
 - Footer shows engine versions as an inline label beside the connection status; the separate engine-versions dropdown and its popover are gone
 - Image Security → Vulnerabilities is now a two-column panel (severity donut + filters beside the findings table); the scanner/database line moved to a panel footer, and a clean scan shows an all-clear ring
 - Image Security → SBOM is now a sortable, virtualized package table (Package / Version / Type / License) with Export SPDX / CycloneDX in its header; the license-type breakdown moved to its own Licenses panel
-- The reachability debugger's connection-path pipeline and diagnosis stripe are now shared components (reused by the Engine Health cockpit); the diagnosis "Why does this happen?" link now renders
+- The reachability debugger's connection-path pipeline and diagnosis stripe are now shared components (reused by Engine health); the diagnosis "Why does this happen?" link now renders
 
 ### Fixed
 
@@ -56,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stack teardown also removes the project's networks — libpod names them with a lowercase `name` field the teardown wasn't reading
 - Container groups now sort ahead of standalone containers across **all** connected engines under any sort
 - Linux AppImage no longer aborts at startup with `EGL_BAD_PARAMETER` on rolling-release distros — packaging strips the bundled host graphics libs so it uses the host's Mesa/Wayland stack
-- List headers/actions are unified: standalone CTAs, nav tabs before minimal refresh/more, centered non-name columns
+- Resource list headers/actions are unified: standalone CTAs, section tabs before minimal refresh/more, centered non-name columns
 - Connection menu uses a solid green connected glyph instead of the broken-link outline
 
 ## [6.0.0] - 2026-07-06

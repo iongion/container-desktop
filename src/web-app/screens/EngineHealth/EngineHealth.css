@@ -103,11 +103,6 @@
 .EngineHealth .ConnHead .EngineCell {
   flex: 0 0 auto;
 }
-.EngineHealth .ConnHead .cn {
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--app-text);
-}
 .EngineHealth .ConnHead .ct {
   font-size: 11px;
   color: var(--app-text-muted);

@@ -68,10 +68,10 @@
   flex: 1;
 }
 .AppSidebar[data-expanded="no"] {
-  flex: 0 0 80px;
-  min-width: 80px;
-  width: 80px;
-  max-width: 80px;
+  flex: 0 0 68px;
+  min-width: 68px;
+  width: 68px;
+  max-width: 68px;
   text-align: left;
 }
 .AppSidebar[data-expanded="no"] .AppSidebarActions {
@@ -100,11 +100,13 @@
 }
 .AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button-text {
   display: block;
+  width: 100%;
   max-width: 100%;
   font-size: 11px;
   line-height: 1.15;
-  overflow-wrap: anywhere;
-  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .AppSidebar[data-expanded="yes"] .AppSidebarActions .bp6-button {
   padding: 5px;

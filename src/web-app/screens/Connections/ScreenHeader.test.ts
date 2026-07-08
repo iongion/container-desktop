@@ -3,6 +3,16 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("connections screen header", () => {
+  it("passes the standard list search props through to AppScreenHeader", () => {
+    const source = readFileSync(path.resolve("src/web-app/screens/Connections/ScreenHeader.tsx"), "utf8");
+
+    expect(source).toContain("searchTerm?: string");
+    expect(source).toContain("onSearch?: React.ChangeEventHandler<HTMLInputElement>");
+    expect(source).toContain("searchTerm={searchTerm}");
+    expect(source).toContain("onSearch={onSearch}");
+    expect(source).toContain("withoutSearch={!onSearch}");
+  });
+
   it("does not expose connection detail pages as global header tabs", () => {
     const source = readFileSync(path.resolve("src/web-app/screens/Connections/ScreenHeader.tsx"), "utf8");
 

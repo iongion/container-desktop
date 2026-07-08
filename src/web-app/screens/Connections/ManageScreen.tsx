@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { getDefaultConnectors } from "@/container-client";
 import { Application } from "@/container-client/Application";
 import type { Connection, Connector } from "@/env/Types";
+import { useAppScreenSearch } from "@/web-app/components/AppScreenHooks";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -28,8 +29,27 @@ export const ID = "connections.manage";
 export const View = "manage";
 export const Title = i18n.t("Connections");
 
+const createConnectionSearchFilter = (searchTerm: string) => {
+  const query = searchTerm.toLowerCase();
+  return (connection: Connection) => {
+    const haystacks = [
+      connection.id,
+      connection.name,
+      connection.description,
+      connection.engine,
+      connection.host,
+      connection.label,
+      connection.settings?.controller?.scope,
+      connection.settings?.program?.name,
+      connection.settings?.api?.baseURL,
+    ].map((value) => `${value ?? ""}`.toLowerCase());
+    return haystacks.some((value) => value.includes(query));
+  };
+};
+
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
+  const { searchTerm, onSearchChange } = useAppScreenSearch();
   const [editedConnection, setEditedConnection] = useState<Connection | undefined>();
   const [reloadingConnections, setReloadingConnections] = useState(false);
   const provisioned = useAppStore((state) => state.provisioned);
@@ -51,6 +71,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
       return acc;
     }, {});
   }, [connectors]);
+  const filteredConnections = useMemo(
+    () => (searchTerm ? connections.filter(createConnectionSearchFilter(searchTerm)) : connections),
+    [connections, searchTerm],
+  );
 
   const onAddConnectionClick = useCallback(() => {
     setEditedConnection(undefined);
@@ -250,7 +274,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader rightContent={headerActions} />
+      <ScreenHeader searchTerm={searchTerm} onSearch={onSearchChange} rightContent={headerActions} />
       <div className="AppScreenContent">
         {contentWidget}
         <div className="AppSettingsEngineManager">
@@ -269,7 +293,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 </tr>
               </thead>
               <tbody>
-                {connections.map((connection, index) => {
+                {filteredConnections.map((connection, index) => {
                   const scopeLabel =
                     runtimeEngineLabelsMap[`${connection.engine}:${connection.host}`] || connection.host;
                   const isCurrent = currentConnector?.connectionId === connection?.id;

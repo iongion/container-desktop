@@ -61,7 +61,7 @@ function accountFromEntry(entry: unknown): string | undefined {
 // credsStore-backed logins still write the key) or a `credHelpers[host]` counts as signed in. Unparseable/empty
 // text → not signed in (so the recovery CTA is offered rather than wrongly suppressed).
 export function isRegistryLoggedIn(configText: string | undefined, registry: string): RegistryLoginState {
-  if (!configText || !configText.trim()) {
+  if (!configText?.trim()) {
     return { loggedIn: false };
   }
   let config: { auths?: Record<string, unknown>; credHelpers?: Record<string, unknown> };

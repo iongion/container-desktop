@@ -85,7 +85,7 @@ export function ConnectionHealthHeader({
   return (
     <>
       {/* The whole header toggles collapse when enabled. */}
-      {/* biome-ignore lint/a11y/useSemanticElements: div-as-button — a real <button> would not fit this layout */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: div-as-button — a real <button> would not fit this layout */}
       <div
         className={`ConnHead ${klass}${canCollapse && !expanded ? " collapsed" : ""}`}
         role={canCollapse ? "button" : undefined}
@@ -95,8 +95,7 @@ export function ConnectionHealthHeader({
         onKeyDown={onHeaderKeyDown}
       >
         {canCollapse ? <Icon className="chev" icon={IconNames.CHEVRON_DOWN} /> : null}
-        <EngineCell engine={card.engine} connectionName={card.name} />
-        <span className="cn">{card.name}</span>
+        <EngineCell engine={card.engine} />
         <span className="ct">{card.subtitle}</span>
         <span className={`vpill ${klass}`}>{pillText}</span>
         <span className="vitals">{vitals}</span>

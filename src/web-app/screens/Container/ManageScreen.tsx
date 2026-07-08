@@ -678,7 +678,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </td>
                     <td>
                       <span className="ContainerState" data-state={container.Computed.DecodedState}>
-                        {container.Computed.DecodedState}
+                        {t(container.Computed.DecodedState)}
                       </span>
                     </td>
                     <td>

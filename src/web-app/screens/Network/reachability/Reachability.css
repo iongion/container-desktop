@@ -71,6 +71,11 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+/* Test reachability sits at the right end of the builder bar (moved out of the screen header). */
+.Reachability .qexpr .qrun {
+  margin-left: auto;
+  height: 34px;
+}
 
 /* the check-type bar lives in the screen header (left), so give it a tidy inline footprint there */
 .Reachability .AppScreenHeader .checkTabs {

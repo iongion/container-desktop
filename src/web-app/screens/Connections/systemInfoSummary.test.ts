@@ -22,8 +22,10 @@ describe("buildSystemInfoSummary", () => {
     };
     const rows = byKey(buildSystemInfoSummary(info, ContainerEngine.PODMAN));
     expect(rows.engineVersion.value).toBe("5.7.0");
-    expect(rows.os.value).toBe("ubuntu 24.04");
-    expect(rows.kernel.value).toBe("6.0.0-generic");
+    expect(rows.osKernel.label).toBe("OS / Kernel");
+    expect(rows.osKernel.value).toBe("ubuntu 24.04 · 6.0.0-generic");
+    expect(rows.os).toBeUndefined();
+    expect(rows.kernel).toBeUndefined();
     expect(rows.arch.value).toBe("amd64");
     expect(rows.cpus.value).toBe("32");
     expect(String(rows.memory.value)).toContain("GB");
@@ -47,7 +49,10 @@ describe("buildSystemInfoSummary", () => {
     for (const engine of [ContainerEngine.DOCKER, ContainerEngine.APPLE]) {
       const rows = byKey(buildSystemInfoSummary(info, engine));
       expect(rows.engineVersion.value).toBe("29.6.1");
-      expect(rows.os.value).toBe("Docker Desktop");
+      expect(rows.osKernel.label).toBe("OS / Kernel");
+      expect(rows.osKernel.value).toBe("Docker Desktop · 6.10.0-linuxkit");
+      expect(rows.os).toBeUndefined();
+      expect(rows.kernel).toBeUndefined();
       expect(rows.arch.value).toBe("x86_64");
       expect(rows.cpus.value).toBe("8");
       expect(String(rows.memory.value)).toContain("GB");

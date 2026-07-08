@@ -3,7 +3,7 @@ import { type Environment, Environments } from "@/env/Types";
 export const PROJECT_VERSION = import.meta.env.PROJECT_VERSION || "1.0.0";
 export const PROJECT_NAME = import.meta.env.PROJECT_NAME;
 export const CURRENT_ENVIRONMENT: Environments = (import.meta.env.ENVIRONMENT as any) || Environments.DEVELOPMENT;
-export const CONTAINER_DOCS_URL = "https://docs.podman.io/en/latest/index.html";
+export const CONTAINER_DOCS_URL = "https://container-desktop.com/manual/";
 export const CONTAINER_DOCS_EXAMPLE_CODE = "{program} run -dt -p 8889:80/tcp docker.io/library/httpd:latest";
 export const PROGRAM_DOCKER = {
   name: "docker",

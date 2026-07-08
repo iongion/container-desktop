@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noTemplateCurlyInString: Compose interpolation fixtures intentionally use literal ${VAR} syntax.
 import { describe, expect, it } from "vitest";
 
 import { InterpolationError, interpolateString, interpolateTree } from "./interpolate";

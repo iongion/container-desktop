@@ -28,6 +28,7 @@ export const URLS_ALLOWED = [
 // Hostnames always allowed (docs/vendor sites + localhost).
 export const DOMAINS_ALLOW_LIST = [
   "localhost",
+  "container-desktop.com", // Project website/docs
   "podman.io", // Podman website
   "docs.podman.io", // Podman documentation
   "avd.aquasec.com", // Aqua Security (trivy)

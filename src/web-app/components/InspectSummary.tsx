@@ -1,8 +1,6 @@
-import { H5 } from "@blueprintjs/core";
 import type React from "react";
 
-import { t } from "@/i18n";
-import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { JsonView } from "@/web-app/components/JsonView";
 import { PropertyValueTable, type PropertyValueTableRow } from "@/web-app/components/PropertyValueTable";
 
 import "./InspectSummary.css";
@@ -29,15 +27,10 @@ export interface InspectRawJsonProps {
   title?: React.ReactNode;
 }
 
-// The raw-JSON viewer block (section header + bordered Monaco) shown below the summary. Centralizes the
-// <H5> + framed-editor markup ConnectionInfoScreen does inline so every inspect matches.
+// The raw-JSON viewer block shown below the summary. Delegates to the reusable JsonView (Tree | JSON
+// toggle), passing the Inspect header/frame classes so the existing section styling + height bounds apply.
 export function InspectRawJson({ value, title }: InspectRawJsonProps) {
   return (
-    <>
-      <H5 className="InspectSectionTitle">{title ?? t("Raw configuration")}</H5>
-      <div className="CodeEditor InspectCodeEditor">
-        <CodeEditor value={value} />
-      </div>
-    </>
+    <JsonView value={value} title={title} headerClassName="InspectSectionTitle" frameClassName="InspectCodeEditor" />
   );
 }

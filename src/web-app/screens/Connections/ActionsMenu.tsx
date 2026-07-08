@@ -128,6 +128,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
   const isConnected = !!runtime?.running;
   const unavailableReason = runtime?.error;
   const lifecyclePending = !!pendingLifecycleAction;
+  const connectedOnlyTitle = isConnected ? undefined : t("Connect this engine to open this view");
 
   const removeWidget = connection ? (
     <ConfirmMenu
@@ -136,6 +137,26 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
       title={isConnected ? t("A connected connection cannot be removed") : null}
       disabled={connection.readonly || lifecyclePending || isConnected || disabledAction === "connection.remove"}
     >
+      <MenuItem
+        icon={IconNames.EYE_OPEN}
+        text={t("Connection info")}
+        href={getConnectionUrl(connection.id, "connection-info")}
+      />
+      <MenuItem
+        icon={IconNames.DESKTOP}
+        text={t("System info")}
+        href={isConnected ? getConnectionUrl(connection.id, "system-info") : undefined}
+        disabled={!isConnected}
+        title={connectedOnlyTitle}
+      />
+      <MenuItem
+        icon={IconNames.PULSE}
+        text={t("Engine health")}
+        href={isConnected ? getConnectionUrl(connection.id, "health") : undefined}
+        disabled={!isConnected}
+        title={connectedOnlyTitle}
+      />
+      <MenuDivider />
       <MenuItem icon={IconNames.TARGET} text={t("Make default")} intent={Intent.NONE} onClick={onMakeDefault} />
       <MenuDivider />
     </ConfirmMenu>
@@ -180,24 +201,24 @@ export const ConnectionDetailsActionsMenu: React.FC<ConnectionDetailsActionsMenu
     <ButtonGroup>
       <AnchorButton
         variant="minimal"
-        active={currentScreen === "connections.health"}
-        icon={IconNames.PULSE}
-        text={t("Engine health")}
-        href={getConnectionUrl(connectionId, "health")}
-      />
-      <AnchorButton
-        variant="minimal"
         active={currentScreen === "connections.connection-info"}
-        icon={IconNames.POWER}
+        icon={IconNames.EYE_OPEN}
         text={t("Connection info")}
         href={getConnectionUrl(connectionId, "connection-info")}
       />
       <AnchorButton
         variant="minimal"
         active={currentScreen === "connections.system-info"}
-        icon={IconNames.EYE_OPEN}
+        icon={IconNames.DESKTOP}
         text={t("System info")}
         href={getConnectionUrl(connectionId, "system-info")}
+      />
+      <AnchorButton
+        variant="minimal"
+        active={currentScreen === "connections.health"}
+        icon={IconNames.PULSE}
+        text={t("Engine health")}
+        href={getConnectionUrl(connectionId, "health")}
       />
     </ButtonGroup>
   );

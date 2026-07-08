@@ -19,6 +19,7 @@ describe("isPrivateIp", () => {
 describe("shouldOpenExternally", () => {
   it("allows exact allow-listed URLs", () => {
     expect(shouldOpenExternally("https://container-desktop.com/")).toBe(true);
+    expect(shouldOpenExternally("https://container-desktop.com/manual/")).toBe(true);
     expect(shouldOpenExternally("https://github.com/iongion/container-desktop/releases")).toBe(true);
   });
 

@@ -65,11 +65,6 @@ export function Diagnosis({
                 />
               ),
             )}
-            {diagnosis.learnMore && learnHref ? (
-              <a className="learn" href={learnHref}>
-                {t("Why does this happen?")}
-              </a>
-            ) : null}
           </div>
         ) : null}
       </div>

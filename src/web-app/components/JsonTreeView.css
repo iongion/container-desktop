@@ -1,0 +1,107 @@
+/* Value-type colors + a monospace label. Row height, caret and hover come from Blueprint's own
+   .bp6-tree system. The ONE deliberate structural tweak is a tighter per-level indent (bottom of
+   this file): Blueprint's stock ~22px/level is too wide for deeply-nested inspect JSON. */
+.JsonTree .bp6-tree-node-label {
+  font-family: var(--monospace-font);
+  font-size: 12px;
+}
+.JsonTree .JsonTreeLabel {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.JsonTree .jkey {
+  color: var(--app-text);
+}
+.JsonTree .jidx {
+  color: var(--app-text-muted);
+}
+.JsonTree .jsep {
+  color: var(--app-text-muted);
+  margin-right: 6px;
+}
+.JsonTree .jval {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.JsonTree .jstr {
+  color: var(--app-intent-success-text);
+}
+.JsonTree .jnum {
+  color: var(--app-intent-warning-text);
+}
+.JsonTree .jbool {
+  color: var(--app-accent-text);
+}
+.JsonTree .jnull {
+  color: var(--app-text-muted);
+  font-style: italic;
+}
+.JsonTree .jsum {
+  color: var(--app-text-muted);
+  margin-left: 8px;
+}
+
+/* Tighter per-level indent: 14px/level (vs Blueprint's ~22px) using Blueprint's own content-depth
+   classes, so the full-bleed row highlight + leaf/branch alignment stay intact. Full 0–20 range. */
+.JsonTree .bp6-tree-node-content-1 {
+  padding-left: 14px;
+}
+.JsonTree .bp6-tree-node-content-2 {
+  padding-left: 28px;
+}
+.JsonTree .bp6-tree-node-content-3 {
+  padding-left: 42px;
+}
+.JsonTree .bp6-tree-node-content-4 {
+  padding-left: 56px;
+}
+.JsonTree .bp6-tree-node-content-5 {
+  padding-left: 70px;
+}
+.JsonTree .bp6-tree-node-content-6 {
+  padding-left: 84px;
+}
+.JsonTree .bp6-tree-node-content-7 {
+  padding-left: 98px;
+}
+.JsonTree .bp6-tree-node-content-8 {
+  padding-left: 112px;
+}
+.JsonTree .bp6-tree-node-content-9 {
+  padding-left: 126px;
+}
+.JsonTree .bp6-tree-node-content-10 {
+  padding-left: 140px;
+}
+.JsonTree .bp6-tree-node-content-11 {
+  padding-left: 154px;
+}
+.JsonTree .bp6-tree-node-content-12 {
+  padding-left: 168px;
+}
+.JsonTree .bp6-tree-node-content-13 {
+  padding-left: 182px;
+}
+.JsonTree .bp6-tree-node-content-14 {
+  padding-left: 196px;
+}
+.JsonTree .bp6-tree-node-content-15 {
+  padding-left: 210px;
+}
+.JsonTree .bp6-tree-node-content-16 {
+  padding-left: 224px;
+}
+.JsonTree .bp6-tree-node-content-17 {
+  padding-left: 238px;
+}
+.JsonTree .bp6-tree-node-content-18 {
+  padding-left: 252px;
+}
+.JsonTree .bp6-tree-node-content-19 {
+  padding-left: 266px;
+}
+.JsonTree .bp6-tree-node-content-20 {
+  padding-left: 280px;
+}

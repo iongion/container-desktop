@@ -13,6 +13,7 @@
    ties on specificity and loses). Compact section label matching the app's other headers. */
 h5.InspectSectionTitle {
   margin: 0;
+  margin-top: 12px;
   padding: 4px 6px;
   font-size: 11px;
   font-weight: 600;

@@ -17,6 +17,10 @@ export function buildSystemInfoSummary(info: SystemInfo | any, engine?: Containe
       rows.push({ key, label, value: `${value}` });
     }
   };
+  const pushOsKernel = (os: unknown, kernel: unknown) => {
+    const value = [os, kernel].filter((part) => part !== undefined && part !== null && `${part}` !== "").join(" · ");
+    push("osKernel", t("OS / Kernel"), value);
+  };
   const bytes = (v: unknown) => (typeof v === "number" && !Number.isNaN(v) ? prettyBytes(v) : undefined);
 
   if (engine === ContainerEngine.PODMAN) {
@@ -28,8 +32,7 @@ export function buildSystemInfoSummary(info: SystemInfo | any, engine?: Containe
       : host.os;
     push("engineVersion", t("Engine version"), version.Version);
     push("apiVersion", t("API version"), version.APIVersion);
-    push("os", t("OS"), distro);
-    push("kernel", t("Kernel"), host.kernel);
+    pushOsKernel(distro, host.kernel);
     push("arch", t("Architecture"), host.arch);
     push("cpus", t("CPUs"), host.cpus);
     push("memory", t("Memory"), bytes(host.memTotal));
@@ -40,8 +43,7 @@ export function buildSystemInfoSummary(info: SystemInfo | any, engine?: Containe
     // Docker + Apple: flat /info payload.
     push("engineVersion", t("Engine version"), info.ServerVersion);
     push("apiVersion", t("API version"), info.ApiVersion);
-    push("os", t("OS"), info.OperatingSystem);
-    push("kernel", t("Kernel"), info.KernelVersion);
+    pushOsKernel(info.OperatingSystem, info.KernelVersion);
     push("arch", t("Architecture"), info.Architecture);
     push("cpus", t("CPUs"), info.NCPU);
     push("memory", t("Memory"), bytes(info.MemTotal));

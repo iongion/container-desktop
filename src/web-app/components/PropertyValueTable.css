@@ -3,6 +3,24 @@
   flex: 0 0 auto;
 }
 
+/* Compact density: tighten the cell padding, property "code" chip, and the in-cell copy button so rows
+   stay dense (Blueprint's `compact` alone is defeated by the small copy Button's default height). */
+.AppDataTable.PropertyValueTable thead tr th,
+.AppDataTable.PropertyValueTable tbody tr td {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.AppDataTable.PropertyValueTable tr td code:first-child {
+  padding: 2px 4px;
+}
+.AppDataTable.PropertyValueTable .PropertyValueTableValue .CopyButton.bp6-button {
+  min-height: 18px;
+  padding: 0 4px;
+}
+.AppDataTable.PropertyValueTable .PropertyValueTableValue .CopyButton.bp6-button .bp6-icon {
+  margin: 0;
+}
+
 .AppDataTable.PropertyValueTable tr td {
   text-align: left;
 }
@@ -12,6 +30,7 @@
   width: 1px !important;
   font-weight: bold;
   white-space: nowrap;
+  min-width: 160px !important;
 }
 
 .AppDataTable.PropertyValueTable tr th:nth-child(2),

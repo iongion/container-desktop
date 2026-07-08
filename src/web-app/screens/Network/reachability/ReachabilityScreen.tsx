@@ -1,4 +1,5 @@
 import {
+  Button,
   Icon,
   type IconName,
   InputGroup,
@@ -347,15 +348,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
         titleIcon={IconNames.GLOBE_NETWORK}
         rightContent={
           <ResourceListActions
-            actions={{
-              disabled: !request || running,
-              icon: IconNames.LIGHTNING,
-              intent: Intent.PRIMARY,
-              loading: running,
-              text: t("Test reachability"),
-              title: t("Trace the path for this question and diagnose where it fails"),
-              onClick: runProbe,
-            }}
             navigation={<ScreenHeaderSectionsTabBar isActive={(screen) => screen === ID} />}
             onReload={runProbe}
           />
@@ -468,6 +460,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 </span>
               </>
             ) : null}
+            <Button
+              className="qrun"
+              icon={IconNames.LIGHTNING}
+              intent={Intent.PRIMARY}
+              text={t("Test reachability")}
+              title={t("Trace the path for this question and diagnose where it fails")}
+              disabled={!request || running}
+              loading={running}
+              onClick={runProbe}
+            />
           </div>
           {connectionHint ? null : <div className="qhint">{t("No connected containers to trace against.")}</div>}
         </section>

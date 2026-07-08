@@ -33,22 +33,11 @@
   background: color-mix(in srgb, var(--app-chrome) 78%, var(--app-surface));
   color: var(--app-text);
 }
-[data-table="container.inspect"] [data-table-row="group.name"] td {
-  width: auto !important;
-  font-family: sans-serif;
-  font-size: 14px;
-  font-weight: bold;
-  text-align: left !important;
-  background: var(--app-group-bg) !important;
-  color: var(--app-text);
-  border-top: 1px solid var(--app-border);
-  border-bottom: 1px solid var(--app-border);
-}
-[data-table="container.inspect"] .ContainerInspectGroupLink {
+.InspectSectionTitle .ContainerInspectGroupLink {
   color: var(--app-accent-text);
   text-decoration: none;
 }
-[data-table="container.inspect"] .ContainerInspectGroupLink:hover {
+.InspectSectionTitle .ContainerInspectGroupLink:hover {
   text-decoration: underline;
 }
 [data-table="container.inspect"] tr td[colspan="2"] {
