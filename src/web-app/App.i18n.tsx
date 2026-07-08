@@ -1,25 +1,26 @@
-import React, { useCallback, useContext } from "react";
+import React, { useCallback, useContext, useEffect } from "react";
 import { initReactI18next } from "react-i18next";
 
 import {
   ensureI18nInitialized,
   getCurrentLanguage,
   i18n,
-  storeCurrentLanguage,
+  LANGUAGE_OPTIONS,
+  type LanguagePreference,
+  setCurrentLanguagePreference,
   TRANSLATIONS,
   t as translate,
 } from "@/i18n";
-import { Languages } from "@/web-app/App.resources";
 
-export { getCurrentLanguage, TRANSLATIONS };
+export { getCurrentLanguage, LANGUAGE_OPTIONS, TRANSLATIONS };
 
-export const TRANSLATION_LANGUAGES = Languages.filter((it) => TRANSLATIONS.includes(it["639-1"]));
+export const TRANSLATION_LANGUAGES = LANGUAGE_OPTIONS;
 
 ensureI18nInitialized([initReactI18next]);
 
 export interface II18nContext {
   currentLanguage: string;
-  setCurrentLanguage: React.Dispatch<React.SetStateAction<string>>;
+  setCurrentLanguage: (language: LanguagePreference) => void;
 }
 
 export const I18nContext = React.createContext<II18nContext>({
@@ -28,15 +29,21 @@ export const I18nContext = React.createContext<II18nContext>({
 });
 
 export const I18nContextProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const [currentLanguage, setCurrentLanguage] = React.useState((i18n as any).language);
+  const [currentLanguage, setCurrentLanguage] = React.useState<string>(getCurrentLanguage());
+  useEffect(() => {
+    const onLanguageChanged = (language: string) => setCurrentLanguage(language);
+    (i18n as any).on?.("languageChanged", onLanguageChanged);
+    return () => {
+      (i18n as any).off?.("languageChanged", onLanguageChanged);
+    };
+  }, []);
   return (
     <I18nContext.Provider
       value={{
         currentLanguage,
         setCurrentLanguage: (lang: any) => {
-          storeCurrentLanguage(lang);
-          (i18n as any).changeLanguage(lang);
-          setCurrentLanguage(lang);
+          setCurrentLanguagePreference(lang);
+          setCurrentLanguage(getCurrentLanguage());
         },
       }}
     >
@@ -47,7 +54,7 @@ export const I18nContextProvider: React.FC<{ children?: React.ReactNode }> = ({ 
 
 export const useSetLocale = () => {
   const { setCurrentLanguage } = useContext(I18nContext);
-  return useCallback((lang: string) => setCurrentLanguage(lang), [setCurrentLanguage]);
+  return useCallback((lang: LanguagePreference) => setCurrentLanguage(lang), [setCurrentLanguage]);
 };
 
 export const useGetLocale = () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type CommandExecutionResult, OperatingSystem } from "@/env/Types";
-import { findProgramPath, findProgramVersion } from "./detector";
+import { findProgramPath, findProgramVersion, parseCosignVersion } from "./detector";
 
 const ok = (stdout: string, over: Partial<CommandExecutionResult> = {}): CommandExecutionResult => ({
   pid: 1,
@@ -72,5 +72,38 @@ describe("findProgramVersion over an SSH executor", () => {
     expect(version).toBe("29.6.1");
     // Unquoted here on purpose — SSHTransport.quoteScopeProgram applies cmd.exe quoting at the exec boundary.
     expect(calls[0].path).toBe("C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe");
+  });
+});
+
+describe("parseCosignVersion", () => {
+  const banner = (git: string) =>
+    `\n  ______   ______\n /      | /  __  \\\ncosign: A tool for Container Signing...\n\nGitVersion:    ${git}\nGitCommit:     unknown\nGoVersion:     go1.25.0\nPlatform:      linux/amd64\n`;
+
+  it("extracts GitVersion (never the GoVersion line below it)", () => {
+    expect(parseCosignVersion(banner("v2.4.1"))).toBe("v2.4.1");
+  });
+
+  it("returns the source-build marker verbatim", () => {
+    expect(parseCosignVersion(banner("devel"))).toBe("devel");
+  });
+
+  it("is empty when there is no GitVersion line", () => {
+    expect(parseCosignVersion("cosign: A tool\nGoVersion: go1.25.0")).toBe("");
+    expect(parseCosignVersion(undefined)).toBe("");
+  });
+});
+
+describe("findProgramVersion for cosign", () => {
+  it("uses the `version` subcommand (never --version) and reads GitVersion", async () => {
+    const calls: { path: string; args: string[] }[] = [];
+    const exec = async (path: string, args: string[]) => {
+      calls.push({ path, args });
+      return args[0] === "version"
+        ? ok("GitVersion:    v2.4.1\nGoVersion:     go1.25.0\n")
+        : fail("Error: unknown flag: --version");
+    };
+    const version = await findProgramVersion("/usr/bin/cosign", { osType: OperatingSystem.Linux }, exec);
+    expect(version).toBe("v2.4.1");
+    expect(calls[0]).toEqual({ path: "/usr/bin/cosign", args: ["version"] });
   });
 });

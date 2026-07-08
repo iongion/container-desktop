@@ -1,5 +1,6 @@
 import merge from "deepmerge";
 import type { ContainerImagePortMapping } from "@/env/Types";
+import { randomUUID } from "./randomUUID";
 
 const DEFAULT_HOST_IP = "0.0.0.0";
 
@@ -127,7 +128,7 @@ export function axiosConfigToCURL(
 
 export const createPortMapping = (): ContainerImagePortMapping => {
   return {
-    guid: crypto.randomUUID(),
+    guid: randomUUID(),
     container_port: 80,
     host_ip: DEFAULT_HOST_IP,
     host_port: 8080,
@@ -141,7 +142,7 @@ export const toPortMappings = (exposed: { [key: string]: number }) => {
     const container_port = Number(container_port_raw);
     const host_port = container_port < 1000 ? 8000 + container_port : container_port;
     return {
-      guid: crypto.randomUUID(),
+      guid: randomUUID(),
       container_port: Number(container_port),
       host_ip: DEFAULT_HOST_IP,
       host_port: host_port,

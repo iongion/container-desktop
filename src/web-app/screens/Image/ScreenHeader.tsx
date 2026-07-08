@@ -14,6 +14,8 @@ interface ScreenHeaderProps {
   currentScreen: string;
   listRoutePath?: string;
   listRouteIcon?: IconName;
+  // Extra controls rendered in the header, before the tabs — used by the Security tab for its Scan CTA.
+  rightExtra?: React.ReactNode;
 }
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
@@ -21,6 +23,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   currentScreen,
   listRoutePath,
   listRouteIcon,
+  rightExtra,
 }: ScreenHeaderProps) => {
   // Keep the owning connection while moving between this resource's detail views (ids collide across engines).
   const { connId } = useRouteSearch<{ connId?: string }>();
@@ -38,7 +41,10 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       titleText={imageDisplayName(image)}
       breadcrumbs={getImageCrumbs(imageDisplayName(image), image.Id, currentScreen, connId)}
       rightContent={
-        <ActionsMenu image={image} connectionId={connId} expand isActive={(input) => input === currentScreen} />
+        <>
+          {rightExtra}
+          <ActionsMenu image={image} connectionId={connId} expand isActive={(input) => input === currentScreen} />
+        </>
       }
     />
   );

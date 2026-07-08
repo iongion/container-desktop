@@ -1,4 +1,4 @@
-import i18n from "@/i18n";
+import i18n, { type LanguagePreference } from "@/i18n";
 
 export interface SpawnedProcess {
   pid: any;
@@ -136,6 +136,7 @@ export interface WizardSettings {
 
 export interface GlobalUserSettings {
   theme: string;
+  language: LanguagePreference;
   engineTheme: EngineThemePreference;
   showEngineColumn: boolean;
   expandSidebar: boolean;
@@ -1224,6 +1225,8 @@ export interface SecurityVulnerability {
   Description: string;
   VulnerabilityID: string;
   PrimaryURL: string;
+  PkgName?: string;
+  InstalledVersion?: string;
   // injected
   guid: string;
 }

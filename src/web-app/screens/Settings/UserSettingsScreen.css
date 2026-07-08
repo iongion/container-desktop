@@ -64,7 +64,8 @@
 }
 .AppSettingsForm[data-form="flags"],
 .AppSettingsForm[data-form="appearance"],
-.AppSettingsForm[data-form="font"] {
+.AppSettingsForm[data-form="font"],
+.AppSettingsForm[data-form="language"] {
   display: flex;
   flex-direction: row;
   width: 100%;
@@ -73,15 +74,22 @@
   padding-left: 4px;
 }
 .AppSettingsForm[data-form="flags"] .bp6-form-group:first-child,
-.AppSettingsForm[data-form="appearance"] .bp6-form-group:first-child {
+.AppSettingsForm[data-form="appearance"] .bp6-form-group:first-child,
+.AppSettingsForm[data-form="language"] .bp6-form-group:first-child {
   flex: 1;
 }
 .AppSettingsForm[data-form="appearance"] {
   padding-bottom: 10px;
 }
+.AppSettingsForm[data-form="language"] {
+  padding-top: 8px;
+}
 .AppSettingsAppearanceControls {
   align-items: center;
   column-gap: 12px;
+}
+.AppSettingsLanguageControls select {
+  min-width: 200px;
 }
 .AppSettingsAppearanceControls .bp6-control {
   margin-bottom: 0;

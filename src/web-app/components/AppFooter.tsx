@@ -5,7 +5,7 @@ import { Application } from "@/container-client/Application";
 import i18n from "@/i18n";
 import { AppTheme } from "@/web-app/App.types";
 import { ConnectionsMenu } from "@/web-app/components/ConnectionsMenu";
-import { buildEngineInventory, EngineVersionsMenu } from "@/web-app/components/EngineVersionsMenu";
+import { buildEngineInventory, engineInventoryTriggerLabel } from "@/web-app/components/engineInventory";
 import { NotificationBell } from "@/web-app/components/NotificationCenter/NotificationBell";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
@@ -38,49 +38,49 @@ export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
   const connectedCount = connected.length;
   const isConnected = connectedCount > 0;
   const engineInventory = buildEngineInventory(connections, connectors, activeRuntime);
+  // Same label the (now removed) engine dropdown showed by default — reused verbatim so the version rules
+  // (system-connection-first, else deduped) are unchanged; now rendered inline as plain text.
+  const engineVersionsLabel = engineInventoryTriggerLabel(engineInventory, t("Engines"));
   const showConnectionStatus = variant === "workspace";
   return (
     <div className="AppFooter" data-variant={variant}>
       <Navbar className="AppFooterNavbar">
         {showConnectionStatus ? (
-          <>
-            <NavbarHeading className="AppFooterStatus">
-              {/* Engine glyph sits IN FRONT OF — not inside — the connections status button; themed per
+          <NavbarHeading className="AppFooterStatus">
+            {/* Engine glyph sits IN FRONT OF — not inside — the connections status button; themed per
                   engine via CSS, scaled to match the count badge. */}
-              <span className="AppFooterEngineIcon" aria-hidden="true" />
-              {/* Single entry point for connections: this status button opens the connect/disconnect menu
+            <span className="AppFooterEngineIcon" aria-hidden="true" />
+            {/* Single entry point for connections: this status button opens the connect/disconnect menu
                   (the caret-up end icon hints the popover opens upward). */}
-              <ConnectionsMenu>
-                <Button
-                  className="AppFooterConnectionsButton"
-                  variant="minimal"
-                  size="small"
+            <ConnectionsMenu>
+              <Button
+                className="AppFooterConnectionsButton"
+                variant="minimal"
+                size="small"
+                data-connected={isConnected ? "yes" : "no"}
+                endIcon={IconNames.CARET_UP}
+                aria-label={t("Connections")}
+                title={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
+              >
+                <Tag
+                  className="AppFooterCurrentConnectorBadge"
+                  round
+                  intent={isConnected ? Intent.SUCCESS : Intent.DANGER}
                   data-connected={isConnected ? "yes" : "no"}
-                  endIcon={IconNames.CARET_UP}
-                  aria-label={t("Connections")}
-                  title={isConnected ? connected.map((info) => info.name).join(", ") : t("No connection")}
                 >
-                  <Tag
-                    className="AppFooterCurrentConnectorBadge"
-                    round
-                    intent={isConnected ? Intent.SUCCESS : Intent.DANGER}
-                    data-connected={isConnected ? "yes" : "no"}
-                  >
-                    {connectedCount}
-                  </Tag>
-                  <span className="AppFooterCurrentConnector">{isConnected ? t("Connected") : t("Disconnected")}</span>
-                </Button>
-              </ConnectionsMenu>
-            </NavbarHeading>
-            {engineInventory.engineCount === 0 ? null : (
-              <>
-                <NavbarDivider />
-                <NavbarHeading className="AppFooterEngineVersions">
-                  <EngineVersionsMenu inventory={engineInventory} />
-                </NavbarHeading>
-              </>
-            )}
-          </>
+                  {connectedCount}
+                </Tag>
+                <span className="AppFooterCurrentConnector">{isConnected ? t("Connected") : t("Disconnected")}</span>
+                {/* Engine versions live INSIDE this button — right of "connected", before the caret — so the
+                      whole cluster is one trigger that opens the connections popover. */}
+                {engineInventory.engineCount === 0 ? null : (
+                  <span className="AppFooterEnginesLabel" title={t("Container host engines")}>
+                    {engineVersionsLabel}
+                  </span>
+                )}
+              </Button>
+            </ConnectionsMenu>
+          </NavbarHeading>
         ) : (
           <NavbarHeading className="AppFooterBootstrapEngine">
             <span className="AppFooterEngineIcon" aria-hidden="true" />

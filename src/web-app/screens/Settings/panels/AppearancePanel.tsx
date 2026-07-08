@@ -5,7 +5,9 @@ import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "rea
 import { useTranslation } from "react-i18next";
 
 import { ContainerEngine, type EngineThemePreference } from "@/env/Types";
+import { LANGUAGE_OPTIONS, type LanguagePreference, normalizeLanguagePreference } from "@/i18n";
 import { createLogger } from "@/platform/logger";
+import { useSetLocale } from "@/web-app/App.i18n";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 const logger = createLogger("web.settings");
@@ -13,6 +15,7 @@ const logger = createLogger("web.settings");
 // Appearance settings: engine theme + the "show engine column" toggle, and the monospace font override.
 export const AppearancePanel: React.FC = () => {
   const { t } = useTranslation();
+  const setLocale = useSetLocale();
   const userSettings = useAppStore((state) => state.userSettings);
   const setGlobalUserSettings = useAppStore((state) => state.setGlobalUserSettings);
 
@@ -55,6 +58,14 @@ export const AppearancePanel: React.FC = () => {
       await setGlobalUserSettings({ font: { ...userSettings.font, ...patch } });
     },
     [setGlobalUserSettings, userSettings.font],
+  );
+  const onLanguageChange = useCallback(
+    async (e: ChangeEvent<HTMLSelectElement>) => {
+      const language = normalizeLanguagePreference(e.currentTarget.value) as LanguagePreference;
+      setLocale(language);
+      await setGlobalUserSettings({ language });
+    },
+    [setGlobalUserSettings, setLocale],
   );
   // Font family uses a DOM-based, filterable Blueprint Select (not a native <select>): a 250+ item
   // native popup loses its pointer grab mid scrollbar-drag on Wayland, and this lets the user type
@@ -163,6 +174,25 @@ export const AppearancePanel: React.FC = () => {
               title={t("Reset to bundled font")}
               onClick={() => onFontChange({ family: "", size: 0, weight: 0 })}
             />
+          </ControlGroup>
+        </FormGroup>
+      </div>
+      <div className="AppSettingsForm" data-form="language">
+        <FormGroup label={t("Language")} labelFor="appLanguage">
+          <ControlGroup className="AppSettingsLanguageControls">
+            <HTMLSelect
+              id="appLanguage"
+              title={t("App language")}
+              value={normalizeLanguagePreference(userSettings.language)}
+              onChange={onLanguageChange}
+            >
+              <option value="auto">{t("Automatic")}</option>
+              {LANGUAGE_OPTIONS.map((language) => (
+                <option key={language.value} value={language.value}>
+                  {language.label}
+                </option>
+              ))}
+            </HTMLSelect>
           </ControlGroup>
         </FormGroup>
       </div>

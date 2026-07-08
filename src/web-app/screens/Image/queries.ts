@@ -8,7 +8,7 @@ import type { ContainerImage } from "@/env/Types";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 
-export type ImageSubKey = "history" | "security";
+export type ImageSubKey = "history" | "security" | "signature";
 
 export const imageKeys = {
   all: ["images"] as const,
@@ -17,6 +17,7 @@ export const imageKeys = {
   details: () => [...imageKeys.all, "detail"] as const,
   detail: (connId: string, id: string) => [...imageKeys.details(), connId, id] as const,
   sub: (connId: string, id: string, sub: ImageSubKey) => [...imageKeys.detail(connId, id), sub] as const,
+  cosignLogin: (connId: string, registry: string) => [...imageKeys.all, "cosign-login", connId, registry] as const,
 };
 
 export const useImage = (connId: string, id?: string, opts?: FetchImageOptions) => {
@@ -42,7 +43,9 @@ export const useImageHistory = (connId: string, id?: string) =>
     enabled: !!connId && !!id,
   });
 
-// One-shot Trivy scan (expensive) — static; the scan target is the image's FullName (Application.ts:606).
+// One-shot Trivy scan (expensive: vulnerabilities + SBOM packages). Button-triggered, NOT on mount — the tab
+// must open instantly. `enabled: false` + a cached result means the report survives tab switches; the screen
+// kicks it off with `.refetch()` and reads `isFetching` for the scanning state.
 export const useImageSecurity = (connId: string, id?: string, target?: string) =>
   useQuery({
     queryKey: imageKeys.sub(connId, id ?? "", "security"),
@@ -53,7 +56,55 @@ export const useImageSecurity = (connId: string, id?: string, target?: string) =
         target: target!,
         host: await resolveConnectionHost(connId),
       }),
+    enabled: false,
+  });
+
+// Signature & provenance via cosign — cheap + independent of the Trivy scan, so it runs automatically on open.
+export const useImageSignature = (connId: string, id?: string, target?: string) =>
+  useQuery({
+    queryKey: imageKeys.sub(connId, id ?? "", "signature"),
+    queryFn: async () =>
+      Application.getInstance().checkSignature({
+        subject: "image",
+        target: target!,
+        host: await resolveConnectionHost(connId),
+      }),
     enabled: !!connId && !!id && !!target,
+  });
+
+// Can cosign already authenticate to `registry` (per its docker keychain)? Gates the Security tab's sign-in recovery
+// so the "log in to verify" CTA only appears when cosign has no credential yet (never when a re-login would not help).
+export const useCosignLoginState = (connId: string, registry?: string, enabled?: boolean) =>
+  useQuery({
+    queryKey: imageKeys.cosignLogin(connId, registry ?? ""),
+    queryFn: async () =>
+      Application.getInstance().getCosignLoginState({ registry: registry!, host: await resolveConnectionHost(connId) }),
+    enabled: !!connId && !!registry && !!enabled,
+  });
+
+// cosign's own `cosign login` (writes the docker keychain that cosign verify reads) — the recovery action behind the
+// sign-in CTA. The secret is piped over stdin inside Application.cosignLogin, never argv or logs.
+export const useCosignLogin = (connId: string) =>
+  useMutation({
+    mutationFn: async ({ registry, username, secret }: { registry: string; username: string; secret: string }) => {
+      const result = await Application.getInstance().cosignLogin({
+        registry,
+        username,
+        secret,
+        host: await resolveConnectionHost(connId),
+      });
+      if (!result.success) {
+        throw new Error(result.stderr?.trim() || `cosign login to ${registry} failed`);
+      }
+      return result;
+    },
+  });
+
+// On-demand SBOM export (spdx-json / cyclonedx) — a fresh format-specific Trivy run; the caller saves the text.
+export const useExportSbom = (connId: string) =>
+  useMutation({
+    mutationFn: async ({ format, target }: { format: string; target: string }) =>
+      Application.getInstance().exportSbom({ format, target, host: await resolveConnectionHost(connId) }),
   });
 
 export const useRemoveImage = (connId: string) => {

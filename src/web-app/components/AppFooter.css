@@ -73,55 +73,32 @@
 .AppFooterConnectionsButton.bp6-button .bp6-button-text {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
 }
 .AppFooterConnectionsButton .bp6-icon {
   opacity: 0.65;
   margin-left: 4px;
 }
-/* Lowercase the connection status label ("connected" / "disconnected") per design. */
+/* Lowercase + muted status word ("connected" / "disconnected") so the engine versions read as the
+   primary text beside it. */
 .AppFooterCurrentConnector {
   text-transform: lowercase;
-}
-.AppFooterEngineVersions {
-  min-width: 0;
-  max-width: min(460px, 45vw);
-  overflow: hidden;
+  color: var(--app-text-muted);
 }
 
-.AppFooterEnginesButton.bp6-button {
-  min-width: 0;
-  max-width: 100%;
-  min-height: 24px;
-  padding: 2px 6px;
-  font-size: 12px;
-  font-weight: inherit;
-}
-
-.AppFooterEnginesButton.bp6-button:focus,
-.AppFooterEnginesButton.bp6-button:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
-.AppFooterEnginesButton.bp6-button .bp6-button-text {
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-}
-
-.AppFooterEnginesButton .bp6-icon {
-  flex: 0 0 auto;
-  opacity: 0.65;
-  margin-left: 4px;
-}
-
+/* Engine versions render INSIDE the connections button — right of "connected", before the caret —
+   set off by a pipe (themed hairline). Versions are full-strength (primary) against the muted status
+   word; truncates with an ellipsis so a long list never pushes out the right-aligned footer actions. */
 .AppFooterEnginesLabel {
   min-width: 0;
+  max-width: min(420px, 38vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--app-border);
+  color: var(--app-text);
 }
 .AppFooterActions {
   display: inline-flex;

@@ -7,6 +7,7 @@
 import { IconNames } from "@blueprintjs/icons";
 
 import { type Container, ContainerStateList } from "@/env/Types";
+import { randomUUID } from "@/utils/randomUUID";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import type { SortSpec } from "@/web-app/stores/sortStore";
 import type { ContainerGroup } from "@/web-app/Types";
@@ -99,7 +100,7 @@ export function groupContainers(
     let group = groupsMap[it.Computed.Group];
     if (!group) {
       group = {
-        Id: crypto.randomUUID(),
+        Id: randomUUID(),
         Name: it.Computed.Group,
         Items: [],
         Report: {

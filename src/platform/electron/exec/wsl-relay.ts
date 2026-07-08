@@ -5,6 +5,7 @@ import { buildWSLDialStdioArgs } from "@/container-client/wsl-args";
 import type { ApiDriverConfig, Connection, ContainerEngine } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import { isEmpty } from "@/utils";
+import { randomUUID } from "@/utils/randomUUID";
 import {
   applyProxyRequestDefaults,
   connectionSummary,
@@ -144,7 +145,7 @@ export class WSLRelayServer {
       // Handle client connections
       const server = net.createServer(async (clientSocket) => {
         let writeable = true;
-        const guid = crypto.randomUUID();
+        const guid = randomUUID();
         logger.debug(guid, "Client connected to named pipe - allocating relay process");
         const relayProcess = await spawnRelayProcess("wsl.exe", args);
         this.relayProcesses[guid] = relayProcess;

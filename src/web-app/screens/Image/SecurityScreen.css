@@ -8,24 +8,398 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   --security-link-hover: #1746a2;
 }
 
-.SecurityScanSummary {
+/* The tab content is a vertical stack of panels; gap keeps them apart and off the screen header. */
+.AppScreen[data-screen="image.security"] .SecurityContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.AppScreen[data-screen="image.security"] .SecurityMono {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.AppScreen[data-screen="image.security"] .SecurityMuted {
+  color: var(--app-text-muted);
+}
+
+.AppScreen[data-screen="image.security"] .SecuritySpacer {
+  flex: 1 1 auto;
+}
+
+/* The Scan / Rescan CTA lives in the Vulnerabilities panel header, rightmost after the "Trivy" hint. Undo
+   the title's uppercase/letter-spacing on the button label so it reads normally. */
+.SecurityPanelTitle .SecurityPanelScan {
+  margin-left: 12px;
+  /* Fixed width so the label swapping (Scan for vulnerabilities → Rescan → loading spinner) never wobbles. */
+  min-width: 130px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Identity + digest bar — instant, no scan. */
+.AppScreen[data-screen="image.security"] .SecurityIdentity {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  min-height: 44px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--app-border);
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 0;
   background: var(--app-surface);
+}
+
+.SecurityIdentityIcon {
+  color: var(--app-text-muted);
+}
+
+.SecurityIdentityRef {
+  color: var(--app-text);
+  white-space: nowrap;
+}
+
+/* The readonly digest field fills the rest of the identity bar (full sha, unified copy affordance). */
+.SecurityDigestField {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Registry — a separate right-hand column in the identity bar, divided off from the digest field. */
+.SecurityIdentityRegistry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-left: 14px;
+  border-left: 1px solid var(--app-border);
+}
+
+.SecurityIdentityRegistry .bp6-icon {
+  color: var(--app-text-muted);
+}
+
+.SecurityIdentityRegistryText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.SecurityIdentityRegistryLabel {
+  color: var(--app-text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.SecurityIdentityRegistryValue {
   color: var(--app-text);
 }
 
-.SecurityScanSummaryLead {
-  display: inline-flex;
+.AppScreen[data-screen="image.security"] .SecurityGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .AppScreen[data-screen="image.security"] .SecurityGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Panels — the app's card surface. */
+.AppScreen[data-screen="image.security"] .SecurityPanel {
+  border: 1px solid var(--app-border);
+  border-radius: 0;
+  background: var(--app-surface);
+}
+
+.SecurityPanelTitle {
+  display: flex;
   align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.SecurityPanelHint {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.SecurityPanelBody {
+  padding: 12px;
+}
+
+/* Signature / digest status line — colored by state. */
+.SecurityStatusLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.SecurityStatusLine[data-signature="verified"] {
+  color: var(--app-intent-success-text);
+}
+
+.SecurityStatusLine[data-signature="unsigned"] {
+  color: var(--app-intent-warning-text);
+}
+
+.SecurityStatusLine[data-signature="error"] {
+  color: var(--app-intent-danger-text);
+}
+
+/* The status icon matches the line's (badge) colour instead of the default muted grey. Force the SVG fill
+   through the CSS `fill` property (var() is valid there, unlike in the SVG `fill` attribute) and override
+   Blueprint's own icon colour. */
+.SecurityStatusLine .bp6-icon {
+  color: inherit !important;
+}
+
+.SecurityStatusLine .bp6-icon svg,
+.SecurityStatusLine .bp6-icon svg path {
+  fill: currentColor !important;
+}
+
+/* Findings footer — the single Expand all / Collapse control. */
+.SecurityFindingsFootRow td {
+  padding: 6px 8px !important;
+  border-top: 1px solid var(--app-border) !important;
+  background: var(--app-surface);
+  text-align: center !important;
+}
+
+/* Key/value facts. */
+.SecurityKv {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  padding-right: 2px;
+}
+
+.SecurityKvRow {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.SecurityKvRow dt {
+  color: var(--app-text-muted);
+}
+
+.SecurityKvRow[data-align="top"] {
+  align-items: start;
+}
+
+.SecurityKvRow dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Error reason in a scrollable code block — wraps long lines, capped at ~5 lines, then scrolls. The parent
+   grid cell needs min-width:0 (above) so this can shrink and wrap instead of overflowing on one line. */
+.SecurityCodeBlock {
+  max-width: 100%;
+  max-height: 7.5em;
+  margin: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.SecurityNote {
+  margin: 10px 0;
+}
+
+/* Auth-required recovery — a "sign in to verify" CTA replaces the raw error when the engine isn't signed in yet. */
+.SecuritySignIn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.SecuritySignInText {
+  margin: 0;
+}
+
+/* Idle "run the scan" prompt inside the Vulnerabilities + SBOM panels. */
+.SecurityRunPrompt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 2px;
+  color: var(--app-text-muted);
+}
+
+.SecurityRunPromptIcon {
+  color: var(--app-text-muted);
+}
+
+.SecurityRunPromptText {
+  flex: 1;
+}
+
+.SecurityRunPromptText b {
+  color: var(--app-text);
+}
+
+/* SBOM preview. */
+.SecuritySbomRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 4px 0;
+  border-top: 1px solid var(--app-border);
+}
+
+.SecuritySbomRow:first-child {
+  border-top: 0;
+}
+
+.SecuritySbomMore {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.SecuritySbomActions {
+  margin-top: 14px;
+}
+
+/* Distribution donut (recharts) with a centered total overlaid in the hole. */
+.SecurityDonut {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.SecurityDonutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.SecurityDonutValue {
+  color: var(--app-text);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.SecurityDonutLabel {
+  margin-top: 3px;
+  color: var(--app-text-muted);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Vulnerabilities: severity donut on the left, filter chips + total on the right. */
+.SecurityVulnOverview {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+/* Right column beside the donut: filter chips, then the scanner meta directly under them. */
+.SecurityVulnMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.SecurityVulnMeta .SecuritySeverityFilters {
+  margin-bottom: 0;
+}
+
+.SecurityVulnMeta .SecurityScannerMeta {
+  margin-top: 0;
+}
+
+/* SBOM licenses — Mend layout: donut on the left, multi-column license-name legend on the right. */
+.SecurityLicenseDist {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.SecurityLicenseLegend {
+  flex: 1;
+  min-width: 220px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 5px 16px;
+}
+
+.SecurityLicenseLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.SecurityLicenseSwatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+}
+
+.SecurityLicenseName {
+  overflow: hidden;
+  color: var(--app-text);
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.SecurityLicenseCount {
+  margin-left: auto;
+  color: var(--app-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Severity filter row (Vulnerabilities). */
+.AppScreen[data-screen="image.security"] .SecuritySeverityFilters {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .SecurityScanTotal {
@@ -37,18 +411,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 .SecurityScanTotalLabel {
   color: var(--app-text-muted);
   font-size: 12px;
-}
-
-.SecurityScanSummarySpacer {
-  flex: 1 1 auto;
-  min-width: 16px;
-}
-
-.SecuritySeverityFilters.bp6-button-group {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  align-self: center;
 }
 
 .SecuritySeverityBadge,
@@ -75,46 +437,73 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   white-space: nowrap;
 }
 
-.SecuritySeverityFilters.bp6-button-group.bp6-outlined .SecuritySeverityFilter.bp6-button {
-  min-height: 24px;
-  padding: 0 8px 0 5px;
-  color: var(--app-text-muted);
-  font-size: 11px;
+/* Each chip carries its own severity color (Critical red … Low/Unknown grey), so the row reads as severity
+   at a glance. Selected = filled tint; unselected = severity outline, recede slightly (never grey-disabled). */
+/* Severity filter = a Switch per severity, stacked vertically. The label carries a solid, severity-colored
+   count pill + the severity name, so on/off state and finding volume both read at a glance. */
+.SecuritySeverityFilter.bp6-switch {
+  margin: 0;
+  padding: 3px 2px;
+  color: var(--app-text);
+  font-size: 12px;
   font-weight: 600;
 }
 
-.SecuritySeverityFilter.bp6-button .bp6-button-text {
+.SecuritySeverityFilter:has(.SecuritySeverityFilterLabel[data-empty="yes"]) {
+  opacity: 0.5;
+}
+
+.SecuritySeverityFilterLabel {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 8px;
 }
 
-.SecuritySeverityFilters.bp6-button-group.bp6-outlined .SecuritySeverityFilter.bp6-button:hover,
-.SecuritySeverityFilters.bp6-button-group.bp6-outlined .SecuritySeverityFilter.bp6-button.bp6-active {
-  background-color: color-mix(in srgb, var(--security-severity-bg) 82%, transparent);
-  box-shadow: inset 0 0 0 1px var(--security-severity-border);
-  color: var(--security-severity-text);
+.SecuritySeverityFilterText {
+  color: var(--app-text);
 }
 
-.SecuritySeverityFilter[data-muted="yes"] {
-  opacity: 0.48;
-}
-
-.SecuritySeverityFilter[data-muted="yes"]:hover {
-  opacity: 0.72;
-}
-
-.SecuritySeverityCountTag.bp6-tag {
-  min-width: 20px;
-  height: 16px;
-  min-height: 16px;
-  padding: 0 5px;
-  border: 1px solid var(--security-severity-border);
-  background: var(--security-severity-bg);
-  color: var(--security-severity-text);
-  font-size: 10px;
+/* Solid, severity-colored count pill — uses the theme's intent accents + their on-accent (-fg) text so the
+   fill stays readable across every engine × light/dark theme. Low/Unknown fall back to a neutral muted fill. */
+.SecuritySeverityCountPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--app-text-muted);
+  color: var(--app-surface);
+  font-size: 11px;
   font-weight: 700;
-  line-height: 14px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.SecuritySeverityCountPill[data-severity="CRITICAL"] {
+  background: var(--app-intent-danger-rest);
+  color: var(--app-intent-danger-fg);
+}
+
+.SecuritySeverityCountPill[data-severity="HIGH"] {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 72%, var(--app-intent-warning-rest));
+  color: var(--app-intent-danger-fg);
+}
+
+.SecuritySeverityCountPill[data-severity="MEDIUM"] {
+  background: var(--app-intent-warning-rest);
+  color: var(--app-intent-warning-fg);
+}
+
+.SecuritySeverityCountPill[data-severity="LOW"] {
+  background: var(--app-text-muted);
+  color: var(--app-surface);
+}
+
+.SecuritySeverityCountPill[data-severity="UNKNOWN"] {
+  background: color-mix(in srgb, var(--app-text-muted) 55%, var(--app-surface));
+  color: var(--app-text);
 }
 
 .SecuritySeverityBadge[data-severity="CRITICAL"],
@@ -158,22 +547,18 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 }
 
 .SecurityScannerMeta {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  flex: 0 1 auto;
   flex-wrap: wrap;
-  min-width: 0;
   gap: 10px;
+  margin-top: 10px;
   color: var(--app-text-muted);
   font-size: 11px;
-  white-space: nowrap;
-  align-self: center;
 }
 
 .SecurityScannerMeta > span {
   display: inline-flex;
   align-items: center;
-  min-width: 0;
   gap: 4px;
 }
 
@@ -207,11 +592,12 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   color: var(--security-link-hover) !important;
 }
 
-.SecurityList {
-  flex: 1;
-  min-height: 0;
-  overflow-x: auto;
-  overflow-y: auto;
+/* The findings table scrolls inside its own fixed 50vh viewport (virtualized), independent of the page. */
+.SecurityFindingsScroll {
+  min-height: 50vh;
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid var(--app-border);
 }
 
 .AppDataTable[data-table="image.scanning.report"] {
@@ -221,16 +607,18 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   table-layout: auto;
 }
 
+/* Vulnerability ID (column 2) is the only flexible column; every other column shrinks to its content via the
+   width:1px + nowrap trick. */
 .AppDataTable[data-table="image.scanning.report"] .SecurityColumnSeverity {
-  width: 116px;
+  width: 1px;
 }
 
 .AppDataTable[data-table="image.scanning.report"] .SecurityColumnVulnerability {
-  width: auto;
+  width: 100%;
 }
 
 .AppDataTable[data-table="image.scanning.report"] .SecurityColumnTarget {
-  width: 230px;
+  width: 1px;
 }
 
 .AppDataTable[data-table="image.scanning.report"] .SecurityColumnType {
@@ -242,12 +630,9 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 }
 
 .AppDataTable[data-table="image.scanning.report"] thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   height: 30px;
   border-bottom: 1px solid var(--app-border);
-  background: var(--app-chrome);
+  background: var(--app-surface-strong);
   color: var(--app-text);
   font-size: 11px;
   font-weight: 600;
@@ -255,52 +640,38 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   white-space: nowrap;
 }
 
-.AppDataTable[data-table="image.scanning.report"] th.SecurityCellSeverity,
+/* Severity + Vulnerability ID stay left-aligned; Package/Target, Type and Published are centered (header + body). */
 .AppDataTable[data-table="image.scanning.report"] td.SecurityCellSeverity {
-  width: 116px;
-  text-align: center !important;
+  white-space: nowrap;
+  text-align: left !important;
 }
 
-.AppDataTable[data-table="image.scanning.report"] th.SecurityCellFinding,
 .AppDataTable[data-table="image.scanning.report"] td.SecurityCellFinding {
-  width: auto;
+  width: 100%;
   min-width: 0;
-  text-align: left !important;
-}
-
-.AppDataTable[data-table="image.scanning.report"] td.SecurityCellFinding {
   max-width: 0;
-}
-
-.AppDataTable[data-table="image.scanning.report"] th.SecurityCellTarget,
-.AppDataTable[data-table="image.scanning.report"] td.SecurityCellTarget {
-  width: 230px;
   text-align: left !important;
 }
 
-.AppDataTable[data-table="image.scanning.report"] th.SecurityCellType,
-.AppDataTable[data-table="image.scanning.report"] td.SecurityCellType {
-  width: 1px;
-  overflow: visible;
-  text-align: center !important;
-  white-space: nowrap;
-}
-
-.AppDataTable[data-table="image.scanning.report"] th.SecurityCellPublished,
+.AppDataTable[data-table="image.scanning.report"] td.SecurityCellTarget,
+.AppDataTable[data-table="image.scanning.report"] td.SecurityCellType,
 .AppDataTable[data-table="image.scanning.report"] td.SecurityCellPublished {
-  width: 1px !important;
-  overflow: visible;
-  text-align: center !important;
   white-space: nowrap;
+  text-align: center !important;
 }
 
+/* Center the sortable headers of the shrink-to-fit columns (their label+icon sit in a flex button). */
+.SecurityFindingsTable th[data-column="package"] .SortableColumnHeaderButton,
+.SecurityFindingsTable th[data-column="type"] .SortableColumnHeaderButton,
+.SecurityFindingsTable th[data-column="published"] .SortableColumnHeaderButton {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Zebra striping is index-driven (data-striped) via App.css [data-windowed] — never :nth-child, which a
+   virtualized subset would scramble. Rows keep only the severity left-accent here. */
 .AppDataTable[data-table="image.scanning.report"] tbody tr {
   border-left: 3px solid transparent;
-  background: var(--app-surface);
-}
-
-.AppDataTable[data-table="image.scanning.report"] tbody tr:nth-child(odd) {
-  background: color-mix(in srgb, var(--app-surface-strong) 52%, var(--app-surface));
 }
 
 .AppDataTable[data-table="image.scanning.report"] tbody tr[data-severity="CRITICAL"] {
@@ -424,4 +795,26 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   margin-top: 3px;
   color: var(--app-text-muted);
   font-size: 11px;
+}
+
+/* Empty state — centered in the findings area when the scan is clean or a filter hides everything. */
+.SecurityFindingsEmptyRow td {
+  border: 0 !important;
+  text-align: center !important;
+}
+
+.SecurityFindingsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 42vh;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.SecurityFindingsEmpty .bp6-icon {
+  color: var(--app-text-muted);
 }

@@ -9,6 +9,7 @@ import {
 } from "@/env/Types";
 import i18n from "@/i18n";
 import { deepMerge } from "@/utils";
+import { randomUUID } from "@/utils/randomUUID";
 
 const NOT_CHECKED = i18n.t("Not checked");
 
@@ -498,6 +499,6 @@ export async function createConnectorBy(
   const connectors = getDefaultConnectors(osType);
   const connector = connectors.find((it) => it.engine === engine && it.host === currentEngineHost)!;
   const copyOf = JSON.parse(JSON.stringify(deepMerge<Connector>({}, { ...connector }))) as Connector;
-  copyOf.id = id || `host.${crypto.randomUUID()}.${connector.host}`;
+  copyOf.id = id || `host.${randomUUID()}.${connector.host}`;
   return copyOf;
 }

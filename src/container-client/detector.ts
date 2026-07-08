@@ -19,6 +19,12 @@ export const parseProgramVersion = (input: string | undefined) => {
   return parsed;
 };
 
+// cosign has no `--version` flag; `cosign version` prints an ASCII banner followed by key:value lines. Prefer the
+// `GitVersion:` value (e.g. `v2.4.1`, or `devel` for a source build) — never the `GoVersion` line below it.
+export const parseCosignVersion = (input: string | undefined): string => {
+  return input?.match(/^\s*GitVersion:\s*(\S+)/im)?.[1] || "";
+};
+
 // Recognize a Windows engine path (C:\...\docker.exe) by shape, so version detection over an SSH executor
 // can pick the cmd.exe-safe (quoted) invocation without a separate remote-OS probe.
 export const isWindowsProgramPath = (programPath: string): boolean =>
@@ -162,16 +168,27 @@ export const findProgramVersion = async (
     return version;
   }
   let isSSH = false;
+  let isCosign = false;
   if (programPath.endsWith("ssh.exe") || programPath.endsWith("ssh")) {
     versionFlag = "-V";
     isSSH = true;
+  } else if (/cosign(\.exe)?$/i.test(programPath)) {
+    // cosign rejects `--version`; its version comes from the `cosign version` subcommand's banner output.
+    versionFlag = "version";
+    isCosign = true;
   }
   const finder = executor ? executor : Command.Execute;
   // Quoting a spaced Windows path for the cmd.exe shell is the executor's job (see SSHTransport.quoteScopeProgram),
   // so a Windows engine path flows through unchanged here.
   const result = await finder(programPath, [versionFlag], opts);
   if (result.success) {
-    version = isSSH ? `${result.stderr}`.trim() : parseProgramVersion(result.stdout || result.stderr);
+    if (isSSH) {
+      version = `${result.stderr}`.trim();
+    } else if (isCosign) {
+      version = parseCosignVersion(result.stdout || result.stderr);
+    } else {
+      version = parseProgramVersion(result.stdout || result.stderr);
+    }
   } else {
     logger.error(`Unable to detect ${programPath} cli program version`, result);
   }

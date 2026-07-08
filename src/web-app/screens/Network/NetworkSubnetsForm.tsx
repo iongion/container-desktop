@@ -5,6 +5,7 @@ import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import type { NetworkSubnet } from "@/env/Types";
+import { randomUUID } from "@/utils/randomUUID";
 
 import "./NetworkSubnetsForm.css";
 
@@ -14,7 +15,7 @@ export interface NetworkSubnetItem extends NetworkSubnet {
 
 export const createNetworkSubnet = (): NetworkSubnetItem => {
   return {
-    guid: crypto.randomUUID(),
+    guid: randomUUID(),
     gateway: "",
     subnet: "",
     lease_range: {

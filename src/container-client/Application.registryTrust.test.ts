@@ -81,6 +81,26 @@ describe("Application.registryLogin", () => {
   });
 });
 
+describe("Application.cosignLogin", () => {
+  it("runs cosign's OWN `cosign login … --password-stdin` (detected via `which`), secret on stdin, never argv", async () => {
+    const app = makeApp();
+    const host = await nativePodmanHost();
+    fake = installFakeCommand((call) => {
+      if (call.launcher === "which" && call.args[0] === "cosign") return { stdout: "/usr/bin/cosign\n" };
+      if (call.args[0] === "version") return { stdout: "GitVersion: v2.4.1\n" };
+      return {};
+    });
+
+    await app.cosignLogin({ host, registry: "ghcr.io", username: "alice", secret: "s3cr3t-token" });
+
+    const login = fake.calls.find((c) => c.args[0] === "login");
+    expect(login?.launcher).toBe("/usr/bin/cosign");
+    expect(login?.args).toEqual(["login", "ghcr.io", "--username", "alice", "--password-stdin"]);
+    expect(login?.opts?.input).toBe("s3cr3t-token");
+    expect(JSON.stringify([login?.launcher, ...(login?.args ?? [])])).not.toContain("s3cr3t-token");
+  });
+});
+
 describe("Application.registryLogout", () => {
   it("runs `logout <registry>`", async () => {
     const app = makeApp();

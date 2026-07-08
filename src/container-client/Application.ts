@@ -19,7 +19,18 @@ import {
   normalizeAndSortSearchResults,
   normalizeSearchOutput,
 } from "@/container-client/application/registrySearch";
-import { createSecurityReport, parseTrivyAnalysis, parseTrivyDatabase } from "@/container-client/application/security";
+import {
+  createSecurityReport,
+  createSignatureResult,
+  mockSbomDocument,
+  mockSecurityReport,
+  mockSignatureResult,
+  parseCosignVerification,
+  parseTrivyAnalysis,
+  parseTrivyDatabase,
+  parseTrivySbomPackages,
+  type SecuritySignatureResult,
+} from "@/container-client/application/security";
 import { UserConfiguration } from "@/container-client/config";
 import {
   buildMockConnections,
@@ -33,8 +44,14 @@ import { getMockEngine, isMockMode } from "@/container-client/mock/mode";
 import { systemNotifier } from "@/container-client/notifier";
 import { normalizeProxyConfig, type ProxyConfig } from "@/container-client/proxy";
 import { buildLoginArgs, buildLogoutArgs } from "@/container-client/registryTrust/auth";
+import {
+  isRegistryLoggedIn,
+  mockRegistryLoginState,
+  type RegistryLoginState,
+} from "@/container-client/registryTrust/authState";
 import { buildCaRemoveCommand, caCertTarget } from "@/container-client/registryTrust/certsd";
 import {
+  cosignAuthConfigPath,
   dockerDaemonJsonPath,
   registriesConfPath,
   type TrustPathContext,
@@ -76,7 +93,7 @@ import {
   StartupStatus,
   type SubscriptionOptions,
 } from "@/env/Types";
-import i18n from "@/i18n";
+import i18n, { normalizeLanguagePreference } from "@/i18n";
 import { getWindowsPipePath } from "@/platform";
 import { createLogger, getLevel, setLevel } from "@/platform/logger";
 import { normalizeLoggingFileSettings } from "@/platform/logger/loggingSettings";
@@ -343,6 +360,7 @@ export class Application {
   async getGlobalUserSettings() {
     const settings = {
       theme: normalizeTheme(await this.userConfiguration.getKey<string>("theme", "bp6-dark")),
+      language: normalizeLanguagePreference(await this.userConfiguration.getKey<string>("language", "auto")),
       engineTheme: normalizeEngineThemePreference(await this.userConfiguration.getKey<string>("engineTheme", "auto")),
       showEngineColumn: await this.userConfiguration.getKey("showEngineColumn", false),
       expandSidebar: await this.userConfiguration.getKey("expandSidebar", true),
@@ -699,6 +717,11 @@ export class Application {
   }
 
   async checkSecurity(options: { scanner: string; subject: string; target: string; host?: HostClientFacade }) {
+    // Mock mode: deterministic vulns + SBOM per image ref so the Security tab is fully exercisable in dev
+    // without trivy installed (mirrors getRegistriesMap's mock branch — dead in production via isMockMode()).
+    if (isMockMode()) {
+      return mockSecurityReport(options.target);
+    }
     const currentApi = options.host || this.getCurrentEngineConnectionApi();
     const report: any = createSecurityReport(options.scanner);
     try {
@@ -756,24 +779,18 @@ export class Application {
           // Scanner analysis
           try {
             let analysis: CommandExecutionResult;
+            // `--list-all-pkgs` makes the same pass emit the full package inventory (Results[].Packages) next
+            // to the vulnerabilities, so the SBOM preview needs no second scan.
+            const analysisArgs = ["--quiet", options.subject, "--format", "json", "--list-all-pkgs", options.target];
             if (useScope) {
-              analysis = await currentApi.runScopeCommand(
-                programPath,
-                ["--quiet", options.subject, "--format", "json", options.target],
-                scope,
-              );
+              analysis = await currentApi.runScopeCommand(programPath, analysisArgs, scope);
             } else {
-              analysis = await currentApi.runHostCommand(programPath, [
-                "--quiet",
-                options.subject,
-                "--format",
-                "json",
-                options.target,
-              ]);
+              analysis = await currentApi.runHostCommand(programPath, analysisArgs);
             }
             if (analysis?.success && analysis.stdout !== "null") {
               try {
                 report.result = parseTrivyAnalysis(analysis.stdout, report.counts);
+                report.sbom = parseTrivySbomPackages(report.result);
                 report.status = "success";
               } catch (error: any) {
                 this.logger.error("Error during output parsing", error.message, analysis);
@@ -808,6 +825,108 @@ export class Application {
       };
     }
     return report;
+  }
+
+  // Signature & provenance via cosign — cheap + independent of the Trivy vuln scan, so the Security tab runs
+  // it on open. Detection mirrors checkSecurity (scoped guest vs host binary). Policy-free: it accepts ANY
+  // valid sigstore signature and surfaces the identity facts; the trust POLICY lives in the Registry center.
+  async checkSignature(options: {
+    subject: string;
+    target: string;
+    host?: HostClientFacade;
+  }): Promise<SecuritySignatureResult> {
+    if (isMockMode()) {
+      return mockSignatureResult(options.target);
+    }
+    const currentApi = options.host || this.getCurrentEngineConnectionApi();
+    const result = createSignatureResult();
+    try {
+      if (!currentApi) {
+        throw new Error("No active engine connection");
+      }
+      const settings = await currentApi.getSettings();
+      const scope = settings.controller?.scope || "";
+      const useScope =
+        currentApi.isScoped() &&
+        ![ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR].includes(
+          currentApi.HOST,
+        );
+      const program = useScope
+        ? await currentApi.findScopeProgram({ name: "cosign", path: "" })
+        : await currentApi.findHostProgram({ name: "cosign", path: "" });
+      const programPath = program?.path || "";
+      if (!programPath) {
+        // cosign not installed → available:false drives the missing-tool NonIdealState.
+        this.logger.debug("cosign is not installed - signature verification unavailable");
+        return result;
+      }
+      result.available = true;
+      result.version = program?.version || "";
+      // `.+` matches any issuer/subject → verify any keyless sigstore signature without asserting a policy.
+      const args = [
+        "verify",
+        options.target,
+        "--certificate-identity-regexp",
+        ".+",
+        "--certificate-oidc-issuer-regexp",
+        ".+",
+        "--output",
+        "json",
+      ];
+      const verify = useScope
+        ? await currentApi.runScopeCommand(programPath, args, scope)
+        : await currentApi.runHostCommand(programPath, args);
+      result.signature = parseCosignVerification(verify.stdout, {
+        success: !!verify.success,
+        stderr: verify.stderr,
+      });
+    } catch (error: any) {
+      this.logger.error("Error during signature verification", error.message);
+      result.fault = { detail: i18n.t("Error during signature verification"), message: error.message };
+    }
+    return result;
+  }
+
+  // On-demand SBOM export in the requested format (spdx-json / cyclonedx …) via a format-specific Trivy run.
+  async exportSbom(options: {
+    format: string;
+    target: string;
+    host?: HostClientFacade;
+  }): Promise<{ format: string; content: string }> {
+    if (isMockMode()) {
+      return { format: options.format, content: mockSbomDocument(options.format, options.target) };
+    }
+    const currentApi = options.host || this.getCurrentEngineConnectionApi();
+    if (!currentApi) {
+      throw new Error("No active engine connection");
+    }
+    const settings = await currentApi.getSettings();
+    const scope = settings.controller?.scope || "";
+    const useScope =
+      currentApi.isScoped() &&
+      ![ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR].includes(
+        currentApi.HOST,
+      );
+    const program = useScope
+      ? await currentApi.findScopeProgram({ name: "trivy", path: "" })
+      : await currentApi.findHostProgram({ name: "trivy", path: "" });
+    const programPath = program?.path || "";
+    if (!programPath) {
+      throw new Error("trivy is not installed");
+    }
+    const args = ["--quiet", "image", "--format", options.format];
+    // CycloneDX disables the vuln scanner unless it is explicitly re-enabled; SPDX keeps it off harmlessly.
+    if (options.format.startsWith("cyclonedx")) {
+      args.push("--scanners", "vuln");
+    }
+    args.push(options.target);
+    const output = useScope
+      ? await currentApi.runScopeCommand(programPath, args, scope)
+      : await currentApi.runHostCommand(programPath, args);
+    if (!output?.success) {
+      throw new Error(output?.stderr || "Failed to generate SBOM");
+    }
+    return { format: options.format, content: output.stdout || "" };
   }
 
   // registry
@@ -1022,6 +1141,63 @@ export class Application {
       return await host.runScopeCommand(launcher, args, controller?.scope || "");
     }
     return await host.runHostCommand(launcher, args);
+  }
+
+  // Is cosign already able to authenticate to a registry? cosign resolves credentials via go-containerregistry's
+  // default keychain — docker's config.json, NOT podman's auth.json — regardless of the container engine, so its
+  // state is read from there. Drives the Security tab's "log in to verify" recovery: only offer sign-in when
+  // cosign has NO credential for the registry yet.
+  async getCosignLoginState(opts: { host?: HostClientFacade; registry: string }): Promise<RegistryLoginState> {
+    if (isMockMode()) {
+      return mockRegistryLoginState(opts.registry);
+    }
+    const host = opts.host || (this._currentContainerEngineHostClient as HostClientFacade);
+    if (!host) {
+      return { loggedIn: false };
+    }
+    try {
+      const path = cosignAuthConfigPath(await this.trustPathContext(host));
+      return isRegistryLoggedIn(await this.readTrustFile(host, path), opts.registry);
+    } catch (error: any) {
+      this.logger.debug("cosign login-state read failed", error?.message);
+      return { loggedIn: false };
+    }
+  }
+
+  // cosign's OWN login (`cosign login <registry> --username … --password-stdin`), distinct from `docker/podman
+  // login`: it writes the docker keychain that `cosign verify` reads, so it also authenticates cosign on podman
+  // engines. Detected via the same host/scope seam as checkSignature; the secret is piped over stdin — never argv.
+  async cosignLogin(opts: {
+    host?: HostClientFacade;
+    registry: string;
+    username: string;
+    secret: string;
+  }): Promise<CommandExecutionResult> {
+    if (isMockMode()) {
+      return { pid: null, code: 0, success: true, stdout: "", stderr: "", command: "cosign login (mock)" };
+    }
+    const currentApi = opts.host || this.getCurrentEngineConnectionApi();
+    if (!currentApi) {
+      throw new Error("No active engine connection");
+    }
+    const settings = await currentApi.getSettings();
+    const scope = settings.controller?.scope || "";
+    const useScope =
+      currentApi.isScoped() &&
+      ![ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR, ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR].includes(
+        currentApi.HOST,
+      );
+    const program = useScope
+      ? await currentApi.findScopeProgram({ name: "cosign", path: "" })
+      : await currentApi.findHostProgram({ name: "cosign", path: "" });
+    const programPath = program?.path || "";
+    if (!programPath) {
+      throw new Error("cosign is not installed");
+    }
+    const args = ["login", opts.registry, "--username", opts.username, "--password-stdin"];
+    return useScope
+      ? await currentApi.runScopeCommand(programPath, args, scope, undefined, { input: opts.secret })
+      : await currentApi.runHostCommand(programPath, args, undefined, { input: opts.secret });
   }
 
   // registry trust — engine config projection (registries.conf / daemon.json / certs.d) + per-connection persist.

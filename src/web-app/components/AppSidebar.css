@@ -60,7 +60,7 @@
 .AppSidebarActions .bp6-button {
   text-align: left;
   justify-content: flex-start;
-  padding: 5px;
+  padding: 2px;
   border-radius: 0 !important;
 }
 .AppSidebarContent {
@@ -68,8 +68,10 @@
   flex: 1;
 }
 .AppSidebar[data-expanded="no"] {
-  min-width: 68px;
-  width: auto;
+  flex: 0 0 80px;
+  min-width: 80px;
+  width: 80px;
+  max-width: 80px;
   text-align: left;
 }
 .AppSidebar[data-expanded="no"] .AppSidebarActions {
@@ -80,7 +82,12 @@
   display: flex;
   text-align: center;
   justify-content: center;
-  padding: 5px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px;
+  padding-top: 5px;
+  padding-bottom: 5px;
   flex-direction: column;
 }
 .AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button .bp6-icon,
@@ -93,5 +100,12 @@
 }
 .AppSidebar[data-expanded="no"] .AppSidebarActions .bp6-button-text {
   display: block;
+  max-width: 100%;
   font-size: 11px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.AppSidebar[data-expanded="yes"] .AppSidebarActions .bp6-button {
+  padding: 5px;
 }

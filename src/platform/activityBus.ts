@@ -7,6 +7,8 @@
 // is bundled into preload.cjs. Every emitted payload must be structured-cloneable
 // (primitives / strings / string[] only) because it crosses the contextBridge.
 
+import { randomUUID } from "@/utils/randomUUID";
+
 type Subscriber = (entry: any) => void;
 
 const subscribers = new Set<Subscriber>();
@@ -80,7 +82,7 @@ export function wrapCommandForActivity(command: ICommand): ICommand {
   const wrapResult = (invocation: "Execute" | "Spawn") => {
     const original = command[invocation].bind(command);
     return async (launcher: string, args: string[], opts?: any) => {
-      const guid = crypto.randomUUID();
+      const guid = randomUUID();
       const startedAt = Date.now();
       const commandLine = toCommandLine(launcher, args);
       emit({ guid, date: startedAt, phase: "pending", invocation, launcher, args: args || [], commandLine });
@@ -123,7 +125,7 @@ export function wrapCommandForActivity(command: ICommand): ICommand {
 
   const originalBackground = command.ExecuteAsBackgroundService.bind(command);
   const wrappedBackground = async (launcher: string, args: string[], opts?: any) => {
-    const guid = crypto.randomUUID();
+    const guid = randomUUID();
     const startedAt = Date.now();
     const commandLine = toCommandLine(launcher, args);
     const base = {
@@ -158,7 +160,7 @@ export function wrapCommandForActivity(command: ICommand): ICommand {
 
   const originalStreaming = command.ExecuteStreaming.bind(command);
   const wrappedStreaming = async (launcher: string, args: string[], opts?: any) => {
-    const guid = crypto.randomUUID();
+    const guid = randomUUID();
     const startedAt = Date.now();
     const commandLine = toCommandLine(launcher, args);
     const base = {

@@ -140,7 +140,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           active={isActive ? isActive("image.security") : false}
           icon={IconNames.CONFIRM}
           text={t("Security")}
-          intent={Intent.DANGER}
           href={getImageUrl(image!.Id, "security", connectionId)}
         />
       </>

@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { systemNotifier } from "@/container-client/notifier";
 import type { SystemNotification } from "@/env/Types";
+import { randomUUID } from "@/utils/randomUUID";
 import type {
   ActivityEntry,
   ActivityKind,
@@ -147,7 +148,7 @@ export function selectHasError(state: ActivityState): boolean {
 function toSystemEntry(event: SystemNotification): SystemEntry {
   const trace = typeof event?.data?.trace === "string" ? event.data.trace : undefined;
   return {
-    guid: event?.guid ?? crypto.randomUUID(),
+    guid: event?.guid ?? randomUUID(),
     date: event?.date instanceof Date ? event.date.getTime() : Date.now(),
     kind: "system",
     severity: "info",
@@ -184,7 +185,7 @@ function toNotificationEntry(event: SystemNotification): NotificationEntry {
   const intent = typeof event?.data?.intent === "string" ? event.data.intent : "none";
   const detail = typeof event?.data?.detail === "string" ? event.data.detail : undefined;
   return {
-    guid: event?.guid ?? crypto.randomUUID(),
+    guid: event?.guid ?? randomUUID(),
     date: event?.date instanceof Date ? event.date.getTime() : Date.now(),
     kind: "notification",
     severity: intentToSeverity(intent),

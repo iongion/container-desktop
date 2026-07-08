@@ -9,6 +9,7 @@ import {
 } from "@/env/Types";
 import { axiosConfigToCURL, deepMerge } from "@/utils";
 import { extractApiErrorText } from "@/utils/apiError";
+import { randomUUID } from "@/utils/randomUUID";
 import { systemNotifier } from "./notifier";
 
 export async function getApiConfig(
@@ -109,7 +110,7 @@ export function createApplicationApiDriver(connection: Connection, context?: any
     }, {} as any);
     req.headers = headersFlat as any;
 
-    const guid = crypto.randomUUID();
+    const guid = randomUUID();
     const method = `${req.method || "GET"}`.toUpperCase();
     const url = `${req.url || ""}`;
     const startedAt = performance.now();

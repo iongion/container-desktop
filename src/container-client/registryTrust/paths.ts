@@ -67,3 +67,10 @@ export function authConfigPath(ctx: TrustPathContext): string | undefined {
   }
   return undefined;
 }
+
+/** Where cosign reads/writes credentials: go-containerregistry's default keychain (docker's config.json),
+ * regardless of the container engine. `cosign login` writes here and `cosign verify` reads here — so cosign's
+ * auth state is checked here, NOT in podman's auth.json. */
+export function cosignAuthConfigPath(ctx: TrustPathContext): string {
+  return posixJoin(ctx.home, ".docker/config.json");
+}

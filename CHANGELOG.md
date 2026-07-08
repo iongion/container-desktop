@@ -26,11 +26,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wails website-screenshot capture backend (`--backend=wails`) via MCP `js_eval` + X11 grab
 - **Mounts inspector** — per-connection container → mount tree with sizes and mock probe results
 - **Reachability debugger** — a **Networks → Reachability** sub-screen: transport-aware trace pinpoints where a port · service→service · reach-out · DNS check breaks, with a copyable fix
+- **Image Security supply-chain tab** — per-image **Security** view: cosign signature/provenance verified on open, copyable digest, and a button-triggered Trivy pass for vulnerabilities + SBOM (SPDX/CycloneDX export) — scans on demand, not on navigate
+- **Signature sign-in recovery** — an auth-required cosign verify offers a **Sign in to verify** action (real `cosign login --password-stdin`, cosign's own keychain so Podman is covered too) that resumes verification on success; the Log in button shows only when cosign isn't already authenticated, and a header **Recheck** button re-verifies on demand
+- Security tab: the source **registry** shows as a column on the image identity bar, severity filters are per-severity toggle switches with solid count pills, and the findings table shows a centered empty state when a scan is clean or filtered to nothing
 - Connection-grouped list views for Images, Registries, Pods, Machines, Networks, Secrets, Volumes and Swarm
 - Containers list now nests connection → group → container while keeping the Appearance-controlled Engine column
 
+### Changed
+
+- Footer shows engine versions as an inline label beside the connection status; the separate engine-versions dropdown and its popover are gone
+
 ### Fixed
 
+- Cross-platform id generation — `crypto.randomUUID` replaced by a Web-Crypto (`getRandomValues`) v4 UUID that works in every desktop webview (WebKitGTK/WebView2), not only Chromium
+- cosign version detection called `cosign --version` (unsupported → activity-log error); now runs `cosign version` and reads `GitVersion` from its banner
 - Container lifecycle ops (stop/restart/force-remove) + stack teardowns use a generous timeout instead of the 3s default — a slow SIGTERM stop no longer "fails" client-side while the engine is still working
 - The engine no longer flaps to "reconnecting" on a momentary socket hiccup — the liveness ping is retried across a short grace window before a disconnect is declared
 - Importing a stack no longer aborts with libpod's "container state improper" for a leftover mid-transition container — the start step waits for it to settle

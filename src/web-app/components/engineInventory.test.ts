@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { EngineInventory } from "./EngineVersionsMenu";
-import { engineInventoryTriggerLabel } from "./EngineVersionsMenu";
+import type { EngineInventory } from "./engineInventory";
+import { engineInventoryTriggerLabel } from "./engineInventory";
 
 const inventory = (groups: EngineInventory["groups"]): EngineInventory => ({
   groups,

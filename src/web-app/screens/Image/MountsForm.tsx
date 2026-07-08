@@ -5,12 +5,13 @@ import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Application } from "@/container-client/Application";
 import type { ContainerImageMount } from "@/env/Types";
+import { randomUUID } from "@/utils/randomUUID";
 import { useAppStore } from "@/web-app/stores/appStore";
 import "./MountsForm.css";
 
 export const createMount = (): MountFormContainerImageMount => {
   return {
-    guid: crypto.randomUUID(),
+    guid: randomUUID(),
     driver: "local",
     type: "bind",
     access: "ro",

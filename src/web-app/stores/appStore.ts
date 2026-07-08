@@ -31,7 +31,7 @@ import {
   OperatingSystem,
   type SystemNotification,
 } from "@/env/Types";
-import { t } from "@/i18n";
+import { setCurrentLanguagePreference, t } from "@/i18n";
 import { registerHostRuntimeFromGlobals } from "@/platform/hostRuntimeFromGlobals";
 import { createLogger } from "@/platform/logger";
 import { deepMerge, isObject } from "@/utils";
@@ -314,7 +314,10 @@ export const useAppStore = create<AppStore>()((set, get) => {
         systemNotifications: [...state.systemNotifications, phase],
       })),
     resetBootstrapPhases: () => set({ systemNotifications: [] }),
-    syncGlobalUserSettings: (values) => set({ userSettings: values }),
+    syncGlobalUserSettings: (values) => {
+      setCurrentLanguagePreference(values.language);
+      set({ userSettings: values });
+    },
     syncEngineUserSettings: (values) =>
       set((state) => ({
         currentConnector: state.currentConnector
