@@ -2,8 +2,8 @@
 // and still missing in some desktop webviews. Uses the Web Crypto `getRandomValues` primitive instead: present
 // in every browser, every desktop webview (WebKitGTK / Edge WebView2) and Node ≥15 via the global `crypto`.
 // Not `Math.random()` — that is not a CSPRNG. Pure JS, zero deps, no node builtins (the global `crypto` here is
-// the Web Crypto API, not `node:crypto`), so it stays clean under `yarn audit:shared`. Same effect as the
-// `uuid` package's v4: 122 bits of cryptographic entropy.
+// the Web Crypto API, not `node:crypto`). Same effect as the `uuid` package's v4: 122 bits of cryptographic
+// entropy.
 
 // Precomputed byte→hex pairs ("00".."ff") so formatting is a table lookup, not per-nibble math.
 const BYTE_TO_HEX: string[] = [];

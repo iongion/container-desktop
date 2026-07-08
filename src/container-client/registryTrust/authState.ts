@@ -2,7 +2,7 @@
 // (config.json / auth.json share the `auths`/`credHelpers`/`credsStore` shape) and answers per registry. Used to
 // gate the Security tab's "log in to verify" recovery: only offer sign-in when the engine has NO credential for
 // the registry (offering it again when already signed in is pointless — the failure is access, not auth). Pure +
-// node-free (stays clean under `yarn audit:shared`); the file READ (native FS vs scoped `cat`) stays in Application.
+// node-free; the file READ (native FS vs scoped `cat`) stays in Application.
 
 export interface RegistryLoginState {
   loggedIn: boolean;

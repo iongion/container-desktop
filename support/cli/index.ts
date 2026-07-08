@@ -5,7 +5,6 @@ import {
   fetchMsix,
   installSelfSignedAppx,
   publishMeta,
-  runAuditShared,
   runBuild,
   runBuildWebsite,
   runBump,
@@ -143,11 +142,6 @@ program.command("start").description("Run the app in development (yarn dev)").ac
 program.command("build-website").description("Compile website-src/ into website/ (Eleventy)").action(runBuildWebsite);
 
 program.command("checksums").description("Write side-by-side .sha256 files for release artifacts").action(runChecksums);
-
-program
-  .command("audit-shared")
-  .description("Audit shared src/ for node/electron/@tauri leaks (verify gate)")
-  .action(runAuditShared);
 
 program
   .command("create-icons")

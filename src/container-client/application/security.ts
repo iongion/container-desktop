@@ -1,6 +1,6 @@
 // State-free helpers for the security scan seam. Command execution and logging/fault handling stay in the
 // Application methods; the report skeleton and all JSON parsing live here — Trivy (vulnerabilities + SBOM
-// packages) and cosign (signature/provenance). Pure + node-free (stays clean under `yarn audit:shared`).
+// packages) and cosign (signature/provenance). Pure + node-free.
 
 import { randomUUID } from "@/utils/randomUUID";
 

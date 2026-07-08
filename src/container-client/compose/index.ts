@@ -1,5 +1,4 @@
-// Public surface of the compose parser. Everything here is pure-JS / renderer-safe (no node builtins) —
-// enforced by `yarn audit:shared`.
+// Public surface of the compose parser. Everything here is pure-JS / renderer-safe (no node builtins).
 
 export { DependencyError, topologicalStartOrder } from "./dependsOn";
 export { parseEnvFile } from "./envfile";

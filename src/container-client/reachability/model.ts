@@ -1,7 +1,7 @@
 // Reachability debugger — shared, node-free vocabulary + pure fact extractors. Both the renderer (query bar,
 // optimistic render) and the main-process prober (engineDataService.probeReachability) import from here, so it
-// must stay free of Node/Electron/Tauri (enforced by `yarn audit:shared`). The transport-aware trace assembly
-// lives in ./report; this file is only types + honest reads off the already-normalized Container shape.
+// must stay free of Node/Electron/Tauri. The transport-aware trace assembly lives in ./report; this file is only
+// types + honest reads off the already-normalized Container shape.
 
 import type { Container } from "@/env/Types";
 

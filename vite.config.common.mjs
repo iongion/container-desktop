@@ -57,7 +57,16 @@ export const sourcemap = ENVIRONMENT === "development";
  * @type {import('vite').UserConfig}
  * @see https://vitejs.dev/config/
  */
-export function getCommonViteConfig({ mode, define, resolve, outputName, outputFormat, plugins, rollupOptions }) {
+export function getCommonViteConfig({
+  mode,
+  command,
+  define,
+  resolve,
+  outputName,
+  outputFormat,
+  plugins,
+  rollupOptions,
+}) {
   const userDefine = {
     // Define default environment variables
     ...createDefine(mode),
@@ -72,9 +81,16 @@ export function getCommonViteConfig({ mode, define, resolve, outputName, outputF
   const config = {
     clearScreen: false,
     plugins: [
-      checker({
-        typescript: true,
-      }),
+      // TypeScript 7 no longer exposes the old compiler API from the root `typescript` import. The current
+      // vite-plugin-checker dev worker still expects that API, so keep checker on builds (where it shells out to
+      // `tsc`) and rely on `yarn check-types` for dev type verification until the plugin catches up.
+      ...(command === "serve"
+        ? []
+        : [
+            checker({
+              typescript: true,
+            }),
+          ]),
       // tsconfig path mappings are resolved by the explicit `resolve.alias` block below
       // (Vite 8 also supports them natively); the vite-tsconfig-paths plugin is redundant.
       ...(plugins ?? []),

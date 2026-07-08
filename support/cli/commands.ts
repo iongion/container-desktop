@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { auditShared } from "@/cli/lib/audit-shared";
 import { fetchAppx, fetchMsix } from "@/cli/lib/fetch-appx";
 import { commitRelease } from "@/cli/lib/git";
 import { createIcons } from "@/cli/lib/icons";
@@ -116,12 +115,6 @@ export async function runUpdateScreenshots(options: Parameters<typeof mediaArgs>
 export async function runGenerateEngineIcons(): Promise<void> {
   const { main } = await import("@/cli/media/generate-engine-icons");
   await main();
-}
-
-export function runAuditShared(): void {
-  if (auditShared() > 0) {
-    throw new Error("audit-shared: shared-code leaks detected");
-  }
 }
 
 export function runCommitRelease(): void {

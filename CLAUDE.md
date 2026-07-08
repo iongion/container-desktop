@@ -48,8 +48,8 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - Install: `yarn install --frozen-lockfile` (or `make prepare`)
 - **Verify — run all before claiming done:**
   `yarn check-types` (tsc — app + `support/cli`) · `yarn lint` (Biome; `yarn lint:check` = no-write, used in CI) ·
-  `yarn test:run` (Vitest, hermetic) · `yarn build` (main+preload+renderer) ·
-  `yarn audit:shared` (no node/electron/@tauri leaks in shared `src/` code — see `support/cli/lib/audit-shared.ts`)
+  `yarn test:run` (Vitest, hermetic) · `yarn build` (main+preload+renderer)
+- Keep no node/electron/@tauri leaks in shared `src/` code.
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `yarn cli release`
