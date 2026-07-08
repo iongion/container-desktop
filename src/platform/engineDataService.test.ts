@@ -119,6 +119,48 @@ describe("EngineDataService.refresh", () => {
     expect((fakeHost as any).getApiDriver).not.toHaveBeenCalled();
     expect(service.getResourceState("conn-1").pods).toEqual([]);
   });
+
+  it("demotes a ready connection and clears its resources when a refresh fails because the API is gone", async () => {
+    const service = new EngineDataService();
+    const connection = {
+      id: "mac-docker",
+      name: "MacOS (docker)",
+      engine: ContainerEngine.DOCKER,
+      host: "docker.remote",
+      settings: { api: { autoReconnect: false } },
+    } as any;
+    const fakeHost = {
+      capabilities: { resources: { pods: false, secrets: false, networks: true } },
+      getApiDriver: async () => ({
+        get: async () => {
+          const error: any = new Error("timeout of 3000ms exceeded");
+          error.code = "ECONNABORTED";
+          throw error;
+        },
+      }),
+      isApiRunning: vi.fn(async () => ({ success: false, details: "API is not reachable" })),
+    } as unknown as HostClientFacade;
+    (service as any).connectionById.set(connection.id, connection);
+    (service as any).hostByConnection.set(connection.id, fakeHost);
+    (service as any).runtimeByConnection.set(connection.id, {
+      id: connection.id,
+      name: connection.name,
+      engine: connection.engine,
+      phase: "ready",
+      running: true,
+    });
+    service.setResourceItems(connection.id, "containers", [{ Id: "c1" } as any]);
+    service.setResourceItems(connection.id, "images", [{ Id: "i1" } as any]);
+
+    await expect(service.refresh(connection.id, "images", fakeHost)).rejects.toThrow("timeout");
+
+    const runtime = service.getAppRuntimeSnapshot().active?.find((item) => item.id === connection.id);
+    expect(runtime?.phase).toBe("failed");
+    expect(runtime?.running).toBe(false);
+    expect(runtime?.error).toBe("API is not reachable");
+    expect(service.getResourceState(connection.id).containers).toEqual([]);
+    expect(service.getResourceState(connection.id).images).toEqual([]);
+  });
 });
 
 describe("EngineDataService.onEngineEvent", () => {
@@ -539,6 +581,89 @@ describe("EngineDataService.performAction", () => {
   it("rejects an unknown action kind", async () => {
     const service = new EngineDataService();
     await expect(service.performAction("bogus.kind", "x", {} as unknown as HostClientFacade)).rejects.toThrow();
+  });
+});
+
+describe("EngineDataService.probeMounts", () => {
+  const originalMockMode = process.env.CONTAINER_DESKTOP_MOCK;
+
+  afterEach(() => {
+    if (originalMockMode === undefined) {
+      delete process.env.CONTAINER_DESKTOP_MOCK;
+    } else {
+      process.env.CONTAINER_DESKTOP_MOCK = originalMockMode;
+    }
+    vi.useRealTimers();
+  });
+
+  it("probes cached mount source paths through the mount's connection host", async () => {
+    const service = new EngineDataService();
+    service.setResourceItems("conn-1", "containers", [
+      {
+        Id: "container-1",
+        Names: ["/api-1"],
+        Computed: { Name: "api-1" },
+        Mounts: [{ Type: "bind", Source: "/srv/api", Destination: "/app", Mode: "rw", RW: true }],
+      } as any,
+    ]);
+    const calls: Array<{ program: string; args: string[] }> = [];
+    (service as any).hostByConnection.set("conn-1", {
+      isScoped: () => false,
+      runHostCommand: async (program: string, args: string[]) => {
+        calls.push({ program, args });
+        return { success: true, stdout: "ext4\n", stderr: "", code: 0 };
+      },
+    });
+
+    const response = await (service as any).probeMounts();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].program).toBe("sh");
+    expect(calls[0].args.join(" ")).toContain("/srv/api");
+    expect(response.results).toEqual([
+      expect.objectContaining({
+        connectionId: "conn-1",
+        containerId: "container-1",
+        source: "/srv/api",
+        destination: "/app",
+        backend: "ext4",
+        healthy: true,
+      }),
+    ]);
+    expect(response.results[0].latencyMs).toEqual(expect.any(Number));
+  });
+
+  it("keeps mock mount probes on the backend path with a realistic delay", async () => {
+    vi.useFakeTimers();
+    process.env.CONTAINER_DESKTOP_MOCK = "1";
+    const service = new EngineDataService();
+    service.setResourceItems("conn-1", "containers", [
+      {
+        Id: "container-1",
+        Names: ["/api-1"],
+        Computed: { Name: "api-1" },
+        Mounts: [{ Type: "bind", Source: "/srv/api", Destination: "/app", Mode: "rw", RW: true }],
+      } as any,
+    ]);
+    let settled = false;
+    const probing = service.probeMounts().then((response) => {
+      settled = true;
+      return response;
+    });
+
+    await vi.advanceTimersByTimeAsync(2199);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(probing).resolves.toEqual({
+      results: [
+        expect.objectContaining({
+          backend: "host bind",
+          healthy: true,
+          latencyMs: 8,
+        }),
+      ],
+    });
   });
 });
 

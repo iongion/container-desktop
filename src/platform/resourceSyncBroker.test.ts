@@ -16,6 +16,7 @@ function makeDeps() {
   const broadcasts: Array<{ channel: string; payload: unknown }> = [];
   const refreshed: Array<{ connectionId: string; domain: string }> = [];
   const ensured: Array<string | undefined> = [];
+  const probedMounts: unknown[] = [];
   return {
     service: {
       getSyncSnapshot: () => currentSnapshot,
@@ -28,6 +29,10 @@ function makeDeps() {
       },
       ensureConnected: async (targetConnectionId?: string) => {
         ensured.push(targetConnectionId);
+      },
+      probeMounts: async () => {
+        probedMounts.push(true);
+        return { results: [] };
       },
     },
     onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => invokeHandlers.set(channel, handler),
@@ -43,6 +48,7 @@ function makeDeps() {
     _broadcasts: () => broadcasts,
     _refreshed: () => refreshed,
     _ensured: () => ensured,
+    _probedMounts: () => probedMounts,
   };
 }
 
@@ -108,5 +114,13 @@ describe("ResourceSyncBroker", () => {
     expect(await deps._invoke(RESOURCE_SYNC.ensureConnected, { allowed: false }, { connectionId: "c3" })).toBe(false);
     expect(await deps._invoke(RESOURCE_SYNC.ensureConnected, { allowed: true }, { connectionId: "c3" })).toBe(true);
     expect(deps._ensured()).toEqual(["c3"]);
+  });
+
+  it("routes mount probes to the service for an allowed sender only", async () => {
+    const deps = makeDeps();
+    new ResourceSyncBroker(deps).register();
+    expect(await deps._invoke(RESOURCE_SYNC.probeMounts, { allowed: false })).toBe(false);
+    expect(await deps._invoke(RESOURCE_SYNC.probeMounts, { allowed: true })).toEqual({ results: [] });
+    expect(deps._probedMounts()).toEqual([true]);
   });
 });

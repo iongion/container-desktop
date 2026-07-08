@@ -4,7 +4,12 @@ import prettyBytes from "pretty-bytes";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { isMockMode } from "@/container-client/mock/mode";
+import {
+  mountProbeKey,
+  RESOURCE_SYNC,
+  type MountProbeResponse,
+  type MountProbeResult,
+} from "@/container-client/resourceSyncProtocol";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -30,10 +35,12 @@ export const Title = "Mounts";
 
 const COLUMN_COUNT = 7;
 const MOUNT_SORT_CAPABILITIES = { [`${ID}.*`]: "client" } as const;
-const MOCK_MOUNT_TEST_DELAY_MS = 2200;
 const DEFAULT_MOUNT_SORT: MountSort = { field: "mount", dir: "asc" };
 
 export interface ScreenProps extends AppScreenProps {}
+
+const indexProbeResults = (response: MountProbeResponse | undefined): Record<string, MountProbeResult> =>
+  Object.fromEntries((response?.results ?? []).map((result) => [result.key, result]));
 
 // Mounts inspector — GLOBAL tree grid: Connection (group) → Container (shown once, links to its logs) → Mount
 // leaves, so a container appears once and its mounts nest beneath it. Merges every connection's bind + volume
@@ -44,12 +51,10 @@ export interface ScreenProps extends AppScreenProps {}
 // navigator; not a sidebar entry.
 export const Screen: AppScreen<ScreenProps> = () => {
   const { t } = useTranslation();
-  const [mockProbeRun, setMockProbeRun] = useState(0);
-  const [mockProbePending, setMockProbePending] = useState(false);
+  const [probeResults, setProbeResults] = useState<Record<string, MountProbeResult>>({});
+  const [probePending, setProbePending] = useState(false);
   const [hasUserChangedSort, setHasUserChangedSort] = useState(false);
   const initialSortRef = useRef(useSortStore.getState().sorts[ID]);
-  const mockMode = isMockMode();
-  const showMockProbe = mockMode && mockProbeRun > 0;
   const { searchTerm, onSearchChange } = useAppScreenSearch();
   const currentConnector = useAppStore((state) => state.currentConnector);
   const sortCapabilities = useMemo(
@@ -91,16 +96,28 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const showEngineRowAccent = useShowEngineRowAccent();
   const onReload = useResourcesReload("containers", "volumes");
   const onTestMounts = useCallback(async () => {
-    if (!mockMode) {
-      Notification.show({ message: t("Mount probing backend is not wired yet."), intent: Intent.WARNING });
-      return;
+    setProbePending(true);
+    try {
+      const response = (await window.MessageBus.invoke(RESOURCE_SYNC.probeMounts)) as MountProbeResponse;
+      const nextResults = indexProbeResults(response);
+      const failedCount = Object.values(nextResults).filter((result) => !result.healthy).length;
+      setProbeResults(nextResults);
+      Notification.show({
+        message:
+          failedCount > 0
+            ? t("Mount checks completed with {{count}} failed.", { count: failedCount })
+            : t("Mount checks completed."),
+        intent: failedCount > 0 ? Intent.WARNING : Intent.SUCCESS,
+      });
+    } catch (error: any) {
+      Notification.show({
+        message: t("Mount checks failed: {{message}}", { message: error?.message ?? `${error}` }),
+        intent: Intent.DANGER,
+      });
+    } finally {
+      setProbePending(false);
     }
-    setMockProbePending(true);
-    await new Promise((resolve) => setTimeout(resolve, MOCK_MOUNT_TEST_DELAY_MS));
-    setMockProbeRun(Date.now());
-    setMockProbePending(false);
-    Notification.show({ message: t("Mock mount checks completed."), intent: Intent.SUCCESS });
-  }, [mockMode, t]);
+  }, [t]);
 
   return (
     <div className="AppScreen" data-screen={ID}>
@@ -110,11 +127,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
         rightContent={
           <ResourceListActions
             actions={{
-              disabled: mockProbePending,
+              disabled: probePending,
               icon: IconNames.PULSE,
-              loading: mockProbePending,
+              loading: probePending,
               text: t("Test mounts"),
-              title: mockMode ? t("Run mock mount checks") : t("Backend, latency & ownership probing — backend wiring next"),
+              title: t("Run mount checks"),
               onClick: onTestMounts,
             }}
             navigation={<ScreenHeaderSectionsTabBar isActive={(screen) => screen === ID} />}
@@ -254,6 +271,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   );
                 }
                 const row = item.mount;
+                const probe = probeResults[
+                  mountProbeKey({
+                    connectionId: row.connectionId,
+                    containerId: row.containerId,
+                    source: row.source,
+                    destination: row.destination,
+                  })
+                ];
                 return (
                   <tr
                     key={key}
@@ -310,8 +335,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       <span className="MountTag">{row.type || "—"}</span>
                     </td>
                     <td>
-                      {showMockProbe ? (
-                        <span className="MountTag">{row.type === "volume" ? t("local volume") : t("host bind")}</span>
+                      {probe ? (
+                        <span className="MountTag">
+                          {probe.backend || (probe.healthy ? t("reachable") : t("unreachable"))}
+                        </span>
                       ) : (
                         <span className="MountMuted">—</span>
                       )}
@@ -330,9 +357,13 @@ export const Screen: AppScreen<ScreenProps> = () => {
                       {typeof row.size === "number" ? prettyBytes(row.size) : <span className="MountMuted">—</span>}
                     </td>
                     <td>
-                      {showMockProbe ? (
-                        <span className="MountHealth" data-health="ok">
-                          {t("OK")}
+                      {probe ? (
+                        <span
+                          className="MountHealth"
+                          data-health={probe.healthy ? "ok" : "error"}
+                          title={probe.error}
+                        >
+                          {probe.healthy ? `${t("OK")} ${probe.latencyMs}ms` : t("Failed")}
                         </span>
                       ) : (
                         <span className="MountMuted">—</span>

@@ -15,16 +15,21 @@ import { SecretsAdapter } from "@/container-client/adapters/secrets";
 import { getActiveHostClient } from "@/container-client/adapters/shared";
 import { VolumesAdapter } from "@/container-client/adapters/volumes";
 import { resolveConnectionVersion } from "@/container-client/connection-display";
+import { isMockMode } from "@/container-client/mock/mode";
 import {
   normalizeResourceEventDomains,
   RESOURCE_DOMAINS,
   type ResourceDomain,
   type ResourceItemsByDomain,
 } from "@/container-client/resourceDomains";
+import { mountProbeKey } from "@/container-client/resourceSyncProtocol";
 import type {
   AppRuntimeSnapshot,
   ConnectionRuntimeInfo,
   ConnectOrigin,
+  MountProbeRequest,
+  MountProbeResponse,
+  MountProbeResult,
   ResourceConnectProgress,
   ResourceSnapshotByConnection,
   ResourceSyncSnapshot,
@@ -32,6 +37,7 @@ import type {
 import type { HostClientFacade } from "@/container-client/runtimes/facade";
 import type {
   AvailabilityCheck,
+  CommandExecutionResult,
   Connection,
   ConnectorCapabilities,
   EngineConnectorAvailability,
@@ -53,6 +59,8 @@ const EVENTS_MIN_UPTIME_MS = 1500;
 const EVENTS_ATTACH_TIMEOUT_MS = 3000;
 const RESOURCE_WARMUP_TIMEOUT_MS = 5000;
 const MACHINES_LOAD_TIMEOUT_MS = 3000;
+const MOUNT_PROBE_TIMEOUT_MS = 5000;
+const MOCK_MOUNT_PROBE_DELAY_MS = 2200;
 // Timeout for individual engine connections — prevents indefinite hangs during startup.
 const CONNECTION_TIMEOUT_MS = 60000;
 // Ready at least this long ⇒ the connection proved stable, so the NEXT drop restarts back-off from scratch.
@@ -60,6 +68,23 @@ const RECONNECT_STABLE_MS = 30000;
 
 // Per-connection resource state: each domain holds the LIST of its items (ResourceItemsByDomain[D] is singular).
 type ResourceState = { [D in ResourceDomain]: ResourceItemsByDomain[D][] };
+
+interface RawMountEntry {
+  Type?: string;
+  Name?: string;
+  Source?: string;
+  Destination?: string;
+  Target?: string;
+}
+
+interface MountProbeTarget {
+  connectionId: string;
+  containerId: string;
+  type: string;
+  source: string;
+  destination: string;
+  path: string;
+}
 
 type ConnectionDescriptor = {
   id: string;
@@ -146,6 +171,30 @@ function describeConnectionAttempt(connection: Connection): string {
   const target = transport === "native" && uri ? ` at ${uri}` : "";
   return `connect the ${engine} engine via ${transport}${target}`;
 }
+
+function singleQuotePosix(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildMountProbeScript(path: string): string {
+  const quotedPath = singleQuotePosix(path);
+  return [
+    `p=${quotedPath}`,
+    `if [ ! -e "$p" ]; then printf '%s\\n' "missing" >&2; exit 2; fi`,
+    `backend=""`,
+    `if command -v stat >/dev/null 2>&1; then backend=$(stat -f -c %T "$p" 2>/dev/null || stat -f %T "$p" 2>/dev/null || true); fi`,
+    `printf '%s\\n' "\${backend:-path}"`,
+  ].join("; ");
+}
+
+function firstOutputLine(value?: string): string | undefined {
+  return value
+    ?.split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 // "What it tried / what happened" + the raw detail, for the Activity Center — the two questions a user asks
 // of any failure, with nothing discarded.
@@ -363,8 +412,13 @@ export class EngineDataService {
     if (!this.supportsDomain(host, domain)) {
       return;
     }
-    const items = await this.loadDomain(host, domain);
-    this.setResourceItems(connectionId, domain, items);
+    try {
+      const items = await this.loadDomain(host, domain);
+      this.setResourceItems(connectionId, domain, items);
+    } catch (error) {
+      await this.handleRefreshFailure(connectionId, host, error);
+      throw error;
+    }
   }
 
   private supportsDomain(host: HostClientFacade, domain: ResourceDomain): boolean {
@@ -635,11 +689,60 @@ export class EngineDataService {
     }
     const connection = this.connectionById.get(connectionId);
     if (!connection) {
+      this.markConnectionFailed(connectionId, reason);
       return;
     }
-    this.stopEventsByConnection.delete(connectionId);
-    this.hostByConnection.delete(connectionId);
+    this.clearLiveConnectionState(connectionId);
     void this.scheduleReconnect(connection, reason);
+  }
+
+  private async handleRefreshFailure(connectionId: string, host: HostClientFacade, error: unknown): Promise<void> {
+    if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
+      return;
+    }
+    const api = await settleWithin(host.isApiRunning(), EVENTS_ATTACH_TIMEOUT_MS + 500);
+    if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
+      return;
+    }
+    if (api?.success) {
+      return;
+    }
+    const reason = api?.details || (error instanceof Error ? error.message : `${error}`) || "API is not reachable";
+    const connection = this.connectionById.get(connectionId);
+    this.clearLiveConnectionState(connectionId);
+    if (connection) {
+      await this.scheduleReconnect(connection, reason);
+    } else {
+      this.markConnectionFailed(connectionId, reason);
+    }
+  }
+
+  private clearLiveConnectionState(connectionId: string): void {
+    const stop = this.stopEventsByConnection.get(connectionId);
+    if (stop) {
+      stop();
+      this.stopEventsByConnection.delete(connectionId);
+    }
+    this.hostByConnection.delete(connectionId);
+    this.machinesByConnection.delete(connectionId);
+    this.resourceByConnection.delete(connectionId);
+    this.clearResourceSignatures(connectionId);
+  }
+
+  private markConnectionFailed(connectionId: string, reason: string): void {
+    const runtime = this.runtimeByConnection.get(connectionId);
+    if (!runtime) {
+      return;
+    }
+    this.runtimeByConnection.set(connectionId, {
+      ...runtime,
+      phase: "failed",
+      running: false,
+      error: reason,
+      reconnecting: false,
+      nextRetryAt: undefined,
+    });
+    this.emitChange();
   }
 
   private async handleEventsDrop(connectionId: string, host: HostClientFacade, reason: string): Promise<void> {
@@ -944,6 +1047,113 @@ export class EngineDataService {
       default:
         return [] as ResourceItemsByDomain[D][];
     }
+  }
+
+  async probeMounts(request: MountProbeRequest = {}): Promise<MountProbeResponse> {
+    const targets = this.collectMountProbeTargets(request.connectionId);
+    if (isMockMode()) {
+      await sleep(MOCK_MOUNT_PROBE_DELAY_MS);
+      return {
+        results: targets.map((target) => ({
+          ...this.mountProbeIdentity(target),
+          backend: target.type === "volume" ? "local volume" : "host bind",
+          latencyMs: 8,
+          healthy: true,
+        })),
+      };
+    }
+    const results = await Promise.all(targets.map((target) => this.probeMountTarget(target)));
+    return { results };
+  }
+
+  private collectMountProbeTargets(connectionId?: string): MountProbeTarget[] {
+    const targets: MountProbeTarget[] = [];
+    for (const [id, state] of this.resourceByConnection.entries()) {
+      if (connectionId && id !== connectionId) {
+        continue;
+      }
+      for (const container of state.containers ?? []) {
+        const mounts: RawMountEntry[] = Array.isArray(container.Mounts) ? container.Mounts : [];
+        for (const raw of mounts) {
+          const type = `${raw?.Type ?? ""}`;
+          const destination = `${raw?.Destination ?? raw?.Target ?? ""}`;
+          const source = type === "volume" ? `${raw?.Name ?? ""}` : `${raw?.Source ?? raw?.Name ?? ""}`;
+          const path = `${raw?.Source ?? (type === "volume" ? "" : source)}`;
+          targets.push({
+            connectionId: id,
+            containerId: `${container.Id ?? ""}`,
+            type,
+            source,
+            destination,
+            path,
+          });
+        }
+      }
+    }
+    return targets;
+  }
+
+  private mountProbeIdentity(target: MountProbeTarget): MountProbeResult {
+    const identity = {
+      connectionId: target.connectionId,
+      containerId: target.containerId,
+      source: target.source,
+      destination: target.destination,
+    };
+    return {
+      ...identity,
+      key: mountProbeKey(identity),
+      latencyMs: 0,
+      healthy: false,
+    };
+  }
+
+  private async probeMountTarget(target: MountProbeTarget): Promise<MountProbeResult> {
+    const base = this.mountProbeIdentity(target);
+    const host = this.hostByConnection.get(target.connectionId);
+    if (!host) {
+      return { ...base, error: "Connection is not ready" };
+    }
+    if (!target.path) {
+      return { ...base, error: "No source path reported by the engine" };
+    }
+    const startedAt = Date.now();
+    const settled = await settleWithin(
+      this.runMountProbeCommand(host, target.path)
+        .then((result) => ({ result }))
+        .catch((error) => ({ error })),
+      MOUNT_PROBE_TIMEOUT_MS,
+    );
+    const latencyMs = Math.max(0, Date.now() - startedAt);
+    if (!settled) {
+      return { ...base, latencyMs, error: "Mount probe timed out" };
+    }
+    if ("error" in settled) {
+      return { ...base, latencyMs, error: `${settled.error?.message ?? settled.error}` };
+    }
+    const { result } = settled;
+    if (!result.success) {
+      return {
+        ...base,
+        latencyMs,
+        error: firstOutputLine(result.stderr) || firstOutputLine(result.stdout) || "Mount path is not reachable",
+      };
+    }
+    return {
+      ...base,
+      backend: firstOutputLine(result.stdout) || "path",
+      latencyMs,
+      healthy: true,
+    };
+  }
+
+  private async runMountProbeCommand(host: HostClientFacade, path: string): Promise<CommandExecutionResult> {
+    const script = buildMountProbeScript(path);
+    if (host.isScoped()) {
+      const settings = await host.getSettings();
+      return await host.runScopeCommand("sh", ["-lc", script], settings.controller?.scope || "", settings);
+    }
+    return await host.runHostCommand("sh", ["-lc", script]);
   }
 
   // Tray operations — main IS the engine authority, so the tray needs no renderer

@@ -7,9 +7,8 @@ import type { ResourceDomain } from "./resourceDomains";
 
 export type ConnectionPhase = "idle" | "starting" | "ready" | "failed" | "reconnecting";
 
-// Who triggered a connection attempt. The renderer routes connection FAILURES by this: "user" (explicit
-// Connect click) and "reconnect" (auto drop-recovery of a previously-live connection) pop a DANGER toast;
-// "bootstrap" (connect-all / auto-start at launch) is routine noise — logged to the Notification Center only.
+// Who triggered a connection attempt. Connection failures are rendered in-place (row/footer) and logged to the
+// Notification Center only; the origin remains useful for progress wording and future policy.
 export type ConnectOrigin = "bootstrap" | "user" | "reconnect";
 
 // Per-connection runtime for a connection main has attempted to bring up (multi-connection: several at once).
@@ -88,6 +87,7 @@ export const RESOURCE_SYNC = {
   ensureConnected: "resource:ensure-connected", // renderer → main (invoke): connect to id (idempotent), await ready
   connectAll: "resource:connect-all", // renderer → main (invoke): connect every auto-start connection, await
   disconnect: "resource:disconnect", // renderer → main (invoke): disconnect one connection by id
+  probeMounts: "resource:probe-mounts", // renderer → main (invoke): run mount path probes for current cached mounts
 } as const;
 
 export interface ResourceRefreshRequest {
@@ -97,6 +97,33 @@ export interface ResourceRefreshRequest {
 
 export interface ResourceSwitchRequest {
   connectionId: string;
+}
+
+export interface MountProbeRequest {
+  connectionId?: string;
+}
+
+export interface MountProbeIdentity {
+  connectionId: string;
+  containerId: string;
+  source: string;
+  destination: string;
+}
+
+export interface MountProbeResult extends MountProbeIdentity {
+  key: string;
+  backend?: string;
+  latencyMs: number;
+  healthy: boolean;
+  error?: string;
+}
+
+export interface MountProbeResponse {
+  results: MountProbeResult[];
+}
+
+export function mountProbeKey(identity: MountProbeIdentity): string {
+  return JSON.stringify([identity.connectionId, identity.containerId, identity.source, identity.destination]);
 }
 
 export type ResourceSyncChannel = (typeof RESOURCE_SYNC)[keyof typeof RESOURCE_SYNC];

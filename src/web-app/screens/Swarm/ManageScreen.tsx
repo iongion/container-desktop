@@ -226,7 +226,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const infoQueries = useQueries({
     queries: dockerConnections.map((connection) => ({
       queryKey: swarmKeys.info(connection.id),
-      queryFn: async () => (await resolveSwarmAdapter(connection.id)).inspect() ?? null,
+      queryFn: async () => (await (await resolveSwarmAdapter(connection.id)).inspect()) ?? null,
       enabled: !!connection.id,
       refetchOnMount: true,
       refetchOnReconnect: true,
@@ -288,6 +288,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const swarmLeave = useSwarmLeave(singleDockerConnectionId);
 
   const onReload = useCallback(() => {
+    if (populatedConnectionIds.size === 0) {
+      return;
+    }
     for (const query of [
       ...infoQueries,
       ...servicesQueries,
@@ -298,7 +301,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     ]) {
       query.refetch();
     }
-  }, [configsQueries, infoQueries, nodesQueries, secretsQueries, servicesQueries, stacksQueries]);
+  }, [configsQueries, infoQueries, nodesQueries, populatedConnectionIds, secretsQueries, servicesQueries, stacksQueries]);
 
   // "Initialize Swarm" opens the InitializeDrawer form (advertise NIC + listen host/port + force-new-cluster)
   // instead of firing the mutation blind — which 400s on multi-NIC hosts that can't auto-pick an advertise addr.
@@ -548,6 +551,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       }
       navigation={populated ? tabStrip : undefined}
       onReload={onReload}
+      reloadDisabled={!populated}
       reloadTitle={t("Reload current list")}
       utilityActions={leaveSwarmAction}
       utilityActionsPlacement="before-reload"

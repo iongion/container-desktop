@@ -87,3 +87,7 @@
   background: color-mix(in srgb, var(--app-intent-success-rest) 20%, transparent);
   color: var(--app-intent-success-text);
 }
+.MountHealth[data-health="error"] {
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 20%, transparent);
+  color: var(--app-intent-danger-text);
+}

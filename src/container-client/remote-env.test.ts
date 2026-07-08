@@ -21,7 +21,7 @@ const ENV: Record<string, string> = {
   CONTAINER_DESKTOP_REMOTE_LINUX_SSH_HOST: "linux",
   CONTAINER_DESKTOP_REMOTE_LINUX_SSH_USER: "ion",
   CONTAINER_DESKTOP_REMOTE_LINUX_SSH_KEY: "~/.ssh/id_ed25519",
-  CONTAINER_DESKTOP_REMOTE_LINUX_AUTOSTART: "false",
+  CONTAINER_DESKTOP_REMOTE_LINUX_AUTOSTART: "true",
   IGNORED_KEY: "x",
 };
 
@@ -44,13 +44,13 @@ describe("parseRemoteConnectionsEnv", () => {
     expect(mac.label).toBe("My Mac");
   });
 
-  it("defaults port to 22 and autoStart to true, and honours AUTOSTART=false", () => {
+  it("defaults port to 22 and autoStart to false, and honours AUTOSTART=true", () => {
     const targets = parseRemoteConnectionsEnv(ENV);
     const mac = targets.find((e) => e.id === "mac")!;
     const linux = targets.find((e) => e.id === "linux")!;
-    expect(mac.autoStart).toBe(true);
+    expect(mac.autoStart).toBe(false);
     expect(linux.sshPort).toBe(22);
-    expect(linux.autoStart).toBe(false);
+    expect(linux.autoStart).toBe(true);
   });
 
   it("skips an entry that has no SSH_HOST", () => {

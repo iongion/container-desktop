@@ -94,7 +94,7 @@ export function parseRemoteConnectionsEnv(env: Record<string, string | undefined
       sshUser: bag.SSH_USER ?? "",
       sshKey: bag.SSH_KEY ?? "",
       sockets,
-      autoStart: (bag.AUTOSTART ?? "true").toLowerCase() !== "false",
+      autoStart: (bag.AUTOSTART ?? "false").toLowerCase() === "true",
       label: bag.LABEL,
     });
   }
@@ -103,7 +103,7 @@ export function parseRemoteConnectionsEnv(env: Record<string, string | undefined
 
 /** Turn parsed entries into readonly `*.remote` connections, one per (entry, engine). Starts from the
  *  default remote connector template and fills only what env config drives: the SSH scope, the optional
- *  socket fallback (relay), and autoStart. `uri` (the local forward socket) is left empty so
+ *  socket fallback (relay), and opt-in autoStart. `uri` (the local forward socket) is left empty so
  *  Application.start() derives the correct per-OS path; `mode.automatic` lets the engine socket be
  *  auto-detected over SSH when no socket is configured. */
 export function buildRemoteConnectionsFromEnv(parsed: RemoteEnvConnection[], osType: OperatingSystem): Connection[] {

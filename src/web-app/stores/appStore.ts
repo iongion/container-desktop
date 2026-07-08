@@ -125,9 +125,8 @@ function notifyConnectionFailure(progress: ResourceConnectProgress, opts?: { sil
   // Activity Center so a real failure is never reduced to a one-line placeholder.
   const detail = progress.detail;
   if (opts?.silent) {
-    // Boot / auto-start failures (engine simply not installed or not running at launch) are routine: record
-    // them in the Notification Center history, but never as a toast. Intentionally skip the toast-dedup map so
-    // a later explicit user retry with the same reason still pops a toast.
+    // Engine connection failures are already visible in the connection row/footer. Record them in the
+    // Notification Center history, but never burst a top-right toast.
     Notification.show({ message, intent: Intent.DANGER, timeout: 6000, silent: true, detail });
     return;
   }
@@ -159,11 +158,10 @@ function subscribeConnectProgress(): void {
       });
       return;
     }
-    // After the splash, route a failure by who triggered it: a "bootstrap" auto-start failure (engine not
-    // installed/running at launch) goes to the Notification Center only — no toast burst — while an explicit
-    // user connect or an auto-reconnect drop still pops a DANGER toast (also teed into the history).
+    // After the splash, connection failures still stay quiet as toasts: the row/footer carries the live status
+    // and the Notification Center keeps the detailed history.
     if (progress.phase === "failed") {
-      notifyConnectionFailure(progress, { silent: progress.origin === "bootstrap" });
+      notifyConnectionFailure(progress, { silent: true });
     }
     if (progress.phase === "ready") {
       notifiedConnectionFailureById.delete(progress.connectionId);

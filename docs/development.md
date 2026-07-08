@@ -121,7 +121,7 @@ CONTAINER_DESKTOP_REMOTE_MAC_DOCKER_SOCKET=/var/run/docker.sock   # optional rel
 
 - The **app** reads the SSH host's user/port/key from `~/.ssh/config` (so `SSH_HOST` must be a Host
   alias). It seeds **readonly** connections regenerated each run (never written to `user-settings.json`),
-  so editing a var and reloading adds/removes them; `AUTOSTART` (default true) connects on launch.
+  so editing a var and reloading adds/removes them; set `AUTOSTART=true` only when it should connect on launch.
 - The **socket** is optional — `mode.automatic` auto-detects it over SSH; a `*_SOCKET` value is only a
   fallback. For the live test it is unused (the bounded SSH pre-flight runs `podman info` / `docker info`
   over SSH; `SSH_USER`/`SSH_KEY` are required there because the pre-flight does not read `~/.ssh/config`).
