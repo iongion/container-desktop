@@ -26,9 +26,10 @@ describe("isRemoteBuildHost", () => {
 });
 
 describe("build trail", () => {
-  it("hangs Build off the Images root", () => {
+  it("leads with the owning connection, then hangs Build off the Images root", () => {
     const trail = getBuildCrumbs("conn-1");
-    expect(trail[0].textKey).toBe("Images");
+    expect(trail[0].connectionId).toBe("conn-1");
+    expect(trail[1].textKey).toBe("Images");
     expect(trail[trail.length - 1]).toMatchObject({ textKey: "Build", current: true });
   });
 });

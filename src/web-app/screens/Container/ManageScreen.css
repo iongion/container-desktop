@@ -65,6 +65,23 @@
 [data-table="containers"] tbody tr.ContainerNestedRow .ContainerLeafLink {
   left: 23px;
 }
+/* Flat mode ("Group resources by connection" off): the connection level is gone, so compose/pod groups become
+   the top level. Shift every row up one connection-level and hide the connection tree-links (they'd dangle
+   toward an absent connection header); the compose→container leaf link stays. */
+[data-table="containers"][data-grouped="false"] tbody tr.ContainerGroupRow td:first-child,
+[data-table="containers"][data-grouped="false"] tbody tr.ContainerConnectionLeafRow td:first-child {
+  padding-left: 10px;
+}
+[data-table="containers"][data-grouped="false"] tbody tr.ContainerNestedRow td:first-child {
+  padding-left: 32px;
+}
+[data-table="containers"][data-grouped="false"] tbody tr.ContainerNestedRow .ContainerLeafLink {
+  left: 0;
+}
+[data-table="containers"][data-grouped="false"] .ContainerConnectionLink,
+[data-table="containers"][data-grouped="false"] .ContainerConnectionTrunk {
+  display: none;
+}
 [data-table="containers"] .ContainerLogsButton,
 [data-table="containers"] .ContainerLayersButton {
   font-size: 12px;

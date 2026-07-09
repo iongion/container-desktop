@@ -12,7 +12,7 @@ import type { ConnectionGroup } from "@/web-app/components/groupedTable/flattenC
 import { useGroupedVirtualRows } from "@/web-app/components/groupedTable/useGroupedVirtualRows";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
-import { useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
+import { useGroupByConnection, useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
 import { AddRegistryDialog } from "../AddRegistryDialog";
 import { RegistryLoginDialog } from "../RegistryLoginDialog";
 import {
@@ -21,6 +21,7 @@ import {
   type RegistrySort,
   type RegistrySortField,
   registryAuthLabel,
+  registrySortValue,
   registryTrustView,
   sortRegistryRows,
 } from "../registryTrustView";
@@ -150,10 +151,28 @@ export const RegistriesPanel: React.FC = () => {
       })),
     [groups, rowsFor],
   );
+  const grouped = useGroupByConnection();
+  // Ungrouped: sort ALL registries across connections as one flat list (same column ordering as the grouped
+  // view, falling back to name when no column sort is active) — not per-connection concatenation.
+  const compareRegistryRows = useCallback(
+    (a: RegistryRow, b: RegistryRow): number => {
+      if (!sort) {
+        return `${a.registry.name}`.localeCompare(`${b.registry.name}`);
+      }
+      const factor = sort.dir === "desc" ? -1 : 1;
+      const av = registrySortValue(a, sort.field);
+      const bv = registrySortValue(b, sort.field);
+      const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
+      return cmp * factor;
+    },
+    [sort],
+  );
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
     useGroupedVirtualRows({
       groups: registryGroups,
       getRowKey: (row, group) => `${group.key}:${row.registry.id}`,
+      grouped,
+      flatSort: compareRegistryRows,
     });
 
   return (
@@ -174,6 +193,7 @@ export const RegistriesPanel: React.FC = () => {
             className="AppDataTable TrustTable"
             data-windowed="true"
             data-table="trust-registries"
+            data-grouped={grouped ? "true" : "false"}
           >
             <thead ref={theadRef}>
               <tr>

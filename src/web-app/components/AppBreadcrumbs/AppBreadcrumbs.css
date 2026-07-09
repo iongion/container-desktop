@@ -16,11 +16,17 @@
 
 .AppBreadcrumbs .bp6-breadcrumbs {
   align-items: center;
+  min-width: 0;
 }
 
-/* A touch more room between the root crumb's icon and its label (4px default reads cramped). */
-.AppBreadcrumbs .bp6-breadcrumb .bp6-icon {
+/* The entity/section icon sits once in front of the whole trail (not inside any crumb). Bright per theme so
+   it never reads disabled in dark mode. */
+.AppBreadcrumbsLeadIcon {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
   margin-right: 8px;
+  color: var(--app-text);
 }
 
 /* Ancestor (link) crumbs recede; the current crumb is the strong "title". */

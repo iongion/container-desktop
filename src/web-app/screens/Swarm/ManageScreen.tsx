@@ -37,7 +37,7 @@ import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
-import { useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
+import { useGroupByConnection, useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
 import { useRouteSearch } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -812,11 +812,13 @@ const GroupedServicesTable: React.FC<{
 }> = ({ groups, showEngineRowAccent, getColumnSortDirection, onColumnSort }) => {
   const { t } = useTranslation();
   const columnCount = 6;
+  const grouped = useGroupByConnection();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
     useGroupedVirtualRows({
       groups,
       getRowKey: (service) => `${service.connectionId}:${service.ID}`,
       scrollKey: "swarm.services",
+      grouped,
     });
   return (
     <div className="GroupedTableScroll" ref={scrollElementRef}>
@@ -826,6 +828,7 @@ const GroupedServicesTable: React.FC<{
         className="AppDataTable GroupedTable SwarmTable"
         data-windowed="true"
         data-table="swarm.services"
+        data-grouped={grouped ? "true" : "false"}
       >
         <thead ref={theadRef}>
           <tr>
@@ -917,11 +920,13 @@ const GroupedNodesTable: React.FC<{
 }> = ({ groups, showEngineRowAccent, getColumnSortDirection, onColumnSort }) => {
   const { t } = useTranslation();
   const columnCount = 7;
+  const grouped = useGroupByConnection();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
     useGroupedVirtualRows({
       groups,
       getRowKey: (node) => `${node.connectionId}:${node.ID}`,
       scrollKey: "swarm.nodes",
+      grouped,
     });
   return (
     <div className="GroupedTableScroll" ref={scrollElementRef}>
@@ -931,6 +936,7 @@ const GroupedNodesTable: React.FC<{
         className="AppDataTable GroupedTable SwarmTable"
         data-windowed="true"
         data-table="swarm.nodes"
+        data-grouped={grouped ? "true" : "false"}
       >
         <thead ref={theadRef}>
           <tr>
@@ -1041,11 +1047,13 @@ const GroupedStacksTable: React.FC<{
 }> = ({ groups, showEngineRowAccent, getColumnSortDirection, onColumnSort }) => {
   const { t } = useTranslation();
   const columnCount = 3;
+  const grouped = useGroupByConnection();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
     useGroupedVirtualRows({
       groups,
       getRowKey: (stack) => `${stack.connectionId}:${stack.Name}`,
       scrollKey: "swarm.stacks",
+      grouped,
     });
   return (
     <div className="GroupedTableScroll" ref={scrollElementRef}>
@@ -1055,6 +1063,7 @@ const GroupedStacksTable: React.FC<{
         className="AppDataTable GroupedTable SwarmTable"
         data-windowed="true"
         data-table="swarm.stacks"
+        data-grouped={grouped ? "true" : "false"}
       >
         <thead ref={theadRef}>
           <tr>
@@ -1138,11 +1147,13 @@ const GroupedSecretsTable: React.FC<{
 }> = ({ groups, showEngineRowAccent, getColumnSortDirection, onColumnSort }) => {
   const { t } = useTranslation();
   const columnCount = 3;
+  const grouped = useGroupByConnection();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
     useGroupedVirtualRows({
       groups,
       getRowKey: (secret) => `${secret.connectionId}:${secret.ID}`,
       scrollKey: "swarm.secrets",
+      grouped,
     });
   return (
     <div className="GroupedTableScroll" ref={scrollElementRef}>
@@ -1152,6 +1163,7 @@ const GroupedSecretsTable: React.FC<{
         className="AppDataTable GroupedTable SwarmTable"
         data-windowed="true"
         data-table="swarm.secrets"
+        data-grouped={grouped ? "true" : "false"}
       >
         <thead ref={theadRef}>
           <tr>
@@ -1231,11 +1243,13 @@ const GroupedConfigsTable: React.FC<{
 }> = ({ groups, showEngineRowAccent, getColumnSortDirection, onColumnSort }) => {
   const { t } = useTranslation();
   const columnCount = 3;
+  const grouped = useGroupByConnection();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
     useGroupedVirtualRows({
       groups,
       getRowKey: (config) => `${config.connectionId}:${config.ID}`,
       scrollKey: "swarm.configs",
+      grouped,
     });
   return (
     <div className="GroupedTableScroll" ref={scrollElementRef}>
@@ -1245,6 +1259,7 @@ const GroupedConfigsTable: React.FC<{
         className="AppDataTable GroupedTable SwarmTable"
         data-windowed="true"
         data-table="swarm.configs"
+        data-grouped={grouped ? "true" : "false"}
       >
         <thead ref={theadRef}>
           <tr>

@@ -12,6 +12,7 @@ import {
 import type { SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
 import i18n from "@/i18n";
 import { CopyToClipboardInput } from "@/web-app/components/CopyToClipboardInput";
+import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
@@ -22,7 +23,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./SecurityScreen.css";
-import { imageDisplayName } from "./Navigation";
+import { imageDisplayName, imageSectionRailItems } from "./Navigation";
 import {
   useCosignLogin,
   useCosignLoginState,
@@ -385,511 +386,528 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader image={image} currentScreen={ID} />
-      <div className="AppScreenContent SecurityContent">
-        {/* Identity + digest — available instantly from manifest metadata, no scan required. */}
-        <div className="SecurityIdentity">
-          <Icon icon={IconNames.BOX} className="SecurityIdentityIcon" />
-          <span className="SecurityMono SecurityIdentityRef">{fullRef}</span>
-          {digest ? (
-            <CopyToClipboardInput className="SecurityDigestField" value={digest} title={t("Image digest")} />
-          ) : (
-            <span className="SecuritySpacer" />
-          )}
-          {registry ? (
-            <div className="SecurityIdentityRegistry">
-              <Icon icon={IconNames.GLOBE_NETWORK} />
-              <div className="SecurityIdentityRegistryText">
-                <span className="SecurityIdentityRegistryLabel">{t("Registry")}</span>
-                <span className="SecurityMono SecurityIdentityRegistryValue">{registry}</span>
+      <ResourceSectionRail items={imageSectionRailItems(image.Id, connectionId)} activeId={ID} dataScreen={ID}>
+        <div className="AppScreenContent SecurityContent">
+          {/* Identity + digest — available instantly from manifest metadata, no scan required. */}
+          <div className="SecurityIdentity">
+            <Icon icon={IconNames.BOX} className="SecurityIdentityIcon" />
+            <span className="SecurityMono SecurityIdentityRef">{fullRef}</span>
+            {digest ? (
+              <CopyToClipboardInput className="SecurityDigestField" value={digest} title={t("Image digest")} />
+            ) : (
+              <span className="SecuritySpacer" />
+            )}
+            {registry ? (
+              <div className="SecurityIdentityRegistry">
+                <Icon icon={IconNames.GLOBE_NETWORK} />
+                <div className="SecurityIdentityRegistryText">
+                  <span className="SecurityIdentityRegistryLabel">{t("Registry")}</span>
+                  <span className="SecurityMono SecurityIdentityRegistryValue">{registry}</span>
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
 
-        <div className="SecurityGrid2">
-          {/* Signature & provenance (cosign) — verified on open. */}
+          <div className="SecurityGrid2">
+            {/* Signature & provenance (cosign) — verified on open. */}
+            <section className="SecurityPanel">
+              <h5 className="SecurityPanelTitle">
+                <Icon icon={IconNames.ENDORSED} />
+                <span>{t("Signature & provenance")}</span>
+                <span className="SecurityPanelHint">cosign</span>
+                <Button
+                  className="SecurityPanelScan"
+                  intent={Intent.PRIMARY}
+                  icon={IconNames.REFRESH}
+                  text={t("Recheck")}
+                  onClick={() => signatureQuery.refetch()}
+                  loading={signatureQuery.isFetching}
+                  disabled={signatureQuery.isFetching || !signatureTarget}
+                />
+              </h5>
+              <div className="SecurityPanelBody">
+                {cosignMissing ? (
+                  <NonIdealState
+                    icon={IconNames.ENDORSED}
+                    title={t("cosign is not installed")}
+                    description={<p>{t("Install cosign to verify image signatures and provenance.")}</p>}
+                  />
+                ) : signature ? (
+                  showSignInBlock ? (
+                    <div className="SecuritySignIn">
+                      <div className="SecurityStatusLine" data-signature={alreadyLoggedIn ? "error" : "unsigned"}>
+                        <Icon icon={alreadyLoggedIn ? IconNames.ERROR : IconNames.LOCK} />
+                        <span>{alreadyLoggedIn ? t("Couldn't read this image") : t("Sign in to verify")}</span>
+                      </div>
+                      <p className="SecurityMuted SecuritySignInText">
+                        {alreadyLoggedIn
+                          ? t(
+                              "cosign is signed in to {{registry}} but couldn't read this image — it may be private (no access) or not published to that registry (e.g. a local build).",
+                              { registry },
+                            )
+                          : t(
+                              "{{registry}} requires sign-in before this image's manifest and signature can be read. Sign in and verification resumes automatically.",
+                              { registry },
+                            )}
+                      </p>
+                      {alreadyLoggedIn ? null : (
+                        <Button
+                          className="SecuritySignInButton"
+                          intent={Intent.PRIMARY}
+                          icon={IconNames.LOG_IN}
+                          text={t("Log in to {{registry}}", { registry })}
+                          loading={cosignLogin.isPending}
+                          onClick={() => setLoginOpen(true)}
+                        />
+                      )}
+                      {alreadyLoggedIn && signature.detail ? (
+                        <pre className="SecurityCodeBlock">{signature.detail}</pre>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="SecurityStatusLine" data-signature={signature.state}>
+                        <Icon icon={signatureIcon(signature.state)} />
+                        <span>{signatureLabel(signature, t)}</span>
+                      </div>
+                      <dl className="SecurityKv">
+                        {signatureRows(signature, t).map((row) =>
+                          row.code ? (
+                            <div className="SecurityKvRow" data-align="top" key={row.label}>
+                              <dt>{row.label}</dt>
+                              <dd>
+                                <pre className="SecurityCodeBlock">{row.value}</pre>
+                              </dd>
+                            </div>
+                          ) : (
+                            <div className="SecurityKvRow" key={row.label}>
+                              <dt>{row.label}</dt>
+                              <dd className="SecurityMono">{row.value}</dd>
+                            </div>
+                          ),
+                        )}
+                      </dl>
+                    </>
+                  )
+                ) : signatureQuery.isFetching ? null : (
+                  <div className="SecurityMuted">{t("No signature information.")}</div>
+                )}
+              </div>
+            </section>
+
+            {/* Digest — content-addressed identity; primary action is Copy digest. */}
+            <section className="SecurityPanel">
+              <h5 className="SecurityPanelTitle">
+                <Icon icon={IconNames.PIN} />
+                <span>{t("Digest")}</span>
+              </h5>
+              <div className="SecurityPanelBody">
+                <div className="SecurityStatusLine" data-signature={digest ? "verified" : "unsigned"}>
+                  <Icon icon={digest ? IconNames.CONFIRM : IconNames.WARNING_SIGN} />
+                  <span>{digest ? t("Content-addressed by digest") : t("No digest recorded")}</span>
+                </div>
+                <dl className="SecurityKv">
+                  <div className="SecurityKvRow">
+                    <dt>{t("Tag")}</dt>
+                    <dd className="SecurityMono">{tagLabel}</dd>
+                  </div>
+                  <div className="SecurityKvRow">
+                    <dt>{t("Resolves to")}</dt>
+                    <dd>
+                      {digest ? (
+                        <CopyToClipboardInput value={digest} title={t("Image digest")} />
+                      ) : (
+                        <span className="SecurityMono">—</span>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="SecurityMuted SecurityNote">
+                  {t("Reference this digest to use exactly this image and prevent supply chain attacks.")}
+                </p>
+              </div>
+            </section>
+          </div>
+
+          {/* Vulnerabilities (Trivy) — gated behind the Scan button. */}
           <section className="SecurityPanel">
             <h5 className="SecurityPanelTitle">
-              <Icon icon={IconNames.ENDORSED} />
-              <span>{t("Signature & provenance")}</span>
-              <span className="SecurityPanelHint">cosign</span>
+              <Icon icon={IconNames.SHIELD} />
+              <span>{t("Vulnerabilities")}</span>
+              <span className="SecurityPanelHint">Trivy</span>
               <Button
                 className="SecurityPanelScan"
                 intent={Intent.PRIMARY}
-                icon={IconNames.REFRESH}
-                text={t("Recheck")}
-                onClick={() => signatureQuery.refetch()}
-                loading={signatureQuery.isFetching}
-                disabled={signatureQuery.isFetching || !signatureTarget}
+                icon={IconNames.SEARCH_TEMPLATE}
+                text={scanned ? t("Rescan") : t("Scan for vulnerabilities")}
+                onClick={runScan}
+                loading={scanning}
+                disabled={scanning || !scanTarget}
               />
             </h5>
             <div className="SecurityPanelBody">
-              {cosignMissing ? (
+              {scannerMissing ? (
                 <NonIdealState
-                  icon={IconNames.ENDORSED}
-                  title={t("cosign is not installed")}
-                  description={<p>{t("Install cosign to verify image signatures and provenance.")}</p>}
+                  icon={IconNames.SHIELD}
+                  title={t("Vulnerability scanning is unavailable")}
+                  description={<p>{t("Please install trivy and then rescan")}</p>}
                 />
-              ) : signature ? (
-                showSignInBlock ? (
-                  <div className="SecuritySignIn">
-                    <div className="SecurityStatusLine" data-signature={alreadyLoggedIn ? "error" : "unsigned"}>
-                      <Icon icon={alreadyLoggedIn ? IconNames.ERROR : IconNames.LOCK} />
-                      <span>{alreadyLoggedIn ? t("Couldn't read this image") : t("Sign in to verify")}</span>
+              ) : reportFaulted ? (
+                <NonIdealState
+                  icon={IconNames.WARNING_SIGN}
+                  title={t("Report could not be generated")}
+                  description={<p>{t("An internal error occurred, please report the issue.")}</p>}
+                />
+              ) : scanned ? (
+                <div className="SecurityVulnLayout">
+                  <div className="SecurityVulnAside">
+                    <Donut
+                      slices={severitySlices}
+                      centerValue={totalCount}
+                      centerLabel={t("findings")}
+                      size={172}
+                      showEmptyTrack
+                    />
+                    <div className="SecuritySeverityFilters">
+                      {SEVERITIES.map((severity) => {
+                        const active = selectedSeverities.includes(severity);
+                        const count = severityCount(counts, severity);
+                        return (
+                          <Switch
+                            key={severity}
+                            className="SecuritySeverityFilter"
+                            checked={active}
+                            onChange={() => toggleSeverityFilter(severity)}
+                            aria-label={t("Filter by {{severity}}", { severity: t(SEVERITY_LABELS[severity]) })}
+                            labelElement={
+                              <span className="SecuritySeverityFilterLabel" data-empty={count === 0 ? "yes" : "no"}>
+                                <span className="SecuritySeverityCountPill" data-severity={severity}>
+                                  {count}
+                                </span>
+                                <span className="SecuritySeverityFilterText">{t(SEVERITY_LABELS[severity])}</span>
+                              </span>
+                            }
+                          />
+                        );
+                      })}
                     </div>
-                    <p className="SecurityMuted SecuritySignInText">
-                      {alreadyLoggedIn
-                        ? t(
-                            "cosign is signed in to {{registry}} but couldn't read this image — it may be private (no access) or not published to that registry (e.g. a local build).",
-                            { registry },
-                          )
-                        : t(
-                            "{{registry}} requires sign-in before this image's manifest and signature can be read. Sign in and verification resumes automatically.",
-                            { registry },
-                          )}
-                    </p>
-                    {alreadyLoggedIn ? null : (
-                      <Button
-                        className="SecuritySignInButton"
-                        intent={Intent.PRIMARY}
-                        icon={IconNames.LOG_IN}
-                        text={t("Log in to {{registry}}", { registry })}
-                        loading={cosignLogin.isPending}
-                        onClick={() => setLoginOpen(true)}
-                      />
-                    )}
-                    {alreadyLoggedIn && signature.detail ? (
-                      <pre className="SecurityCodeBlock">{signature.detail}</pre>
-                    ) : null}
                   </div>
-                ) : (
-                  <>
-                    <div className="SecurityStatusLine" data-signature={signature.state}>
-                      <Icon icon={signatureIcon(signature.state)} />
-                      <span>{signatureLabel(signature, t)}</span>
+                  <div className="SecurityFindingsScroll" ref={scrollElementRef}>
+                    <HTMLTable
+                      compact
+                      interactive
+                      className="AppDataTable SecurityFindingsTable"
+                      data-windowed="true"
+                      data-table="image.scanning.report"
+                    >
+                      <colgroup>
+                        <col className="SecurityColumnSeverity" />
+                        <col className="SecurityColumnVulnerability" />
+                        <col className="SecurityColumnTarget" />
+                        <col className="SecurityColumnType" />
+                        <col className="SecurityColumnPublished" />
+                      </colgroup>
+                      <thead ref={theadRef}>
+                        <tr>
+                          <SortableColumnHeader
+                            field="severity"
+                            direction={sortDirection("severity")}
+                            onSort={toggleSort}
+                          >
+                            {t("Severity")}
+                          </SortableColumnHeader>
+                          <SortableColumnHeader field="id" direction={sortDirection("id")} onSort={toggleSort}>
+                            {t("Vulnerability ID")}
+                          </SortableColumnHeader>
+                          <SortableColumnHeader
+                            field="package"
+                            direction={sortDirection("package")}
+                            onSort={toggleSort}
+                          >
+                            {t("Package / Target")}
+                          </SortableColumnHeader>
+                          <SortableColumnHeader field="type" direction={sortDirection("type")} onSort={toggleSort}>
+                            {t("Type")}
+                          </SortableColumnHeader>
+                          <SortableColumnHeader
+                            field="published"
+                            direction={sortDirection("published")}
+                            onSort={toggleSort}
+                          >
+                            {t("Published")}
+                          </SortableColumnHeader>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <VirtualSpacerRow height={paddingTop} columnCount={5} />
+                        {items.map(({ row: { group, vulnerability }, index, key }) => {
+                          const expanded = expandedDescriptions.includes(key);
+                          const description = vulnerability.Description || "";
+                          const canToggleDescription = shouldShowDescriptionToggle(description);
+                          const pkgLabel = vulnerability.PkgName
+                            ? `${vulnerability.PkgName}${vulnerability.InstalledVersion ? ` ${vulnerability.InstalledVersion}` : ""}`
+                            : group.Target;
+                          const striped = index % 2 === 0 ? "true" : undefined;
+                          return (
+                            <tr
+                              key={key}
+                              ref={measureRef}
+                              data-index={index}
+                              data-striped={striped}
+                              data-severity={vulnerability.Severity}
+                            >
+                              <td className="SecurityCellSeverity">
+                                <span
+                                  className="SecuritySeverityBadge SecuritySeverityBadgeCompact"
+                                  data-severity={vulnerability.Severity}
+                                >
+                                  {vulnerability.Severity}
+                                </span>
+                              </td>
+                              <td className="SecurityCellFinding">
+                                <div className="SecurityFindingText">
+                                  <a
+                                    className="SecurityFindingLink"
+                                    href={vulnerability.PrimaryURL}
+                                    target="_blank"
+                                    rel="noopener"
+                                  >
+                                    <Icon className="SecurityFindingLinkIcon" icon={IconNames.LINK} size={12} />
+                                    <span className="SecurityFindingLinkText">{vulnerability.VulnerabilityID}</span>
+                                  </a>
+                                  {description ? (
+                                    <p className="SecurityFindingDescription" data-expanded={expanded ? "yes" : "no"}>
+                                      {description}
+                                    </p>
+                                  ) : null}
+                                  {canToggleDescription ? (
+                                    <button
+                                      className="SecurityDescriptionToggle"
+                                      type="button"
+                                      onClick={() => toggleDescription(key)}
+                                    >
+                                      {expanded ? t("Show less") : t("Show more")}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </td>
+                              <td className="SecurityCellTarget">
+                                <span className="SecurityFindingTarget">{pkgLabel}</span>
+                                <span className="SecurityFindingMeta">{group.Target}</span>
+                              </td>
+                              <td className="SecurityCellType">{group.Type}</td>
+                              <td className="SecurityCellPublished">{formatPublishedDate(vulnerability.Published)}</td>
+                            </tr>
+                          );
+                        })}
+                        <VirtualSpacerRow height={paddingBottom} columnCount={5} />
+                        {sortedFindings.length === 0 ? (
+                          <tr className="SecurityFindingsEmptyRow">
+                            <td colSpan={5}>
+                              <div className="SecurityFindingsEmpty">
+                                <Icon
+                                  icon={findings.length === 0 ? IconNames.TICK_CIRCLE : IconNames.FILTER}
+                                  size={26}
+                                />
+                                <span>
+                                  {findings.length === 0
+                                    ? t("No vulnerabilities found")
+                                    : t("No vulnerabilities match the selected severities")}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </HTMLTable>
+                  </div>
+                </div>
+              ) : (
+                <div className="SecurityRunPrompt">
+                  <Icon icon={IconNames.HELP} size={22} className="SecurityRunPromptIcon" />
+                  <div className="SecurityRunPromptText">
+                    <b>{scanning ? t("Scanning…") : t("Not scanned yet")}</b>
+                    <div className="SecurityMuted">
+                      {scanning
+                        ? t("Running a local scan of vulnerabilities…")
+                        : t("Run a local scan of vulnerabilities to get detailed summary.")}
                     </div>
-                    <dl className="SecurityKv">
-                      {signatureRows(signature, t).map((row) =>
-                        row.code ? (
-                          <div className="SecurityKvRow" data-align="top" key={row.label}>
-                            <dt>{row.label}</dt>
-                            <dd>
-                              <pre className="SecurityCodeBlock">{row.value}</pre>
-                            </dd>
-                          </div>
-                        ) : (
-                          <div className="SecurityKvRow" key={row.label}>
-                            <dt>{row.label}</dt>
-                            <dd className="SecurityMono">{row.value}</dd>
-                          </div>
-                        ),
-                      )}
-                    </dl>
-                  </>
-                )
-              ) : signatureQuery.isFetching ? null : (
-                <div className="SecurityMuted">{t("No signature information.")}</div>
+                  </div>
+                </div>
               )}
             </div>
+            {scanned ? (
+              <div className="SecurityPanelFooter">
+                <div className="SecurityScannerMeta">
+                  <span>
+                    {t("Scanner")} <strong>{report?.scanner?.name || "trivy"}</strong>
+                    {report?.scanner?.version ? <code>{report.scanner.version}</code> : null}
+                  </span>
+                  <span>
+                    {t("Database")} <strong>{report?.scanner?.database?.VulnerabilityDB?.Version || "—"}</strong>
+                  </span>
+                  <span>
+                    {t("Updated")}{" "}
+                    <strong>{formatRelativeDate(report?.scanner?.database?.VulnerabilityDB?.UpdatedAt)}</strong>
+                  </span>
+                  <AnchorButton
+                    className="SecurityExternalLink"
+                    icon={IconNames.LINK}
+                    href="https://trivy.dev"
+                    target="_blank"
+                    rel="noopener"
+                    size="small"
+                    variant="minimal"
+                    text="trivy.dev"
+                  />
+                </div>
+              </div>
+            ) : null}
           </section>
 
-          {/* Digest — content-addressed identity; primary action is Copy digest. */}
+          {/* SBOM (Trivy output) — the full package inventory as a virtualized table; export lives in the header. */}
           <section className="SecurityPanel">
             <h5 className="SecurityPanelTitle">
-              <Icon icon={IconNames.PIN} />
-              <span>{t("Digest")}</span>
+              <Icon icon={IconNames.DIAGRAM_TREE} />
+              <span>{t("SBOM")}</span>
+              <span className="SecurityPanelHint">Trivy · SPDX / CycloneDX</span>
+              {scanned && sbomPackages.length ? (
+                <ButtonGroup className="SecuritySbomExport" variant="outlined">
+                  <Button
+                    icon={IconNames.EXPORT}
+                    text={t("Export SPDX")}
+                    onClick={() => onExport("spdx-json")}
+                    disabled={exportSbom.isPending}
+                    size="small"
+                  />
+                  <Button
+                    icon={IconNames.EXPORT}
+                    text={t("Export CycloneDX")}
+                    onClick={() => onExport("cyclonedx")}
+                    disabled={exportSbom.isPending}
+                    size="small"
+                  />
+                </ButtonGroup>
+              ) : null}
             </h5>
             <div className="SecurityPanelBody">
-              <div className="SecurityStatusLine" data-signature={digest ? "verified" : "unsigned"}>
-                <Icon icon={digest ? IconNames.CONFIRM : IconNames.WARNING_SIGN} />
-                <span>{digest ? t("Content-addressed by digest") : t("No digest recorded")}</span>
-              </div>
-              <dl className="SecurityKv">
-                <div className="SecurityKvRow">
-                  <dt>{t("Tag")}</dt>
-                  <dd className="SecurityMono">{tagLabel}</dd>
-                </div>
-                <div className="SecurityKvRow">
-                  <dt>{t("Resolves to")}</dt>
-                  <dd>
-                    {digest ? (
-                      <CopyToClipboardInput value={digest} title={t("Image digest")} />
-                    ) : (
-                      <span className="SecurityMono">—</span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-              <p className="SecurityMuted SecurityNote">
-                {t("Reference this digest to use exactly this image and prevent supply chain attacks.")}
-              </p>
-            </div>
-          </section>
-        </div>
-
-        {/* Vulnerabilities (Trivy) — gated behind the Scan button. */}
-        <section className="SecurityPanel">
-          <h5 className="SecurityPanelTitle">
-            <Icon icon={IconNames.SHIELD} />
-            <span>{t("Vulnerabilities")}</span>
-            <span className="SecurityPanelHint">Trivy</span>
-            <Button
-              className="SecurityPanelScan"
-              intent={Intent.PRIMARY}
-              icon={IconNames.SEARCH_TEMPLATE}
-              text={scanned ? t("Rescan") : t("Scan for vulnerabilities")}
-              onClick={runScan}
-              loading={scanning}
-              disabled={scanning || !scanTarget}
-            />
-          </h5>
-          <div className="SecurityPanelBody">
-            {scannerMissing ? (
-              <NonIdealState
-                icon={IconNames.SHIELD}
-                title={t("Vulnerability scanning is unavailable")}
-                description={<p>{t("Please install trivy and then rescan")}</p>}
-              />
-            ) : reportFaulted ? (
-              <NonIdealState
-                icon={IconNames.WARNING_SIGN}
-                title={t("Report could not be generated")}
-                description={<p>{t("An internal error occurred, please report the issue.")}</p>}
-              />
-            ) : scanned ? (
-              <div className="SecurityVulnLayout">
-                <div className="SecurityVulnAside">
-                  <Donut
-                    slices={severitySlices}
-                    centerValue={totalCount}
-                    centerLabel={t("findings")}
-                    size={172}
-                    showEmptyTrack
-                  />
-                  <div className="SecuritySeverityFilters">
-                    {SEVERITIES.map((severity) => {
-                      const active = selectedSeverities.includes(severity);
-                      const count = severityCount(counts, severity);
-                      return (
-                        <Switch
-                          key={severity}
-                          className="SecuritySeverityFilter"
-                          checked={active}
-                          onChange={() => toggleSeverityFilter(severity)}
-                          aria-label={t("Filter by {{severity}}", { severity: t(SEVERITY_LABELS[severity]) })}
-                          labelElement={
-                            <span className="SecuritySeverityFilterLabel" data-empty={count === 0 ? "yes" : "no"}>
-                              <span className="SecuritySeverityCountPill" data-severity={severity}>
-                                {count}
-                              </span>
-                              <span className="SecuritySeverityFilterText">{t(SEVERITY_LABELS[severity])}</span>
-                            </span>
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="SecurityFindingsScroll" ref={scrollElementRef}>
+              {scanned && sbomPackages.length ? (
+                <div className="SecurityFindingsScroll" ref={sbomScrollRef}>
                   <HTMLTable
                     compact
                     interactive
-                    className="AppDataTable SecurityFindingsTable"
+                    className="AppDataTable SecuritySbomTable"
                     data-windowed="true"
-                    data-table="image.scanning.report"
+                    data-table="image.sbom.packages"
                   >
                     <colgroup>
-                      <col className="SecurityColumnSeverity" />
-                      <col className="SecurityColumnVulnerability" />
-                      <col className="SecurityColumnTarget" />
-                      <col className="SecurityColumnType" />
-                      <col className="SecurityColumnPublished" />
+                      <col className="SecuritySbomColumnName" />
+                      <col className="SecuritySbomColumnVersion" />
+                      <col className="SecuritySbomColumnType" />
+                      <col className="SecuritySbomColumnLicense" />
                     </colgroup>
-                    <thead ref={theadRef}>
+                    <thead ref={sbomTheadRef}>
                       <tr>
                         <SortableColumnHeader
-                          field="severity"
-                          direction={sortDirection("severity")}
-                          onSort={toggleSort}
+                          field="name"
+                          direction={sbomSortDirection("name")}
+                          onSort={toggleSbomSort}
                         >
-                          {t("Severity")}
+                          {t("Package")}
                         </SortableColumnHeader>
-                        <SortableColumnHeader field="id" direction={sortDirection("id")} onSort={toggleSort}>
-                          {t("Vulnerability ID")}
+                        <SortableColumnHeader
+                          field="version"
+                          direction={sbomSortDirection("version")}
+                          onSort={toggleSbomSort}
+                        >
+                          {t("Version")}
                         </SortableColumnHeader>
-                        <SortableColumnHeader field="package" direction={sortDirection("package")} onSort={toggleSort}>
-                          {t("Package / Target")}
-                        </SortableColumnHeader>
-                        <SortableColumnHeader field="type" direction={sortDirection("type")} onSort={toggleSort}>
+                        <SortableColumnHeader
+                          field="type"
+                          direction={sbomSortDirection("type")}
+                          onSort={toggleSbomSort}
+                        >
                           {t("Type")}
                         </SortableColumnHeader>
                         <SortableColumnHeader
-                          field="published"
-                          direction={sortDirection("published")}
-                          onSort={toggleSort}
+                          field="license"
+                          direction={sbomSortDirection("license")}
+                          onSort={toggleSbomSort}
                         >
-                          {t("Published")}
+                          {t("License")}
                         </SortableColumnHeader>
                       </tr>
                     </thead>
                     <tbody>
-                      <VirtualSpacerRow height={paddingTop} columnCount={5} />
-                      {items.map(({ row: { group, vulnerability }, index, key }) => {
-                        const expanded = expandedDescriptions.includes(key);
-                        const description = vulnerability.Description || "";
-                        const canToggleDescription = shouldShowDescriptionToggle(description);
-                        const pkgLabel = vulnerability.PkgName
-                          ? `${vulnerability.PkgName}${vulnerability.InstalledVersion ? ` ${vulnerability.InstalledVersion}` : ""}`
-                          : group.Target;
+                      <VirtualSpacerRow height={sbomPaddingTop} columnCount={4} />
+                      {sbomItems.map(({ row: pkg, index, key }) => {
                         const striped = index % 2 === 0 ? "true" : undefined;
                         return (
-                          <tr
-                            key={key}
-                            ref={measureRef}
-                            data-index={index}
-                            data-striped={striped}
-                            data-severity={vulnerability.Severity}
-                          >
-                            <td className="SecurityCellSeverity">
-                              <span
-                                className="SecuritySeverityBadge SecuritySeverityBadgeCompact"
-                                data-severity={vulnerability.Severity}
-                              >
-                                {vulnerability.Severity}
-                              </span>
-                            </td>
-                            <td className="SecurityCellFinding">
-                              <div className="SecurityFindingText">
-                                <a
-                                  className="SecurityFindingLink"
-                                  href={vulnerability.PrimaryURL}
-                                  target="_blank"
-                                  rel="noopener"
-                                >
-                                  <Icon className="SecurityFindingLinkIcon" icon={IconNames.LINK} size={12} />
-                                  <span className="SecurityFindingLinkText">{vulnerability.VulnerabilityID}</span>
-                                </a>
-                                {description ? (
-                                  <p className="SecurityFindingDescription" data-expanded={expanded ? "yes" : "no"}>
-                                    {description}
-                                  </p>
-                                ) : null}
-                                {canToggleDescription ? (
-                                  <button
-                                    className="SecurityDescriptionToggle"
-                                    type="button"
-                                    onClick={() => toggleDescription(key)}
-                                  >
-                                    {expanded ? t("Show less") : t("Show more")}
-                                  </button>
-                                ) : null}
-                              </div>
-                            </td>
-                            <td className="SecurityCellTarget">
-                              <span className="SecurityFindingTarget">{pkgLabel}</span>
-                              <span className="SecurityFindingMeta">{group.Target}</span>
-                            </td>
-                            <td className="SecurityCellType">{group.Type}</td>
-                            <td className="SecurityCellPublished">{formatPublishedDate(vulnerability.Published)}</td>
+                          <tr key={key} ref={sbomMeasureRef} data-index={index} data-striped={striped}>
+                            <td className="SecuritySbomCellName SecurityMono">{pkg.name}</td>
+                            <td className="SecuritySbomCellVersion SecurityMono">{pkg.version}</td>
+                            <td className="SecuritySbomCellType">{pkg.type}</td>
+                            <td className="SecuritySbomCellLicense">{pkg.license || "—"}</td>
                           </tr>
                         );
                       })}
-                      <VirtualSpacerRow height={paddingBottom} columnCount={5} />
-                      {sortedFindings.length === 0 ? (
-                        <tr className="SecurityFindingsEmptyRow">
-                          <td colSpan={5}>
-                            <div className="SecurityFindingsEmpty">
-                              <Icon icon={findings.length === 0 ? IconNames.TICK_CIRCLE : IconNames.FILTER} size={26} />
-                              <span>
-                                {findings.length === 0
-                                  ? t("No vulnerabilities found")
-                                  : t("No vulnerabilities match the selected severities")}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : null}
+                      <VirtualSpacerRow height={sbomPaddingBottom} columnCount={4} />
                     </tbody>
                   </HTMLTable>
                 </div>
-              </div>
-            ) : (
-              <div className="SecurityRunPrompt">
-                <Icon icon={IconNames.HELP} size={22} className="SecurityRunPromptIcon" />
-                <div className="SecurityRunPromptText">
-                  <b>{scanning ? t("Scanning…") : t("Not scanned yet")}</b>
-                  <div className="SecurityMuted">
-                    {scanning
-                      ? t("Running a local scan of vulnerabilities…")
-                      : t("Run a local scan of vulnerabilities to get detailed summary.")}
+              ) : (
+                <div className="SecurityRunPrompt">
+                  <Icon icon={IconNames.DIAGRAM_TREE} size={22} className="SecurityRunPromptIcon" />
+                  <div className="SecurityRunPromptText">
+                    <b>{t("Generated with the scan")}</b>
+                    <div className="SecurityMuted">{t("The Trivy pass emits the SBOM after scan")}</div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-          {scanned ? (
-            <div className="SecurityPanelFooter">
-              <div className="SecurityScannerMeta">
-                <span>
-                  {t("Scanner")} <strong>{report?.scanner?.name || "trivy"}</strong>
-                  {report?.scanner?.version ? <code>{report.scanner.version}</code> : null}
-                </span>
-                <span>
-                  {t("Database")} <strong>{report?.scanner?.database?.VulnerabilityDB?.Version || "—"}</strong>
-                </span>
-                <span>
-                  {t("Updated")}{" "}
-                  <strong>{formatRelativeDate(report?.scanner?.database?.VulnerabilityDB?.UpdatedAt)}</strong>
-                </span>
-                <AnchorButton
-                  className="SecurityExternalLink"
-                  icon={IconNames.LINK}
-                  href="https://trivy.dev"
-                  target="_blank"
-                  rel="noopener"
-                  size="small"
-                  variant="minimal"
-                  text="trivy.dev"
-                />
-              </div>
+              )}
             </div>
-          ) : null}
-        </section>
+          </section>
 
-        {/* SBOM (Trivy output) — the full package inventory as a virtualized table; export lives in the header. */}
-        <section className="SecurityPanel">
-          <h5 className="SecurityPanelTitle">
-            <Icon icon={IconNames.DIAGRAM_TREE} />
-            <span>{t("SBOM")}</span>
-            <span className="SecurityPanelHint">Trivy · SPDX / CycloneDX</span>
-            {scanned && sbomPackages.length ? (
-              <ButtonGroup className="SecuritySbomExport" variant="outlined">
-                <Button
-                  icon={IconNames.EXPORT}
-                  text={t("Export SPDX")}
-                  onClick={() => onExport("spdx-json")}
-                  disabled={exportSbom.isPending}
-                  size="small"
-                />
-                <Button
-                  icon={IconNames.EXPORT}
-                  text={t("Export CycloneDX")}
-                  onClick={() => onExport("cyclonedx")}
-                  disabled={exportSbom.isPending}
-                  size="small"
-                />
-              </ButtonGroup>
-            ) : null}
-          </h5>
-          <div className="SecurityPanelBody">
-            {scanned && sbomPackages.length ? (
-              <div className="SecurityFindingsScroll" ref={sbomScrollRef}>
-                <HTMLTable
-                  compact
-                  interactive
-                  className="AppDataTable SecuritySbomTable"
-                  data-windowed="true"
-                  data-table="image.sbom.packages"
-                >
-                  <colgroup>
-                    <col className="SecuritySbomColumnName" />
-                    <col className="SecuritySbomColumnVersion" />
-                    <col className="SecuritySbomColumnType" />
-                    <col className="SecuritySbomColumnLicense" />
-                  </colgroup>
-                  <thead ref={sbomTheadRef}>
-                    <tr>
-                      <SortableColumnHeader field="name" direction={sbomSortDirection("name")} onSort={toggleSbomSort}>
-                        {t("Package")}
-                      </SortableColumnHeader>
-                      <SortableColumnHeader
-                        field="version"
-                        direction={sbomSortDirection("version")}
-                        onSort={toggleSbomSort}
-                      >
-                        {t("Version")}
-                      </SortableColumnHeader>
-                      <SortableColumnHeader field="type" direction={sbomSortDirection("type")} onSort={toggleSbomSort}>
-                        {t("Type")}
-                      </SortableColumnHeader>
-                      <SortableColumnHeader
-                        field="license"
-                        direction={sbomSortDirection("license")}
-                        onSort={toggleSbomSort}
-                      >
-                        {t("License")}
-                      </SortableColumnHeader>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <VirtualSpacerRow height={sbomPaddingTop} columnCount={4} />
-                    {sbomItems.map(({ row: pkg, index, key }) => {
-                      const striped = index % 2 === 0 ? "true" : undefined;
-                      return (
-                        <tr key={key} ref={sbomMeasureRef} data-index={index} data-striped={striped}>
-                          <td className="SecuritySbomCellName SecurityMono">{pkg.name}</td>
-                          <td className="SecuritySbomCellVersion SecurityMono">{pkg.version}</td>
-                          <td className="SecuritySbomCellType">{pkg.type}</td>
-                          <td className="SecuritySbomCellLicense">{pkg.license || "—"}</td>
-                        </tr>
-                      );
-                    })}
-                    <VirtualSpacerRow height={sbomPaddingBottom} columnCount={4} />
-                  </tbody>
-                </HTMLTable>
-              </div>
-            ) : (
-              <div className="SecurityRunPrompt">
-                <Icon icon={IconNames.DIAGRAM_TREE} size={22} className="SecurityRunPromptIcon" />
-                <div className="SecurityRunPromptText">
-                  <b>{t("Generated with the scan")}</b>
-                  <div className="SecurityMuted">{t("The Trivy pass emits the SBOM after scan")}</div>
+          {/* Licenses — the SBOM's license-type breakdown, in its own panel. */}
+          <section className="SecurityPanel">
+            <h5 className="SecurityPanelTitle">
+              <Icon icon={IconNames.PIE_CHART} />
+              <span>{t("Licenses")}</span>
+              <span className="SecurityPanelHint">Trivy</span>
+            </h5>
+            <div className="SecurityPanelBody">
+              {scanned && licenseSlices.length ? (
+                <div className="SecurityLicenseDist">
+                  <Donut
+                    slices={licenseSlices}
+                    centerValue={licenseSlices.length}
+                    centerLabel={t("license types")}
+                    size={172}
+                  />
+                  <div className="SecurityLicenseLegend">
+                    {licenseSlices.map((slice) => (
+                      <div className="SecurityLicenseLegendItem" key={slice.key}>
+                        <span className="SecurityLicenseSwatch" style={{ background: slice.color }} />
+                        <span className="SecurityLicenseName" title={slice.label}>
+                          {slice.label}
+                        </span>
+                        <span className="SecurityLicenseCount">×{slice.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Licenses — the SBOM's license-type breakdown, in its own panel. */}
-        <section className="SecurityPanel">
-          <h5 className="SecurityPanelTitle">
-            <Icon icon={IconNames.PIE_CHART} />
-            <span>{t("Licenses")}</span>
-            <span className="SecurityPanelHint">Trivy</span>
-          </h5>
-          <div className="SecurityPanelBody">
-            {scanned && licenseSlices.length ? (
-              <div className="SecurityLicenseDist">
-                <Donut
-                  slices={licenseSlices}
-                  centerValue={licenseSlices.length}
-                  centerLabel={t("license types")}
-                  size={172}
-                />
-                <div className="SecurityLicenseLegend">
-                  {licenseSlices.map((slice) => (
-                    <div className="SecurityLicenseLegendItem" key={slice.key}>
-                      <span className="SecurityLicenseSwatch" style={{ background: slice.color }} />
-                      <span className="SecurityLicenseName" title={slice.label}>
-                        {slice.label}
-                      </span>
-                      <span className="SecurityLicenseCount">×{slice.value}</span>
-                    </div>
-                  ))}
+              ) : (
+                <div className="SecurityRunPrompt">
+                  <Icon icon={IconNames.PIE_CHART} size={22} className="SecurityRunPromptIcon" />
+                  <div className="SecurityRunPromptText">
+                    <b>{t("License breakdown")}</b>
+                    <div className="SecurityMuted">{t("Summarized from the SBOM after a scan")}</div>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="SecurityRunPrompt">
-                <Icon icon={IconNames.PIE_CHART} size={22} className="SecurityRunPromptIcon" />
-                <div className="SecurityRunPromptText">
-                  <b>{t("License breakdown")}</b>
-                  <div className="SecurityMuted">{t("Summarized from the SBOM after a scan")}</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </ResourceSectionRail>
       {loginOpen && registry ? (
         <RegistryLoginDialog
           registry={registry}

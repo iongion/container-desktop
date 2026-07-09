@@ -21,6 +21,7 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
+  useGroupByConnection,
   useMergedResources,
   useResourcesReload,
   useShowEngineRowAccent,
@@ -93,6 +94,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [clientSort],
   );
+  const grouped = useGroupByConnection();
   const groups = useMemo(() => {
     const byConnection = new Map<string, PodConnectionGroup>();
     for (const pod of filteredPods) {
@@ -125,7 +127,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = usePodBulkActions();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
-    useGroupedVirtualRows({ groups, getRowKey: (pod) => getRowId(pod) });
+    useGroupedVirtualRows({ groups, getRowKey: (pod) => getRowId(pod), grouped, flatSort: comparePods });
   const onReload = useResourcesReload("pods", "containers");
 
   return (
@@ -161,7 +163,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("There are no pods")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact className="AppDataTable GroupedTable" data-windowed="true" data-table="pods">
+          <HTMLTable
+            interactive
+            compact
+            className="AppDataTable GroupedTable"
+            data-windowed="true"
+            data-table="pods"
+            data-grouped={grouped ? "true" : "false"}
+          >
             <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>

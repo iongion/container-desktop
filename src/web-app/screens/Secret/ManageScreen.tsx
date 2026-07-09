@@ -21,6 +21,7 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
+  useGroupByConnection,
   useMergedResources,
   useResourceReload,
   useShowEngineRowAccent,
@@ -97,6 +98,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [clientSort],
   );
+  const grouped = useGroupByConnection();
   const groups = useMemo(() => {
     const byConnection = new Map<string, SecretConnectionGroup>();
     for (const secret of filteredSecrets) {
@@ -130,7 +132,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { actions: bulkActions, refresh: bulkRefresh } = useSecretBulkActions();
   const showEngineRowAccent = useShowEngineRowAccent();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
-    useGroupedVirtualRows({ groups, getRowKey: (secret) => getRowId(secret) });
+    useGroupedVirtualRows({ groups, getRowKey: (secret) => getRowId(secret), grouped, flatSort: compareSecrets });
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("secrets");
 
@@ -173,6 +175,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             className="AppDataTable GroupedTable"
             data-windowed="true"
             data-table="secrets"
+            data-grouped={grouped ? "true" : "false"}
           >
             <thead ref={theadRef}>
               <tr>

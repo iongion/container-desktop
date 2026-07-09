@@ -62,51 +62,59 @@ describe("crumb", () => {
 });
 
 describe("getContainerCrumbs", () => {
-  it("default/inspect view: the resource name is the current leaf (Containers > name)", () => {
+  it("default/inspect view: leads with the owning connection, resource name is the current leaf (Connection > Containers > name)", () => {
     const trail = getContainerCrumbs("nginx", "abc", "container.inspect", "c1");
-    expect(trail).toHaveLength(2);
-    expect(trail[0].textKey).toBe("Containers");
-    expect(trail[0].href).toContain("connId=c1");
-    expect(trail[1]).toEqual({ text: "nginx", current: true });
+    expect(trail).toHaveLength(3);
+    expect(trail[0].connectionId).toBe("c1");
+    expect(trail[0].href).toContain("#/screens/connections/c1/connection-info");
+    expect(trail[1].textKey).toBe("Containers");
+    expect(trail[1].href).toContain("connId=c1");
+    expect(trail[2]).toEqual({ text: "nginx", current: true });
   });
 
-  it("sub-tab view: name links to inspect and the tab is the current leaf (Containers > name > Logs)", () => {
+  it("sub-tab view: name links to inspect and the tab is the current leaf (Connection > Containers > name > Logs)", () => {
     const trail = getContainerCrumbs("nginx", "abc", "container.logs", "c1");
-    expect(trail).toHaveLength(3);
-    expect(trail[1].text).toBe("nginx");
-    expect(trail[1].href).toContain("/screens/container/abc/inspect");
-    expect(trail[1].href).toContain("connId=c1");
-    expect(trail[1].current).toBeFalsy();
-    expect(trail[2]).toEqual({ textKey: "Logs", current: true });
+    expect(trail).toHaveLength(4);
+    expect(trail[0].connectionId).toBe("c1");
+    expect(trail[1].textKey).toBe("Containers");
+    expect(trail[2].text).toBe("nginx");
+    expect(trail[2].href).toContain("/screens/container/abc/inspect");
+    expect(trail[2].href).toContain("connId=c1");
+    expect(trail[2].current).toBeFalsy();
+    expect(trail[3]).toEqual({ textKey: "Logs", current: true });
   });
 });
 
 describe("getVolumeCrumbs (single-view entity)", () => {
-  it("is [Volumes, name(current)] with the resource name as the current leaf", () => {
+  it("is [Connection, Volumes, name(current)] with the resource name as the current leaf", () => {
     const trail = getVolumeCrumbs("pgdata", "c1");
-    expect(trail).toHaveLength(2);
-    expect(trail[0].textKey).toBe("Volumes");
-    expect(trail[0].href).toContain("connId=c1");
-    expect(trail[1]).toEqual({ text: "pgdata", current: true });
+    expect(trail).toHaveLength(3);
+    expect(trail[0].connectionId).toBe("c1");
+    expect(trail[0].href).toContain("#/screens/connections/c1/connection-info");
+    expect(trail[1].textKey).toBe("Volumes");
+    expect(trail[1].href).toContain("connId=c1");
+    expect(trail[2]).toEqual({ text: "pgdata", current: true });
   });
 });
 
 describe("getSwarmCrumbs", () => {
-  it("service: [Swarm, Services (links to tab), name(current)]", () => {
+  it("service: [Connection, Swarm, Services (links to tab), name(current)]", () => {
     const trail = getSwarmCrumbs("services", "shop_web", "c1");
-    expect(trail).toHaveLength(3);
-    expect(trail[0].textKey).toBe("Swarm");
-    expect(trail[1].textKey).toBe("Services");
-    expect(trail[1].href).toContain("/screens/swarm");
-    expect(trail[1].href).toContain("tab=services");
-    expect(trail[1].href).toContain("connId=c1");
-    expect(trail[2]).toEqual({ text: "shop_web", current: true });
+    expect(trail).toHaveLength(4);
+    expect(trail[0].connectionId).toBe("c1");
+    expect(trail[1].textKey).toBe("Swarm");
+    expect(trail[2].textKey).toBe("Services");
+    expect(trail[2].href).toContain("/screens/swarm");
+    expect(trail[2].href).toContain("tab=services");
+    expect(trail[2].href).toContain("connId=c1");
+    expect(trail[3]).toEqual({ text: "shop_web", current: true });
   });
 
-  it("stack: the middle crumb is Stacks and links to the stacks tab", () => {
+  it("stack: the kind crumb is Stacks and links to the stacks tab", () => {
     const trail = getSwarmCrumbs("stacks", "shop", "c1");
-    expect(trail[1].textKey).toBe("Stacks");
-    expect(trail[1].href).toContain("tab=stacks");
-    expect(trail[2]).toEqual({ text: "shop", current: true });
+    expect(trail[1].textKey).toBe("Swarm");
+    expect(trail[2].textKey).toBe("Stacks");
+    expect(trail[2].href).toContain("tab=stacks");
+    expect(trail[3]).toEqual({ text: "shop", current: true });
   });
 });

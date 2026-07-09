@@ -19,7 +19,27 @@ export function flattenConnectionGroups<T>(
   groups: ConnectionGroup<T>[],
   collapse: Record<string, boolean | undefined>,
   getRowKey: (item: T, group: ConnectionGroup<T>) => string,
+  // When false the connection dimension is dropped: no headers, no collapse — every group's items are merged
+  // into ONE flat list, sorted globally by `flatSort` when given (so ungrouped sorts across ALL items, not
+  // per group). The "disable grouping by connection" / single-connection path (see resolveGroupByConnection).
+  grouped = true,
+  flatSort?: (a: T, b: T) => number,
 ): ConnectionRowDescriptor<T>[] {
+  if (!grouped) {
+    const merged = groups.flatMap((group) => group.items.map((item) => ({ item, group })));
+    if (flatSort) {
+      merged.sort((a, b) => flatSort(a.item, b.item));
+    }
+    const last = merged.length - 1;
+    return merged.map(({ item, group }, index) => ({
+      kind: "row",
+      key: getRowKey(item, group),
+      groupKey: group.key,
+      item,
+      isFirst: index === 0,
+      isLast: index === last,
+    }));
+  }
   const rows: ConnectionRowDescriptor<T>[] = [];
   for (const group of groups) {
     const groupKey = group.key;

@@ -139,6 +139,9 @@ export interface GlobalUserSettings {
   language: LanguagePreference;
   engineTheme: EngineThemePreference;
   showEngineColumn: boolean;
+  // Group resource lists by connection. Only takes effect with more than one connection connected (a single
+  // connection always renders flat); default on. Off = one merged, globally-sorted list per screen.
+  groupByConnection: boolean;
   expandSidebar: boolean;
   startApi: boolean;
   minimizeToSystemTray: boolean;

@@ -43,7 +43,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       rightContent={
         <>
           {rightExtra}
-          <ActionsMenu image={image} connectionId={connId} expand isActive={(input) => input === currentScreen} />
+          <ActionsMenu image={image} connectionId={connId} />
         </>
       }
     />

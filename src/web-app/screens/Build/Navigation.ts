@@ -5,7 +5,7 @@
 // isBuildSupported gates the Images CTA/ConnectionSelect only against connectivity; see adapters/build.ts.
 
 import { type Connection, ContainerEngineHost } from "@/env/Types";
-import { type AppBreadcrumb, crumb, rootCrumb } from "@/web-app/components/AppBreadcrumbs";
+import { type AppBreadcrumb, connectionCrumb, crumb, rootCrumb } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 
 export const BUILD_ID = "build";
@@ -49,7 +49,7 @@ export function isRemoteBuildHost(host: ContainerEngineHost): boolean {
 /** Route to the Build Studio, carrying the connection to build on. */
 export const getBuildUrl = (connId?: string) => pathTo(BUILD_ROUTE, undefined, { connId });
 
-/** Canonical trail: `Images > Build` (Build is a leaf under the Images root). */
+/** Canonical trail: `Connection > Images > Build` (Build is a leaf under the Images root). */
 export function getBuildCrumbs(connId?: string): AppBreadcrumb[] {
-  return [rootCrumb("images", connId), crumb({ textKey: "Build", current: true })];
+  return [connectionCrumb(connId), rootCrumb("images", connId), crumb({ textKey: "Build", current: true })];
 }

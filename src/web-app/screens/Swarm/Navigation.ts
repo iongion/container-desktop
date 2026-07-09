@@ -1,5 +1,5 @@
 import i18n from "@/i18n";
-import { type AppBreadcrumb, crumb, rootCrumb } from "@/web-app/components/AppBreadcrumbs";
+import { type AppBreadcrumb, connectionCrumb, crumb, rootCrumb } from "@/web-app/components/AppBreadcrumbs";
 import { pathTo } from "@/web-app/Navigator";
 
 export type SwarmTab = "services" | "nodes" | "stacks" | "secrets" | "configs";
@@ -25,10 +25,11 @@ const SWARM_KIND_LABELS: Record<SwarmInspectSegment, string> = {
 };
 
 /**
- * Canonical swarm trail: `Swarm > Kind > leaf` (e.g. `Swarm > Services > shop_web`, `Swarm > Stacks >
- * shop`). The middle crumb links back to that kind's tab; `leaf` is the resolved entity name/id.
+ * Canonical swarm trail: `Connection > Swarm > Kind > leaf` (e.g. `System Docker > Swarm > Services >
+ * shop_web`). The kind crumb links back to that kind's tab; `leaf` is the resolved entity name/id.
  */
 export const getSwarmCrumbs = (kind: SwarmInspectSegment, leaf: string, connId?: string): AppBreadcrumb[] => [
+  connectionCrumb(connId),
   rootCrumb("swarm", connId),
   crumb({ textKey: SWARM_KIND_LABELS[kind], href: getSwarmTabUrl(kind, connId) }),
   crumb({ text: leaf, current: true }),

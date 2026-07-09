@@ -54,18 +54,24 @@ export function flattenGroups(
   connectionGroups: ContainerConnectionGroup[],
   collapse: Record<string, boolean | undefined>,
   getRowKey: (container: MergedContainer) => string,
+  // When false, drop the connection LEVEL only — the compose/pod group level (a different dimension) stays.
+  // Callers pass a single synthetic connection group holding groupContainersAcrossConnections(...) so the
+  // compose groups still sort folder-first across every engine. See resolveGroupByConnection.
+  grouped = true,
 ): ContainerRowDescriptor[] {
   const rows: ContainerRowDescriptor[] = [];
   for (const connectionGroup of connectionGroups) {
     const connectionKey = `connection:${connectionGroup.key}`;
-    rows.push({
-      kind: "connection-header",
-      key: connectionKey,
-      connectionGroup,
-      connectionKey,
-    });
-    if (collapse[connectionKey]) {
-      continue;
+    if (grouped) {
+      rows.push({
+        kind: "connection-header",
+        key: connectionKey,
+        connectionGroup,
+        connectionKey,
+      });
+      if (collapse[connectionKey]) {
+        continue;
+      }
     }
     const lastGroupIndex = connectionGroup.groups.length - 1;
     connectionGroup.groups.forEach((group, groupIndex) => {

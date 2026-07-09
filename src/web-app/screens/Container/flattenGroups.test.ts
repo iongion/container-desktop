@@ -109,4 +109,20 @@ describe("flattenGroups", () => {
     const keys = rows.map((row) => row.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
+
+  it("flat mode (grouped=false): omits the connection header, emitting compose group + container rows directly", () => {
+    const items = [container("a", "1", "web"), container("a", "2", "web")];
+    const rows = flattenGroups([makeConnection("a", [makeGroup("web", items)])], {}, rowKey, false);
+    expect(kinds(rows)).toEqual(["group-header", "container", "container"]);
+  });
+
+  it("flat mode (grouped=false): omits the connection header for a singleton group too", () => {
+    const rows = flattenGroups(
+      [makeConnection("a", [makeGroup("solo", [container("a", "1", "solo")])])],
+      {},
+      rowKey,
+      false,
+    );
+    expect(kinds(rows)).toEqual(["container"]);
+  });
 });

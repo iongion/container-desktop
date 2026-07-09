@@ -25,6 +25,7 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
+  useGroupByConnection,
   useMergedResources,
   useResourceReload,
   useShowEngineRowAccent,
@@ -102,6 +103,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [clientSort],
   );
+  const grouped = useGroupByConnection();
   const groups = useMemo(() => {
     const byConnection = new Map<string, ImageConnectionGroup>();
     for (const image of filteredImages) {
@@ -135,7 +137,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { actions: bulkActions, refresh: bulkRefresh } = useImageBulkActions();
   const showEngineRowAccent = useShowEngineRowAccent();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
-    useGroupedVirtualRows({ groups, getRowKey: (image) => getRowId(image) });
+    useGroupedVirtualRows({ groups, getRowKey: (image) => getRowId(image), grouped, flatSort: compareImages });
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("images");
 
@@ -207,7 +209,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("There are no images")}</p>}
           />
         ) : (
-          <HTMLTable interactive compact className="AppDataTable GroupedTable" data-windowed="true" data-table="images">
+          <HTMLTable
+            interactive
+            compact
+            className="AppDataTable GroupedTable"
+            data-windowed="true"
+            data-table="images"
+            data-grouped={grouped ? "true" : "false"}
+          >
             <thead ref={theadRef}>
               <tr>
                 <SortableColumnHeader field="name" direction={getColumnSortDirection("name")} onSort={toggleColumnSort}>
@@ -321,7 +330,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     </div>
                     <AppDataTableLink
                       fillCell
-                      href={getImageUrl(image.Id, "layers", image.connectionId)}
+                      href={getImageUrl(image.Id, "inspect", image.connectionId)}
                       text={image.Name}
                       iconName={IconNames.LAYERS}
                     />

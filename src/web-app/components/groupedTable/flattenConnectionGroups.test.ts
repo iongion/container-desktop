@@ -70,4 +70,26 @@ describe("flattenConnectionGroups", () => {
     const keys = rows.map((r) => r.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
+
+  it("flat mode (grouped=false): emits only rows across every group, in order, no headers", () => {
+    const rows = flattenConnectionGroups([group("podman", "a"), group("docker", "b", "c")], {}, getRowKey, false);
+    expect(rows.map((r) => r.kind)).toEqual(["row", "row", "row"]);
+    expect(rows.map((r) => (r.kind === "row" ? r.item.id : null))).toEqual(["a", "b", "c"]);
+  });
+
+  it("flat mode (grouped=false): ignores collapse — every row is shown", () => {
+    const rows = flattenConnectionGroups([group("podman", "a", "b")], { podman: true }, getRowKey, false);
+    expect(rows.map((r) => r.kind)).toEqual(["row", "row"]);
+  });
+
+  it("flat mode with flatSort: merges every connection's items into ONE globally sorted list (not per group)", () => {
+    const rows = flattenConnectionGroups(
+      [group("podman", "c", "a"), group("docker", "b")],
+      {},
+      getRowKey,
+      false,
+      (x, y) => x.id.localeCompare(y.id),
+    );
+    expect(rows.map((r) => (r.kind === "row" ? r.item.id : null))).toEqual(["a", "b", "c"]);
+  });
 });

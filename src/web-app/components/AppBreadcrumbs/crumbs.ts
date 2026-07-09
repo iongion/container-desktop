@@ -18,6 +18,9 @@ export interface AppBreadcrumb {
   icon?: BreadcrumbProps["icon"];
   href?: string;
   current?: boolean;
+  // Render-time marker for the owning-connection crumb: AppBreadcrumbs resolves this id to the connection's
+  // display name (the pure builders never read the store). An absent/unknown id renders empty and is dropped.
+  connectionId?: string;
 }
 
 /** Identity/normalizer so builders read declaratively, e.g. `crumb({ text: name, current: true })`. */
@@ -51,17 +54,35 @@ export function rootCrumb(rootId: RootCrumbId, connId?: string): AppBreadcrumb {
 }
 
 /**
- * Canonical two-level trail for an entity with a single detail view: `Root > name`, the name being the
+ * The leading crumb naming the resource's owning connection, linking to its Connection info page — so every
+ * resource trail reads `Connection > Section > name`. A render-time marker (see AppBreadcrumb.connectionId):
+ * the display name resolves in AppBreadcrumbs, and an absent/unknown id renders empty and is dropped (not
+ * every view has an owning connection). The Connections screens' own trails never use it — a connection
+ * doesn't lead with itself.
+ */
+export function connectionCrumb(connId?: string): AppBreadcrumb {
+  return {
+    connectionId: connId,
+    // No icon: the trail's single leading icon is the entity/section icon (see AppBreadcrumbs), not this crumb.
+    // Mirrors ConnectionInfo Route.Path. Kept inline (not getConnectionUrl) so this shared component never
+    // imports the Connections screen back — that would be an import cycle through the AppBreadcrumbs barrel.
+    href: connId ? pathTo(`/screens/connections/${encodeURIComponent(connId)}/connection-info`) : undefined,
+  };
+}
+
+/**
+ * Canonical trail for an entity with a single detail view: `Connection > Root > name`, the name being the
  * current leaf. Used by Volume/Network/Secret/Machine.
  */
 export function leafCrumbs(rootId: RootCrumbId, name: string, connId?: string): AppBreadcrumb[] {
-  return [rootCrumb(rootId, connId), crumb({ text: name, current: true })];
+  return [connectionCrumb(connId), rootCrumb(rootId, connId), crumb({ text: name, current: true })];
 }
 
 /**
  * Canonical trail for an entity with sub-tabs. On the default/inspect view (no `tabLabel`) the resource
- * name is the current leaf: `Root > name`. On a sub-tab the name links back to inspect and the tab becomes
- * the current leaf: `Root > name > Tab`. `inspectHref` is that resource's default-view URL (connId-scoped).
+ * name is the current leaf: `Connection > Root > name`. On a sub-tab the name links back to inspect and the
+ * tab becomes the current leaf: `Connection > Root > name > Tab`. `inspectHref` is that resource's
+ * default-view URL (connId-scoped).
  */
 export function tabbedCrumbs(
   rootId: RootCrumbId,
@@ -70,7 +91,7 @@ export function tabbedCrumbs(
   connId: string | undefined,
   tabLabel?: string,
 ): AppBreadcrumb[] {
-  const trail: AppBreadcrumb[] = [rootCrumb(rootId, connId)];
+  const trail: AppBreadcrumb[] = [connectionCrumb(connId), rootCrumb(rootId, connId)];
   if (tabLabel) {
     trail.push(crumb({ text: name, href: inspectHref }));
     trail.push(crumb({ textKey: tabLabel, current: true }));

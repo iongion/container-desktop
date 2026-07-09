@@ -35,6 +35,14 @@ export const AppearancePanel: React.FC = () => {
     },
     [setGlobalUserSettings],
   );
+  const onGroupByConnectionChange = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      await setGlobalUserSettings({
+        groupByConnection: !!e.currentTarget.checked,
+      });
+    },
+    [setGlobalUserSettings],
+  );
 
   // Monospace font override. Enumerating installed fonts is explicitly wanted here so users can
   // pick one they have; the bundled JetBrains Mono always remains the fallback.
@@ -113,13 +121,23 @@ export const AppearancePanel: React.FC = () => {
               <option value={ContainerEngine.PODMAN}>{t("Amethyst")}</option>
               <option value={ContainerEngine.DOCKER}>{t("Navy")}</option>
             </HTMLSelect>
-            <Checkbox
-              id="showEngineColumn"
-              label={t("Show engine column in resource lists")}
-              checked={!!userSettings.showEngineColumn}
-              onChange={onShowEngineColumnChange}
-            />
           </ControlGroup>
+        </FormGroup>
+      </div>
+      <div className="AppSettingsForm" data-form="resourceLists">
+        <FormGroup label={t("Resource lists")}>
+          <Checkbox
+            id="showEngineColumn"
+            label={t("Show engine column in resource lists")}
+            checked={!!userSettings.showEngineColumn}
+            onChange={onShowEngineColumnChange}
+          />
+          <Checkbox
+            id="groupByConnection"
+            label={t("Group resources by connection")}
+            checked={userSettings.groupByConnection ?? true}
+            onChange={onGroupByConnectionChange}
+          />
         </FormGroup>
       </div>
       <div className="AppSettingsForm" data-form="font">

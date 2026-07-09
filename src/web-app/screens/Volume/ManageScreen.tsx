@@ -18,6 +18,7 @@ import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   mergedKey,
+  useGroupByConnection,
   useMergedResources,
   useResourceReload,
   useShowEngineRowAccent,
@@ -81,6 +82,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [clientSort],
   );
+  const grouped = useGroupByConnection();
   const groups = useMemo(
     () => groupVolumesByConnection(filteredVolumes, compareVolumes),
     [compareVolumes, filteredVolumes],
@@ -92,7 +94,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, refresh: bulkRefresh } = useVolumeBulkActions();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
-    useGroupedVirtualRows({ groups, getRowKey: (volume) => getRowId(volume) });
+    useGroupedVirtualRows({ groups, getRowKey: (volume) => getRowId(volume), grouped, flatSort: compareVolumes });
   const showEngineRowAccent = useShowEngineRowAccent();
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("volumes");
@@ -139,6 +141,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             className="AppDataTable GroupedTable VolumesTable"
             data-windowed="true"
             data-table="volumes"
+            data-grouped={grouped ? "true" : "false"}
           >
             <thead ref={theadRef}>
               <tr>

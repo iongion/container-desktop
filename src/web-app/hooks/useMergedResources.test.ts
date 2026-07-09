@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   reloadResources,
+  resolveGroupByConnection,
   resolveShowEngineColumn,
   resolveShowEngineRowAccent,
   sameDomainItems,
@@ -23,6 +24,20 @@ describe("resolveShowEngineRowAccent", () => {
   it("shows row accents automatically in unified mode", () => {
     expect(resolveShowEngineRowAccent(false)).toBe(false);
     expect(resolveShowEngineRowAccent(true)).toBe(true);
+  });
+});
+
+describe("resolveGroupByConnection", () => {
+  it("groups only when unified mode AND the user setting is not disabled", () => {
+    expect(resolveGroupByConnection(true, true)).toBe(true);
+    expect(resolveGroupByConnection(true, undefined)).toBe(true); // default on
+    expect(resolveGroupByConnection(true, false)).toBe(false); // user disabled grouping
+  });
+
+  it("auto-flattens with a single (or zero) connection regardless of the setting", () => {
+    expect(resolveGroupByConnection(false, true)).toBe(false);
+    expect(resolveGroupByConnection(false, undefined)).toBe(false);
+    expect(resolveGroupByConnection(false, false)).toBe(false);
   });
 });
 

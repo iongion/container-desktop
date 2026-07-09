@@ -32,6 +32,7 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
+  useGroupByConnection,
   useMergedResources,
   useResourceReload,
   useShowEngineColumn,
@@ -49,7 +50,7 @@ import { useContainerBulkActions } from "./bulkActions";
 import { isComposeGroup } from "./composeGroups";
 import { tearDownStack } from "./composeQueries";
 import { type ContainerConnectionGroup, type ContainerRowDescriptor, flattenGroups } from "./flattenGroups";
-import { groupContainers } from "./grouping";
+import { groupContainers, groupContainersAcrossConnections } from "./grouping";
 import { aggregateStatus, statusLabel, statusTone } from "./health";
 import { ImportStackDrawer } from "./ImportStackDrawer";
 import { enrichHealth, useComposeHealth } from "./useComposeHealth";
@@ -110,6 +111,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const withHealth = useMemo(() => enrichHealth(merged, composeHealth), [merged, composeHealth]);
   // Three-level tree: Connection → existing container group → container leaves. Group WITHIN each connection
   // so identically-named groups on different engines never merge.
+  const grouped = useGroupByConnection();
   const connectionGroups = useMemo<ContainerConnectionGroup[]>(() => {
     const byConnection = new Map<string, MergedContainer[]>();
     for (const container of withHealth) {
@@ -119,6 +121,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
       } else {
         byConnection.set(container.connectionId, [container]);
       }
+    }
+    if (!grouped) {
+      // Flat mode: drop the connection level. Merge every connection's containers but KEEP the compose/pod
+      // groups (a different dimension), ordered folder-first across engines. No connection header renders.
+      const across = groupContainersAcrossConnections([...byConnection.values()], searchTerm, clientSort);
+      return across.length ? [{ key: "all", connection: { id: "all", name: "", engine: "" }, groups: across }] : [];
     }
     const groups: ContainerConnectionGroup[] = [];
     for (const containers of byConnection.values()) {
@@ -138,14 +146,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
     }
     groups.sort((a, b) => sortAlphaNum(a.connection.name, b.connection.name));
     return groups;
-  }, [withHealth, searchTerm, clientSort]);
+  }, [withHealth, searchTerm, clientSort, grouped]);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((container: MergedContainer) => mergedKey(container, container.Id), []);
   // Flatten the groups into the exact ordered <tr> sequence (group header + members, collapse-aware),
   // then window it — only the visible rows reach the DOM. Replaces the progressive-reveal hook.
   const rows = useMemo(
-    () => flattenGroups(connectionGroups, collapse, getRowId),
-    [connectionGroups, collapse, getRowId],
+    () => flattenGroups(connectionGroups, collapse, getRowId, grouped),
+    [connectionGroups, collapse, getRowId, grouped],
   );
   const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
   const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows({
@@ -318,6 +326,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             className="AppDataTable ContainersTreeTable"
             data-windowed="true"
             data-table="containers"
+            data-grouped={grouped ? "true" : "false"}
           >
             <thead ref={theadRef}>
               <tr>

@@ -23,6 +23,7 @@ import { useColumnSort } from "@/web-app/hooks/useColumnSort";
 import {
   type MergedResource,
   mergedKey,
+  useGroupByConnection,
   useMergedResources,
   useResourceReload,
   useShowEngineRowAccent,
@@ -100,6 +101,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [clientSort],
   );
+  const grouped = useGroupByConnection();
   const groups = useMemo(() => {
     const byConnection = new Map<string, NetworkConnectionGroup>();
     for (const network of filteredNetworks) {
@@ -133,7 +135,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { actions: bulkActions, refresh: bulkRefresh } = useNetworkBulkActions();
   const showEngineRowAccent = useShowEngineRowAccent();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
-    useGroupedVirtualRows({ groups, getRowKey: (network) => getRowId(network) });
+    useGroupedVirtualRows({ groups, getRowKey: (network) => getRowId(network), grouped, flatSort: compareNetworks });
   // Always-merged: a manual reload refreshes this domain on every connected engine.
   const onReload = useResourceReload("networks");
 
@@ -179,6 +181,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             className="AppDataTable GroupedTable"
             data-windowed="true"
             data-table="networks"
+            data-grouped={grouped ? "true" : "false"}
           >
             <thead ref={theadRef}>
               <tr>

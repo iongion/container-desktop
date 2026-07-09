@@ -1,6 +1,7 @@
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/i18n";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
+import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -9,6 +10,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
 import { buildImageSummary } from "./inspectSummary";
+import { imageSectionRailItems } from "./Navigation";
 import { useImage } from "./queries";
 
 export const ID = "image.inspect";
@@ -30,12 +32,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader image={image} currentScreen={ID} />
-      <ResourceInspectTabs
-        dataScreen={ID}
-        summaryRows={buildImageSummary(image)}
-        summaryTable="image.inspect-summary"
-        rawValue={JSON.stringify(image, null, 2)}
-      />
+      <ResourceSectionRail items={imageSectionRailItems(image.Id, connectionId)} activeId={ID} dataScreen={ID}>
+        <ResourceInspectTabs
+          dataScreen={ID}
+          summaryRows={buildImageSummary(image)}
+          summaryTable="image.inspect-summary"
+          rawValue={JSON.stringify(image, null, 2)}
+        />
+      </ResourceSectionRail>
     </div>
   );
 };

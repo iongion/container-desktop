@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Group resources by connection** toggle (Settings → Appearance) — turn it off to render each resource list (containers, images, volumes, networks, secrets, pods, machines, mounts, registries, swarm) as one merged, globally-sorted list instead of per-connection groups; lists auto-flatten when only one connection is connected
 - **Inspect Tree | JSON viewer** — the raw-configuration block on every resource **Inspect** screen (containers, images, volumes, networks, pods, machines, secrets, swarm, system info) gains a **Tree | JSON** toggle: a native Blueprint collapsible tree over the whole payload, expand/collapse all, selectable labels, and the JSON code editor one click away; unparseable/incomplete JSON falls back to the raw text
 - **Per-connection registry trust** — global **Registries** screen grouped by connection; real per-engine backends: sign-in (`login --password-stdin`), add/remove (`registries.conf`/`daemon.json`), CAs (`certs.d`) + proxy in the connection form; remote image search/pull lives on **Images**
 - **Engine compatibility matrix** — a **Troubleshoot → Compatibility** sub-screen comparing engine capabilities side by side (Podman/Docker/Apple), read from connect-time capabilities
@@ -35,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Engine health** — a per-connection detail page from **Connections**: one engine at a time, with a verdict header and connection-path pipeline that breaks at the failing hop, runtime/machine vitals with image disk usage (`/system/df`), custom networks with client-side subnet-overlap detection, bind mounts, and plain-language diagnoses with copyable fixes
 - **Inspect tab rail** — resource Inspect screens with more than Summary + Raw (Containers) get a left tab rail (Summary · Env vars · Ports · Mounts · Raw) matching the Settings rail; summaries are sortable Property/Value tables that render values richly (run-state pill, health dot, image `Tag`, code chips), with Ports/Mounts as Container/Host tables
 - **Connection detail rail** — Connection info · System info · Engine health move from a header menu into a left rail
+- Resource breadcrumbs lead with the owning **connection** (clickable → its info page); the entity icon moves in front of the trail
 
 ### Changed
 

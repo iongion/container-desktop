@@ -363,6 +363,7 @@ export class Application {
       language: normalizeLanguagePreference(await this.userConfiguration.getKey<string>("language", "auto")),
       engineTheme: normalizeEngineThemePreference(await this.userConfiguration.getKey<string>("engineTheme", "auto")),
       showEngineColumn: await this.userConfiguration.getKey("showEngineColumn", false),
+      groupByConnection: await this.userConfiguration.getKey("groupByConnection", true),
       expandSidebar: await this.userConfiguration.getKey("expandSidebar", true),
       startApi: await this.userConfiguration.getKey("startApi", false),
       minimizeToSystemTray: await this.userConfiguration.getKey("minimizeToSystemTray", false),

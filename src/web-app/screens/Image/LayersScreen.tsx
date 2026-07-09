@@ -1,11 +1,13 @@
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/i18n";
+import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { LayerInspector } from "@/web-app/screens/Build/LayerInspector";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
+import { imageSectionRailItems } from "./Navigation";
 import { useImage, useImageHistory } from "./queries";
 import "./LayersScreen.css";
 
@@ -32,9 +34,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader image={image} currentScreen={ID} />
-      <div className="AppScreenContent">
-        <LayerInspector history={layers} />
-      </div>
+      <ResourceSectionRail items={imageSectionRailItems(image.Id, connectionId)} activeId={ID} dataScreen={ID}>
+        <div className="AppScreenContent">
+          <LayerInspector history={layers} />
+        </div>
+      </ResourceSectionRail>
     </div>
   );
 };

@@ -26,6 +26,10 @@ export interface UseGroupedVirtualRowsParams<T> {
   scrollKey?: string;
   /** When false the virtualizer idles (e.g. the empty/NonIdealState branch). */
   enabled?: boolean;
+  /** When false, render one flat list with no connection group headers (see resolveGroupByConnection). */
+  grouped?: boolean;
+  /** In flat mode, sort across every connection's items (one global sort). Omit to keep per-connection order. */
+  flatSort?: (a: T, b: T) => number;
 }
 
 export function useGroupedVirtualRows<T>({
@@ -34,6 +38,8 @@ export function useGroupedVirtualRows<T>({
   estimateRowHeight,
   scrollKey,
   enabled,
+  grouped = true,
+  flatSort,
 }: UseGroupedVirtualRowsParams<T>) {
   const [collapse, setCollapse] = useState<Record<string, boolean | undefined>>({});
   const toggleGroup = useCallback((groupKey: string) => {
@@ -49,7 +55,10 @@ export function useGroupedVirtualRows<T>({
     }
   }, []);
 
-  const rows = useMemo(() => flattenConnectionGroups(groups, collapse, getRowKey), [groups, collapse, getRowKey]);
+  const rows = useMemo(
+    () => flattenConnectionGroups(groups, collapse, getRowKey, grouped, flatSort),
+    [groups, collapse, getRowKey, grouped, flatSort],
+  );
   const { scrollElementRef, theadRef, scrollMargin, getScrollElement } = useTableScroll();
   const { items, paddingTop, paddingBottom, measureRef } = useWindowedRows<ConnectionRowDescriptor<T>>({
     rows,

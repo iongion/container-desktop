@@ -62,6 +62,21 @@ export function useShowEngineRowAccent(): boolean {
 }
 
 /**
+ * Whether resource lists should group rows by connection. Grouping only makes sense with more than one
+ * connection, so it is gated by unified mode (a single/zero connection auto-flattens, exactly like the
+ * engine column) AND the user's `groupByConnection` preference (default on). Pure → unit-tested.
+ */
+export function resolveGroupByConnection(isUnifiedMode: boolean, groupByConnection: boolean | undefined): boolean {
+  return isUnifiedMode && groupByConnection !== false;
+}
+
+export function useGroupByConnection(): boolean {
+  const isUnifiedMode = useIsUnifiedMode();
+  const groupByConnection = useAppStore((state) => state.userSettings.groupByConnection ?? true);
+  return resolveGroupByConnection(isUnifiedMode, groupByConnection);
+}
+
+/**
  * Reload the given resource domain(s) on EVERY connected engine — the always-merged replacement for a
  * single-connection `resourceEvents.refresh`. Plural/variadic form for screens that refresh several domains
  * at once, e.g. `useResourcesReload("pods", "containers")`. See `useResourceReload` for the one-domain case.

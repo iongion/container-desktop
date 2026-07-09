@@ -351,8 +351,14 @@ pre,
 .AppDataTable tbody tr td:hover {
   cursor: initial !important;
 }
-.AppDataTable tbody tr[data-prefix-group] td:first-child {
+.AppDataTable:not([data-grouped="false"]) tbody tr[data-prefix-group] td:first-child {
   padding-left: 30px;
+}
+/* Flat (ungrouped) mode: grouping by connection is off, so child rows drop the group indent and the
+   dangling tree-link connector (there is no connection header above them to connect to). The Containers
+   tree keeps a second (compose/pod) level, so it manages its own flat links/indent (ManageScreen.css). */
+.AppDataTable[data-grouped="false"]:not(.ContainersTreeTable) .AppDataTableGroupLink {
+  display: none;
 }
 .AppDataTableGroupLink[data-link-location="last"] .AppDataTableGroupLinkVertical {
   height: 50%;

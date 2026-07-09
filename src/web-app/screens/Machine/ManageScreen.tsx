@@ -23,7 +23,12 @@ import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
-import { type MergedResource, mergedKey, useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
+import {
+  type MergedResource,
+  mergedKey,
+  useGroupByConnection,
+  useShowEngineRowAccent,
+} from "@/web-app/hooks/useMergedResources";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
@@ -148,6 +153,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
     },
     [clientSort],
   );
+  const grouped = useGroupByConnection();
   const groups = useMemo(() => {
     const byConnection = new Map<string, MachineConnectionGroup>();
     for (const machine of filteredMachines) {
@@ -179,7 +185,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const selection = useBulkSelection(ID, visibleIds);
   const { actions: bulkActions, getId: bulkGetId, refresh: bulkRefresh } = useMachineBulkActions();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
-    useGroupedVirtualRows({ groups, getRowKey: (machine) => getRowId(machine) });
+    useGroupedVirtualRows({ groups, getRowKey: (machine) => getRowId(machine), grouped, flatSort: compareMachines });
   const showEngineRowAccent = useShowEngineRowAccent();
   const onReload = useCallback(() => {
     for (const query of machineQueries) {
@@ -226,6 +232,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             className="AppDataTable GroupedTable"
             data-windowed="true"
             data-table="machines"
+            data-grouped={grouped ? "true" : "false"}
           >
             <thead ref={theadRef}>
               <tr>

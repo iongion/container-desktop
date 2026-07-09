@@ -1,0 +1,35 @@
+/* Resource DETAIL section rail — the vertical rail idiom of InspectTabs (InspectTabs.css), reused for
+   route-based section navigation (e.g. Image: Layers | Inspect | Security). The rail recedes on --app-chrome
+   with a hairline right border; the content pane to its right fills the rest and owns its own scroll.
+   Everything reads --app-* tokens so it tracks every engine × mode. */
+
+.ResourceDetailLayout {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+}
+/* The section's screen keeps its own .AppScreenContent (or the Inspect tab layout) — grow it to fill the pane. */
+.ResourceDetailLayout > .AppScreenContent {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ResourceSectionRail {
+  flex: 0 0 auto;
+  width: 188px;
+  min-width: 188px;
+  overflow-y: auto;
+  padding: 8px;
+  background-color: var(--app-chrome);
+  border-right: 1px solid var(--app-border);
+}
+.ResourceSectionRail .bp6-button-group {
+  width: 100%;
+}
+.ResourceSectionRail .ResourceSectionRailItem.bp6-button {
+  margin-bottom: 2px;
+  border-radius: 4px;
+}

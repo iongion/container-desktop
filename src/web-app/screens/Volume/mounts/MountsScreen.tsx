@@ -21,7 +21,12 @@ import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { SortableColumnHeader } from "@/web-app/components/SortableColumnHeader";
 import { VirtualSpacerRow } from "@/web-app/components/VirtualSpacerRow";
 import { useColumnSort } from "@/web-app/hooks/useColumnSort";
-import { useMergedResources, useResourcesReload, useShowEngineRowAccent } from "@/web-app/hooks/useMergedResources";
+import {
+  useGroupByConnection,
+  useMergedResources,
+  useResourcesReload,
+  useShowEngineRowAccent,
+} from "@/web-app/hooks/useMergedResources";
 import { Notification } from "@/web-app/Notification";
 import { getContainerUrl } from "@/web-app/screens/Container/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -93,8 +98,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
     () => buildMountGroups(containers, volumes, searchTerm, effectiveClientSort),
     [containers, effectiveClientSort, searchTerm, volumes],
   );
+  const grouped = useGroupByConnection();
   const { items, paddingTop, paddingBottom, measureRef, scrollElementRef, theadRef, isCollapsed, onGroupToggleClick } =
-    useGroupedVirtualRows({ groups, getRowKey: (item) => item.key });
+    useGroupedVirtualRows({ groups, getRowKey: (item) => item.key, grouped });
   const showEngineRowAccent = useShowEngineRowAccent();
   const onReload = useResourcesReload("containers", "volumes");
   const onTestMounts = useCallback(async () => {
@@ -155,6 +161,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             className="AppDataTable GroupedTable MountsTable"
             data-windowed="true"
             data-table="mounts"
+            data-grouped={grouped ? "true" : "false"}
           >
             <thead ref={theadRef}>
               <tr>
