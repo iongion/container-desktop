@@ -1,7 +1,5 @@
 import { AnchorButton, Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { mdiPlayCircle } from "@mdi/js";
-import * as ReactIcon from "@mdi/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ContainerImage } from "@/env/Types";
@@ -111,10 +109,10 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const startButton = withoutStart ? null : (
     <Button
       size="small"
-      variant="minimal"
+      intent={Intent.SUCCESS}
       text={iconOnly ? undefined : t("Start")}
       title={t("Start")}
-      icon={<ReactIcon.Icon path={mdiPlayCircle} size={0.75} />}
+      icon={IconNames.PLAY}
       onClick={onCreateClick}
     />
   );

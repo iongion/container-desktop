@@ -66,3 +66,28 @@
 .PropertyValueTableValue--mono {
   font-family: var(--monospace-font);
 }
+
+/* Optional leading icon in a column header (e.g. the non-sortable container Ports table). */
+.PropertyValueHeaderCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.PropertyValueHeaderIcon {
+  color: var(--app-text-muted);
+}
+/* Plain (non-sortable) header cells match the sortable header's left alignment / weight / height (the
+   sortable header's button is min-height 28px — mirror it so mixed screens line their header rows up). */
+.AppDataTable.PropertyValueTable th.PropertyValueTableHeader {
+  text-align: left;
+  font-weight: 600;
+}
+.PropertyValueHeaderInner {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+/* Semantic value tags (image refs, drivers, roles) keep the monospace rhythm of the value column. */
+.PropertyValueTag.bp6-tag {
+  font-family: var(--monospace-font);
+}

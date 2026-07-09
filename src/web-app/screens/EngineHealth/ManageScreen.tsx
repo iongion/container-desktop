@@ -9,6 +9,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { useMergedResources } from "@/web-app/hooks/useMergedResources";
 import { useRouteParams } from "@/web-app/Navigator";
 import { ConnectionDetailsActionsMenu } from "@/web-app/screens/Connections/ActionsMenu";
+import { ConnectionDetailLayout } from "@/web-app/screens/Connections/ConnectionDetailRail";
 import { getConnectionCrumbs, getConnectionsUrl } from "@/web-app/screens/Connections/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
@@ -90,7 +91,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <ConnectionDetailsActionsMenu connectionId={connectionId} currentScreen={ID} onReload={onReload} />
         }
       />
-      <div className="AppScreenContent">
+      <ConnectionDetailLayout connectionId={connectionId} currentScreen={ID}>
         {selectedEntry ? (
           <>
             <ConnectionHealthHeader
@@ -113,7 +114,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
             description={<p>{t("Connect this engine to see its health here.")}</p>}
           />
         )}
-      </div>
+      </ConnectionDetailLayout>
     </div>
   );
 };

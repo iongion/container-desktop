@@ -1,6 +1,6 @@
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/i18n";
-import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
+import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -30,10 +30,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader image={image} currentScreen={ID} />
-      <div className="AppScreenContent">
-        <InspectSummary rows={buildImageSummary(image)} dataTable="image.inspect-summary" />
-        <InspectRawJson value={JSON.stringify(image, null, 2)} />
-      </div>
+      <ResourceInspectTabs
+        dataScreen={ID}
+        summaryRows={buildImageSummary(image)}
+        summaryTable="image.inspect-summary"
+        rawValue={JSON.stringify(image, null, 2)}
+      />
     </div>
   );
 };

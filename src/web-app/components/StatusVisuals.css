@@ -1,0 +1,64 @@
+/* Shared, UNSCOPED status visuals: the run-state pill and the health/status dot, lifted out of the
+   containers table (ManageScreen.css + themes/*.css .ContainerState / .ContainerStatus, which are scoped to
+   [data-table="containers"]) so any Inspect panel can render them. The palette is kept as literals to match
+   the existing table badges exactly — the table hardcodes these same values; chrome/text stays on --app-*
+   tokens. */
+
+.StatePill {
+  display: inline-block;
+  min-width: 50px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-family: var(--monospace-font);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--app-text);
+}
+/* Exited/dead read as a filled magenta badge (the table's "stopped for good" look); every other state is
+   colored text on a transparent chip. Matches themes/dark.css .ContainerState. */
+.StatePill[data-state="exited"],
+.StatePill[data-state="dead"] {
+  background-color: #8b104c;
+  color: #fff;
+}
+.StatePill[data-state="running"] {
+  color: #60ff45;
+}
+.StatePill[data-state="created"] {
+  color: #00a6ff;
+}
+.StatePill[data-state="stopped"] {
+  color: #888a83;
+}
+.StatePill[data-state="paused"] {
+  color: orange;
+}
+
+.StatusDotWrap {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--monospace-font);
+}
+.StatusDot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background-color: currentColor;
+}
+/* Tones mirror the containers table's .ContainerStatus dot palette (themes/dark.css). */
+.StatusDotWrap[data-tone="success"] {
+  color: #3dcc91;
+}
+.StatusDotWrap[data-tone="warning"] {
+  color: #ffb366;
+}
+.StatusDotWrap[data-tone="danger"] {
+  color: #ff6b6b;
+}
+.StatusDotWrap[data-tone="muted"] {
+  color: var(--app-text-muted);
+}

@@ -1,4 +1,4 @@
-import { AnchorButton, Button, ButtonGroup, Intent, MenuDivider, MenuItem } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, MenuDivider, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -192,36 +192,9 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
 };
 
 export const ConnectionDetailsActionsMenu: React.FC<ConnectionDetailsActionsMenuProps> = ({
-  connectionId,
-  currentScreen,
   onReload,
 }: ConnectionDetailsActionsMenuProps) => {
-  const { t } = useTranslation();
-  const navigation = (
-    <ButtonGroup>
-      <AnchorButton
-        variant="minimal"
-        active={currentScreen === "connections.connection-info"}
-        icon={IconNames.EYE_OPEN}
-        text={t("Connection info")}
-        href={getConnectionUrl(connectionId, "connection-info")}
-      />
-      <AnchorButton
-        variant="minimal"
-        active={currentScreen === "connections.system-info"}
-        icon={IconNames.DESKTOP}
-        text={t("System info")}
-        href={getConnectionUrl(connectionId, "system-info")}
-      />
-      <AnchorButton
-        variant="minimal"
-        active={currentScreen === "connections.health"}
-        icon={IconNames.PULSE}
-        text={t("Engine health")}
-        href={getConnectionUrl(connectionId, "health")}
-      />
-    </ButtonGroup>
-  );
-
-  return <ResourceListActions navigation={navigation} onReload={onReload} />;
+  // The detail-view navigation (Connection info / System info / Engine health) now lives in the left rail
+  // (ConnectionDetailRail), so the header keeps only the reload action.
+  return <ResourceListActions onReload={onReload} />;
 };

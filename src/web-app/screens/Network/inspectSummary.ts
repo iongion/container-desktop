@@ -12,10 +12,17 @@ export function buildNetworkSummary(network: Network): InspectSummaryRow[] {
     rows.push({ key: "name", label: t("Name"), value: network.name, copyText: network.name });
   }
   if (network.id) {
-    rows.push({ key: "id", label: t("Id"), value: shortId(network.id), copyText: network.id, mono: true });
+    rows.push({
+      key: "id",
+      label: t("Id"),
+      value: shortId(network.id),
+      copyText: network.id,
+      mono: true,
+      render: "code",
+    });
   }
   if (network.driver) {
-    rows.push({ key: "driver", label: t("Driver"), value: network.driver });
+    rows.push({ key: "driver", label: t("Driver"), value: network.driver, render: "tag" });
   }
   rows.push({ key: "internal", label: t("Internal"), value: yesNo(network.internal) });
   rows.push({ key: "ipv6", label: t("IPv6"), value: yesNo(network.ipv6_enabled) });

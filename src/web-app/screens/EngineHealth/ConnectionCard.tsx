@@ -52,6 +52,14 @@ export function ConnectionHealthHeader({
   const snapshot = useResourceStore((state) => state.byConnection[card.id]);
   const containers = snapshot?.containers?.items?.length ?? 0;
   const images = snapshot?.images?.items?.length ?? 0;
+  // Disk/reclaimable live in the header now (the Runtime panel was removed). Skip it for machine engines —
+  // the MachinePanel already reports its own image-disk usage — and while unreachable.
+  const df = useSystemDf(card.id).data;
+  const machinesCap = !!(
+    card.connector?.capabilities?.extensions?.machines ?? card.runtime.capabilities?.extensions?.machines
+  );
+  const hasMachine = card.transport === "vm" && machinesCap;
+  const showDisk = card.verdict.level !== "unreachable" && !hasMachine && !!df && df.imagesSize > 0;
   const klass = LEVEL_CLASS[level];
   const canCollapse = collapsible && !!onToggle;
   const onHeaderClick = canCollapse && onToggle ? () => onToggle() : undefined;
@@ -78,7 +86,11 @@ export function ConnectionHealthHeader({
   const vitals =
     card.verdict.level === "unreachable"
       ? card.verdict.reasons[0] || t("unreachable")
-      : [card.version ? `v${card.version}` : null, `${containers} ${t("containers")}`, `${images} ${t("images")}`]
+      : [
+          card.version ? `v${card.version}` : null,
+          t("containerCount", { count: containers, context: `${containers}` }),
+          t("imageCount", { count: images, context: `${images}` }),
+        ]
           .filter(Boolean)
           .join(" · ");
 
@@ -96,9 +108,32 @@ export function ConnectionHealthHeader({
       >
         {canCollapse ? <Icon className="chev" icon={IconNames.CHEVRON_DOWN} /> : null}
         <EngineCell engine={card.engine} />
-        <span className="ct">{card.subtitle}</span>
+        <span className="ct">{card.engineLabel}</span>
+        {card.transportDetail ? <span className="ct muted">{card.transportDetail}</span> : null}
+        <span className="vitals">
+          {vitals}
+          {showDisk && df ? (
+            <>
+              {" · "}
+              {t("Disk")} <b>{prettyBytes(df.imagesSize)}</b>
+              {df.imagesReclaimable > 0 ? (
+                <span className="muted">
+                  {" · "}
+                  {prettyBytes(df.imagesReclaimable)} {t("reclaimable")}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+          {card.verdict.level !== "unreachable" && card.verdict.reasons.length > 0 ? (
+            <span className="muted">
+              {" · "}
+              {card.verdict.reasons.join(" · ")}
+            </span>
+          ) : null}
+        </span>
+        {/* State + transport badges pin to the right edge (vitals flex-grows to fill the gap). */}
+        <span className="statePill remote">{card.transportLabel}</span>
         <span className={`vpill ${klass}`}>{pillText}</span>
-        <span className="vitals">{vitals}</span>
       </div>
     </>
   );
@@ -106,9 +141,6 @@ export function ConnectionHealthHeader({
 
 export function ConnectionHealthContent({ card, level, diagnoses }: ConnectionHealthContentProps) {
   const { t } = useTranslation();
-  const snapshot = useResourceStore((state) => state.byConnection[card.id]);
-  const containers = snapshot?.containers?.items?.length ?? 0;
-  const images = snapshot?.images?.items?.length ?? 0;
   const hops = derivePath(card);
   const failingHop = hops.find((hop) => hop.state === "err");
   const df = useSystemDf(card.id).data;
@@ -132,48 +164,14 @@ export function ConnectionHealthContent({ card, level, diagnoses }: ConnectionHe
         </div>
         <ChainPipe hops={hops} />
       </div>
-      <div className="grid2">
-        {hasMachine ? (
+      {hasMachine ? (
+        <div className="grid2">
           <MachinePanel connectionId={card.id} scope={machineScope} df={df} />
-        ) : (
-          <div className="subCard">
-            <div className="CardHead">
-              <h5>{t("Runtime")}</h5>
-              <span className="statePill remote">{card.transportLabel}</span>
-            </div>
-            <div className="kv">
-              <span>
-                {t("Containers")} <b>{containers}</b>
-              </span>
-              <span>
-                {t("Images")} <b>{images}</b>
-              </span>
-              {card.version ? (
-                <span>
-                  {t("Version")} <b>{card.version}</b>
-                </span>
-              ) : null}
-              {df && df.imagesSize > 0 ? (
-                <span>
-                  {t("Disk")} <b>{prettyBytes(df.imagesSize)}</b>
-                  {df.imagesReclaimable > 0 ? (
-                    <span className="muted">
-                      {" · "}
-                      {prettyBytes(df.imagesReclaimable)} {t("reclaimable")}
-                    </span>
-                  ) : null}
-                </span>
-              ) : null}
-            </div>
-            {card.verdict.reasons.length > 0 ? (
-              <div className="kv">
-                <span className="muted">{card.verdict.reasons.join(" · ")}</span>
-              </div>
-            ) : null}
-          </div>
-        )}
+          <NetworkingPanel connectionId={card.id} />
+        </div>
+      ) : (
         <NetworkingPanel connectionId={card.id} />
-      </div>
+      )}
       <BindMountsPanel connectionId={card.id} />
     </>
   );

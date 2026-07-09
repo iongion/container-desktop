@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
+import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -53,10 +53,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
         breadcrumbs={getSecretCrumbs(secret.Spec.Name, connectionId)}
         rightContent={<SecretActionsMenu secret={secret} connectionId={connectionId} withoutCreate />}
       />
-      <div className="AppScreenContent">
-        <InspectSummary rows={buildSecretSummary(secret)} dataTable="secret.inspect-summary" />
-        <InspectRawJson value={JSON.stringify(secret, null, 2)} />
-      </div>
+      <ResourceInspectTabs
+        dataScreen={ID}
+        summaryRows={buildSecretSummary(secret)}
+        summaryTable="secret.inspect-summary"
+        rawValue={JSON.stringify(secret, null, 2)}
+      />
     </div>
   );
 };

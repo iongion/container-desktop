@@ -1,23 +1,24 @@
-import { H5, HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
+import { InspectSummary } from "@/web-app/components/InspectSummary";
+import type { InspectTabSection } from "@/web-app/components/InspectTabs";
+import { PropertyValueTable } from "@/web-app/components/PropertyValueTable";
+import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
-import { getVolumesUrl } from "@/web-app/screens/Volume/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./InspectScreen.css";
 import i18n from "@/i18n";
-import { buildContainerEnvRows, buildContainerPortRows, buildContainerSummary } from "./inspectSummary";
+import {
+  buildContainerEnvRows,
+  buildContainerMountRows,
+  buildContainerPortRows,
+  buildContainerSummary,
+} from "./inspectSummary";
 import { useContainer } from "./queries";
-
-interface VolumeMount {
-  source: string;
-  destination: string;
-}
 
 export const ID = "container.inspect";
 
@@ -43,61 +44,69 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const envRows = buildContainerEnvRows(container);
   const portRows = buildContainerPortRows(container);
-  const volumeMounts: VolumeMount[] = container.Mounts.map((mount) => ({
-    source: mount.Source,
-    destination: mount.Destination,
-  }));
+  const mountRows = buildContainerMountRows(container);
+
+  // Data-bearing tabs between Summary and Raw, present only when the container has them. Env vars keep the
+  // sortable Property/Value table (InspectSummary); Ports are a fixed (unsorted) Container → Host table with
+  // port icons; Mounts stay a sortable table relabeled Container → Host, default ascending by Container path.
+  const middle: InspectTabSection[] = [];
+  if (envRows.length > 0) {
+    middle.push({
+      id: "env",
+      label: t("Env vars"),
+      icon: IconNames.VARIABLE,
+      count: envRows.length,
+      body: <InspectSummary rows={envRows} dataTable="container.inspect-env" />,
+    });
+  }
+  if (portRows.length > 0) {
+    middle.push({
+      id: "ports",
+      label: t("Ports"),
+      icon: IconNames.GLOBE_NETWORK,
+      count: portRows.length,
+      body: (
+        <PropertyValueTable
+          rows={portRows}
+          dataTable="container.inspect-ports"
+          className="InspectSummary"
+          sortable={false}
+          propertyLabel={t("Container")}
+          valueLabel={t("Host")}
+          propertyIcon={IconNames.CUBE}
+          valueIcon={IconNames.DESKTOP}
+        />
+      ),
+    });
+  }
+  if (mountRows.length > 0) {
+    middle.push({
+      id: "mounts",
+      label: t("Mounts"),
+      icon: IconNames.FOLDER_CLOSE,
+      count: mountRows.length,
+      body: (
+        <PropertyValueTable
+          rows={mountRows}
+          dataTable="container.inspect-mounts"
+          className="InspectSummary"
+          propertyLabel={t("Container")}
+          valueLabel={t("Host")}
+        />
+      ),
+    });
+  }
+
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
-      <div className="AppScreenContent">
-        <InspectSummary rows={buildContainerSummary(container)} dataTable="container.inspect-summary" />
-        {envRows.length > 0 ? (
-          <>
-            <H5 className="InspectSectionTitle">{t("Environment variables")}</H5>
-            <InspectSummary rows={envRows} dataTable="container.inspect-env" />
-          </>
-        ) : null}
-        {volumeMounts.length > 0 ? (
-          <>
-            <H5 className="InspectSectionTitle">
-              <a className="ContainerInspectGroupLink" href={getVolumesUrl("mounts")}>
-                {t("Mounts")}
-              </a>
-            </H5>
-            <HTMLTable compact striped className="AppDataTable" data-table="container.inspect">
-              <tbody>
-                {volumeMounts.map((item, index) => (
-                  <tr key={`mount_${item.source}_${item.destination}`}>
-                    <td colSpan={2}>
-                      <div className="ContainerVolume">
-                        <div className="ContainerVolumeIndex">{index + 1}.</div>
-                        <ul className="ContainerVolumeMapping">
-                          <li>
-                            <strong title={t("Host path")}>{t("Host")}</strong>
-                            <code>{item.source}</code>
-                          </li>
-                          <li>
-                            <strong title={t("Container path")}>{t("Container")}</strong>
-                            <code>{item.destination}</code>
-                          </li>
-                        </ul>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </HTMLTable>
-          </>
-        ) : null}
-        {portRows.length > 0 ? (
-          <>
-            <H5 className="InspectSectionTitle">{t("Ports")}</H5>
-            <InspectSummary rows={portRows} dataTable="container.inspect-ports" />
-          </>
-        ) : null}
-        <InspectRawJson value={JSON.stringify(container, null, 2)} />
-      </div>
+      <ResourceInspectTabs
+        dataScreen={ID}
+        summaryRows={buildContainerSummary(container)}
+        summaryTable="container.inspect-summary"
+        rawValue={JSON.stringify(container, null, 2)}
+        middle={middle}
+      />
     </div>
   );
 };

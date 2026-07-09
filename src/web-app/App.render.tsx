@@ -37,7 +37,9 @@ export function renderApplication(opts?: { loggerBackend?: LoggerBackend }) {
             <body className="bp6-dark" data-engine="unified" />
           </Helmet>
           <App />
-          {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
+          {/* Toggle at top-left: the only corner clear of the footer action buttons (bottom), the window
+              controls (top-right) and the connection status (bottom-left). */}
+          {showDevtools && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />}
         </HelmetProvider>
       </I18nContextProvider>
     </QueryClientProvider>,

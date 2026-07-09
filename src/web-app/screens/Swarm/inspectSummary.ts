@@ -17,15 +17,15 @@ export function buildSwarmSummary(entity: SwarmEntity, kind: SwarmInspectKind): 
       rows.push({ key: "name", label: t("Name"), value: s.Spec.Name, copyText: s.Spec.Name });
     }
     if (s.ID) {
-      rows.push({ key: "id", label: t("Id"), value: shortId(s.ID), copyText: s.ID, mono: true });
+      rows.push({ key: "id", label: t("Id"), value: shortId(s.ID), copyText: s.ID, mono: true, render: "code" });
     }
     const image = s.Spec?.TaskTemplate?.ContainerSpec?.Image;
     if (image) {
-      rows.push({ key: "image", label: t("Image"), value: image, copyText: image });
+      rows.push({ key: "image", label: t("Image"), value: image, copyText: image, render: "tag" });
     }
     const mode = s.Spec?.Mode?.Replicated ? "replicated" : s.Spec?.Mode?.Global ? "global" : undefined;
     if (mode) {
-      rows.push({ key: "mode", label: t("Mode"), value: mode });
+      rows.push({ key: "mode", label: t("Mode"), value: mode, render: "tag" });
     }
     const replicas = s.Spec?.Mode?.Replicated?.Replicas;
     if (typeof replicas === "number") {
@@ -42,16 +42,16 @@ export function buildSwarmSummary(entity: SwarmEntity, kind: SwarmInspectKind): 
       });
     }
     if (n.ID) {
-      rows.push({ key: "id", label: t("Id"), value: shortId(n.ID), copyText: n.ID, mono: true });
+      rows.push({ key: "id", label: t("Id"), value: shortId(n.ID), copyText: n.ID, mono: true, render: "code" });
     }
     if (n.Spec?.Role) {
-      rows.push({ key: "role", label: t("Role"), value: n.Spec.Role });
+      rows.push({ key: "role", label: t("Role"), value: n.Spec.Role, render: "tag" });
     }
     if (n.Spec?.Availability) {
-      rows.push({ key: "availability", label: t("Availability"), value: n.Spec.Availability });
+      rows.push({ key: "availability", label: t("Availability"), value: n.Spec.Availability, render: "state" });
     }
     if (n.Status?.State) {
-      rows.push({ key: "state", label: t("State"), value: n.Status.State });
+      rows.push({ key: "state", label: t("State"), value: n.Status.State, render: "state" });
     }
     const engineVersion = n.Description?.Engine?.EngineVersion;
     if (engineVersion) {
@@ -64,7 +64,7 @@ export function buildSwarmSummary(entity: SwarmEntity, kind: SwarmInspectKind): 
       rows.push({ key: "name", label: t("Name"), value: c.Spec.Name, copyText: c.Spec.Name });
     }
     if (c.ID) {
-      rows.push({ key: "id", label: t("Id"), value: shortId(c.ID), copyText: c.ID, mono: true });
+      rows.push({ key: "id", label: t("Id"), value: shortId(c.ID), copyText: c.ID, mono: true, render: "code" });
     }
   }
   const created = (entity as { CreatedAt?: string }).CreatedAt;

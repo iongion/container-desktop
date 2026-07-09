@@ -16,7 +16,7 @@ export function buildMachineSummary(machine: PodmanMachineInspect | PodmanMachin
   }
   const state = m.State ?? (m.Running === true ? "running" : m.Running === false ? "stopped" : undefined);
   if (state) {
-    rows.push({ key: "state", label: t("State"), value: state });
+    rows.push({ key: "state", label: t("State"), value: state, render: "state" });
   }
   const cpus = m.Resources?.CPUs ?? m.CPUs;
   if (cpus) {

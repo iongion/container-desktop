@@ -7,14 +7,14 @@ import {
 } from "@/web-app/screens/Settings/settingsCategoryModel";
 
 describe("settingsCategoryModel", () => {
-  it("exposes the settings categories in display order", () => {
+  it("exposes the settings categories in display order (alphabetical by title)", () => {
     expect(SETTINGS_CATEGORIES.map((c) => c.id)).toEqual([
       "ai",
+      "policy",
       "appearance",
       "config",
       "logging",
       "network",
-      "policy",
       "startup",
     ]);
   });

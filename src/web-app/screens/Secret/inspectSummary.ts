@@ -11,11 +11,18 @@ export function buildSecretSummary(secret: Secret): InspectSummaryRow[] {
     rows.push({ key: "name", label: t("Name"), value: name, copyText: name });
   }
   if (secret.ID) {
-    rows.push({ key: "id", label: t("Id"), value: shortId(secret.ID), copyText: secret.ID, mono: true });
+    rows.push({
+      key: "id",
+      label: t("Id"),
+      value: shortId(secret.ID),
+      copyText: secret.ID,
+      mono: true,
+      render: "code",
+    });
   }
   const driver = secret.Spec?.Driver?.Name;
   if (driver) {
-    rows.push({ key: "driver", label: t("Driver"), value: driver });
+    rows.push({ key: "driver", label: t("Driver"), value: driver, render: "tag" });
   }
   if (secret.CreatedAt) {
     rows.push({ key: "created", label: t("Created"), value: inspectDate(secret.CreatedAt) });

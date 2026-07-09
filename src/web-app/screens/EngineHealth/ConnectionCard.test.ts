@@ -16,7 +16,8 @@ describe("connection health card", () => {
     expect(source).toContain('role={canCollapse ? "button" : undefined}');
     expect(source).toContain('{canCollapse ? <Icon className="chev" icon={IconNames.CHEVRON_DOWN} /> : null}');
     expect(source).toContain("<EngineCell engine={card.engine} />");
-    expect(source).toContain('<span className="ct">{card.subtitle}</span>');
+    expect(source).toContain('<span className="ct">{card.engineLabel}</span>');
+    expect(source).toContain('<span className="statePill remote">{card.transportLabel}</span>');
     expect(source).not.toContain("connectionName={card.name}");
     expect(source).not.toContain('<span className="cn">{card.name}</span>');
     expect(source).not.toContain('className="ConnBody"');

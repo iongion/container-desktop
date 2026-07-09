@@ -10,6 +10,7 @@ import { useRouteParams } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ConnectionDetailsActionsMenu } from "./ActionsMenu";
+import { ConnectionDetailLayout } from "./ConnectionDetailRail";
 import { getConnectionCrumbs, getConnectionsUrl } from "./Navigation";
 import { useSystemInfo } from "./queries";
 import { buildSystemInfoSummary } from "./systemInfoSummary";
@@ -75,7 +76,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
           <ConnectionDetailsActionsMenu connectionId={connectionId} currentScreen={ID} onReload={onReload} />
         }
       />
-      <div className="AppScreenContent">{contentWidget}</div>
+      <ConnectionDetailLayout connectionId={connectionId} currentScreen={ID}>
+        {contentWidget}
+      </ConnectionDetailLayout>
     </div>
   );
 };

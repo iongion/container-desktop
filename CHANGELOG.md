@@ -33,8 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Containers list now nests connection → group → container while keeping the Appearance-controlled Engine column
 - **Human-friendly Property/Value tables** — Connection info and every resource Inspect (Containers, Images, Pods, Machines, Networks, Secrets, Volumes, plus Swarm and Connection → System info) now share sortable Property/Value tables with per-row copy and Property ascending by default
 - **Engine health** — a per-connection detail page from **Connections**: one engine at a time, with a verdict header and connection-path pipeline that breaks at the failing hop, runtime/machine vitals with image disk usage (`/system/df`), custom networks with client-side subnet-overlap detection, bind mounts, and plain-language diagnoses with copyable fixes
+- **Inspect tab rail** — resource Inspect screens with more than Summary + Raw (Containers) get a left tab rail (Summary · Env vars · Ports · Mounts · Raw) matching the Settings rail; summaries are sortable Property/Value tables that render values richly (run-state pill, health dot, image `Tag`, code chips), with Ports/Mounts as Container/Host tables
+- **Connection detail rail** — Connection info · System info · Engine health move from a header menu into a left rail
 
 ### Changed
+
+- Engine health folds the Runtime panel into the header (transport badge + image-disk usage, pluralized container/image counts); Networking spans full width
+- Connection info shows the real resolved DOCKER_HOST (runtime socket, with an on-load discovery for automatic connections) and hides the meaningless guest row on native connections
+- Settings categories are listed alphabetically; connection-name links drop the default blue underline; the Image **Start** action adopts the shared success-button style
 
 - Localization: en.json is now the complete source catalog (every `t()` key extracted); all language catalogs share the identical key set; container state/health badges, table headers, action menus and more are now translatable, with expanded coverage for French, Spanish, Italian, Portuguese, Romanian and Japanese
 - Container state and health now render through the translation layer instead of raw engine strings

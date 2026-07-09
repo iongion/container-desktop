@@ -13,19 +13,26 @@ export function buildImageSummary(image: ContainerImage): InspectSummaryRow[] {
     rows.push({ key: "name", label: t("Name"), value: image.Name, copyText: image.Name });
   }
   if (image.Registry) {
-    rows.push({ key: "registry", label: t("Registry"), value: image.Registry });
+    rows.push({ key: "registry", label: t("Registry"), value: image.Registry, render: "tag" });
   }
   if (image.Tag) {
-    rows.push({ key: "tag", label: t("Tag"), value: image.Tag });
+    rows.push({ key: "tag", label: t("Tag"), value: image.Tag, render: "tag" });
   }
   // Digest is as identity-critical as the tag (the immutable content ref). Podman populates `Digest`;
   // Docker leaves it empty and carries `repo@sha256:…` in RepoDigests[] — take the part after `@`.
   const digest = image.Digest || image.RepoDigests?.[0]?.split("@")[1] || image.RepoDigests?.[0] || "";
   if (digest) {
-    rows.push({ key: "digest", label: t("Digest"), value: digest, copyText: digest, mono: true });
+    rows.push({ key: "digest", label: t("Digest"), value: digest, copyText: digest, mono: true, render: "code" });
   }
   if (image.Id) {
-    rows.push({ key: "id", label: t("Id"), value: shortId(image.Id), copyText: image.Id, mono: true });
+    rows.push({
+      key: "id",
+      label: t("Id"),
+      value: shortId(image.Id),
+      copyText: image.Id,
+      mono: true,
+      render: "code",
+    });
   }
   if (typeof image.Size === "number") {
     rows.push({ key: "size", label: t("Size"), value: prettyBytes(image.Size) });

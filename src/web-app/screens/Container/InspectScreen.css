@@ -102,14 +102,7 @@
   color: var(--app-text);
 }
 
-/* Container inspect stacks THREE sections (summary + Env/Mounts/Ports groups + raw JSON), so the content
-   area scrolls and the JSON frame is bounded (rather than flex-filling) — otherwise tall groups would
-   squeeze the editor to zero. Higher specificity than the shared `.InspectCodeEditor` rule, so no tie. */
-.AppScreen[data-screen="container.inspect"] .AppScreenContent {
-  overflow: auto;
-}
-.AppScreen[data-screen="container.inspect"] .InspectCodeEditor {
-  flex: 0 0 auto;
-  min-height: 320px;
-  max-height: 50vh;
-}
+/* Inspect now uses the left tab rail (InspectTabs): the content column switches to a row (see
+   .AppScreenContent.InspectTabsContent in InspectTabs.css) and the active tab's pane owns the scroll. The
+   Raw-config frame is flex:1 1 auto (InspectSummary.css .InspectCodeEditor), so it fills the pane fluidly —
+   no fixed height needed. */

@@ -4,7 +4,7 @@ import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/env/Ty
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { connectedConnections, isDockerConnection } from "@/web-app/components/ConnectionSelect";
-import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
+import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -103,10 +103,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
         titleIcon={icon}
         breadcrumbs={getSwarmCrumbs(kind, title, connectionId)}
       />
-      <div className="AppScreenContent">
-        <InspectSummary rows={buildSwarmSummary(entity, inspectKind)} dataTable="swarm.inspect-summary" />
-        <InspectRawJson value={JSON.stringify(entity, null, 2)} />
-      </div>
+      <ResourceInspectTabs
+        dataScreen={ID}
+        summaryRows={buildSwarmSummary(entity, inspectKind)}
+        summaryTable="swarm.inspect-summary"
+        rawValue={JSON.stringify(entity, null, 2)}
+      />
     </div>
   );
 };

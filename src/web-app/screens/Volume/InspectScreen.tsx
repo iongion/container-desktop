@@ -1,7 +1,7 @@
 import { IconNames } from "@blueprintjs/icons";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
-import { InspectRawJson, InspectSummary } from "@/web-app/components/InspectSummary";
+import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -37,10 +37,12 @@ export const Screen: AppScreen<ScreenProps> = () => {
         breadcrumbs={getVolumeCrumbs(volume.Name, connectionId)}
         rightContent={<VolumeActionsMenu volume={volume} connectionId={connectionId} withoutCreate />}
       />
-      <div className="AppScreenContent">
-        <InspectSummary rows={buildVolumeSummary(volume)} dataTable="volume.inspect-summary" />
-        <InspectRawJson value={JSON.stringify(volume, null, 2)} />
-      </div>
+      <ResourceInspectTabs
+        dataScreen={ID}
+        summaryRows={buildVolumeSummary(volume)}
+        summaryTable="volume.inspect-summary"
+        rawValue={JSON.stringify(volume, null, 2)}
+      />
     </div>
   );
 };

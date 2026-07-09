@@ -72,14 +72,19 @@
 .PlatformConnectionName {
   font-size: 12px;
 }
-.PlatformConnectionNameLink {
+/* The connection name is a link, but Blueprint's `.bp6-dark a` blue + underline reads foreign in the table.
+   Scope + `a.` out-specify it: normal app text, no underline, weight for presence; hover tints to the accent
+   (still no underline) so it reads as interactive without the harsh default-link look. */
+[data-table="host.connections"] a.PlatformConnectionNameLink {
   color: var(--app-text);
   display: block;
-  text-decoration: underline;
+  text-decoration: none;
+  font-weight: 600;
 }
-.PlatformConnectionNameLink:hover,
-.PlatformConnectionNameLink:focus {
-  color: var(--app-accent);
+[data-table="host.connections"] a.PlatformConnectionNameLink:hover,
+[data-table="host.connections"] a.PlatformConnectionNameLink:focus {
+  color: var(--app-accent-text);
+  text-decoration: none;
 }
 .PlatformConnectionDescription {
   padding-top: 5px;
@@ -87,5 +92,4 @@
 }
 [data-connection-is-system="yes"] .PlatformConnectionName {
   font-weight: bold;
-  text-decoration: underline;
 }

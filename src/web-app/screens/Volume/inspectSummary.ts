@@ -11,10 +11,10 @@ export function buildVolumeSummary(volume: Volume): InspectSummaryRow[] {
     rows.push({ key: "name", label: t("Name"), value: volume.Name, copyText: volume.Name });
   }
   if (volume.Driver) {
-    rows.push({ key: "driver", label: t("Driver"), value: volume.Driver });
+    rows.push({ key: "driver", label: t("Driver"), value: volume.Driver, render: "tag" });
   }
   if (volume.Scope) {
-    rows.push({ key: "scope", label: t("Scope"), value: volume.Scope });
+    rows.push({ key: "scope", label: t("Scope"), value: volume.Scope, render: "tag" });
   }
   if (volume.Mountpoint) {
     rows.push({
@@ -23,6 +23,7 @@ export function buildVolumeSummary(volume: Volume): InspectSummaryRow[] {
       value: volume.Mountpoint,
       copyText: volume.Mountpoint,
       mono: true,
+      render: "code",
     });
   }
   if (volume.CreatedAt) {

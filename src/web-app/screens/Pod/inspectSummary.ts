@@ -11,13 +11,13 @@ export function buildPodSummary(pod: Pod): InspectSummaryRow[] {
     rows.push({ key: "name", label: t("Name"), value: pod.Name, copyText: pod.Name });
   }
   if (pod.Status) {
-    rows.push({ key: "status", label: t("Status"), value: pod.Status });
+    rows.push({ key: "status", label: t("Status"), value: pod.Status, render: "state" });
   }
   if (typeof pod.NumContainers === "number") {
     rows.push({ key: "containers", label: t("Containers"), value: `${pod.NumContainers}` });
   }
   if (pod.Id) {
-    rows.push({ key: "id", label: t("Id"), value: shortId(pod.Id), copyText: pod.Id, mono: true });
+    rows.push({ key: "id", label: t("Id"), value: shortId(pod.Id), copyText: pod.Id, mono: true, render: "code" });
   }
   if (pod.NameSpace) {
     rows.push({ key: "namespace", label: t("Namespace"), value: pod.NameSpace });

@@ -2,15 +2,11 @@
    (.scratch/engine-health-cockpit/index.html), scoped under .EngineHealth and driven entirely by --app-*
    theme tokens (unified/teal chrome; per-connection identity = engine glyph + verdict-colored left border). */
 
-/* Separate the first card from the header (the shared section header has no bottom margin of its own). */
-.EngineHealth .AppScreenHeader {
-  margin-bottom: 10px;
-}
-.EngineHealth .AppScreenContent {
-  display: flex;
-  flex-direction: column;
+/* The health cockpit now renders inside the connection-detail rail panel (ConnectionDetailLayout), which
+   owns the header spacing, row layout and scroll — so the old direct-content rules here would only leak into
+   the rail layout (extra header margin / gap). The panel's own flex column + gap drives the cards' spacing. */
+.EngineHealth .ConnectionDetailPanel {
   gap: 10px;
-  overflow: auto;
 }
 /* Legacy fleet-status widget styles kept for any diagnostics header reuse. */
 .EngineHealth .EngineHealthHead {
@@ -132,6 +128,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Grow to fill the bar so the trailing state + transport badges pin to the right edge. */
+  flex: 1;
+  min-width: 0;
+}
+/* Keep the right-edge badges from shrinking when the vitals text is long. */
+.EngineHealth .ConnHead .statePill,
+.EngineHealth .ConnHead .vpill {
+  flex: 0 0 auto;
 }
 /* Health content panels render directly in the page content flow. */
 .EngineHealth .subCard {

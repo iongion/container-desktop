@@ -18,6 +18,11 @@
   align-items: center;
 }
 
+/* A touch more room between the root crumb's icon and its label (4px default reads cramped). */
+.AppBreadcrumbs .bp6-breadcrumb .bp6-icon {
+  margin-right: 8px;
+}
+
 /* Ancestor (link) crumbs recede; the current crumb is the strong "title". */
 .AppBreadcrumbs .bp6-breadcrumb {
   color: var(--app-text-muted);

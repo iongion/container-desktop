@@ -437,6 +437,12 @@ code.DocsCodeBox {
   vertical-align: middle;
 }
 
+.tsqd-open-btn-container {
+  transform: scale(0.4);
+  right: 105px !important;
+  bottom: -10px !important;
+}
+
 /*
 :not(input):not(textarea),
 :not(input):not(textarea)::after,
