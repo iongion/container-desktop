@@ -1,4 +1,4 @@
-import { Alignment, AnchorButton, ButtonGroup } from "@blueprintjs/core";
+import { Alignment, AnchorButton, ButtonGroup, Tag } from "@blueprintjs/core";
 import type { IconName } from "@blueprintjs/icons";
 import type { ReactNode } from "react";
 
@@ -12,6 +12,12 @@ export interface ResourceSectionRailItem {
   icon: IconName;
   // Hash route this section navigates to.
   href: string;
+  // Optional trailing count pill (e.g. Env vars, Ports, Mounts).
+  count?: number;
+  // Non-navigable when the engine can't serve this section (e.g. Kube on a non-kube host).
+  disabled?: boolean;
+  // Tooltip (e.g. why the section is disabled).
+  title?: string;
 }
 
 interface ResourceSectionRailProps {
@@ -40,11 +46,19 @@ export function ResourceSectionRail({ items, activeId, dataScreen, children }: R
               alignText={Alignment.START}
               fill
               active={activeId === item.id}
+              disabled={item.disabled}
+              title={item.title}
               icon={item.icon}
               href={item.href}
               data-tab={item.id}
-              text={item.label}
-            />
+            >
+              <span className="ResourceSectionRailLabel">{item.label}</span>
+              {typeof item.count === "number" ? (
+                <Tag minimal round className="ResourceSectionRailCount">
+                  {item.count}
+                </Tag>
+              ) : null}
+            </AnchorButton>
           ))}
         </ButtonGroup>
       </div>

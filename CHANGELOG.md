@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Connection detail rail** — Connection info · System info · Engine health move from a header menu into a left rail
 - Resource breadcrumbs lead with the owning **connection** (clickable → its info page); the entity icon moves in front of the trail
 - **Inspect** now leads every resource's actions — inline buttons, the "…" menu, and the Image detail rail; Networks and Machines gain the Inspect action they were missing
-- Container detail gains the same left section rail (Inspect · Logs · Processes · Kube) as Image; those sections leave the header for the "…" menu, keeping only the inline player actions (pause/stop/play)
+- Container detail gets one left section rail — Inspect (the summary) · Env vars · Ports · Mounts · Logs · Processes · Kube · Raw configuration — replacing both the header's inline section buttons (now in the "…" menu) and the old inner inspect tabs; player actions stay inline, and Kube is disabled off Podman
 
 ### Changed
 

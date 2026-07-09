@@ -16,6 +16,16 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+/* A section body's own header (the Raw-config JsonView reuses h5.InspectSectionTitle, whose 12px top margin is
+   for the old stacked layout) must not add a second top gap inside the rail's pane — the pane pads its own top. */
+.ResourceDetailLayout h5.InspectSectionTitle {
+  margin-top: 0;
+}
+/* The raw-config frame (.JsonViewFrame.InspectCodeEditor) carries its own 1px border; embedded in the rail its
+   left edge butts against the rail's right border, so drop the frame's left border to avoid a doubled hairline. */
+.ResourceDetailLayout .JsonViewFrame.InspectCodeEditor {
+  border-left: none;
+}
 
 .ResourceSectionRail {
   flex: 0 0 auto;
@@ -32,4 +42,29 @@
 .ResourceSectionRail .ResourceSectionRailItem.bp6-button {
   margin-bottom: 2px;
   border-radius: 4px;
+}
+/* Let the label grow and the count pill sit flush-right inside the Button's text slot (mirrors InspectTabs). */
+.ResourceSectionRail .ResourceSectionRailItem.bp6-button .bp6-button-text {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+}
+.ResourceSectionRailLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ResourceSectionRail .ResourceSectionRailCount.bp6-tag {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  min-width: 20px;
+  text-align: center;
+}
+/* The active item's count pill picks up the accent so the selection reads as one unit. */
+.ResourceSectionRail .ResourceSectionRailItem.bp6-button.bp6-active .ResourceSectionRailCount.bp6-tag {
+  background-color: color-mix(in srgb, var(--app-accent) 24%, transparent);
+  color: var(--app-accent-text);
 }

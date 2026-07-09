@@ -27,6 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const { connId } = useRouteSearch<{ connId?: string }>();
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
   const connectionId = connId || primaryConnectionId;
+  const engine = useAppStore((state) => state.connections.find((c) => c.id === connectionId)?.engine);
   const decodedId = decodeURIComponent(id || "");
   const containerQuery = useContainer(connectionId, decodedId, undefined, { live: false });
   const container = containerQuery.data;
@@ -52,7 +53,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
-      <ResourceSectionRail items={containerSectionRailItems(container.Id, connectionId)} activeId={ID} dataScreen={ID}>
+      <ResourceSectionRail
+        items={containerSectionRailItems(container, connectionId, engine)}
+        activeId={ID}
+        dataScreen={ID}
+      >
         <div className="AppScreenContent">
           {stream.error ? (
             <Callout intent="warning">{t("Live log stream failed: {{error}}", { error: stream.error })}</Callout>

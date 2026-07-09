@@ -18,7 +18,7 @@ export const imageSectionRailItems = (id: string, connId?: string): ResourceSect
   { id: "image.layers", label: i18n.t("Layers"), icon: IconNames.LAYERS, href: getImageUrl(id, "layers", connId) },
   {
     id: "image.security",
-    label: i18n.t("Security"),
+    label: i18n.t("Security check"),
     icon: IconNames.CONFIRM,
     href: getImageUrl(id, "security", connId),
   },
@@ -44,7 +44,7 @@ export const imageDisplayName = (image: Pick<ContainerImage, "Name" | "Tag" | "F
 // Sub-tab label per view segment (keys match the ActionsMenu wording).
 const IMAGE_VIEW_LABELS: Record<string, string> = {
   layers: i18n.t("Layers"),
-  security: i18n.t("Security"),
+  security: i18n.t("Security check"),
 };
 
 /** Canonical image trail: `Images > name` on inspect; `Images > name > Tab` on a sub-tab. */
