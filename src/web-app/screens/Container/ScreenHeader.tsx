@@ -6,6 +6,7 @@ import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 
 import { ActionsMenu } from "./ActionsMenu";
+import { ContainerStatusPill } from "./ContainerStatusPill";
 import { getContainerCrumbs } from "./Navigation";
 
 interface ScreenHeaderProps {
@@ -42,9 +43,12 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       titleText={displayName}
       breadcrumbs={getContainerCrumbs(displayName, container.Id, currentScreen, connId)}
       rightContent={
-        // Sections (Inspect/Logs/Processes/Kube) live in the left rail now; the header keeps only the inline
-        // player actions (pause/stop/play) and the "…" menu (which lists the sections via expandAsMenuItems).
-        <ActionsMenu container={container} connectionId={connId} withInlinePlayerActions onReload={onReload} />
+        // Sections (Inspect/Logs/Processes/Kube) live in the left rail now; the header keeps the container's
+        // health+state pill, the inline player actions (pause/stop/play) and the "…" menu.
+        <>
+          <ContainerStatusPill container={container} />
+          <ActionsMenu container={container} connectionId={connId} withInlinePlayerActions onReload={onReload} />
+        </>
       }
     />
   );
