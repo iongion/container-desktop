@@ -874,7 +874,7 @@
   "Relay target socket": "릴레이 대상 소켓",
   "Relay to": "중계 대상",
   "Reload connections": "연결 새로 고침",
-  "Reload current list": "현재 목록 새로고침",
+  "Reload current screen": "현재 화면 새로 고침",
   "Remote": "원격",
   "Remote SSH connection": "원격 SSH 연결",
   "Remote SSH connection is not yet available": "원격 SSH 연결을 아직 사용할 수 없습니다.",

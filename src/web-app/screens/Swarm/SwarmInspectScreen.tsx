@@ -1,10 +1,12 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 
 import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/env/Types";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { connectedConnections, isDockerConnection } from "@/web-app/components/ConnectionSelect";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -55,6 +57,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const servicesQuery = useSwarmServices(connectionId, isStack);
   const scaleService = useScaleService(connectionId);
   const removeService = useRemoveService(connectionId);
+  const onScreenReload = useCallback(() => {
+    entityQuery.refetch();
+    servicesQuery.refetch();
+  }, [entityQuery, servicesQuery]);
 
   // Stacks are derived (not a REST object) — reuse the Services table for the member services so a stack's
   // services get the same detail link + scale/remove actions.
@@ -70,6 +76,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
           titleText={id}
           titleIcon={icon}
           breadcrumbs={getSwarmCrumbs(kind, id, connectionId)}
+          rightContent={<ResourceListActions onReload={onScreenReload} />}
         />
         <div className="AppScreenContent">
           {servicesQuery.isLoading ? (
@@ -102,6 +109,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
         titleText={title}
         titleIcon={icon}
         breadcrumbs={getSwarmCrumbs(kind, title, connectionId)}
+        rightContent={<ResourceListActions onReload={onScreenReload} />}
       />
       <ResourceInspectTabs
         dataScreen={ID}

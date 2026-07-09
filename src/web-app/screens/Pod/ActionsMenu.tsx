@@ -182,36 +182,51 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   const canStop = isRunning && !isStopped;
   const canRestart = !isPaused;
 
+  const overflowMenu = (
+    <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"} large={!!onReload}>
+      {expandAsMenuItems}
+      <MenuItem
+        data-pod={pod.Id}
+        data-action={isPaused ? "pod.unpause" : "pod.pause"}
+        disabled={!canPauseUnpause}
+        icon={IconNames.PAUSE}
+        text={isPaused ? t("Resume") : t("Pause")}
+        onClick={onActionClick}
+      />
+      <MenuItem
+        data-pod={pod.Id}
+        data-action="pod.stop"
+        disabled={!canStop}
+        icon={IconNames.STOP}
+        text={t("Stop")}
+        onClick={onActionClick}
+      />
+      <MenuItem
+        data-pod={pod.Id}
+        data-action="pod.restart"
+        disabled={!canRestart}
+        icon={IconNames.RESET}
+        text={t("Restart")}
+        onClick={onActionClick}
+      />
+    </ConfirmMenu>
+  );
+  // Detail screenheader: nav + overflow + reload via the shared ResourceListActions (matches the list header).
+  if (onReload) {
+    return (
+      <ResourceListActions
+        navigation={expandAsButtons}
+        utilityActions={overflowMenu}
+        utilityActionsPlacement="before-reload"
+        onReload={onReload}
+      />
+    );
+  }
+  // List rows: one compact inline ButtonGroup.
   return (
     <ButtonGroup className="ResourceItemInlineActionsMenu">
       {expandAsButtons}
-      <ConfirmMenu onConfirm={onRemove} tag={pod.Id} disabled={disabledAction === "pod.remove"}>
-        {expandAsMenuItems}
-        <MenuItem
-          data-pod={pod.Id}
-          data-action={isPaused ? "pod.unpause" : "pod.pause"}
-          disabled={!canPauseUnpause}
-          icon={IconNames.PAUSE}
-          text={isPaused ? t("Resume") : t("Pause")}
-          onClick={onActionClick}
-        />
-        <MenuItem
-          data-pod={pod.Id}
-          data-action="pod.stop"
-          disabled={!canStop}
-          icon={IconNames.STOP}
-          text={t("Stop")}
-          onClick={onActionClick}
-        />
-        <MenuItem
-          data-pod={pod.Id}
-          data-action="pod.restart"
-          disabled={!canRestart}
-          icon={IconNames.RESET}
-          text={t("Restart")}
-          onClick={onActionClick}
-        />
-      </ConfirmMenu>
+      {overflowMenu}
     </ButtonGroup>
   );
 };

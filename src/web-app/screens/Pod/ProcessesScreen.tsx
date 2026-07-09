@@ -1,6 +1,6 @@
 import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { PodProcessReport } from "@/env/Types";
 import i18n from "@/i18n";
@@ -28,6 +28,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const processesQuery = usePodProcesses(connectionId, id);
   const pod = podQuery.data;
   const pending = podQuery.isLoading || podQuery.isFetching || processesQuery.isLoading || processesQuery.isFetching;
+  const onScreenReload = useCallback(() => {
+    podQuery.refetch();
+    processesQuery.refetch();
+  }, [podQuery, processesQuery]);
 
   const processes = useMemo(() => {
     let report: PodProcessReport = { Processes: [], Titles: [] };
@@ -45,7 +49,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   const contents = (
     <>
-      <ScreenHeader pod={pod} currentScreen={ID} />
+      <ScreenHeader pod={pod} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
         <HTMLTable compact striped className="AppDataTable" data-table="pod.processes">
           <thead>

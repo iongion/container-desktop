@@ -561,7 +561,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
       navigation={populated ? tabStrip : undefined}
       onReload={onReload}
       reloadDisabled={!populated}
-      reloadTitle={t("Reload current list")}
+      reloadTitle={t("Reload current screen")}
       utilityActions={leaveSwarmAction}
       utilityActionsPlacement="before-reload"
     />

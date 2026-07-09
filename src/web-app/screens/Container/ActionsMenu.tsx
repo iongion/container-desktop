@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { type Container, ContainerStateList } from "@/env/Types";
 import { randomUUID } from "@/utils/randomUUID";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -376,6 +377,90 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     setContainer(userContainer);
   }, [userContainer]);
 
+  const overflowMenu = container ? (
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={container.Id}
+      title={t("The container cannot be removed while running")}
+      disabled={!canRemove || disabledAction === "container.remove"}
+      onOpenChange={onMenuOpenChange}
+      large={!!onReload}
+    >
+      {expandAsMenuItems}
+      <MenuItem
+        data-container={container.Id}
+        data-action="container.stats"
+        disabled={!isRunning}
+        icon={IconNames.CHART}
+        text={t("Stats")}
+        href={getContainerUrl(container.Id, "stats", connectionId)}
+      />
+      <MenuItem
+        data-container={container.Id}
+        disabled={!isRunning}
+        icon={<ReactIcon.Icon path={mdiOpenInApp} size={0.75} />}
+        href={containerServiceUrl}
+        target="_blank"
+        text={t("Open in browser")}
+        title={containerServiceUrl}
+      />
+      <MenuItem
+        data-container={container.Id}
+        data-action="container.connect"
+        disabled={!isRunning}
+        icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
+        text={t("Open terminal console")}
+        onClick={onOpenTerminalConsole}
+      />
+      {withInlinePlayerActionsWidget ? null : (
+        <>
+          <MenuItem
+            data-container={container.Id}
+            data-action={isPaused ? "container.unpause" : "container.pause"}
+            disabled={!canPauseUnpause}
+            icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
+            text={isPaused ? t("Resume") : t("Pause")}
+            onClick={onActionClick}
+          />
+          <MenuItem
+            data-container={container.Id}
+            data-action="container.stop"
+            disabled={!canStop}
+            icon={IconNames.STOP}
+            text={t("Stop")}
+            onClick={onActionClick}
+          />
+          <MenuItem
+            data-container={container.Id}
+            data-action="container.restart"
+            disabled={!canRestart}
+            icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
+            text={isRunning || isPaused ? t("Restart") : t("Start")}
+            onClick={onActionClick}
+          />
+        </>
+      )}
+    </ConfirmMenu>
+  ) : null;
+  // Detail screenheader: player controls lead, the "…" + reload trail in a group, via the shared
+  // ResourceListActions (matches the list header's size/spacing/order).
+  if (onReload) {
+    return (
+      <ResourceListActions
+        navigation={
+          <>
+            {expandAsOverlay}
+            {withInlinePlayerActionsWidget}
+            {expandAsButtons}
+          </>
+        }
+        utilityActions={overflowMenu}
+        utilityActionsPlacement="before-reload"
+        onReload={onReload}
+      />
+    );
+  }
+  // List rows / hover overlay: a single inline ButtonGroup keeps the row-specific look.
   return (
     <ButtonGroup
       className={container ? "ItemActionsMenu ResourceItemInlineActionsMenu" : "ItemActionsMenu"}
@@ -389,83 +474,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         </>
       ) : null}
       {expandAsButtons}
-      {container ? (
-        <ConfirmMenu
-          onConfirm={onRemove}
-          tag={container.Id}
-          title={t("The container cannot be removed while running")}
-          disabled={!canRemove || disabledAction === "container.remove"}
-          onOpenChange={onMenuOpenChange}
-        >
-          {expandAsMenuItems}
-          <MenuItem
-            data-container={container.Id}
-            data-action="container.stats"
-            disabled={!isRunning}
-            icon={IconNames.CHART}
-            text={t("Stats")}
-            href={getContainerUrl(container.Id, "stats", connectionId)}
-          />
-          <MenuItem
-            data-container={container.Id}
-            disabled={!isRunning}
-            icon={<ReactIcon.Icon path={mdiOpenInApp} size={0.75} />}
-            href={containerServiceUrl}
-            target="_blank"
-            text={t("Open in browser")}
-            title={containerServiceUrl}
-          />
-          <MenuItem
-            data-container={container.Id}
-            data-action="container.connect"
-            disabled={!isRunning}
-            icon={<ReactIcon.Icon path={mdiConsole} size={0.75} />}
-            text={t("Open terminal console")}
-            onClick={onOpenTerminalConsole}
-          />
-          {withInlinePlayerActionsWidget ? null : (
-            <>
-              <MenuItem
-                data-container={container.Id}
-                data-action={isPaused ? "container.unpause" : "container.pause"}
-                disabled={!canPauseUnpause}
-                icon={isPaused ? IconNames.PLAY : IconNames.PAUSE}
-                text={isPaused ? t("Resume") : t("Pause")}
-                onClick={onActionClick}
-              />
-              <MenuItem
-                data-container={container.Id}
-                data-action="container.stop"
-                disabled={!canStop}
-                icon={IconNames.STOP}
-                text={t("Stop")}
-                onClick={onActionClick}
-              />
-              <MenuItem
-                data-container={container.Id}
-                data-action="container.restart"
-                disabled={!canRestart}
-                icon={isRunning || isPaused ? IconNames.RESET : IconNames.PLAY}
-                text={isRunning || isPaused ? t("Restart") : t("Start")}
-                onClick={onActionClick}
-              />
-            </>
-          )}
-        </ConfirmMenu>
-      ) : null}
-      {onReload && (
-        <>
-          {expandAsOverlay || withInlinePlayerActionsWidget ? <Divider /> : null}
-          <Button
-            size="small"
-            variant="minimal"
-            intent={Intent.NONE}
-            title={t("Reload current list")}
-            icon={IconNames.REFRESH}
-            onClick={onReload}
-          />
-        </>
-      )}
+      {overflowMenu}
     </ButtonGroup>
   );
 };

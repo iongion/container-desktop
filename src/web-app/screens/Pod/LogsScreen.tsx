@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
@@ -25,6 +26,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const logsQuery = usePodLogs(connectionId, id, 100);
   const pod = podQuery.data;
   const pending = podQuery.isLoading || podQuery.isFetching || logsQuery.isLoading || logsQuery.isFetching;
+  const onScreenReload = useCallback(() => {
+    podQuery.refetch();
+    logsQuery.refetch();
+  }, [podQuery, logsQuery]);
 
   if (!pod) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -32,7 +37,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader pod={pod} currentScreen={ID} />
+      <ScreenHeader pod={pod} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
         <CodeEditor value={`${logsQuery.data?.stderr ?? ""}`} mode="text" headerTitle={t("stderr")} />
         <CodeEditor value={`${logsQuery.data?.stdout ?? ""}`} mode="text" headerTitle={t("stdout")} />

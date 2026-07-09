@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import i18n from "@/i18n";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -21,7 +22,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
   const connectionId = connId || primaryConnectionId;
   const podQuery = usePod(connectionId, id);
-  const pod = podQuery.data;
+  const { data: pod, refetch } = podQuery;
+  const onScreenReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   if (!pod) {
     return <ScreenLoader screen={ID} pending={podQuery.isLoading || podQuery.isFetching} />;
@@ -29,7 +33,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader pod={pod} currentScreen={ID} />
+      <ScreenHeader pod={pod} currentScreen={ID} onReload={onScreenReload} />
       <ResourceInspectTabs
         dataScreen={ID}
         summaryRows={buildPodSummary(pod)}

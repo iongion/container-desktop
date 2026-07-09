@@ -1,5 +1,6 @@
 import { NonIdealState } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -27,7 +28,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
   const connectionId = connId || primaryConnectionId;
   const secretQuery = useSecret(connectionId, id);
-  const secret = secretQuery.data;
+  const { data: secret, refetch } = secretQuery;
+  const onScreenReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   if (!secret) {
     if (secretQuery.isLoading || secretQuery.isFetching) {
@@ -51,7 +55,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
         titleText={secret.Spec.Name}
         titleIcon={IconNames.KEY}
         breadcrumbs={getSecretCrumbs(secret.Spec.Name, connectionId)}
-        rightContent={<SecretActionsMenu secret={secret} connectionId={connectionId} withoutCreate />}
+        rightContent={
+          <SecretActionsMenu secret={secret} connectionId={connectionId} withoutCreate onReload={onScreenReload} />
+        }
       />
       <ResourceInspectTabs
         dataScreen={ID}

@@ -420,7 +420,7 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   border-radius: 999px;
   background: var(--security-severity-bg);
   color: var(--security-severity-text);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -496,9 +496,9 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 
 .SecuritySeverityBadge[data-severity="CRITICAL"],
 .SecuritySeverityFilter[data-severity="CRITICAL"] {
-  --security-severity-bg: color-mix(in srgb, var(--app-intent-danger-rest) 28%, var(--app-surface));
-  --security-severity-border: color-mix(in srgb, var(--app-intent-danger-rest) 62%, var(--app-border));
-  --security-severity-text: var(--app-intent-danger-text);
+  --security-severity-bg: color-mix(in srgb, var(--app-intent-danger-rest) 46%, var(--app-surface));
+  --security-severity-border: color-mix(in srgb, var(--app-intent-danger-rest) 88%, var(--app-border));
+  --security-severity-text: color-mix(in srgb, var(--app-intent-danger-text) 82%, var(--app-intent-danger-fg));
 }
 
 .SecuritySeverityBadge[data-severity="HIGH"],
@@ -530,8 +530,9 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 }
 
 .SecuritySeverityBadgeCompact {
-  min-width: 76px;
-  padding-inline: 9px;
+  min-width: 60px;
+  padding-inline: 6px;
+  font-size: 8px;
 }
 
 .SecurityScannerMeta {
@@ -588,7 +589,7 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 
 .AppDataTable[data-table="image.scanning.report"] {
   width: 100%;
-  min-width: 780px;
+  min-width: 0;
   color: var(--app-text);
   table-layout: auto;
 }
@@ -647,7 +648,13 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 .SecurityFindingsTable th[data-column="type"] .SortableColumnHeaderButton,
 .SecurityFindingsTable th[data-column="published"] .SortableColumnHeaderButton {
   width: 100%;
-  justify-content: center;
+  text-align: center;
+}
+
+.AppDataTable[data-table="image.scanning.report"].SecurityFindingsTable th[data-column="package"],
+.AppDataTable[data-table="image.scanning.report"].SecurityFindingsTable th[data-column="type"],
+.AppDataTable[data-table="image.scanning.report"].SecurityFindingsTable th[data-column="published"] {
+  text-align: center !important;
 }
 
 .AppDataTable[data-table="image.scanning.report"] tbody tr {
@@ -678,6 +685,10 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   color: var(--app-text-muted);
   text-align: left !important;
   vertical-align: top !important;
+}
+
+.AppDataTable[data-table="image.scanning.report"] tbody td.SecurityCellSeverity {
+  vertical-align: middle !important;
 }
 
 .SecurityFindingText {

@@ -48,6 +48,7 @@ interface ScreenHeaderProps {
   currentScreen: string;
   listRoutePath?: string;
   listRouteIcon?: IconName;
+  onReload?: () => void;
 }
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
@@ -55,6 +56,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   currentScreen,
   listRoutePath,
   listRouteIcon,
+  onReload,
 }: ScreenHeaderProps) => {
   // Keep the owning connection while moving between this resource's detail views (ids collide across engines).
   const { connId } = useRouteSearch<{ connId?: string }>();
@@ -71,7 +73,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       titleIcon={IconNames.GRAPH}
       titleText={network.name || network.id || ""}
       breadcrumbs={getNetworkCrumbs(network.name || network.id || "", connId)}
-      rightContent={<ActionsMenu withoutCreate network={network} connectionId={connId} />}
+      rightContent={<ActionsMenu withoutCreate network={network} connectionId={connId} onReload={onReload} />}
     />
   );
 };

@@ -101,6 +101,8 @@ export interface ConfirmMenuProps {
   // Notified whenever the popover opens/closes. The container list uses this to keep the (hover-gated) row
   // menu mounted while it's open, so moving the mouse toward a menu item doesn't tear the popover down.
   onOpenChange?: (open: boolean) => void;
+  // Detail-screen headers render actions at default size; row menus keep the compact minimal trigger.
+  large?: boolean;
 }
 export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   disabled,
@@ -109,6 +111,7 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
   children,
   onConfirm,
   onOpenChange,
+  large,
 }: ConfirmMenuProps) => {
   // Controlled open state: PopoverNext (React 19 compatible) has no imperative
   // handleOverlayClose, so we close it explicitly when an action is taken.
@@ -142,7 +145,12 @@ export const ConfirmMenu: React.FC<ConfirmMenuProps> = ({
     [changeOpen],
   );
   const triggerButton = (
-    <Button variant="minimal" size="small" icon={IconNames.MORE} onClick={isOpen ? undefined : onOpen} />
+    <Button
+      variant="minimal"
+      size={large ? undefined : "small"}
+      icon={IconNames.MORE}
+      onClick={isOpen ? undefined : onOpen}
+    />
   );
   if (!isOpen) {
     return triggerButton;

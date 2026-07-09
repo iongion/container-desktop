@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
@@ -23,7 +24,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
   const connectionId = connId || primaryConnectionId;
   const volumeQuery = useVolume(connectionId, id);
-  const volume = volumeQuery.data;
+  const { data: volume, refetch } = volumeQuery;
+  const onScreenReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
   if (!volume) {
     return <ScreenLoader screen={ID} pending={volumeQuery.isLoading || volumeQuery.isFetching} />;
   }
@@ -35,7 +39,9 @@ export const Screen: AppScreen<ScreenProps> = () => {
         titleText={volume.Name}
         titleIcon={IconNames.DATABASE}
         breadcrumbs={getVolumeCrumbs(volume.Name, connectionId)}
-        rightContent={<VolumeActionsMenu volume={volume} connectionId={connectionId} withoutCreate />}
+        rightContent={
+          <VolumeActionsMenu volume={volume} connectionId={connectionId} withoutCreate onReload={onScreenReload} />
+        }
       />
       <ResourceInspectTabs
         dataScreen={ID}

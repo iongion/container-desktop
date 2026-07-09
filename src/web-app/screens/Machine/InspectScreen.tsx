@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import i18n from "@/i18n";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -23,13 +24,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
   const connectionId = connId || primaryConnectionId;
   const machineQuery = useMachine(connectionId, name);
-  const machine = machineQuery.data;
+  const { data: machine, refetch } = machineQuery;
+  const onScreenReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
   if (!machine) {
     return <ScreenLoader screen={ID} pending={machineQuery.isLoading || machineQuery.isFetching} />;
   }
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader machine={machine} connectionId={connectionId} currentScreen={ID} />
+      <ScreenHeader machine={machine} connectionId={connectionId} currentScreen={ID} onReload={onScreenReload} />
       <ResourceInspectTabs
         dataScreen={ID}
         summaryRows={buildMachineSummary(machine)}

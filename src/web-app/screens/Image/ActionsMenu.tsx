@@ -1,10 +1,11 @@
-import { AnchorButton, Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
+import { AnchorButton, Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ContainerImage } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
+import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -106,10 +107,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     },
     [performActionCommand],
   );
+  // List rows keep a compact, minimal inline action (no custom fill); the screenheader renders its own
+  // call-to-action instead (see below), so this variant is row-only.
   const startButton = withoutStart ? null : (
     <Button
       size="small"
-      intent={Intent.SUCCESS}
+      variant="minimal"
       text={iconOnly ? undefined : t("Start")}
       title={t("Start")}
       icon={IconNames.PLAY}
@@ -154,47 +157,59 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         />
       </>
     );
+  const overflowMenu = image ? (
+    <ConfirmMenu onConfirm={onRemove} tag={image.Id} large={!!onReload}>
+      {expandAsMenuItems}
+      <MenuItem
+        data-image={image.Id}
+        data-action="image.pull"
+        disabled={disabledAction === "image.pull"}
+        icon={IconNames.GIT_PULL}
+        text={t("Pull")}
+        onClick={onActionClick}
+      />
+      <MenuItem
+        data-image={image.Id}
+        data-action="image.push"
+        disabled={disabledAction === "image.push"}
+        icon={IconNames.GIT_PUSH}
+        text={t("Push to Hub")}
+        onClick={onActionClick}
+      />
+    </ConfirmMenu>
+  ) : null;
+  const drawer = withCreate && image && (
+    <CreateDrawer image={image} connectionId={connectionId} onClose={onCreateClose} />
+  );
+  // Screenheader: the primary action becomes a separate call-to-action and the utility actions (menu + reload)
+  // trail in a group with the list's 8px gap — reuse ResourceListActions so size/spacing/order match the list.
+  if (onReload) {
+    return (
+      <>
+        <ResourceListActions
+          actions={
+            withoutStart
+              ? undefined
+              : { icon: IconNames.PLAY, text: t("Start"), title: t("Start"), onClick: onCreateClick }
+          }
+          navigation={expandAsButtons}
+          utilityActions={overflowMenu}
+          utilityActionsPlacement="before-reload"
+          onReload={onReload}
+        />
+        {drawer}
+      </>
+    );
+  }
+  // List rows: a single compact ButtonGroup keeps the row-specific inline look.
   return (
     <>
       <ButtonGroup className={image ? "ResourceItemInlineActionsMenu" : undefined}>
         {startButton}
-        {onReload && (
-          <>
-            {startButton ? <Divider /> : null}
-            <Button
-              size="small"
-              variant="minimal"
-              intent={Intent.NONE}
-              title={t("Reload current list")}
-              icon={IconNames.REFRESH}
-              onClick={onReload}
-            />
-          </>
-        )}
         {expandAsButtons}
-        {image ? (
-          <ConfirmMenu onConfirm={onRemove} tag={image.Id}>
-            {expandAsMenuItems}
-            <MenuItem
-              data-image={image.Id}
-              data-action="image.pull"
-              disabled={disabledAction === "image.pull"}
-              icon={IconNames.GIT_PULL}
-              text={t("Pull")}
-              onClick={onActionClick}
-            />
-            <MenuItem
-              data-image={image.Id}
-              data-action="image.push"
-              disabled={disabledAction === "image.push"}
-              icon={IconNames.GIT_PUSH}
-              text={t("Push to Hub")}
-              onClick={onActionClick}
-            />
-          </ConfirmMenu>
-        ) : null}
+        {overflowMenu}
       </ButtonGroup>
-      {withCreate && image && <CreateDrawer image={image} connectionId={connectionId} onClose={onCreateClose} />}
+      {drawer}
     </>
   );
 };

@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import i18n from "@/i18n";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -22,13 +23,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const primaryConnectionId = useAppStore((state) => state.currentConnector?.id || "");
   const connectionId = connId || primaryConnectionId;
   const networkQuery = useNetwork(connectionId, name);
-  const network = networkQuery.data;
+  const { data: network, refetch } = networkQuery;
+  const onScreenReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
   if (!network) {
     return <ScreenLoader screen={ID} pending={networkQuery.isLoading || networkQuery.isFetching} />;
   }
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader network={network} currentScreen={ID} />
+      <ScreenHeader network={network} currentScreen={ID} onReload={onScreenReload} />
       <ResourceInspectTabs
         dataScreen={ID}
         summaryRows={buildNetworkSummary(network)}

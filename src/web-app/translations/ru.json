@@ -874,7 +874,7 @@
   "Relay target socket": "Целевое гнездо реле",
   "Relay to": "Реле на",
   "Reload connections": "Перезагрузить подключения",
-  "Reload current list": "Обновить текущий список",
+  "Reload current screen": "Обновить текущий экран",
   "Remote": "Удаленный",
   "Remote SSH connection": "Удаленное соединение SSH",
   "Remote SSH connection is not yet available": "Удаленное соединение SSH пока недоступно.",

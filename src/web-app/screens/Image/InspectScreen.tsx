@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import i18n from "@/i18n";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
 import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
@@ -25,13 +26,16 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const connectionId = connId || primaryConnectionId;
   const decodedId = decodeURIComponent(id || "");
   const imageQuery = useImage(connectionId, decodedId, { Id: decodedId, withHistory: true });
-  const image = imageQuery.data;
+  const { data: image, refetch } = imageQuery;
+  const onScreenReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
   if (!image) {
     return <ScreenLoader screen={ID} pending={imageQuery.isLoading || imageQuery.isFetching} />;
   }
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader image={image} currentScreen={ID} />
+      <ScreenHeader image={image} currentScreen={ID} onReload={onScreenReload} />
       <ResourceSectionRail items={imageSectionRailItems(image.Id, connectionId)} activeId={ID} dataScreen={ID}>
         <ResourceInspectTabs
           dataScreen={ID}

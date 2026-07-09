@@ -13,6 +13,7 @@ interface ScreenHeaderProps {
   currentScreen: string;
   listRoutePath?: string;
   listRouteIcon?: IconName;
+  onReload?: () => void;
 }
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
@@ -21,6 +22,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   currentScreen,
   listRoutePath,
   listRouteIcon,
+  onReload,
 }: ScreenHeaderProps) => {
   let currentListRoutePath = listRoutePath;
   if (machine && !currentListRoutePath) {
@@ -41,6 +43,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
           connectionId={connectionId}
           expand
           isActive={(input) => input === currentScreen}
+          onReload={onReload}
         />
       }
     />

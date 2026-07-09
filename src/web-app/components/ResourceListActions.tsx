@@ -79,7 +79,7 @@ export const ResourceListActions: React.FC<ResourceListActionsProps> = ({
           icon={IconNames.REFRESH}
           loading={reloadLoading}
           onClick={onReload}
-          title={reloadTitle ?? t("Reload current list")}
+          title={reloadTitle ?? t("Reload current screen")}
           variant="minimal"
         />
         {utilityActionsPlacement === "after-reload" ? utilityActions : null}

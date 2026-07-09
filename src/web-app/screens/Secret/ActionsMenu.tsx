@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -94,33 +94,22 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
     <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = secret ? (
-    <ConfirmMenu onConfirm={onRemove} tag={secret.ID} disabled={disabledAction === "secret.remove"}>
+    <ConfirmMenu onConfirm={onRemove} tag={secret.ID} disabled={disabledAction === "secret.remove"} large={!!onReload}>
       <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getSecretUrl(secret.ID, "inspect", connectionId)} />
     </ConfirmMenu>
   ) : undefined;
   return (
     <>
-      {!secret && onReload ? (
+      {onReload ? (
         <ResourceListActions
           actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
+          utilityActions={removeWidget}
+          utilityActionsPlacement="before-reload"
           onReload={onReload}
         />
       ) : (
         <ButtonGroup className={secret ? "ResourceItemInlineActionsMenu" : undefined}>
           {startButton}
-          {onReload && (
-            <>
-              {startButton ? <Divider /> : null}
-              <Button
-                size="small"
-                variant="minimal"
-                intent={Intent.NONE}
-                title={t("Reload current list")}
-                icon={IconNames.REFRESH}
-                onClick={onReload}
-              />
-            </>
-          )}
           {removeWidget}
         </ButtonGroup>
       )}

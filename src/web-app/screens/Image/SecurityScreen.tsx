@@ -255,6 +255,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const alreadyLoggedIn = cosignLoginState.data?.loggedIn === true;
   const showSignInBlock = authRequired && !!registry;
   const cosignLogin = useCosignLogin(connectionId);
+  // Refresh the manifest metadata + the cosign signature (both run on open); the Trivy scan stays button-triggered.
+  const onScreenReload = useCallback(() => {
+    imageQuery.refetch();
+    signatureQuery.refetch();
+  }, [imageQuery, signatureQuery]);
 
   const counts = report?.counts;
   const sbomPackages: SbomPackage[] = report?.sbom || [];
@@ -385,7 +390,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader image={image} currentScreen={ID} />
+      <ScreenHeader image={image} currentScreen={ID} onReload={onScreenReload} />
       <ResourceSectionRail items={imageSectionRailItems(image.Id, connectionId)} activeId={ID} dataScreen={ID}>
         <div className="AppScreenContent SecurityContent">
           {/* Identity + digest — available instantly from manifest metadata, no scan required. */}

@@ -874,7 +874,7 @@
   "Relay target socket": "リレー先の socket",
   "Relay to": "リレー先",
   "Reload connections": "接続を再読み込み",
-  "Reload current list": "現在の一覧を再読み込み",
+  "Reload current screen": "現在の画面を再読み込み",
   "Remote": "リモート",
   "Remote SSH connection": "リモート SSH 接続",
   "Remote SSH connection is not yet available": "リモート SSH 接続はまだ利用できません",

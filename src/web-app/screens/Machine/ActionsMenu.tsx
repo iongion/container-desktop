@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiConsole } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
@@ -140,7 +140,12 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = machine ? (
-    <ConfirmMenu onConfirm={onRemove} tag={machine.Name} disabled={disabledAction === "machine.remove"}>
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={machine.Name}
+      disabled={disabledAction === "machine.remove"}
+      large={!!onReload}
+    >
       <MenuItem
         icon={IconNames.EYE_OPEN}
         text={t("Inspect")}
@@ -179,27 +184,16 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   ) : undefined;
   return (
     <>
-      {!machine && onReload ? (
+      {onReload ? (
         <ResourceListActions
           actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
+          utilityActions={removeWidget}
+          utilityActionsPlacement="before-reload"
           onReload={onReload}
         />
       ) : (
         <ButtonGroup className={machine ? "ResourceItemInlineActionsMenu" : undefined}>
           {startButton}
-          {onReload && (
-            <>
-              {startButton ? <Divider /> : null}
-              <Button
-                size="small"
-                variant="minimal"
-                intent={Intent.NONE}
-                title={t("Reload current list")}
-                icon={IconNames.REFRESH}
-                onClick={onReload}
-              />
-            </>
-          )}
           {removeWidget}
         </ButtonGroup>
       )}

@@ -1,4 +1,5 @@
 import { IconNames } from "@blueprintjs/icons";
+import { useCallback } from "react";
 import i18n from "@/i18n";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
@@ -23,6 +24,10 @@ export const Screen: AppScreen<ScreenProps> = () => {
   const kubeQuery = usePodKube(connectionId, id);
   const pod = podQuery.data;
   const pending = podQuery.isLoading || podQuery.isFetching || kubeQuery.isLoading || kubeQuery.isFetching;
+  const onScreenReload = useCallback(() => {
+    podQuery.refetch();
+    kubeQuery.refetch();
+  }, [podQuery, kubeQuery]);
 
   if (!pod) {
     return <ScreenLoader screen={ID} pending={pending} />;
@@ -30,7 +35,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 
   return (
     <div className="AppScreen" data-screen={ID}>
-      <ScreenHeader pod={pod} currentScreen={ID} />
+      <ScreenHeader pod={pod} currentScreen={ID} onReload={onScreenReload} />
       <div className="AppScreenContent">
         <CodeEditor value={kubeQuery.data ?? ""} mode="yaml" />
       </div>

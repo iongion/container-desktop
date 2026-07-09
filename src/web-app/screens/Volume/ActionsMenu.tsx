@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
+import { Button, ButtonGroup, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -94,7 +94,12 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
     <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = volume ? (
-    <ConfirmMenu onConfirm={onRemove} tag={volume.Name} disabled={disabledAction === "volume.remove"}>
+    <ConfirmMenu
+      onConfirm={onRemove}
+      tag={volume.Name}
+      disabled={disabledAction === "volume.remove"}
+      large={!!onReload}
+    >
       <MenuItem
         icon={IconNames.EYE_OPEN}
         text={t("Inspect")}
@@ -104,28 +109,17 @@ export const VolumeActionsMenu: React.FC<VolumeActionsMenuProps> = ({
   ) : undefined;
   return (
     <>
-      {!volume && onReload ? (
+      {onReload ? (
         <ResourceListActions
           actions={withoutCreate ? undefined : { icon: IconNames.PLUS, text: t("Create"), onClick: onCreateClick }}
           navigation={navigation}
+          utilityActions={removeWidget}
+          utilityActionsPlacement="before-reload"
           onReload={onReload}
         />
       ) : (
         <ButtonGroup className={volume ? "ResourceItemInlineActionsMenu" : undefined}>
           {startButton}
-          {onReload && (
-            <>
-              {startButton ? <Divider /> : null}
-              <Button
-                size="small"
-                variant="minimal"
-                intent={Intent.NONE}
-                title={t("Reload current list")}
-                icon={IconNames.REFRESH}
-                onClick={onReload}
-              />
-            </>
-          )}
           {removeWidget}
         </ButtonGroup>
       )}

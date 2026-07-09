@@ -221,6 +221,17 @@ The user is a hands-on designer and corrects deviations fast — match these up 
 - **Tables:** selection checkbox in the **last** column (first breaks the grouped/tree
   view); trailing columns shrink-to-fit. Selection is **always-on** (action bar shows
   when ≥1 selected).
+- **`ActionsMenu` is context-dual — study it before editing.** Each `screens/<R>/ActionsMenu.tsx`
+  is reused two ways and MUST render differently by context: **list rows** (`iconOnly`, no `onReload`)
+  = one compact `ButtonGroup` (`ResourceItemInlineActionsMenu`, `size="small" variant="minimal"`) with
+  the primary action, section-nav and the "…" `ConfirmMenu` inline together — the list-row look, preserve
+  it. **Detail screenheader** (`onReload` set, via `screens/<R>/ScreenHeader.tsx`) = render through the
+  **same `ResourceListActions`** the list header uses: primary action → a separate `actions` **CTA**
+  (green, standalone, not inlined), section-nav → `navigation`, the "…" menu → `utilityActions`
+  (`utilityActionsPlacement="before-reload"`, pass `large` to `ConfirmMenu`), plus `onReload`. Same
+  component ⇒ identical **8px CTA gap · default-size utility group · trailing minimal
+  `ResourceListActionsReload`** by construction. Never hand-roll a divergent header row — header and
+  list must match in size/spacing/order/meaning/style/colour.
 - **CHANGELOG:** terse one-liners. **Activity log:** response bodies + CLI output only
   for **failed** calls.
 

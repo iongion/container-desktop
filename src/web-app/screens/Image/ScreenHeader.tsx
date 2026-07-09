@@ -16,6 +16,7 @@ interface ScreenHeaderProps {
   listRouteIcon?: IconName;
   // Extra controls rendered in the header, before the tabs — used by the Security tab for its Scan CTA.
   rightExtra?: React.ReactNode;
+  onReload?: () => void;
 }
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
@@ -24,6 +25,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   listRoutePath,
   listRouteIcon,
   rightExtra,
+  onReload,
 }: ScreenHeaderProps) => {
   // Keep the owning connection while moving between this resource's detail views (ids collide across engines).
   const { connId } = useRouteSearch<{ connId?: string }>();
@@ -43,7 +45,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       rightContent={
         <>
           {rightExtra}
-          <ActionsMenu image={image} connectionId={connId} />
+          <ActionsMenu image={image} connectionId={connId} onReload={onReload} />
         </>
       }
     />

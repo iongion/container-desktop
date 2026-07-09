@@ -4,6 +4,7 @@
   "pylint.enabled": false,
   "biome.enabled": true,
   "biome.lsp.bin": "./node_modules/.bin/biome",
+  "aws.cloudformation.diagnostics.cfnLint.enabled": false,
   "[html]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
@@ -175,6 +176,7 @@
     "eleventy",
     "elfutils",
     "elif",
+    "ellipsize",
     "emerg",
     "endfor",
     "enumflags",
@@ -450,6 +452,7 @@
     "rustls",
     "sampledb",
     "scoper",
+    "screenheader",
     "scrollback",
     "scrollview",
     "seekbar",

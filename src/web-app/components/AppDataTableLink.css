@@ -25,3 +25,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.AppDataTableLink.AppDataTableLinkMuted,
+.AppDataTableLink.AppDataTableLinkMuted .bp6-button-text {
+  color: var(--app-text-muted);
+}

@@ -37,7 +37,7 @@ import { useResourceStore } from "@/web-app/stores/resourceStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { compareSortValues, type SortSelectors } from "@/web-app/utils/comparators";
 
-import { ActionsMenu, getImageUrl } from ".";
+import { ActionsMenu, getImageUrl, shortImageId } from ".";
 import { useImageBulkActions } from "./bulkActions";
 import "./ManageScreen.css";
 
@@ -331,7 +331,8 @@ export const Screen: AppScreen<ScreenProps> = () => {
                     <AppDataTableLink
                       fillCell
                       href={getImageUrl(image.Id, "inspect", image.connectionId)}
-                      text={image.Name}
+                      text={image.Name || shortImageId(image.Id)}
+                      muted={!image.Name}
                       iconName={IconNames.LAYERS}
                     />
                   </>
