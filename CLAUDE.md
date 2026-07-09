@@ -75,8 +75,8 @@ How you build here, **per change** — not an end-of-task afterthought:
 - **Test-first (TDD) for logic.** Failing test → watch it fail for the right reason → minimal
   code to pass. Covers pure/near-pure units: hook helpers, `normalizers/`, `comparators`,
   grouping/flatten, reducers, stores. No production logic without a failing test first — tests
-  added after prove nothing. Layout/DOM glue jsdom can't run (virtualizer, ResizeObserver) is
-  exempt: verify it live, don't fake it.
+  added after prove nothing. **Never add component tests** for React components/screens/presentational
+  UI; verify those live, don't fake them in jsdom.
 - **Verify every UI change in the running app, as you go.** Keep `CONTAINER_DESKTOP_MOCK=1 yarn
   dev` hot-reloading and drive `support/cdp.mjs` (screenshot + `EVAL=` asserts) after each
   change — never batch to the end. The renderer is the source of truth.

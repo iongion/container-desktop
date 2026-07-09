@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ContainerEngineHost } from "@/env/Types";
-import { Screen } from "./ManageScreen";
-import { BUILD_ROUTE, getBuildCrumbs, isBuildSupported, isRemoteBuildHost } from "./Navigation";
+import { getBuildCrumbs, isBuildSupported, isRemoteBuildHost } from "./Navigation";
 
 describe("isBuildSupported", () => {
   it("is true across native, scoped, and remote transports", () => {
@@ -31,13 +30,5 @@ describe("build trail", () => {
     const trail = getBuildCrumbs("conn-1");
     expect(trail[0].textKey).toBe("Images");
     expect(trail[trail.length - 1]).toMatchObject({ textKey: "Build", current: true });
-  });
-});
-
-describe("Build Screen registration", () => {
-  it("is a route that is excluded from the sidebar", () => {
-    expect(Screen.Route.Path).toBe(BUILD_ROUTE);
-    expect(Screen.Route.Path).toBe("/screens/build");
-    expect(Screen.Metadata?.ExcludeFromSidebar).toBe(true);
   });
 });
