@@ -328,7 +328,7 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 
 .AppScreen[data-screen="image.security"] .SecurityVulnLayout {
   display: grid;
-  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  grid-template-columns: 172px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -772,10 +772,16 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
 }
 
 .SecurityFindingTarget,
-.SecurityFindingMeta {
+.SecurityFindingMeta,
+.SecurityFindingCellText {
   display: block;
   min-width: 0;
-  overflow-wrap: anywhere;
+  max-width: 100px;
+  margin-inline: auto;
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .SecurityFindingTarget {

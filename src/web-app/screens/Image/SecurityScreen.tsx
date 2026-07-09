@@ -700,8 +700,14 @@ export const Screen: AppScreen<ScreenProps> = () => {
                                 <span className="SecurityFindingTarget">{pkgLabel}</span>
                                 <span className="SecurityFindingMeta">{group.Target}</span>
                               </td>
-                              <td className="SecurityCellType">{group.Type}</td>
-                              <td className="SecurityCellPublished">{formatPublishedDate(vulnerability.Published)}</td>
+                              <td className="SecurityCellType">
+                                <span className="SecurityFindingCellText">{group.Type}</span>
+                              </td>
+                              <td className="SecurityCellPublished">
+                                <span className="SecurityFindingCellText">
+                                  {formatPublishedDate(vulnerability.Published)}
+                                </span>
+                              </td>
                             </tr>
                           );
                         })}
@@ -768,6 +774,46 @@ export const Screen: AppScreen<ScreenProps> = () => {
                 </div>
               </div>
             ) : null}
+          </section>
+
+          {/* Licenses — the SBOM's license-type breakdown, in its own panel. */}
+          <section className="SecurityPanel">
+            <h5 className="SecurityPanelTitle">
+              <Icon icon={IconNames.PIE_CHART} />
+              <span>{t("Licenses")}</span>
+              <span className="SecurityPanelHint">Trivy</span>
+            </h5>
+            <div className="SecurityPanelBody">
+              {scanned && licenseSlices.length ? (
+                <div className="SecurityLicenseDist">
+                  <Donut
+                    slices={licenseSlices}
+                    centerValue={licenseSlices.length}
+                    centerLabel={t("license types")}
+                    size={172}
+                  />
+                  <div className="SecurityLicenseLegend">
+                    {licenseSlices.map((slice) => (
+                      <div className="SecurityLicenseLegendItem" key={slice.key}>
+                        <span className="SecurityLicenseSwatch" style={{ background: slice.color }} />
+                        <span className="SecurityLicenseName" title={slice.label}>
+                          {slice.label}
+                        </span>
+                        <span className="SecurityLicenseCount">×{slice.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="SecurityRunPrompt">
+                  <Icon icon={IconNames.PIE_CHART} size={22} className="SecurityRunPromptIcon" />
+                  <div className="SecurityRunPromptText">
+                    <b>{t("License breakdown")}</b>
+                    <div className="SecurityMuted">{t("Summarized from the SBOM after a scan")}</div>
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* SBOM (Trivy output) — the full package inventory as a virtualized table; export lives in the header. */}
@@ -866,46 +912,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
                   <div className="SecurityRunPromptText">
                     <b>{t("Generated with the scan")}</b>
                     <div className="SecurityMuted">{t("The Trivy pass emits the SBOM after scan")}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Licenses — the SBOM's license-type breakdown, in its own panel. */}
-          <section className="SecurityPanel">
-            <h5 className="SecurityPanelTitle">
-              <Icon icon={IconNames.PIE_CHART} />
-              <span>{t("Licenses")}</span>
-              <span className="SecurityPanelHint">Trivy</span>
-            </h5>
-            <div className="SecurityPanelBody">
-              {scanned && licenseSlices.length ? (
-                <div className="SecurityLicenseDist">
-                  <Donut
-                    slices={licenseSlices}
-                    centerValue={licenseSlices.length}
-                    centerLabel={t("license types")}
-                    size={172}
-                  />
-                  <div className="SecurityLicenseLegend">
-                    {licenseSlices.map((slice) => (
-                      <div className="SecurityLicenseLegendItem" key={slice.key}>
-                        <span className="SecurityLicenseSwatch" style={{ background: slice.color }} />
-                        <span className="SecurityLicenseName" title={slice.label}>
-                          {slice.label}
-                        </span>
-                        <span className="SecurityLicenseCount">×{slice.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="SecurityRunPrompt">
-                  <Icon icon={IconNames.PIE_CHART} size={22} className="SecurityRunPromptIcon" />
-                  <div className="SecurityRunPromptText">
-                    <b>{t("License breakdown")}</b>
-                    <div className="SecurityMuted">{t("Summarized from the SBOM after a scan")}</div>
                   </div>
                 </div>
               )}
