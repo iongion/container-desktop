@@ -219,17 +219,17 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       <>
         <AnchorButton
           variant="minimal"
-          active={isActive ? isActive("container.logs") : false}
-          icon={IconNames.ALIGN_JUSTIFY}
-          text={t("Logs")}
-          href={getContainerUrl(container.Id, "logs", connectionId)}
-        />
-        <AnchorButton
-          variant="minimal"
           active={isActive ? isActive("container.inspect") : false}
           icon={IconNames.EYE_OPEN}
           text={t("Inspect")}
           href={getContainerUrl(container.Id, "inspect", connectionId)}
+        />
+        <AnchorButton
+          variant="minimal"
+          active={isActive ? isActive("container.logs") : false}
+          icon={IconNames.ALIGN_JUSTIFY}
+          text={t("Logs")}
+          href={getContainerUrl(container.Id, "logs", connectionId)}
         />
         <AnchorButton
           variant="minimal"
@@ -253,14 +253,14 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     expand || !container ? undefined : (
       <>
         <MenuItem
-          icon={IconNames.ALIGN_JUSTIFY}
-          text={t("Logs")}
-          href={getContainerUrl(container.Id, "logs", connectionId)}
-        />
-        <MenuItem
           icon={IconNames.EYE_OPEN}
           text={t("Inspect")}
           href={getContainerUrl(container.Id, "inspect", connectionId)}
+        />
+        <MenuItem
+          icon={IconNames.ALIGN_JUSTIFY}
+          text={t("Logs")}
+          href={getContainerUrl(container.Id, "logs", connectionId)}
         />
         <MenuItem
           icon={IconNames.PANEL_TABLE}

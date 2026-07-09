@@ -121,17 +121,17 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
       <>
         <AnchorButton
           variant="minimal"
-          active={isActive ? isActive("image.layers") : false}
-          icon={IconNames.LAYERS}
-          text={t("Layers")}
-          href={getImageUrl(image.Id, "layers", connectionId)}
-        />
-        <AnchorButton
-          variant="minimal"
           active={isActive ? isActive("image.inspect") : false}
           icon={IconNames.EYE_OPEN}
           text={t("Inspect")}
           href={getImageUrl(image.Id, "inspect", connectionId)}
+        />
+        <AnchorButton
+          variant="minimal"
+          active={isActive ? isActive("image.layers") : false}
+          icon={IconNames.LAYERS}
+          text={t("Layers")}
+          href={getImageUrl(image.Id, "layers", connectionId)}
         />
         <AnchorButton
           variant="minimal"
@@ -145,8 +145,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   const expandAsMenuItems =
     expand || !image ? undefined : (
       <>
-        <MenuItem icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers", connectionId)} />
         <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getImageUrl(image.Id, "inspect", connectionId)} />
+        <MenuItem icon={IconNames.LAYERS} text={t("Layers")} href={getImageUrl(image.Id, "layers", connectionId)} />
         <MenuItem
           icon={IconNames.CONFIRM}
           text={t("Security check")}

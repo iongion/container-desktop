@@ -125,6 +125,13 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     <>
       <AnchorButton
         variant="minimal"
+        active={isActive ? isActive("pod.inspect") : false}
+        icon={IconNames.EYE_OPEN}
+        text={t("Inspect")}
+        href={getPodUrl(pod.Id, "inspect", connectionId)}
+      />
+      <AnchorButton
+        variant="minimal"
         active={isActive ? isActive("pod.logs") : false}
         icon={IconNames.LIST}
         text={t("Logs")}
@@ -139,13 +146,6 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
       />
       <AnchorButton
         variant="minimal"
-        active={isActive ? isActive("pod.inspect") : false}
-        icon={IconNames.EYE_OPEN}
-        text={t("Inspect")}
-        href={getPodUrl(pod.Id, "inspect", connectionId)}
-      />
-      <AnchorButton
-        variant="minimal"
         disabled={isKubeDisabled}
         active={isActive ? isActive("pod.kube") : false}
         icon={IconNames.TEXT_HIGHLIGHT}
@@ -157,13 +157,13 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   ) : undefined;
   const expandAsMenuItems = expand ? undefined : (
     <>
+      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect", connectionId)} />
       <MenuItem icon={IconNames.LIST} text={t("Logs")} href={getPodUrl(pod.Id, "logs", connectionId)} />
       <MenuItem
         icon={IconNames.LIST_COLUMNS}
         text={t("Processes")}
         href={getPodUrl(pod.Id, "processes", connectionId)}
       />
-      <MenuItem icon={IconNames.EYE_OPEN} text={t("Inspect")} href={getPodUrl(pod.Id, "inspect", connectionId)} />
       <MenuItem
         icon={IconNames.TEXT_HIGHLIGHT}
         text={t("Kube")}

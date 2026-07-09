@@ -10,11 +10,12 @@ export const getImageUrl = (id: string, view: string, connId?: string) => {
   return pathTo(`/screens/image/${encodeURIComponent(id)}/${encodeURIComponent(view)}`, undefined, { connId });
 };
 
-/** The Image detail section rail (Layers | Inspect | Security) — the vertical rail idiom shared with the
- * Container inspect. Ids match each detail screen's ID so the active section highlights. */
+/** The Image detail section rail (Inspect | Layers | Security) — the vertical rail idiom shared with the
+ * Container inspect. Inspect leads (the primary detail view). Ids match each detail screen's ID so the active
+ * section highlights. */
 export const imageSectionRailItems = (id: string, connId?: string): ResourceSectionRailItem[] => [
-  { id: "image.layers", label: i18n.t("Layers"), icon: IconNames.LAYERS, href: getImageUrl(id, "layers", connId) },
   { id: "image.inspect", label: i18n.t("Inspect"), icon: IconNames.EYE_OPEN, href: getImageUrl(id, "inspect", connId) },
+  { id: "image.layers", label: i18n.t("Layers"), icon: IconNames.LAYERS, href: getImageUrl(id, "layers", connId) },
   {
     id: "image.security",
     label: i18n.t("Security"),

@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Inspect tab rail** — resource Inspect screens with more than Summary + Raw (Containers) get a left tab rail (Summary · Env vars · Ports · Mounts · Raw) matching the Settings rail; summaries are sortable Property/Value tables that render values richly (run-state pill, health dot, image `Tag`, code chips), with Ports/Mounts as Container/Host tables
 - **Connection detail rail** — Connection info · System info · Engine health move from a header menu into a left rail
 - Resource breadcrumbs lead with the owning **connection** (clickable → its info page); the entity icon moves in front of the trail
+- **Inspect** now leads every resource's actions — inline buttons, the "…" menu, and the Image detail rail; Networks and Machines gain the Inspect action they were missing
 
 ### Changed
 

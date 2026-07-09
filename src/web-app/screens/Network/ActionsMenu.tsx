@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Divider, Intent } from "@blueprintjs/core";
+import { Button, ButtonGroup, Divider, Intent, MenuItem } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,6 +11,7 @@ import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { CreateDrawer } from "./CreateDrawer";
+import { getNetworkUrl } from "./Navigation";
 import { useRemoveNetwork } from "./queries";
 
 const logger = createLogger("web.network");
@@ -109,7 +110,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     <Button size="small" intent={Intent.SUCCESS} text={t("Create")} icon={IconNames.PLUS} onClick={onCreateClick} />
   );
   const removeWidget = network ? (
-    <ConfirmMenu onConfirm={onRemove} tag={network.name} disabled={disabledAction === "network.remove"}></ConfirmMenu>
+    <ConfirmMenu onConfirm={onRemove} tag={network.name} disabled={disabledAction === "network.remove"}>
+      <MenuItem
+        icon={IconNames.EYE_OPEN}
+        text={t("Inspect")}
+        href={getNetworkUrl(network.id, "inspect", connectionId)}
+      />
+    </ConfirmMenu>
   ) : undefined;
   return (
     <>

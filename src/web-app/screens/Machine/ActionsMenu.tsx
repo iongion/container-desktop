@@ -13,6 +13,7 @@ import { goToScreen } from "@/web-app/Navigator";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { CreateDrawer } from "./CreateDrawer";
+import { getMachineUrl } from "./Navigation";
 import { useConnectMachine, useRemoveMachine, useRestartMachine, useStopMachine } from "./queries";
 
 const logger = createLogger("web.machine");
@@ -140,6 +141,11 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
   );
   const removeWidget = machine ? (
     <ConfirmMenu onConfirm={onRemove} tag={machine.Name} disabled={disabledAction === "machine.remove"}>
+      <MenuItem
+        icon={IconNames.EYE_OPEN}
+        text={t("Inspect")}
+        href={getMachineUrl(machine.Name, "inspect", connectionId)}
+      />
       {isNative ? (
         <MenuItem
           data-machine={machine.Name}
