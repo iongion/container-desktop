@@ -2,9 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  padding: 4px;
+  border: none;
   border-radius: 4px;
   background: var(--code-bg, rgba(0, 0, 0, 0.18));
 }
@@ -19,8 +18,11 @@
   resize: none;
   min-height: 44px;
   max-height: 200px;
-  padding: 2px 2px 0;
-  font-size: 13px;
+  padding: 4px;
+  font-size: 12px;
+  border-radius: 0;
+  outline: none;
+  border: 1px solid var(--app-border);
 }
 .AIComposerToolbar {
   display: flex;
@@ -39,10 +41,11 @@
 }
 .AIComposerSend.AIComposerSend {
   border-radius: 50%;
-  min-width: 28px;
-  min-height: 28px;
-  width: 28px;
-  height: 28px;
+  min-width: 24px;
+  min-height: 24px;
+  width: 24px;
+  height: 24px;
+  transform: scale(0.8);
   padding: 0;
   display: inline-flex;
   align-items: center;

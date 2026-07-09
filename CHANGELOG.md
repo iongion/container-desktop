@@ -48,9 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make the assistant console see-through with a transparency slider, so you can keep watching the screen behind it
 - The assistant renders replies as rich markdown — tables, fenced code blocks with a copy button, lists, callouts and links
 - Recall recently sent messages in the assistant composer with the Up and Down arrows
+- The assistant shows an animated thinking indicator above the composer while it works on your request
 
 ### Changed
 
+- Resource actions no longer show a success toast — only failures notify, keeping routine start, stop and remove quiet
 - Engine health moves runtime details into its header and lets networking use the full width
 - Connection info shows the real socket it connects through and hides rows that don't apply
 - Settings categories are alphabetical, connection links look cleaner, and the image Start button matches the others

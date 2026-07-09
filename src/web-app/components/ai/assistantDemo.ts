@@ -42,5 +42,12 @@ export function installAssistantDemo(): void {
         useAIStore.setState((s: any) => ({ timelines: { ...s.timelines, [sid]: [] } }));
       }
     },
+    setBusy(on = true) {
+      const sid = (useAIStore.getState() as any).activeSessionId;
+      if (sid) {
+        useAIStore.setState((s: any) => ({ busy: { ...s.busy, [sid]: on } }));
+      }
+      return sid;
+    },
   };
 }

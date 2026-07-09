@@ -90,12 +90,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           default:
             break;
         }
-        if (confirm?.success) {
-          Notification.show({
-            message: t("Command completed"),
-            intent: Intent.SUCCESS,
-          });
-        }
         if (action === "machine.remove") {
           goToScreen("/screens/machines");
         }

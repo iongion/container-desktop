@@ -67,12 +67,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
           default:
             break;
         }
-        if (confirm?.success) {
-          Notification.show({
-            message: t("Command completed"),
-            intent: Intent.SUCCESS,
-          });
-        }
       } catch (error: any) {
         logger.error("Command execution failed", error);
         Notification.show({

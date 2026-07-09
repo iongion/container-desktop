@@ -1,18 +1,17 @@
 // The summonable AI console: a single app-wide host, mounted once at the App level and portaled to <body>
 // so it can overlay the FULL app width (over the sidebar). It renders the SAME <AssistantConversation> as the
-// full-page Assistant, against the shared useAIStore session. Summon with the popular quake combo Ctrl/Cmd+`
-// (works even inside inputs); Esc closes when the model is idle. Open/variant/opacity live in uiStore, shared
+// full-page Assistant, against the shared useAIStore session. Summon/dismiss with Ctrl/Cmd+` — the toggle is
+// registered in the always-mounted AppLayout (layout-independent, via e.code). Open/variant/opacity live in uiStore, shared
 // with the header trigger. The transparency slider (quake variants) drives --console-opacity so the screen
 // shows through.
-import { Button, type HotkeyConfig, useHotkeys } from "@blueprintjs/core";
+import { Button } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { mdiRobot } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import { useAIStore } from "@/ai-system/ui/react/stores/useAIStore";
 import { AssistantConversation } from "@/web-app/components/ai/AssistantConversation";
 import { useUIStore } from "@/web-app/stores/uiStore";
 
@@ -25,7 +24,6 @@ export const AssistantConsoleHost: React.FC = () => {
   const opacity = useUIStore((s) => s.assistantConsole.opacity);
   const screenTitle = useUIStore((s) => s.currentScreen.title);
   const setOpen = useUIStore((s) => s.setAssistantConsoleOpen);
-  const toggle = useUIStore((s) => s.toggleAssistantConsole);
   const setOpacity = useUIStore((s) => s.setAssistantConsoleOpacity);
 
   // Lazy-mount the conversation only once the console has actually been opened, so app start never eagerly
@@ -48,42 +46,9 @@ export const AssistantConsoleHost: React.FC = () => {
     requestAnimationFrame(() => host?.querySelector<HTMLTextAreaElement>(".AIComposerInput")?.focus());
   }, [open]);
 
-  // Global summon via Blueprint's hotkey system (registered app-wide through the root HotkeysProvider, so it
-  // also appears in the "?" shortcuts dialog): the popular quake combo Ctrl/Cmd+` toggles from anywhere, even
-  // inside inputs. Escape closes — but only while the model is idle, so Esc during a stream falls through to
-  // the composer's own stop handler instead of closing the console.
-  const hotkeys = useMemo<HotkeyConfig[]>(
-    () => [
-      {
-        combo: "mod+`",
-        global: true,
-        allowInInput: true,
-        preventDefault: true,
-        label: t("Toggle the AI assistant console"),
-        group: t("AI Assistant"),
-        onKeyDown: () => toggle(),
-      },
-      {
-        combo: "escape",
-        global: true,
-        allowInInput: true,
-        label: t("Close the AI assistant console"),
-        group: t("AI Assistant"),
-        onKeyDown: (e) => {
-          if (!useUIStore.getState().assistantConsole.open) {
-            return;
-          }
-          const anyBusy = Object.values(useAIStore.getState().busy).some(Boolean);
-          if (!anyBusy) {
-            e.preventDefault();
-            setOpen(false);
-          }
-        },
-      },
-    ],
-    [t, toggle, setOpen],
-  );
-  useHotkeys(hotkeys);
+  // The Ctrl/Cmd+` summon toggle lives in the always-mounted AppLayout (matched on e.code, so it is
+  // layout-independent) and therefore works even when this host is not mounted. This component only renders
+  // the overlay and its close affordances (the ✕ button and the scrim).
 
   return createPortal(
     <div

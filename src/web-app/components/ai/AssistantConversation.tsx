@@ -16,6 +16,7 @@ import { resolveScreenPrompt } from "@/prompt/screenPrompts";
 import { AIComposer } from "@/web-app/components/AIComposer";
 import { AssistantMarkdown } from "@/web-app/components/ai/AssistantMarkdown";
 import { ToolCard } from "@/web-app/components/ai/cards/registry";
+import { ThinkingStatus } from "@/web-app/components/ai/ThinkingStatus";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
 
@@ -234,25 +235,28 @@ export const AssistantConversation: React.FC<AssistantConversationProps> = ({ cl
         ) : null}
       </div>
 
-      <AIComposer
-        placeholder={composerPlaceholder ?? t("Message the assistant… (Enter to send, Shift+Enter for newline)")}
-        streaming={streaming}
-        awaitingResponse={awaitingApproval}
-        onStop={cancel}
-        onSubmit={onSubmit}
-        showPermissionMode
-        leadingActions={
-          <Button
-            className="AIComposerTool"
-            variant="minimal"
-            size="small"
-            icon={IconNames.PLUS}
-            title={t("New chat")}
-            aria-label={t("New chat")}
-            onClick={() => newSession()}
-          />
-        }
-      />
+      <div className="AssistantComposerDock">
+        {streaming ? <ThinkingStatus /> : null}
+        <AIComposer
+          placeholder={composerPlaceholder ?? t("Message the assistant… (Enter to send, Shift+Enter for newline)")}
+          streaming={streaming}
+          awaitingResponse={awaitingApproval}
+          onStop={cancel}
+          onSubmit={onSubmit}
+          showPermissionMode
+          leadingActions={
+            <Button
+              className="AIComposerTool"
+              variant="minimal"
+              size="small"
+              icon={IconNames.PLUS}
+              title={t("New chat")}
+              aria-label={t("New chat")}
+              onClick={() => newSession()}
+            />
+          }
+        />
+      </div>
     </div>
   );
 };

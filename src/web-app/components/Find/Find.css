@@ -136,18 +136,3 @@ body.bp6-light[data-engine="unified"] {
   font-size: 11px;
   font-weight: 600;
 }
-
-.bp6-hotkey-dialog {
-  background-color: var(--find-widget-bg) !important;
-  color: var(--find-widget-fg);
-}
-.bp6-hotkey-dialog .bp6-heading,
-.bp6-hotkey-dialog .bp6-hotkey-label,
-.bp6-hotkey-dialog .bp6-hotkey-group {
-  color: var(--find-widget-fg) !important;
-}
-.bp6-hotkey-dialog .bp6-key-combo .bp6-key {
-  background: var(--find-widget-border);
-  color: var(--find-widget-fg);
-  box-shadow: none;
-}

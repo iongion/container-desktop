@@ -1,4 +1,4 @@
-import { HotkeysProvider, NonIdealState } from "@blueprintjs/core";
+import { type HotkeyConfig, HotkeysProvider, NonIdealState, useHotkeys } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import {
   createHashHistory,
@@ -10,7 +10,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import type React from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 
@@ -273,6 +273,40 @@ function AppLayout() {
   useEffect(() => {
     setCurrentScreen({ id: currentScreen?.ID, title: currentScreen?.Title });
   }, [currentScreen, setCurrentScreen]);
+
+  // Global summon for the AI console: Ctrl (Windows/Linux) or Cmd (macOS) + backtick, from anywhere in the app.
+  // Registered here in the always-mounted layout (not in AssistantConsoleHost, whose mount is gated) and matched
+  // on e.code === "Backquote" — the PHYSICAL key, identical on every keyboard layout — because Blueprint's
+  // useHotkeys matches on e.key, which varies by layout and silently misses backtick (palantir/blueprint#6693).
+  // Capture phase so it fires even while a text input is focused. The same combo toggles open and closed.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "Backquote") {
+        e.preventDefault();
+        useUIStore.getState().toggleAssistantConsole();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
+
+  // Dialog-only registration: this entry exists solely so the shortcut appears in the "?" shortcuts dialog.
+  // `disabled: true` stops Blueprint from also handling the event (its e.key matcher misses backtick on some
+  // layouts — palantir/blueprint#6693), so there is no double toggle; the real executor is the e.code listener
+  // above. HotkeysDialog renders disabled entries, so it still shows under the "AI Assistant" group.
+  const assistantHotkeys = useMemo<HotkeyConfig[]>(
+    () => [
+      {
+        combo: "mod+`",
+        global: true,
+        disabled: true,
+        label: t("Toggle the AI assistant console"),
+        group: t("AI Assistant"),
+      },
+    ],
+    [t],
+  );
+  useHotkeys(assistantHotkeys);
 
   const content: React.ReactNode = booting ? (
     <div className="AppScreenViewport">

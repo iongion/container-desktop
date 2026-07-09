@@ -12,6 +12,25 @@
   min-height: 0;
   display: flex;
 }
+.AssistantComposerDock {
+  position: relative;
+}
+.AssistantComposerDock .ThinkingStatus {
+  position: absolute;
+  left: 4px;
+  bottom: calc(100% - 4px);
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--app-text-muted);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+  z-index: 2;
+}
 .AssistantTranscript {
   flex: 1;
   min-height: 0;
@@ -20,6 +39,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-bottom: 1px solid var(--app-border);
 }
 /* The transcript is a SCROLL container, not a sizer: every item keeps its natural height and the column
    scrolls. Without this, flex-shrink compresses tall cards (tables/logs) toward min-content as the
@@ -35,18 +55,18 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   padding: 0;
   border-radius: 999px;
-  background: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 50%, transparent) !important;
   color: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .AssistantJump.AssistantJump:hover {
-  background: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 50%, transparent) !important;
   filter: brightness(1.12);
 }
 .AssistantJump--blink {

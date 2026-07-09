@@ -138,10 +138,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           });
         }
         if (success && successMessage) {
-          Notification.show({
-            message: successMessage,
-            intent: Intent.SUCCESS,
-          });
           await onReload?.();
         }
         if (action === "container.remove") {

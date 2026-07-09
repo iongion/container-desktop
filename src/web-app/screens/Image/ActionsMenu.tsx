@@ -64,10 +64,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           default:
             break;
         }
-        Notification.show({
-          message: t("Command completed"),
-          intent: Intent.SUCCESS,
-        });
         if (action === "image.remove") {
           goToScreen("/screens/images");
         }
