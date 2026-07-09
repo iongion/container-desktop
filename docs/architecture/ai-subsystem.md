@@ -328,12 +328,27 @@ assistant) and the generator prompt. `renderPrompt` provides a single `nunjucks.
 `autoescape:false`, importing the **browser build** so `prompt/` carries no Node dependency and can sit at
 the package root. Templates load via Vite's `?raw` in production and inline strings in tests.
 
+The agent prompt also renders a **Current screen** block from `DiagnosticsBundle.screen` — a compact,
+model-facing summary (`ui/core/screenContext.ts`) of the screen the user is on, plus that screen's *focus*
+guidance from the **per-screen prompt registry** (`prompt/screenPrompts.ts`, keyed by screen id with domain
+bases → sub-screen overrides → generic fallback). The same registry supplies the starter-question chips
+shown in the console's empty state.
+
 ## Screen gating & navigation
 
 AI screens opt in with `Metadata.RequiresAI` **and** `Metadata.ExcludeFromSidebar` — they are kept out of
-the sidebar and reached through a split-button **AI menu in the header**: the main button opens the
-Assistant, the caret lists every AI screen. The Assistant hosts the one conversation; the generator is its
-own screen.
+the sidebar and reached through a split-button **AI menu in the header**: the **main button toggles the
+summonable Assistant console**, and the caret lists every AI screen (the full-page Assistant + the
+generator). The generator is its own screen.
+
+The **Assistant console** (`components/ai/AssistantConsole/`) is a single app-wide host portaled to
+`<body>` so it overlays the full app width (over the sidebar). Its primary form is a bottom *quake* drawer
+(5px margins, `data-variant` also supports top/right/center) opened with the quake shortcut (mod + backtick,
+i.e. Ctrl or Cmd plus the backtick key) or the header button and dismissed with Escape (when idle). It renders the **same `AssistantConversation`** as the
+full-page Assistant against one `useAIStore` session, so a chat is continuous across surfaces. Open/variant/
+opacity live in `uiStore` (`assistantConsole` slice); a transparency slider (quake variants) drives
+`--console-opacity`. `AppLayout` publishes the active screen's id/title to `uiStore.currentScreen`, which
+feeds both the console's context chip and the assistant's screen-context collector.
 
 ## Mock mode
 

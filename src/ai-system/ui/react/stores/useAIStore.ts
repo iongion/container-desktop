@@ -8,12 +8,15 @@ import type { StoreApi } from "zustand/vanilla";
 
 import type { DiagnosticsBundle } from "@/ai-system/core";
 import { buildResourceContext, type ConnectionResourceSummary } from "@/ai-system/ui/core/resourceContext";
+import { buildScreenContext } from "@/ai-system/ui/core/screenContext";
 import { type AIState, createAIStore, startAIBus as startVanillaAIBus } from "@/ai-system/ui/core/stores/aiStore";
 import { ContainerStateList } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
+import { resolveScreenPrompt } from "@/prompt/screenPrompts";
 import { useActivityStore } from "@/web-app/stores/activityStore";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
+import { useUIStore } from "@/web-app/stores/uiStore";
 
 export type { AIState };
 
@@ -52,10 +55,21 @@ function collectBundle(): DiagnosticsBundle {
   });
   const resources = buildResourceContext(summaries) || undefined;
 
+  // What the user is currently looking at (screen id/title). The per-screen focus guidance is folded in by
+  // the console/registry in a later step; here we attach at least the screen identity every turn.
+  const screenMeta = useUIStore.getState().currentScreen;
+  const screen =
+    buildScreenContext({
+      id: screenMeta.id,
+      title: screenMeta.title,
+      focus: resolveScreenPrompt(screenMeta.id).focus,
+    }) || undefined;
+
   return {
     os: String(app.osType ?? ""),
     engine: conn?.engine ? String(conn.engine) : undefined,
     connection: conn ? `${conn.name ?? conn.id ?? ""} (host: ${conn.host ?? "?"})` : undefined,
+    screen,
     activity: activity || undefined,
     errors: errors || undefined,
     resources,

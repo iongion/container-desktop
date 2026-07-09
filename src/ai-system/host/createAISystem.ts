@@ -1,7 +1,6 @@
 import type { AISettings, EngineOps } from "@/ai-system/core";
 import { AIBroker } from "@/ai-system/host/broker";
 import { KnowledgeBank } from "@/ai-system/host/knowledgeBank";
-import { buildAgentPrompt, buildGeneratePrompt } from "@/ai-system/prompt/prompts";
 import { createAgentRunner } from "@/ai-system/runtimes/agent/agent";
 import { executeContainerTool } from "@/ai-system/runtimes/agent/containerTools";
 import { executeSandboxed } from "@/ai-system/runtimes/agent/sandbox";
@@ -10,7 +9,8 @@ import { webSearch } from "@/ai-system/runtimes/agent/webSearch";
 import { createKnowledgeFileStorage } from "@/ai-system/runtimes/knowledgeFileStorage";
 import { listModels } from "@/ai-system/runtimes/localModels";
 import { createPermissionsStore } from "@/ai-system/runtimes/permissionsStoreCore";
-import "@/ai-system/prompt/templateRegistry.vite";
+import { buildAgentPrompt, buildGeneratePrompt } from "@/prompt/prompts";
+import "@/prompt/templateRegistry.vite";
 import { createMockAIDeps, createMockPermissionsStore } from "@/ai-system/testing/aiMocks";
 import type { IHostCapabilities } from "@/platform/capabilities";
 import type { IFileSystem, IPath } from "@/platform/contract";

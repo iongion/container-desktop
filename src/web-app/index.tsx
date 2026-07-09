@@ -49,6 +49,12 @@ async function boot() {
   } else {
     throw new Error("No supported desktop host runtime detected");
   }
+  if (import.meta.env.DEV) {
+    // DEV-only: expose window.__assistantDemo.seed() to load a synthetic transcript so the assistant's
+    // rendering can be exercised without a live model. Dynamic import → tree-shaken from production.
+    const { installAssistantDemo } = await import("@/web-app/components/ai/assistantDemo");
+    installAssistantDemo();
+  }
   const { renderApplication } = await import("./App.render");
   bootTimeline.mark("app-render-imported");
   renderApplication({ loggerBackend });

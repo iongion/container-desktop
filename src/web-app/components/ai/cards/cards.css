@@ -102,6 +102,11 @@
   word-break: break-word;
 }
 
+/* Logs are capped tighter than JSON so long output scrolls instead of filling the transcript. */
+.AICardLogs {
+  max-height: 200px;
+}
+
 .AICardLogs::-webkit-scrollbar,
 .AICardJson::-webkit-scrollbar {
   width: 10px;

@@ -380,6 +380,17 @@ body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] 
   color: var(--app-accent);
 }
 
+.AppErrorBoundaryOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--app-bg);
+}
+
 .AppErrorBoundaryCallout {
   text-align: center;
   padding: 15px !important;

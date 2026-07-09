@@ -202,6 +202,10 @@ How you build here, **per change** — not an end-of-task afterthought:
 - **UI changes:** verify live in the running app, not off static checks — see Development workflow.
 - **Logging:** use `@/platform/logger` (`createLogger`), never raw `console.*` (except the façade
   sink + the pre-React fallback in `index.tsx`). Verbosity is controlled solely by log level.
+- **AI prompts & markdown live in templates, NEVER inlined.** Every model-facing prompt (system/agent,
+  generate, per-screen focus, …) AND any static markdown/prose block (incl. demo/example transcripts) is a
+  `.md` file under `src/resources/prompts/`, rendered via `renderPrompt` (nunjucks **browser** build
+  → node-free) or imported `?raw`. NEVER inline prompt/markdown prose in TS/TSX — add a `.md` there and import it.
 
 ## UI conventions (renderer · Blueprint)
 

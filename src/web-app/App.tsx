@@ -25,6 +25,7 @@ import { AppFooter } from "@/web-app/components/AppFooter";
 import { AppHeader } from "@/web-app/components/AppHeader";
 import { AppLoading } from "@/web-app/components/AppLoading";
 import { AppSidebar } from "@/web-app/components/AppSidebar";
+import { AssistantConsoleHost } from "@/web-app/components/ai/AssistantConsole/AssistantConsoleHost";
 import { FindHost } from "@/web-app/components/Find/FindHost";
 import { NotificationCenterHost } from "@/web-app/components/NotificationCenter/NotificationCenterHost";
 import { ProvisioningWizardHost } from "@/web-app/components/ProvisioningWizard/ProvisioningWizardHost";
@@ -74,6 +75,7 @@ import { Screen as VolumesScreen } from "@/web-app/screens/Volume/ManageScreen";
 import { Screen as MountsScreen } from "@/web-app/screens/Volume/mounts/MountsScreen";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
+import { useUIStore } from "@/web-app/stores/uiStore";
 
 const logger = createLogger("web.app");
 
@@ -231,6 +233,7 @@ function AppLayout() {
   const startApplication = useAppStore((state) => state.startApplication);
   const program = currentConnector?.settings?.program;
   const currentScreen = useCurrentScreen();
+  const setCurrentScreen = useUIStore((state) => state.setCurrentScreen);
   const ready = phase === AppBootstrapPhase.READY;
 
   const onReconnect = useCallback(() => {
@@ -265,6 +268,12 @@ function AppLayout() {
     prevRunningRef.current = !!running;
   }, [ready, running, currentScreen]);
 
+  // Publish the active screen's identity so the AI console header chip + the assistant's context collector
+  // can read "what screen is the user on" without the router.
+  useEffect(() => {
+    setCurrentScreen({ id: currentScreen?.ID, title: currentScreen?.Title });
+  }, [currentScreen, setCurrentScreen]);
+
   const content: React.ReactNode = booting ? (
     <div className="AppScreenViewport">
       <AppLoading />
@@ -278,8 +287,9 @@ function AppLayout() {
   return (
     <>
       <AppBootstrapReadySignal />
-      {/* The non-blocking wizard gets its own boundary (the app's standard one) so a crash inside it is
-          contained + recoverable and can never take down the app chrome — AppHeader is a sibling outside it. */}
+      {/* Each region (wizard, content, console) gets its own boundary so a crash is caught close to its
+          source and stays recoverable; the fallback is a full-window opaque overlay (AppErrorBoundaryOverlay),
+          so the error screen never renders alongside live app chrome. */}
       <AppErrorBoundary
         onReconnect={onReconnect}
         reconnect={t("Try to recover")}
@@ -313,6 +323,16 @@ function AppLayout() {
           </div>
         </div>
       </AppErrorBoundary>
+      {ready ? (
+        <AppErrorBoundary
+          onReconnect={onReconnect}
+          reconnect={t("Try to recover")}
+          title={t("An uncaught error showed up")}
+          suggestion={t("It could be very helpful if you can check the logs of the app and report back")}
+        >
+          <AssistantConsoleHost />
+        </AppErrorBoundary>
+      ) : null}
     </>
   );
 }

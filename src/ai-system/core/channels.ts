@@ -94,6 +94,9 @@ export interface DiagnosticsBundle {
   os?: string;
   engine?: string;
   connection?: string;
+  // The screen the user is currently viewing (id/title + per-screen focus), so the assistant can answer
+  // "about this screen" without being told. Built by ui/core/screenContext.ts.
+  screen?: string;
   activity?: string;
   resources?: string;
   errors?: string;

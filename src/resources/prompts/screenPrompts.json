@@ -1,0 +1,136 @@
+{
+  "generic": {
+    "focus": "Help the user manage their container environment. Prefer the typed container tools and be concise.",
+    "suggestions": [
+      "What can you help me with here?",
+      "Summarize my container environment",
+      "What looks wrong right now?"
+    ]
+  },
+  "domains": {
+    "container": {
+      "focus": "The user is looking at containers. Favor listContainers / inspectContainer / getContainerLogs; explain states (created, running, exited, paused) and exit codes, and suggest safe next actions.",
+      "suggestions": [
+        "Why did my containers exit?",
+        "Which containers are unhealthy?",
+        "Reclaim space from stopped containers"
+      ]
+    },
+    "image": {
+      "focus": "The user is looking at images. Favor listImages / inspectImage; help with size, layers, tags, pulls, and cleaning up dangling images.",
+      "suggestions": ["Which images are safe to remove?", "Why are my images so large?", "Explain this image's layers"]
+    },
+    "pod": {
+      "focus": "The user is looking at pods (Podman). Reason about pods and their shared namespaces, and distinguish pod state from the state of the containers inside it.",
+      "suggestions": [
+        "What's the health of my pods?",
+        "Why won't this pod start?",
+        "How do these containers share a pod?"
+      ]
+    },
+    "network": {
+      "focus": "The user is looking at networks. Favor listNetworks / inspectNetwork; explain drivers, subnets, DNS, and container connectivity.",
+      "suggestions": [
+        "Why can't my containers reach each other?",
+        "Explain this network's configuration",
+        "Which containers are on this network?"
+      ]
+    },
+    "volume": {
+      "focus": "The user is looking at volumes. Favor listVolumes / inspectVolume; explain mount points, drivers, and how to reclaim space.",
+      "suggestions": ["Which volumes are unused?", "Where is this volume mounted?", "How do I back up this volume?"]
+    },
+    "secret": {
+      "focus": "The user is looking at secrets. Explain how secrets are stored and mounted into containers. Never reveal or guess secret values.",
+      "suggestions": ["How do I use this secret in a container?", "Which containers use this secret?"]
+    },
+    "machine": {
+      "focus": "The user is looking at container machines/VMs (Podman machine, WSL distros, Lima/Colima). Help with machine lifecycle, resources, and connectivity.",
+      "suggestions": [
+        "Is my machine healthy?",
+        "How do I give this machine more resources?",
+        "Why won't my machine start?"
+      ]
+    },
+    "swarm": {
+      "focus": "The user is looking at Docker Swarm. Explain services, nodes, tasks, replicas, and convergence.",
+      "suggestions": [
+        "What's the state of my swarm?",
+        "Why is this service not converging?",
+        "How do I scale this service?"
+      ]
+    },
+    "registry": {
+      "focus": "The user is looking at registries and image trust. Help with logins, mirrors, and trust policy.",
+      "suggestions": ["How do I log in to a registry?", "Is this registry trusted?", "How do I add a registry mirror?"]
+    },
+    "dashboard": {
+      "focus": "The user is on the dashboard overview. Give a concise health summary across connections and point to what needs attention.",
+      "suggestions": [
+        "Give me an overview of my environment",
+        "What needs my attention?",
+        "Are all my engines healthy?"
+      ]
+    },
+    "connections": {
+      "focus": "The user is looking at engine connections. Help diagnose connectivity — sockets, SSH, WSL, remote hosts — and engine health.",
+      "suggestions": ["Why is my connection failing?", "Is my engine reachable?", "How do I add a remote engine?"]
+    },
+    "troubleshoot": {
+      "focus": "The user is troubleshooting. Use searchKnowledge first, then give step-by-step, verifiable fixes.",
+      "suggestions": ["Help me fix my current problem", "Run the common diagnostics", "Why isn't my engine working?"]
+    },
+    "ai": {
+      "focus": "General assistant surface. Help with any container task; prefer the typed tools.",
+      "suggestions": ["What can you do?", "Help me with my containers", "Generate a Containerfile"]
+    }
+  },
+  "overrides": {
+    "container.logs": {
+      "focus": "The user is viewing a container's logs. Help interpret log lines, errors, and crash/restart loops.",
+      "suggestions": [
+        "Explain the errors in these logs",
+        "Why does this container keep restarting?",
+        "What do the last log lines mean?"
+      ]
+    },
+    "container.inspect": {
+      "focus": "The user is inspecting one container's configuration. Explain mounts, ports, env, networks, and restart policy.",
+      "suggestions": [
+        "Explain this container's configuration",
+        "Which ports and volumes are mapped?",
+        "Is anything misconfigured here?"
+      ]
+    },
+    "container.stats": {
+      "focus": "The user is viewing live container stats. Help interpret CPU, memory, and I/O and spot resource problems.",
+      "suggestions": ["Is this container using too much memory?", "Explain these resource stats"]
+    },
+    "image.security": {
+      "focus": "The user is on an image's security view. Help audit vulnerabilities (CVEs), signatures, and SBOM; prioritize critical and high findings.",
+      "suggestions": [
+        "Summarize this image's vulnerabilities",
+        "Which CVEs should I fix first?",
+        "Is this image signed and trusted?"
+      ]
+    },
+    "image.layers": {
+      "focus": "The user is viewing image layers. Help find what bloats the image and how to shrink it.",
+      "suggestions": ["What's making this image large?", "How can I reduce these layers?"]
+    },
+    "pod.logs": {
+      "focus": "The user is viewing pod logs. Help identify which container in the pod produced which output.",
+      "suggestions": ["Explain these pod logs", "Which container in the pod is failing?"]
+    }
+  },
+  "pluralToDomain": {
+    "containers": "container",
+    "images": "image",
+    "pods": "pod",
+    "networks": "network",
+    "volumes": "volume",
+    "secrets": "secret",
+    "machines": "machine",
+    "registries": "registry"
+  }
+}

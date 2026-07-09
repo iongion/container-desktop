@@ -2,9 +2,9 @@
 // Rolldown (used by vite build) inlines these at bundle time. The Electron main process uses
 // this registry; tests replace it with their own (see templateRegistry.ts / installPromptTemplates).
 
+import agentRaw from "../resources/prompts/agent.md?raw";
+import generateRaw from "../resources/prompts/generate.md?raw";
 import { installPromptTemplates } from "./templateRegistry";
-import agentRaw from "./templates/agent.md?raw";
-import generateRaw from "./templates/generate.md?raw";
 
 installPromptTemplates({
   generate: generateRaw,

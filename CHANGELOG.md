@@ -42,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Untagged images show a short ID in the name column instead of a blank cell
 - The container detail header shows a combined health-and-state badge next to the playback controls
 - Container detail is reorganized into one side rail — summary, environment, ports, mounts, logs, processes and more — with playback kept inline
+- Summon the AI assistant as a console over any screen — a bottom panel opened with a keyboard shortcut or the header button and dismissed with Escape
+- The assistant now knows which screen you're on, so you can ask about what you're looking at without spelling it out
+- Each screen offers its own starter questions to kick off a conversation with the assistant
+- Make the assistant console see-through with a transparency slider, so you can keep watching the screen behind it
+- The assistant renders replies as rich markdown — tables, fenced code blocks with a copy button, lists, callouts and links
+- Recall recently sent messages in the assistant composer with the Up and Down arrows
 
 ### Changed
 

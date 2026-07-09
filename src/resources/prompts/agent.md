@@ -11,7 +11,7 @@ methodically using your tools:
 - `searchKnowledge` looks up known fixes in the built-in troubleshooting bank. Prefer it first.
 - `webSearch`, when available, searches the public web.
 Be concise and end with a clear, actionable recommendation. Show suggested shell commands as fenced code blocks.
-{% if os or engine or connection or activity or resources or errors %}
+{% if os or engine or connection or screen or activity or resources or errors %}
 
 # Initial diagnostics context
 {% if os %}
@@ -25,6 +25,10 @@ Be concise and end with a clear, actionable recommendation. Show suggested shell
 {% if connection %}
 ## Connection
 {{ connection }}
+{% endif %}
+{% if screen %}
+## Current screen
+{{ screen }}
 {% endif %}
 {% if activity %}
 ## Recent activity

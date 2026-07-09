@@ -5,10 +5,11 @@
 // screen (Assistant, Generator) gets the identical interaction by rendering <AIComposer onSubmit=…/>.
 import { Button, Intent, Menu, MenuItem, PopoverNext, TextArea } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AIPermissionMode } from "@/ai-system/core";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core";
+import { commandHistory, navigateHistory, pushCommand } from "@/ai-system/ui/core/commandHistory";
 import type { AISettings } from "@/env/Types";
 import { ConfirmMenuItem } from "@/web-app/components/ConfirmMenu";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -122,6 +123,10 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const ai: AISettings = useAppStore((state) => state.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
 
   const [draft, setDraft] = useState("");
+  // In-memory command history (quake-style Up/Down recall). historyIndex = null means "editing the live
+  // draft"; liveDraftRef stashes that draft while navigating so Down past the newest entry restores it.
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
+  const liveDraftRef = useRef("");
   // The ModelPicker owns discovery + persistence; the composer just tracks the live selection for submit
   // and egress gating. Seeded from the saved default provider + its model (the picker fills it in on first
   // discovery when nothing is saved yet).
@@ -159,6 +164,9 @@ export const AIComposer: React.FC<AIComposerProps> = ({
     }
     const text = draft;
     setDraft("");
+    pushCommand(text);
+    setHistoryIndex(null);
+    liveDraftRef.current = "";
     onSubmit(text, { providerId: selection.providerId, model: selection.model });
   };
 
@@ -176,11 +184,39 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         fill
         value={draft}
         placeholder={placeholder ?? t("Message… (Enter to send, Shift+Enter for newline)")}
-        onChange={(e) => setDraft(e.currentTarget.value)}
+        onChange={(e) => {
+          setDraft(e.currentTarget.value);
+          if (historyIndex !== null) {
+            setHistoryIndex(null); // typing exits history navigation; the edited text becomes the live draft
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             submit();
+            return;
+          }
+          // Quake-style history recall: Up on the first line steps to older sent messages; Down on the last
+          // line steps back toward the live draft. Elsewhere the arrows move the caret as usual.
+          if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            const ta = e.currentTarget;
+            const hist = commandHistory();
+            const onFirstLine = ta.value.slice(0, ta.selectionStart).indexOf("\n") === -1;
+            const onLastLine = ta.value.slice(ta.selectionEnd).indexOf("\n") === -1;
+            if (e.key === "ArrowUp" && onFirstLine && hist.length > 0) {
+              if (historyIndex === null) {
+                liveDraftRef.current = draft;
+              }
+              const { index, value } = navigateHistory(hist, historyIndex, "up", liveDraftRef.current);
+              e.preventDefault();
+              setHistoryIndex(index);
+              setDraft(value);
+            } else if (e.key === "ArrowDown" && onLastLine && historyIndex !== null) {
+              const { index, value } = navigateHistory(hist, historyIndex, "down", liveDraftRef.current);
+              e.preventDefault();
+              setHistoryIndex(index);
+              setDraft(value);
+            }
           }
         }}
       />

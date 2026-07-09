@@ -42,6 +42,8 @@
       "@/i18n": ["./src/i18n"],
       "@/platform": ["./src/platform"],
       "@/platform/*": ["./src/platform/*"],
+      "@/prompt": ["./src/prompt"],
+      "@/prompt/*": ["./src/prompt/*"],
       "@/resources": ["./src/resources"],
       "@/resources/*": ["./src/resources/*"],
       "@/rpc": ["./src/rpc"],
