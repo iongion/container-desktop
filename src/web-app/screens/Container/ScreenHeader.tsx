@@ -42,14 +42,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       titleText={displayName}
       breadcrumbs={getContainerCrumbs(displayName, container.Id, currentScreen, connId)}
       rightContent={
-        <ActionsMenu
-          container={container}
-          connectionId={connId}
-          expand
-          withInlinePlayerActions
-          onReload={onReload}
-          isActive={(input) => input === currentScreen}
-        />
+        // Sections (Inspect/Logs/Processes/Kube) live in the left rail now; the header keeps only the inline
+        // player actions (pause/stop/play) and the "…" menu (which lists the sections via expandAsMenuItems).
+        <ActionsMenu container={container} connectionId={connId} withInlinePlayerActions onReload={onReload} />
       }
     />
   );

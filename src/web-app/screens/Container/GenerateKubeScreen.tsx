@@ -2,6 +2,7 @@ import { Spinner } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
+import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -10,6 +11,7 @@ import { ScreenHeader } from ".";
 
 import "./GenerateKubeScreen.css";
 import i18n from "@/i18n";
+import { containerSectionRailItems } from "./Navigation";
 import { useContainer, useContainerKube } from "./queries";
 
 export const ID = "container.kube";
@@ -41,9 +43,11 @@ export const Screen: AppScreen<ScreenProps> = () => {
   ) : (
     <>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
-      <div className="AppScreenContent">
-        <CodeEditor value={kubeQuery.data ?? ""} mode="yaml" />
-      </div>
+      <ResourceSectionRail items={containerSectionRailItems(container.Id, connectionId)} activeId={ID} dataScreen={ID}>
+        <div className="AppScreenContent">
+          <CodeEditor value={kubeQuery.data ?? ""} mode="yaml" />
+        </div>
+      </ResourceSectionRail>
     </>
   );
 

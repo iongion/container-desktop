@@ -5,11 +5,13 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { CopyButton } from "@/web-app/components/CopyButton";
+import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
+import { containerSectionRailItems } from "./Navigation";
 import { useContainer, useContainerProcesses } from "./queries";
 
 import "./ProcessesScreen.css";
@@ -45,57 +47,59 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
-      <div className="AppScreenContent">
-        {isRunning ? (
-          <HTMLTable interactive compact striped className="AppDataTable" data-table="processes">
-            <thead>
-              <tr>
-                {processesTitles.map((title) => {
+      <ResourceSectionRail items={containerSectionRailItems(container.Id, connectionId)} activeId={ID} dataScreen={ID}>
+        <div className="AppScreenContent">
+          {isRunning ? (
+            <HTMLTable interactive compact striped className="AppDataTable" data-table="processes">
+              <thead>
+                <tr>
+                  {processesTitles.map((title) => {
+                    return (
+                      <th key={title} data-column={title}>
+                        <AppLabel text={title} />
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {processesList.map((processColumns) => {
+                  const pid = processColumns[1];
                   return (
-                    <th key={title} data-column={title}>
-                      <AppLabel text={title} />
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {processesList.map((processColumns) => {
-                const pid = processColumns[1];
-                return (
-                  <tr key={pid}>
-                    {processColumns.map((columnValue, columnIndex) => {
-                      const processColumn = processesTitles[columnIndex];
-                      const processColumnKey = `${pid}-${processColumn}`;
-                      if (processColumn.toLowerCase() === "command") {
+                    <tr key={pid}>
+                      {processColumns.map((columnValue, columnIndex) => {
+                        const processColumn = processesTitles[columnIndex];
+                        const processColumnKey = `${pid}-${processColumn}`;
+                        if (processColumn.toLowerCase() === "command") {
+                          return (
+                            <td key={processColumnKey} data-column={processColumn}>
+                              <CopyButton
+                                text={columnValue}
+                                title={t("{{command}} (click to copy to clipboard)", { command: columnValue })}
+                              />
+                            </td>
+                          );
+                        }
                         return (
                           <td key={processColumnKey} data-column={processColumn}>
-                            <CopyButton
-                              text={columnValue}
-                              title={t("{{command}} (click to copy to clipboard)", { command: columnValue })}
-                            />
+                            <Code>{columnValue}</Code>
                           </td>
                         );
-                      }
-                      return (
-                        <td key={processColumnKey} data-column={processColumn}>
-                          <Code>{columnValue}</Code>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </HTMLTable>
-        ) : (
-          <NonIdealState
-            icon={IconNames.PANEL_TABLE}
-            title={t("No processes")}
-            description={<p>{t("This container is not running")}</p>}
-          />
-        )}
-      </div>
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </HTMLTable>
+          ) : (
+            <NonIdealState
+              icon={IconNames.PANEL_TABLE}
+              title={t("No processes")}
+              description={<p>{t("This container is not running")}</p>}
+            />
+          )}
+        </div>
+      </ResourceSectionRail>
     </div>
   );
 };

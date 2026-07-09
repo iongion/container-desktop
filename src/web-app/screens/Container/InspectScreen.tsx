@@ -5,6 +5,7 @@ import { InspectSummary } from "@/web-app/components/InspectSummary";
 import type { InspectTabSection } from "@/web-app/components/InspectTabs";
 import { PropertyValueTable } from "@/web-app/components/PropertyValueTable";
 import { ResourceInspectTabs } from "@/web-app/components/ResourceInspectTabs";
+import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -18,6 +19,7 @@ import {
   buildContainerPortRows,
   buildContainerSummary,
 } from "./inspectSummary";
+import { containerSectionRailItems } from "./Navigation";
 import { useContainer } from "./queries";
 
 export const ID = "container.inspect";
@@ -100,13 +102,15 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
-      <ResourceInspectTabs
-        dataScreen={ID}
-        summaryRows={buildContainerSummary(container)}
-        summaryTable="container.inspect-summary"
-        rawValue={JSON.stringify(container, null, 2)}
-        middle={middle}
-      />
+      <ResourceSectionRail items={containerSectionRailItems(container.Id, connectionId)} activeId={ID} dataScreen={ID}>
+        <ResourceInspectTabs
+          dataScreen={ID}
+          summaryRows={buildContainerSummary(container)}
+          summaryTable="container.inspect-summary"
+          rawValue={JSON.stringify(container, null, 2)}
+          middle={middle}
+        />
+      </ResourceSectionRail>
     </div>
   );
 };

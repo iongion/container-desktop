@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { isContainerRunning } from "@/container-client/adapters/containers";
 import { LiveLogBadge, type LogStatus } from "@/web-app/components/LiveLogBadge";
+import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";
 import { Terminal } from "@/web-app/components/Terminal";
 import { useRouteParams, useRouteSearch } from "@/web-app/Navigator";
@@ -12,6 +13,7 @@ import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 import { ScreenHeader } from ".";
 import "./LogsScreen.css";
 import i18n from "@/i18n";
+import { containerSectionRailItems } from "./Navigation";
 import { useContainer, useContainerLogs } from "./queries";
 import { useContainerLogStream } from "./useContainerLogStream";
 
@@ -50,20 +52,22 @@ export const Screen: AppScreen<ScreenProps> = () => {
   return (
     <div className="AppScreen" data-screen={ID}>
       <ScreenHeader container={container} currentScreen={ID} onReload={onScreenReload} />
-      <div className="AppScreenContent">
-        {stream.error ? (
-          <Callout intent="warning">{t("Live log stream failed: {{error}}", { error: stream.error })}</Callout>
-        ) : null}
-        {running ? (
-          <Terminal writeMode="append" onReady={stream.setTerminal} overlay={<LiveLogBadge status={badgeStatus} />} />
-        ) : (
-          <Terminal
-            value={logsQuery.data || container.Logs}
-            writeMode="replace"
-            overlay={<LiveLogBadge status="snapshot" />}
-          />
-        )}
-      </div>
+      <ResourceSectionRail items={containerSectionRailItems(container.Id, connectionId)} activeId={ID} dataScreen={ID}>
+        <div className="AppScreenContent">
+          {stream.error ? (
+            <Callout intent="warning">{t("Live log stream failed: {{error}}", { error: stream.error })}</Callout>
+          ) : null}
+          {running ? (
+            <Terminal writeMode="append" onReady={stream.setTerminal} overlay={<LiveLogBadge status={badgeStatus} />} />
+          ) : (
+            <Terminal
+              value={logsQuery.data || container.Logs}
+              writeMode="replace"
+              overlay={<LiveLogBadge status="snapshot" />}
+            />
+          )}
+        </div>
+      </ResourceSectionRail>
     </div>
   );
 };
