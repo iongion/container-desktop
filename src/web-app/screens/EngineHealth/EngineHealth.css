@@ -1,14 +1,6 @@
-/* Engine Health cockpit — scoped connection health view. Ported from the approved mockup
-   (.scratch/engine-health-cockpit/index.html), scoped under .EngineHealth and driven entirely by --app-*
-   theme tokens (unified/teal chrome; per-connection identity = engine glyph + verdict-colored left border). */
-
-/* The health cockpit now renders inside the connection-detail rail panel (ConnectionDetailLayout), which
-   owns the header spacing, row layout and scroll — so the old direct-content rules here would only leak into
-   the rail layout (extra header margin / gap). The panel's own flex column + gap drives the cards' spacing. */
 .EngineHealth .ConnectionDetailPanel {
   gap: 10px;
 }
-/* Legacy fleet-status widget styles kept for any diagnostics header reuse. */
 .EngineHealth .EngineHealthHead {
   display: flex;
   align-items: center;
@@ -43,7 +35,6 @@
   padding-left: 2px;
 }
 
-/* Status dots (shared inside the cockpit) */
 .EngineHealth .dot {
   width: 9px;
   height: 9px;
@@ -128,16 +119,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* Grow to fill the bar so the trailing state + transport badges pin to the right edge. */
   flex: 1;
   min-width: 0;
 }
-/* Keep the right-edge badges from shrinking when the vitals text is long. */
 .EngineHealth .ConnHead .statePill,
 .EngineHealth .ConnHead .vpill {
   flex: 0 0 auto;
 }
-/* Health content panels render directly in the page content flow. */
 .EngineHealth .subCard {
   background: var(--app-bg);
   border: 1px solid var(--app-border);
@@ -201,7 +189,6 @@
   color: var(--app-intent-danger-text);
 }
 
-/* Inner data tables (custom networks, bind mounts) */
 .EngineHealth table.AppDataTable {
   width: 100%;
   border-collapse: collapse;
@@ -230,8 +217,6 @@
   color: var(--app-intent-warning-text);
 }
 
-/* Squared panels on this screen (user preference) — also flattens the shared ChainPipe hops + Diagnosis stripe
-   here without changing them on the reachability screen. Pills/dots/icon chips keep their shape. */
 .EngineHealth .ChainPipe .hop,
 .EngineHealth .ChainPipe .remoteWrap,
 .EngineHealth .Diagnosis {

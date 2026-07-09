@@ -5,8 +5,8 @@
 
 import type { IFileSystem, IPath } from "@/platform/contract";
 
-/** Read a text file, or `null` if it does not exist. A present-but-unreadable file REJECTS — callers (the AI
- *  permissions store) treat that as fail-closed, distinct from a missing file. */
+// Read a text file, or `null` if it does not exist. A present-but-unreadable file REJECTS — callers (the AI
+// permissions store) treat that as fail-closed, distinct from a missing file.
 export async function readTextFileOrNull(fs: IFileSystem, filePath: string): Promise<string | null> {
   if (!(await fs.isFilePresent(filePath))) {
     return null;
@@ -14,8 +14,8 @@ export async function readTextFileOrNull(fs: IFileSystem, filePath: string): Pro
   return fs.readTextFile(filePath);
 }
 
-/** Write a PRIVATE (0600 on the Node impl) text file, creating its parent directory first. The AI stores hold
- *  the user's allow/reject rules + knowledge — never world-readable. */
+// Write a PRIVATE (0600 on the Node impl) text file, creating its parent directory first. The AI stores hold
+// the user's allow/reject rules + knowledge — never world-readable.
 export async function writePrivateFileEnsuringDir(
   fs: IFileSystem,
   path: IPath,

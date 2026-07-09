@@ -4,10 +4,6 @@
   line-height: 1.4em;
 }
 
-/* Pod logs stacks two editors (stderr + stdout). By default each .CodeEditor is height:100%, so the two
-   stack to 200% and the second (stdout) is pushed out of view (the content is overflow:visible). Split the
-   content 50/50 instead: each editor becomes a flex pane whose monaco <section> fills the space under its
-   header. Scoped to this screen so single-editor screens (Inspect/Kube/…) keep their full-height editor. */
 .AppScreen[data-screen="pod.logs"] .AppScreenContent {
   overflow: hidden;
   gap: 8px;
@@ -25,8 +21,6 @@
   flex: 0 0 auto;
 }
 
-/* flex:1 1 0 gives flex-basis 0, so monaco's inline height:100% is ignored for sizing and the editor fills
-   the remaining pane height under the header. */
 .AppScreen[data-screen="pod.logs"] .AppScreenContent > .CodeEditor > section {
   flex: 1 1 0;
   min-height: 0;

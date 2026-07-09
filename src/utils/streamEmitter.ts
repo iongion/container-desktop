@@ -14,11 +14,6 @@ export interface EmitterStream {
   close: () => void;
 }
 
-/**
- * Build an {@link EmitterStream} backed by a fresh EventEmitter. `onDestroy` (source-specific
- * teardown, e.g. destroying the underlying stream or removing an IPC listener) runs exactly once,
- * before the emitter's listeners are removed; `close()` delegates to `destroy()`.
- */
 export function createEmitterStream(opts?: { onDestroy?: () => void }): {
   emitter: EventEmitter;
   api: EmitterStream;

@@ -1,14 +1,3 @@
-/* Registries & Trust — single-section screen (the grouped registries table). Per-connection Certificates +
- * Proxy moved to the connection edit form, so there is no category rail anymore.
- *
- * The grouped-by-connection table REUSES the app's resource-table grouping (same as the Containers screen):
- * .AppDataTable + .AppDataTableGroupRow / .AppDataTableGroupName (caret toggle) / .AppDataTableGroupDetails,
- * collapse keyed on data-prefix-group, the group band from --app-group-bg (tokens.css). This file only adds
- * the registry-specific column widths + pills. Anti-wobble is the app's own trick: the name column is greedy
- * (width:100%) so every other column stays pinned at its set width regardless of which rows are visible.
- * Theme tokens only. Also shared (globally bundled) by the Settings Air-gap panel + the Search-images drawer. */
-
-/* Panel area fills the space and does NOT scroll itself — the table inside manages its own scroll. */
 .TrustPanelWrap {
   display: flex;
   flex-direction: column;
@@ -19,9 +8,6 @@
   padding: 10px;
 }
 
-/* Search-images drawer — the registry-search bar (registry select · term input · Search). The select and
-   button keep their natural content width (flex: 0 0 auto) so their icon + label never get squeezed against
-   the edges; only the term input flexes to fill the row. */
 .SearchImagesWrap {
   overflow: auto;
 }
@@ -39,8 +25,6 @@
   min-width: 0;
 }
 
-/* Panel = a fixed heading strip (title + note) over a table that takes the full remaining width/height and
-   manages its own scroll (sticky header) — exactly like the Containers list (table not boxed in a card). */
 .TrustPanel {
   display: flex;
   flex-direction: column;
@@ -64,10 +48,6 @@
   letter-spacing: 0.02em;
 }
 
-/* Screen-header variant — the section title + note relocated into the AppScreenHeader left slot (replacing the
-   plain "Registries & Trust" title). Stacked + compact so both lines sit in the navbar; keeps the .TrustNote
-   muted styling. The note stays a single line (truncated, full text on hover) so it never grows the header. */
-/* Sign-in drawer — a touch of separation below the security callout, before the submit button. */
 .RegistryLoginNote.bp6-callout {
   margin-bottom: 5px;
 }
@@ -93,16 +73,12 @@
   white-space: nowrap;
 }
 
-/* Table scroll container — takes the remaining height and scrolls; the .AppDataTable sticky thead (App.css)
-   keeps the header fixed while the body scrolls. */
 .TrustTableScroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
 
-/* Registries table — every column except the first (Registry name) is horizontally centered (header + body).
-   The group-header cell is a single colSpan td (`:first-child` of its row) so it's untouched. */
 .TrustTable[data-table="trust-registries"] thead th:not(:first-child),
 .TrustTable[data-table="trust-registries"] tbody td:not(:first-child) {
   text-align: center;
@@ -111,7 +87,6 @@
   justify-content: center;
 }
 
-/* Card (used by the Air-gap panel in Settings and the certificates drop-zone). */
 .TrustCard {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
@@ -153,11 +128,6 @@
   color: var(--app-text);
 }
 
-/* ── Table tweaks layered on .AppDataTable (reused grouping). Square corners (no border/radius of its own —
- *    the wrapping card provides the frame), left-aligned cells, name column absorbs the slack. ── */
-/* Auto layout + the app's shrink-to-fit "1px" trick: each content column grows to its min-content (its
-   pill/text) and no further, so columns hug their content and the fluid name column soaks up the slack. No
-   table-layout:fixed — that made every column a wide fixed slot, wasting space and squeezing the name. */
 .TrustTable.AppDataTable thead tr th,
 .TrustTable.AppDataTable tbody tr td {
   text-align: left;
@@ -165,45 +135,33 @@
   white-space: nowrap;
 }
 
-/* Name column is greedy — takes all the width the content columns don't. */
 .TrustTable.AppDataTable thead th:first-child,
 .TrustTable.AppDataTable tbody td:first-child {
   width: 100%;
   min-width: 200px;
 }
 
-/* Every content column (not the name, not the Actions) shrinks to fit via the app's 1px trick. Position-based
-   so it works regardless of column set / SortableColumnHeader's data-column attr. */
 .TrustTable.AppDataTable thead th:not(:first-child):not([data-column="Actions"]),
 .TrustTable.AppDataTable tbody td:not(:first-child):not([data-column="Actions"]) {
   width: 1px;
 }
 
-/* TLS and Certificate contain wider pills/buttons than their header labels. Keep their measured max-content
-   footprint even when virtualization/collapse temporarily removes the widest rows from the DOM. */
 .TrustTable[data-table="trust-registries"] :is(th, td):nth-child(2),
 .TrustTable[data-table="trust-registries"] :is(th, td):nth-child(4) {
   min-width: 104px;
 }
 
-/* The ONE genuinely fixed column: the login/logout actions. A fixed min-width so "Log in" (icon+text) and
-   "Log out" (text) occupy the same slot, and so it never collapses to nothing when every group is closed
-   (its header is empty, so the 1px trick alone would shrink it away). */
 .TrustTable.AppDataTable :is(th, td)[data-column="Actions"] {
   width: 118px !important;
   min-width: 118px;
   text-align: center;
 }
-/* Certificates / Proxy have no login/logout — their trailing column shrinks to fit like the content ones. */
 .TrustTable.AppDataTable.TrustTable--certs :is(th, td)[data-column="Actions"],
 .TrustTable.AppDataTable.TrustTable--proxy :is(th, td)[data-column="Actions"] {
   width: 1px !important;
   min-width: 0;
 }
 
-/* Group toggle fills the (greedy) name cell so the whole band is one click target; its contents — caret,
-   engine icon, name, meta — are a single aligned flex row (scoped so the shared Containers grouping is
-   untouched). */
 .TrustTable.AppDataTable .AppDataTableGroupName .bp6-button {
   width: 100%;
   justify-content: flex-start;
@@ -217,8 +175,6 @@
   overflow: hidden;
 }
 
-/* Engine label + count are pushed to the right of the full-width group button (name stays left); the count
-   sits just after the engine label. */
 .TrustGroupMeta {
   margin-left: auto;
   color: var(--app-text-muted);
@@ -226,13 +182,11 @@
   font-weight: 400;
 }
 
-/* Count follows the engine label (both on the right). */
 .TrustGroupSum {
   color: var(--app-text-muted);
   font-size: 11px;
 }
 
-/* Registry / host name cell. */
 .TrustRegName {
   display: flex;
   align-items: center;
@@ -272,8 +226,6 @@
   color: var(--app-text-muted);
 }
 
-/* Row actions right-aligned; the auth button keeps a fixed min-width so "Log out" (no icon) and "→ Log in"
-   (with icon) occupy the same slot and the trailing ⋯ never shifts row-to-row. */
 .TrustRowActions {
   display: flex;
   gap: 4px;
@@ -287,13 +239,10 @@
   justify-content: center;
 }
 
-/* Certificate column: the actionable "Trust cert" affordance (self-signed / insecure) lives in its own fixed
-   column so it always sits in the same place — no raggedness — next to the verified / unverified badges. */
 .TrustCertAction.bp6-button {
   justify-content: flex-start;
 }
 
-/* ── Pills (TLS · auth · status) — one class, four intents, matching the mockup .pill. ── */
 .TrustPill {
   display: inline-flex;
   align-items: center;
@@ -332,19 +281,16 @@
   color: var(--app-text-muted);
 }
 
-/* Pill icon inherits the pill's intent color (Blueprint would otherwise re-tint standalone icons). */
 .TrustPill.TrustPill--ok .bp6-icon,
 .TrustPill.TrustPill--warn .bp6-icon,
 .TrustPill.TrustPill--err .bp6-icon {
   color: currentColor;
 }
 
-/* Warning-tinted inline action (Trust cert). */
 .TrustAction--warn.bp6-button {
   color: var(--app-intent-warning-text);
 }
 
-/* ── Diagnosis stripe (proxy / air-gap) — colored left border, icon chip, body; pinned below the table. ── */
 .TrustDiagnosis {
   flex: 0 0 auto;
   display: flex;
@@ -412,7 +358,6 @@
   border-radius: 4px;
 }
 
-/* ── Air-gap policy (Settings) — switch rows + allowed-registry rows. ── */
 .TrustSwitchRow {
   display: flex;
   align-items: flex-start;
@@ -429,7 +374,6 @@
   margin: 0;
 }
 
-/* Checked switch tracks the engine accent (Blueprint's default is a neutral fill). */
 .TrustSwitchRow .bp6-switch input:checked ~ .bp6-control-indicator {
   background: var(--app-accent);
 }

@@ -202,7 +202,7 @@ function findCatalog(repo: string): ImageCatalogEntry {
   );
 }
 
-/** Build the full per-engine logical dataset. Deterministic for a given (faker seed, engine, counts). */
+// Build the full per-engine logical dataset. Deterministic for a given (faker seed, engine, counts).
 export function generateLogicalDataset(faker: Faker, engine: ContainerEngine, counts: EngineCounts): LogicalDataset {
   const labelKeys = composeLabelKeys(engine);
 

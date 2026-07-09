@@ -32,23 +32,23 @@ export interface MountConnection {
 }
 
 export interface MountRow {
-  /** Connection-qualified, stable — the row's DOM/React key. */
+  // Connection-qualified, stable — the row's DOM/React key.
   key: string;
   connectionId: string;
   connectionName: string;
   engine: string;
   containerId: string;
   containerName: string;
-  /** "bind" | "volume" | … (raw). */
+  // "bind" | "volume" | … (raw).
   type: string;
-  /** Host path (bind) or volume name (volume); "" for an anonymous volume / unknown. */
+  // Host path (bind) or volume name (volume); "" for an anonymous volume / unknown.
   source: string;
   destination: string;
-  /** "rw" | "ro" | "" when unknown (never guessed). */
+  // "rw" | "ro" | "" when unknown (never guessed).
   mode: string;
-  /** "uid:gid" — only for a volume mount matched to its connection's Volume; undefined otherwise (probe later). */
+  // "uid:gid" — only for a volume mount matched to its connection's Volume; undefined otherwise (probe later).
   owner?: string;
-  /** Volume size in bytes — from the matched volume's UsageData (only when the engine's list offers size). */
+  // Volume size in bytes — from the matched volume's UsageData (only when the engine's list offers size).
   size?: number;
 }
 

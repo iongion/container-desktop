@@ -96,11 +96,6 @@ export async function waitForSelectorCount(driver: CaptureDriver, selector: stri
   );
 }
 
-// After landing on a screen, wait for the route transition to FULLY settle before capturing: the
-// previous screen must unmount and the new one must render its data and paint.
-// Without this a screenshot can land mid-transition where the old screen still overlaps
-// the new one. Waits until DOM mutations go quiet for `quietMs` (bounded by `maxWaitMs` so a steadily
-// polling screen can't hang it), then two animation frames so the settled tree has actually painted.
 export async function settleOnScreen(driver: CaptureDriver, quietMs = 350, maxWaitMs = 4000) {
   if (!quietMs || quietMs <= 0) {
     return;

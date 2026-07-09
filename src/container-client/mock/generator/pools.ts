@@ -5,26 +5,26 @@
 import type { ContainerStateValue } from "./model";
 
 export interface ImageCatalogEntry {
-  /** Registry host. "docker.io" for Hub; others (quay.io/ghcr.io/gcr.io) exercise the registry split. */
+  // Registry host. "docker.io" for Hub; others (quay.io/ghcr.io/gcr.io) exercise the registry split.
   registry: string;
-  /** Full repository path INCLUDING "library/" for Hub official images (e.g. "library/nginx", "prom/prometheus"). */
+  // Full repository path INCLUDING "library/" for Hub official images (e.g. "library/nginx", "prom/prometheus").
   repo: string;
-  /** Allowed tags — drawn from so we never invent an implausible tag (e.g. nginx:99). */
+  // Allowed tags — drawn from so we never invent an implausible tag (e.g. nginx:99).
   tags: string[];
-  /** Long-running server that binds a port, vs a one-shot/worker base image. */
+  // Long-running server that binds a port, vs a one-shot/worker base image.
   exposesPort: boolean;
-  /** Canonical container port for exposesPort images. */
+  // Canonical container port for exposesPort images.
   port?: number;
-  /** Size band in bytes [min, max]. */
+  // Size band in bytes [min, max].
   size: [number, number];
-  /** Default command (podman keeps the array; docker joins to a string). */
+  // Default command (podman keeps the array; docker joins to a string).
   cmd: string[];
-  /** Optional entrypoint for inspect. */
+  // Optional entrypoint for inspect.
   entrypoint?: string[];
-  /** Config.Env hints for inspect. */
+  // Config.Env hints for inspect.
   env: string[];
   maintainer?: string;
-  /** Preferred compose service name when this image anchors a service. */
+  // Preferred compose service name when this image anchors a service.
   service: string;
 }
 
@@ -316,19 +316,14 @@ export const IMAGE_CATALOG: ImageCatalogEntry[] = [
   },
 ];
 
-/** A compose project = a named group of services. Used to build realistic multi-service container groups. */
+// A compose project = a named group of services. Used to build realistic multi-service container groups.
 export interface ProjectTemplate {
   name: string;
-  /** Service definitions: a repo from the catalog + optional replica count + optional pinned state. */
+  // Service definitions: a repo from the catalog + optional replica count + optional pinned state.
   services: { repo: string; service: string; replicas?: number; state?: ContainerStateValue }[];
 }
 
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
-  // "acme" sorts before every other multi-item project, so acme-db-1 is the FIRST row of the Containers list —
-  // the exact container the docs Inspect screenshot resolves ([data-container] .first()). Its db is pinned
-  // running so that row shows a rich, realistic Postgres inspect (env + published 5432 + a data volume),
-  // instead of the empty CI worker that used to land there. Keep every sibling service name > "db" so the
-  // Postgres row stays alphabetically first within the group.
   {
     name: "acme",
     services: [
@@ -488,7 +483,7 @@ export const POD_BASES = [
   "session-store",
 ];
 
-/** Network base names used for non-default project networks. */
+// Network base names used for non-default project networks.
 export const NETWORK_BASES = [
   "lamp",
   "ops",
@@ -508,7 +503,7 @@ export const NETWORK_BASES = [
   "mgmt",
 ];
 
-/** Volume name stems. */
+// Volume name stems.
 export const VOLUME_STEMS = [
   "web-data",
   "db-data",
@@ -528,7 +523,7 @@ export const VOLUME_STEMS = [
   "config",
 ];
 
-/** Secret name stems. */
+// Secret name stems.
 export const SECRET_STEMS = [
   "db_password",
   "db_root_password",
@@ -547,7 +542,7 @@ export const SECRET_STEMS = [
   "license_key",
 ];
 
-/** Registry hosts for the generated registries list. */
+// Registry hosts for the generated registries list.
 export const REGISTRY_HOSTS = [
   "docker.io",
   "quay.io",
@@ -566,7 +561,7 @@ export const REGISTRY_HOSTS = [
   "artifactory.corp",
 ];
 
-/** Sample vulnerabilities for the Trivy security report (semantically plausible, deterministic). */
+// Sample vulnerabilities for the Trivy security report (semantically plausible, deterministic).
 export const VULN_SAMPLES = [
   {
     PkgName: "libssl3",
@@ -633,7 +628,7 @@ export function vulnerabilityDescription(index: number): string {
   return index % 2 === 0 ? LONG_VULN_DESCRIPTION : "Mock package vulnerability used for deterministic screenshots.";
 }
 
-/** Container log line templates (kept non-empty — the streaming adapter test relies on it). */
+// Container log line templates (kept non-empty — the streaming adapter test relies on it).
 export const LOG_TEMPLATES = [
   "Using configuration from /etc/app/config.yaml",
   "Starting service",

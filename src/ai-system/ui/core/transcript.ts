@@ -19,7 +19,7 @@ export type TranscriptItem =
       args: string[];
       reason: string;
       status: ApprovalStatus;
-      /** Friendly one-line summary for a typed-tool approval (cmdKind === "tool"); commands render program+args. */
+      // Friendly one-line summary for a typed-tool approval (cmdKind === "tool"); commands render program+args.
       title?: string;
     }
   // A first-class typed tool call (e.g. listContainers) + its redacted result, rendered as a generative-UI

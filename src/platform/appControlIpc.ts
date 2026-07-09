@@ -6,7 +6,7 @@
 export interface AppControlIpcDeps {
   onMessage: (channel: string, handler: (event: any, payload: any) => void) => void;
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
-  /** Gate window/app handlers to the main app window only. */
+  // Gate window/app handlers to the main app window only.
   isAllowedSender: (event: any) => boolean;
   minimize: () => void;
   toggleMaximize: () => void;
@@ -15,11 +15,11 @@ export interface AppControlIpcDeps {
   exit: () => void;
   relaunch: () => void;
   openDevTools: () => void;
-  /** Show the window in response to the renderer's "ready" notification. */
+  // Show the window in response to the renderer's "ready" notification.
   showWindow: () => void;
   openFileSelector: (options: any) => Promise<unknown>;
   openTerminal: (options: any) => Promise<boolean>;
-  /** Open the app's storage/config directory (userData) in the OS file manager. Main resolves the path. */
+  // Open the app's storage/config directory (userData) in the OS file manager. Main resolves the path.
   openStorageFolder: () => void;
   applyProxy?: (options: any) => Promise<unknown> | unknown;
   testProxy?: (options: any) => Promise<unknown> | unknown;

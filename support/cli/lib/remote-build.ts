@@ -9,11 +9,6 @@ import { hostSystem } from "@/cli/lib/host";
 import { ENVIRONMENT, PROJECT_CODE, PROJECT_HOME } from "@/cli/lib/paths";
 import { type EnvOverrides, runEnv } from "@/cli/lib/process";
 
-// Cross-OS bundle orchestration: when a package script targets a platform other than the host, the
-// build is shipped to a configured remote box over ssh/scp. This is the bulk of the old tasks.py —
-// env layering to find the box, remote prepare/build scripts, source-archive packing, and the
-// ssh/scp round-trip. The pure pieces (env layering, resolution, script text) are unit-tested.
-
 export const LOCAL_BUILD_BOX_KEYS: Record<string, string> = {
   win: "BUILD_WIN_BOX",
   mac: "BUILD_MAC_BOX",
@@ -453,8 +448,8 @@ export interface BundleDeps {
   runLocal?: (script: string, env?: EnvOverrides) => void;
 }
 
-/** Resolve the package script, then either build locally (`yarn <script>`) or dispatch to the
- * configured remote box. Deps are injectable so the dispatch is unit-tested without real ssh. */
+// Resolve the package script, then either build locally (`yarn <script>`) or dispatch to the
+// configured remote box. Deps are injectable so the dispatch is unit-tested without real ssh.
 export async function executeBundle(
   env: EnvOverrides = {},
   deps: BundleDeps = {},

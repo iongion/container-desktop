@@ -1,9 +1,3 @@
-// runtimes/registry.ts — the map: (engine, host) → { transport, dialect, profile } + identity constants.
-//
-// This replaces the AbstractEngine.ENGINE_HOST_CLIENTS leaf instantiation. Transports are created per host
-// (a factory) because SSH/WSL/PodmanMachine keep per-connection state; dialects and profiles are stateless
-// singletons. createComposedHostClient builds the HostClient that drives a connection.
-
 import { type Connection, ContainerEngine, ContainerEngineHost, type OperatingSystem } from "@/env/Types";
 import { APPLE_PROGRAM, DOCKER_PROGRAM, LIMA_PROGRAM, PODMAN_PROGRAM, SSH_PROGRAM, WSL_PROGRAM } from "../connection";
 import type { EngineDialect, HostProfile, Transport } from "./composition";
@@ -35,11 +29,11 @@ import { WSLTransport } from "./transports/wsl";
 export interface HostClientRegistryEntry {
   readonly engine: ContainerEngine;
   readonly host: ContainerEngineHost;
-  /** Engine binary (podman/docker). */
+  // Engine binary (podman/docker).
   readonly PROGRAM: string;
-  /** Controller binary (wsl/limactl/ssh/podman; the engine binary for native, where it is unused). */
+  // Controller binary (wsl/limactl/ssh/podman; the engine binary for native, where it is unused).
   readonly CONTROLLER: string;
-  /** Per-host transport instance (factory: SSH/WSL/PodmanMachine keep per-connection state). */
+  // Per-host transport instance (factory: SSH/WSL/PodmanMachine keep per-connection state).
   readonly createTransport: () => Transport;
   readonly dialect: EngineDialect;
   readonly profile: HostProfile;
@@ -171,7 +165,7 @@ export function resolveHostClientRegistryEntry(
   return entry;
 }
 
-/** Build the composed HostClient that drives the given connection (does not apply settings - the caller does). */
+// Build the composed HostClient that drives the given connection (does not apply settings - the caller does).
 export async function createComposedHostClient(connection: Connection, osType: OperatingSystem): Promise<HostClient> {
   const entry = resolveHostClientRegistryEntry(connection.engine, connection.host);
   const composition: HostClientComposition = {

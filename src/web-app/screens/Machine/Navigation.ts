@@ -5,6 +5,6 @@ export const getMachineUrl = (id: string, view: string, connId?: string) => {
   return pathTo(`/screens/machines/${encodeURIComponent(id)}/${encodeURIComponent(view)}`, undefined, { connId });
 };
 
-/** Canonical machine trail: `Machines > name` (single detail view). */
+// Canonical machine trail: `Machines > name` (single detail view).
 export const getMachineCrumbs = (name: string, connId?: string): AppBreadcrumb[] =>
   leafCrumbs("machines", name, connId);

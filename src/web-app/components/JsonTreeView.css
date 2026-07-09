@@ -1,6 +1,3 @@
-/* Value-type colors + a monospace label. Row height, caret and hover come from Blueprint's own
-   .bp6-tree system. The ONE deliberate structural tweak is a tighter per-level indent (bottom of
-   this file): Blueprint's stock ~22px/level is too wide for deeply-nested inspect JSON. */
 .JsonTree .bp6-tree-node-label {
   font-family: var(--monospace-font);
   font-size: 11px;
@@ -45,8 +42,6 @@
   margin-left: 8px;
 }
 
-/* Tighter per-level indent: 14px/level (vs Blueprint's ~22px) using Blueprint's own content-depth
-   classes, so the full-bleed row highlight + leaf/branch alignment stay intact. Full 0–20 range. */
 .JsonTree .bp6-tree-node-content-1 {
   padding-left: 14px;
 }

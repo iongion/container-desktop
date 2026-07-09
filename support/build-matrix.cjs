@@ -96,10 +96,6 @@ const CD_JOBS = [
   },
 ];
 
-// Electron CI matrix — the source of truth for CDPipeline.Electron.yml. Same per-OS-native-runner model as the
-// Tauri CD_JOBS (no Rust; electron-builder packages via the retained package:electron:* scripts). Electron's
-// historical set across all of 5.x is 4 targets — no Windows-on-ARM (electron-builder ships no arm64 Windows
-// target) and no Intel mac. Kept OUT of PLATFORMS: Tauri stays the public website/release default.
 const ELECTRON_CD_JOBS = [
   { target: "linux-x64", os: "ubuntu-latest", packageScript: "package:electron:linux_x86" },
   { target: "linux-arm64", os: "ubuntu-24.04-arm", packageScript: "package:electron:linux_arm" },
@@ -287,9 +283,6 @@ function assetName(platformKey, format, arch, version) {
   return PLATFORMS[platformKey].naming(format.arch[arch], version, format.ext);
 }
 
-// Legacy electron-builder `target` array for a platform. Release automation uses
-// Tauri package scripts from `releaseArtifactEntries`; keep this only for manual
-// Electron fallback commands.
 function electronBuilderTargets(platformKey) {
   return PLATFORMS[platformKey].formats.filter((format) => format.electron !== false).map((format) => format.target);
 }

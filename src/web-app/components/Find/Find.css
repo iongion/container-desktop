@@ -1,8 +1,3 @@
-/* Global find widget + match highlighting.
-   Theme tokens live here so the feature is self-contained. Terminal decoration vars are
-   engine-only (the xterm surface is always dark); highlight/widget vars follow the full
-   skin (engine × light/dark). */
-
 :root {
   --find-accent: #6caaff;
   --find-hl-bg: rgba(108, 170, 255, 0.3);
@@ -61,8 +56,6 @@ body.bp6-light[data-engine="podman"] {
   --find-widget-border: #dcdcdc;
 }
 
-/* CONTAINER/GREEN + UNIFIED share the same find-widget palette. The app chrome differs by accent,
-   but this floating utility should read like the neutral unified surface instead of a green panel. */
 body[data-engine="container"],
 body[data-engine="unified"] {
   --find-term-match: #1d5a52;
@@ -89,7 +82,6 @@ body.bp6-light[data-engine="unified"] {
   --find-widget-border: #c7d6d2;
 }
 
-/* DOM-screen match painting via the CSS Custom Highlight API. */
 ::highlight(cd-find) {
   background-color: var(--find-hl-bg);
 }
@@ -145,9 +137,6 @@ body.bp6-light[data-engine="unified"] {
   font-weight: 600;
 }
 
-/* Blueprint's built-in "?" hotkeys dialog (populated by the find hotkey). The app themes
-   menus/popovers/drawers but not generic dialogs, so this one defaults to Blueprint grey.
-   Re-skin it with the same tokens as the find widget so it matches each engine theme. */
 .bp6-hotkey-dialog {
   background-color: var(--find-widget-bg) !important;
   color: var(--find-widget-fg);

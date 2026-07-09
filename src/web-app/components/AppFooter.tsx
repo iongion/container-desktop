@@ -38,8 +38,6 @@ export const AppFooter = ({ variant = "workspace" }: AppFooterProps) => {
   const connectedCount = connected.length;
   const isConnected = connectedCount > 0;
   const engineInventory = buildEngineInventory(connections, connectors, activeRuntime);
-  // Same label the (now removed) engine dropdown showed by default — reused verbatim so the version rules
-  // (system-connection-first, else deduped) are unchanged; now rendered inline as plain text.
   const engineVersionsLabel = engineInventoryTriggerLabel(engineInventory, t("Engines"));
   const showConnectionStatus = variant === "workspace";
   return (

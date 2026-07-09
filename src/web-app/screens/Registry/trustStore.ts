@@ -22,7 +22,6 @@ interface TrustState {
   authOverrides: Record<string, RegistryAuthInfo>;
   // Registries added this session, per connection id.
   added: Record<string, AddedRegistry[]>;
-  // Registries removed this session (a set of scopeKey(connId, name)).
   removed: Record<string, true>;
   // Open header-CTA drawer, or null.
   dialog: TrustDialog | null;
@@ -61,7 +60,6 @@ export const useTrustStore = create<TrustState>((set) => ({
       if (existing.some((r) => r.name === registry.name)) {
         return state;
       }
-      // Un-remove if it was removed earlier, then append.
       const { [scopeKey(connectionId, registry.name)]: _dropped, ...removed } = state.removed;
       return { added: { ...state.added, [connectionId]: [...existing, registry] }, removed };
     }),

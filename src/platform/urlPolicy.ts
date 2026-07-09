@@ -4,9 +4,6 @@
 
 import ipaddr from "ipaddr.js";
 
-// Private/internal address ranges trusted to open without the domain allow-list check. Replaces the
-// unmaintained `private-ip` package (GHSA-9h3q-32c7-r533, SSRF). ipaddr.js classifies IPv4, IPv6 and
-// IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1) correctly.
 const PRIVATE_IP_RANGES = new Set([
   "private",
   "loopback",
@@ -48,7 +45,7 @@ export function isPrivateIp(hostname: string): boolean {
   return PRIVATE_IP_RANGES.has(addr.range());
 }
 
-/** Whether `rawUrl` may be opened in the external browser. Malformed URLs are denied. */
+// Whether `rawUrl` may be opened in the external browser. Malformed URLs are denied.
 export function shouldOpenExternally(rawUrl: string): boolean {
   if (URLS_ALLOWED.includes(rawUrl)) {
     return true;

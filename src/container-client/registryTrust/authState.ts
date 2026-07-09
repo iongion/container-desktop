@@ -10,7 +10,6 @@ export interface RegistryLoginState {
   account?: string;
 }
 
-// Docker Hub is addressed under several aliases; its docker config.json key is the legacy v1 URL.
 const DOCKER_HUB_HOSTS = ["docker.io", "index.docker.io", "registry-1.docker.io", "registry.hub.docker.com"];
 const DOCKER_HUB_KEY = "https://index.docker.io/v1/";
 

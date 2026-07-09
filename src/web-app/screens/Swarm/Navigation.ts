@@ -24,10 +24,8 @@ const SWARM_KIND_LABELS: Record<SwarmInspectSegment, string> = {
   configs: i18n.t("Configs"),
 };
 
-/**
- * Canonical swarm trail: `Connection > Swarm > Kind > leaf` (e.g. `System Docker > Swarm > Services >
- * shop_web`). The kind crumb links back to that kind's tab; `leaf` is the resolved entity name/id.
- */
+// Canonical swarm trail: `Connection > Swarm > Kind > leaf` (e.g. `System Docker > Swarm > Services >
+// shop_web`). The kind crumb links back to that kind's tab; `leaf` is the resolved entity name/id.
 export const getSwarmCrumbs = (kind: SwarmInspectSegment, leaf: string, connId?: string): AppBreadcrumb[] => [
   connectionCrumb(connId),
   rootCrumb("swarm", connId),

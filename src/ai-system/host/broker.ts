@@ -89,38 +89,38 @@ export interface AIBrokerDeps {
   getAISettings: () => Promise<AISettings> | AISettings;
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
   onMessage: (channel: string, handler: (event: any, payload: any) => void) => void;
-  /** Push a stream event to the window that opened the stream. */
+  // Push a stream event to the window that opened the stream.
   send: (event: any, channel: string, payload: unknown) => void;
-  /** Stable identity for a sender, so its streams can be reaped when its window closes. */
+  // Stable identity for a sender, so its streams can be reaped when its window closes.
   senderId: (event: any) => number | string;
-  /** Only the main app window may reach the AI subsystem. */
+  // Only the main app window may reach the AI subsystem.
   isAllowedSender: (event: any) => boolean;
-  /** Lists models from a provider's server; injected so it can be stubbed in tests. */
+  // Lists models from a provider's server; injected so it can be stubbed in tests.
   listModels: (baseURL: string, opts?: { auth?: AIAuthSettings; secret?: string }) => Promise<ListedModel[]>;
   // Prompt builders — pure functions, injected so host never imports from runtimes.
   buildGeneratePrompt: (kind: "dockerfile" | "compose") => string;
   buildAgentPrompt: (bundle?: DiagnosticsBundle) => string;
   // Agentic runner + tools — all injected so the broker stays SDK-free and unit-testable.
-  /** Drives the AI-SDK agent loop (streamText + tools + step cap); also used for one-shot generate (no tools). */
+  // Drives the AI-SDK agent loop (streamText + tools + step cap); also used for one-shot generate (no tools).
   agentRunner?: AgentRunner;
-  /** Executes a command in the main sandbox (scrub + cap + redact; floor enforced unless enforceFloor:false). */
+  // Executes a command in the main sandbox (scrub + cap + redact; floor enforced unless enforceFloor:false).
   runSandboxed?: SandboxRunner;
-  /** Builds the AI-SDK tool set from tool deps (= createAgentTools); injected to avoid an SDK import here. */
+  // Builds the AI-SDK tool set from tool deps (= createAgentTools); injected to avoid an SDK import here.
   buildAgentTools?: BuildAgentTools;
-  /** First-class typed container operations the assistant's tools call (and the broker re-runs when the user
-   *  approves a gated mutation). Absent ⇒ only the generic command/web/knowledge tools are offered. */
+  // First-class typed container operations the assistant's tools call (and the broker re-runs when the user
+  // approves a gated mutation). Absent ⇒ only the generic command/web/knowledge tools are offered.
   engineOps?: EngineOps;
-  /** Re-runs an APPROVED typed tool (= executeContainerTool bound to engineOps); injected so the broker stays
-   *  SDK-free. Returns the redacted card payload + the model-facing summary. */
+  // Re-runs an APPROVED typed tool (= executeContainerTool bound to engineOps); injected so the broker stays
+  // SDK-free. Returns the redacted card payload + the model-facing summary.
   runEngineTool?: (
     name: string,
     args: Record<string, unknown>,
   ) => Promise<{ ok: boolean; result: unknown; summary: unknown; title: string }>;
-  /** The user-managed allow/reject record (a versioned file in userData). Broker-owned writes. */
+  // The user-managed allow/reject record (a versioned file in userData). Broker-owned writes.
   permissionsStore?: PermissionsStoreLike;
-  /** The seeded troubleshooting knowledge store. */
+  // The seeded troubleshooting knowledge store.
   knowledgeBank?: KnowledgeBankLike;
-  /** Performs an SSRF-guarded web search; offered to the agent only when web search is enabled. */
+  // Performs an SSRF-guarded web search; offered to the agent only when web search is enabled.
   webSearcher?: (query: string) => Promise<{ text: string }>;
   logger?: { error: (...args: any[]) => void };
 }

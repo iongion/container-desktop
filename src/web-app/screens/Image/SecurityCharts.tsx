@@ -24,7 +24,6 @@ interface DonutProps {
 
 // A compact donut with a centered total. Zero-value slices are dropped so empty severities don't render a sliver.
 export const Donut: React.FC<DonutProps> = ({ slices, centerValue, centerLabel, size = 172, showEmptyTrack }) => {
-  // recharts 3 reads each sector's colour from the datum's `fill` (the `<Cell>` child is deprecated).
   const data = slices.filter((slice) => slice.value > 0).map((slice) => ({ ...slice, fill: slice.color }));
   return (
     <div className="SecurityDonut" style={{ width: size, height: size }}>

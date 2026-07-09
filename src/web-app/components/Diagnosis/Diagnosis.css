@@ -1,6 +1,3 @@
-/* Diagnosis stripe — shared, self-contained + theme-tokened so it renders the same under any screen root
-   (reachability debugger, Engine Health cockpit). Colored left border by tone; icon chip; fix command + actions. */
-
 .Diagnosis {
   display: flex;
   gap: 13px;

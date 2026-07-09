@@ -1,9 +1,3 @@
-// Row windowing for the native Blueprint <HTMLTable> list screens. Replaces the progressive-reveal
-// hook (which still ended with every row in the DOM) with true virtualization: only the rows in (and
-// just around) the viewport are rendered, between two height-reserving spacer <tr>s. Native table
-// layout, sticky <thead>, the CSS-driven column widths and (index-driven) striping are all preserved —
-// see App.css `[data-windowed]`. Built on @tanstack/react-virtual.
-
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -52,40 +46,40 @@ function listScrollKey(scrollKey?: string): string {
 
 export interface WindowedRowItem<T> {
   row: T;
-  /** Absolute index into the full `rows` array — drives keys, measurement and stripe parity. */
+  // Absolute index into the full `rows` array — drives keys, measurement and stripe parity.
   index: number;
   key: string;
 }
 
 export interface UseWindowedRowsParams<T> {
-  /** The FULL ordered row array (already sorted/filtered/flattened upstream). */
+  // The FULL ordered row array (already sorted/filtered/flattened upstream).
   rows: T[];
-  /** Resolves the scroll container (the `overflow:auto` ancestor of the table). */
+  // Resolves the scroll container (the `overflow:auto` ancestor of the table).
   getScrollElement: () => HTMLElement | null;
-  /** Stable identity per row so the measurement cache + DOM keys survive data churn (never the index). */
+  // Stable identity per row so the measurement cache + DOM keys survive data churn (never the index).
   getRowKey: (row: T, index: number) => string;
-  /** First-paint height guess per row (px). Only affects initial paint; real heights are measured. */
+  // First-paint height guess per row (px). Only affects initial paint; real heights are measured.
   estimateRowHeight?: (row: T, index: number) => number;
-  /** Distance (px) from the scroll container's top to the first row — i.e. the sticky <thead> height. */
+  // Distance (px) from the scroll container's top to the first row — i.e. the sticky <thead> height.
   scrollMargin?: number;
-  /** Rows rendered above/below the viewport. */
+  // Rows rendered above/below the viewport.
   overscan?: number;
-  /** When false (e.g. the empty/NonIdealState branch) the virtualizer idles. */
+  // When false (e.g. the empty/NonIdealState branch) the virtualizer idles.
   enabled?: boolean;
-  /** Disambiguates scroll restoration when one route hosts two lists (Registry: "search"/"sources"). */
+  // Disambiguates scroll restoration when one route hosts two lists (Registry: "search"/"sources").
   scrollKey?: string;
 }
 
 export interface WindowedRows<T> {
-  /** The subset of rows to actually render, in order, each carrying its absolute index + stable key. */
+  // The subset of rows to actually render, in order, each carrying its absolute index + stable key.
   items: WindowedRowItem<T>[];
-  /** Height (px) of the leading spacer <tr>. */
+  // Height (px) of the leading spacer <tr>.
   paddingTop: number;
-  /** Height (px) of the trailing spacer <tr>. */
+  // Height (px) of the trailing spacer <tr>.
   paddingBottom: number;
-  /** Attach to EACH rendered row's outer <tr> via `ref={measureRef}` (also set `data-index={index}`). */
+  // Attach to EACH rendered row's outer <tr> via `ref={measureRef}` (also set `data-index={index}`).
   measureRef: (node: HTMLTableRowElement | null) => void;
-  /** Escape hatch for remeasure / scrollTo (e.g. collapse, search reset). */
+  // Escape hatch for remeasure / scrollTo (e.g. collapse, search reset).
   virtualizer: Virtualizer<HTMLElement, HTMLTableRowElement>;
 }
 
@@ -105,8 +99,6 @@ export function useWindowedRows<T>({
     [estimateRowHeight, rows],
   );
 
-  // Capture the restore key + any previously-saved state ONCE, on the first render — while the hash is
-  // still this list's route (see note above). Reused verbatim to seed the virtualizer below.
   const keyRef = useRef<string | null>(null);
   const savedRef = useRef<ListScrollState | undefined>(undefined);
   if (keyRef.current === null) {
@@ -164,13 +156,11 @@ export function useWindowedRows<T>({
   return { items, paddingTop, paddingBottom, measureRef: virtualizer.measureElement, virtualizer };
 }
 
-/**
- * Wires a windowed table's scroll plumbing: a callback ref for the scroll container, a callback ref for
- * the <thead> (so the sticky-header height is measured even across the empty↔non-empty table transition),
- * and the resulting `scrollMargin`. Call once per scroll container. Scroll *restoration* is handled by
- * `useWindowedRows` (which owns the virtualizer) via @tanstack/react-virtual's snapshot API, so nothing
- * here touches scrollTop.
- */
+// Wires a windowed table's scroll plumbing: a callback ref for the scroll container, a callback ref for
+// the <thead> (so the sticky-header height is measured even across the empty↔non-empty table transition),
+// and the resulting `scrollMargin`. Call once per scroll container. Scroll *restoration* is handled by
+// `useWindowedRows` (which owns the virtualizer) via @tanstack/react-virtual's snapshot API, so nothing
+// here touches scrollTop.
 export function useTableScroll() {
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);

@@ -1,10 +1,7 @@
-/* Shared sortable Property/Value table used by Connection info and Inspect summaries. */
 .AppDataTable.PropertyValueTable {
   flex: 0 0 auto;
 }
 
-/* Compact density: tighten the cell padding, property "code" chip, and the in-cell copy button so rows
-   stay dense (Blueprint's `compact` alone is defeated by the small copy Button's default height). */
 .AppDataTable.PropertyValueTable thead tr th,
 .AppDataTable.PropertyValueTable tbody tr td {
   padding-top: 2px;
@@ -67,7 +64,6 @@
   font-family: var(--monospace-font);
 }
 
-/* Optional leading icon in a column header (e.g. the non-sortable container Ports table). */
 .PropertyValueHeaderCell {
   display: inline-flex;
   align-items: center;
@@ -76,8 +72,6 @@
 .PropertyValueHeaderIcon {
   color: var(--app-text-muted);
 }
-/* Plain (non-sortable) header cells match the sortable header's left alignment / weight / height (the
-   sortable header's button is min-height 28px — mirror it so mixed screens line their header rows up). */
 .AppDataTable.PropertyValueTable th.PropertyValueTableHeader {
   text-align: left;
   font-weight: 600;
@@ -87,7 +81,6 @@
   align-items: center;
   min-height: 28px;
 }
-/* Semantic value tags (image refs, drivers, roles) keep the monospace rhythm of the value column. */
 .PropertyValueTag.bp6-tag {
   font-family: var(--monospace-font);
 }

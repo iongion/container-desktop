@@ -9,8 +9,6 @@
   width: 256px;
   height: 256px;
 }
-/* Merged/multi-engine chrome: the unified mark (boot normally shows the primary engine's logo before
-   connect-all flips to unified, so this is the rare merged-splash case). */
 [data-engine="unified"] .AppLoadingSplashLogo {
   background: url("../images/unified-engine.svg") no-repeat center / contain;
 }

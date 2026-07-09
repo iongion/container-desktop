@@ -40,7 +40,7 @@ export interface SSHClientDeps {
   osType: string;
 }
 
-/** SSHHost → the credentials buildSSHArgs consumes (mirrors ssh-transport.ts:207). */
+// SSHHost → the credentials buildSSHArgs consumes (mirrors ssh-transport.ts:207).
 export function credentialsFromHost(host: SSHHostLike): SSHClientConnection {
   return {
     host: host.HostName || host.Host || host.Name,
@@ -55,7 +55,7 @@ function isEstablished(output: CommandExecutionResult | undefined): boolean {
   return !!output?.success && `${output?.stdout ?? ""}`.trim() === SSH_ESTABLISHED;
 }
 
-/** Command.StartSSHConnection — run the echo connect-probe; on success return a live ISSHClient. */
+// Command.StartSSHConnection — run the echo connect-probe; on success return a live ISSHClient.
 export async function startSSHConnection(deps: SSHClientDeps, host: SSHHostLike, _opts?: any): Promise<ISSHClient> {
   const cli = deps.osType === "Windows_NT" ? "ssh.exe" : "ssh";
   const credentials = credentialsFromHost(host);

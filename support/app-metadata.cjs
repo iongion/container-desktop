@@ -27,7 +27,7 @@ const license = pkg.license; // MIT
 const version = pkg.version; // convenience re-export; package.json stays the source (see sync-manifests)
 const homepage = "https://container-desktop.com";
 
-/** `Copyright (c) <year> <author>` — the caller passes the year (electron uses dayjs). */
+// `Copyright (c) <year> <author>` — the caller passes the year (electron uses dayjs).
 function copyright(year) {
   return `Copyright (c) ${year} ${author}`;
 }

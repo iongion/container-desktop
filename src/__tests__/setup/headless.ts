@@ -16,7 +16,7 @@ g.CURRENT_OS_TYPE = CURRENT_OS_TYPE;
 g.CURRENT_DARWIN_MAJOR = CURRENT_DARWIN_MAJOR;
 process.env.APP_PATH ??= process.cwd();
 
-/** Live tests only: wire the real Node executor as the global `Command` (spawns real processes). */
+// Live tests only: wire the real Node executor as the global `Command` (spawns real processes).
 export async function installRealCommand() {
   const { Command } = await import("@/platform/electron/command");
   (globalThis as unknown as Record<string, unknown>).Command = Command;

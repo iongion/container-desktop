@@ -1,18 +1,7 @@
-/* The header Build/Cancel toggle keeps a fixed min-width so the control doesn't wobble when its label swaps
-   between "Build image" and "Cancel" (the wider "Build image" measures ≈103px). Lives in the screen header,
-   outside .BuildStudio, so this rule is intentionally not nested. */
 .BuildActionButton {
   min-width: 104px;
 }
 
-/* Build Studio layout — locked to the approved mock. All colours/spacing come from the app --app-* tokens
-   (src/web-app/themes/tokens.css); the mock's ad-hoc --ok/--warn/--input-bg map onto the semantic
-   --app-intent-* tokens here. Everything is scoped under .BuildStudio so the generic class names
-   (.panel/.field/.row/.chip/.tabs…) never leak into the rest of the app. */
-
-/* Fills the space under the header (the parent .AppScreen is a padded flex column). The top padding gives
-   the panels the same 10px breathing room from the header that .AppScreen's padding gives on the sides —
-   without it the editor/config cards sit flush against the screen header. */
 .BuildStudio {
   display: flex;
   flex-direction: column;
@@ -22,9 +11,6 @@
   color: var(--app-text);
 }
 
-/* Studio: react-split-pane resizable layout — left column (editor over run) | config right rail. The lib
-   sizes each .split-pane-pane inline; we make the contained panel (or nested split) fill its pane and skin
-   the draggable divider with theme tokens. Panel spacing is owned by the divider (no grid gap). */
 .BuildStudio .studio {
   flex: 1 1 auto;
   min-height: 0;
@@ -44,8 +30,6 @@
 .BuildStudio .split-pane-divider:hover {
   background: var(--app-accent);
 }
-/* The lib hardcodes the divider to 1px inline; give it a real grab/gap width (override the inline size).
-   `.horizontal` is the vertical bar between the side-by-side panes; `.vertical` is the bar between stacked. */
 .BuildStudio .split-pane-divider.horizontal {
   width: 8px !important;
 }
@@ -53,7 +37,6 @@
   height: 8px !important;
 }
 
-/* Every panel follows header (flex 0) / body (flex 1, scroll) / footer (flex 0, pinned). */
 .BuildStudio .panel {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
@@ -91,9 +74,6 @@
   background: var(--app-surface);
 }
 
-/* Editor panel: Monaco fills the body; the lint findings pin to the panel footer. The body itself never
-   scrolls — Monaco and the lint list own their scroll — so no stray scrollbar appears when a Monaco hover
-   widget mounts. The widget escapes this panel via fixedOverflowWidgets (see ContainerfileEditorPane). */
 .BuildStudio .editor-panel .body {
   padding: 0;
   display: flex;
@@ -105,8 +85,6 @@
   min-height: 0;
   overflow: hidden;
 }
-/* The lint list never takes more than a third of the panel — however many findings there are, it scrolls
-   internally so the editor above it always stays visible. */
 .BuildStudio .lint {
   flex: 0 0 auto;
   max-height: 34%;
@@ -148,7 +126,6 @@
   color: var(--app-intent-danger-text);
 }
 
-/* Config right rail: guided form + redacted command preview. */
 .BuildStudio .field {
   margin-bottom: 13px;
 }
@@ -184,13 +161,10 @@
   word-break: break-all;
   font-family: "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
 }
-/* Match Blueprint's InputGroup text size (TextArea defaults larger) so the two read as one form. Textareas
-   resize vertically only — never horizontally (which would fight the fixed-width config rail). */
 .BuildStudio .config-panel textarea {
   font-size: 12px;
   resize: vertical;
 }
-/* Plain, theme-aware inline note (e.g. the multi-platform hint) — deliberately NOT a loud Callout. */
 .BuildStudio .cfg-note {
   color: var(--app-text-muted);
   font-size: 11.5px;
@@ -214,14 +188,12 @@
   color: var(--app-intent-warning-text);
 }
 
-/* Run panel: tabs / scrolling content / pinned footer, plus the cache diagnostics strip. */
 .BuildStudio .run-panel .body {
   padding: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-/* Tabs live at the END of the run panel's header (pushed right). */
 .BuildStudio .tabs {
   display: flex;
   gap: 14px;
@@ -252,8 +224,6 @@
   align-items: center;
   justify-content: center;
 }
-/* Raw Log tab hosts an xterm (ANSI colours). It fills the scroll region above the pinned footer; the
-   Terminal component sizes to 100% of this padded box. */
 .BuildStudio .run-terminal {
   flex: 1 1 auto;
   min-height: 0;
@@ -261,7 +231,6 @@
   padding: 4px;
 }
 
-/* Cache diagnostics — the headline: a fixed strip + per-step badges + the cascade rail. */
 .BuildStudio .cache-strip {
   flex: 0 0 auto;
   display: flex;
@@ -344,7 +313,6 @@
   color: var(--app-text-muted);
 }
 
-/* Full-height "coming soon" / empty states inside the studio regions. */
 .BuildStudio .panel .body.centered {
   display: flex;
   align-items: center;

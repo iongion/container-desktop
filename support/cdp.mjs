@@ -36,7 +36,7 @@ function discoverCdpUrl() {
       }
     }
   } catch {
-    /* fall through to default */
+    // fall through to default
   }
   return "http://localhost:9222";
 }
@@ -123,7 +123,7 @@ for (let i = 0; i < 45; i++) {
     info = await readInfo(page);
     if (info.ready && info.phase === "ready") break;
   } catch {
-    /* execution context destroyed mid-navigation — retry */
+    // execution context destroyed mid-navigation — retry
   }
   await sleep(1000);
 }

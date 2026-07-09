@@ -26,9 +26,6 @@
   column-gap: 0;
   width: auto;
 }
-/* Out-specifies Blueprint's own `.bp6-form-group.bp6-inline label.bp6-label` (0,3,1), which pins
-   line-height:30px (sized for medium buttons) + margin:0 12px. Match the small (24px) action buttons so the
-   label box and buttons are the same height and the row centers cleanly. */
 .AppSettingsHeaderVersionCheck.bp6-form-group.bp6-inline label.bp6-label {
   display: inline-flex;
   align-items: center;
@@ -94,7 +91,6 @@
 .AppSettingsAppearanceControls .bp6-control {
   margin-bottom: 0;
 }
-/* Configuration + Logging categories: vertical stacks (like the AI panel), never horizontal rows. */
 .AppSettingsForm[data-form="configuration"],
 .AppSettingsForm[data-form="logging"],
 .AppSettingsForm[data-form="network"] {
@@ -132,7 +128,6 @@
   gap: 8px;
   margin-top: 2px;
 }
-/* File-logging sub-controls: size + files + actions on one tidy row, greyed out until enabled. */
 .AppSettingsLoggingFileControls {
   display: flex;
   flex-wrap: wrap;
@@ -157,9 +152,6 @@
   font-size: 11px;
 }
 
-/* Monospace font-family Select popover: wider than the trigger (to show full font names), the
-   filter input kept at the top (Blueprint default), and the 250+ item list capped to a compact
-   height with denser items without icon indentation. */
 .AppMonospaceFontPopover .bp6-popover-content {
   min-width: 320px;
 }
@@ -175,27 +167,19 @@
   padding-left: 8px;
   font-size: 12px;
 }
-/* Match the native size/weight selects' text size to the family Select button (12px). */
 .AppSettingsFontForm select {
   font-size: 12px;
 }
 
-/* AI assistant (issue #232): the other sections are horizontal rows; this one is a vertical stack of
-   controls. Keep their 4px side / 10px top-bottom padding, with even gaps between controls. The base
-   rule `.AppSettingsForm .bp6-form-group { margin: 0 }` zeroes FormGroup margins, so spacing is the
-   container's row-gap. */
 .AppSettingsForm[data-form="ai"] {
   display: flex;
   flex-direction: column;
   row-gap: 8px;
   width: 100%;
   padding: 10px 4px;
-  /* Fill the panel so the Permissions widget (and its Allow/Reject lists) can stretch to the bottom and
-     scroll internally, instead of the whole settings panel scrolling. Scoped to the AI category only. */
   flex: 1 1 auto;
   min-height: 0;
 }
-/* AI category only: stop the panel itself from scrolling so the in-widget lists own the overflow. */
 .SettingsPanel[data-category="ai"] {
   overflow: hidden;
 }
@@ -216,16 +200,10 @@
 .AppSettingsAIConsents .bp6-control {
   margin-bottom: 0;
 }
-/* Blueprint/normalize give <p> a default 8px margin-bottom; drop it on the trailing paragraph so the
-   callout has no dangling gap (the first privacy line keeps its margin to separate the two lines). */
 .AppSettingsForm[data-form="ai"] .AppSettingsAIPrivacy p:last-child,
 .AppSettingsForm[data-form="ai"] .AppSettingsAIDegraded p {
   margin-bottom: 0;
 }
-/* Default-provider segmented buttons: icon-color the choices by reach — local stays on-device
-   (green), cloud leaves the machine (amber). The selected button uses its Blueprint intent fill.
-   With 8 providers a single fill row would truncate labels, so allow wrapping to a second row while
-   each button still grows to fill its row (min-width keeps "GLM (Zhipu)" / "OpenRouter" readable). */
 .AppSettingsAIProviders {
   width: 100%;
   flex-wrap: wrap;
@@ -241,10 +219,6 @@
   color: #d98324;
 }
 
-/* Categorized settings (issue #232): a left vertical category rail + a scrollable panel pane, below the
-   screen header. Overrides the default column AppScreenContent with a row split (only the panel scrolls).
-   Colors/borders read the shared theme tokens (themes/tokens.css) so the rail tracks every engine/mode and
-   matches the app chrome — it recedes like the main AppSidebar (--app-chrome, darker than the content). */
 .AppScreenContent.SettingsContent {
   flex-direction: row;
   align-items: stretch;
@@ -267,9 +241,6 @@
   margin-bottom: 2px;
   border-radius: 4px;
 }
-/* The panel owns a generous outer margin so its content matches the app's content rhythm and never sits
-   flush against the top/left edge; row-gap separates the forms (e.g. the two Appearance forms). Each form's
-   own top/bottom padding is neutralized so every category starts at the same offset. */
 .SettingsPanel {
   display: flex;
   flex-direction: column;

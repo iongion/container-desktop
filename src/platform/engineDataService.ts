@@ -153,7 +153,6 @@ function firstRealReason(availability: EngineConnectorAvailability | undefined):
       return reason;
     }
   }
-  // Fallback (legacy): the first real message regardless of pass/fail.
   for (const value of [report?.host, report?.controller, report?.program, report?.api]) {
     const reason = real(value);
     if (reason) {
@@ -796,7 +795,6 @@ export class EngineDataService {
       attempts: EVENTS_DROP_PING_ATTEMPTS,
       delayMs: EVENTS_DROP_PING_DELAY_MS,
     });
-    // The grace window is async — bail if the connection was torn down or replaced meanwhile.
     if (this.userDisconnected.has(connectionId) || this.hostByConnection.get(connectionId) !== host) {
       return;
     }

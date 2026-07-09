@@ -3,7 +3,6 @@
   padding: 5px !important;
   margin: 0;
 }
-/* Dedicated screen: the manager fills the content area (no settings forms below it anymore). */
 .AppSettingsEngineManager {
   margin-top: 10px;
   display: flex;
@@ -60,7 +59,6 @@
   font-size: 9px;
   color: var(--app-text-muted);
 }
-/* Connection actions now live in the screen header (right side); keep a small gap before Create/Reload. */
 .ConnectionsExportImport {
   margin-right: 5px;
 }
@@ -72,9 +70,6 @@
 .PlatformConnectionName {
   font-size: 12px;
 }
-/* The connection name is a link, but Blueprint's `.bp6-dark a` blue + underline reads foreign in the table.
-   Scope + `a.` out-specify it: normal app text, no underline, weight for presence; hover tints to the accent
-   (still no underline) so it reads as interactive without the harsh default-link look. */
 [data-table="host.connections"] a.PlatformConnectionNameLink {
   color: var(--app-text);
   display: block;

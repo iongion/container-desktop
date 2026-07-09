@@ -1,5 +1,3 @@
-/* Header row: title on the left, the Tree|JSON segmented switch on the right. Reuses the host's
-   header class (e.g. .InspectSectionTitle) for the surface/typography; only the flex layout is added. */
 .JsonViewHeader {
   display: flex;
   align-items: center;
@@ -14,15 +12,12 @@
 .JsonViewSwitch {
   flex: 0 0 auto;
 }
-/* Segmented look — mirrors .NotificationCenterSwitch: the active segment is accent-tinted. */
 .JsonViewSwitch.bp6-button-group .bp6-button.bp6-active,
 .JsonViewSwitch.bp6-button-group .bp6-button.bp6-active:hover {
   background: var(--app-accent);
   color: var(--app-accent-fg);
 }
 
-/* The viewer frame fills the remaining height and scrolls internally (tree grows with content; the
-   JSON editor fills). Host frame class (e.g. .InspectCodeEditor) supplies the border and height bounds. */
 .JsonViewFrame {
   overflow: auto;
   min-height: 0;
@@ -34,7 +29,6 @@
   margin: 8px;
 }
 
-/* Expand/collapse-all toggle sits before the title; keep its icon bright (minimal buttons render muted). */
 .JsonViewExpandToggle .bp6-icon {
   color: var(--app-text);
 }

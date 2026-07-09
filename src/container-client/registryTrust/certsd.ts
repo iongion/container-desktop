@@ -15,7 +15,7 @@ export interface CaInstallTarget {
   file: string;
 }
 
-/** The certs.d target (dir + ca.crt file) for a host, or undefined for engines without a certs.d (Apple). */
+// The certs.d target (dir + ca.crt file) for a host, or undefined for engines without a certs.d (Apple).
 export function caCertTarget(ctx: TrustPathContext, host: string): CaInstallTarget | undefined {
   const dir = certsDir(ctx, host);
   const file = caCertPath(ctx, host);
@@ -30,13 +30,12 @@ export interface ScopedCommand {
   args: string[];
 }
 
-/** `sh -c "mkdir -p <dir> && cat > <file>"` — the PEM is piped to stdin, so the cert content never hits argv. */
+// `sh -c "mkdir -p <dir> && cat > <file>"` — the PEM is piped to stdin, so the cert content never hits argv.
 export function buildCaInstallCommand(target: CaInstallTarget, opts?: { sudo?: boolean }): ScopedCommand {
   const script = `mkdir -p ${singleQuote(target.dir)} && cat > ${singleQuote(target.file)}`;
   return opts?.sudo ? { launcher: "sudo", args: ["sh", "-c", script] } : { launcher: "sh", args: ["-c", script] };
 }
 
-/** `sh -c "rm -f <file>"` — remove a previously installed CA. */
 export function buildCaRemoveCommand(target: CaInstallTarget, opts?: { sudo?: boolean }): ScopedCommand {
   const script = `rm -f ${singleQuote(target.file)}`;
   return opts?.sudo ? { launcher: "sudo", args: ["sh", "-c", script] } : { launcher: "sh", args: ["-c", script] };

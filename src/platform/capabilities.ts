@@ -29,10 +29,6 @@ export interface IKeychain {
   clearKey(key: string): Promise<void>;
 }
 
-// Env-scrubbed, shell-less execution — a DISTINCT capability from ICommand.Execute. The engine command path
-// force-merges the full process.env (+ proxy env) into the child (node/exec/commander.ts buildSpawnEnv);
-// this one replaces the child env WHOLESALE with exactly `opts.env` (the caller's scrubbed allowlist) and
-// spawns an args array with no shell, so a caller can run a command WITHOUT leaking inherited secrets.
 export interface IsolatedExecOpts {
   cwd: string;
   env: Record<string, string>;

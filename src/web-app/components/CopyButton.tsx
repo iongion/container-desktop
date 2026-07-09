@@ -20,8 +20,6 @@ export interface CopyButtonProps {
 // How long the confirmation tick stays up after a successful copy.
 const COPIED_RESET_MS = 1500;
 
-// The single copy-to-clipboard affordance for the whole app. Every copy button funnels through this so they
-// all confirm the same way — a brief in-button tick that replaces the icon — never a toast/notification.
 export const CopyButton: React.FC<CopyButtonProps> = ({
   text,
   title,

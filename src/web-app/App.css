@@ -31,9 +31,6 @@
   font-size: 12px;
 }
 
-/* Form-field labels — one consistent size, 2px below Blueprint's default (~14px), for denser, calmer forms:
-   FormGroup labels, checkbox/switch/radio controls, and bespoke inline field labels (e.g. the subnet
-   Gateway/Subnet/Start IP/End IP labels). */
 .bp6-form-group label.bp6-label,
 .bp6-control,
 .AppDataForm label {
@@ -131,13 +128,10 @@ pre,
 .AppScreenHeader > .bp6-navbar {
   display: flex;
 }
-/* Blueprint's default navbar inline padding (0 15px) is too wide for this app's dense chrome — tighten every
-   navbar to 8px. Component navbars that set their own padding (e.g. the footers) are more specific and keep it. */
 .bp6-navbar {
   padding-left: 8px;
   padding-right: 8px;
 }
-/* Table headers are not content — never let a stray drag select their labels. */
 .AppDataTable thead,
 .bp6-html-table thead {
   user-select: none;
@@ -354,9 +348,6 @@ pre,
 .AppDataTable:not([data-grouped="false"]) tbody tr[data-prefix-group] td:first-child {
   padding-left: 30px;
 }
-/* Flat (ungrouped) mode: grouping by connection is off, so child rows drop the group indent and the
-   dangling tree-link connector (there is no connection header above them to connect to). The Containers
-   tree keeps a second (compose/pod) level, so it manages its own flat links/indent (ManageScreen.css). */
 .AppDataTable[data-grouped="false"]:not(.ContainersTreeTable) .AppDataTableGroupLink {
   display: none;
 }
@@ -366,17 +357,12 @@ pre,
 .AppDataTableGroupLink[data-link-location="last"] .AppDataTableGroupLinkHorizontal {
   bottom: 0;
 }
-/* Virtualized tables (data-windowed): only the visible rows are in the DOM, between two .AppVirtualSpacer
-   rows (see useWindowedRows). Striping is therefore driven by the row's ABSOLUTE index (data-striped),
-   not :nth-child — which the spacer rows + a windowed subset would scramble. Colors mirror Blueprint's
-   bp6-html-table-striped exactly, so the zebra is identical to the non-windowed tables. */
 .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] td {
   background: rgba(143, 153, 168, 0.15);
 }
 body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] td {
   background: rgba(95, 107, 124, 0.15);
 }
-/* Spacer rows reserve height only — never stripe, pad, border, or take a hover background/cursor. */
 .AppDataTable[data-windowed="true"] tbody tr.AppVirtualSpacer td,
 .AppDataTable[data-windowed="true"] tbody tr.AppVirtualSpacer:hover td {
   padding: 0 !important;
@@ -448,23 +434,3 @@ code.DocsCodeBox {
   right: 105px !important;
   bottom: -10px !important;
 }
-
-/*
-:not(input):not(textarea),
-:not(input):not(textarea)::after,
-:not(input):not(textarea)::before {
-  -webkit-user-select: none;
-  user-select: none;
-  cursor: default;
-}
-a:not([draggable=true]), img:not([draggable=true]) {
-  -webkit-user-drag: none;
-  user-drag: none;
-}
-a[href^="http://"],
-a[href^="https://"],
-a[href^="ftp://"] {
-  -webkit-user-drag: auto;
-  user-drag: auto;
-}
-*/

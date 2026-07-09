@@ -29,11 +29,9 @@ export interface PodmanRegistriesConf {
   [key: string]: unknown;
 }
 
-/**
- * Parse an existing registries.conf. An EMPTY/whitespace file is a valid "no config" → {} (writing managed
- * entries onto it is correct — a fresh file). A MALFORMED file THROWS: the orchestration layer catches it and
- * ABORTS the write, so a user's hand-edited-but-broken file is never overwritten (correction #1).
- */
+// Parse an existing registries.conf. An EMPTY/whitespace file is a valid "no config" → {} (writing managed
+// entries onto it is correct — a fresh file). A MALFORMED file THROWS: the orchestration layer catches it and
+// ABORTS the write, so a user's hand-edited-but-broken file is never overwritten (correction #1).
 export function parsePodmanRegistriesConf(text: string): PodmanRegistriesConf {
   const trimmed = (text ?? "").trim();
   if (!trimmed) {
@@ -46,12 +44,6 @@ export function stringifyPodmanRegistriesConf(conf: PodmanRegistriesConf): strin
   return `${stringify(conf as Record<string, unknown>)}\n`;
 }
 
-/**
- * Merge the app's MANAGED registry set into an existing parsed registries.conf, preserving everything unmanaged.
- * - `desired`: the managed entries to ensure present (insecure flag from TLS, mirrors, search order).
- * - `removedLocations`: locations the app previously managed and the user has now removed — deleted from the
- *   file. A location NOT in `desired` and NOT in `removedLocations` is a USER entry and is never touched.
- */
 export function mergeManagedRegistries(
   existing: PodmanRegistriesConf,
   desired: RegistryTrustEntry[],
@@ -60,7 +52,6 @@ export function mergeManagedRegistries(
   const conf: PodmanRegistriesConf = { ...existing };
   const removed = new Set(removedLocations);
 
-  // [[registry]] — drop app-removed entries, then upsert managed direct (non-mirror) entries by location.
   let registries: PodmanRegistry[] = Array.isArray(conf.registry) ? conf.registry.map((r) => ({ ...r })) : [];
   registries = registries.filter((r) => !removed.has(r.location));
 
@@ -134,12 +125,10 @@ export function mergeManagedRegistries(
   return conf;
 }
 
-/**
- * Docker daemon.json is JSON and already object-merge-friendly. We only set the two keys we manage
- * (`insecure-registries`, `registry-mirrors`) and PRESERVE every other daemon setting. Malformed existing JSON
- * throws (caller aborts). Docker has no per-registry search-order/mirror, so mirrors collapse to global URLs — a
- * documented limitation. Returns the serialized text (2-space, trailing newline).
- */
+// Docker daemon.json is JSON and already object-merge-friendly. We only set the two keys we manage
+// (`insecure-registries`, `registry-mirrors`) and PRESERVE every other daemon setting. Malformed existing JSON
+// throws (caller aborts). Docker has no per-registry search-order/mirror, so mirrors collapse to global URLs — a
+// documented limitation. Returns the serialized text (2-space, trailing newline).
 export function mergeDockerDaemonJson(existingText: string, desired: RegistryTrustEntry[]): string {
   const trimmed = (existingText ?? "").trim();
   const obj: Record<string, unknown> = trimmed ? (JSON.parse(trimmed) as Record<string, unknown>) : {};

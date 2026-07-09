@@ -16,7 +16,7 @@ type WailsLogSink = (level: LoggerWriteLevel, message: string) => void;
 
 let sink: WailsLogSink | null = null;
 
-/** Wire (or clear) the native file sink. Called by the bridge once the Wails invoke transport is up. */
+// Wire (or clear) the native file sink. Called by the bridge once the Wails invoke transport is up.
 export function setWailsLogSink(next: WailsLogSink | null): void {
   sink = next;
 }

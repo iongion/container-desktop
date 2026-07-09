@@ -3,8 +3,6 @@
   flex-direction: column;
   height: 100%;
 }
-/* Positioning frame for the floating "jump to latest" button — it sits over the transcript viewport,
-   not inside the scrolled content. */
 .AssistantScroll {
   position: relative;
   flex: 1;
@@ -20,7 +18,6 @@
   flex-direction: column;
   gap: 8px;
 }
-/* Bottom-center re-follow control: appears when the user has scrolled up; blinks while output streams. */
 .AssistantJump.AssistantJump {
   position: absolute;
   bottom: 14px;
@@ -65,7 +62,6 @@
   font-family: var(--monospace-font);
   font-size: var(--monospace-font-size, 11px);
 }
-/* Diagnose-mode items, rendered inline in the same transcript. */
 .AssistantStep {
   margin: 0;
 }
@@ -84,12 +80,10 @@
   gap: 6px;
 }
 .AssistantOutput {
-  /* The transcript scrolls as a whole — don't let the flex column squish this below its content. */
   flex-shrink: 0;
   font-family: var(--monospace-font);
   font-size: var(--monospace-font-size, 11px);
   line-height: 1.5;
-  /* Keep command output (tables, JSON) terminal-aligned; scroll rather than wrap-mangle it. */
   white-space: pre;
   overflow: auto;
   max-height: 260px;
@@ -100,7 +94,6 @@
   border-radius: 4px;
   color: var(--app-text);
 }
-/* The default Chromium scrollbar is invisible in the dark theme — make it readable using the app tokens. */
 .AssistantOutput::-webkit-scrollbar {
   width: 10px;
   height: 10px;

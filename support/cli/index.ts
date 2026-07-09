@@ -23,10 +23,6 @@ import {
 } from "@/cli/commands";
 import { readSourceVersion } from "@/cli/lib/paths";
 
-// Home-grown build/dev/release CLI (commander), replacing the Python invoke tasks. Run via tsx:
-//   yarn cli <command>    (or: tsx support/cli/index.ts <command>)
-// One subcommand per former invoke task; names are preserved.
-
 const program = new Command();
 
 program

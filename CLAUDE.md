@@ -174,10 +174,14 @@ How you build here, **per change** — not an end-of-task afterthought:
   add ESLint/Prettier. `yarn lint` auto-fixes.
 - TypeScript strict (`noImplicitAny: false`). `tsconfig.json` uses `paths` (no
   `baseUrl` — removed in TS 6) and `types: ["node"]`.
-- Never insert literal NUL bytes into source files. If code needs a NUL separator,
-  write the visible escape sequence `\u0000`; do not type, paste, or copy the
-  invisible byte itself into a string, because it makes Git/editor tooling treat the
-  file as binary.
+- **No raw NUL bytes in code.** Never insert literal/invisible NUL bytes into source
+  files. If code needs a NUL separator, write the visible escape sequence `\u0000`;
+  do not type, paste, or copy the raw byte itself into a string, because it makes
+  Git/editor tooling treat the file as binary.
+- **Comments:** use `//` in TypeScript/JavaScript source; keep JSX `{/* ... */}` and
+  `biome-*` directive comments as required by tooling/syntax. Do not add C-style
+  block comments, CSS comments, XML comments, or comments that explain historical /
+  legacy migrations; delete stale history instead of preserving it.
 - **Dependencies are pinned to exact versions** in `package.json` — don't
   reintroduce `^`/`~` ranges casually.
 - **Transitive security pins live in `package.json` `resolutions`** (dompurify,

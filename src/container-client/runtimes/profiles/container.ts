@@ -40,7 +40,7 @@ export async function availableOnAppleContainer(host: HostContext): Promise<{ su
 const APPLE_NETWORKS_MIN_DARWIN = 25; // macOS 26 "Tahoe"; macOS 15 = Darwin 24 (degraded, no `container network`)
 const APPLE_NETWORKS_MIN_MACOS = 26;
 
-/** Pure gate (exported for testing): networks only on macOS ≥ 26. Off-platform / unknown major → keep on. */
+// Pure gate (exported for testing): networks only on macOS ≥ 26. Off-platform / unknown major → keep on.
 export function appleNetworksEnabled(osType: OperatingSystem, darwinMajor: number | undefined): boolean {
   if (osType !== OperatingSystem.MacOS) {
     return true; // off-platform the engine is unavailable anyway — don't over-restrict the base
@@ -51,7 +51,7 @@ export function appleNetworksEnabled(osType: OperatingSystem, darwinMajor: numbe
   return darwinMajor >= APPLE_NETWORKS_MIN_DARWIN;
 }
 
-/** Returns a COPY of base with networks gated by the local macOS version (used by the native profile). */
+// Returns a COPY of base with networks gated by the local macOS version (used by the native profile).
 export function gateNetworksForMacOS(
   base: CapabilityDescriptor,
   osType: OperatingSystem,
@@ -60,7 +60,7 @@ export function gateNetworksForMacOS(
   return withNetworks(base, appleNetworksEnabled(osType, darwinMajor));
 }
 
-/** Maps a `sw_vers -productVersion` string ("26.0", "15.5", …) to its major; undefined if unparseable. */
+// Maps a `sw_vers -productVersion` string ("26.0", "15.5", …) to its major; undefined if unparseable.
 export function parseMacOsProductMajor(productVersion: string): number | undefined {
   const major = Number.parseInt(`${productVersion}`.trim().split(".")[0], 10);
   return Number.isNaN(major) ? undefined : major;

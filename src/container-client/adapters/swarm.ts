@@ -28,7 +28,7 @@ import { parseHostAddresses } from "./swarm-net";
 import * as swarm from "./swarm-rest";
 
 export class SwarmAdapter extends ResourceAdapter {
-  /** Capability gate (real-vs-no-op) — NOT apiSurface. Apple Container is "docker" but swarm:false. */
+  // Capability gate (real-vs-no-op) — NOT apiSurface. Apple Container is "docker" but swarm:false.
   private get enabled(): boolean {
     return this.host?.capabilities?.extensions?.swarm === true;
   }
@@ -53,12 +53,10 @@ export class SwarmAdapter extends ResourceAdapter {
     return swarm.swarmLeave(await this.driver(), opts);
   }
 
-  /**
-   * Candidate `--advertise-addr` values — the IPv4 interfaces of the SELECTED connection's host, obtained by
-   * running `ip -o -4 addr show scope global` on that host (native/SSH/WSL) via the same scoped-command path
-   * getSystemInfo uses. Best-effort: returns [] when `ip` is unavailable (e.g. Docker Desktop's VM) so the
-   * init drawer degrades to free-text.
-   */
+  // Candidate `--advertise-addr` values — the IPv4 interfaces of the SELECTED connection's host, obtained by
+  // running `ip -o -4 addr show scope global` on that host (native/SSH/WSL) via the same scoped-command path
+  // getSystemInfo uses. Best-effort: returns [] when `ip` is unavailable (e.g. Docker Desktop's VM) so the
+  // init drawer degrades to free-text.
   async listAdvertiseCandidates(): Promise<HostAddress[]> {
     if (!this.enabled) {
       return [];

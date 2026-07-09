@@ -9,7 +9,7 @@ import type { Connection, EngineConnectorSettings } from "@/env/Types";
 import { createApplicationApiDriver } from "../../Api.clients";
 import type { HostContext } from "../composition";
 
-/** Build the "Current" connection object. */
+// Build the "Current" connection object.
 export function buildCurrentConnection(host: HostContext, settings: EngineConnectorSettings): Connection {
   return {
     name: "Current",
@@ -21,7 +21,7 @@ export function buildCurrentConnection(host: HostContext, settings: EngineConnec
   };
 }
 
-/** Plain raw Axios driver (no SSH establishment hook) — used by every transport except SSH. */
+// Plain raw Axios driver (no SSH establishment hook) — used by every transport except SSH.
 export function createPlainApiDriver(host: HostContext, settings: EngineConnectorSettings): AxiosInstance {
   return createApplicationApiDriver(buildCurrentConnection(host, settings));
 }

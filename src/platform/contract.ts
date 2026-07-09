@@ -1,16 +1,3 @@
-// SINGLE SOURCE OF TRUTH for the host-capability port — the seam between the portable app (renderer +
-// container-client + the main-owned engine layer) and whatever native shell backs it (Electron main/preload
-// today; a native Rust Tauri backend next). Everything here is TYPES ONLY: the file compiles to nothing, so
-// it is safe to import from the renderer (no Node/Electron runtime is pulled in).
-//
-// Why a real module (not the ambient `declare global`): the ambient interfaces in global.d.ts are invisible
-// to `import`, so a Tauri binding could never state "I implement this exact surface". By defining the port
-// here as named exports and having global.d.ts re-alias them into the global scope, existing ambient callers
-// keep working UNCHANGED while the Tauri backend + binding get a concrete, checkable contract to satisfy.
-//
-// (Moving these out of a .d.ts also means they are now FULLY type-checked — global.d.ts's `skipLibCheck`
-// used to silently degrade unresolved references like AxiosRequestConfig/EventEmitter to `any`.)
-
 import type { AxiosRequestConfig } from "axios";
 import type { IAI, IAIBus } from "@/ai-system/core";
 import type { ISSHClient } from "@/container-client/services";
@@ -131,11 +118,6 @@ export interface IResourceBus {
   subscribe: (channel: string, callback: (payload: any) => void) => () => void;
 }
 
-// Typed window/app-lifecycle control. Electron backs these with the string channels that
-// registerAppControlIpc handles in main (window.minimize / window.maximize / window.restore /
-// window.close / application.exit / application.relaunch / openDevTools / openStorageFolder); the Tauri
-// backend maps them onto WebviewWindow + the process/lifecycle plugins. Replaces the magic strings that
-// Application/appChrome fire today.
 export interface IWindowControl {
   minimize(): void;
   maximize(): void;

@@ -1,12 +1,3 @@
-/* Inspect section switcher — a left vertical rail + scrollable pane, echoing the Settings category rail
-   (screens/Settings/UserSettingsScreen.css .SettingsRail / .SettingsPanel): the rail recedes on --app-chrome
-   with a hairline right border, its items are Blueprint minimal Buttons (native active highlight), and the
-   pane on the right scrolls independently. Everything reads --app-* tokens so it tracks every engine × mode.
-   Host screens wrap it in `.AppScreenContent.InspectTabsContent` to switch the content column to this row. */
-
-/* The `.AppScreen` prefix bumps specificity above screen-scoped rules like `.EngineHealth .AppScreenContent`
-   (column + gap + overflow) so the rail layout is identical on every screen: a flush row (no gap) whose rail
-   and panel own their own scroll. Reset each property those screen rules also set. */
 .AppScreen .AppScreenContent.InspectTabsContent {
   flex-direction: row;
   align-items: stretch;
@@ -41,7 +32,6 @@
   margin-bottom: 2px;
   border-radius: 4px;
 }
-/* Let the label grow and the count pill sit flush-right inside the Button's text slot. */
 .InspectTabsRail .InspectTabItem.bp6-button .bp6-button-text {
   display: flex;
   flex: 1 1 auto;
@@ -61,15 +51,11 @@
   min-width: 20px;
   text-align: center;
 }
-/* The active tab's count pill picks up the accent so the selection reads as one unit. */
 .InspectTabsRail .InspectTabItem.bp6-button.bp6-active .InspectTabCount.bp6-tag {
   background-color: color-mix(in srgb, var(--app-accent) 24%, transparent);
   color: var(--app-accent-text);
 }
 
-/* Flex column so a fluid body (the Raw-config JsonView frame is flex:1 1 auto) fills the whole pane between
-   the symmetric 10px top/bottom padding, while natural-height bodies (Summary/Env/Ports/Mounts) sit at the
-   top and let the pane scroll when tall. */
 .InspectTabsPanel {
   flex: 1 1 auto;
   display: flex;
@@ -79,8 +65,6 @@
   overflow: auto;
   padding: 10px 8px 5px 12px;
 }
-/* Bodies that carry their own header (the Raw-config JsonView reuses h5.InspectSectionTitle, which adds a
-   12px top margin for the old stacked layout) must not add a SECOND top gap — the pane already pads the top. */
 .InspectTabsPanel h5.InspectSectionTitle {
   margin-top: 0;
 }

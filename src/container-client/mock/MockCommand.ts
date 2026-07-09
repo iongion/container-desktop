@@ -203,7 +203,7 @@ export function mockProvisioningStream(launcher: string, flat: string[]): string
   return [];
 }
 
-/** Build a fresh MockCommand (implements ICommand). */
+// Build a fresh MockCommand (implements ICommand).
 export function createMockCommand(): ICommand {
   const command: ICommand = {
     async Execute(launcher: string, args: string[]) {
@@ -213,7 +213,7 @@ export function createMockCommand(): ICommand {
       return runCli(launcher, args);
     },
     async Kill() {
-      /* no-op */
+      // no-op
     },
     async CreateNodeJSApiDriver() {
       return { request: async () => ({ status: 200, data: "OK" }) };
@@ -264,7 +264,7 @@ export function createMockCommand(): ICommand {
       throw new Error("MockCommand: StartSSHConnection is not supported in mock mode");
     },
     async StopConnectionServices() {
-      /* no-op */
+      // no-op
     },
     async ProxyRequest(request: any, connection: any) {
       return mockApiAdapter(request, connection);

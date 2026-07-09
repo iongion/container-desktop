@@ -1,23 +1,3 @@
-/* ───────────────────────────────────────────────────────────────────────────
- * Semantic design tokens + Blueprint bridge + shared structural surfaces.
- *
- * The harmonious core of the theme. Instead of hand-painting every component per
- * engine×mode with hardcoded hex, we:
- *   1. Define a small semantic palette per `[data-theme][data-engine]` combo
- *      (--app-accent*, --app-bg, --app-chrome, --app-surface*, --app-border, --app-text*).
- *   2. BRIDGE that palette into Blueprint's own token layer (--bp-intent-primary-*),
- *      so every Blueprint component (buttons, links, tabs, focus rings, inputs,
- *      selected rows, primary surfaces) re-tints to the engine accent automatically.
- *   3. Drive the app's structural surfaces (header / sidebar / content / menus /
- *      drawers / tables) from the SAME tokens via ONE shared set of structure rules —
- *      only the token *values* differ per combo.
- *
- * Tokens are declared on <html> (data-theme lives there); structure rules match on
- * body[data-engine] and read the inherited tokens. To re-tone a combo, edit its
- * values block below — nothing else.
- * ─────────────────────────────────────────────────────────────────────────── */
-
-/* Neutral fallbacks so a missing combo never renders empty surfaces. */
 :root {
   --app-accent: var(--bp-intent-primary-rest, #2d72d2);
   --app-accent-hover: var(--bp-intent-primary-hover, #215db0);
@@ -58,10 +38,6 @@
   --app-scrollbar-thumb-hover: color-mix(in srgb, var(--app-accent) 46%, var(--app-text-muted));
 }
 
-/* ── PER-ENGINE ROW ACCENTS — standalone, theme-scoped tokens for the always-merged lists.
- *    Independent of the active [data-engine] chrome (which is `unified` in merged mode) so a row
- *    marker — Engine-column dot, row-left accent border, engine filter chip — always shows ITS OWN
- *    engine's brand color. Values mirror each engine's --app-accent; dark is the default, light overrides. */
 :root {
   --engine-accent-docker: #2f7df0;
   --engine-accent-podman: #a855c9;
@@ -73,7 +49,6 @@ html[data-theme="bp6-light"] {
   --engine-accent-container: #248a3d;
 }
 
-/* ── DOCKER · DARK (deep blue) ────────────────────────────────────────────── */
 html[data-theme="bp6-dark"][data-engine="docker"] {
   --app-accent: #2f7df0;
   --app-accent-hover: #2569d6;
@@ -105,9 +80,6 @@ html[data-theme="bp6-dark"][data-engine="docker"] {
   --app-text-muted: #8593ac;
 }
 
-/* ── DOCKER · LIGHT — neutral surfaces (clean grays + white), blue used ONLY as the accent.
- *    Hierarchy: white app frame (header/sidebar) → soft-gray content backdrop → white cards/
- *    menus → subtle-gray table headers. No blue wash on neutrals. */
 html[data-theme="bp6-light"][data-engine="docker"] {
   --app-accent: #2563eb;
   --app-accent-hover: #1d54c9;
@@ -129,17 +101,16 @@ html[data-theme="bp6-light"][data-engine="docker"] {
   --app-intent-danger-active: #881337;
   --app-intent-danger-fg: #ffffff;
   --app-intent-danger-text: #be123c;
-  --app-bg: #f4f6f9; /* content backdrop — soft cool gray so white surfaces lift off it */
-  --app-chrome: #ffffff; /* header + sidebar — white app frame */
-  --app-surface: #ffffff; /* cards, menus, drawers, screen-header bar */
-  --app-surface-strong: #eaedf2; /* table headers — near-neutral cool gray (accent reserved for interactive) */
-  --app-group-bg: #eef0f4; /* group-header rows — distinct from white body rows */
-  --app-border: #e2e6ec; /* neutral cool-gray hairline */
+  --app-bg: #f4f6f9;
+  --app-chrome: #ffffff;
+  --app-surface: #ffffff;
+  --app-surface-strong: #eaedf2;
+  --app-group-bg: #eef0f4;
+  --app-border: #e2e6ec;
   --app-text: #1b2430;
   --app-text-muted: #5b6675;
 }
 
-/* ── PODMAN · DARK (deep purple) ──────────────────────────────────────────── */
 html[data-theme="bp6-dark"][data-engine="podman"] {
   --app-accent: #a855c9;
   --app-accent-hover: #9242b1;
@@ -171,7 +142,6 @@ html[data-theme="bp6-dark"][data-engine="podman"] {
   --app-text-muted: #9c87a9;
 }
 
-/* ── PODMAN · LIGHT (lavender) ────────────────────────────────────────────── */
 html[data-theme="bp6-light"][data-engine="podman"] {
   --app-accent: #8e3aa8;
   --app-accent-hover: #7b3093;
@@ -193,25 +163,21 @@ html[data-theme="bp6-light"][data-engine="podman"] {
   --app-intent-danger-active: #842052;
   --app-intent-danger-fg: #ffffff;
   --app-intent-danger-text: #9f2a62;
-  --app-bg: #f5f6f8; /* neutral light gray content backdrop — no purple wash */
-  --app-chrome: #ffffff; /* white app frame (header + sidebar) */
-  --app-surface: #ffffff; /* cards, menus, drawers */
-  --app-surface-strong: #eeecf1; /* table headers — near-neutral warm gray (accent reserved for interactive) */
-  --app-group-bg: #f1eff4; /* group-header rows — distinct from white body rows */
-  --app-border: #e4e2e7; /* neutral hairline */
+  --app-bg: #f5f6f8;
+  --app-chrome: #ffffff;
+  --app-surface: #ffffff;
+  --app-surface-strong: #eeecf1;
+  --app-group-bg: #f1eff4;
+  --app-border: #e4e2e7;
   --app-text: #241a2c;
   --app-text-muted: #6a5b75;
 }
 
-/* ── UNIFIED · DARK — neutral slate + teal accent. The merged, multi-engine chrome (data-engine="unified",
- *    set when >1 connection is up); per-row engine markers still carry each engine's own accent. Apple
- *    Container (data-engine="container") reuses this theme by definition — only its brand logo stays green. ── */
 html[data-theme="bp6-dark"][data-engine="unified"],
 html[data-theme="bp6-dark"][data-engine="container"] {
   --app-accent: #14b8a6;
   --app-accent-hover: #0d9488;
   --app-accent-active: #0f766e;
-  /* Dark fg on the bright teal accent: white-on-#14b8a6 is ~2.2:1 (unreadable); this dark teal is ~7.7:1. */
   --app-accent-fg: #04312c;
   --app-accent-text: #5eead4;
   --app-intent-success-rest: #34d399;
@@ -239,10 +205,6 @@ html[data-theme="bp6-dark"][data-engine="container"] {
   --app-text-muted: #8a93a0;
 }
 
-/* Darker default-intent (#1e252f) for unified/container DARK mode. Must cover BOTH <html> — where the derived
-   `--bp-surface-*` tokens read it (HTMLSelects) — AND <body>: the per-engine `[data-engine="unified"]` block
-   carries data-engine onto <body> too, so without the body scope it shadows this for everything inside body
-   (the default buttons read body's value). Light mode keeps the #4b5563 default. Hover lifts, active presses. */
 html[data-theme="bp6-dark"][data-engine="unified"],
 html[data-theme="bp6-dark"][data-engine="container"],
 body.bp6-dark[data-engine="unified"],
@@ -250,13 +212,8 @@ body.bp6-dark[data-engine="container"] {
   --app-intent-default-rest: #1e252f;
   --app-intent-default-hover: #323c4a;
   --app-intent-default-active: #161c24;
-  /* Darken ONLY the filled tokens: solid `.bp6-button` + HTMLSelect read `--app-intent-default-*`. Leave the
-     Blueprint `--bp-intent-default-*` at the engine default on purpose — minimal/outlined buttons (e.g.
-     "Versions") build their hover/active/pressed/disabled tints from those at low opacity (8–16%), so
-     darkening them to near-background would erase the highlight. Respect Blueprint's variant state model. */
 }
 
-/* ── UNIFIED · LIGHT — neutral gray + teal accent (Apple Container reuses this; only its logo stays green) ── */
 html[data-theme="bp6-light"][data-engine="unified"],
 html[data-theme="bp6-light"][data-engine="container"] {
   --app-accent: #0d9488;
@@ -289,13 +246,6 @@ html[data-theme="bp6-light"][data-engine="container"] {
   --app-text-muted: #5b6675;
 }
 
-/* ── BRIDGE → Blueprint's intent tokens.
- *    intent-primary is per-combo (reads --app-accent*). intent-default is ONE neutral hue
- *    per engine; Blueprint's own color-mix formulas adapt it per mode AND per variant —
- *    solid default buttons/selects get a dim fill (color-mix with the palette base), while
- *    minimal/outlined stay transparent (their rest is `background: none`). So default
- *    buttons go subtly engine-tinted by moving ONE token — no per-component CSS, no
- *    :not() variant-fighting. */
 [data-engine] {
   --bp-intent-default-rest: var(--app-intent-default-rest);
   --bp-intent-default-hover: var(--app-intent-default-hover);
@@ -322,10 +272,6 @@ html[data-theme="bp6-light"][data-engine="container"] {
   --bp-intent-danger-active: var(--app-intent-danger-active);
   --bp-intent-danger-disabled: color-mix(in srgb, var(--app-intent-danger-rest) 48%, var(--app-surface-strong));
   --bp-intent-danger-foreground: var(--app-intent-danger-fg);
-  /* Blueprint drives input focus rings, primary surfaces and primary text from
-     SEPARATE token families (not intent-primary). Bridge them too, or focus rings
-     and links stay stock blue under podman. Verified via computed box-shadow:
-     `.bp6-input:focus` reads --bp-surface-background-color-primary-hover. */
   --bp-surface-background-color-primary-rest: var(--app-accent);
   --bp-surface-background-color-primary-hover: var(--app-accent-hover);
   --bp-surface-background-color-primary-active: var(--app-accent-active);
@@ -455,9 +401,6 @@ html[data-theme][data-engine] *::-webkit-scrollbar-corner {
   background: var(--app-scrollbar-track);
 }
 
-/* ── SHARED STRUCTURE — one rule per surface, engine/mode-agnostic, reads tokens.
- *    Specificity (0,2,1) intentionally sits BELOW the engine files (0,3,1) so an
- *    engine file can still override a single surface where it genuinely differs. */
 body[data-engine] {
   background-color: var(--app-bg);
 }
@@ -532,17 +475,12 @@ body[data-engine] [data-actions-menu="container"] .ItemActionsOverlayMenuActions
   background-color: var(--app-surface);
   border-color: var(--app-accent);
 }
-/* Notification Center — active segment tinted with the engine accent. */
 body[data-engine] .NotificationCenterSwitch .bp6-button.bp6-active,
 body[data-engine] .NotificationCenterSwitch .bp6-button.bp6-active:hover {
   background-color: var(--app-accent);
   color: var(--app-accent-fg);
 }
 
-/* Blueprint intent hardcoded paths — keep these centralized. Buttons/tags mostly read
-   Blueprint's tokens, bridged above; icons, callouts, controls, toasts, tooltips and
-   several meters/rings are compiled with literal palette colors, so they need one
-   semantic override layer that still uses the normal Blueprint intent classes. */
 body[data-engine] .bp6-intent-primary {
   --app-current-intent-rest: var(--app-accent);
   --app-current-intent-hover: var(--app-accent-hover);
@@ -594,22 +532,14 @@ body[data-engine]
   color: var(--app-current-intent-text);
 }
 
-/* Non-intent STANDALONE icons (framework .bp6-icon + mdi .ReactIcon/.AppLabelIcon that are NOT inside a
-   button). DARK only: lift to the bright --app-text so mdi and framework match and nothing reads as pure
-   white. LIGHT standalone is intentionally left untouched (Blueprint for framework; the light.css mdi rule
-   for .ReactIcon). In-button icons are handled below; intent icons keep their own color (rule above). */
 body.bp6-dark[data-engine] :is(.bp6-icon, .bp6-icon-standard, .bp6-icon-large):not([class*="bp6-intent-"]),
 body.bp6-dark[data-engine] .ReactIcon,
 body.bp6-dark[data-engine] .AppLabelIcon {
   color: var(--app-text);
 }
 
-/* …EXCEPT a framework (.bp6-icon) or mdi (.ReactIcon) icon EMBEDDED IN A STATUS BADGE/PILL/CHIP, which takes the
-   badge's own (text) color — the badge sets `color`, so its icon must follow it (currentColor) to match the label,
-   NOT the standalone bright fill above. The mdi↔framework alignment still governs every truly-standalone icon;
-   engine glyphs are CSS masks (not .bp6-icon/.ReactIcon), so they stay untouched. Higher specificity (0,5,1) than
-   the standalone rule (0,4,1), so it wins. */
-body.bp6-dark[data-engine] :is(.TrustPill, .ConnTrustChip, .SecuritySeverityBadge, .LiveLogBadge)
+body.bp6-dark[data-engine]
+  :is(.TrustPill, .ConnTrustChip, .SecuritySeverityBadge, .LiveLogBadge)
   :is(.bp6-icon, .bp6-icon-standard, .bp6-icon-large, .ReactIcon):not([class*="bp6-intent-"]) {
   color: currentColor;
 }
@@ -758,14 +688,6 @@ body[data-engine] .bp6-button:not([class*="bp6-intent-"]) > svg,
 body[data-engine] .bp6-button:not([class*="bp6-intent-"]) svg path {
   fill: currentColor;
 }
-/* Non-intent BUTTON icons — mdi (.ReactIcon) + framework (.bp6-icon) — render the SAME fill in a button
-   (sidebar, footer, action bars). LIGHT is already handled by the currentColor rule above: both the raw
-   .ReactIcon svg and the framework .bp6-icon take the button's text color, so mdi and framework match with no
-   extra rule (light stays exactly as before). DARK is the only place they diverge — Blueprint dims framework
-   button icons (its own 4124 rule) while the mdi svg falls to the white button text — so lift BOTH families to
-   the bright --app-text. Framework is kept at (0,6,1) so the AI-accent caret rule (0,7,1) still wins, and its
-   disabled icons stay dimmed via Blueprint's `color: inherit !important`; the mdi rule guards :not(:disabled)
-   so disabled mdi icons fall through to currentColor (dimmed) like the framework ones. */
 body.bp6-dark[data-engine] .bp6-button:not([class*="bp6-intent-"]) .bp6-icon:not([class*="bp6-intent-"]) {
   color: var(--app-text);
 }
@@ -773,9 +695,6 @@ body.bp6-dark[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(:disabled
   color: var(--app-text);
 }
 
-/* HTMLSelect (`.bp6-html-select select`) mirrors the filled default-button look — same intent-default tokens,
-   border and states — so dropdowns and default buttons match exactly (Blueprint otherwise gives selects a
-   derived surface gray). Same `body[data-engine]` scope, so it tracks the per-theme default-intent. */
 body[data-engine] .bp6-html-select select {
   background-color: var(--app-intent-default-rest);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 70%, transparent);
@@ -801,10 +720,6 @@ body[data-engine] .bp6-html-select .bp6-icon {
   color: var(--app-intent-default-fg);
 }
 
-/* ButtonGroup carries `variant="minimal|outlined"` on the group, not on each child.
-   Mirror Blueprint's variant state model here so our filled Intent.NONE override above
-   cannot leak into icon-only group actions. Element-level `.bp6-button.bp6-minimal`
-   and `.bp6-button.bp6-outlined` are left to Blueprint's own selectors and bridged tokens. */
 body[data-engine] .bp6-button-group.bp6-minimal .bp6-button:not([class*="bp6-intent-"]),
 body[data-engine] .bp6-button-group.bp6-outlined .bp6-button:not([class*="bp6-intent-"]) {
   background: none;
@@ -1335,12 +1250,6 @@ body[data-engine] .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content
   color: var(--app-accent-fg);
 }
 
-/* Input / textarea focus ring. Blueprint hardcodes this to palette blue in its compiled
-   CSS (.bp6-input:focus, line ~8060) — there is NO token to bridge — so we override the
-   rule directly with the engine accent. Specificity is deliberate: `body .bp6-input:focus`
-   (0,2,1) beats the light base (0,2,0) but loses to intent rules (0,3,0), and the dark
-   selector (0,3,1) beats dark base (0,3,0) but loses to dark intent (0,4,0) — so
-   error/success/warning inputs keep their semantic ring; only default inputs re-tint. */
 body .bp6-input:focus,
 body .bp6-input.bp6-active,
 body .bp6-input[readonly]:focus {

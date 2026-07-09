@@ -17,7 +17,7 @@ describe("createEmitterStream", () => {
     const fn2 = (v: string) => seen.push(v);
     expect(api.on("data", fn2)).toBe(api);
     expect(api.removeListener("data", fn2)).toBe(api);
-    emitter.emit("data", "c"); // removed
+    emitter.emit("data", "c");
     expect(seen).toEqual(["a"]);
   });
 

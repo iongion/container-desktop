@@ -54,8 +54,6 @@ async function ensure(driver: AxiosInstance, url: string, body: unknown): Promis
 
 async function deleteQuiet(driver: AxiosInstance, url: string, params?: Record<string, unknown>): Promise<void> {
   try {
-    // Teardown deletes are destructive and can be slow (a force-remove stops the container first, waiting its
-    // grace period), so give them the lifecycle timeout rather than the 3s default that used to cut them off.
     await driver.delete(url, cfg(params, LIFECYCLE_TIMEOUT_MS));
   } catch {
     // Missing resource (404) during teardown — nothing to do.
@@ -70,7 +68,7 @@ async function createContainer(driver: AxiosInstance, body: unknown): Promise<vo
 // removing, dead) rejects with a 500 whose cause is "container state improper".
 const STARTABLE_STATES = new Set(["created", "configured", "exited", "stopped"]);
 
-/** True for libpod's "container state improper" 500 (also worded "must be in … to be started"). */
+// True for libpod's "container state improper" 500 (also worded "must be in … to be started").
 const isStateImproper = (err: any): boolean => {
   const data = err?.response?.data;
   const message = String(data?.cause ?? data?.message ?? err?.message ?? "");
@@ -87,13 +85,6 @@ async function inspectRunState(driver: AxiosInstance, nameOrId: string): Promise
   }
 }
 
-/**
- * Start a container, recovering from a leftover transient state. A container left mid-transition (typically
- * "stopping") by a previous run that did not finish makes libpod reject `start` with the cryptic "container
- * state improper", which used to abort the entire import. Instead: if it is already running we are done;
- * otherwise wait for it to settle into a startable state and start it; and only if it never becomes startable
- * do we surface a clear, actionable error naming the container and its actual state.
- */
 export async function startContainer(
   driver: AxiosInstance,
   nameOrId: string,
@@ -158,12 +149,10 @@ export interface HealthWaitOptions {
   timeoutMs?: number;
 }
 
-/**
- * Poll a container's inspect `State.Health.Status` until it is "healthy" — the mechanism behind
- * `depends_on: {condition: service_healthy}`. Throws a descriptive error on timeout, or immediately when the
- * container has no healthcheck at all (`State.Health` absent), so `up` never hangs silently. `intervalMs` is
- * injectable so tests don't sleep.
- */
+// Poll a container's inspect `State.Health.Status` until it is "healthy" — the mechanism behind
+// `depends_on: {condition: service_healthy}`. Throws a descriptive error on timeout, or immediately when the
+// container has no healthcheck at all (`State.Health` absent), so `up` never hangs silently. `intervalMs` is
+// injectable so tests don't sleep.
 export async function waitHealthy(
   driver: AxiosInstance,
   nameOrId: string,
@@ -191,7 +180,7 @@ export async function waitHealthy(
   }
 }
 
-/** Reconcile a project to its plan in two passes: create/recreate (no start), then start once in order. */
+// Reconcile a project to its plan in two passes: create/recreate (no start), then start once in order.
 export async function applyPlan(
   driver: AxiosInstance,
   plan: ComposePlan,
@@ -200,11 +189,6 @@ export async function applyPlan(
 ): Promise<ComposeChangeSummary> {
   const summary: ComposeChangeSummary = { created: [], recreated: [], unchanged: [], started: [], orphansRemoved: [] };
 
-  // Mode-switch guard: if the project already exists in a different deployment mode (pod ↔ no-pod), a plain
-  // reconcile would recreate every container in place — force-removing each old one individually, which can
-  // crash the podman service on a container that must be SIGKILLed, and can strand orphans (e.g. a pod's infra
-  // container). Redeploy cleanly instead: tear the old project down the pod-safe way first, then create fresh.
-  // Named volumes are preserved (down() without removeVolumes), so stack data survives the switch.
   const prior = await listProjectContainers(driver, plan.project);
   if (prior.size > 0 && [...prior.values()].some((c) => c.pod) !== Boolean(plan.pod)) {
     await down(driver, plan.project, {});
@@ -262,7 +246,6 @@ export async function applyPlan(
   return summary;
 }
 
-/** Tear a project down by label; the project pod is removed by its deterministic name, ignoring 404. */
 export async function down(driver: AxiosInstance, project: string, opts: ComposeDownOptions = {}): Promise<void> {
   // Remove the project POD FIRST (force): this atomically stops and removes every member container (and the
   // pod's infra container) through podman's own pod-teardown path. Force-removing individual pod members out
@@ -286,7 +269,7 @@ export async function down(driver: AxiosInstance, project: string, opts: Compose
   }
 }
 
-/** Derive the compose projects visible on a connection by grouping containers on the project labels. */
+// Derive the compose projects visible on a connection by grouping containers on the project labels.
 export async function listProjects(driver: AxiosInstance): Promise<ComposeProject[]> {
   const res = await driver.get("/containers/json", cfg({ all: true }));
   const all: RawContainer[] = Array.isArray(res.data) ? res.data : [];

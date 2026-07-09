@@ -1,9 +1,3 @@
-/* Shared, UNSCOPED status visuals: the run-state pill and the health/status dot, lifted out of the
-   containers table (ManageScreen.css + themes/*.css .ContainerState / .ContainerStatus, which are scoped to
-   [data-table="containers"]) so any Inspect panel can render them. The palette is kept as literals to match
-   the existing table badges exactly — the table hardcodes these same values; chrome/text stays on --app-*
-   tokens. */
-
 .StatePill {
   display: inline-block;
   min-width: 50px;
@@ -16,8 +10,6 @@
   text-align: center;
   color: var(--app-text);
 }
-/* Exited/dead read as a filled magenta badge (the table's "stopped for good" look); every other state is
-   colored text on a transparent chip. Matches themes/dark.css .ContainerState. */
 .StatePill[data-state="exited"],
 .StatePill[data-state="dead"] {
   background-color: #8b104c;
@@ -49,7 +41,6 @@
   margin-right: 8px;
   background-color: currentColor;
 }
-/* Tones mirror the containers table's .ContainerStatus dot palette (themes/dark.css). */
 .StatusDotWrap[data-tone="success"] {
   color: #3dcc91;
 }

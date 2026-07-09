@@ -30,7 +30,6 @@
 .ManageConnectionForm {
   position: relative;
 }
-/* The drawer is dense — Blueprint's default 15px FormGroup gap is too airy here; tighten every group. */
 .ManageConnectionForm .bp6-form-group {
   margin-bottom: 5px;
 }
@@ -54,8 +53,6 @@
   padding-left: 10px;
 }
 
-/* Per-connection trust — collapsible Proxy + Certificates advanced sections. The toggle recedes (like the
-   receding nav chrome) so it reads as an advanced disclosure, not a primary field. */
 .ConnTrustSection {
   margin-top: 6px;
   border-top: 1px solid var(--app-border);
@@ -68,7 +65,6 @@
 .ConnTrustToggle.bp6-button:hover {
   color: var(--app-text);
 }
-/* Fill the button text so the summary chip can sit hard against the right edge (opposite the label). */
 .ConnTrustToggle.bp6-button .bp6-button-text {
   flex: 1 1 auto;
   display: flex;
@@ -100,10 +96,6 @@
   font-size: 12px;
 }
 
-/* The proxy fields (shared with Settings→Network) wrap in that wide panel; the drawer is narrower, so keep
-   Protocol · Host · Port and Username · Password each on one row — sized by semantic ProxyField classes (not
-   nth-child). Protocol/Port are compact + equal; Host fills the middle but is capped so it never dominates.
-   The controls use Blueprint `fill` so their inputs shrink to the group instead of overflowing it. */
 .ManageConnectionForm .AppSettingsNetworkEndpoint,
 .ManageConnectionForm .AppSettingsNetworkCredentials {
   flex-wrap: nowrap;
@@ -123,7 +115,6 @@
   min-width: 0;
 }
 
-/* Certificate list — a compact per-row list (host input · filename · remove), NOT a grouped table. */
 .ConnCertList {
   display: flex;
   flex-direction: column;
@@ -146,7 +137,6 @@
   color: var(--app-text-muted);
 }
 
-/* Drop-zone — moved from the old Certificates panel (.TrustDropzone) and renamed to avoid a duplicate class. */
 .ConnCertDropzone {
   flex: 0 0 auto;
   width: 100%;

@@ -1,9 +1,3 @@
-// The ONE composition root for the AI subsystem — shell-neutral. Both shells build an IHostCapabilities
-// (privileged keychain / executeIsolated / dns / env) + provide the renderer-safe FS/Path ports, the transport,
-// and the engine surface; this factory wires the shared AIBroker + the neutral runtimes over those ports. It
-// replaces per-shell broker duplication: the shells now only ASSEMBLE
-// caps+deps and call here. No node:*/electron/@tauri-apps import — the privileged bits arrive via `caps`.
-
 import type { AISettings, EngineOps } from "@/ai-system/core";
 import { AIBroker } from "@/ai-system/host/broker";
 import { KnowledgeBank } from "@/ai-system/host/knowledgeBank";
@@ -22,15 +16,15 @@ import type { IHostCapabilities } from "@/platform/capabilities";
 import type { IFileSystem, IPath } from "@/platform/contract";
 
 export interface AISystemDeps {
-  /** OS app-data dir — where the AI permission + knowledge JSON stores live. */
+  // OS app-data dir — where the AI permission + knowledge JSON stores live.
   userDataDir: string;
-  /** The renderer-safe file/path ports (Electron main → platform/electron/host FS/Path; Tauri webview → window.FS/Path).
-   *  The stores write PRIVATELY (0600 on the Node impl). */
+  // The renderer-safe file/path ports (Electron main → platform/electron/host FS/Path; Tauri webview → window.FS/Path).
+  // The stores write PRIVATELY (0600 on the Node impl).
   fs: IFileSystem;
   path: IPath;
-  /** Working directory for a sandboxed tool command (Electron: os.tmpdir(); Tauri: userData). */
+  // Working directory for a sandboxed tool command (Electron: os.tmpdir(); Tauri: userData).
   sandboxCwd: string;
-  /** Reads + normalizes the persisted AI settings. */
+  // Reads + normalizes the persisted AI settings.
   getAISettings: () => Promise<AISettings>;
   // Process-neutral transport (Electron ipcMain; Tauri in-webview bus) — the AIBroker's 5-function shape.
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
@@ -38,9 +32,9 @@ export interface AISystemDeps {
   send: (event: any, channel: string, payload: unknown) => void;
   senderId: (event: any) => number | string;
   isAllowedSender: (event: any) => boolean;
-  /** Typed container operations the assistant's first-class tools call. Absent ⇒ only generic tools. */
+  // Typed container operations the assistant's first-class tools call. Absent ⇒ only generic tools.
   engineOps?: EngineOps;
-  /** CONTAINER_DESKTOP_MOCK — swap real streamers/runner/stores for scripted mocks. */
+  // CONTAINER_DESKTOP_MOCK — swap real streamers/runner/stores for scripted mocks.
   mock?: boolean;
   logger?: { error: (...args: any[]) => void };
 }

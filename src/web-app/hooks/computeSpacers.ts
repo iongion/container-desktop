@@ -2,9 +2,9 @@
 // directly without a DOM or the virtualizer.
 
 export interface Spacers {
-  /** Height (px) of the leading spacer <tr> — reserves the rows windowed out above the viewport. */
+  // Height (px) of the leading spacer <tr> — reserves the rows windowed out above the viewport.
   paddingTop: number;
-  /** Height (px) of the trailing spacer <tr> — reserves the rows windowed out below the viewport. */
+  // Height (px) of the trailing spacer <tr> — reserves the rows windowed out below the viewport.
   paddingBottom: number;
 }
 

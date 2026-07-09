@@ -364,7 +364,7 @@ export async function proxyRequestToWSLDistribution(
   });
 }
 
-/** Stop and drop a connection's cached WSL relay server. Backs the facade's `StopConnectionServices`. */
+// Stop and drop a connection's cached WSL relay server. Backs the facade's `StopConnectionServices`.
 export async function stopRelayServer(connection_id: string): Promise<void> {
   if (RELAY_SERVERS_CACHE[connection_id]) {
     await RELAY_SERVERS_CACHE[connection_id].stop();
@@ -372,7 +372,7 @@ export async function stopRelayServer(connection_id: string): Promise<void> {
   }
 }
 
-/** Clear the WSL relay server cache. Composed into the facade's `__resetConnectionCaches` (test-only). */
+// Clear the WSL relay server cache. Composed into the facade's `__resetConnectionCaches` (test-only).
 export function resetRelayServersCache() {
   for (const key of Object.keys(RELAY_SERVERS_CACHE)) {
     delete RELAY_SERVERS_CACHE[key];

@@ -33,10 +33,10 @@ function rawFlag(): string {
   return `${exposed ?? ""}`;
 }
 
-/** Read a mock-only env flag with the same guarded strategy as the mock gate: process.env in main/preload, the
- *  contextBridge-exposed global in the renderer, "" otherwise. The single guarded `process` read for mock config
- *  lives HERE so the mock sites (connections / mockApiAdapter / generator) stay node-free. Not production-gated —
- *  callers already run only in mock mode. */
+// Read a mock-only env flag with the same guarded strategy as the mock gate: process.env in main/preload, the
+// contextBridge-exposed global in the renderer, "" otherwise. The single guarded `process` read for mock config
+// lives HERE so the mock sites (connections / mockApiAdapter / generator) stay node-free. Not production-gated —
+// callers already run only in mock mode.
 export function mockEnvValue(name: string): string {
   if (typeof process !== "undefined" && process.env?.[name]) {
     return `${process.env[name]}`;
@@ -45,18 +45,16 @@ export function mockEnvValue(name: string): string {
   return `${exposed ?? ""}`;
 }
 
-/** True when the app should serve fixtures instead of talking to a real engine. */
+// True when the app should serve fixtures instead of talking to a real engine.
 export function isMockMode(): boolean {
   const value = rawFlag().toLowerCase();
   return MULTI_ENGINE_FLAGS.has(value) || value === "podman" || value === "docker" || value === "container";
 }
 
-/**
- * The engines the mock boots as auto-start (connected) connections: a single engine for
- * "podman"/"docker", or both for the multi-engine flags ("unified" etc.). Drives which system
- * connections auto-start at boot (see ./connections) — and therefore whether the app lands in the
- * single-engine or the merged/unified workspace. Empty when not in mock mode.
- */
+// The engines the mock boots as auto-start (connected) connections: a single engine for
+// "podman"/"docker", or both for the multi-engine flags ("unified" etc.). Drives which system
+// connections auto-start at boot (see ./connections) — and therefore whether the app lands in the
+// single-engine or the merged/unified workspace. Empty when not in mock mode.
 export function getMockEngines(): MockEngine[] {
   const value = rawFlag().toLowerCase();
   if (value === "docker") {
@@ -74,12 +72,12 @@ export function getMockEngines(): MockEngine[] {
   return [];
 }
 
-/** True when the mock boots more than one engine — i.e. the merged/unified workspace. */
+// True when the mock boots more than one engine — i.e. the merged/unified workspace.
 export function isUnifiedMock(): boolean {
   return getMockEngines().length > 1;
 }
 
-/** The primary engine (the default current connection). Defaults to podman. */
+// The primary engine (the default current connection). Defaults to podman.
 export function getMockEngine(): MockEngine {
   return getMockEngines()[0] ?? ContainerEngine.PODMAN;
 }

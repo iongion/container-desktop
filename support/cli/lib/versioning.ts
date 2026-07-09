@@ -11,15 +11,15 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Return `[major, minor, patch]` from a version string, tolerating a leading `v` and any
- * `-prerelease` / `+build` suffix. */
+// Return `[major, minor, patch]` from a version string, tolerating a leading `v` and any
+// `-prerelease` / `+build` suffix.
 export function parseVersion(value: string): [number, number, number] {
   const core = value.trim().replace(/^v+/, "").split("+", 1)[0].split("-", 1)[0];
   const parts = core.split(".");
   return [Number(parts[0]), Number(parts[1]), Number(parts[2])];
 }
 
-/** Increment `value` by `part` (`major` / `minor` / `patch`). */
+// Increment `value` by `part` (`major` / `minor` / `patch`).
 export function bumpVersion(value: string, part: string = "patch"): string {
   if (!(PARTS as readonly string[]).includes(part)) {
     throw new Error(`unknown version part: ${JSON.stringify(part)} (expected one of ${PARTS.join(", ")})`);
@@ -39,7 +39,7 @@ function replaceJsonStringValue(text: string, key: string, value: string): strin
   return text.replace(pattern, (_match, prefix, suffix) => `${prefix}${value}${suffix}`);
 }
 
-/** Update `version` and the version embedded in `main` (a path segment). */
+// Update `version` and the version embedded in `main` (a path segment).
 export function setPackageJsonVersion(text: string, version: string): string {
   const withVersion = replaceJsonStringValue(text, "version", version);
   return withVersion.replace(
@@ -48,13 +48,13 @@ export function setPackageJsonVersion(text: string, version: string): string {
   );
 }
 
-/** Update the `version` field, leaving `manifest_version` untouched. */
+// Update the `version` field, leaving `manifest_version` untouched.
 export function setManifestVersion(text: string, version: string): string {
   return replaceJsonStringValue(text, "version", version);
 }
 
-/** Update the Tauri `version` field AND the version embedded in `frontendDist`
- * (`../build/<version>`, the versioned renderer output dir — same pattern as package.json `main`). */
+// Update the Tauri `version` field AND the version embedded in `frontendDist`
+// (`../build/<version>`, the versioned renderer output dir — same pattern as package.json `main`).
 export function setTauriConfVersion(text: string, version: string): string {
   const withVersion = replaceJsonStringValue(text, "version", version);
   return withVersion.replace(
@@ -63,31 +63,31 @@ export function setTauriConfVersion(text: string, version: string): string {
   );
 }
 
-/** Sync the Tauri app-identity fields — `productName`, `identifier` and the main-window `title` — from
- * the shared source of truth (support/app-metadata.cjs). tauri.conf.json is a DERIVED file: version +
- * frontendDist are handled by setTauriConfVersion; window geometry / icons stay authored in the file.
- * Each key occurs once at top level (title once, in the single window), so the first-match replace is
- * exact. */
+// Sync the Tauri app-identity fields — `productName`, `identifier` and the main-window `title` — from
+// the shared source of truth (support/app-metadata.cjs). tauri.conf.json is a DERIVED file: version +
+// frontendDist are handled by setTauriConfVersion; window geometry / icons stay authored in the file.
+// Each key occurs once at top level (title once, in the single window), so the first-match replace is
+// exact.
 export function setTauriConfMetadata(text: string, meta: { product: string; identifier: string }): string {
   let out = replaceJsonStringValue(text, "productName", meta.product);
   out = replaceJsonStringValue(out, "identifier", meta.identifier);
   return replaceJsonStringValue(out, "title", meta.product);
 }
 
-/** Update the `[package]` crate version in a Cargo.toml — the first line-anchored `version = "..."`,
- * which is always the package version ([package] leads the file). Dependency constraints (inline or
- * under `[dependencies.*]` sub-tables) come later and are left untouched. */
+// Update the `[package]` crate version in a Cargo.toml — the first line-anchored `version = "..."`,
+// which is always the package version ([package] leads the file). Dependency constraints (inline or
+// under `[dependencies.*]` sub-tables) come later and are left untouched.
 export function setCargoTomlVersion(text: string, version: string): string {
   return text.replace(/^version = "[^"]*"/m, `version = "${version}"`);
 }
 
-/** Replace a plaintext VERSION file body, preserving a trailing newline. */
+// Replace a plaintext VERSION file body, preserving a trailing newline.
 export function setPlainVersion(text: string, version: string): string {
   const suffix = text.endsWith("\n") ? "\n" : "";
   return `${version}${suffix}`;
 }
 
-/** Insert a dated `[version]` section under `[Unreleased]`. No-op without an `## [Unreleased]` heading. */
+// Insert a dated `[version]` section under `[Unreleased]`. No-op without an `## [Unreleased]` heading.
 export function promoteChangelog(text: string, version: string, today: string): string {
   const marker = "## [Unreleased]";
   if (!text.includes(marker)) {
@@ -96,9 +96,9 @@ export function promoteChangelog(text: string, version: string, today: string): 
   return text.replace(marker, `${marker}\n\n## [${version}] - ${today}`);
 }
 
-/** Return only the changelog body for `version`. Accepts both `## [1.2.3] - date` and
- * `## 1.2.3 - date` headings and stops at the next level-2 heading. Throws when the section is
- * missing or empty (the bump guard relies on the empty-section throw, passing "Unreleased"). */
+// Return only the changelog body for `version`. Accepts both `## [1.2.3] - date` and
+// `## 1.2.3 - date` headings and stops at the next level-2 heading. Throws when the section is
+// missing or empty (the bump guard relies on the empty-section throw, passing "Unreleased").
 export function extractChangelogSection(text: string, version: string): string {
   const escapedVersion = escapeRegExp(version);
   const heading = new RegExp(`^##\\s+(?:\\[${escapedVersion}\\]|${escapedVersion})(?:\\s+-[^\\n]*)?\\s*$`, "m");
@@ -116,9 +116,9 @@ export function extractChangelogSection(text: string, version: string): string {
   return `${body}\n`;
 }
 
-/** Point the website download page at `version`. The current version is read from the
- * `data-version` attribute and every literal occurrence is rewritten — this covers
- * `data-version`, the `?v=x.y.z[.n]` asset cache-busters and the release download URLs. */
+// Point the website download page at `version`. The current version is read from the
+// `data-version` attribute and every literal occurrence is rewritten — this covers
+// `data-version`, the `?v=x.y.z[.n]` asset cache-busters and the release download URLs.
 export function setWebsiteVersion(text: string, version: string): string {
   const match = /data-version="([^"]+)"/.exec(text);
   if (!match) {
@@ -131,8 +131,8 @@ export function setWebsiteVersion(text: string, version: string): string {
   return text.replaceAll(current, version);
 }
 
-/** Update the cask `version` and its `sha256` (arm64-only). The download URL uses `#{version}`
- * interpolation so it needs no change. */
+// Update the cask `version` and its `sha256` (arm64-only). The download URL uses `#{version}`
+// interpolation so it needs no change.
 export function renderHomebrewRb(text: string, version: string, shaArm: string): string {
   const withVersion = text.replace(/(version\s+")[^"]*(")/, (_match, prefix, suffix) => `${prefix}${version}${suffix}`);
   return withVersion.replace(/(sha256\s+")[^"]*(")/, (_match, prefix, suffix) => `${prefix}${shaArm}${suffix}`);

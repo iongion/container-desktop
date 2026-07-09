@@ -30,7 +30,7 @@ describe("rotation", () => {
     // active + 3 archives, keep 3 → oldest (.3) dropped, others shift up, active → .1
     const fs = makeFakeFs([LOG, archivePathFor(LOG, 1), archivePathFor(LOG, 2), archivePathFor(LOG, 3)]);
     rotateArchives(LOG, 3, fs);
-    expect(fs.files.has(LOG)).toBe(false); // active moved to .1
+    expect(fs.files.has(LOG)).toBe(false);
     expect(fs.files.has(archivePathFor(LOG, 1))).toBe(true);
     expect(fs.files.has(archivePathFor(LOG, 2))).toBe(true);
     expect(fs.files.has(archivePathFor(LOG, 3))).toBe(true);

@@ -11,5 +11,5 @@ export const getVolumesUrl = (view: "manage" | "mounts") => {
   return pathTo(view === "mounts" ? "/screens/volumes/mounts" : "/screens/volumes");
 };
 
-/** Canonical volume trail: `Volumes > name` (single detail view). */
+// Canonical volume trail: `Volumes > name` (single detail view).
 export const getVolumeCrumbs = (name: string, connId?: string): AppBreadcrumb[] => leafCrumbs("volumes", name, connId);

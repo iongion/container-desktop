@@ -14,7 +14,7 @@ import { buildFaker } from "./seededFaker";
 import { serializeDocker } from "./serializers/docker";
 import { serializePodman } from "./serializers/podman";
 
-/** Pure: build the full raw-shaped fixture set for an engine. Deterministic for a given (engine, seed). */
+// Pure: build the full raw-shaped fixture set for an engine. Deterministic for a given (engine, seed).
 export function buildEngineDataset(engine: ContainerEngine, seedOverride?: number): EngineFixtures {
   const faker = buildFaker(engineSeed(engine, seedOverride));
   const dataset = generateLogicalDataset(faker, engine, COUNTS[engine]);
@@ -24,7 +24,7 @@ export function buildEngineDataset(engine: ContainerEngine, seedOverride?: numbe
 
 const CACHE = new Map<string, EngineFixtures>();
 
-/** Memoized accessor (generate-once per engine:seed). */
+// Memoized accessor (generate-once per engine:seed).
 export function generateEngineDataset(engine: ContainerEngine, seedOverride?: number): EngineFixtures {
   const key = `${engine}:${seedOverride ?? "default"}`;
   let result = CACHE.get(key);

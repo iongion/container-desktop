@@ -29,7 +29,7 @@ const SSH_TUNNELS_CACHE: { [key: string]: string } = {};
 // One long-lived dial-stdio bridge per remote npipe endpoint (Windows Docker), keyed like the tunnel cache.
 const SSH_BRIDGES: { [key: string]: { stop: () => Promise<void> } } = {};
 
-/** Clear the SSH tunnel cache. Composed into the facade's `__resetConnectionCaches` (test-only). */
+// Clear the SSH tunnel cache. Composed into the facade's `__resetConnectionCaches` (test-only).
 export function resetSSHTunnelsCache() {
   for (const key of Object.keys(SSH_TUNNELS_CACHE)) {
     delete SSH_TUNNELS_CACHE[key];
@@ -157,7 +157,7 @@ export async function startSSHConnection(host: SSHHost, opts?: Partial<ServiceOp
                 try {
                   child.kill();
                 } catch {
-                  /* already gone */
+                  // already gone
                 }
               },
               onExit: (cb: () => void) => {

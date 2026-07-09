@@ -27,8 +27,6 @@ const foldersFirst = (groups: ReturnType<typeof groupContainersAcrossConnections
 
 describe("groupContainersAcrossConnections", () => {
   it("orders every directory group before singletons ACROSS connections (folders-first, globally)", () => {
-    // conn A: a multi-member group + a singleton; conn B: another multi-member group + a singleton.
-    // The old per-connection flatMap produced [web, alpha, db, zeta] — a directory (db) after a singleton.
     const connA = [c("web-1", "web"), c("web-2", "web"), c("alpha", "alpha")];
     const connB = [c("db-1", "db"), c("db-2", "db"), c("zeta", "zeta")];
     const groups = groupContainersAcrossConnections([connA, connB], "", { field: "name", dir: "asc" });

@@ -85,9 +85,9 @@ export interface AgentRunnerParams {
   onDelta: (text: string) => void;
   onDone: (finishReason: string) => void;
   onError: (message: string) => void;
-  /** Tool-call events the agent emits alongside prose deltas. Mock agents use this
-   * to inject command badges, approval cards, etc. directly. Real agents wired
-   * through the AI-SDK tool loop may ignore it (the SDK calls tools internally). */
+  // Tool-call events the agent emits alongside prose deltas. Mock agents use this
+  // to inject command badges, approval cards, etc. directly. Real agents wired
+  // through the AI-SDK tool loop may ignore it (the SDK calls tools internally).
   onToolEvent?: (event: import("./channels").AgentToolEvent) => void;
 }
 
@@ -99,14 +99,14 @@ export interface AgentToolDeps {
   searchKnowledge: (query: string) => Promise<KnowledgeEntry[]>;
   webSearch?: (query: string) => Promise<{ text: string }>;
   onEvent?: (event: import("./channels").AgentToolEvent) => void;
-  /** Active permission mode for this run — governs run/ask/reject for the gated tools (runCommand, webSearch). */
+  // Active permission mode for this run — governs run/ask/reject for the gated tools (runCommand, webSearch).
   mode: AIPermissionMode;
-  /** Remembered verdict for a command key (consulted only in "remember" mode); undefined ⇒ not yet decided. */
+  // Remembered verdict for a command key (consulted only in "remember" mode); undefined ⇒ not yet decided.
   cacheLookup?: (key: string) => CachedVerdict;
-  /** Remembered verdict for the web-search switch (consulted only in "remember" mode). */
+  // Remembered verdict for the web-search switch (consulted only in "remember" mode).
   webVerdict?: CachedVerdict;
-  /** First-class typed container operations (list/inspect/logs/lifecycle/…). When present, createAgentTools
-   *  exposes the typed container toolset; absent ⇒ only the generic runCommand/web/knowledge tools. */
+  // First-class typed container operations (list/inspect/logs/lifecycle/…). When present, createAgentTools
+  // exposes the typed container toolset; absent ⇒ only the generic runCommand/web/knowledge tools.
   engineOps?: EngineOps;
 }
 

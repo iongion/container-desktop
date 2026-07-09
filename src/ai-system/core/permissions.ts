@@ -16,8 +16,6 @@ export type ToolAction = "run" | "ask" | "reject";
 // The remembered verdict for a command/web-search capability, persisted in the permissions cache.
 export type CachedVerdict = "allow" | "block" | undefined;
 
-// The single canonical key for a command — used identically by the broker approval map, the permissions
-// cache, and the settings UI so they can never drift. Matches the broker's historical approvalKey shape.
 export function commandKey(program: string, args: string[]): string {
   return JSON.stringify([program, args]);
 }

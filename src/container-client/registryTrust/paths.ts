@@ -24,7 +24,7 @@ function podmanContainersBase(ctx: TrustPathContext): string {
   return ctx.rootfull ? "/etc/containers" : posixJoin(ctx.home, ".config/containers");
 }
 
-/** Podman `registries.conf` (insecure / mirror / search-order). Docker uses daemon.json instead; Apple: none. */
+// Podman `registries.conf` (insecure / mirror / search-order). Docker uses daemon.json instead; Apple: none.
 export function registriesConfPath(ctx: TrustPathContext): string | undefined {
   if (ctx.engine !== ContainerEngine.PODMAN) {
     return undefined;
@@ -32,7 +32,7 @@ export function registriesConfPath(ctx: TrustPathContext): string | undefined {
   return posixJoin(podmanContainersBase(ctx), "registries.conf");
 }
 
-/** Docker daemon.json (insecure-registries / registry-mirrors). Only Docker; system-wide (needs elevation). */
+// Docker daemon.json (insecure-registries / registry-mirrors). Only Docker; system-wide (needs elevation).
 export function dockerDaemonJsonPath(ctx: TrustPathContext): string | undefined {
   if (ctx.engine !== ContainerEngine.DOCKER) {
     return undefined;
@@ -40,7 +40,7 @@ export function dockerDaemonJsonPath(ctx: TrustPathContext): string | undefined 
   return "/etc/docker/daemon.json";
 }
 
-/** Directory a per-registry CA is installed into (…/certs.d/<host>). */
+// Directory a per-registry CA is installed into (…/certs.d/<host>).
 export function certsDir(ctx: TrustPathContext, host: string): string | undefined {
   if (ctx.engine === ContainerEngine.PODMAN) {
     return posixJoin(podmanContainersBase(ctx), "certs.d", host);
@@ -51,13 +51,13 @@ export function certsDir(ctx: TrustPathContext, host: string): string | undefine
   return undefined;
 }
 
-/** The CA file path (…/certs.d/<host>/ca.crt) both engines read a custom root from. */
+// The CA file path (…/certs.d/<host>/ca.crt) both engines read a custom root from.
 export function caCertPath(ctx: TrustPathContext, host: string): string | undefined {
   const dir = certsDir(ctx, host);
   return dir ? posixJoin(dir, "ca.crt") : undefined;
 }
 
-/** Where the engine stores login credentials (managed by `login`, referenced for display only). Apple: none. */
+// Where the engine stores login credentials (managed by `login`, referenced for display only). Apple: none.
 export function authConfigPath(ctx: TrustPathContext): string | undefined {
   if (ctx.engine === ContainerEngine.PODMAN) {
     return posixJoin(podmanContainersBase(ctx), "auth.json");
@@ -68,9 +68,9 @@ export function authConfigPath(ctx: TrustPathContext): string | undefined {
   return undefined;
 }
 
-/** Where cosign reads/writes credentials: go-containerregistry's default keychain (docker's config.json),
- * regardless of the container engine. `cosign login` writes here and `cosign verify` reads here — so cosign's
- * auth state is checked here, NOT in podman's auth.json. */
+// Where cosign reads/writes credentials: go-containerregistry's default keychain (docker's config.json),
+// regardless of the container engine. `cosign login` writes here and `cosign verify` reads here — so cosign's
+// auth state is checked here, NOT in podman's auth.json.
 export function cosignAuthConfigPath(ctx: TrustPathContext): string {
   return posixJoin(ctx.home, ".docker/config.json");
 }

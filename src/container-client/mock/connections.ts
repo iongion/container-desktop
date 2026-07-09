@@ -20,7 +20,7 @@ const MOCK_PODMAN_VERSION = "5.3.1";
 const MOCK_DOCKER_VERSION = "27.3.1";
 const MOCK_APPLE_VERSION = "1.0.0";
 
-/** Forced-ready availability — bypasses program/socket detection (which would fail with no real engine). */
+// Forced-ready availability — bypasses program/socket detection (which would fail with no real engine).
 export function mockAvailability(): EngineConnectorAvailability {
   return {
     enabled: true,
@@ -99,7 +99,7 @@ function mockConnection(opts: MockConnectionOptions): Connection {
   };
 }
 
-/** The connection list surfaced everywhere in mock mode (boot, Connection Manager, tray). */
+// The connection list surfaced everywhere in mock mode (boot, Connection Manager, tray).
 export function buildMockConnections(): Connection[] {
   // Only the system connection(s) for the active mock engine(s) auto-start, so the app lands in the
   // single-engine workspace for "podman"/"docker" and the merged/unified one for "unified" (see

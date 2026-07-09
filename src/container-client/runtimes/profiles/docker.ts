@@ -1,10 +1,3 @@
-// runtimes/profiles/docker.ts — the 5 Docker per-(engine,host) profiles.
-//
-// Docker has no machine extensions, so the capability host-adjustments are the dialect base (all false). The
-// per-host getApiConnection variants are preserved verbatim: native replaces the env-seed with the context
-// host; vendor adds the Docker-Desktop named-pipe discovery + a system-info relay read; WSL adds a scoped
-// DOCKER_HOST env read; LIMA/SSH reuse the shared bodies. docker-vendor keeps its reduced automatic-settings.
-
 import { ContainerEngineHost, type EngineConnectorSettings, OperatingSystem } from "@/env/Types";
 import { getWindowsPipePath } from "@/platform";
 import { isEmpty } from "@/utils";
@@ -18,7 +11,7 @@ import {
   sshApiConnection,
 } from "./shared";
 
-/** docker-vendor's reduced automatic-settings (no scope-program detection) — docker/vendor.ts:84. */
+// docker-vendor's reduced automatic-settings (no scope-program detection) — docker/vendor.ts:84.
 async function dockerVendorAutomaticSettings(
   host: HostContext,
   settings: EngineConnectorSettings,
@@ -52,7 +45,6 @@ export const dockerNativeProfile: HostProfile = {
     const settings = customSettings || (await host.getSettings());
     let uri = await host.dialect.resolveNativeURISeed(host, settings);
     try {
-      // NOTE: docker-native replaces the env-seed with the context host (even when empty) - matches the leaf.
       uri = (await host.dialect.readEngineSocket(host, settings)) || "";
     } catch (error: any) {
       host.logger.warn(host.id, "Unable to get context inspect", error);

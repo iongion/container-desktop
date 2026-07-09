@@ -36,16 +36,14 @@ function isOk(res: any): boolean {
   return res?.status >= 200 && res.status < 300;
 }
 
-/**
- * True only for Docker's "node is not (part of) a swarm manager" signal (HTTP 503) — NOT for 500/auth/network.
- *
- * Recognition must survive the renderer→main IPC proxy, which rebuilds the AxiosError from a re-serialized
- * subset (commandProxyClient.ts): the numeric status can arrive as a string, and Docker's JSON body can be
- * dropped, leaving only axios's generic "Request failed with status code 503" message. So we coerce the
- * status before comparing AND fall back to the message — Docker's own phrase when the body survived, else the
- * generic "status code 503" (the one string that always survives). Missing this turns the not-in-a-swarm 503
- * into an endless toast storm, since the swarm queries poll.
- */
+// True only for Docker's "node is not (part of) a swarm manager" signal (HTTP 503) — NOT for 500/auth/network.
+//
+// Recognition must survive the renderer→main IPC proxy, which rebuilds the AxiosError from a re-serialized
+// subset (commandProxyClient.ts): the numeric status can arrive as a string, and Docker's JSON body can be
+// dropped, leaving only axios's generic "Request failed with status code 503" message. So we coerce the
+// status before comparing AND fall back to the message — Docker's own phrase when the body survived, else the
+// generic "status code 503" (the one string that always survives). Missing this turns the not-in-a-swarm 503
+// into an endless toast storm, since the swarm queries poll.
 function isNotSwarmManager(error: any): boolean {
   const status = Number(error?.response?.status ?? error?.status);
   if (status === 503) {
@@ -129,7 +127,7 @@ export async function createService(driver: AxiosInstance, spec: Record<string, 
   return isOk(res);
 }
 
-/** Read-modify-write the service Spec at its current Version.Index (Docker optimistic concurrency). */
+// Read-modify-write the service Spec at its current Version.Index (Docker optimistic concurrency).
 async function updateServiceSpec(driver: AxiosInstance, id: string, mutate: (spec: any) => void): Promise<boolean> {
   const service = await getService(driver, id);
   if (!service?.Version) {
@@ -166,7 +164,7 @@ export function listTasks(driver: AxiosInstance, serviceId?: string): Promise<Sw
   return readList<SwarmTask>(driver, "/tasks", extra);
 }
 
-/** Stacks are derived: one entry per `com.docker.stack.namespace` label across the service list. */
+// Stacks are derived: one entry per `com.docker.stack.namespace` label across the service list.
 export async function listStacks(driver: AxiosInstance): Promise<SwarmStack[]> {
   const services = await listServices(driver);
   const byNamespace = new Map<string, number>();
@@ -189,7 +187,7 @@ export function getNode(driver: AxiosInstance, id: string): Promise<SwarmNode | 
   return readOne<SwarmNode>(driver, `/nodes/${encodeURIComponent(id)}`);
 }
 
-/** RMW the node Spec (Availability / Role) at its current Version.Index. */
+// RMW the node Spec (Availability / Role) at its current Version.Index.
 export async function updateNode(driver: AxiosInstance, id: string, opts: NodeUpdateOptions): Promise<boolean> {
   const node = await getNode(driver, id);
   if (!node?.Version) {

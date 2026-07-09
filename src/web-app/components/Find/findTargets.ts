@@ -20,7 +20,7 @@ export function registerFindTarget(target: FindTarget): () => void {
   };
 }
 
-/** Returns the registered target whose element is contained by `root`, if any. */
+// Returns the registered target whose element is contained by `root`, if any.
 export function findTargetWithin(root: HTMLElement | null): FindTarget | undefined {
   if (!root) {
     return undefined;

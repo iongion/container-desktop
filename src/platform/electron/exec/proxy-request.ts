@@ -118,11 +118,9 @@ export async function proxyRequest(request: Partial<AxiosRequestConfig>, connect
   return response;
 }
 
-/**
- * Test-only: clear the module-global connection caches between cases/targets. `StopConnectionServices`
- * only clears `RELAY_SERVERS_CACHE`; the SSH tunnel cache is otherwise cleared solely via a tunnel's
- * `onStopTunnel`, so live tests reusing a process would otherwise reuse a stale tunnel.
- */
+// Test-only: clear the module-global connection caches between cases/targets. `StopConnectionServices`
+// only clears `RELAY_SERVERS_CACHE`; the SSH tunnel cache is otherwise cleared solely via a tunnel's
+// `onStopTunnel`, so live tests reusing a process would otherwise reuse a stale tunnel.
 export function resetConnectionCaches() {
   resetSSHTunnelsCache();
   resetRelayServersCache();

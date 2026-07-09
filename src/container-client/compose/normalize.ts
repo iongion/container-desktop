@@ -300,7 +300,7 @@ function collectUnsupported(services: Dict, raw: Dict): UnsupportedKeyReport[] {
   return reports;
 }
 
-/** Normalize a raw compose object into the canonical model. */
+// Normalize a raw compose object into the canonical model.
 export function normalizeProject(raw: unknown, opts: NormalizeOptions): ComposeProjectModel {
   const doc = asRecord(raw);
   const servicesRaw = asRecord(doc.services);

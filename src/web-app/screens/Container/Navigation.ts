@@ -10,10 +10,10 @@ export const getContainerUrl = (id: string, view: string, connId?: string) => {
   return pathTo(`/screens/container/${encodeURIComponent(id)}/${encodeURIComponent(view)}`, undefined, { connId });
 };
 
-/** The Container detail section rail — one flat rail shared by every container detail screen. The Inspect
- * facets (Inspect = the Summary panel, Env vars, Ports, Mounts, Raw configuration) navigate to the inspect
- * route with a `?section=` selector; Logs/Processes/Kube are their own routes. Env/Ports/Mounts appear only
- * when the container has them, each with a count pill. Ids match the active screen/section for highlighting. */
+// The Container detail section rail — one flat rail shared by every container detail screen. The Inspect
+// facets (Inspect = the Summary panel, Env vars, Ports, Mounts, Raw configuration) navigate to the inspect
+// route with a `?section=` selector; Logs/Processes/Kube are their own routes. Env/Ports/Mounts appear only
+// when the container has them, each with a count pill. Ids match the active screen/section for highlighting.
 export const containerSectionRailItems = (
   container: Container,
   connId?: string,
@@ -97,10 +97,8 @@ const CONTAINER_VIEW_LABELS: Record<string, string> = {
   terminal: i18n.t("Terminal"),
 };
 
-/**
- * Canonical container trail: `Containers > name` on the inspect view; `Containers > name > Tab` on a
- * sub-tab (name links back to inspect). `currentScreen` is the active sub-screen id, e.g. "container.logs".
- */
+// Canonical container trail: `Containers > name` on the inspect view; `Containers > name > Tab` on a
+// sub-tab (name links back to inspect). `currentScreen` is the active sub-screen id, e.g. "container.logs".
 export const getContainerCrumbs = (
   name: string,
   id: string,

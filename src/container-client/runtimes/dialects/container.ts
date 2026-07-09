@@ -19,15 +19,13 @@ import { readScopedHome } from "./shared";
 
 const SOCKTAINER_SOCKET_NAME = "container.sock";
 
-/** A failed command result used by the no-op extension methods on Apple. */
+// A failed command result used by the no-op extension methods on Apple.
 function noopCommandResult(): CommandExecutionResult {
   return { pid: null, code: null, success: false, stdout: "", stderr: "" };
 }
 
-/**
- * Resolve the socktainer socket path from `$HOME/.socktainer/container.sock` (local) or the scoped home
- * (remote). Does NOT honor raw DOCKER_HOST — on macOS it commonly points to a non-Apple daemon.
- */
+// Resolve the socktainer socket path from `$HOME/.socktainer/container.sock` (local) or the scoped home
+// (remote). Does NOT honor raw DOCKER_HOST — on macOS it commonly points to a non-Apple daemon.
 async function resolveSocktainerSocket(host: HostContext, settings: EngineConnectorSettings): Promise<string> {
   // Remote (scoped): the remote $HOME via printenv; native: the local home. NEVER raw DOCKER_HOST — on
   // macOS it commonly points to a non-Apple daemon.

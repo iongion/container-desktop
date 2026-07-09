@@ -5,7 +5,7 @@
 // blank lines, `#` comment lines, an optional `export ` prefix, trailing inline comments on unquoted
 // values, and single/double quoted values (double quotes process `\n \r \t \" \\`).
 
-/** Parse `.env`-style content into a flat record. */
+// Parse `.env`-style content into a flat record.
 export function parseEnvFile(content: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const rawLine of content.split(/\r?\n/)) {

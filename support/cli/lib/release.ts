@@ -23,7 +23,7 @@ import {
 // and wails-package.ts. CommonJS module → require it via createRequire from this ESM file.
 const appMeta = createRequire(import.meta.url)("../../app-metadata.cjs");
 
-/** package.json (source of truth) + the files derived from it, rendered at `version`. */
+// package.json (source of truth) + the files derived from it, rendered at `version`.
 export function syncedTargets(version: string): Array<[string, string]> {
   return [
     ["package.json", setPackageJsonVersion(readText("package.json"), version)],
@@ -40,7 +40,7 @@ export function syncedTargets(version: string): Array<[string, string]> {
   ];
 }
 
-/** Print the plan (dry-run) or write each changed file, mirroring tasks.py `_apply`. */
+// Print the plan (dry-run) or write each changed file, mirroring tasks.py `_apply`.
 export function applyTargets(targets: Array<[string, string]>, perform: boolean): void {
   let changed = 0;
   for (const [rel, newContent] of targets) {
@@ -57,7 +57,7 @@ export function applyTargets(targets: Array<[string, string]>, perform: boolean)
   console.log(`${changed} file(s) ${perform ? "updated" : "pending"}`);
 }
 
-/** Write the source version + shared metadata into all derived manifest files (drift repair, no bump). */
+// Write the source version + shared metadata into all derived manifest files (drift repair, no bump).
 export function runManifestSync(options: { version?: string; perform?: boolean } = {}): void {
   const version = options.version || readSourceVersion();
   console.log(
@@ -66,8 +66,8 @@ export function runManifestSync(options: { version?: string; perform?: boolean }
   applyTargets(syncedTargets(version), Boolean(options.perform));
 }
 
-/** Bump the version everywhere and (with perform) commit, tag and push. Refuses to run when the
- * CHANGELOG [Unreleased] section is empty — a release must document something. */
+// Bump the version everywhere and (with perform) commit, tag and push. Refuses to run when the
+// CHANGELOG [Unreleased] section is empty — a release must document something.
 export function runBump(options: { part?: string; perform?: boolean; commit?: boolean } = {}): void {
   const part = options.part || "patch";
   const perform = Boolean(options.perform);

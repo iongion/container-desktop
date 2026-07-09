@@ -115,9 +115,9 @@ export function parseTestTargets(env: Record<string, string | undefined>): TestT
   return targets.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** Map the app's env-driven remote connections (CONTAINER_DESKTOP_REMOTE_*) to live SSH targets, so a host
- *  configured once in the `.env` chain is exercised by the matrix. The client OS is the machine running the
- *  suite; a configured entry is enabled (it was opted into by being present). */
+// Map the app's env-driven remote connections (CONTAINER_DESKTOP_REMOTE_*) to live SSH targets, so a host
+// configured once in the `.env` chain is exercised by the matrix. The client OS is the machine running the
+// suite; a configured entry is enabled (it was opted into by being present).
 export function remoteEnvToTargets(parsed: RemoteEnvConnection[], osType: OperatingSystem): TestTarget[] {
   return parsed.map((entry) => ({
     id: entry.id,
@@ -130,7 +130,7 @@ export function remoteEnvToTargets(parsed: RemoteEnvConnection[], osType: Operat
   }));
 }
 
-/** No selection → every enabled target. An explicit comma list of ids → exactly those (overrides enabled). */
+// No selection → every enabled target. An explicit comma list of ids → exactly those (overrides enabled).
 export function selectTargets(targets: TestTarget[], selection?: string): TestTarget[] {
   const ids = (selection ?? "")
     .split(",")
@@ -146,9 +146,9 @@ export function isConfigured(target: TestTarget, host: ContainerEngineHost): boo
   return target.enabled && target.hosts.includes(host);
 }
 
-/** Load targets from the app's multi-stage `.env` chain (same precedence as vite's sourceEnv) and the
- *  gitignored targets.env, overlaid by process.env (real env vars win). Yields both the explicit
- *  `CDT_TARGET_*` targets and the `CONTAINER_DESKTOP_REMOTE_*` connections mapped to SSH targets. */
+// Load targets from the app's multi-stage `.env` chain (same precedence as vite's sourceEnv) and the
+// gitignored targets.env, overlaid by process.env (real env vars win). Yields both the explicit
+// `CDT_TARGET_*` targets and the `CONTAINER_DESKTOP_REMOTE_*` connections mapped to SSH targets.
 export function loadTestTargets(): TestTarget[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const projectHome = path.resolve(here, "../../..");

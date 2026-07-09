@@ -106,10 +106,6 @@ function materializeItem(item: any, engine: string) {
   };
 }
 
-// Default is NON-DESTRUCTIVE: only ensure the engine folders exist and let each capture OVERWRITE its own
-// file in place, so a scoped run — or one that fails partway — never wipes screenshots it isn't regenerating.
-// Pass `--clean` (full runs only) to restore the old prune: drop the stale flat files and wipe each engine
-// folder first, so the output ends up matching the manifest exactly.
 async function cleanOutputDirectories(outDir: string, engines: string[], only: Set<string> | null, clean: boolean) {
   if (clean && !only) {
     for (const file of STALE_FLAT_SCREENSHOTS) {

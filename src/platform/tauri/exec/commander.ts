@@ -57,7 +57,7 @@ export async function exec_launcher(
   return exec_launcher_async(deps, launcher, args, opts);
 }
 
-/** ExecuteStreaming — a finite streamed process (build/logs -f). Returns a StreamHandle. */
+// ExecuteStreaming — a finite streamed process (build/logs -f). Returns a StreamHandle.
 export async function exec_streaming(
   deps: CommandDeps,
   launcher: string,
@@ -88,7 +88,7 @@ export async function exec_streaming(
   };
 }
 
-/** ExecuteAsBackgroundService — spawn a long-lived service, poll opts.checkStatus until ready. Returns { on }. */
+// ExecuteAsBackgroundService — spawn a long-lived service, poll opts.checkStatus until ready. Returns { on }.
 export async function exec_service(
   deps: CommandDeps,
   launcher: string,
@@ -144,7 +144,7 @@ export async function exec_service(
   return service;
 }
 
-/** Spawn — spawnSync-shaped { status, stdout, stderr, pid } (detector.ts reads .status). Buffered exec. */
+// Spawn — spawnSync-shaped { status, stdout, stderr, pid } (detector.ts reads .status). Buffered exec.
 export async function spawn_sync(deps: CommandDeps, launcher: string, args: string[], opts?: any): Promise<any> {
   const result = await exec_launcher_async(deps, launcher, args, opts);
   return {

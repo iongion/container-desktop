@@ -18,15 +18,10 @@
 [data-table="containers"] thead th:nth-child(2),
 [data-table="containers"] tbody tr:not(.AppDataTableGroupRow) td:nth-child(2) {
   text-align: left;
-  /* Fixed width so windowing can't resize the Image column as rows scroll in/out — only the Name
-     column (first child) is fluid. min-width is the hard floor (a plain width is just a hint under
-     table-layout:auto and the Name 100% column pulls it narrower); content is capped at this width by
-     the layers button's max-width and truncates with an ellipsis (.bp6-button-text). */
   width: 240px;
   min-width: 240px;
   max-width: 240px;
 }
-/* Actions column stays shrink-to-fit even when the optional Appearance-controlled Engine column is visible. */
 [data-table="containers"] :is(th, td)[data-column="Actions"] {
   width: 1px !important;
   min-width: 36px;
@@ -65,9 +60,6 @@
 [data-table="containers"] tbody tr.ContainerNestedRow .ContainerLeafLink {
   left: 23px;
 }
-/* Flat mode ("Group resources by connection" off): the connection level is gone, so compose/pod groups become
-   the top level. Shift every row up one connection-level and hide the connection tree-links (they'd dangle
-   toward an absent connection header); the compose→container leaf link stays. */
 [data-table="containers"][data-grouped="false"] tbody tr.ContainerGroupRow td:first-child,
 [data-table="containers"][data-grouped="false"] tbody tr.ContainerConnectionLeafRow td:first-child {
   padding-left: 10px;
@@ -103,13 +95,6 @@
   display: inline-block;
   border: 1px solid transparent;
 }
-/* Status ball — a single fixed slot rendered inside the name link (rows) and the group button (groups),
-   right before the text value. Always present (never wobbles). Per-tone colors (success/warning/danger) live
-   in the theme files (dark.css/light.css); the icon inherits color via currentColor. Group headers show ONE
-   ball for the group's aggregate (worst) status. */
-/* A CSS-drawn dot (not a Blueprint Icon, whose SVG box misaligns in flex/inline contexts). The fill is
-   currentColor, so the per-tone `color` set in the theme files paints it; it centers as a flex item (row
-   name link) and via vertical-align inline (group button text). */
 [data-table="containers"] .ContainerStatus {
   display: inline-block;
   flex: 0 0 auto;
@@ -120,18 +105,14 @@
   background-color: currentColor;
   vertical-align: middle;
 }
-/* "muted" = status unknown / not checked — a faded, theme-neutral dot (the muted text token adapts to every
-   engine theme + accent, so it never clashes). */
 [data-table="containers"] .ContainerStatus[data-tone="muted"] {
   color: var(--app-text-muted);
   opacity: 0.55;
 }
-/* Spinner shown next to a group's action buttons while a start/stop/restart-all or teardown is in flight. */
 [data-table="containers"] .AppDataTableGroupDetails .ContainerGroupBusy {
   flex: 0 0 auto;
   margin: 0 8px;
 }
-/* Status */
 [data-table="containers"] .ContainerReportStateCounts {
   display: inline-block;
   margin: 0;

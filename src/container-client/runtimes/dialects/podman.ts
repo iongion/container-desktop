@@ -36,7 +36,7 @@ import {
   runScopedSocketCommand,
 } from "./shared";
 
-/** Resolve the program used to drive machine commands: the controller when scoped, else the engine program. */
+// Resolve the program used to drive machine commands: the controller when scoped, else the engine program.
 async function getControllerLauncherPath(host: HostContext): Promise<string> {
   const { program, controller } = await host.getSettings();
   let programLauncher = "";

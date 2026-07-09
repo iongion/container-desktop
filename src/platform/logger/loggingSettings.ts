@@ -24,7 +24,6 @@ function clampNumber(value: unknown, fallback: number, min: number, max: number)
   return n > max ? max : n;
 }
 
-// Always returns a complete, safe LoggingFileSettings — even from a partial/legacy/garbage blob.
 export function normalizeLoggingFileSettings(file?: Partial<LoggingFileSettings> | null): LoggingFileSettings {
   return {
     enabled: !!file?.enabled,

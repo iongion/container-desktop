@@ -66,15 +66,15 @@ export type ApiSurface = "docker" | "libpod";
 export interface CapabilityDescriptor {
   resources: { pods: boolean; secrets: boolean; networks: boolean };
   events: boolean;
-  /** Per-field sort capability; REST list endpoints are explicit "client" entries until an API exposes sorting. */
+  // Per-field sort capability; REST list endpoints are explicit "client" entries until an API exposes sorting.
   sort: Record<string, SortMode>;
-  /** Which extension groups are real (vs no-op) on this host. */
+  // Which extension groups are real (vs no-op) on this host.
   extensions: Record<EngineExtension, boolean>;
 }
 
 // Engine-extension groups — declared once, implemented by EVERY host (real or no-op)
 
-/** `machines` — Podman machine lifecycle (real on Podman native/vendor; no-op elsewhere). */
+// `machines` — Podman machine lifecycle (real on Podman native/vendor; no-op elsewhere).
 export interface MachinesExtension {
   getPodmanMachineInspect(
     name?: string,
@@ -89,20 +89,20 @@ export interface MachinesExtension {
   connectToPodmanMachine(name: string, title?: string): Promise<boolean>;
 }
 
-/** `kube` — Podman kube generation (real on Podman; no-op on Docker). */
+// `kube` — Podman kube generation (real on Podman; no-op on Docker).
 export interface KubeExtension {
   generateKube(entityId?: any): Promise<CommandExecutionResult>;
 }
 
-/** `contexts` — `docker context ls/inspect/use` (real on Docker as wired; no-op on Podman). */
+// `contexts` — `docker context ls/inspect/use` (real on Docker as wired; no-op on Podman).
 export interface ContextsExtension {
   getDockerContexts(): Promise<ContextInspect[]>;
   inspectDockerContext(name: string): Promise<ContextInspect | undefined>;
   useDockerContext(name: string): Promise<boolean>;
 }
 
-/** `swarm` — Docker Swarm services/nodes/stacks (real on Docker as wired; no-op on Podman/Apple).
- * Write ops + cluster secrets/configs live on `SwarmAdapter` (Docker-only), not the symmetric facade. */
+// `swarm` — Docker Swarm services/nodes/stacks (real on Docker as wired; no-op on Podman/Apple).
+// Write ops + cluster secrets/configs live on `SwarmAdapter` (Docker-only), not the symmetric facade.
 export interface SwarmExtension {
   getSwarmServices(): Promise<SwarmService[]>;
   getSwarmNodes(): Promise<SwarmNode[]>;
@@ -111,13 +111,13 @@ export interface SwarmExtension {
   swarmLeave(opts?: SwarmLeaveOptions): Promise<boolean>;
 }
 
-/** `builders` — `docker buildx ls/use` (real on Docker as wired; no-op on Podman). */
+// `builders` — `docker buildx ls/use` (real on Docker as wired; no-op on Podman).
 export interface BuildersExtension {
   getBuilders(): Promise<any[]>;
   useBuilder(name: string): Promise<boolean>;
 }
 
-/** `compose` — parse a docker-compose file and orchestrate it as native Podman resources (REAL on Podman). */
+// `compose` — parse a docker-compose file and orchestrate it as native Podman resources (REAL on Podman).
 export interface ComposeExtension {
   getComposeProjects(): Promise<ComposeProject[]>;
   composeUp(request: ComposeUpRequest): Promise<ComposeChangeSummary>;
@@ -141,9 +141,9 @@ export interface HostClientFacade
   HOST: ContainerEngineHost;
   id: string;
   logger: ILogger;
-  /** Capability matrix (host-adjusted); gates real-vs-no-op extensions + engine-specific UI. */
+  // Capability matrix (host-adjusted); gates real-vs-no-op extensions + engine-specific UI.
   capabilities: CapabilityDescriptor;
-  /** The REST API shape this host speaks ("docker" or "libpod"); used by adapters for baseURL/normalizers. */
+  // The REST API shape this host speaks ("docker" or "libpod"); used by adapters for baseURL/normalizers.
   apiSurface: ApiSurface;
 
   // lifecycle / API
@@ -152,7 +152,6 @@ export interface HostClientFacade
   isEngineAvailable(): Promise<AvailabilityCheck>;
   isApiRunning(): Promise<AvailabilityCheck>;
   getApiConnection(connection?: Connection, customSettings?: EngineConnectorSettings): Promise<ApiConnection>;
-  /** Raw Axios driver for the 3 raw consumers (/_ping, /events, /images/search). Replaces getContainerApiClient(). */
   getApiDriver(): Promise<AxiosInstance>;
   getAvailability(userSettings?: EngineConnectorSettings): Promise<EngineConnectorAvailability>;
   getConnectionDataDir(): Promise<string>;
@@ -182,7 +181,7 @@ export interface HostClientFacade
     settings?: EngineConnectorSettings,
     execOpts?: HostExecOptions,
   ): Promise<CommandExecutionResult>;
-  /** Streaming twin of runHostCommand (Command.ExecuteStreaming) — the scoped/remote build streams its wrapper CLI through this. */
+  // Streaming twin of runHostCommand (Command.ExecuteStreaming) — the scoped/remote build streams its wrapper CLI through this.
   runHostCommandStreaming(program: string, args?: string[], settings?: EngineConnectorSettings): Promise<StreamHandle>;
   runScopeCommand(
     program: string,
@@ -191,14 +190,14 @@ export interface HostClientFacade
     settings?: EngineConnectorSettings,
     execOpts?: HostExecOptions,
   ): Promise<CommandExecutionResult>;
-  /** Streaming scoped exec — the scope wrapper streamed via Command.ExecuteStreaming (Native throws). */
+  // Streaming scoped exec — the scope wrapper streamed via Command.ExecuteStreaming (Native throws).
   runScopeCommandStreaming(
     program: string,
     args: string[],
     scope: string,
     settings?: EngineConnectorSettings,
   ): Promise<StreamHandle>;
-  /** Translate a LOCAL host path to its guest-side path for a scoped engine (WSL: drive-letter → /mnt/…; Lima/machine/ssh: identity). */
+  // Translate a LOCAL host path to its guest-side path for a scoped engine (WSL: drive-letter → /mnt/…; Lima/machine/ssh: identity).
   resolveGuestPath(localPath: string, scope: string, settings?: EngineConnectorSettings): Promise<string>;
   findHostProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program>;
   findScopeProgram(program: Program, settings?: EngineConnectorSettings): Promise<Program>;

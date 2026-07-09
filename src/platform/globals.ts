@@ -8,11 +8,11 @@ export interface PlatformGlobalsOptions {
   osType: IPlatform["OPERATING_SYSTEM"];
   darwinMajor?: number;
   messageBus: IMessageBus;
-  /** Realm-specific extras (e.g. APP_PATH in main; TrayBus/ResourceBus in preload). */
+  // Realm-specific extras (e.g. APP_PATH in main; TrayBus/ResourceBus in preload).
   extras?: Record<string, unknown>;
 }
 
-/** Patch the shared platform globals onto `target` (e.g. `globalThis` or a Tauri webview window). */
+// Patch the shared platform globals onto `target` (e.g. `globalThis` or a Tauri webview window).
 export function installPlatformGlobals(target: any, options: PlatformGlobalsOptions): void {
   target.Command = options.command;
   target.Platform = options.platform;

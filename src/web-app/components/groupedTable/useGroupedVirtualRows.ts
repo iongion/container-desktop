@@ -18,17 +18,17 @@ const getDescriptorKey = (descriptor: ConnectionRowDescriptor<unknown>): string 
 
 export interface UseGroupedVirtualRowsParams<T> {
   groups: ConnectionGroup<T>[];
-  /** Connection-qualified, stable per row (e.g. `mergedKey`) — also the row's DOM/selection identity. */
+  // Connection-qualified, stable per row (e.g. `mergedKey`) — also the row's DOM/selection identity.
   getRowKey: (item: T, group: ConnectionGroup<T>) => string;
-  /** Override the first-paint height estimate per descriptor (px). */
+  // Override the first-paint height estimate per descriptor (px).
   estimateRowHeight?: (descriptor: ConnectionRowDescriptor<T>) => number;
-  /** Disambiguates scroll restoration when one route hosts two lists. */
+  // Disambiguates scroll restoration when one route hosts two lists.
   scrollKey?: string;
-  /** When false the virtualizer idles (e.g. the empty/NonIdealState branch). */
+  // When false the virtualizer idles (e.g. the empty/NonIdealState branch).
   enabled?: boolean;
-  /** When false, render one flat list with no connection group headers (see resolveGroupByConnection). */
+  // When false, render one flat list with no connection group headers (see resolveGroupByConnection).
   grouped?: boolean;
-  /** In flat mode, sort across every connection's items (one global sort). Omit to keep per-connection order. */
+  // In flat mode, sort across every connection's items (one global sort). Omit to keep per-connection order.
   flatSort?: (a: T, b: T) => number;
 }
 

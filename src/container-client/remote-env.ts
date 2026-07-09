@@ -41,8 +41,8 @@ const REMOTE_HOST_BY_ENGINE: Record<ContainerEngine, ContainerEngineHost> = {
   [ContainerEngine.APPLE]: ContainerEngineHost.APPLE_REMOTE,
 };
 
-/** Parse the `CONTAINER_DESKTOP_REMOTE_<ID>_<FIELD>` bag. Lenient: an entry needs a non-empty SSH_HOST and
- *  at least one known engine, else it is skipped (a half-typed `.env` must never crash dev startup). */
+// Parse the `CONTAINER_DESKTOP_REMOTE_<ID>_<FIELD>` bag. Lenient: an entry needs a non-empty SSH_HOST and
+// at least one known engine, else it is skipped (a half-typed `.env` must never crash dev startup).
 export function parseRemoteConnectionsEnv(env: Record<string, string | undefined>): RemoteEnvConnection[] {
   const byId = new Map<string, Record<string, string>>();
   for (const [key, value] of Object.entries(env)) {
@@ -101,11 +101,11 @@ export function parseRemoteConnectionsEnv(env: Record<string, string | undefined
   return connections.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** Turn parsed entries into readonly `*.remote` connections, one per (entry, engine). Starts from the
- *  default remote connector template and fills only what env config drives: the SSH scope, the optional
- *  socket fallback (relay), and opt-in autoStart. `uri` (the local forward socket) is left empty so
- *  Application.start() derives the correct per-OS path; `mode.automatic` lets the engine socket be
- *  auto-detected over SSH when no socket is configured. */
+// Turn parsed entries into readonly `*.remote` connections, one per (entry, engine). Starts from the
+// default remote connector template and fills only what env config drives: the SSH scope, the optional
+// socket fallback (relay), and opt-in autoStart. `uri` (the local forward socket) is left empty so
+// Application.start() derives the correct per-OS path; `mode.automatic` lets the engine socket be
+// auto-detected over SSH when no socket is configured.
 export function buildRemoteConnectionsFromEnv(parsed: RemoteEnvConnection[], osType: OperatingSystem): Connection[] {
   const defaults = getDefaultConnectors(osType);
   const connections: Connection[] = [];
@@ -141,9 +141,9 @@ export function buildRemoteConnectionsFromEnv(parsed: RemoteEnvConnection[], osT
   return connections;
 }
 
-/** Resolve the env-driven connections in any context, mirroring isMockMode()'s dual source:
- *  inert in production; parse `process.env` in main/preload/node (where the .env chain lands); else read
- *  the preload-exposed JSON global in the renderer (which has no `process`). */
+// Resolve the env-driven connections in any context, mirroring isMockMode()'s dual source:
+// inert in production; parse `process.env` in main/preload/node (where the .env chain lands); else read
+// the preload-exposed JSON global in the renderer (which has no `process`).
 export function resolveRemoteEnvConnections(): RemoteEnvConnection[] {
   // Production never loads the .env chain at runtime — never seed env connections there.
   if (import.meta.env.ENVIRONMENT === "production") {

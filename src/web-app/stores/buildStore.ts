@@ -12,7 +12,7 @@ const RAW_LOG_CAP = 32 * 1024;
 const MAX_PERSISTED_RUNS = 50;
 const IN_MEMORY_RAW_LOG_CAP = 512 * 1024;
 
-/** Pure: the on-disk projection of a run — redacted, log-stripped, size-capped. Exported for tests. */
+// Pure: the on-disk projection of a run — redacted, log-stripped, size-capped. Exported for tests.
 export function toPersistedRun(run: BuildRun): BuildRun {
   return redactPayload({
     ...run,

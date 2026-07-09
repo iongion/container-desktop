@@ -11,12 +11,10 @@ export interface UnavailableReason {
 // so the first failing dimension in this order is the most useful reason to surface.
 const DIMENSION_ORDER: AvailabilityDimension[] = ["host", "controller", "controllerScope", "program", "api"];
 
-/**
- * Derive the most relevant "why is this connection not available" reason from an
- * availability report. Returns `undefined` when the API is running (connected) or
- * when no availability is known. Optional dimensions (controller/controllerScope)
- * are `undefined` for native hosts and are skipped rather than treated as failures.
- */
+// Derive the most relevant "why is this connection not available" reason from an
+// availability report. Returns `undefined` when the API is running (connected) or
+// when no availability is known. Optional dimensions (controller/controllerScope)
+// are `undefined` for native hosts and are skipped rather than treated as failures.
 export function getFirstUnavailableReason(availability?: EngineConnectorAvailability): UnavailableReason | undefined {
   if (!availability || availability.api) {
     return undefined;

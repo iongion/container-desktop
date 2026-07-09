@@ -19,18 +19,18 @@ import { DOCKER_BASE_URL, LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS } from "./baseUr
 // from "./shared"`) keep working, while swarm-rest can import them without pulling Application.
 export { DOCKER_BASE_URL, LIBPOD_BASE_URL, LIFECYCLE_TIMEOUT_MS };
 
-/** The active host facade for the current connection. */
+// The active host facade for the current connection.
 export function getActiveHostClient(): HostClientFacade {
   return Application.getInstance().getCurrentEngineConnectionApi();
 }
 
-/** Base for every per-resource adapter: binds the host and encapsulates the driver/engine seams. */
+// Base for every per-resource adapter: binds the host and encapsulates the driver/engine seams.
 export abstract class ResourceAdapter {
   private driverPromise?: Promise<AxiosInstance>;
 
   constructor(protected readonly host: HostClientFacade = getActiveHostClient()) {}
 
-  /** The active host's raw Axios driver — one instance per adapter, created on first use. */
+  // The active host's raw Axios driver — one instance per adapter, created on first use.
   protected driver(): Promise<AxiosInstance> {
     // The host can be undefined when an adapter was built without a connection and no global "current" host
     // is set (the always-merged workspace has none). Fail with a legible message instead of the cryptic
@@ -43,26 +43,24 @@ export abstract class ResourceAdapter {
     return this.driverPromise;
   }
 
-  /** True when the host speaks the Docker REST surface (Docker-native or Docker-compatible like Apple-socktainer). */
+  // True when the host speaks the Docker REST surface (Docker-native or Docker-compatible like Apple-socktainer).
   protected get usesDockerApi(): boolean {
     return this.host.apiSurface === "docker";
   }
 
-  /**
-   * Per-call baseURL for resources that explicitly target the libpod-compat vs docker root (volumes,
-   * secrets, networks, pods, container/pod creation). Keyed on apiSurface, not engine identity —
-   * Apple (apiSurface "docker") gets DOCKER_BASE_URL, same as Docker itself.
-   */
+  // Per-call baseURL for resources that explicitly target the libpod-compat vs docker root (volumes,
+  // secrets, networks, pods, container/pod creation). Keyed on apiSurface, not engine identity —
+  // Apple (apiSurface "docker") gets DOCKER_BASE_URL, same as Docker itself.
   protected get baseURL(): string {
     return this.usesDockerApi ? DOCKER_BASE_URL : LIBPOD_BASE_URL;
   }
 
-  /** The per-engine normalizer set for the active host (symmetric — both engines implement the full surface). */
+  // The per-engine normalizer set for the active host (symmetric — both engines implement the full surface).
   protected get normalizers(): EngineNormalizers {
     return this.usesDockerApi ? dockerNormalizers : podmanNormalizers;
   }
 
-  /** 2xx check. */
+  // 2xx check.
   protected isOk(response: AxiosResponse): boolean {
     return response.status >= 200 && response.status < 300;
   }

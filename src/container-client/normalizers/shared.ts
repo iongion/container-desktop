@@ -22,7 +22,7 @@ import type {
   Volume,
 } from "@/env/Types";
 
-/** Container group separators. */
+// Container group separators.
 export const CONTAINER_GROUP_SEPARATORS = ["-", "_"];
 
 function normalizeContainerName(name: string): string {
@@ -68,13 +68,11 @@ function computeComposeGroup(
   return { group: project, nameInGroup };
 }
 
-/**
- * Healthcheck status from the `/containers/json` list `Status` string — zero extra API calls. Handles BOTH
- * engine formats: podman returns the bare word ("healthy" | "unhealthy" | "starting", or "" for none), docker
- * a suffix ("Up 2 minutes (healthy)", "(health: starting)"). Returns undefined when there is no healthcheck.
- * `unhealthy` is matched before `healthy` (it contains it); container states like "Restarting"/"Exited" that
- * merely contain the letters are excluded by word boundaries.
- */
+// Healthcheck status from the `/containers/json` list `Status` string — zero extra API calls. Handles BOTH
+// engine formats: podman returns the bare word ("healthy" | "unhealthy" | "starting", or "" for none), docker
+// a suffix ("Up 2 minutes (healthy)", "(health: starting)"). Returns undefined when there is no healthcheck.
+// `unhealthy` is matched before `healthy` (it contains it); container states like "Restarting"/"Exited" that
+// merely contain the letters are excluded by word boundaries.
 export function parseHealthFromStatus(
   status: string | undefined | null,
 ): "healthy" | "unhealthy" | "starting" | undefined {
@@ -94,7 +92,7 @@ export function parseHealthFromStatus(
   return undefined;
 }
 
-/** raw container (list = State string, inspect = State object) → canonical. */
+// raw container (list = State string, inspect = State object) → canonical.
 export const normalizeContainer = (container: Container): Container => {
   if (container.ImageName) {
     container.Image = container.ImageName;
@@ -144,7 +142,7 @@ export const normalizeContainer = (container: Container): Container => {
   return container;
 };
 
-/** raw image → canonical (Name/Tag/Registry/FullName from Names|NamesHistory|RepoTags). */
+// raw image → canonical (Name/Tag/Registry/FullName from Names|NamesHistory|RepoTags).
 export const normalizeImage = (image: ContainerImage): ContainerImage => {
   let info = "";
   let tag = "";
@@ -171,7 +169,7 @@ export const normalizeImage = (image: ContainerImage): ContainerImage => {
   return image;
 };
 
-/** raw pod → canonical (init Processes/Containers). */
+// raw pod → canonical (init Processes/Containers).
 export const normalizePod = (pod: Pod): Pod => {
   pod.Processes = {
     Processes: [],
@@ -182,13 +180,13 @@ export const normalizePod = (pod: Pod): Pod => {
   return pod;
 };
 
-/** Volume shape is identical across engines (the Docker `{ Volumes: [...] }` list-envelope is unwrapped in the adapter). */
+// Volume shape is identical across engines (the Docker `{ Volumes: [...] }` list-envelope is unwrapped in the adapter).
 export const normalizeVolume = (volume: Volume): Volume => volume;
 
-/** Secret shape is identical across engines. */
+// Secret shape is identical across engines.
 export const normalizeSecret = (secret: Secret): Secret => secret;
 
-/** registry search result → canonical (seed Index from the searched registry). */
+// registry search result → canonical (seed Index from the searched registry).
 export const normalizeRegistrySearchResult = (
   it: RegistrySearchResult,
   opts: RegistrySearchOptions,
@@ -199,7 +197,7 @@ export const normalizeRegistrySearchResult = (
   return it;
 };
 
-/** The full per-resource normalizer surface — every engine implements ALL of it (symmetric; only networks differ). */
+// The full per-resource normalizer surface — every engine implements ALL of it (symmetric; only networks differ).
 export interface EngineNormalizers {
   normalizeContainer(raw: Container): Container;
   normalizeImage(raw: ContainerImage): ContainerImage;

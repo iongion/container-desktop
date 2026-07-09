@@ -35,12 +35,12 @@ import {
 
 const DEFAULT_DOCKER_SOCKETS = new Set(["/var/run/docker.sock", "/run/docker.sock"]);
 
-/** A failed command result used by the no-op Podman-domain extensions on Docker. */
+// A failed command result used by the no-op Podman-domain extensions on Docker.
 function noopCommandResult(): CommandExecutionResult {
   return { pid: null, code: null, success: false, stdout: "", stderr: "" };
 }
 
-/** `docker context inspect --format json` → the current context. */
+// `docker context inspect --format json` → the current context.
 async function getContextInspect(
   host: HostContext,
   customFormat?: string,

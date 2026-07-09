@@ -34,7 +34,7 @@ const MAPPERS: Record<BuildEngineKind, (options: ImageBuildOptions) => string[]>
   apple: buildAppleArgs,
 };
 
-/** Map the wire ContainerEngine enum to the build-core engine kind. */
+// Map the wire ContainerEngine enum to the build-core engine kind.
 export function toBuildEngineKind(engine: ContainerEngine): BuildEngineKind {
   if (engine === ContainerEngine.PODMAN) {
     return "podman";
@@ -70,7 +70,7 @@ async function writeAuthoredContainerfile(options: ImageBuildOptions): Promise<s
 }
 
 export class BuildAdapter extends ResourceAdapter {
-  /** Pure: program + argv + cwd for the given options (used for the command preview and by start). */
+  // Pure: program + argv + cwd for the given options (used for the command preview and by start).
   buildArgv(options: ImageBuildOptions): { program: string; args: string[]; cwd: string } {
     return {
       program: ENGINE_PROGRAM[options.engine],
@@ -79,7 +79,7 @@ export class BuildAdapter extends ResourceAdapter {
     };
   }
 
-  /** Start a streaming build; native runs locally, scoped/remote runs the engine inside the guest / over SSH. */
+  // Start a streaming build; native runs locally, scoped/remote runs the engine inside the guest / over SSH.
   async start(options: ImageBuildOptions, sink: BuildSink): Promise<BuildHandle> {
     return this.host.isScoped() ? await this.startScoped(options, sink) : await this.startNative(options, sink);
   }

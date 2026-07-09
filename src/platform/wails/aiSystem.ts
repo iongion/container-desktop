@@ -14,18 +14,18 @@ import type { WailsInvoke } from "@/platform/wails/capabilities/invoke";
 import { createWailsKeychain } from "@/platform/wails/capabilities/keychain";
 
 export interface AISystemDeps {
-  /** Wails `invoke` — reaches the keychain_*, command_execute, dns_lookup host commands. */
+  // Wails `invoke` — reaches the keychain_*, command_execute, dns_lookup host commands.
   invoke: WailsInvoke;
-  /** The app FileSystem + Path ports (window.FS / window.Path) for the permission + knowledge JSON stores. */
+  // The app FileSystem + Path ports (window.FS / window.Path) for the permission + knowledge JSON stores.
   fs: IFileSystem;
   path: IPath;
-  /** userData dir — where the AI JSON stores live and the sandbox cwd is rooted. */
+  // userData dir — where the AI JSON stores live and the sandbox cwd is rooted.
   userDataDir: string;
-  /** Reads + normalizes the persisted AI settings (bridge sources it from the app config). */
+  // Reads + normalizes the persisted AI settings (bridge sources it from the app config).
   getAISettings: () => Promise<AISettings>;
-  /** Typed container operations the assistant's first-class tools call (over the in-webview EngineDataService). */
+  // Typed container operations the assistant's first-class tools call (over the in-webview EngineDataService).
   engineOps?: EngineOps;
-  /** CONTAINER_DESKTOP_MOCK — swap real streamers/runner/stores for scripted mocks. */
+  // CONTAINER_DESKTOP_MOCK — swap real streamers/runner/stores for scripted mocks.
   mock?: boolean;
   // Injected in-webview IPC transport (aiSystemHost) — the AIBroker's process-neutral 5-function shape.
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;

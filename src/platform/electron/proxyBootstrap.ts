@@ -44,12 +44,10 @@ export interface ProxyConnectivityResult {
   error?: string;
 }
 
-/**
- * undici's ProxyAgent/Socks5ProxyAgent accept only `socks5://`/`socks:` (NOT `socks5h://`), and their
- * SOCKS client already resolves DNS at the proxy (i.e. socks5h semantics). `proxyToEnv()` emits
- * `socks5h://` for the Go CLI env, which undici rejects — so the undici dispatcher must derive its URL
- * from `proxyToUrl()` (→ `socks5://`). Credentials ARE included (unlike Chromium, undici authenticates).
- */
+// undici's ProxyAgent/Socks5ProxyAgent accept only `socks5://`/`socks:` (NOT `socks5h://`), and their
+// SOCKS client already resolves DNS at the proxy (i.e. socks5h semantics). `proxyToEnv()` emits
+// `socks5h://` for the Go CLI env, which undici rejects — so the undici dispatcher must derive its URL
+// from `proxyToUrl()` (→ `socks5://`). Credentials ARE included (unlike Chromium, undici authenticates).
 export function undiciProxyOptions(config: ProxyConfig): { httpProxy: string; httpsProxy: string; noProxy: string } {
   const proxyUrl = proxyToUrl(config);
   return { httpProxy: proxyUrl, httpsProxy: proxyUrl, noProxy: proxyToEnv(config).NO_PROXY ?? "" };

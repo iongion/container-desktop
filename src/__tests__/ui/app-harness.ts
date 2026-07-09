@@ -32,7 +32,7 @@ export function headlessFromEnv(): boolean {
   return ["1", "true", "yes"].includes(`${process.env.CONTAINER_DESKTOP_HEADLESS || ""}`.toLowerCase());
 }
 
-/** Absolute path to the packaged main entry (build/<version>/main.cjs). */
+// Absolute path to the packaged main entry (build/<version>/main.cjs).
 export function productionMainPath(): string {
   const version = require(path.join(ROOT, "package.json")).version as string;
   return path.join(ROOT, "build", version, "main.cjs");
@@ -42,7 +42,7 @@ export interface AppSession {
   page: Page;
   app?: ElectronApplication;
   browser?: Browser;
-  /** Close the launched app (launchApp) or disconnect from the attached one (connectToApp). */
+  // Close the launched app (launchApp) or disconnect from the attached one (connectToApp).
   close: () => Promise<void>;
 }
 
@@ -51,7 +51,7 @@ const waitForPreloaded = (page: Page, timeoutMs: number) =>
     timeout: timeoutMs,
   });
 
-/** Launch the BUILT app under Playwright (CDP-driven). Requires `cross-env ENVIRONMENT=production yarn build`. */
+// Launch the BUILT app under Playwright (CDP-driven). Requires `cross-env ENVIRONMENT=production yarn build`.
 export async function launchApp(opts?: { headless?: boolean; preloadTimeoutMs?: number }): Promise<AppSession> {
   const mainPath = productionMainPath();
   if (!existsSync(mainPath)) {
@@ -87,14 +87,14 @@ export async function launchApp(opts?: { headless?: boolean; preloadTimeoutMs?: 
       try {
         app.process()?.kill("SIGKILL");
       } catch {
-        /* already gone */
+        // already gone
       }
     }
   };
   return { page, app, close };
 }
 
-/** Attach to a running instance over CDP (e.g. `yarn dev` exposes :9222). Disconnects on close; app keeps running. */
+// Attach to a running instance over CDP (e.g. `yarn dev` exposes :9222). Disconnects on close; app keeps running.
 export async function connectToApp(opts?: { endpoint?: string; preloadTimeoutMs?: number }): Promise<AppSession> {
   const endpoint = opts?.endpoint ?? DEFAULT_ENDPOINT;
   const browser = await chromium.connectOverCDP(endpoint);

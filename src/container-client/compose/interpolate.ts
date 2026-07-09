@@ -86,7 +86,7 @@ function resolveBraced(inner: string, env: Env): string {
   return applyOperator(name, op, interpolateString(argRaw, env), env);
 }
 
-/** Substitute Compose `${VAR}` / `$VAR` references in a single string using `env`. */
+// Substitute Compose `${VAR}` / `$VAR` references in a single string using `env`.
 export function interpolateString(input: string, env: Env): string {
   let out = "";
   let i = 0;
@@ -119,7 +119,7 @@ export function interpolateString(input: string, env: Env): string {
   return out;
 }
 
-/** Deep-interpolate every string value in a parsed compose tree; keys and non-strings pass through. */
+// Deep-interpolate every string value in a parsed compose tree; keys and non-strings pass through.
 export function interpolateTree(value: unknown, env: Env): unknown {
   if (typeof value === "string") return interpolateString(value, env);
   if (Array.isArray(value)) return value.map((v) => interpolateTree(v, env));

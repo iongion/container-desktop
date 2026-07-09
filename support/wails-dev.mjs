@@ -84,7 +84,9 @@ const mcpOn = ["1", "true", "yes"].includes(String(process.env.WAILS_MCP ?? "").
 const goTags = mcpOn ? "gtk3,mcp" : "gtk3";
 const mcpEnv = mcpOn ? { WAILS_MCP_PORT: process.env.WAILS_MCP_PORT ?? "9099" } : {};
 if (mcpOn) {
-  console.log(`Wails MCP server enabled → http://127.0.0.1:${mcpEnv.WAILS_MCP_PORT}/mcp (drive with support/wails-mcp.mjs)`);
+  console.log(
+    `Wails MCP server enabled → http://127.0.0.1:${mcpEnv.WAILS_MCP_PORT}/mcp (drive with support/wails-mcp.mjs)`,
+  );
 }
 const go = spawn("go", ["-C", "src-wails", "run", "-tags", goTags, "."], {
   stdio: "inherit",

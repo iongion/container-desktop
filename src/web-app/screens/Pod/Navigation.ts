@@ -13,7 +13,7 @@ const POD_VIEW_LABELS: Record<string, string> = {
   kube: i18n.t("Kube"),
 };
 
-/** Canonical pod trail: `Pods > name` on inspect; `Pods > name > Tab` on a sub-tab. */
+// Canonical pod trail: `Pods > name` on inspect; `Pods > name > Tab` on a sub-tab.
 export const getPodCrumbs = (name: string, id: string, currentScreen: string, connId?: string): AppBreadcrumb[] => {
   const view = currentScreen.split(".")[1] ?? "inspect";
   return tabbedCrumbs("pods", name, getPodUrl(id, "inspect", connId), connId, POD_VIEW_LABELS[view]);

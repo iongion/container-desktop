@@ -22,12 +22,12 @@ export function writeText(rel: string, content: string): void {
   fs.writeFileSync(path.join(PROJECT_HOME, rel), content, "utf8");
 }
 
-/** The version baked into the VERSION file (what get_env exposes as PROJECT_VERSION). */
+// The version baked into the VERSION file (what get_env exposes as PROJECT_VERSION).
 export function projectVersion(): string {
   return readText("VERSION").trim();
 }
 
-/** The single source of truth: package.json `version`. */
+// The single source of truth: package.json `version`.
 export function readSourceVersion(): string {
   return JSON.parse(readText("package.json")).version;
 }

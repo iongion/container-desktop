@@ -37,8 +37,6 @@ export function buildMachineSummary(machine: PodmanMachineInspect | PodmanMachin
     rows.push({ key: "created", label: t("Created"), value: inspectDate(m.Created) });
   }
   if (m.LastUp) {
-    // LastUp is an ISO timestamp on inspect but a human phrase ("Currently running") in the list —
-    // inspectDate formats the former and passes the latter through unchanged.
     rows.push({ key: "lastup", label: t("Last up"), value: inspectDate(m.LastUp) });
   }
   return rows;

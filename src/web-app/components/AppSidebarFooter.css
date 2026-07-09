@@ -19,14 +19,12 @@
   padding-left: 0;
   padding-right: 0;
 }
-/* The settings cog fills the footer width (both expanded and collapsed) with a centered icon. */
 .AppSidebarFooter .AppSidebarFooterRightColumn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
 }
-/* Settings cog: fills the bar; 3px breathing margin on every side except the top (it sits below the edge). */
 .AppSidebarFooter .AppSidebarSettingsButton {
   flex: 1 1 auto;
   margin: 0 3px 3px;

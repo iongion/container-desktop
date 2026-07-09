@@ -40,11 +40,9 @@ import { findProgramPath, findProgramVersion, isWindowsProgramPath } from "../de
 import type { EngineDialect, HostContext, HostProfile, Transport } from "./composition";
 import type { ApiSurface, CapabilityDescriptor, HostClientFacade } from "./facade";
 
-/**
- * The per-(engine,host) composition the registry resolves: the three units plus the identity constants that
- * no single unit carries (PROGRAM = engine binary, CONTROLLER = controller binary). ENGINE comes from the
- * dialect, HOST/LABEL from the profile.
- */
+// The per-(engine,host) composition the registry resolves: the three units plus the identity constants that
+// no single unit carries (PROGRAM = engine binary, CONTROLLER = controller binary). ENGINE comes from the
+// dialect, HOST/LABEL from the profile.
 export interface HostClientComposition {
   readonly transport: Transport;
   readonly dialect: EngineDialect;
@@ -173,8 +171,6 @@ export class HostClient implements HostContext {
   getAutomaticSettings(): Promise<EngineConnectorSettings> {
     return this.profile.getAutomaticSettings(this, this.settings);
   }
-
-  // raw API driver (replaces getContainerApiClient(); SSH injects its establishment hook in the transport)
 
   async getApiDriver(): Promise<AxiosInstance> {
     if (!this.cachedDriver) {

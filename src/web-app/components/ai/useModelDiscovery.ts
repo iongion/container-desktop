@@ -17,9 +17,9 @@ export interface ModelDiscovery {
   modelsBySource: Record<string, string[]>;
   loadingBySource: Record<string, boolean>;
   errorBySource: Record<string, string>;
-  /** Lazily fetch (and cache) a source's models. `force` re-fetches even if already attempted. */
+  // Lazily fetch (and cache) a source's models. `force` re-fetches even if already attempted.
   discover: (sourceId: string, force?: boolean) => Promise<void>;
-  /** Drop the whole cache so the next discover() re-fetches — e.g. after a key is saved/cleared. */
+  // Drop the whole cache so the next discover() re-fetches — e.g. after a key is saved/cleared.
   resetCache: () => void;
 }
 

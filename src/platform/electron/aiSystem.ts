@@ -18,11 +18,11 @@ import { createNodeKeychain, type SafeStorageLike } from "@/platform/electron/ca
 import { FS, Path } from "@/platform/electron/host";
 
 export interface AISystemDeps {
-  /** OS app-data dir (app.getPath("userData")) — where keys + the AI JSON stores are persisted. */
+  // OS app-data dir (app.getPath("userData")) — where keys + the AI JSON stores are persisted.
   userDataDir: string;
-  /** Electron safeStorage (OS keychain) used to encrypt provider keys at rest. */
+  // Electron safeStorage (OS keychain) used to encrypt provider keys at rest.
   safeStorage: SafeStorageLike;
-  /** process.platform — the keychain tunes its degraded-encryption policy from it. */
+  // process.platform — the keychain tunes its degraded-encryption policy from it.
   platform: NodeJS.Platform;
   // IPC transport (Electron ipcMain), injected so this module never imports `electron`.
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
@@ -30,14 +30,14 @@ export interface AISystemDeps {
   send: (event: any, channel: string, payload: unknown) => void;
   senderId: (event: any) => number | string;
   isAllowedSender: (event: any) => boolean;
-  /** Reads + normalizes the persisted AI settings. */
+  // Reads + normalizes the persisted AI settings.
   getAISettings: () => Promise<AISettings>;
-  /** Typed container operations the assistant's first-class tools call. Absent ⇒ only generic tools. */
+  // Typed container operations the assistant's first-class tools call. Absent ⇒ only generic tools.
   engineOps?: EngineOps;
-  /** CONTAINER_DESKTOP_MOCK — swap real streamers/runner/stores for scripted mocks. */
+  // CONTAINER_DESKTOP_MOCK — swap real streamers/runner/stores for scripted mocks.
   mock?: boolean;
-  /** DEVELOPMENT-ONLY provider API keys seeded from the environment (e.g. OPENROUTER_API_KEY). Present ONLY in
-   *  development; when set, a provider with no keychain entry falls back to its env key (a stored key wins). */
+  // DEVELOPMENT-ONLY provider API keys seeded from the environment (e.g. OPENROUTER_API_KEY). Present ONLY in
+  // development; when set, a provider with no keychain entry falls back to its env key (a stored key wins).
   devApiKeys?: Record<string, string>;
   logger?: { error: (...args: any[]) => void };
 }

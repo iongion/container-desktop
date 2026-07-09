@@ -24,21 +24,21 @@ export interface ProviderCatalogEntry {
   id: string;
   label: string;
   kind: ProviderKind;
-  /** Off-device by nature (cloud API). Local servers pointed at a remote host are gated separately via egress. */
+  // Off-device by nature (cloud API). Local servers pointed at a remote host are gated separately via egress.
   cloud: boolean;
-  /** A gateway whose /v1/models returns vendor-prefixed ids ("anthropic/claude-3.5-sonnet") → 3-level picker. */
+  // A gateway whose /v1/models returns vendor-prefixed ids ("anthropic/claude-3.5-sonnet") → 3-level picker.
   aggregator: boolean;
   discovery: ProviderDiscovery;
-  /** Loopback URL for local servers, public API root for clouds. */
+  // Loopback URL for local servers, public API root for clouds.
   defaultBaseURL?: string;
-  /** Default connection auth scheme — the one seeded into settings. Must be a member of `authSchemes`. */
+  // Default connection auth scheme — the one seeded into settings. Must be a member of `authSchemes`.
   defaultAuthScheme: AIAuthScheme;
-  /** Capability: the auth schemes this provider supports — exactly what the UI offers. Clouds are API-key
-   * (`["bearer"]`); locals are keyless or an optional API key (`["none","bearer"]`). HTTP Basic / custom
-   * header are reserved for unknown user-added gateways (no catalog provider uses them). */
+  // Capability: the auth schemes this provider supports — exactly what the UI offers. Clouds are API-key
+  // (`["bearer"]`); locals are keyless or an optional API key (`["none","bearer"]`). HTTP Basic / custom
+  // header are reserved for unknown user-added gateways (no catalog provider uses them).
   authSchemes: AIAuthScheme[];
-  /** Picker sort weight — lower sorts first within its section; ties break alphabetically by label.
-   * Pins LM Studio (the local default) and OpenRouter (the recommended aggregator) ahead of their peers. */
+  // Picker sort weight — lower sorts first within its section; ties break alphabetically by label.
+  // Pins LM Studio (the local default) and OpenRouter (the recommended aggregator) ahead of their peers.
   weight?: number;
 }
 
@@ -184,7 +184,7 @@ export interface ResolvedProvider {
   model: string;
   isCloud: boolean;
   requiresKey: boolean;
-  /** Resolved connection auth — the catalog default scheme unless the user overrode it per provider. */
+  // Resolved connection auth — the catalog default scheme unless the user overrode it per provider.
   auth: AIAuthSettings;
 }
 

@@ -17,11 +17,14 @@ function patchGrayMatterYamlEngine() {
   }
 
   const patched = source
-    .replace("const engines = exports = module.exports;", [
+    .replace(
       "const engines = exports = module.exports;",
-      "const loadYaml = yaml.load || yaml.safeLoad;",
-      "const dumpYaml = yaml.dump || yaml.safeDump;",
-    ].join("\n"))
+      [
+        "const engines = exports = module.exports;",
+        "const loadYaml = yaml.load || yaml.safeLoad;",
+        "const dumpYaml = yaml.dump || yaml.safeDump;",
+      ].join("\n"),
+    )
     .replace("parse: yaml.safeLoad.bind(yaml),", "parse: loadYaml.bind(yaml),")
     .replace("stringify: yaml.safeDump.bind(yaml)", "stringify: dumpYaml.bind(yaml)");
 

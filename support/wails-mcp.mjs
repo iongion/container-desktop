@@ -69,8 +69,10 @@ function captureScreenshot(pngPath) {
   let windowId = "";
   try {
     windowId =
-      execFileSync("xdotool", ["search", "--name", "Container Desktop"], { encoding: "utf8" }).trim().split("\n").pop() ||
-      "";
+      execFileSync("xdotool", ["search", "--name", "Container Desktop"], { encoding: "utf8" })
+        .trim()
+        .split("\n")
+        .pop() || "";
   } catch {
     // xdotool missing or no match — fall back to the whole X root below.
   }

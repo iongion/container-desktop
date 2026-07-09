@@ -10,13 +10,13 @@ import { compareProviderEntries, PROVIDER_CATALOG, type ProviderCatalogEntry } f
 import { providerIcon } from "@/web-app/components/providerIcon";
 
 export interface ProviderSourceListProps {
-  /** Provider id to highlight as active — the browsed source (chat) or the one being configured (Settings). */
+  // Provider id to highlight as active — the browsed source (chat) or the one being configured (Settings).
   activeId?: string;
-  /** Row click — the chat popover drills into it (openPanel); Settings selects it to configure. */
+  // Row click — the chat popover drills into it (openPanel); Settings selects it to configure.
   onSelect: (entry: ProviderCatalogEntry) => void;
-  /** Optional trailing element per row — the chat popover passes a chevron; Settings omits it. */
+  // Optional trailing element per row — the chat popover passes a chevron; Settings omits it.
   renderItemRight?: (entry: ProviderCatalogEntry) => React.ReactNode;
-  /** Optional case-insensitive label filter — the chat popover's root search box; omitted in Settings. */
+  // Optional case-insensitive label filter — the chat popover's root search box; omitted in Settings.
   filter?: string;
 }
 

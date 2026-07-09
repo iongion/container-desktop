@@ -317,11 +317,11 @@ SPECS.pullImage = {
 
 export interface EngineToolOutcome {
   ok: boolean;
-  /** Full typed payload for the renderer card — already redacted. */
+  // Full typed payload for the renderer card — already redacted.
   result: unknown;
-  /** Compact, model-facing summary — already redacted. */
+  // Compact, model-facing summary — already redacted.
   summary: unknown;
-  /** Friendly one-line label for the tool call/result/approval. */
+  // Friendly one-line label for the tool call/result/approval.
   title: string;
 }
 

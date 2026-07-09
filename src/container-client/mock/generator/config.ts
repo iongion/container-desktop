@@ -18,9 +18,6 @@ export interface EngineCounts {
   registries: number;
 }
 
-// Fixed reference date — ALL faker.date.* calls resolve relative to this (via setDefaultRefDate) so the
-// generated timestamps are deterministic and never depend on the wall clock. Matches the "now" the old
-// static fixtures assumed (their stats `read` was 2024-11-02T12:00:00Z).
 export const REF_DATE = "2024-11-02T12:00:00.000Z";
 
 // Default base seed. Stable → byte-identical dataset every run (reproducible screenshots + tests).
@@ -71,7 +68,7 @@ export const COUNTS: Record<ContainerEngine, EngineCounts> = {
   },
 };
 
-/** Optional dev-only seed override (same read strategy as mode.ts reads CONTAINER_DESKTOP_MOCK). */
+// Optional dev-only seed override (same read strategy as mode.ts reads CONTAINER_DESKTOP_MOCK).
 export function readSeedOverride(): number | undefined {
   const raw = mockEnvValue("CONTAINER_DESKTOP_MOCK_SEED");
   if (!raw) {
@@ -81,7 +78,7 @@ export function readSeedOverride(): number | undefined {
   return Number.isFinite(n) ? n >>> 0 : undefined;
 }
 
-/** Deterministic per-engine seed: a fixed base (or override) spread apart per engine. */
+// Deterministic per-engine seed: a fixed base (or override) spread apart per engine.
 export function engineSeed(engine: ContainerEngine, override?: number): number {
   const root = override ?? readSeedOverride() ?? BASE_SEED;
   return (root + ENGINE_SEED_OFFSET[engine] * 1_000_003) >>> 0;

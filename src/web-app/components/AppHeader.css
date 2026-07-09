@@ -2,8 +2,8 @@
   height: var(--app-header-height, 50px);
   margin: 0;
   padding: 0;
-  -webkit-app-region: drag; /* Electron/WebView2 (Chromium) */
-  --wails-draggable: drag; /* Wails on WebKitGTK, which ignores -webkit-app-region */
+  -webkit-app-region: drag;
+  --wails-draggable: drag;
 }
 .AppHeader .bp6-navbar {
   display: flex;
@@ -49,17 +49,9 @@
   align-items: center;
   flex: 0 0 auto;
 }
-/* Header non-intent icons (the Blueprint DATA_CONNECTION connections icon + its sibling mdi icons). DARK is
-   handled by the general in-button rule in tokens.css — both the connections icon and the mdi icons lift to
-   --app-text there. LIGHT keeps the header's intentional muted slate: this rule clears Blueprint's own muted
-   button-icon gray (0,5,0) — `body.bp6-light[data-engine]` sits at (0,6,1). Disabled header buttons still get
-   Blueprint's dimmed icon; the AI split-button accent rule below still wins. */
 body.bp6-light[data-engine] .AppHeaderActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
   color: #5f6b7c;
 }
-/* AI split-button: tinted with the CURRENT theme accent (var(--app-accent), set per theme×engine on
-   <html>) so it unifies with the active theme; button sizing is left to match the sibling header
-   buttons. The flush caret needs display:flex — the Blueprint Popover target is inline-block by default. */
 .AppHeaderAIActions {
   border: 1px solid color-mix(in srgb, var(--app-accent) 55%, transparent);
   background-color: color-mix(in srgb, var(--app-accent) 55%, transparent);
@@ -74,7 +66,6 @@ body.bp6-light[data-engine] .AppHeaderActions .AppHeaderActionButton:not(.bp6-di
 .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton {
   outline: none;
 }
-/* The body.bp6-* prefix lifts specificity above the muted header-icon rule (0,5,1) so the accent wins. */
 body.bp6-dark .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon,
 body.bp6-light .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(.bp6-disabled) .bp6-icon {
   color: var(--app-accent);
@@ -97,8 +88,6 @@ body.bp6-light .AppHeaderActions .AppHeaderAIActions .AppHeaderActionButton:not(
 [data-native="yes"] .App-projectNameVersion span {
   display: none;
 }
-/* When the full-screen provisioning wizard (PWizOverlay, z-index 40) is open, the AI menu still opens from the
-   header — lift its portal above the overlay so it isn't hidden underneath it. */
 .bp6-portal.AppHeaderPopoverAboveWizard {
   z-index: 50;
 }

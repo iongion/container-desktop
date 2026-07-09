@@ -49,14 +49,14 @@ export interface ModelPickerValue {
 
 export interface ModelNavigatorProps {
   value: ModelPickerValue;
-  /** Fired when the user picks a model leaf. The container decides side effects (persist / close). */
+  // Fired when the user picks a model leaf. The container decides side effects (persist / close).
   onPick: (value: ModelPickerValue) => void;
-  /** Injected discovery state machine (cache shared/owned by the container). */
+  // Injected discovery state machine (cache shared/owned by the container).
   discovery: ModelDiscovery;
-  /** Popover: render a NonIdealState + "Open AI settings" for an unconfigured/unreachable source.
-   *  Embedded settings: false → suppress it (the config widget below handles adding a key). */
+  // Popover: render a NonIdealState + "Open AI settings" for an unconfigured/unreachable source.
+  // Embedded settings: false → suppress it (the config widget below handles adding a key).
   showNotConfigured?: boolean;
-  /** Cap the auto-sized stack height (px) before it scrolls. Popover ~360; embedded settings larger. */
+  // Cap the auto-sized stack height (px) before it scrolls. Popover ~360; embedded settings larger.
   maxHeight?: number;
 }
 

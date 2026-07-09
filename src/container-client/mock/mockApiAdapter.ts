@@ -28,7 +28,7 @@ function fail(status: number, message: string): never {
   throw error;
 }
 
-/** on/off/destroy emitter matching what the adapters + commandProxyClient consume for streams. */
+// on/off/destroy emitter matching what the adapters + commandProxyClient consume for streams.
 function createMockStream(chunks: Uint8Array[]): any {
   const { emitter, api } = createEmitterStream();
   // Emit on a macrotask so the caller registers its listeners first (see fakeCommand.ts rationale).
@@ -46,12 +46,12 @@ function encodeLogs(lines: string[]): Uint8Array[] {
   return lines.map((line) => encoder.encode(line.endsWith("\n") ? line : `${line}\n`));
 }
 
-/** Split "/containers/abc/json" → ["containers","abc","json"] (query already stripped by caller). */
+// Split "/containers/abc/json" → ["containers","abc","json"] (query already stripped by caller).
 function segments(path: string): string[] {
   return path.split("/").filter(Boolean);
 }
 
-/** `/images/search?term=…` → RegistrySearchResult[] derived from the generated images (keeps the search drawer alive). */
+// `/images/search?term=…` → RegistrySearchResult[] derived from the generated images (keeps the search drawer alive).
 function imageSearchResults(images: unknown[], rawUrl: string): unknown[] {
   const term = (new URLSearchParams(rawUrl.split("?")[1] || "").get("term") || "").toLowerCase();
   return images

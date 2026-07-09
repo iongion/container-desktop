@@ -16,9 +16,9 @@ import { computeVerdict, type Verdict } from "./verdict";
 
 export interface TransportDescription {
   transport: ReachabilityTransport;
-  /** Short label: "native" | "VM" | "WSL" | "SSH". */
+  // Short label: "native" | "VM" | "WSL" | "SSH".
   label: string;
-  /** SSH user@host (from the uri) or the VM/WSL controller scope; undefined for native. */
+  // SSH user@host (from the uri) or the VM/WSL controller scope; undefined for native.
   detail?: string;
 }
 
@@ -29,9 +29,9 @@ export interface FleetConnection {
   engineLabel: string;
   transport: ReachabilityTransport;
   transportLabel: string;
-  /** SSH user@host / VM-WSL scope — the connecting-hop meta; undefined for native. */
+  // SSH user@host / VM-WSL scope — the connecting-hop meta; undefined for native.
   transportDetail?: string;
-  /** "Docker · native", "Podman · SSH · demo@host", "Podman · WSL · Ubuntu-24.04". */
+  // "Docker · native", "Podman · SSH · demo@host", "Podman · WSL · Ubuntu-24.04".
   subtitle: string;
   version?: string;
   verdict: Verdict;

@@ -1,5 +1,3 @@
-/* Two-cell container status badge: `[ ● health | run-state ]`. A rounded rectangle whose cells reuse the
-   StatusDot (health tone) and StatePill (run-state) palettes from StatusVisuals.css. */
 .ContainerStatusPill {
   display: inline-flex;
   align-items: stretch;
@@ -17,11 +15,9 @@
   align-items: center;
   padding: 3px 10px;
 }
-/* Hairline divider between the two cells. */
 .ContainerStatusPill > * + * {
   border-left: 1px solid var(--app-border);
 }
-/* The run-state cell reuses StatePill's data-state colors but drops its standalone chip chrome. */
 .ContainerStatusPill .StatePill {
   min-width: 0;
   border: none;

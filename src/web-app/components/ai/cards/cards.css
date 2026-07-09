@@ -1,5 +1,3 @@
-/* Generative-UI tool cards. Themed only with --app-* tokens so they track every engine x light/dark mode. */
-
 .AICard {
   margin: 6px 0;
   border: 1px solid var(--app-border);
@@ -36,7 +34,6 @@
   flex: 1 1 auto;
 }
 
-/* Tables (containers / images / networks / volumes) */
 .AICardTable {
   width: 100%;
   border-collapse: collapse;
@@ -90,7 +87,6 @@
   font-style: italic;
 }
 
-/* Logs + generic JSON fallback */
 .AICardLogs,
 .AICardJson {
   margin: 0;

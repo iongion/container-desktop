@@ -26,14 +26,11 @@
   display: flex;
   align-items: center;
 }
-/* Status cluster: engine glyph + connections button on one centered row. */
 .AppFooterStatus {
   display: inline-flex;
   align-items: center;
   margin-right: 8px;
 }
-/* Engine glyph moved here from the sidebar footer — sits in front of the connections button. Unified default;
-   per-engine themes override the image (podman.css / docker.css). Scaled to 0.8 to match the count badge. */
 .AppFooterEngineIcon {
   flex: 0 0 auto;
   width: 24px;
@@ -45,8 +42,6 @@
 [data-engine="container"] .AppFooterEngineIcon {
   background-image: url("../images/container-engine.svg");
 }
-/* Connection count badge (green = N connected, red = disconnected) — replaces the old status dot.
-   Scaled to 80% so the pill reads as a compact marker next to the label. */
 .AppFooterCurrentConnectorBadge {
   margin-right: 4px;
   min-width: 18px;
@@ -56,15 +51,12 @@
   justify-content: center;
   transform: scale(0.8);
 }
-/* Footer connections trigger: the status badge + label as ONE minimal button that opens the connections
-   menu (the caret-up end icon hints the popover opens upward). Compact so it fits the 32px footer. */
 .AppFooterConnectionsButton.bp6-button {
   min-height: 24px;
   padding: 2px 6px;
   font-size: 12px;
   font-weight: inherit;
 }
-/* No focus ring on the footer connections trigger (per design). */
 .AppFooterConnectionsButton.bp6-button:focus,
 .AppFooterConnectionsButton.bp6-button:focus-visible {
   outline: none;
@@ -79,16 +71,11 @@
   opacity: 0.65;
   margin-left: 4px;
 }
-/* Lowercase + muted status word ("connected" / "disconnected") so the engine versions read as the
-   primary text beside it. */
 .AppFooterCurrentConnector {
   text-transform: lowercase;
   color: var(--app-text-muted);
 }
 
-/* Engine versions render INSIDE the connections button — right of "connected", before the caret —
-   set off by a pipe (themed hairline). Versions are full-strength (primary) against the muted status
-   word; truncates with an ellipsis so a long list never pushes out the right-aligned footer actions. */
 .AppFooterEnginesLabel {
   min-width: 0;
   max-width: min(420px, 38vw);
@@ -131,8 +118,6 @@
   box-shadow: none;
 }
 
-/* Footer status bar follows the engine/mode "chrome" tone (matches header + sidebar),
-   with a hairline to separate it from content. Driven by tokens.css per combo. */
 [data-engine] .AppFooter,
 [data-engine] .AppFooterNavbar {
   background-color: var(--app-chrome);

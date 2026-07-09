@@ -128,13 +128,13 @@ export interface ComposeDownOptions {
   removeVolumes?: boolean;
 }
 
-/** Where the compose file to deploy lives on disk. Docker shells `docker compose -f <path>` (it parses the
- * file itself); Podman ignores this and deploys the parsed `model` via libpod translation. */
+// Where the compose file to deploy lives on disk. Docker shells `docker compose -f <path>` (it parses the
+// file itself); Podman ignores this and deploys the parsed `model` via libpod translation.
 export interface ComposeSource {
   path: string;
 }
 
-/** The host-facade request shapes (typed `composeUp`/`composeDown` params). */
+// The host-facade request shapes (typed `composeUp`/`composeDown` params).
 export interface ComposeUpRequest extends ComposeUpOptions {
   model: ComposeProjectModel;
 }
@@ -143,7 +143,7 @@ export interface ComposeDownRequest extends ComposeDownOptions {
   project: string;
 }
 
-/** What an `up` actually did — surfaced to the user so a no-op reconcile never "lies". */
+// What an `up` actually did — surfaced to the user so a no-op reconcile never "lies".
 export interface ComposeChangeSummary {
   created: string[];
   recreated: string[];

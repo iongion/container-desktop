@@ -1,5 +1,3 @@
-/* ConnectionsMenu — connections popover (standard Blueprint Menu/MenuItem) listing every configured
-   connection. Status is shown by the connect/disconnect icon's color (no separate dot); engine by name. */
 .ConnectionsMenu {
   min-width: 300px;
   max-width: 420px;
@@ -7,7 +5,6 @@
   overflow-x: hidden;
   overflow-y: auto;
 }
-/* Connection name + inline "primary" tag (kept compact; Menu handles row layout/hover). */
 .ConnectionsMenuName {
   display: inline-flex;
   align-items: center;
@@ -27,13 +24,10 @@
   display: inline-flex;
   align-items: center;
 }
-/* Keep every part of a connection row vertically centered (the PRIMARY pill and action buttons must not
-   shift the baseline), and keep the icon-only action buttons tight so they add no stray vertical margin. */
 .ConnectionsMenu .bp6-menu-item {
   align-items: center;
   font-size: 12px;
 }
-/* The label slot holds the action buttons — make it a centered flex row so they sit on the row's midline. */
 .ConnectionsMenu .bp6-menu-item-label {
   display: flex;
   align-items: center;
@@ -47,8 +41,6 @@
   align-items: center;
   justify-content: center;
 }
-/* Icon-only action buttons: drop any (empty) text span and icon text-gap so the glyph is dead-centered with
-   no stray right/bottom space. */
 .ConnectionsMenuActions .bp6-button .bp6-button-text {
   display: none;
 }

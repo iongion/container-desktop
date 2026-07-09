@@ -1,9 +1,3 @@
-// adapter (the Electron window edge): owns the main BrowserWindow and everything window-shaped — creation,
-// geometry persistence, hide-to-tray, the ready watchdog, renderer-failure handling, the external-navigation
-// guard, and the window/app actions the IPC registrar drives. Its collaborators (config, url policy,
-// recovery, context menu) are injected, so the orchestration is explicit and the electron-free core stays
-// reusable; a different shell replaces THIS file. No other module should touch BrowserWindow directly.
-
 import fs from "node:fs";
 import path from "node:path";
 import { app, BrowserWindow, dialog, nativeImage, shell } from "electron";
@@ -41,9 +35,9 @@ export interface WindowManagerDeps {
   urlPolicy: { shouldOpenExternally: (rawUrl: string) => boolean };
   recovery: { showRecoveryDialog: (title: string, error: unknown) => void };
   createContextMenu: (options: { window: BrowserWindow; showInspectElement?: boolean }) => void;
-  /** Reap any forwarded engine streams a renderer opened when it goes away (reload/crash/quit). */
+  // Reap any forwarded engine streams a renderer opened when it goes away (reload/crash/quit).
   onRendererGone: (webContentsId: number) => void;
-  /** Ensure the tray exists when hiding to it (delegates to TrayController). */
+  // Ensure the tray exists when hiding to it (delegates to TrayController).
   ensureTray: () => void;
 }
 

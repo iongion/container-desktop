@@ -1,6 +1,3 @@
-/* Structure only — engine/theme colors are layered on in themes/podman.css + docker.css.
-   The drawer background itself is already supplied by the shared .AppDrawer rules. */
-
 .NotificationCenterDrawer .bp6-drawer-body {
   padding: 0;
   display: flex;
@@ -8,7 +5,6 @@
   min-height: 0;
 }
 
-/* Drawer header bar: tab switcher on the left, Pause/Clear actions right after it. */
 .NotificationCenterHeaderBar {
   display: flex;
   align-items: center;
@@ -16,7 +12,6 @@
   width: 100%;
   font-weight: normal;
 }
-/* Spacer pushes Pause/Clear to the far right, next to the drawer close icon. */
 .NotificationCenterHeaderActions {
   margin-left: auto;
   display: flex;
@@ -28,8 +23,6 @@
   -webkit-app-region: no-drag;
   --wails-draggable: no-drag;
 }
-/* Segmented switcher = Blueprint ButtonGroup; the framework renders the active state.
-   The active button is tinted per engine in themes/podman.css + docker.css. */
 .NotificationCenterSwitch .NotificationCenterSwitchCount {
   margin-left: 6px;
   font-size: 10px;
@@ -39,7 +32,6 @@
   vertical-align: middle;
 }
 
-/* The drawer body's only child is the active tab panel — let it fill and self-scroll. */
 .NotificationCenterDrawer .bp6-drawer-body > .NotificationCenterPanel {
   flex: 1 1 auto;
 }
@@ -56,8 +48,6 @@
   padding: 4px 0 12px;
 }
 
-/* Filter toolbar: a single search field carrying the kind/severity toggles as its
-   right element. */
 .ActivityToolbar {
   flex: 0 0 auto;
   padding: 8px 12px;
@@ -80,7 +70,6 @@
   line-height: 1.4;
 }
 
-/* Header is a reset <button> when expandable, a plain <div> otherwise. */
 .ActivityRowHeader {
   display: flex;
   align-items: flex-start;
@@ -163,14 +152,11 @@ button.ActivityRowHeader:hover {
   font-size: 10px;
 }
 
-/* Expanded detail (request/response, stdout/stderr, copy actions) */
 .ActivityRowDetail {
   display: flex;
   flex-direction: column;
   padding: 4px;
 }
-/* Label line carries an optional inline action (e.g. Copy as cURL) on the right, so it
-   doesn't cost an extra row. */
 .ActivityDetailLabel {
   display: flex;
   align-items: center;
@@ -202,13 +188,11 @@ button.ActivityRowHeader:hover {
   border-radius: 3px;
 }
 
-/* Header bell + unread badge */
 .NotificationBell {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
-/* Theme-aware bell icon: muted normally, engine accent when unread (never hardcoded white). */
 .NotificationBell .NotificationBellIcon,
 .NotificationBell .NotificationBellIcon svg,
 .NotificationBell .NotificationBellIcon path {
@@ -219,7 +203,6 @@ button.ActivityRowHeader:hover {
 .NotificationBell .NotificationBellIcon--unread path {
   fill: var(--app-accent);
 }
-/* Danger: any recorded error (notification or activity) turns the bell red so a failure can't be missed. */
 .NotificationBell .NotificationBellIcon--error,
 .NotificationBell .NotificationBellIcon--error svg,
 .NotificationBell .NotificationBellIcon--error path {

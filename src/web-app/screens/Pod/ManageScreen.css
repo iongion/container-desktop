@@ -7,7 +7,6 @@
 .AppDataTable[data-table="pods"] th:first-child {
   padding-left: 6px;
 }
-/* Actions column (second-to-last; the selection column is always last) stays shrink-to-fit. */
 .AppDataTable[data-table="pods"] th:nth-last-child(2),
 .AppDataTable[data-table="pods"] tbody td:nth-last-child(2) {
   padding-left: initial;

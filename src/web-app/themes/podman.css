@@ -1,9 +1,3 @@
-/* Podman engine — only Podman-specific, non-structural rules. All structural surfaces
-   (header/sidebar/content/menus/drawers/tables/footer) come from tokens.css and read the
-   Podman tokens. Status colors, security severity, and the Podman-only container-inspect
-   zebra striping live here. */
-
-/* Status colors */
 body.bp6-dark[data-engine="podman"] [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #8b104c;
 }
@@ -43,7 +37,6 @@ body.bp6-dark[data-engine="podman"]
   color: #fff;
 }
 
-/* ── Light — surface-ish specifics ── */
 body.bp6-light[data-engine="podman"] .AppSettingsForm[data-form="host"] .AppSettingsFieldActive {
   background: var(--app-surface-strong);
 }
@@ -58,7 +51,6 @@ body.bp6-light[data-engine="podman"] .AppDataTableGroupLinkHorizontal {
   filter: invert(1);
 }
 
-/* Security (light) */
 body.bp6-light[data-engine="podman"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: var(--app-surface-strong);
 }
@@ -117,7 +109,6 @@ body.bp6-light[data-engine="podman"] .SecurityDetails {
   background: var(--app-surface-strong);
 }
 
-/* Property/Value tables — engine specifics. */
 [data-theme="bp6-dark"][data-engine="podman"] .PropertyValueTable tr td:first-child code:first-child {
   background: #110411;
   color: #f6c0fe;
@@ -126,19 +117,15 @@ body.bp6-light[data-engine="podman"] .SecurityDetails {
   background: #cbc8cb;
   border: 1px solid #412d4b;
 }
-/* Inline player actions (container row hover) */
 [data-theme="bp6-dark"][data-engine="podman"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #7114ce;
 }
 [data-theme="bp6-light"][data-engine="podman"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #c6bbd0;
 }
-/* Loading splash engine logo */
 [data-engine="podman"] .AppLoadingSplashLogo {
   background: url("../images/podman-engine.svg") no-repeat;
 }
-/* Footer engine glyph (in front of the connections status): the Podman logo, overriding the unified default
-   in AppFooter.css. */
 [data-engine="podman"] .AppFooterEngineIcon {
   background-image: url("../images/podman-engine.svg");
 }

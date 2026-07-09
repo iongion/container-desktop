@@ -20,7 +20,7 @@ function errorText(error: unknown): string {
   return `${(error as { message?: string })?.message ?? error}`;
 }
 
-/** Pipe a running build's events into the buildStore. Not a hook — safe to unit test directly. */
+// Pipe a running build's events into the buildStore. Not a hook — safe to unit test directly.
 export function createBuildSink(runId: string, onDone?: (code: number | null) => void): BuildSink {
   const store = useBuildStore.getState;
   return {

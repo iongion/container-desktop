@@ -1,6 +1,3 @@
-/* Breadcrumb trail in the screen header (replaces the plain title on detail screens). Left-aligned after
-   the back chevron; themed via --app-* tokens so it tracks every engine x mode. min-width:0 lets the bp6
-   overflow list collapse leading crumbs into a "..." menu instead of overflowing/truncating the navbar. */
 .AppBreadcrumbs {
   display: inline-flex;
   align-items: center;
@@ -8,7 +5,6 @@
   font-size: 13px;
 }
 
-/* Keep every crumb (link, current, overflow) at the requested 13px. */
 .AppBreadcrumbs .bp6-breadcrumb,
 .AppBreadcrumbs .bp6-breadcrumbs-collapsed {
   font-size: 13px;
@@ -19,8 +15,6 @@
   min-width: 0;
 }
 
-/* The entity/section icon sits once in front of the whole trail (not inside any crumb). Bright per theme so
-   it never reads disabled in dark mode. */
 .AppBreadcrumbsLeadIcon {
   display: inline-flex;
   align-items: center;
@@ -29,7 +23,6 @@
   color: var(--app-text);
 }
 
-/* Ancestor (link) crumbs recede; the current crumb is the strong "title". */
 .AppBreadcrumbs .bp6-breadcrumb {
   color: var(--app-text-muted);
   font-weight: 400;
@@ -40,13 +33,11 @@
   font-weight: 600;
 }
 
-/* Links pick up the app accent on hover, matching the rest of the UI. */
 .AppBreadcrumbs a.bp6-breadcrumb:hover {
   color: var(--app-accent);
   text-decoration: none;
 }
 
-/* The overflow "..." collapse control also recedes until hovered. */
 .AppBreadcrumbs .bp6-breadcrumbs-collapsed {
   color: var(--app-text-muted);
 }

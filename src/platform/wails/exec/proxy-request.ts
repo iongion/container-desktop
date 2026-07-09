@@ -1,16 +1,3 @@
-// The Wails-side Command.ProxyRequest — the drop-in replacement for platform/electron/commandProxyClient's
-// forwardProxyRequest. It re-synthesizes the EXACT shapes the unchanged createApplicationApiDriver
-// (container-client/Api.clients.ts) consumes, backed by the Go proxy commands (src-wails/proxy.go)
-// instead of Electron IPC:
-//   - buffered ok      → { data, status, statusText, headers }
-//   - buffered failure → { __proxyError: true, status, statusText, data, headers, message }  (NEVER thrown —
-//                          Api.clients rebuilds + throws an axios-like error from the envelope)
-//   - stream           → { data: EmitterStream, status, statusText: "", headers }
-//
-// Wails's invoke + Channel are INJECTED (ProxyRequestDeps) so this whole flow is unit-testable with fakes;
-// bridge.ts supplies the real @wailsio/runtime bindings. The stream emitter reuses the shared
-// createEmitterStream so its on/off/destroy/close surface is byte-identical to the Electron path.
-
 import {
   type CommandProxyStreamEvent,
   pickConnection,
@@ -31,9 +18,9 @@ export interface ProxyChannel {
 
 export interface ProxyRequestDeps {
   invoke: (command: string, args: Record<string, unknown>) => Promise<any>;
-  /** Create a fresh Wails Channel (passed to proxy_request_stream; its onmessage receives stream events). */
+  // Create a fresh Wails Channel (passed to proxy_request_stream; its onmessage receives stream events).
   newChannel: () => ProxyChannel;
-  /** Local OS type (for the ssh/ssh.exe launcher in an SSH bridge spec). Defaults to non-Windows. */
+  // Local OS type (for the ssh/ssh.exe launcher in an SSH bridge spec). Defaults to non-Windows.
   osType?: string;
 }
 
@@ -132,7 +119,7 @@ export function applyStreamEvent(
   }
 }
 
-/** Build the Command.ProxyRequest function from injected Wails bindings. */
+// Build the Command.ProxyRequest function from injected Wails bindings.
 export function createProxyRequest(deps: ProxyRequestDeps) {
   return async function proxyRequest(request: any, connection: any, _context?: any): Promise<any> {
     const req = pickSerializableRequest(request);

@@ -2,7 +2,6 @@
   border-top-right-radius: 15px;
   border-bottom-right-radius: 15px;
 }
-/* Vertically center the left header slot (back/search buttons, tab bars) like the right group already is. */
 .AppScreenHeader .NavbarLeft {
   display: flex;
   align-items: center;
@@ -28,8 +27,6 @@
   align-items: center;
 }
 
-/* Flexible spacer: drop it before a header widget (e.g. the connection picker) to push that widget to the
-   end of the bar. Lives in the center slot, which already spans full width between the tabs and the edge. */
 .AppScreenHeader .ScreenHeaderSpacer {
   flex: 1 1 auto;
   width: 100%;

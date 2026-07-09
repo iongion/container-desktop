@@ -48,7 +48,7 @@ describe("scroll-restoration regression scenario (end to end, pure)", () => {
   const estimateRowHeight = estimate;
 
   it("rejects the saved offset when the merged list shrank after a disconnect", () => {
-    const savedOffset = 2800; // bottom of the old multi-engine list
+    const savedOffset = 2800;
     const shrunkRows: Row[] = [header(), ...Array.from({ length: 29 }, container)]; // docker only now
     const contentHeight = estimateWindowedContentHeight(shrunkRows, estimateRowHeight);
     expect(canRestoreScrollOffset(savedOffset, contentHeight)).toBe(false);

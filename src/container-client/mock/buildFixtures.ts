@@ -127,7 +127,7 @@ function chunkify(text: string, parts = 3): BuildStreamChunk[] {
   return chunks;
 }
 
-/** Engine-shaped streamed build output for mock mode, pre-split into chunks. */
+// Engine-shaped streamed build output for mock mode, pre-split into chunks.
 export function getBuildOutput(engine: ContainerEngine): BuildStreamChunk[] {
   if (engine === ContainerEngine.PODMAN) {
     return chunkify(PODMAN_BUILD);

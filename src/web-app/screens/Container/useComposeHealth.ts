@@ -22,9 +22,9 @@ import { isComposeContainer } from "./composeGroups";
 type MergedContainer = MergedResource<Container>;
 type Health = NonNullable<Container["Computed"]["Health"]>;
 
-/** RUNNING compose containers whose health the engine list did not provide (→ need an on-demand inspect).
- * Stopped containers are excluded: their last-health is stale (the status tone ignores it), so inspecting them
- * would only waste calls and stamp a misleading health tooltip onto a neutral "off" dot. */
+// RUNNING compose containers whose health the engine list did not provide (→ need an on-demand inspect).
+// Stopped containers are excluded: their last-health is stale (the status tone ignores it), so inspecting them
+// would only waste calls and stamp a misleading health tooltip onto a neutral "off" dot.
 export function selectComposeHealthTargets(containers: MergedContainer[]): MergedContainer[] {
   return containers.filter(
     (container) =>
@@ -34,7 +34,7 @@ export function selectComposeHealthTargets(containers: MergedContainer[]): Merge
   );
 }
 
-/** Overlay resolved health onto containers by connection-qualified id; untouched containers pass through. */
+// Overlay resolved health onto containers by connection-qualified id; untouched containers pass through.
 export function enrichHealth(containers: MergedContainer[], health: Map<string, Health>): MergedContainer[] {
   if (!health.size) {
     return containers;
@@ -45,7 +45,7 @@ export function enrichHealth(containers: MergedContainer[], health: Map<string, 
   });
 }
 
-/** id→health map for compose containers missing it, resolved via a bounded, screen-scoped inspect poll. */
+// id→health map for compose containers missing it, resolved via a bounded, screen-scoped inspect poll.
 export function useComposeHealth(containers: MergedContainer[]): Map<string, Health> {
   const targets = useMemo(() => selectComposeHealthTargets(containers), [containers]);
   const key = useMemo(

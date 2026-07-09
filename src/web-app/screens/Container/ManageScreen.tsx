@@ -149,8 +149,6 @@ export const Screen: AppScreen<ScreenProps> = () => {
   }, [withHealth, searchTerm, clientSort, grouped]);
   // Composite selection/React key — ids collide across engines, so qualify each by its connection.
   const getRowId = useCallback((container: MergedContainer) => mergedKey(container, container.Id), []);
-  // Flatten the groups into the exact ordered <tr> sequence (group header + members, collapse-aware),
-  // then window it — only the visible rows reach the DOM. Replaces the progressive-reveal hook.
   const rows = useMemo(
     () => flattenGroups(connectionGroups, collapse, getRowId, grouped),
     [connectionGroups, collapse, getRowId, grouped],

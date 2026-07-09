@@ -16,7 +16,7 @@ export interface BuildConfigPanelProps {
   engine: BuildEngineKind;
   connectionId: string;
   containerfileContent: string;
-  /** Remote (SSH) connection: no shared filesystem, so ask for remote paths instead of the local pickers. */
+  // Remote (SSH) connection: no shared filesystem, so ask for remote paths instead of the local pickers.
   remote?: boolean;
   onOptionsChange: (options: ImageBuildOptions) => void;
 }

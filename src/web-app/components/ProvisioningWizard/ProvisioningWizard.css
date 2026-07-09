@@ -1,9 +1,5 @@
-/* Full-screen provisioning wizard. A fixed, full-viewport takeover (above the app chrome) — NOT a
-   dialog. All colors come from the --app-* theme tokens so it tracks every engine x mode. */
-
 .PWizOverlay {
   position: fixed;
-  /* Sit BELOW the custom titlebar (AppHeader) so window controls + drag region stay usable. */
   inset: var(--app-header-height, 50px) 0 0 0;
   z-index: 40;
   display: grid;
@@ -13,7 +9,6 @@
   color: var(--app-text);
 }
 
-/* Left step rail — reuses the receding-chrome idiom of the AppSidebar. */
 .PWizRail {
   grid-row: 1 / span 2;
   display: flex;
@@ -97,7 +92,6 @@
   flex: 1;
 }
 
-/* Content stage. */
 .PWizStage {
   grid-column: 2;
   overflow: auto;
@@ -112,7 +106,6 @@
   color: var(--app-text-muted);
 }
 
-/* Footer — opt-out + Skip + a Back/Continue group (equal width). */
 .PWizFoot {
   grid-column: 1 / -1;
   display: flex;
@@ -134,9 +127,6 @@
   justify-content: center;
 }
 
-/* Step content */
-
-/* System check */
 .PWizChecking {
   display: flex;
   align-items: center;
@@ -164,7 +154,6 @@
 .PWizProbe.is-checking {
   opacity: 0.72;
 }
-/* Program that can't exist on this OS (e.g. WSL on Linux): listed for consistency but not probed. */
 .PWizProbe.is-na {
   opacity: 0.5;
 }
@@ -179,7 +168,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Engine choice — brand-SVG cards (same assets as the table/footer glyphs). */
 .PWizEngineCards {
   display: flex;
   flex-wrap: wrap;
@@ -225,7 +213,6 @@
   border-color: var(--app-accent);
   background-color: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
 }
-/* Engine not provisionable on this OS (e.g. Apple Container off macOS): visible + badged, but not selectable. */
 .PWizEngineCard:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -263,7 +250,6 @@
   font-size: 12px;
 }
 
-/* Review — target summary + deterministic plan steps. */
 .PWizReviewSummary {
   display: flex;
   align-items: center;
@@ -303,7 +289,6 @@
   font-size: 11px;
 }
 
-/* Execute — progress bar + per-step status list + streamed log. */
 .PWizExecute .bp6-progress-bar {
   margin-bottom: 18px;
 }
@@ -346,7 +331,6 @@
   word-break: break-word;
 }
 
-/* Ready — readiness checklist. */
 .PWizChecklist {
   list-style: none;
   margin: 18px 0 0;
@@ -372,7 +356,6 @@
   font-size: 12px;
 }
 
-/* Resources — VM sizing fields. */
 .PWizResources {
   display: flex;
   flex-wrap: wrap;
@@ -390,7 +373,6 @@
   color: var(--app-text-muted);
 }
 
-/* Volumes — folder rows + resolved flag preview (the make-or-break step). */
 .PWizVolumes {
   max-width: 720px;
 }

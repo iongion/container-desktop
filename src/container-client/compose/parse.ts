@@ -10,7 +10,7 @@ export class ComposeParseError extends Error {
   }
 }
 
-/** Parse compose YAML text into a raw object (anchors/aliases resolved). Throws on malformed input. */
+// Parse compose YAML text into a raw object (anchors/aliases resolved). Throws on malformed input.
 export function parseComposeYaml(text: string): unknown {
   let doc: unknown;
   try {

@@ -9,7 +9,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_HOME = path.dirname(__dirname);
 
-const pkg = JSON.parse(await import("node:fs").then((fs) => fs.readFileSync(path.join(PROJECT_HOME, "package.json"), "utf8")));
+const pkg = JSON.parse(
+  await import("node:fs").then((fs) => fs.readFileSync(path.join(PROJECT_HOME, "package.json"), "utf8")),
+);
 const mainEntry = path.resolve(PROJECT_HOME, pkg.main);
 
 if (!(await import("node:fs").then((fs) => fs.existsSync(mainEntry)))) {
@@ -26,10 +28,8 @@ const remoteDebuggingOrigin =
 // `--enable-logging` shows startup traces.
 const logLevel = process.env.CONTAINER_DESKTOP_LOG_LEVEL || "debug";
 
-/**
- * Electron must NOT inherit `ELECTRON_RUN_AS_NODE`: with it set, the Electron binary boots as a plain
- * Node runtime. Some shells/terminals export it globally, so strip it here.
- */
+// Electron must NOT inherit `ELECTRON_RUN_AS_NODE`: with it set, the Electron binary boots as a plain
+// Node runtime. Some shells/terminals export it globally, so strip it here.
 function electronEnv() {
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
@@ -71,7 +71,7 @@ const shutdown = (signal) => {
     try {
       electronApp.kill(signal);
     } catch {
-      /* already gone */
+      // already gone
     }
   }
 };

@@ -1,8 +1,3 @@
-// Lazy, production-excluded accessor for the fixture data. `PROD` is a compile-time constant (Vite
-// replaces import.meta.env.ENVIRONMENT), so in a production build `if (PROD) { throw }` makes the
-// dynamic import unreachable and the bundler drops ./fixtures — and therefore all the JSON — from the
-// shipped output. In dev/test the import runs once and is cached.
-
 import type { ContainerEngine } from "@/env/Types";
 import type { EngineFixtures } from "./fixtures";
 

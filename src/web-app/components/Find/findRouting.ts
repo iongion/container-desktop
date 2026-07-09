@@ -18,7 +18,7 @@ export interface FindRoute {
   filterInput?: HTMLInputElement;
 }
 
-/** The scrollable content of the active screen (with sensible fallbacks). */
+// The scrollable content of the active screen (with sensible fallbacks).
 export function getActiveContentRoot(): HTMLElement | null {
   return (
     document.querySelector<HTMLElement>(".AppScreenViewport .AppScreenContent") ??

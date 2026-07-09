@@ -117,8 +117,6 @@ describe("Tauri build command planning", () => {
       { script: "package:tauri:win_arm", triple: "aarch64-pc-windows-msvc" },
     ]) {
       const value = rootPkg.scripts[script];
-      // Exactly one renderer build + one Rust compile — NOT one per package format (nsis/appx/msix/zip),
-      // which is what re-invoking the granular scripts used to cost (~4x the compile time on Windows).
       expect(value.match(/yarn tauri:renderer/g) ?? []).toHaveLength(1);
       expect(value.match(/tauri-build\.cjs build/g) ?? []).toHaveLength(1);
       expect(value).toContain(`--bundles nsis --target ${triple}`);

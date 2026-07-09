@@ -26,7 +26,7 @@ async function refreshComposeDomains(connId: string): Promise<void> {
   await resourceEvents.refreshMany(connId, ["containers", "networks", "volumes", "pods"]);
 }
 
-/** Deploy a parsed compose model as native containers (the Import stack drawer). Fixed target connection. */
+// Deploy a parsed compose model as native containers (the Import stack drawer). Fixed target connection.
 export const useComposeUp = (connId: string) => {
   const qc = useQueryClient();
   return useMutation({
@@ -46,11 +46,9 @@ export const useComposeUp = (connId: string) => {
   });
 };
 
-/**
- * Tear a stack down from its group header in the merged Containers list. Imperative (not a hook) because the
- * owning connection is only known per-group at click time — it routes to that container group's connection,
- * exactly like the per-group bulk actions do.
- */
+// Tear a stack down from its group header in the merged Containers list. Imperative (not a hook) because the
+// owning connection is only known per-group at click time — it routes to that container group's connection,
+// exactly like the per-group bulk actions do.
 export async function tearDownStack(connId: string, project: string): Promise<void> {
   await (await composeAdapter(connId)).down(project, {});
   await refreshComposeDomains(connId);

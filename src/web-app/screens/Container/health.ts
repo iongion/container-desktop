@@ -16,7 +16,7 @@ const CLEAN_EXIT_CODES = new Set([0, 130, 137, 143]);
 
 type StatusInput = Pick<Container, "Computed" | "Status">;
 
-/** Exit code parsed from the list Status string ("Exited (137) 2 hours ago" on the docker-compat API). */
+// Exit code parsed from the list Status string ("Exited (137) 2 hours ago" on the docker-compat API).
 function exitCodeFromStatus(status: string | undefined): number | undefined {
   const match = /exited \((-?\d+)\)/i.exec(status ?? "");
   return match ? Number(match[1]) : undefined;
@@ -52,21 +52,21 @@ export function statusTone(container: StatusInput): StatusTone {
   }
 }
 
-/** The run state with the exit code for stopped containers, e.g. "exited (1)" — for the status badge. */
+// The run state with the exit code for stopped containers, e.g. "exited (1)" — for the status badge.
 export function stateLabel(container: StatusInput): string {
   const state = container.Computed?.DecodedState ?? "";
   const code = exitCodeFromStatus(container.Status);
   return code !== undefined ? `${state} (${code})` : state;
 }
 
-/** The healthcheck label, or undefined when the container declares no healthcheck — for the health badge. */
+// The healthcheck label, or undefined when the container declares no healthcheck — for the health badge.
 export function healthLabel(container: StatusInput): string | undefined {
   return container.Computed?.Health;
 }
 
-/** The ball's tooltip. Mirrors statusTone's "health only while RUNNING" rule: a stopped container's last
- * health is stale, so the label falls back to the run state (with exit code). This keeps the tooltip from
- * ever contradicting the dot — e.g. a neutral "off" dot that claims "unhealthy". */
+// The ball's tooltip. Mirrors statusTone's "health only while RUNNING" rule: a stopped container's last
+// health is stale, so the label falls back to the run state (with exit code). This keeps the tooltip from
+// ever contradicting the dot — e.g. a neutral "off" dot that claims "unhealthy".
 export function statusLabel(container: StatusInput): string {
   const health = container.Computed?.Health;
   if (health && container.Computed?.DecodedState === ContainerStateList.RUNNING) {
@@ -75,9 +75,9 @@ export function statusLabel(container: StatusInput): string {
   return stateLabel(container);
 }
 
-/** A group's single ball: the worst member's tone (danger > warning > success > muted) + its status label.
- * The first member seeds the result, so an all-off group still gets a representative label (never a blank
- * tooltip); any strictly-worse member then takes over. An empty group is muted with no label. */
+// A group's single ball: the worst member's tone (danger > warning > success > muted) + its status label.
+// The first member seeds the result, so an all-off group still gets a representative label (never a blank
+// tooltip); any strictly-worse member then takes over. An empty group is muted with no label.
 export function aggregateStatus(containers: StatusInput[]): { tone: StatusTone; label: string } {
   let worst: { tone: StatusTone; label: string } | undefined;
   for (const container of containers) {

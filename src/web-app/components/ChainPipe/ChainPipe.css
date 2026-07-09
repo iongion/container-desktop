@@ -1,7 +1,3 @@
-/* ChainPipe — shared connection/reachability trace pipeline. Self-contained + theme-tokened so it renders the
-   same under any screen root (reachability debugger, Engine Health cockpit). Dots are scoped to .ChainPipe so
-   they never leak a generic .dot rule. */
-
 .ChainPipe {
   display: flex;
   align-items: stretch;

@@ -63,7 +63,10 @@ try {
     if (!main) await sleep(1000);
   }
   if (!main) {
-    console.error("SMOKE FAIL: no main app window. Windows:", allPages().map((p) => p.url()));
+    console.error(
+      "SMOKE FAIL: no main app window. Windows:",
+      allPages().map((p) => p.url()),
+    );
     await browser.close().catch(() => {});
     exitCode = 2;
   } else {
@@ -90,7 +93,9 @@ try {
     const ok = !!snap && typeof snap === "object" && !!snap.appRuntime;
     console.log(
       "resource:get-snapshot →",
-      ok ? `appRuntime.phase=${snap.appRuntime.phase}, connections=${snap.appRuntime.connections.length}` : "NO SNAPSHOT",
+      ok
+        ? `appRuntime.phase=${snap.appRuntime.phase}, connections=${snap.appRuntime.connections.length}`
+        : "NO SNAPSHOT",
     );
     if (!ok) {
       console.error("SMOKE FAIL: broker returned no snapshot (main-owned data not reaching the renderer).");

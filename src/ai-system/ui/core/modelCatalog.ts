@@ -11,17 +11,17 @@ import { getProviderEntry, type ProviderCatalogEntry, parseAggregatedModelId } f
 import { resolveModelChoice } from "./modelChoice";
 
 export interface ModelLeaf {
-  /** Full model id to persist (e.g. "anthropic/claude-3.5-sonnet" for an aggregator, "qwen2.5" for a flat source). */
+  // Full model id to persist (e.g. "anthropic/claude-3.5-sonnet" for an aggregator, "qwen2.5" for a flat source).
   model: string;
-  /** Display text — the model portion after the vendor prefix for aggregators, the full id otherwise. */
+  // Display text — the model portion after the vendor prefix for aggregators, the full id otherwise.
   label: string;
   selected: boolean;
-  /** llama.cpp's single served model is informational — the server bound it at launch and can't switch. */
+  // llama.cpp's single served model is informational — the server bound it at launch and can't switch.
   readOnly?: boolean;
 }
 
 export interface ProviderGroup {
-  /** Upstream provider id ("anthropic") for aggregators; the source id for flat sources. */
+  // Upstream provider id ("anthropic") for aggregators; the source id for flat sources.
   providerId: string;
   label: string;
   models: ModelLeaf[];
@@ -31,12 +31,12 @@ export interface SourceModelTree {
   sourceId: string;
   label: string;
   aggregator: boolean;
-  /** No intermediate provider level (flat source) → the picker renders leaves directly under the source. */
+  // No intermediate provider level (flat source) → the picker renders leaves directly under the source.
   collapsed: boolean;
   groups: ProviderGroup[];
-  /** Set when nothing was saved (or the single served model drifted) → the caller persists it. */
+  // Set when nothing was saved (or the single served model drifted) → the caller persists it.
   autoSelect?: string;
-  /** A non-selectable status row instead of leaves (server down / nothing served). */
+  // A non-selectable status row instead of leaves (server down / nothing served).
   notice?: string;
 }
 

@@ -1,6 +1,3 @@
-/* Dark — structural surfaces (header/sidebar/content/menus/drawers/tables) now come
-   from tokens.css. Only Docker-specific, non-structural rules remain; surface-ish bits
-   read the Docker dark tokens so they stay in tune with the palette. */
 body.bp6-dark[data-engine="docker"] .SecurityDetails {
   background: var(--app-surface);
 }
@@ -8,7 +5,6 @@ body.bp6-dark[data-engine="docker"] .AppDataTable[data-table="image.scanning.rep
   background-color: #0f1c3f;
 }
 
-/* Status colors */
 body.bp6-dark[data-engine="docker"] [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #8b104c;
 }
@@ -48,7 +44,6 @@ body.bp6-dark[data-engine="docker"]
   color: #fff;
 }
 
-/* ── Light — surface-ish specifics only; structural surfaces come from tokens.css. ── */
 body.bp6-light[data-engine="docker"] .AppSettingsForm[data-form="host"] .AppSettingsFieldActive {
   background: var(--app-surface-strong);
 }
@@ -59,7 +54,6 @@ body.bp6-light[data-engine="docker"] .AppDataTable[data-table="images"] .Contain
   color: var(--app-text-muted);
 }
 
-/* Security */
 body.bp6-light[data-engine="docker"] .AppDataTable[data-table="image.scanning.report"] tr[data-row-highlight="odd"] {
   background-color: var(--app-surface-strong);
 }
@@ -122,16 +116,10 @@ body.bp6-light[data-engine="docker"] .AppDataTableGroupLinkHorizontal {
   filter: invert(1);
 }
 
-/* Footer engine glyph (in front of the connections status): the colored Docker logo, overriding the unified
-   default in AppFooter.css. */
 [data-engine="docker"] .AppFooterEngineIcon {
   background-image: url("../images/docker-engine.svg");
 }
 
-/* In light mode the Docker brand-blue logo clashes with the neutral chrome and reads louder than the adjacent
-   framework icons (--bp-typography-color-muted #5f6b7c). Render it as a neutral monochrome icon in that same
-   fill via a mask, so it matches them. The glyph is now a standalone element, so we can mask it directly (no
-   ::before needed). The colored logo stays in dark mode. */
 body.bp6-light[data-engine="docker"] .AppFooterEngineIcon {
   background-image: none;
   background-color: var(--bp-typography-color-muted, #5f6b7c);
@@ -139,7 +127,6 @@ body.bp6-light[data-engine="docker"] .AppFooterEngineIcon {
   mask: url("../images/docker-engine.svg") no-repeat center / contain;
 }
 
-/* Property/Value tables — engine specifics. */
 [data-theme="bp6-dark"][data-engine="docker"] .PropertyValueTable tr td:first-child code:first-child {
   background: #2f4e94;
   color: #c4daff;
@@ -148,19 +135,16 @@ body.bp6-light[data-engine="docker"] .AppFooterEngineIcon {
   background: #cbc8cb;
   border: 1px solid #412d4b;
 }
-/* Inline player actions (container row hover) */
 [data-theme="bp6-dark"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #1463ce;
 }
 [data-theme="bp6-light"][data-engine="docker"] [data-actions-menu="container"] .InlinePlayerActions {
   background: #9eb0c8;
 }
-/* Loading splash engine logo */
 [data-engine="docker"] .AppLoadingSplashLogo {
   background: url("../images/docker-engine.svg") no-repeat;
 }
 
-/* Connection manager (host.connections) — Docker dark specifics, consolidated from UserSettingsScreen.css */
 [data-theme="bp6-dark"]
   [data-engine="docker"]
   .AppSettingsEngineManagerConnections

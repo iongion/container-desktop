@@ -4,10 +4,6 @@ import { Application } from "@/container-client/Application";
 import { RESOURCE_SYNC, type ResourceSyncSnapshot } from "@/container-client/resourceSyncProtocol";
 import { createResourceSyncHost } from "./resourceSyncHost";
 
-// The in-process hub is the Tauri realm's replacement for the Electron main↔renderer RESOURCE_SYNC IPC:
-// the same EngineDataService + ResourceSyncBroker run here, wired to a direct-call bus. These tests pin
-// the collapse — invoke/send/subscribe must behave like the broker's ipcMain handlers, minus the process
-// boundary — without needing a live Tauri window.
 describe("createResourceSyncHost (in-process RESOURCE_SYNC hub)", () => {
   afterEach(() => {
     (Application as any).instance = undefined;

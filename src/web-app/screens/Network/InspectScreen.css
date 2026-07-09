@@ -1,4 +1,0 @@
-/* Network inspect styling now comes from the shared InspectSummary component
-   (components/InspectSummary.css). The former `[data-table="network.inspect"]` / `.NetworkInspectDisplay`
-   rules were dead (this screen renders the shared summary table + raw JSON, not a grouped
-   `network.inspect` table) and used hardcoded colors, so they were removed. */

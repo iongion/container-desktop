@@ -28,7 +28,7 @@ async function readIfPresent(path: string): Promise<string | undefined> {
   return (await FS.isFilePresent(path)) ? FS.readTextFile(path) : undefined;
 }
 
-/** Read, interpolate, validate and normalize a compose project. */
+// Read, interpolate, validate and normalize a compose project.
 export async function loadComposeProject(input: ComposeInput): Promise<ComposeProjectModel> {
   let text: string;
   let projectDir: string;

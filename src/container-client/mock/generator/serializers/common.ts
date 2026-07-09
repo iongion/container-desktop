@@ -9,20 +9,19 @@ import { LOG_TEMPLATES, VULN_SAMPLES, vulnerabilityDescription } from "../pools"
 
 export const iso = (date: Date): string => date.toISOString();
 
-/** Deterministic pseudo-number from a hex id (pure — replaces faker in the stats serializer). */
 export function numFromHex(hex: string, min: number, max: number, offset = 0): number {
   const slice = hex.slice(offset, offset + 8) || "0";
   const value = Number.parseInt(slice, 16) || 0;
   return min + (value % (max - min + 1));
 }
 
-/** Full Podman/Docker-Hub-aware image reference WITH the registry (libpod list/inspect form). */
+// Full Podman/Docker-Hub-aware image reference WITH the registry (libpod list/inspect form).
 export function fullImageRef(image: LogicalImage): string {
   return `${image.registry}/${image.repo}:${image.tag}`;
 }
 
-/** Short Docker reference: Hub library images drop "docker.io/library/", other Hub images drop the host,
- *  non-Hub registries keep their host (so the registry split is still exercised). */
+// Short Docker reference: Hub library images drop "docker.io/library/", other Hub images drop the host,
+// non-Hub registries keep their host (so the registry split is still exercised).
 export function dockerImageRef(image: LogicalImage): string {
   return `${dockerImageName(image)}:${image.tag}`;
 }
@@ -93,8 +92,8 @@ export function demoRegistryTrust(
   return { tls: "verify", auth: DEMO_REGISTRY_AUTH[name] ?? { kind: "anonymous" } };
 }
 
-/** RegistriesMap: a system "Configuration" default (enabled only for Podman, matching getRegistriesMap) +
- *  the generated custom registry hosts, each with deterministic demo trust (TLS/auth/mirror). */
+// RegistriesMap: a system "Configuration" default (enabled only for Podman, matching getRegistriesMap) +
+// the generated custom registry hosts, each with deterministic demo trust (TLS/auth/mirror).
 export function serializeRegistriesMap(dataset: LogicalDataset): RegistriesMap {
   const isPodman = dataset.engine === ContainerEngine.PODMAN;
   const created = iso(dataset.registries[0]?.createdAt ?? new Date(0));
@@ -125,7 +124,7 @@ export function serializeRegistriesMap(dataset: LogicalDataset): RegistriesMap {
   };
 }
 
-/** Per-container stats keyed by container id (Docker-stats shape; the StatsScreen parses it for both engines). */
+// Per-container stats keyed by container id (Docker-stats shape; the StatsScreen parses it for both engines).
 export function serializeStats(containers: LogicalContainer[]): Record<string, unknown> {
   const stats: Record<string, unknown> = {};
   for (const container of containers) {
@@ -150,7 +149,7 @@ export function serializeStats(containers: LogicalContainer[]): Record<string, u
   return stats;
 }
 
-/** Trivy report targeting the first few exposesPort images, with severity counts derived from the picks. */
+// Trivy report targeting the first few exposesPort images, with severity counts derived from the picks.
 export function serializeSecurityReport(dataset: LogicalDataset): unknown {
   const targets = dataset.images.filter((image) => image.exposesPort).slice(0, 3);
   const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, UNKNOWN: 0 };

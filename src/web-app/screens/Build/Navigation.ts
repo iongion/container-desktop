@@ -28,7 +28,7 @@ const BUILD_HOSTS: ReadonlySet<ContainerEngineHost> = new Set([
   ContainerEngineHost.APPLE_REMOTE,
 ]);
 
-/** True when the connection can run a build here (any transport). Doubles as the ConnectionSelect filter. */
+// True when the connection can run a build here (any transport). Doubles as the ConnectionSelect filter.
 export function isBuildSupported(connection: Pick<Connection, "host">): boolean {
   return BUILD_HOSTS.has(connection.host);
 }
@@ -41,15 +41,15 @@ const REMOTE_BUILD_HOSTS: ReadonlySet<ContainerEngineHost> = new Set([
   ContainerEngineHost.APPLE_REMOTE,
 ]);
 
-/** True when the build runs on a remote host (SSH) — the Build config panel then asks for remote paths. */
+// True when the build runs on a remote host (SSH) — the Build config panel then asks for remote paths.
 export function isRemoteBuildHost(host: ContainerEngineHost): boolean {
   return REMOTE_BUILD_HOSTS.has(host);
 }
 
-/** Route to the Build Studio, carrying the connection to build on. */
+// Route to the Build Studio, carrying the connection to build on.
 export const getBuildUrl = (connId?: string) => pathTo(BUILD_ROUTE, undefined, { connId });
 
-/** Canonical trail: `Connection > Images > Build` (Build is a leaf under the Images root). */
+// Canonical trail: `Connection > Images > Build` (Build is a leaf under the Images root).
 export function getBuildCrumbs(connId?: string): AppBreadcrumb[] {
   return [connectionCrumb(connId), rootCrumb("images", connId), crumb({ textKey: "Build", current: true })];
 }

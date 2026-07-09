@@ -8,7 +8,7 @@ import i18n from "@/i18n";
 
 export interface SettingsCategory {
   id: string;
-  /** i18n key — translated with t() at render time. */
+  // i18n key — translated with t() at render time.
   title: string;
   icon: IconName;
 }

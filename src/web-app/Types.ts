@@ -23,7 +23,7 @@ export interface AppScreenMetadata {
   WithoutSidebar: boolean;
   LeftIcon: any;
   RightIcon: any;
-  /** Sidebar hover tooltip (defaults to the Title when absent). */
+  // Sidebar hover tooltip (defaults to the Title when absent).
   Tooltip: string;
   RequiresProvisioning: boolean;
   RequiresConnection: boolean;

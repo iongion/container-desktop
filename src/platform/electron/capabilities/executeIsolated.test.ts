@@ -2,10 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { createNodeExecuteIsolated } from "./executeIsolated";
 
-// These characterize the load-bearing property of the ExecuteIsolated port: the child env is REPLACED
-// WHOLESALE with exactly opts.env — never merged with the parent's process.env / proxy env (that is what
-// ICommand.Execute does, and precisely what this capability must NOT do). Hermetic + cross-platform: we spawn
-// the very Node binary running the tests via -e, so no fixtures and nothing to install.
 const NODE = process.execPath;
 
 // The minimum a Node child needs to start; each test's point is what is ABSENT from this map.

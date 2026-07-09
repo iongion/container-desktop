@@ -10,10 +10,8 @@
 import type { ConnectionProxySettings } from "@/env/Types";
 import { isProxyActive, normalizeProxyConfig, type ProxyConfig, proxyToEnv } from "../proxy";
 
-/**
- * The effective proxy for a connection: `off` → disabled; `override` → the per-connection config; `inherit`
- * (default) → the global GlobalUserSettings proxy. Always normalized, so callers get a well-formed ProxyConfig.
- */
+// The effective proxy for a connection: `off` → disabled; `override` → the per-connection config; `inherit`
+// (default) → the global GlobalUserSettings proxy. Always normalized, so callers get a well-formed ProxyConfig.
 export function resolveConnectionProxy(
   global: Partial<ProxyConfig> | undefined,
   per: ConnectionProxySettings | undefined,
@@ -28,11 +26,9 @@ export function resolveConnectionProxy(
   return normalizeProxyConfig(global);
 }
 
-/**
- * A per-command `env VAR=… program` prefix for a scoped guest (WSL/LIMA/machine/SSH) that doesn't inherit the
- * host proxy env. CREDENTIAL-FREE by contract: returns [] when the proxy is inactive OR carries credentials (an
- * authenticated proxy is injected via serializeSystemdProxyDropin instead, so the secret never touches argv).
- */
+// A per-command `env VAR=… program` prefix for a scoped guest (WSL/LIMA/machine/SSH) that doesn't inherit the
+// host proxy env. CREDENTIAL-FREE by contract: returns [] when the proxy is inactive OR carries credentials (an
+// authenticated proxy is injected via serializeSystemdProxyDropin instead, so the secret never touches argv).
 export function buildGuestProxyEnvPrefix(config: ProxyConfig): string[] {
   if (!isProxyActive(config)) {
     return [];
@@ -44,11 +40,9 @@ export function buildGuestProxyEnvPrefix(config: ProxyConfig): string[] {
   return ["env", ...Object.entries(env).map(([key, value]) => `${key}=${value}`)];
 }
 
-/**
- * A systemd drop-in that exports the proxy env for the guest engine service. Written to a root-owned
- * `…​.service.d/proxy.conf` via STDIN (never argv), so credentials are safe to include here. Returns "" when the
- * proxy is inactive — the caller removes the drop-in rather than writing an empty one.
- */
+// A systemd drop-in that exports the proxy env for the guest engine service. Written to a root-owned
+// `…​.service.d/proxy.conf` via STDIN (never argv), so credentials are safe to include here. Returns "" when the
+// proxy is inactive — the caller removes the drop-in rather than writing an empty one.
 export function serializeSystemdProxyDropin(config: ProxyConfig): string {
   if (!isProxyActive(config)) {
     return "";

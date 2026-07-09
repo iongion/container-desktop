@@ -1,9 +1,3 @@
-/* ModelNavigator — the reusable AI source → provider → model drill-down (issue #232). A persistent
-   chrome bar (back · title · combined search + ⟳) ABOVE a Blueprint PanelStack whose views slide on
-   push/pop. The stack auto-sizes to the active panel's content (height set in JS, transitioned here) so
-   it never wastes space; past maxHeight the inner list scrolls. Themed only via --app-* tokens — no
-   hardcoded colors. PanelStack renders the legacy bp6-panel-stack2-* class names. */
-
 .ModelNavigator {
   box-sizing: border-box;
   display: flex;
@@ -16,7 +10,6 @@
   box-sizing: border-box;
 }
 
-/* Persistent chrome bar above the sliding stack. */
 .ModelNavigatorHeader {
   flex: 0 0 auto;
   display: flex;
@@ -35,7 +28,6 @@
 .ModelNavigatorBack.bp6-button {
   flex: 0 0 auto;
 }
-/* Pinned to the right edge so it never shifts when the back button appears/disappears (no wobble). */
 .ModelNavigatorTitle {
   min-width: 0;
   margin-left: auto;
@@ -51,8 +43,6 @@
   width: 100%;
 }
 
-/* The stack: its height is set in JS to the active panel's content height (capped), transitioned here so
-   push/pop still slides. Views are absolute (inset:0) within this relative, clipped frame. */
 .ModelNavigatorStack {
   position: relative;
   flex: 0 0 auto;
@@ -74,12 +64,10 @@
   overflow-y: auto;
   padding-bottom: 4px;
 }
-/* The Menu sits on our surface; let the shell paint the background. */
 .ModelNavigatorScroll .bp6-menu {
   background: transparent;
   min-width: 0;
 }
-/* Slightly tighter type for the dense source/model lists. */
 .ModelNavigatorScroll .bp6-menu-item {
   font-size: 13px;
 }
@@ -93,7 +81,6 @@
   color: var(--app-text-muted);
 }
 
-/* Compact empty-state for unconfigured / unreachable sources (popover only). */
 .ModelNavigatorNotConfigured.bp6-non-ideal-state {
   padding: 28px 18px;
   gap: 8px;

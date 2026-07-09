@@ -10,10 +10,8 @@ import type {
 } from "@/env/Types";
 import { createLogger } from "@/platform/logger";
 
-/**
- * Minimal host surface the Runner depends on — only the API health check. The composed HostClient satisfies
- * it, so the Runner doesn't couple to (or circularly import) the concrete host class.
- */
+// Minimal host surface the Runner depends on — only the API health check. The composed HostClient satisfies
+// it, so the Runner doesn't couple to (or circularly import) the concrete host class.
 export interface RunnerHost {
   isApiRunning(): Promise<AvailabilityCheck>;
 }
@@ -32,7 +30,7 @@ export class Runner {
     this.logger = createLogger("container-client.api.Runner");
   }
 
-  /** Single source of truth: was the API service started by us in this process? */
+  // Single source of truth: was the API service started by us in this process?
   isStarted() {
     return this.started;
   }

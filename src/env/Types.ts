@@ -87,7 +87,7 @@ export interface OpenFileSelectorOptions {
   directory?: boolean;
   multiple?: boolean;
   filters?: any;
-  /** Starting directory (or file) for the native picker. Honored by both the Electron and Tauri backends. */
+  // Starting directory (or file) for the native picker. Honored by both the Electron and Tauri backends.
   defaultPath?: string;
 }
 
@@ -218,11 +218,11 @@ export interface ApiConnection {
   dialStdioCommand?: string[];
 }
 
-/** How to bridge an engine whose API can't be `ssh -NL` forwarded: a stable relay id + the command to run. */
+// How to bridge an engine whose API can't be `ssh -NL` forwarded: a stable relay id + the command to run.
 export interface DialStdioBridge {
-  /** Stable, non-empty id for this bridge (the engine endpoint / machine URI) — the transport's cache key. */
+  // Stable, non-empty id for this bridge (the engine endpoint / machine URI) — the transport's cache key.
   relay: string;
-  /** Command run over the outer SSH to produce a raw stdio bridge to the engine daemon. */
+  // Command run over the outer SSH to produce a raw stdio bridge to the engine daemon.
   command: string[];
 }
 
@@ -561,9 +561,9 @@ export interface SystemInfo {
 // Image disk-usage summarized from GET /system/df — docker (LayersSize + Images[].Size/SharedSize/Containers)
 // and libpod (ImagesSize + Images[].UniqueSize/Containers) normalized to one shape (see adapters/systemDf.ts).
 export interface SystemDf {
-  /** Total on-disk bytes of image layers. */
+  // Total on-disk bytes of image layers.
   imagesSize: number;
-  /** Bytes reclaimable by removing images no container references. */
+  // Bytes reclaimable by removing images no container references.
   imagesReclaimable: number;
   imagesCount: number;
   reclaimableCount: number;
@@ -593,7 +593,7 @@ export interface SwarmVersion {
   Index: number;
 }
 
-/** GET /swarm — the cluster spec; presence of `ID` means the node is in a swarm. */
+// GET /swarm — the cluster spec; presence of `ID` means the node is in a swarm.
 export interface SwarmInfo {
   ID: string;
   Version?: SwarmVersion;
@@ -650,7 +650,7 @@ export interface SwarmTask {
   DesiredState?: string;
 }
 
-/** Derived (not a REST object): one entry per `com.docker.stack.namespace` label across services. */
+// Derived (not a REST object): one entry per `com.docker.stack.namespace` label across services.
 export interface SwarmStack {
   Name: string;
   Services: number;
@@ -683,13 +683,13 @@ export interface SwarmLeaveOptions {
   force?: boolean;
 }
 
-/** A host network interface address — a candidate `--advertise-addr` for swarm init. */
+// A host network interface address — a candidate `--advertise-addr` for swarm init.
 export interface HostAddress {
   iface: string;
   address: string;
 }
 
-/** Node availability/role change (read-modify-write onto the node's current Spec). */
+// Node availability/role change (read-modify-write onto the node's current Spec).
 export interface NodeUpdateOptions {
   Availability?: "active" | "pause" | "drain";
   Role?: "manager" | "worker";
@@ -697,14 +697,14 @@ export interface NodeUpdateOptions {
 
 export interface SwarmSecretCreateOptions {
   Name: string;
-  /** Raw (un-encoded) secret value; the adapter base64-encodes it for the Docker API. */
+  // Raw (un-encoded) secret value; the adapter base64-encodes it for the Docker API.
   Data: string;
   Labels?: Record<string, string>;
 }
 
 export interface SwarmConfigCreateOptions {
   Name: string;
-  /** Raw (un-encoded) config value; the adapter base64-encodes it for the Docker API. */
+  // Raw (un-encoded) config value; the adapter base64-encodes it for the Docker API.
   Data: string;
   Labels?: Record<string, string>;
 }

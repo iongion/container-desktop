@@ -44,10 +44,6 @@ const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 // header lines are ignored.
 const CONTAINER_LINE = /\bContainer\s+(\S+)\s+(Created|Recreated|Started|Running|Removed)\b/;
 
-// Map compose v2's human progress output (stdout+stderr) to the engine-neutral summary. A fresh container
-// emits both "Created" and "Started" lines → it lands in BOTH arrays, mirroring the libpod orchestrator's
-// two-pass (create then start) summary. "Running" = already up (unchanged); "Recreated" = config changed;
-// "Removed" = orphan pruned by --remove-orphans.
 export function parseComposeUpSummary(output: string): ComposeChangeSummary {
   const created = new Set<string>();
   const recreated = new Set<string>();

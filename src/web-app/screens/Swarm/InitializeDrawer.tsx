@@ -1,11 +1,3 @@
-// screens/Swarm/InitializeDrawer.tsx — the "Initialize Swarm" form drawer.
-//
-// Replaces the bare Initialize button: the user customizes the listen address (host + port), picks which
-// interface to advertise on (the fix for the multi-NIC "could not choose an IP address to advertise" 400 —
-// candidates come from `ip addr` on the target host via useSwarmAdvertiseCandidates), and optionally forces a
-// new cluster. Mirrors the app's canonical create-drawer pattern (AppDrawer + react-hook-form + FormActions),
-// see Network/CreateDrawer.
-
 import {
   Button,
   ButtonGroup,

@@ -18,10 +18,10 @@
 import i18n from "../../i18n";
 
 export interface WindowControl {
-  /** IPC channel sent on window.MessageBus — handled by registerAppControlIpc in the main process. */
+  // IPC channel sent on window.MessageBus — handled by registerAppControlIpc in the main process.
   action: "window.minimize" | "window.maximize" | "window.close";
   label: string;
-  /** @mdi/js glyph path (mdiWindowMinimize / mdiWindowMaximize / mdiWindowClose), inlined to stay dependency-free. */
+  // @mdi/js glyph path (mdiWindowMinimize / mdiWindowMaximize / mdiWindowClose), inlined to stay dependency-free.
   mdiPath: string;
 }
 
@@ -126,8 +126,6 @@ export const BOOT_CHROME_STYLE = `/* boot splash content area (--app-bg unified 
     html[data-boot-os="mac"] #app-boot-controls { display: none; }
     html[data-boot-os="mac"] #app-boot-brand { position: absolute; left: 50%; transform: translateX(-50%); }`;
 
-// Boot DOM — the #root contents until React mounts and replaces them. The header embeds the single-source
-// LOGO_SVG and the generated control buttons verbatim.
 export const BOOT_CHROME_BODY = `
     <div id="app-splash" aria-hidden="true">
       <div class="app-splash-ring"></div>

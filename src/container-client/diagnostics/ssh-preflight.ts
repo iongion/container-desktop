@@ -33,9 +33,9 @@ export interface SSHPreflightTarget {
 
 export interface SSHPreflightOptions {
   osType: OperatingSystem;
-  /** ssh client to invoke (Windows uses the bundled relay exe). Defaults to "ssh". */
+  // ssh client to invoke (Windows uses the bundled relay exe). Defaults to "ssh".
   sshProgram?: string;
-  /** When set ("podman"/"docker"), also probe that the remote engine responds. */
+  // When set ("podman"/"docker"), also probe that the remote engine responds.
   engineProgram?: string;
   connectTimeoutSeconds?: number;
 }

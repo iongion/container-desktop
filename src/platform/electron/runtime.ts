@@ -11,11 +11,11 @@ import { OperatingSystem } from "@/env/Types";
 import { CURRENT_OS_TYPE } from "@/platform/electron/host";
 
 export interface RuntimePaths {
-  /** Directory of the built `main.cjs` (build/<version>/) — holds preload.cjs, index.html, packaged icons. */
+  // Directory of the built `main.cjs` (build/<version>/) — holds preload.cjs, index.html, packaged icons.
   appDir: string;
-  /** `dirname(app.getPath("exe"))` when packaged, else `app.getAppPath()`. */
+  // `dirname(app.getPath("exe"))` when packaged, else `app.getAppPath()`.
   appPath: string;
-  /** Repo root in dev — for `src/resources/icons`. */
+  // Repo root in dev — for `src/resources/icons`.
   projectHome: string;
 }
 

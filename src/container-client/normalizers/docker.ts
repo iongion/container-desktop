@@ -16,7 +16,7 @@ import {
   normalizeVolume,
 } from "./shared";
 
-/** Docker network (PascalCase) → canonical lowercase Network. */
+// Docker network (PascalCase) → canonical lowercase Network.
 export const normalizeNetwork = (it: any): Network => {
   // Docker carries subnets in IPAM.Config[] ({ Subnet, Gateway }); map them to the canonical `subnets` shape
   // (libpod is already canonical) so consumers like the Networks screen and the Engine Health subnet-overlap

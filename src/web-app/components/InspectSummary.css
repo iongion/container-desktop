@@ -1,16 +1,7 @@
-/* Raw-JSON layout for every resource Inspect screen; the Property/Value table itself lives in
-   PropertyValueTable.css so Connection info and inspect screens share the same implementation. */
-
-/* Stacked layout inside the flex-column .AppScreenContent: the summary table and the section header sit
-   at their natural height and never shrink; the raw-JSON frame absorbs the remaining space so Monaco
-   (height:100%) fills it and scrolls internally. Because the table/header cannot shrink, the default
-   `overflow:visible` on the content area (CodeEditor.css) is harmless here — nothing overflows. */
 .InspectSummary,
 .InspectSectionTitle {
   flex: 0 0 auto;
 }
-/* Element-qualified so it beats Blueprint's `.bp6-heading` default size (a bare `.InspectSectionTitle`
-   ties on specificity and loses). Compact section label matching the app's other headers. */
 h5.InspectSectionTitle {
   margin: 0;
   margin-top: 12px;
@@ -18,7 +9,6 @@ h5.InspectSectionTitle {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.5;
-  /* Matches the table header surface in both themes. */
   background: var(--app-surface-strong);
 }
 .InspectCodeEditor {

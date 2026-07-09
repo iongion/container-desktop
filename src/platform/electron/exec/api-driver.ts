@@ -9,8 +9,6 @@ import { createEmitterStream } from "@/utils/streamEmitter";
 
 const logger = createLogger("platform.api");
 
-// Route classification moved to the node-free @/container-client/proxy-route so the Tauri webview binding can
-// reuse it; re-exported here to keep the node-side importers (proxy-request.ts) unchanged.
 export { getProxyRequestRoute, type ProxyRequestRoute } from "@/container-client/proxy-route";
 
 // Summaries are exported (additive vs. the original private versions) so the transport modules can

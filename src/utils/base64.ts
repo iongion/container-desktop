@@ -2,7 +2,7 @@
 // works identically in main/dialect and the renderer. The single owner of base64 string conversion for the
 // container-client adapters (swarm secrets/configs, remote Containerfile injection, buildx rawjson logs).
 
-/** UTF-8 string → base64. */
+// UTF-8 string → base64.
 export function toBase64(value: string): string {
   const bytes = new TextEncoder().encode(value);
   let binary = "";
@@ -12,7 +12,7 @@ export function toBase64(value: string): string {
   return btoa(binary);
 }
 
-/** base64 → UTF-8 string. */
+// base64 → UTF-8 string.
 export function fromBase64(value: string): string {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);

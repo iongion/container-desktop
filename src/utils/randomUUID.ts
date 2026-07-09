@@ -11,7 +11,7 @@ for (let byte = 0; byte < 256; byte += 1) {
   BYTE_TO_HEX.push((byte + 0x100).toString(16).slice(1));
 }
 
-/** Generate an RFC-4122 version-4 UUID using cryptographically strong randomness. */
+// Generate an RFC-4122 version-4 UUID using cryptographically strong randomness.
 export function randomUUID(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);

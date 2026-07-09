@@ -26,7 +26,7 @@ const LEVEL_CLASS: Record<VerdictLevel, string> = {
 
 interface ConnectionHealthHeaderProps {
   card: FleetConnection;
-  /** Effective verdict (runtime folded with panel issues) — drives the pill + border. */
+  // Effective verdict (runtime folded with panel issues) — drives the pill + border.
   level: VerdictLevel;
   diagnoses: ReachabilityDiagnosis[];
   collapsible?: boolean;
@@ -52,8 +52,6 @@ export function ConnectionHealthHeader({
   const snapshot = useResourceStore((state) => state.byConnection[card.id]);
   const containers = snapshot?.containers?.items?.length ?? 0;
   const images = snapshot?.images?.items?.length ?? 0;
-  // Disk/reclaimable live in the header now (the Runtime panel was removed). Skip it for machine engines —
-  // the MachinePanel already reports its own image-disk usage — and while unreachable.
   const df = useSystemDf(card.id).data;
   const machinesCap = !!(
     card.connector?.capabilities?.extensions?.machines ?? card.runtime.capabilities?.extensions?.machines

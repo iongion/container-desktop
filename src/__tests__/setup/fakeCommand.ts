@@ -8,9 +8,9 @@ export interface RecordedCall {
 }
 
 export interface FakeCommandHandle {
-  /** Every Execute / Spawn / ExecuteAsBackgroundService invocation, in order. */
+  // Every Execute / Spawn / ExecuteAsBackgroundService invocation, in order.
   calls: RecordedCall[];
-  /** Restore the previous global `Command`. Call in afterEach. */
+  // Restore the previous global `Command`. Call in afterEach.
   restore: () => void;
 }
 
@@ -23,12 +23,10 @@ const okResult = (over?: Partial<CommandExecutionResult>): CommandExecutionResul
   ...over,
 });
 
-/**
- * Replace the global `Command` with a recording fake. The handler can shape the result per call
- * (e.g. return `{ success: false, stderr }` to simulate a failure). ALL `ICommand` members are
- * implemented — `startTunnel`/availability paths call `CreateNodeJSApiDriver` +
- * `ExecuteAsBackgroundService`, so a fake that only handles `Execute` would crash those tests.
- */
+// Replace the global `Command` with a recording fake. The handler can shape the result per call
+// (e.g. return `{ success: false, stderr }` to simulate a failure). ALL `ICommand` members are
+// implemented — `startTunnel`/availability paths call `CreateNodeJSApiDriver` +
+// `ExecuteAsBackgroundService`, so a fake that only handles `Execute` would crash those tests.
 export function installFakeCommand(
   handler?: (call: RecordedCall) => Partial<CommandExecutionResult>,
 ): FakeCommandHandle {
@@ -47,7 +45,7 @@ export function installFakeCommand(
       return record(launcher, args, opts);
     },
     async Kill() {
-      /* no-op */
+      // no-op
     },
     async CreateNodeJSApiDriver() {
       return { request: async () => ({ status: 200, data: "OK" }) };
@@ -89,7 +87,7 @@ export function installFakeCommand(
       throw new Error("installFakeCommand: StartSSHConnection is not faked — provide a custom fake if a test needs it");
     },
     async StopConnectionServices() {
-      /* no-op */
+      // no-op
     },
     async ProxyRequest() {
       return { status: 200, data: "OK" };

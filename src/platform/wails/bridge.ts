@@ -88,11 +88,9 @@ const COMMAND_TO_METHOD: Record<string, string> = {
   tray_update: "main.TrayService.Update",
 };
 
-/**
- * The injected `invoke` shim: the Tauri `invoke(cmd, args)` seam re-expressed over Wails Call.ByName. Every
- * mirrored caller passes a single request-struct object (or nothing) — forwarded as the one Call.ByName arg,
- * matching the Go services' single-params-struct methods (the analog of Tauri's single-object payloads).
- */
+// The injected `invoke` shim: the Tauri `invoke(cmd, args)` seam re-expressed over Wails Call.ByName. Every
+// mirrored caller passes a single request-struct object (or nothing) — forwarded as the one Call.ByName arg,
+// matching the Go services' single-params-struct methods (the analog of Tauri's single-object payloads).
 function createWailsInvoke() {
   return async <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
     const method = COMMAND_TO_METHOD[command];
@@ -146,7 +144,7 @@ class WailsChannel<T> {
   }
 }
 
-/** Install the Wails-backed host globals + mark the preload bridge ready, mirroring the Electron preload. */
+// Install the Wails-backed host globals + mark the preload bridge ready, mirroring the Electron preload.
 export async function installWailsHostBridge(): Promise<void> {
   const target = window as any;
   const invoke = createWailsInvoke();

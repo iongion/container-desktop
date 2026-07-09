@@ -24,21 +24,19 @@ export type MergedResource<T> = T & {
   connectionName: string;
 };
 
-/** Composite selection/React key — ids collide across engines, so qualify each by its connection. */
+// Composite selection/React key — ids collide across engines, so qualify each by its connection.
 export function mergedKey(item: { connectionId: string }, id: string): string {
   return `${item.connectionId}:${id}`;
 }
 
-/** Ids of the connections main is currently mirroring (i.e. connected). Imperative read, for callbacks. */
+// Ids of the connections main is currently mirroring (i.e. connected). Imperative read, for callbacks.
 export function getConnectedConnectionIds(): string[] {
   return Object.keys(useResourceStore.getState().byConnection);
 }
 
-/**
- * "Unified mode" — the workspace is showing more than one connection at once. Derived from the count of
- * connected connections (no stored flag, so it can't drift). A single connection renders exactly as before;
- * engine-column visibility is a separate user preference.
- */
+// "Unified mode" — the workspace is showing more than one connection at once. Derived from the count of
+// connected connections (no stored flag, so it can't drift). A single connection renders exactly as before;
+// engine-column visibility is a separate user preference.
 export function useIsUnifiedMode(): boolean {
   return useResourceStore((state) => Object.keys(state.byConnection).length > 1);
 }
@@ -61,11 +59,9 @@ export function useShowEngineRowAccent(): boolean {
   return resolveShowEngineRowAccent(useIsUnifiedMode());
 }
 
-/**
- * Whether resource lists should group rows by connection. Grouping only makes sense with more than one
- * connection, so it is gated by unified mode (a single/zero connection auto-flattens, exactly like the
- * engine column) AND the user's `groupByConnection` preference (default on). Pure → unit-tested.
- */
+// Whether resource lists should group rows by connection. Grouping only makes sense with more than one
+// connection, so it is gated by unified mode (a single/zero connection auto-flattens, exactly like the
+// engine column) AND the user's `groupByConnection` preference (default on). Pure → unit-tested.
 export function resolveGroupByConnection(isUnifiedMode: boolean, groupByConnection: boolean | undefined): boolean {
   return isUnifiedMode && groupByConnection !== false;
 }
@@ -76,15 +72,8 @@ export function useGroupByConnection(): boolean {
   return resolveGroupByConnection(isUnifiedMode, groupByConnection);
 }
 
-/**
- * Reload the given resource domain(s) on EVERY connected engine — the always-merged replacement for a
- * single-connection `resourceEvents.refresh`. Plural/variadic form for screens that refresh several domains
- * at once, e.g. `useResourcesReload("pods", "containers")`. See `useResourceReload` for the one-domain case.
- */
-/**
- * Fire a refresh for every (connection, domain) pair, ISOLATING failures: one connection dropping mid-reload —
- * or a rejected refresh — must not abort the others. Pure + injectable so it can be tested without React.
- */
+// Fire a refresh for every (connection, domain) pair, ISOLATING failures: one connection dropping mid-reload —
+// or a rejected refresh — must not abort the others. Pure + injectable so it can be tested without React.
 export function reloadResources(
   connectionIds: string[],
   domains: ResourceDomain[],
@@ -114,7 +103,7 @@ export function useResourcesReload(...domains: ResourceDomain[]): () => void {
   }, [key]);
 }
 
-/** Singular convenience — reload ONE resource domain across every connected engine. */
+// Singular convenience — reload ONE resource domain across every connected engine.
 export function useResourceReload(domain: ResourceDomain): () => void {
   return useResourcesReload(domain);
 }

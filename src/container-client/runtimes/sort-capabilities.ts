@@ -61,11 +61,9 @@ const REGISTRY_SORT_CAPABILITIES = {
   "registries.sources.name": "client",
 } satisfies SortCapabilityMap;
 
-/**
- * Docker Engine API v1.54 and Podman Libpod API v5.7.0 expose filters/limits for
- * these list endpoints, but no sort/order query parameters. Keep the map explicit
- * so future server-side support can flip individual fields to "server".
- */
+// Docker Engine API v1.54 and Podman Libpod API v5.7.0 expose filters/limits for
+// these list endpoints, but no sort/order query parameters. Keep the map explicit
+// so future server-side support can flip individual fields to "server".
 export const DOCKER_SORT_CAPABILITIES = {
   ...RESOURCE_SORT_CAPABILITIES,
   ...REGISTRY_SORT_CAPABILITIES,

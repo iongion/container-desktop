@@ -1,11 +1,3 @@
-// web-app/domain/queryClient.ts — the single app-wide TanStack Query client (cache-first).
-//
-// Server data is treated as fresh indefinitely (staleTime: Infinity), so it is NEVER refetched on plain
-// navigation/remount/focus — re-entering a screen serves the cached list/detail instantly. Freshness is
-// explicit: mutation invalidation, the per-screen reload button (refetch), and reconnect. Live resources
-// override this via liveQueryOptions(). The QueryCache.onError toast replaces the scattered per-screen
-// catch+notify boilerplate (fires once per failed query — react-query dedups).
-
 import { Intent } from "@blueprintjs/core";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import i18n from "@/i18n";

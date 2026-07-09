@@ -20,7 +20,7 @@ function stringifyArg(value: unknown): string {
   return String(value);
 }
 
-/** Mirror the façade's console line ("[scope] ...args") as one string for plugin-log. */
+// Mirror the façade's console line ("[scope] ...args") as one string for plugin-log.
 export function formatLogArgs(scope: string, args: unknown[]): string {
   const body = args.map(stringifyArg).join(" ");
   return body ? `[${scope}] ${body}` : `[${scope}]`;

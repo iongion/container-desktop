@@ -20,14 +20,12 @@ function emptyCapabilities(): ConnectorCapabilities {
   };
 }
 
-/**
- * The workspace is always-merged: several engines can be connected at once, so sidebar/screen capabilities are
- * the UNION of every RUNNING connection's capabilities — not a single "current" connector. `currentConnector`
- * stays meaningful only as the default create/pull TARGET (identity), and must NOT gate capabilities: when a
- * non-primary connection is the one running (e.g. a remote Windows Docker), its capabilities still have to
- * count (so Swarm/Networks/etc. light up). We fall back to `currentConnector` only when nothing is running —
- * there is simply nothing to merge.
- */
+// The workspace is always-merged: several engines can be connected at once, so sidebar/screen capabilities are
+// the UNION of every RUNNING connection's capabilities — not a single "current" connector. `currentConnector`
+// stays meaningful only as the default create/pull TARGET (identity), and must NOT gate capabilities: when a
+// non-primary connection is the one running (e.g. a remote Windows Docker), its capabilities still have to
+// count (so Swarm/Networks/etc. light up). We fall back to `currentConnector` only when nothing is running —
+// there is simply nothing to merge.
 export function resolveAvailabilityConnector(
   activeRuntime: ConnectionRuntimeInfo[],
   currentConnector: Connector | undefined,

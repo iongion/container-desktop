@@ -80,7 +80,7 @@ export function wrap_process(deps: CommandDeps, proc: any, processId: string | u
   };
 }
 
-/** Terminate a Rust-owned process from a processId-stamped child, or delegate to a child kill function. */
+// Terminate a Rust-owned process from a processId-stamped child, or delegate to a child kill function.
 export async function killProcess(deps: CommandDeps, target: any, signal?: unknown): Promise<void> {
   if (target?.__processId) {
     await killRustProcess(deps, target.__processId, signal);

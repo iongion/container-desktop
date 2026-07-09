@@ -22,7 +22,7 @@ const ajv = new Ajv2020({ allErrors: true, strict: false });
 addFormats(ajv);
 const validate = ajv.compile(schema as object);
 
-/** Validate a raw parsed compose object against the compose spec. Throws with the offending paths. */
+// Validate a raw parsed compose object against the compose spec. Throws with the offending paths.
 export function validateComposeSpec(doc: unknown): void {
   if (validate(doc)) return;
   const issues = (validate.errors ?? []).map((e) => `${e.instancePath || "/"}: ${e.message}`);

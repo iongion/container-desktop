@@ -45,7 +45,7 @@ export function applyResourceSyncSnapshot(snapshot: ResourceSyncSnapshot): void 
 
 let started = false;
 
-/** Begin mirroring main's pushes into the resource store. Idempotent; safe to call once on connect. */
+// Begin mirroring main's pushes into the resource store. Idempotent; safe to call once on connect.
 export function startResourceMirror(): void {
   if (started) {
     return;

@@ -16,7 +16,7 @@ type Raw = Record<string, any>;
 const nameOf = (container: Raw): string =>
   String(container?.Name ?? container?.Names?.[0] ?? container?.Id ?? "").replace(/^\//, "");
 
-/** Aggregate a pod's member-container logs over REST (no CLI). Infra container excluded; lines are prefixed. */
+// Aggregate a pod's member-container logs over REST (no CLI). Infra container excluded; lines are prefixed.
 export async function getPodLogsViaRest(
   driver: AxiosInstance,
   podId: string,

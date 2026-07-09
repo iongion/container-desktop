@@ -126,11 +126,9 @@ function buildContainerBody(service: ComposeServiceModel, model: ComposeProjectM
   return body;
 }
 
-/**
- * Host ports published by more than one service — they cannot coexist in a single shared-netns pod (the
- * pod create would fail). PURE. Surfaced both as translate() warnings and, ahead of deploy, in the Import
- * drawer's single-pod pre-flight, so the user sees the conflict instead of a cryptic engine error.
- */
+// Host ports published by more than one service — they cannot coexist in a single shared-netns pod (the
+// pod create would fail). PURE. Surfaced both as translate() warnings and, ahead of deploy, in the Import
+// drawer's single-pod pre-flight, so the user sees the conflict instead of a cryptic engine error.
 export function detectPodPortConflicts(model: ComposeProjectModel): string[] {
   const conflicts: string[] = [];
   const seen = new Map<string, string>();
@@ -178,7 +176,7 @@ function fnv1a(input: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-/** Translate a compose model into a declarative libpod plan. */
+// Translate a compose model into a declarative libpod plan.
 export function translate(model: ComposeProjectModel, opts: TranslateOptions): ComposePlan {
   const project = model.name;
   const podMode = opts.podMode === true;

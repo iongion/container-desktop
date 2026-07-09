@@ -20,7 +20,6 @@ import i18n from "@/i18n";
 export const ID = "ai.generator";
 export const Title = i18n.t("Generator");
 
-// Static starting points (no AI required). The AI step refines/replaces the editor content.
 const DOCKERFILE_TEMPLATES: Record<string, string> = {
   Node: 'FROM node:22-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY . .\nUSER node\nCMD ["node", "index.js"]\n',
   Python:

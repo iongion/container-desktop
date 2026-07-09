@@ -6,7 +6,7 @@
 // the group, so every group emits a header — even a single-item or empty connection.
 
 export interface ConnectionGroup<T> {
-  /** Stable group identity — the connection id. Drives the collapse map + the header key. */
+  // Stable group identity — the connection id. Drives the collapse map + the header key.
   key: string;
   items: T[];
 }

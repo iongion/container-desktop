@@ -9,16 +9,14 @@ export interface SSHClientConnection {
   configHost?: string;
 }
 
-/** Default bound for the SSH control connection — matches the Windows relay `--ssh-timeout`. */
+// Default bound for the SSH control connection — matches the Windows relay `--ssh-timeout`.
 export const SSH_CONNECT_TIMEOUT_SECONDS = 15;
 
-/**
- * Single source of truth for the native `ssh` argv. Centralized so the port is never dropped and the
- * connection is always bounded:
- * - `-p <port>` is always passed (a missing `-p` silently broke non-22 hosts).
- * - `BatchMode=yes` + `ConnectTimeout` + `ConnectionAttempts=1` stop the control connection from
- *   blocking forever on an interactive prompt or an unreachable host (the #171 "Please wait" hang).
- */
+// Single source of truth for the native `ssh` argv. Centralized so the port is never dropped and the
+// connection is always bounded:
+// - `-p <port>` is always passed (a missing `-p` silently broke non-22 hosts).
+// - `BatchMode=yes` + `ConnectTimeout` + `ConnectionAttempts=1` stop the control connection from
+// blocking forever on an interactive prompt or an unreachable host (the #171 "Please wait" hang).
 export function buildSSHBaseArgs(params: SSHClientConnection, opts?: { connectTimeoutSeconds?: number }): string[] {
   const connectTimeout = opts?.connectTimeoutSeconds ?? SSH_CONNECT_TIMEOUT_SECONDS;
   const identityArgs = params.privateKeyPath && !params.configHost ? ["-i", params.privateKeyPath] : [];

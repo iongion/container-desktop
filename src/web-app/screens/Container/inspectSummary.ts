@@ -45,8 +45,6 @@ export function buildContainerSummary(container: Container): InspectSummaryRow[]
   if (image) {
     rows.push({ key: "image", label: t("Image"), value: image, copyText: image, render: "tag" });
   }
-  // Raw state token (not pre-translated): the StatePill colors by data-state and translates the label itself,
-  // so the color stays correct in every locale. In English this is byte-identical to the old t(state).
   const state =
     container.Computed?.DecodedState ??
     (typeof container.State === "string" ? container.State : (container.State as ContainerState)?.Status);

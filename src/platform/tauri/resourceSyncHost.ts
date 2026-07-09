@@ -16,15 +16,15 @@ import { createInRealmBus } from "./inRealmBus";
 type Subscriber = (payload: any) => void;
 
 export interface ResourceSyncHost {
-  /** The hosted engine service — the single owner of connection + resource state in this realm. */
+  // The hosted engine service — the single owner of connection + resource state in this realm.
   service: EngineDataService;
-  /** window.MessageBus.invoke for the request/response RESOURCE_SYNC channels (getSnapshot, connectAll, …). */
+  // window.MessageBus.invoke for the request/response RESOURCE_SYNC channels (getSnapshot, connectAll, …).
   invoke(channel: string, payload?: any): unknown;
-  /** window.MessageBus.send for the fire-and-forget RESOURCE_SYNC channels (refresh). */
+  // window.MessageBus.send for the fire-and-forget RESOURCE_SYNC channels (refresh).
   send(channel: string, payload?: any): void;
-  /** window.ResourceBus.subscribe for the push channels (snapshot, progress). Returns an unsubscribe. */
+  // window.ResourceBus.subscribe for the push channels (snapshot, progress). Returns an unsubscribe.
   subscribe(channel: string, callback: Subscriber): () => void;
-  /** True when this hub owns `channel` (invoke or send) — lets the bridge route window/logging itself. */
+  // True when this hub owns `channel` (invoke or send) — lets the bridge route window/logging itself.
   handles(channel: string): boolean;
   dispose(): void;
 }

@@ -43,17 +43,15 @@ export function withControllerVersion(base: CapabilityDescriptor, controllerVers
   return { ...base, extensions: { ...base.extensions, controllerVersion } };
 }
 
-/**
- * Returns a COPY of the descriptor with resources.networks overridden. Copy (not in-place) so the per-host
- * capability object never aliases the shared dialect singleton — callers may later mutate it per connection.
- */
+// Returns a COPY of the descriptor with resources.networks overridden. Copy (not in-place) so the per-host
+// capability object never aliases the shared dialect singleton — callers may later mutate it per connection.
 export function withNetworks(base: CapabilityDescriptor, networks: boolean): CapabilityDescriptor {
   return { ...base, resources: { ...base.resources, networks } };
 }
 
 // shared getApiConnection bodies (engine-agnostic; the socket read is the dialect's)
 
-/** LIMA: the API socket is ~/.lima/<scope>/sock/<scope>.sock (podman-lima + docker-lima are identical). */
+// LIMA: the API socket is ~/.lima/<scope>/sock/<scope>.sock (podman-lima + docker-lima are identical).
 export async function limaApiConnection(
   host: HostContext,
   customSettings?: EngineConnectorSettings,
@@ -68,7 +66,7 @@ export async function limaApiConnection(
   return { uri, relay: "" };
 }
 
-/** SSH: uri is the windows-pipe (or the settings fallback); relay is the engine socket read over the link. */
+// SSH: uri is the windows-pipe (or the settings fallback); relay is the engine socket read over the link.
 export async function sshApiConnection(
   host: HostContext,
   customSettings?: EngineConnectorSettings,

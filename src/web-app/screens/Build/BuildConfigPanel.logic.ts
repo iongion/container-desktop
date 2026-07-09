@@ -24,18 +24,18 @@ function quoteArg(arg: string): string {
   return /\s/.test(arg) ? JSON.stringify(arg) : arg;
 }
 
-/** The full `<program> <args…>` line as it would run (no redaction). */
+// The full `<program> <args…>` line as it would run (no redaction).
 export function buildArgvPreview(options: ImageBuildOptions): string {
   const argv = [PROGRAM[options.engine], ...MAPPER[options.engine](options)];
   return argv.map(quoteArg).join(" ");
 }
 
-/** The command preview shown in the panel — secrets/tokens redacted so nothing sensitive is displayed. */
+// The command preview shown in the panel — secrets/tokens redacted so nothing sensitive is displayed.
 export function buildRedactedPreview(options: ImageBuildOptions): string {
   return redactText(buildArgvPreview(options));
 }
 
-/** A single-platform build with no push can be --load'ed into the local image store; multi-platform cannot. */
+// A single-platform build with no push can be --load'ed into the local image store; multi-platform cannot.
 export function canLoadLocally(options: ImageBuildOptions): boolean {
   return options.platforms.length <= 1 && !options.push;
 }

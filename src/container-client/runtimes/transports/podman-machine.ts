@@ -89,10 +89,6 @@ export class PodmanMachineTransport implements Transport {
     const connections = await this.getSystemConnections(host, customSettings);
     const machines = await host.getPodmanMachines(undefined, customSettings);
     const machineNames = machines.map((it) => it.Name).filter((name): name is string => !!name);
-    // Prefer the ROOTLESS machine connection and map it to its machine. Podman marks the rootful `<machine>-root`
-    // connection Default on some (WSL) machines; the old exact-name match against it never equalled the machine
-    // name, so no scope was set and the connection resolved to an empty URI — the "API is not reachable" the user
-    // saw. The app targets rootless podman only, so the rootful connection must never be selected.
     const { name, reason } = selectDefaultMachineScopeName(connections, machineNames);
     if (!name) {
       host.logger.error(host.id, "Unable to resolve default machine scope", {

@@ -24,7 +24,7 @@ export interface TrayActions {
   quit: () => void;
 }
 
-/** Reuse the shared projection, then split it into a serializable tree + an id→closure registry. */
+// Reuse the shared projection, then split it into a serializable tree + an id→closure registry.
 export function projectTrayMenu(
   data: TrayMenuData,
   actions: TrayActions,
@@ -83,7 +83,7 @@ export interface TrayControllerDeps {
 
 const TRAY_ACTION_EVENT = "tray://action";
 
-/** Wire the tray: rebuild the native menu on engine changes, and route native clicks back to performAction. */
+// Wire the tray: rebuild the native menu on engine changes, and route native clicks back to performAction.
 export function createTrayController(deps: TrayControllerDeps): { rebuild: () => void; dispose: () => void } {
   let registry = new Map<string, () => void>();
   let lastSignature = "";

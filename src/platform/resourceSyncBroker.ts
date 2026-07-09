@@ -34,13 +34,13 @@ export interface ResourceSyncBrokerDeps {
     probeReachability?(request: ReachabilityProbeRequest): Promise<ReachabilityProbeResponse>;
     subscribeProgress?(cb: (progress: ResourceConnectProgress) => void): () => void;
   };
-  /** Register an invoke (request/response) handler — wraps ipcMain.handle in production. */
+  // Register an invoke (request/response) handler — wraps ipcMain.handle in production.
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
-  /** Register a fire-and-forget message handler — wraps ipcMain.on in production. */
+  // Register a fire-and-forget message handler — wraps ipcMain.on in production.
   onMessage: (channel: string, handler: (event: any, payload: any) => void) => void;
-  /** Push a payload to every consumer window — wraps webContents.send fan-out in production. */
+  // Push a payload to every consumer window — wraps webContents.send fan-out in production.
   broadcast: (channel: string, payload: unknown) => void;
-  /** Only the main app window may read/refresh/switch — wraps event.sender validation. */
+  // Only the main app window may read/refresh/switch — wraps event.sender validation.
   isAllowedSender: (event: any) => boolean;
 }
 

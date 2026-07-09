@@ -43,8 +43,6 @@ function collectLibraryFiles(dir, results) {
   }
 }
 
-// Deletes the host-provided graphics/display libraries from an extracted AppDir (squashfs-root),
-// so the app falls back to the host's copies. Returns the removed paths (relative to appDir, posix).
 function stripBundledGraphicsLibs(appDir) {
   const removed = [];
   for (const root of LIBRARY_ROOTS) {

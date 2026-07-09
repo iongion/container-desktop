@@ -9,11 +9,11 @@ import { translate } from "./translate";
 import type { ComposeChangeSummary, ComposeProjectModel, ComposeUpOptions } from "./types";
 
 export interface OrchestrateDeps {
-  /** Translate a client-absolute host path to the path the engine sees (guest/WSL/Lima); identity on Native/SSH. */
+  // Translate a client-absolute host path to the path the engine sees (guest/WSL/Lima); identity on Native/SSH.
   resolvePath: (localPath: string) => Promise<string>;
 }
 
-/** Make bind-mount sources absolute against the compose-file dir, then guest-translate them. */
+// Make bind-mount sources absolute against the compose-file dir, then guest-translate them.
 export async function resolvePaths(
   model: ComposeProjectModel,
   resolvePath: OrchestrateDeps["resolvePath"],
@@ -33,7 +33,7 @@ export async function resolvePaths(
   return { ...model, services };
 }
 
-/** resolve paths → translate → reconcile. Shared by the renderer adapter and the podman dialect. */
+// resolve paths → translate → reconcile. Shared by the renderer adapter and the podman dialect.
 export async function composeUp(
   driver: AxiosInstance,
   model: ComposeProjectModel,

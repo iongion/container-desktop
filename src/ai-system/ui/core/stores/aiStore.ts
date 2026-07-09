@@ -22,24 +22,24 @@ const uid = () => `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).
 const NEW_CHAT_TITLE = i18n.t("New chat");
 
 export interface AIStoreDeps {
-  /** Preload bridge — a getter for window.AI, evaluated at call time so tests can swap it. */
+  // Preload bridge — a getter for window.AI, evaluated at call time so tests can swap it.
   getAI: () => IAI;
-  /** Logging — injected so core never imports @/platform/logger. */
+  // Logging — injected so core never imports @/platform/logger.
   log: { error: (...args: any[]) => void };
-  /** Best-effort live engine/diagnostics context from the app layer. Called fresh each turn. */
+  // Best-effort live engine/diagnostics context from the app layer. Called fresh each turn.
   collectBundle: () => DiagnosticsBundle;
 }
 
 export interface AIState {
   sessions: ChatSession[];
   activeSessionId: string | null;
-  /** sessionId → the ordered render timeline (the source of truth for the screen). */
+  // sessionId → the ordered render timeline (the source of truth for the screen).
   timelines: Record<string, TranscriptItem[]>;
-  /** streamId → sessionId (multiplexes main's pushes back to the right conversation). */
+  // streamId → sessionId (multiplexes main's pushes back to the right conversation).
   binding: Record<string, string>;
-  /** sessionId → its in-flight streamId (resolve/cancel target). */
+  // sessionId → its in-flight streamId (resolve/cancel target).
   streamBySession: Record<string, string>;
-  /** sessionId → whether the model is currently producing (drives the composer send/stop). */
+  // sessionId → whether the model is currently producing (drives the composer send/stop).
   busy: Record<string, boolean>;
   newSession: () => void;
   setActiveSession: (id: string) => void;

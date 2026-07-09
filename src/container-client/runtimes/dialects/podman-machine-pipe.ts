@@ -16,11 +16,9 @@ interface PodmanConnectionEntry {
 
 const NPIPE_SCHEME = /^npipe:\/\//i;
 
-/**
- * True for a Windows named-pipe endpoint in any form the app passes around: an `npipe://` URI, a `\\.\pipe\…`
- * path (what `getWindowsPipePath` and Podman's `ConnectionInfo.PodmanPipe.Path` produce), or its forward-slash
- * `//./pipe/…` variant. Unix sockets and ssh URIs are false.
- */
+// True for a Windows named-pipe endpoint in any form the app passes around: an `npipe://` URI, a `\\.\pipe\…`
+// path (what `getWindowsPipePath` and Podman's `ConnectionInfo.PodmanPipe.Path` produce), or its forward-slash
+// `//./pipe/…` variant. Unix sockets and ssh URIs are false.
 export function isWindowsNamedPipe(uri: string | undefined | null): boolean {
   if (!uri) {
     return false;
@@ -34,11 +32,9 @@ function extractPipeName(uri: string): string | undefined {
   return match ? match[1] : undefined;
 }
 
-/**
- * From the parsed `podman system connection list --format json`, return the machine's Windows named-pipe path
- * (`\\.\pipe\<name>`) when Podman exposes one, else undefined. Prefers the ROOTLESS machine connection (never the
- * rootful `-root` pipe, which the app does not target) — mirroring the SSH bridge selection in podman-machine-ssh.ts.
- */
+// From the parsed `podman system connection list --format json`, return the machine's Windows named-pipe path
+// (`\\.\pipe\<name>`) when Podman exposes one, else undefined. Prefers the ROOTLESS machine connection (never the
+// rootful `-root` pipe, which the app does not target) — mirroring the SSH bridge selection in podman-machine-ssh.ts.
 export function parsePodmanMachineNamedPipe(connections: unknown): string | undefined {
   const entries: PodmanConnectionEntry[] = Array.isArray(connections) ? connections : [];
   const machines = entries.filter(

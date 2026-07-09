@@ -4,13 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { ENVIRONMENT, NODE_ENV, PORT, PROJECT_CODE, PROJECT_HOME, projectVersion, TARGET } from "@/cli/lib/paths";
 
-// Replaces invoke's `ctx.run`. Commands echo the line, inherit stdio and propagate the child's
-// exit code; `runEnv` additionally reproduces tasks.py `run_env` — it sources nvm (unless in CI or
-// on Windows) so the .nvmrc Node runs the yarn scripts, matching the previous behavior.
-
 export type EnvOverrides = Record<string, string | undefined>;
 
-/** The base environment tasks.py `get_env` injected into every child process. */
+// The base environment tasks.py `get_env` injected into every child process.
 export function getEnv(): Record<string, string> {
   return {
     BROWSER: "none",
@@ -31,7 +27,7 @@ function shellFor(): string | boolean {
 }
 
 const SHELL_SAFE = /^[\w@%+=:,./-]+$/;
-/** POSIX shell quoting (shlex.quote equivalent) for interpolating values into `run`/`capture`. */
+// POSIX shell quoting (shlex.quote equivalent) for interpolating values into `run`/`capture`.
 export function shellQuote(value: string): string {
   const text = String(value);
   if (text === "") {
@@ -43,8 +39,8 @@ export function shellQuote(value: string): string {
   return `'${text.replaceAll("'", "'\"'\"'")}'`;
 }
 
-/** Run a command from an argv array (no shell), inheriting stdio; throws on a non-zero exit unless
- * `allowFailure`. Mirrors subprocess.run(args, check=True). */
+// Run a command from an argv array (no shell), inheriting stdio; throws on a non-zero exit unless
+// `allowFailure`. Mirrors subprocess.run(args, check=True).
 export function spawnArgs(
   command: string,
   args: string[],
@@ -58,7 +54,7 @@ export function spawnArgs(
   return result.status ?? 1;
 }
 
-/** Run a shell command, inheriting stdio; throws on a non-zero exit. */
+// Run a shell command, inheriting stdio; throws on a non-zero exit.
 export function run(cmd: string, env?: EnvOverrides, cwd: string = PROJECT_HOME): void {
   console.log(`+ ${cmd}`);
   const childEnv = { ...process.env, ...(env || {}) };
@@ -68,7 +64,7 @@ export function run(cmd: string, env?: EnvOverrides, cwd: string = PROJECT_HOME)
   }
 }
 
-/** Run a yarn/tooling command with the project env, sourcing nvm the way tasks.py `run_env` did. */
+// Run a yarn/tooling command with the project env, sourcing nvm the way tasks.py `run_env` did.
 export function runEnv(cmd: string, env?: EnvOverrides, cwd: string = PROJECT_HOME): void {
   const childEnv = { ...process.env, ...getEnv(), ...(env || {}) };
   const nvmDir = process.env.NVM_DIR || path.join(os.homedir(), ".nvm");
@@ -88,7 +84,7 @@ export function runEnv(cmd: string, env?: EnvOverrides, cwd: string = PROJECT_HO
   }
 }
 
-/** Run a command and capture stdout. When `allowFailure`, returns the result instead of throwing. */
+// Run a command and capture stdout. When `allowFailure`, returns the result instead of throwing.
 export function capture(
   cmd: string,
   options: { cwd?: string; allowFailure?: boolean } = {},

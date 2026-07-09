@@ -10,15 +10,13 @@ interface AppBreadcrumbsProps {
   items: AppBreadcrumb[];
 }
 
-/**
- * Renders a canonical breadcrumb trail using Blueprint's own Breadcrumbs component. i18n is resolved here
- * (translatable `textKey` vs literal `text`) so the trail builders stay pure. The owning-connection crumb
- * arrives as a bare `connectionId` (again, to keep the builders pure and store-free) and is resolved to its
- * display name here — once, rather than in every screen. The entity/section icon renders once, standalone in
- * front of the trail (not as a crumb); the crumbs themselves are icon-free text links. `collapseFrom=START` +
- * `minVisibleItems=1` means a long trail collapses leading crumbs into a `…` overflow menu and always keeps
- * the current leaf visible.
- */
+// Renders a canonical breadcrumb trail using Blueprint's own Breadcrumbs component. i18n is resolved here
+// (translatable `textKey` vs literal `text`) so the trail builders stay pure. The owning-connection crumb
+// arrives as a bare `connectionId` (again, to keep the builders pure and store-free) and is resolved to its
+// display name here — once, rather than in every screen. The entity/section icon renders once, standalone in
+// front of the trail (not as a crumb); the crumbs themselves are icon-free text links. `collapseFrom=START` +
+// `minVisibleItems=1` means a long trail collapses leading crumbs into a `…` overflow menu and always keeps
+// the current leaf visible.
 export const AppBreadcrumbs: React.FC<AppBreadcrumbsProps> = ({ items }) => {
   const { t } = useTranslation();
   const connections = useAppStore((state) => state.connections);

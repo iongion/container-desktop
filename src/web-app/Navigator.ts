@@ -1,21 +1,13 @@
 import { useParams, useSearch } from "@tanstack/react-router";
 import { compile } from "path-to-regexp";
 
-/**
- * Typed accessor for the active route's path params. TanStack does not infer param names without route
- * codegen (our `Screen.Route.Path` values are `string`-typed, so `$id` can't be read at the type level),
- * but the matched route does carry them at runtime — callers name the shape they expect.
- */
+// Typed accessor for the active route's path params. TanStack does not infer param names without route
+// codegen (our `Screen.Route.Path` values are `string`-typed, so `$id` can't be read at the type level),
+// but the matched route does carry them at runtime — callers name the shape they expect.
 export function useRouteParams<T extends Record<string, string>>(): T {
   return useParams({ strict: false }) as unknown as T;
 }
 
-/**
- * Typed accessor for the active route's search (query) params — same un-inferred-shape caveat as
- * useRouteParams. Used to thread the owning `connId` from a merged list row into its detail/inspect/
- * logs/terminal screen: resource Ids collide across engines, so the bare path `$id` isn't enough to
- * pick the right connection. Absent `connId` (legacy/deep links) falls back to the primary connector.
- */
 export function useRouteSearch<T extends Record<string, string | undefined>>(): T {
   return useSearch({ strict: false }) as unknown as T;
 }

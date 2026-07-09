@@ -37,7 +37,7 @@ export interface ChatRequest {
   messages: ChatMessage[];
   providerId?: string;
   model?: string;
-  /** Live engine/diagnostics context the renderer assembles for this turn (redacted main-side). */
+  // Live engine/diagnostics context the renderer assembles for this turn (redacted main-side).
   bundle?: DiagnosticsBundle;
 }
 
@@ -74,8 +74,8 @@ export type AgentToolEvent =
       program: string;
       args: string[];
       reason: string;
-      /** Typed first-class tool (kind === "tool"): the engine op + its args, so the broker can re-run it on
-       *  approval, and a friendly one-line summary for the approval card. */
+      // Typed first-class tool (kind === "tool"): the engine op + its args, so the broker can re-run it on
+      // approval, and a friendly one-line summary for the approval card.
       tool?: string;
       toolArgs?: Record<string, unknown>;
       title?: string;
@@ -123,12 +123,12 @@ export interface IAI {
   egressCheck: (providerId?: string) => Promise<import("./egress").EgressDecision>;
   chat: (req: ChatRequest) => Promise<{ streamId: string }>;
   cancelChat: (streamId: string) => void;
-  /** Resolve a pending tool approval the agent surfaced. Fire-and-forget: the broker runs/persists per
-   *  mode and resumes the turn over the stream. A reject never runs. */
+  // Resolve a pending tool approval the agent surfaced. Fire-and-forget: the broker runs/persists per
+  // mode and resumes the turn over the stream. A reject never runs.
   resolve: (streamId: string, actionId: string, decision: ResolveDecision) => void;
   generate: (req: GenerateRequest) => Promise<{ streamId: string }>;
   listModels: (providerId?: string) => Promise<ModelsListResult>;
-  /** The user-managed allow/reject record (read + revoke + web switch). Broker owns all writes. */
+  // The user-managed allow/reject record (read + revoke + web switch). Broker owns all writes.
   listPermissions: () => Promise<PermissionsSnapshot>;
   removePermission: (list: PermissionsList, key: string) => Promise<PermissionsSnapshot>;
   setWebPermission: (verdict: "allow" | "block" | null) => Promise<PermissionsSnapshot>;

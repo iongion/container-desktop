@@ -3,9 +3,9 @@
 // Highlight API); the FindHost/FindWidget drive whichever engine the active screen needs.
 
 export interface FindResults {
-  /** 1-based index of the active match, or 0 when there are none. */
+  // 1-based index of the active match, or 0 when there are none.
   index: number;
-  /** Total number of matches. */
+  // Total number of matches.
   count: number;
 }
 
@@ -14,14 +14,14 @@ export interface FindEngineOptions {
 }
 
 export interface FindEngine {
-  /** (Re)compute matches, highlight all of them and activate the first. */
+  // (Re)compute matches, highlight all of them and activate the first.
   apply(query: string, options: FindEngineOptions): void;
-  /** Move the active match forward (wraps). */
+  // Move the active match forward (wraps).
   next(): void;
-  /** Move the active match backward (wraps). */
+  // Move the active match backward (wraps).
   previous(): void;
-  /** Remove every highlight/decoration this engine created. */
+  // Remove every highlight/decoration this engine created.
   clear(): void;
-  /** Subscribe to result changes; returns an unsubscribe function. */
+  // Subscribe to result changes; returns an unsubscribe function.
   subscribe(callback: (results: FindResults) => void): () => void;
 }

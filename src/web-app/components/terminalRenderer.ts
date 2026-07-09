@@ -21,7 +21,7 @@ const SOFTWARE_RENDERER_MARKERS = [
   "microsoft basic",
 ];
 
-/** A GL renderer string looks software-rasterized (llvmpipe / SwiftShader / MS Basic Render, etc.). */
+// A GL renderer string looks software-rasterized (llvmpipe / SwiftShader / MS Basic Render, etc.).
 export function isSoftwareRenderer(renderer: string): boolean {
   const value = renderer.toLowerCase();
   return SOFTWARE_RENDERER_MARKERS.some((marker) => value.includes(marker));
@@ -34,11 +34,9 @@ export interface RendererProbe {
   getParameter: (parameter: number) => unknown;
 }
 
-/**
- * Enable WebGL only when the probe PROVES hardware acceleration. Conservative by design: WebGL is an
- * optimization, so absent proof (no context, no debug-renderer extension, or a software renderer) we choose
- * the always-safe DOM renderer. `null` probe ⇒ no GL context at all ⇒ DOM.
- */
+// Enable WebGL only when the probe PROVES hardware acceleration. Conservative by design: WebGL is an
+// optimization, so absent proof (no context, no debug-renderer extension, or a software renderer) we choose
+// the always-safe DOM renderer. `null` probe ⇒ no GL context at all ⇒ DOM.
 export function shouldUseWebglRenderer(probe: RendererProbe | null): boolean {
   if (!probe) {
     return false;
@@ -90,7 +88,7 @@ function isTauriWebview(): boolean {
 
 let cached: boolean | undefined;
 
-/** Memoized per session: whether the terminal should load the WebGL addon (else the DOM renderer). */
+// Memoized per session: whether the terminal should load the WebGL addon (else the DOM renderer).
 export function preferWebglRenderer(): boolean {
   if (cached === undefined) {
     cached = !isTauriWebview() && shouldUseWebglRenderer(acquireGlProbe());

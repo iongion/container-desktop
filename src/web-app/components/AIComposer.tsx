@@ -23,17 +23,17 @@ export interface AIComposerContext {
 }
 
 export interface AIComposerProps {
-  /** Called with the (trimmed, non-empty) text and the chosen provider/model when the user sends. */
+  // Called with the (trimmed, non-empty) text and the chosen provider/model when the user sends.
   onSubmit: (text: string, ctx: AIComposerContext) => void;
   streaming?: boolean;
-  /** When provided AND streaming, the send button becomes a stop button. */
+  // When provided AND streaming, the send button becomes a stop button.
   onStop?: () => void;
   placeholder?: string;
-  /** Optional left-aligned toolbar content, e.g. the Assistant's "New chat" button. */
+  // Optional left-aligned toolbar content, e.g. the Assistant's "New chat" button.
   leadingActions?: React.ReactNode;
-  /** Show the global permission-mode dropdown (Assistant only — Generator runs no tools). */
+  // Show the global permission-mode dropdown (Assistant only — Generator runs no tools).
   showPermissionMode?: boolean;
-  /** The assistant is waiting on the user's decision for a surfaced action — block send to avoid interleaving. */
+  // The assistant is waiting on the user's decision for a surfaced action — block send to avoid interleaving.
   awaitingResponse?: boolean;
 }
 

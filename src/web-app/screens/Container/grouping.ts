@@ -36,9 +36,9 @@ export function isContainerGroupDirectory(group: ContainerGroup): boolean {
   return group.Name === "Pod infrastructure" || group.Items.length > 1;
 }
 
-/** A pod's infra ("pause") container — podman implementation detail, not a user workload. Detected by the
- * libpod `IsInfra` flag when present, else by the `<pod-id>-infra` name (the docker-compat list omits the
- * flag). These are hidden from the Containers list, like Docker Desktop hides pause containers. */
+// A pod's infra ("pause") container — podman implementation detail, not a user workload. Detected by the
+// libpod `IsInfra` flag when present, else by the `<pod-id>-infra` name (the docker-compat list omits the
+// flag). These are hidden from the Containers list, like Docker Desktop hides pause containers.
 export function isInfraContainer(container: Container): boolean {
   if (container.IsInfra) {
     return true;
@@ -137,14 +137,12 @@ export function groupContainers(
   return groups;
 }
 
-/**
- * Group each connection's containers independently — so identically-named groups on different engines never
- * merge (a Docker "web" project and a Podman "web" project stay separate) — then order the COMBINED set with
- * the same comparator, so directory groups (multi-member projects + "Pod infrastructure") always sort before
- * singletons across EVERY connection, like folders in a file manager, regardless of the active sort. Grouping
- * per connection then concatenating (flatMap alone) would drop a second engine's group below the first
- * engine's singletons — this final sort keeps every folder on top.
- */
+// Group each connection's containers independently — so identically-named groups on different engines never
+// merge (a Docker "web" project and a Podman "web" project stay separate) — then order the COMBINED set with
+// the same comparator, so directory groups (multi-member projects + "Pod infrastructure") always sort before
+// singletons across EVERY connection, like folders in a file manager, regardless of the active sort. Grouping
+// per connection then concatenating (flatMap alone) would drop a second engine's group below the first
+// engine's singletons — this final sort keeps every folder on top.
 export function groupContainersAcrossConnections(
   containersByConnection: Container[][],
   searchTerm: string,

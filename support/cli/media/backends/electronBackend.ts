@@ -9,10 +9,6 @@ import { createPlaywrightDriver } from "../drivers/playwrightDriver";
 import { RUNTIME_NAME_SHIM } from "../drivers/runtimeShim";
 import type { CaptureApp, CaptureBackend, LaunchOptions, Viewport } from "../drivers/types";
 
-// Electron capture lifecycle (shared by screenshots + demo replay): boot a mock Electron app and
-// attach Playwright over CDP. Extracted verbatim from the two scripts' former withApp/electronEnv/
-// waitForApp helpers so the Electron path is unchanged; only the driver seam is new.
-
 const require = createRequire(import.meta.url);
 const ROOT = PROJECT_HOME;
 
@@ -133,13 +129,13 @@ async function stopProcess(child: any): Promise<void> {
         process.kill(-child.pid, signal);
         return;
       } catch {
-        /* fall through to the direct child */
+        // fall through to the direct child
       }
     }
     try {
       child.kill(signal);
     } catch {
-      /* already gone */
+      // already gone
     }
   };
   await new Promise<void>((resolve) => {

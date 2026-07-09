@@ -173,8 +173,6 @@ export class SSHTransport implements Transport {
         const scopes = await host.getControllerScopes();
         const currentSettings = await host.getSettings();
         const scope = scopes.find((s) => s.Name === currentSettings.controller?.scope);
-        // Fixed (review): startSSHConnection returns a StartupStatus string; the old `if (connected)` treated
-        // ERROR ("error", a truthy non-empty string) as success. Only RUNNING/STARTED is an established connection.
         const status = await this.startSSHConnection(scope as SSHHost, {
           onStatusCheck: (info) => {
             systemNotifier.transmit("engine.availability", {

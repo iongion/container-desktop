@@ -1,8 +1,3 @@
-// In-tree, typed replacement for the slice of `electron-context-menu` this app actually used
-// (`contextMenu({ window, showInspectElement: true })`). Rather than vendor the whole feature-rich
-// package, we implement just the standard right-click menu: editing roles, copy selection, link +
-// image actions, and Inspect Element. Built from Electron primitives so there is no external dep.
-
 import {
   type BrowserWindow,
   type ContextMenuParams,
@@ -92,7 +87,7 @@ function buildTemplate(
   return template;
 }
 
-/** Attach a standard right-click context menu to `options.window`. */
+// Attach a standard right-click context menu to `options.window`.
 export function createContextMenu(options: ContextMenuOptions): void {
   options.window.webContents.on("context-menu", (_event, props) => {
     const template = buildTemplate(options.window, props, options);

@@ -13,7 +13,7 @@ interface ServiceNode {
   dependsOn: string[];
 }
 
-/** Return service names ordered so every `depends_on` target precedes the service that needs it. */
+// Return service names ordered so every `depends_on` target precedes the service that needs it.
 export function topologicalStartOrder(services: ServiceNode[]): string[] {
   const byName = new Map(services.map((s) => [s.name, s]));
   const order: string[] = [];

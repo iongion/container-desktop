@@ -35,7 +35,6 @@ table[data-table="image.layers"] {
   color: var(--app-text);
   vertical-align: top;
 }
-/* Size column */
 [data-table="image.layers.history"] tr th:nth-last-child(2),
 [data-table="image.layers.history"] tr td:nth-last-child(2) {
   width: 120px;

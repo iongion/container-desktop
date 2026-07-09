@@ -10,7 +10,7 @@ import { createLogger } from "@/platform/logger";
 
 const logger = createLogger("platform.ssh-stdio-bridge");
 
-/** A raw, byte-accurate duplex to the remote engine daemon (e.g. `docker system dial-stdio` over SSH). */
+// A raw, byte-accurate duplex to the remote engine daemon (e.g. `docker system dial-stdio` over SSH).
 export interface StdioChannel {
   stdin: NodeJS.WritableStream;
   stdout: NodeJS.ReadableStream;
@@ -44,7 +44,7 @@ export class SSHStdioBridgeServer {
       try {
         fs.unlinkSync(this.localAddress);
       } catch {
-        /* no stale socket — fine */
+        // no stale socket — fine
       }
     }
     return new Promise((resolve) => {
@@ -71,7 +71,7 @@ export class SSHStdioBridgeServer {
       try {
         channel.kill();
       } catch {
-        /* already gone */
+        // already gone
       }
       socket.destroy();
     };
@@ -90,7 +90,7 @@ export class SSHStdioBridgeServer {
       try {
         channel.kill();
       } catch {
-        /* already gone */
+        // already gone
       }
     }
     this.channels.clear();

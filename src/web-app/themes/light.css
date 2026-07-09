@@ -1,11 +1,3 @@
-/* Engine-agnostic LIGHT theme overrides.
- *
- * Rules here are scoped to the light theme ONLY (`body.bp6-light`, i.e. data-theme="bp6-light")
- * and carry NO `[data-engine]` selector — they apply to both Podman and Docker in light mode.
- * Engine-specific light rules live in docker.css / podman.css; truly universal rules live in
- * shared.css. (Moved here from shared.css + podman.css during theme centralization.) */
-
-/* Container status */
 body.bp6-light [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #a45f80;
   color: #fff;
@@ -50,7 +42,6 @@ body.bp6-light [data-table="containers"] .ContainerReportStateCounts li[data-sta
   color: #333;
 }
 
-/* Pod state */
 body.bp6-light table tr td {
   color: #242b31;
 }
@@ -75,18 +66,12 @@ body.bp6-light [data-table="pods"] .PodState[data-state="Paused"] {
   background-color: orange;
 }
 
-/* ── Security scanning severity (light) — engine-agnostic, so it also covers the unified chrome.
-   The dark base (SecurityScreen.css) already gives correct CRITICAL/HIGH/MEDIUM (dark-red badge,
-   white text) on light too; only LOW must flip from the near-black dark base to a light-gray badge.
-   podman/docker keep their higher-specificity light copies, so their reports are unchanged. ── */
 body.bp6-light .AppDataTable[data-table="image.scanning.report"] tr[data-severity="LOW"] .Severity,
 body.bp6-light table[data-table="image.scanning.report.counts"] tr[data-severity="LOW"] td .Severity {
   background-color: #c5c5c5;
   color: #666;
 }
 
-/* Light standalone mdi icons keep Blueprint's muted slate (the dark brightening to --app-text is scoped to
-   dark in tokens.css; in-button mdi mirrors the framework muted tone there too, so light stays unchanged). */
 body.bp6-light .ReactIcon,
 body.bp6-light .AppLabelIcon {
   color: #5f6b7c;
@@ -97,7 +82,6 @@ body.bp6-light .AppDataTableGroupLinkHorizontal {
   filter: invert(1);
 }
 
-/* ── Container volume mappings + image layer history (theme-only) — consolidated from screen CSS. ── */
 [data-theme="bp6-light"] .ContainerVolumeMapping li strong {
   color: var(--app-text);
   background-color: color-mix(in srgb, var(--app-surface-strong) 72%, var(--app-surface));
@@ -114,7 +98,6 @@ body.bp6-light .AppDataTableGroupLinkHorizontal {
   background-color: #ccc;
 }
 
-/* Connection manager (host.connections) — light specifics, consolidated from UserSettingsScreen.css */
 [data-theme="bp6-light"]
   .AppSettingsEngineManagerConnections
   [data-table="host.connections"]
@@ -135,7 +118,6 @@ body.bp6-light .AppDataTableGroupLinkHorizontal {
 [data-theme="bp6-light"] .AppSettingsEngineManagerConnections .PlatformConnectionDescription {
   color: #777;
 }
-/* Notification center drawer — light readability, consolidated from NotificationCenter.css */
 body.bp6-light .NotificationCenterDrawer .ActivityDetailPre {
   background: rgba(17, 20, 24, 0.07);
   color: #1c2127;

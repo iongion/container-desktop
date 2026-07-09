@@ -1,6 +1,3 @@
-/* AppDrawer — shared form-drawer shell. The header reuses Blueprint's .bp6-drawer-header layout (so it looks
-   identical to the built-in one); we only pin the [Save][Close] action group to its trailing edge while the
-   .bp6-heading title flexes to fill the row. */
 .AppDrawerHeaderTitle {
   flex: 1 1 auto;
   min-width: 0;

@@ -9,8 +9,6 @@ export const DEFAULT_RETRIES_COUNT = 10;
 export interface WrapperOpts extends SpawnOptionsWithoutStdio {
   wrapper?: Wrapper;
   proxyEnv?: boolean;
-  // Isolated exec (the sandbox): the child sees ONLY `env` — never process.env or the proxy creds. This is the
-  // wholesale-env-replacement guarantee ICommand.Execute (which merges) deliberately does NOT give.
   isolate?: boolean;
   // Terminate + resolve once collected stdout OR stderr reaches this many bytes (sandbox memory-exhaustion guard).
   maxCollectBytes?: number;

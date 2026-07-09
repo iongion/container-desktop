@@ -27,7 +27,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import "./AIProviderConfig.css";
 
 export interface AIProviderConfigProps {
-  /** Consent to store secrets without OS encryption (only meaningful in a degraded environment). */
+  // Consent to store secrets without OS encryption (only meaningful in a degraded environment).
   allowDegraded: boolean;
 }
 
@@ -97,7 +97,7 @@ export const AIProviderConfig: React.FC<AIProviderConfigProps> = ({ allowDegrade
         try {
           await bridge.clearKey(configId);
         } catch {
-          /* nothing stored yet — fine */
+          // nothing stored yet — fine
         }
       }
     },

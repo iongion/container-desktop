@@ -6,8 +6,6 @@ import { useTranslation } from "react-i18next";
 import "@/web-app/components/InspectTabs.css";
 import { getConnectionUrl } from "./Navigation";
 
-// The connection detail views, in display order. Each rail entry is a route link; the active one is the
-// current screen. Mirrors the old horizontal header nav (ConnectionDetailsActionsMenu), now a left rail.
 const CONNECTION_DETAIL_VIEWS = [
   {
     screen: "connections.connection-info",

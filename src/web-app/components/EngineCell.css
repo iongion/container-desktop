@@ -1,7 +1,3 @@
-/* EngineCell + per-row engine accent. The dot and the row-left border read the standalone
-   --engine-accent-* tokens (tokens.css) so each row shows its OWN engine color regardless of the
-   active unified chrome. The left accent is an inset box-shadow on the first cell — no layout shift. */
-
 .EngineCell {
   display: inline-flex;
   align-items: center;
@@ -9,8 +5,6 @@
   white-space: nowrap;
 }
 
-/* The engine's own brand SVG (same assets as the splash + sidebar-footer glyph), rendered as a small
-   full-color logo so each row is recognizable at a glance. */
 .EngineCell .EngineCellIcon {
   flex: 0 0 auto;
   width: 16px;
@@ -36,9 +30,6 @@
   text-transform: capitalize;
 }
 
-/* Row-left engine accent for the owning engine. A ::before bar (NOT box-shadow) so it can't be overridden
-   by Blueprint's per-cell border box-shadow — notably `.bp6-dark table.bp6-html-table tbody tr:first-child td`,
-   whose higher specificity was hiding the FIRST row's accent. */
 .AppDataTable tbody tr[data-engine-row] > td:first-child {
   position: relative;
 }
@@ -62,9 +53,6 @@
   background: var(--engine-accent-container);
 }
 
-/* Engine column = minimum width always (the icon marker), never wrapping or stretching. The 1px width is
-   the table shrink-to-fit idiom — the browser grows it to min-content and no further. Applies to both the
-   header (th[data-column="engine"]) and the cells (td[data-column="engine"]). */
 .AppDataTable th[data-column="engine"],
 .AppDataTable td[data-column="engine"] {
   width: 1px;

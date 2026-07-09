@@ -18,17 +18,17 @@ interface ForwardedStream {
 }
 
 export interface CommandProxyBrokerDeps {
-  /** Ensure the target connection is up before proxying (idempotent) — the renderer also awaits this. */
+  // Ensure the target connection is up before proxying (idempotent) — the renderer also awaits this.
   ensureConnected: (connectionId?: string) => Promise<void>;
-  /** The target connection's host-client Axios driver (falls back to the primary when id is absent). */
+  // The target connection's host-client Axios driver (falls back to the primary when id is absent).
   getDriver: (connectionId?: string) => Promise<{ request: (config: any) => Promise<any> }>;
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
   onMessage: (channel: string, handler: (event: any, payload: any) => void) => void;
-  /** Push a stream event to the window that opened the stream. */
+  // Push a stream event to the window that opened the stream.
   send: (event: any, channel: string, payload: unknown) => void;
-  /** Only the main app window forwards engine HTTP. */
+  // Only the main app window forwards engine HTTP.
   isAllowedSender: (event: any) => boolean;
-  /** Stable identity for a sender, so its streams can be reaped when its window closes. */
+  // Stable identity for a sender, so its streams can be reaped when its window closes.
   senderId: (event: any) => number | string;
 }
 

@@ -7,7 +7,7 @@
 import type { IDialogs, IHostRuntime, IWindowControl } from "./contract";
 import { registerHostRuntime } from "./provider";
 
-/** Build the IHostRuntime from the contextBridge'd globals (defaults to the live globalThis/window). */
+// Build the IHostRuntime from the contextBridge'd globals (defaults to the live globalThis/window).
 export function assembleHostRuntimeFromGlobals(source: typeof globalThis = globalThis): IHostRuntime {
   const messageBus = source.MessageBus;
   const windowControl: IWindowControl = {
@@ -42,7 +42,7 @@ export function assembleHostRuntimeFromGlobals(source: typeof globalThis = globa
   };
 }
 
-/** Assemble + register the Electron host runtime with the provider; returns it for convenience. */
+// Assemble + register the Electron host runtime with the provider; returns it for convenience.
 export function registerHostRuntimeFromGlobals(source: typeof globalThis = globalThis): IHostRuntime {
   const runtime = assembleHostRuntimeFromGlobals(source);
   registerHostRuntime(runtime);

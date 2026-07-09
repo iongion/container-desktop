@@ -1,6 +1,3 @@
-/* Engine Compatibility matrix — Troubleshoot sub-screen. Merged/global comparison: connections as COLUMNS,
-   capabilities as ROWS. All color/spacing from the global --app-* tokens (theme-tracked; never hardcoded). */
-
 .AppScreen[data-screen="troubleshoot.compatibility"] .AppScreenContent {
   display: flex;
   flex-direction: column;
@@ -13,7 +10,6 @@
   gap: 10px;
 }
 
-/* summary + legend strip */
 .CompatSumBar {
   display: flex;
   align-items: center;
@@ -41,7 +37,6 @@
   gap: 6px;
 }
 
-/* cell markers — icons inherit currentColor from the mark class so they read bright, never muted */
 .CompatMark {
   display: inline-flex;
   align-items: center;
@@ -76,7 +71,6 @@
   color: var(--app-accent-text);
 }
 
-/* the matrix */
 .CompatMatrixWrap {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
@@ -165,7 +159,6 @@ table.CompatMatrix .conn {
   opacity: 0.8;
 }
 
-/* disconnected engine column: dim the header (its cells show the engine's known base capabilities) */
 table.CompatMatrix th.conn[data-connected="no"] .ch .EngineCell,
 table.CompatMatrix th.conn[data-connected="no"] .ch .chn {
   opacity: 0.55;
@@ -181,7 +174,6 @@ table.CompatMatrix th.conn[data-connected="no"] .ch .chn {
   color: var(--app-intent-success-text);
 }
 
-/* category group rows */
 table.CompatMatrix tr.cat td {
   position: sticky;
   left: 0;
@@ -201,7 +193,6 @@ table.CompatMatrix tbody tr:hover td.cap {
   background: color-mix(in srgb, var(--app-accent) 9%, transparent);
 }
 
-/* insight callout + footnotes */
 .CompatInsight.bp6-callout {
   border-left: 3px solid var(--app-accent);
 }

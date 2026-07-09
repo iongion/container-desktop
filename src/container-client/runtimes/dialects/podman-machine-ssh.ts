@@ -38,12 +38,10 @@ function parseSSHURI(uri: string): Omit<PodmanMachineSSH, "identity"> | undefine
   return { user: user || "", host, port: port ? Number(port) : 22, socket: socket || "" };
 }
 
-/**
- * Pick the machine's SSH connection from `podman system connection list --format json`. Only `IsMachine`
- * entries with an identity qualify — a directly-reachable native remote podman has none, so this returns
- * undefined and the caller keeps the existing `ssh -NL` unix-socket forward. Prefers the ROOTLESS connection
- * (never the rootful `-root` socket — the app targets rootless podman only).
- */
+// Pick the machine's SSH connection from `podman system connection list --format json`. Only `IsMachine`
+// entries with an identity qualify — a directly-reachable native remote podman has none, so this returns
+// undefined and the caller keeps the existing `ssh -NL` unix-socket forward. Prefers the ROOTLESS connection
+// (never the rootful `-root` socket — the app targets rootless podman only).
 export function parsePodmanMachineSSHConnection(connectionListJson: string): PodmanMachineSSH | undefined {
   let entries: PodmanConnectionEntry[];
   try {
@@ -61,12 +59,10 @@ export function parsePodmanMachineSSHConnection(connectionListJson: string): Pod
   return parsed ? { ...parsed, identity: chosen.Identity as string } : undefined;
 }
 
-/**
- * The command run ON the SSH-remote host: nest OpenSSH into the machine VM, then the VM's LOCAL
- * `podman system dial-stdio` (which bridges to the in-VM socket). The identity is quoted so a Windows profile
- * path with spaces survives cmd.exe. StrictHostKeyChecking is disabled (the machine host key rotates per
- * recreation and lives only in podman's own store) and BatchMode stops any prompt hanging the bridge.
- */
+// The command run ON the SSH-remote host: nest OpenSSH into the machine VM, then the VM's LOCAL
+// `podman system dial-stdio` (which bridges to the in-VM socket). The identity is quoted so a Windows profile
+// path with spaces survives cmd.exe. StrictHostKeyChecking is disabled (the machine host key rotates per
+// recreation and lives only in podman's own store) and BatchMode stops any prompt hanging the bridge.
 export function buildPodmanMachineDialStdioCommand(conn: PodmanMachineSSH, program = "podman"): string[] {
   const target = conn.user ? `${conn.user}@${conn.host}` : conn.host;
   return [
@@ -86,10 +82,8 @@ export function buildPodmanMachineDialStdioCommand(conn: PodmanMachineSSH, progr
   ];
 }
 
-/**
- * From `podman system connection list --format json`, produce the bridge (relay id + nested dial-stdio
- * command), or undefined when there is no machine to bridge.
- */
+// From `podman system connection list --format json`, produce the bridge (relay id + nested dial-stdio
+// command), or undefined when there is no machine to bridge.
 export function resolvePodmanMachineBridge(connectionListJson: string): DialStdioBridge | undefined {
   const conn = parsePodmanMachineSSHConnection(connectionListJson);
   if (!conn) {

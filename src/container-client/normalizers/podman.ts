@@ -15,7 +15,7 @@ import {
   normalizeVolume,
 } from "./shared";
 
-/** libpod networks are already canonical (lowercase driver/id/internal/...) — passthrough. */
+// libpod networks are already canonical (lowercase driver/id/internal/...) — passthrough.
 export const normalizeNetwork = (network: Network): Network => network;
 
 export const podmanNormalizers: EngineNormalizers = {

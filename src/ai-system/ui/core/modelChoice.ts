@@ -8,7 +8,7 @@ export interface ModelChoice {
   mode: "select" | "input";
   value: string;
   options: string[];
-  /** Set when no model was saved and we defaulted to the first listed model — the caller persists it. */
+  // Set when no model was saved and we defaulted to the first listed model — the caller persists it.
   autoSelect?: string;
 }
 

@@ -12,13 +12,13 @@ export const LOGGING_CHANNELS = {
 
 export interface LoggingIpcDeps {
   onInvoke: (channel: string, handler: (event: any, payload: any) => unknown) => void;
-  /** Gate every handler to the main app window only. */
+  // Gate every handler to the main app window only.
   isAllowedSender: (event: any) => boolean;
-  /** Re-read the persisted logging policy and apply it; returns the resolved log file path. */
+  // Re-read the persisted logging policy and apply it; returns the resolved log file path.
   applyConfig: () => Promise<{ logFile: string }>;
-  /** Open the active log file; the result lets the renderer toast when it's missing/inaccessible. */
+  // Open the active log file; the result lets the renderer toast when it's missing/inaccessible.
   openLogFile: () => Promise<{ ok: boolean; reason?: string; detail?: string }>;
-  /** Reveal the active log file in the OS file manager; same result contract. */
+  // Reveal the active log file in the OS file manager; same result contract.
   revealLogFile: () => Promise<{ ok: boolean; reason?: string; detail?: string }>;
 }
 

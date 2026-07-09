@@ -99,8 +99,6 @@ import { createLogger, getLevel, setLevel } from "@/platform/logger";
 import { normalizeLoggingFileSettings } from "@/platform/logger/loggingSettings";
 import { deepMerge } from "@/utils";
 
-// Re-export the helpers that moved to ./application/* so Application.ts keeps its historical
-// named exports (detectOperatingSystem, normalizeAndSortSearchResults) byte-for-byte.
 export { detectOperatingSystem, normalizeAndSortSearchResults };
 
 // A tiny, dependency-free stable hash (FNV-1a 32-bit → 8 hex). This module is bundled into the renderer, where
@@ -1256,11 +1254,9 @@ export class Application {
     return { pid: null, code: 0, success: true, stdout: "", stderr: "", command: `write ${file}` };
   }
 
-  /**
-   * Project the connection's MANAGED registry set into the engine's config (podman registries.conf / docker
-   * daemon.json). READ-MODIFY-WRITE — a malformed existing file ABORTS the write (never overwritten). Returns
-   * `restartNeeded` (docker daemon.json changes only take effect after a daemon restart).
-   */
+  // Project the connection's MANAGED registry set into the engine's config (podman registries.conf / docker
+  // daemon.json). READ-MODIFY-WRITE — a malformed existing file ABORTS the write (never overwritten). Returns
+  // `restartNeeded` (docker daemon.json changes only take effect after a daemon restart).
   async writeRegistryConfig(opts: {
     host?: HostClientFacade;
     registries: RegistryTrustEntry[];
@@ -1314,7 +1310,7 @@ export class Application {
     return { success: true, restartNeeded: false };
   }
 
-  /** Install a custom CA into the engine's certs.d (PEM piped over stdin, never argv). */
+  // Install a custom CA into the engine's certs.d (PEM piped over stdin, never argv).
   async importCA(opts: {
     host?: HostClientFacade;
     registryHost: string;
@@ -1356,7 +1352,7 @@ export class Application {
     return await host.runHostCommand(cmd.launcher, cmd.args);
   }
 
-  /** Persist the connection's managed registry set (desired state) + refresh the cached host so reads are fresh. */
+  // Persist the connection's managed registry set (desired state) + refresh the cached host so reads are fresh.
   async setConnectionRegistries(opts: { connectionId: string; registries: RegistryTrustEntry[] }): Promise<void> {
     const conn = (await this.getConnectionsFromConfiguration()).find((c) => c.id === opts.connectionId);
     if (!conn?.settings) {
@@ -1366,7 +1362,7 @@ export class Application {
     await this.refreshCachedHostSettings(opts.connectionId);
   }
 
-  /** Persist the connection's proxy override + refresh the cached host. Effective proxy is renderer-computed. */
+  // Persist the connection's proxy override + refresh the cached host. Effective proxy is renderer-computed.
   async setConnectionProxy(opts: { connectionId: string; proxy: ConnectionProxySettings }): Promise<void> {
     const conn = (await this.getConnectionsFromConfiguration()).find((c) => c.id === opts.connectionId);
     if (!conn?.settings) {
@@ -1389,8 +1385,8 @@ export class Application {
     }
   }
 
-  /** Inject the effective proxy into a SCOPED guest's engine service via a systemd drop-in (written over stdin,
-   * so credentials never touch argv), then daemon-reload. Native hosts already inherit the app's proxy env. */
+  // Inject the effective proxy into a SCOPED guest's engine service via a systemd drop-in (written over stdin,
+  // so credentials never touch argv), then daemon-reload. Native hosts already inherit the app's proxy env.
   async applyProxyToGuest(opts: {
     host?: HostClientFacade;
     config: ProxyConfig;

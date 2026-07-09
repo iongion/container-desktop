@@ -1,4 +1,0 @@
-/* Pod inspect styling now comes from the shared InspectSummary component
-   (components/InspectSummary.css). The former `[data-table="pod.inspect"]` / `.PodInspectDisplay`
-   rules were dead (this screen renders the shared summary table + raw JSON, not a grouped
-   `pod.inspect` table) and used hardcoded colors, so they were removed. */

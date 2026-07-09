@@ -1,3 +1,0 @@
-/* The System info content no longer needs a wrapping border: the summary table brings its own header
-   surface and the raw-JSON viewer (.InspectCodeEditor, shared InspectSummary.css) supplies the frame.
-   A content-area border here would double-frame the JSON. */

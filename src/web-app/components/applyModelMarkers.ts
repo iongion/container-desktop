@@ -6,7 +6,7 @@ import type * as Monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
 export const MARKER_OWNER = "containerfile-linter";
 
-/** Set (or clear) markers on the editor's model. Returns false when monaco/the model is not ready yet. */
+// Set (or clear) markers on the editor's model. Returns false when monaco/the model is not ready yet.
 export function applyModelMarkers(
   monaco: typeof Monaco | null | undefined,
   editor: Monaco.editor.IStandaloneCodeEditor | null | undefined,

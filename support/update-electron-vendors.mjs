@@ -1,8 +1,6 @@
-/**
- * This script should be run in electron context
- * @example
- *  ELECTRON_RUN_AS_NODE=1 electron scripts/update-electron-vendors.js
- */
+// This script should be run in electron context
+// @example
+// ELECTRON_RUN_AS_NODE=1 electron scripts/update-electron-vendors.js
 
 import { writeFileSync } from "node:fs";
 import path from "node:path";

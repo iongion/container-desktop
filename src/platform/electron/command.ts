@@ -51,9 +51,6 @@ export const Command: ICommand = {
   },
 };
 
-// Re-export EXACTLY the historical public surface (never `export *`, which would leak internals like the
-// log summaries, `createProxyStreamBridge`, `startSSHConnection`, `stopRelayServer`, the cache-reset
-// helpers, `PROGRAM_*`, and the WSL deploy helpers — none of which were ever public).
 export {
   applyProxyRequestDefaults,
   createNodeJSApiDriver,

@@ -28,7 +28,7 @@ export function extractApiErrorText(error: unknown, fallback = "Request failed")
   return fallback;
 }
 
-/** The HTTP status behind an axios-like error, coerced to a number — survives the string-ified IPC re-serialize. */
+// The HTTP status behind an axios-like error, coerced to a number — survives the string-ified IPC re-serialize.
 export function apiErrorStatus(error: unknown): number | undefined {
   const err = error as any;
   const raw = err?.response?.status ?? err?.status;

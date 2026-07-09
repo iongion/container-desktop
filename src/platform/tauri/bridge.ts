@@ -53,7 +53,7 @@ function installTauriStorageGlobals(
   target.CURRENT_OS_TYPE = options.osType;
 }
 
-/** Install the Tauri-backed host globals + mark the preload bridge ready, mirroring the Electron preload. */
+// Install the Tauri-backed host globals + mark the preload bridge ready, mirroring the Electron preload.
 export async function installTauriHostBridge(): Promise<void> {
   const target = window as any;
   const recovery = createTauriRecoveryService({

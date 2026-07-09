@@ -11,6 +11,6 @@ export const getNetworksUrl = (view: "manage" | "reachability") => {
   return pathTo(view === "reachability" ? "/screens/networks/reachability" : "/screens/networks");
 };
 
-/** Canonical network trail: `Networks > name` (single detail view). */
+// Canonical network trail: `Networks > name` (single detail view).
 export const getNetworkCrumbs = (name: string, connId?: string): AppBreadcrumb[] =>
   leafCrumbs("networks", name, connId);

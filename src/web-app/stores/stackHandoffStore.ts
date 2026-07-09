@@ -4,7 +4,7 @@
 import { create } from "zustand";
 
 interface StackHandoffState {
-  /** Raw compose YAML text queued for the Stacks Add-Stack drawer, or null when nothing is pending. */
+  // Raw compose YAML text queued for the Stacks Add-Stack drawer, or null when nothing is pending.
   pendingComposeText: string | null;
   setPendingComposeText: (text: string | null) => void;
 }

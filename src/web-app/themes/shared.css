@@ -1,8 +1,3 @@
-/* Universal theme rules — NOT scoped to any theme (data-theme) or engine (data-engine).
- *
- * Fonts, design-token-independent :root variables, and structural tweaks that apply in every
- * mode. Theme-only rules live in dark.css / light.css; engine-only rules in docker.css / podman.css. */
-
 @font-face {
   font-family: "JetBrains Mono";
   font-style: normal;
@@ -34,9 +29,6 @@
 
 :root {
   --app-data-table-items-padding: 10px;
-  /* The bundled fallback chain (JetBrains Mono first) — always present so a user's custom
-     font can degrade to it. The user font override (if any) is prepended to --monospace-font
-     at runtime in App.tsx; --monospace-font-size / --monospace-font-weight are set there too. */
   --monospace-font-embedded:
     "JetBrains Mono", Consolas, "SF Mono", "DejaVu Sans Mono", "Droid Sans Mono", "Ubuntu Mono", "Roboto Mono",
     "Fira Code", monospace, "Powerline Extra Symbols";

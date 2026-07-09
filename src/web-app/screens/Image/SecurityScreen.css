@@ -8,7 +8,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   --security-link-hover: #1746a2;
 }
 
-/* The tab content is a vertical stack of panels; gap keeps them apart and off the screen header. */
 .AppScreen[data-screen="image.security"] .SecurityContent {
   display: flex;
   flex-direction: column;
@@ -30,17 +29,13 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   flex: 1 1 auto;
 }
 
-/* The Scan / Rescan CTA lives in the Vulnerabilities panel header, rightmost after the "Trivy" hint. Undo
-   the title's uppercase/letter-spacing on the button label so it reads normally. */
 .SecurityPanelTitle .SecurityPanelScan {
   margin-left: 12px;
-  /* Fixed width so the label swapping (Scan for vulnerabilities → Rescan → loading spinner) never wobbles. */
   min-width: 130px;
   text-transform: none;
   letter-spacing: 0;
 }
 
-/* Identity + digest bar — instant, no scan. */
 .AppScreen[data-screen="image.security"] .SecurityIdentity {
   display: flex;
   align-items: center;
@@ -60,13 +55,11 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   white-space: nowrap;
 }
 
-/* The readonly digest field fills the rest of the identity bar (full sha, unified copy affordance). */
 .SecurityDigestField {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-/* Registry — a separate right-hand column in the identity bar, divided off from the digest field. */
 .SecurityIdentityRegistry {
   display: flex;
   align-items: center;
@@ -111,7 +104,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   }
 }
 
-/* Panels — the app's card surface. */
 .AppScreen[data-screen="image.security"] .SecurityPanel {
   border: 1px solid var(--app-border);
   border-radius: 0;
@@ -144,7 +136,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   padding: 12px;
 }
 
-/* Signature / digest status line — colored by state. */
 .SecurityStatusLine {
   display: flex;
   align-items: center;
@@ -165,9 +156,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   color: var(--app-intent-danger-text);
 }
 
-/* The status icon matches the line's (badge) colour instead of the default muted grey. Force the SVG fill
-   through the CSS `fill` property (var() is valid there, unlike in the SVG `fill` attribute) and override
-   Blueprint's own icon colour. */
 .SecurityStatusLine .bp6-icon {
   color: inherit !important;
 }
@@ -177,14 +165,12 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   fill: currentColor !important;
 }
 
-/* Panel footer — a muted metadata line pinned below the body (mirrors Build Studio's .panel-footer). */
 .SecurityPanelFooter {
   padding: 8px 12px;
   border-top: 1px solid var(--app-border);
   background: var(--app-surface);
 }
 
-/* Key/value facts. */
 .SecurityKv {
   margin: 0;
   display: flex;
@@ -213,8 +199,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   overflow-wrap: anywhere;
 }
 
-/* Error reason in a scrollable code block — wraps long lines, capped at ~5 lines, then scrolls. The parent
-   grid cell needs min-width:0 (above) so this can shrink and wrap instead of overflowing on one line. */
 .SecurityCodeBlock {
   max-width: 100%;
   max-height: 7.5em;
@@ -237,7 +221,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   margin: 10px 0;
 }
 
-/* Auth-required recovery — a "sign in to verify" CTA replaces the raw error when the engine isn't signed in yet. */
 .SecuritySignIn {
   display: flex;
   flex-direction: column;
@@ -249,7 +232,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   margin: 0;
 }
 
-/* Idle "run the scan" prompt inside the Vulnerabilities + SBOM panels. */
 .SecurityRunPrompt {
   display: flex;
   align-items: center;
@@ -270,8 +252,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   color: var(--app-text);
 }
 
-/* SBOM — the package inventory as a virtualized table (reuses .SecurityFindingsScroll's box). Package name is the
-   only flexible column; version / type / license shrink to content. */
 .AppDataTable[data-table="image.sbom.packages"] {
   width: 100%;
   min-width: 620px;
@@ -296,20 +276,17 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   white-space: nowrap;
 }
 
-/* Export buttons sit in the SBOM panel header after the hint; undo the title's uppercase on their labels. */
 .SecurityPanelTitle .SecuritySbomExport {
   margin-left: 12px;
   text-transform: none;
   letter-spacing: 0;
 }
 
-/* Distribution donut (recharts) with a centered total overlaid in the hole. */
 .SecurityDonut {
   position: relative;
   flex: 0 0 auto;
 }
 
-/* The centered total is a later DOM sibling than the chart, so lift the hover tooltip above it. */
 .SecurityDonut .recharts-tooltip-wrapper {
   z-index: 5;
 }
@@ -339,9 +316,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   text-transform: uppercase;
 }
 
-/* All-clear ring drawn for a clean scan (0 findings) via Donut's showEmptyTrack, so the empty state still reads
-   as a chart. Stroke is a theme token, so it re-tints per engine/mode — recharts can't (it sets `fill` as an SVG
-   attribute, where var() does not resolve). Geometry (r=40, stroke-width=18) matches the recharts ring. */
 .SecurityDonutTrack {
   width: 100%;
   height: 100%;
@@ -352,7 +326,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   stroke: color-mix(in srgb, var(--app-intent-success-rest) 45%, var(--app-surface-strong));
 }
 
-/* Vulnerabilities: two columns in one row — chart + filters aside (left), findings table (right). */
 .AppScreen[data-screen="image.security"] .SecurityVulnLayout {
   display: grid;
   grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
@@ -360,7 +333,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   align-items: start;
 }
 
-/* Left column: donut (centered) above the severity filters. No divider — the table carries its own border. */
 .SecurityVulnAside {
   display: flex;
   flex-direction: column;
@@ -373,14 +345,12 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   margin-bottom: 0;
 }
 
-/* Narrow: stack the columns. */
 @media (max-width: 900px) {
   .AppScreen[data-screen="image.security"] .SecurityVulnLayout {
     grid-template-columns: 1fr;
   }
 }
 
-/* Licenses panel — Mend layout: donut on the left, multi-column license-name legend on the right. */
 .SecurityLicenseDist {
   display: flex;
   align-items: center;
@@ -424,7 +394,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   font-variant-numeric: tabular-nums;
 }
 
-/* Severity filter row (Vulnerabilities). */
 .AppScreen[data-screen="image.security"] .SecuritySeverityFilters {
   display: flex;
   flex-direction: column;
@@ -457,10 +426,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   white-space: nowrap;
 }
 
-/* Each chip carries its own severity color (Critical red … Low/Unknown grey), so the row reads as severity
-   at a glance. Selected = filled tint; unselected = severity outline, recede slightly (never grey-disabled). */
-/* Severity filter = a Switch per severity, stacked vertically. The label carries a solid, severity-colored
-   count pill + the severity name, so on/off state and finding volume both read at a glance. */
 .SecuritySeverityFilter.bp6-switch {
   margin: 0;
   padding: 3px 2px;
@@ -488,8 +453,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   color: var(--app-text);
 }
 
-/* Solid, severity-colored count pill — uses the theme's intent accents + their on-accent (-fg) text so the
-   fill stays readable across every engine × light/dark theme. Low/Unknown fall back to a neutral muted fill. */
 .SecuritySeverityCountPill {
   display: inline-flex;
   align-items: center;
@@ -616,7 +579,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   color: var(--security-link-hover) !important;
 }
 
-/* The findings table scrolls inside its own fixed 50vh viewport (virtualized), independent of the page. */
 .SecurityFindingsScroll {
   min-height: 50vh;
   max-height: 50vh;
@@ -631,8 +593,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   table-layout: auto;
 }
 
-/* Vulnerability ID (column 2) is the only flexible column; every other column shrinks to its content via the
-   width:1px + nowrap trick. */
 .AppDataTable[data-table="image.scanning.report"] .SecurityColumnSeverity {
   width: 1px;
 }
@@ -664,7 +624,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   white-space: nowrap;
 }
 
-/* Severity + Vulnerability ID stay left-aligned; Package/Target, Type and Published are centered (header + body). */
 .AppDataTable[data-table="image.scanning.report"] td.SecurityCellSeverity {
   white-space: nowrap;
   text-align: left !important;
@@ -684,7 +643,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   text-align: center !important;
 }
 
-/* Center the sortable headers of the shrink-to-fit columns (their label+icon sit in a flex button). */
 .SecurityFindingsTable th[data-column="package"] .SortableColumnHeaderButton,
 .SecurityFindingsTable th[data-column="type"] .SortableColumnHeaderButton,
 .SecurityFindingsTable th[data-column="published"] .SortableColumnHeaderButton {
@@ -692,8 +650,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   justify-content: center;
 }
 
-/* Zebra striping is index-driven (data-striped) via App.css [data-windowed] — never :nth-child, which a
-   virtualized subset would scramble. Rows keep only the severity left-accent here. */
 .AppDataTable[data-table="image.scanning.report"] tbody tr {
   border-left: 3px solid transparent;
 }
@@ -821,7 +777,6 @@ body.bp6-light .AppScreen[data-screen="image.security"] {
   font-size: 11px;
 }
 
-/* Empty state — centered in the findings area when the scan is clean or a filter hides everything. */
 .SecurityFindingsEmptyRow td {
   border: 0 !important;
   text-align: center !important;

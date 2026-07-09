@@ -1,12 +1,3 @@
-/* Engine-agnostic DARK theme overrides.
- *
- * Rules here are scoped to the dark theme ONLY (`body.bp6-dark`, i.e. data-theme="bp6-dark")
- * and carry NO `[data-engine]` selector — they apply to both Podman and Docker in dark mode.
- * Engine-specific dark rules live in docker.css / podman.css; truly universal rules live in
- * shared.css. (Moved here from shared.css + podman.css during theme centralization.) */
-
-/* Menu/arrow follow the active engine's elevated surface (was a hardcoded purple
-   that leaked into Docker dark). The per-engine value comes from tokens.css. */
 body.bp6-dark .bp6-menu {
   background: var(--app-surface) !important;
 }
@@ -32,7 +23,6 @@ body.bp6-dark .bp6-navbar {
     0 1px 1px rgb(17 20 24 / 40%);
 }
 
-/* Pod state */
 body.bp6-dark [data-table="pods"] .PodState[data-state="Degraded"] {
   background-color: #611f69;
 }
@@ -52,8 +42,6 @@ body.bp6-dark [data-table="pods"] .PodState[data-state="Paused"] {
   color: orange;
 }
 
-/* Container state — engine-agnostic (also applies under the unified chrome; the per-engine files keep their
-   own higher-specificity copies, so podman/docker rows are unchanged). Mirrors light.css. */
 body.bp6-dark [data-table="containers"] .ContainerState[data-state="exited"] {
   background-color: #8b104c;
 }
@@ -96,9 +84,6 @@ body.bp6-dark [data-table="containers"] .ContainerReportStateCounts li[data-stat
   color: #fff;
 }
 
-/* mdi + non-intent framework icon fills are centralized in tokens.css (driven from --app-text /
-   --app-text-muted), so both families match and stay light/dark symmetric — no per-theme #fff pin here. */
-
 body.bp6-dark .AppErrorBoundaryCallout .bp6-heading,
 body.bp6-dark .AppErrorBoundaryCallout p {
   color: #fff !important;
@@ -108,7 +93,6 @@ body.bp6-dark .AppDataTable[data-table="image.scanning.report"] tr td p {
   color: #fff;
 }
 
-/* Moved from podman.css (these were engine-agnostic despite living in the Podman file) */
 body.bp6-dark .AppDataTable[data-table="images"] .ContainerImageRegistry {
   color: #ccc;
 }
@@ -120,7 +104,6 @@ body.bp6-dark [data-actions-menu="container"] .ItemActionsOverlayMenuActions {
   border-color: var(--app-accent-hover);
 }
 
-/* ── Container volume mappings + image layer history (theme-only) — consolidated from screen CSS. ── */
 [data-theme="bp6-dark"] .ContainerVolumeMapping li strong {
   color: var(--app-text);
   background-color: color-mix(in srgb, var(--app-surface-strong) 72%, var(--app-surface));
