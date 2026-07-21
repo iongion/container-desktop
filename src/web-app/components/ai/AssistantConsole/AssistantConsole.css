@@ -1,0 +1,251 @@
+/* The summonable AI console — a themed overlay portaled to <body>, layered over the whole app.
+   Variants (data-variant): `bottom` (primary quake), `top` (quake), `right` (dock), `center` (palette).
+   Quake variants span the full app width with 5px margins and honor --console-opacity (transparency slider). */
+
+.AssistantConsoleRoot {
+  display: contents;
+}
+
+.AssistantConsoleScrim {
+  position: fixed;
+  top: var(--app-header-height, 50px);
+  left: 0;
+  right: 0;
+  bottom: var(--app-footer-height, 32px);
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: default;
+  background: rgba(4, 7, 12, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+  /* Above app content/sidebar (z ≤ 10) but below Blueprint portals (z 20) so the composer's model-picker
+     popover renders above the console. */
+  z-index: 18;
+}
+.AssistantConsoleRoot[data-open="true"] .AssistantConsoleScrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* quake variants dim only lightly so the transparency preview shows real screen content; the right dock
+   leaves the screen fully usable (no dim). */
+.AssistantConsoleRoot[data-variant="top"] .AssistantConsoleScrim,
+.AssistantConsoleRoot[data-variant="bottom"] .AssistantConsoleScrim {
+  background: rgba(4, 7, 12, 0.14);
+}
+.AssistantConsoleRoot[data-variant="right"] .AssistantConsoleScrim {
+  background: transparent;
+}
+
+.AssistantConsole {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-surface);
+  border: none;
+  color: var(--app-text);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 19;
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+.AssistantConsoleRoot[data-open="true"] .AssistantConsole {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- variant: BOTTOM quake drawer (primary) — full app width, above the footer, 5px margins --- */
+.AssistantConsoleRoot[data-variant="bottom"] .AssistantConsole {
+  bottom: calc(var(--app-footer-height, 32px) + 5px);
+  left: 5px;
+  right: 5px;
+  height: var(--console-height, 56%);
+  /* hard pixel floor mirroring CONSOLE_MIN_PX — guards the 250px minimum after a viewport shrink */
+  min-height: 250px;
+  transform: translateY(calc(100% + 60px));
+}
+.AssistantConsoleRoot[data-variant="bottom"][data-open="true"] .AssistantConsole {
+  transform: translateY(0);
+}
+
+/* --- variant: TOP quake drop-down — full app width, under the header, 5px margins --- */
+.AssistantConsoleRoot[data-variant="top"] .AssistantConsole {
+  top: calc(var(--app-header-height, 50px) + 5px);
+  left: 5px;
+  right: 5px;
+  height: var(--console-height, 56%);
+  /* hard pixel floor mirroring CONSOLE_MIN_PX — guards the 250px minimum after a viewport shrink */
+  min-height: 250px;
+  transform: translateY(calc(-100% - 60px));
+}
+.AssistantConsoleRoot[data-variant="top"][data-open="true"] .AssistantConsole {
+  transform: translateY(0);
+}
+
+/* --- drag-resize grip — a real element (replaces the old decorative ::after) that straddles the quake
+   panel's free edge so the pointer can resize the console vertically. The bottom quake's free edge is its
+   top (at the header); the top quake's is its bottom. Hidden for the right/center variants. --- */
+.AssistantConsoleResizeHandle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  z-index: 2;
+}
+.AssistantConsoleResizeHandle::after {
+  content: "";
+  width: 46px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--app-accent);
+  opacity: 0.7;
+  transition:
+    opacity 120ms ease,
+    width 120ms ease;
+}
+.AssistantConsoleResizeHandle:hover::after,
+.AssistantConsoleResizeHandle:active::after {
+  opacity: 1;
+  width: 62px;
+}
+.AssistantConsoleRoot[data-variant="bottom"] .AssistantConsoleResizeHandle {
+  top: -7px;
+}
+.AssistantConsoleRoot[data-variant="top"] .AssistantConsoleResizeHandle {
+  bottom: -8px;
+}
+.AssistantConsoleRoot:not([data-variant="top"]):not([data-variant="bottom"]) .AssistantConsoleResizeHandle {
+  display: none;
+}
+
+/* transparency preview — quake (top/bottom) variants only; the header slider drives --console-opacity. */
+.AssistantConsoleRoot[data-variant="top"][data-open="true"] .AssistantConsole,
+.AssistantConsoleRoot[data-variant="bottom"][data-open="true"] .AssistantConsole {
+  opacity: var(--console-opacity, 0.9);
+}
+
+/* --- variant: RIGHT dock — full height on the right, 5px margins --- */
+.AssistantConsoleRoot[data-variant="right"] .AssistantConsole {
+  top: calc(var(--app-header-height, 50px) + 5px);
+  bottom: calc(var(--app-footer-height, 32px) + 5px);
+  right: 5px;
+  width: 440px;
+  transform: translateX(calc(100% + 20px));
+}
+.AssistantConsoleRoot[data-variant="right"][data-open="true"] .AssistantConsole {
+  transform: translateX(0);
+}
+
+/* --- variant: CENTER palette --- */
+.AssistantConsoleRoot[data-variant="center"] .AssistantConsole {
+  top: 50%;
+  left: 50%;
+  width: min(760px, 82%);
+  height: min(560px, 72%);
+  transform: translate(-50%, -48%) scale(0.96);
+}
+.AssistantConsoleRoot[data-variant="center"][data-open="true"] .AssistantConsole {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* ---- header ---- */
+.AssistantConsoleHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+.AssistantConsoleRobot {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--app-accent) 14%, transparent);
+  color: var(--app-accent-text);
+  flex: 0 0 auto;
+}
+.AssistantConsoleTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
+.AssistantConsoleChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 14%, transparent);
+  color: var(--app-accent-text);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 30%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.AssistantConsoleChip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-accent);
+}
+.AssistantConsoleSpacer {
+  flex: 1;
+}
+.AssistantConsoleOpacity {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 6px;
+  color: var(--app-text-muted);
+}
+.AssistantConsoleOpacity input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 92px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  outline: none;
+  cursor: pointer;
+}
+.AssistantConsoleOpacity input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--app-accent);
+  border: 2px solid var(--app-surface-strong);
+  cursor: pointer;
+}
+/* transparency only makes sense for the full-bleed quake variants */
+.AssistantConsoleRoot:not([data-variant="top"]):not([data-variant="bottom"]) .AssistantConsoleOpacity {
+  display: none;
+}
+
+/* the shared conversation fills the console below the header */
+.AssistantConsole .AssistantConversation {
+  flex: 1;
+  min-height: 0;
+}

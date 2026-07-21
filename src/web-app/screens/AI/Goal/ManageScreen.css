@@ -1,0 +1,135 @@
+@import "./phase.css";
+
+.AppScreen[data-screen="ai.goals"] .AppScreenContent {
+  gap: 10px;
+}
+
+.GoalListError {
+  margin-bottom: 10px;
+}
+
+/* Board cards. Same idiom as a run's task node: a surface panel with an accent left rule carrying the state. */
+.GoalCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--app-text);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-text-muted);
+  border-radius: 3px;
+}
+.GoalCard:hover {
+  border-color: var(--app-text-muted);
+}
+.GoalCard[data-phase="running"],
+.GoalCard[data-phase="synthesizing"],
+.GoalCard[data-phase="cancelling"] {
+  border-left-color: var(--app-accent);
+}
+.GoalCard[data-phase="awaiting-plan"] {
+  border-left-color: var(--app-intent-warning-rest);
+}
+.GoalCard[data-phase="done"] {
+  border-left-color: var(--app-intent-success-rest);
+}
+.GoalCard[data-phase="error"],
+.GoalCard[data-phase="stopped"] {
+  border-left-color: var(--app-intent-danger-rest);
+}
+
+.GoalCardTitle {
+  font-size: 12px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.GoalCardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.GoalCardTokens {
+  font-family: var(--monospace-font);
+  font-size: 10px;
+  color: var(--app-text-muted);
+}
+
+.GoalCardProgress {
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--app-surface-strong);
+  overflow: hidden;
+}
+.GoalCardProgressBar {
+  display: block;
+  height: 100%;
+  background: var(--app-accent);
+}
+.GoalCardProgressBar[data-phase="done"] {
+  background: var(--app-intent-success-rest);
+}
+.GoalCardProgressBar[data-phase="error"],
+.GoalCardProgressBar[data-phase="stopped"] {
+  background: var(--app-intent-danger-rest);
+}
+
+.GoalCardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--app-text-muted);
+}
+
+/* A run blocked on the user is the one thing worth interrupting for, so it is called out on the card. */
+.GoalCardNeedsYou {
+  padding: 0 5px;
+  border-radius: 2px;
+  color: var(--app-intent-warning-text);
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 18%, transparent);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.AppDataTable[data-table="ai.goals"] th {
+  padding-left: var(--app-data-table-items-padding);
+  padding-right: var(--app-data-table-items-padding);
+}
+.AppDataTable[data-table="ai.goals"] th:first-child {
+  padding-left: 6px;
+}
+.AppDataTable[data-table="ai.goals"] tbody td:first-child {
+  width: 100%;
+  min-width: 240px;
+}
+
+/* The goal text is the row's link, but a goal is a sentence — it gets the full cell and truncates. */
+.GoalTableLink {
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--app-accent-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.GoalTableLink:hover {
+  text-decoration: underline;
+}

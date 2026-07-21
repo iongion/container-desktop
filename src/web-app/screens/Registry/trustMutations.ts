@@ -1,3 +1,4 @@
+import type { CommandExecutionResult } from "@/host-contract/exec";
 // Registries & Trust — mutation hooks. Each resolves the row's OWNING connection host (the workspace is merged,
 // so an action must target the right engine) and runs the real config/CLI action, then invalidates the grouped
 // query so the table reflects the new state. The credential for login is piped to the engine over stdin
@@ -6,7 +7,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Application } from "@/container-client/Application";
 import { RegistryTrustAdapter } from "@/container-client/adapters/registryTrust";
-import type { CommandExecutionResult, RegistryTrustEntry } from "@/env/Types";
+import type { RegistryTrustEntry } from "@/container-client/types/registry";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { trustKeys } from "./trustQueries";

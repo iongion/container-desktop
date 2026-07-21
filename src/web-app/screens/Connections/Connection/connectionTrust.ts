@@ -1,9 +1,10 @@
 // Pure helpers for the connection form's trust sections (Proxy + Certificates). Node-free, unit-tested.
 
-import { isProxyActive, type ProxyConfig } from "@/container-client/proxy";
+import { isProxyActive } from "@/container-client/proxy";
 import { resolveConnectionProxy } from "@/container-client/registryTrust/proxyResolution";
-import type { CertAuthority, ConnectionProxySettings, ContainerEngineHost, RegistryTrustEntry } from "@/env/Types";
-import { ContainerEngineHost as Host } from "@/env/Types";
+import { type ContainerEngineHost, ContainerEngineHost as Host } from "@/container-client/types/engine";
+import type { ConnectionProxySettings, ProxyConfig } from "@/container-client/types/network";
+import type { CertAuthority, RegistryTrustEntry } from "@/container-client/types/registry";
 
 // A "guest" host runs the engine inside a VM or on a remote machine (WSL/LIMA/vendor-machine/SSH), so it does
 // NOT inherit the host's proxy env — a proxy there needs the guest drop-in (applyProxyToGuest). Native

@@ -4,7 +4,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CreatePodOptions, PodsAdapter } from "@/container-client/adapters/pods";
-import type { Pod } from "@/env/Types";
+import type { Pod } from "@/container-client/types/pod";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";

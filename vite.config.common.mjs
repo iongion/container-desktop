@@ -5,6 +5,7 @@ import path from "node:path";
 import merge from "deepmerge";
 import * as dotenv from "dotenv";
 import { checker } from "vite-plugin-checker";
+import { makeAliases } from "./support/aliases.mjs";
 
 // pkg
 import pkg from "./package.json";
@@ -125,22 +126,8 @@ export function getCommonViteConfig({
     },
     resolve: merge.all([
       {
-        alias: {
-          // Build tooling lives in support/cli (run via tsx, not bundled here); kept in sync
-          // with tsconfig `paths` and vitest so `@/cli/*` resolves everywhere. Must precede the
-          // "@" -> src entry: alias matching is first-hit, and "@" would otherwise swallow "@/cli".
-          "@/cli": path.resolve(__dirname, "support/cli"),
-          "@": path.resolve(__dirname, "src"),
-          "@/container-client": path.resolve(__dirname, "src/container-client"),
-          "@/container-provisioning": path.resolve(__dirname, "src/container-provisioning"),
-          "@/env": path.resolve(__dirname, "src/env"),
-          "@/platform": path.resolve(__dirname, "src/platform"),
-          "@/resources": path.resolve(__dirname, "src/resources"),
-          "@/rpc": path.resolve(__dirname, "src/rpc"),
-          "@/utils": path.resolve(__dirname, "src/utils"),
-          "@/web-app": path.resolve(__dirname, "src/web-app"),
-          "@/ai-system": path.resolve(__dirname, "src/ai-system"),
-        },
+        // The @/… alias map is the single source in support/aliases.mjs (shared with the vitest configs).
+        alias: makeAliases(__dirname),
       },
       resolve ?? {},
     ]),

@@ -1,0 +1,43 @@
+/* The run-phase / task-status pill, shared by the Goals list and a single run's task graph.
+   Intent colours come from the --app-intent-* tokens; the shorter --app-success / --app-danger / --app-warning
+   names this used to reference are not defined anywhere, so those states rendered with no colour at all. */
+
+.GoalPhase,
+.GoalTaskState {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 2px;
+  color: var(--app-text-muted);
+  background: var(--app-surface-strong);
+}
+
+.GoalPhase[data-phase="running"],
+.GoalPhase[data-phase="planning"],
+.GoalPhase[data-phase="synthesizing"],
+.GoalPhase[data-phase="cancelling"],
+.GoalTaskState[data-status="running"] {
+  color: var(--app-accent-text);
+  background: color-mix(in srgb, var(--app-accent) 18%, transparent);
+}
+
+.GoalPhase[data-phase="done"],
+.GoalTaskState[data-status="complete"] {
+  color: var(--app-intent-success-text);
+  background: color-mix(in srgb, var(--app-intent-success-rest) 18%, transparent);
+}
+
+.GoalPhase[data-phase="error"],
+.GoalPhase[data-phase="stopped"],
+.GoalTaskState[data-status="failed"] {
+  color: var(--app-intent-danger-text);
+  background: color-mix(in srgb, var(--app-intent-danger-rest) 18%, transparent);
+}
+
+.GoalPhase[data-phase="awaiting-plan"],
+.GoalTaskState[data-status="awaiting-approval"] {
+  color: var(--app-intent-warning-text);
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 18%, transparent);
+}

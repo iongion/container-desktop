@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { OnlineApi } from "@/container-client/Api.clients";
-import type { OperatingSystem } from "@/env/Types";
+import type { OperatingSystem } from "@/container-client/types/os";
 
 const onlineApi = new OnlineApi(import.meta.env.ONLINE_API);
 

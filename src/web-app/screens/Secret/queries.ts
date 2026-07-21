@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { type CreateSecretOptions, SecretsAdapter } from "@/container-client/adapters/secrets";
-import type { Secret } from "@/env/Types";
+import type { Secret } from "@/container-client/types/secret";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 

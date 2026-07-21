@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
+import type { PodmanMachine, PodmanMachineInspect } from "@/container-client/types/machine";
 
 import { buildMachineSummary } from "./inspectSummary";
 

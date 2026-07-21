@@ -34,6 +34,10 @@ serde_json = "1"
 # the 0600 perms are the real protection; base64 just keeps keys off disk in plaintext. Already in the tree
 # (tauri/reqwest pull it), so declaring it direct adds nothing to the binary.
 base64 = "0.22"
+# Regex for the coding-workspace grep + glob matching (workspace_grep / workspace_glob in host.rs), so the Rust
+# shell matches the Node shell's semantics exactly. Already in the tree (tauri/reqwest pull it), so declaring it
+# direct adds nothing to the binary.
+regex = "1"
 # Native shell parity (Phase D): dialogs (openFileSelector), opener (external links + reveal storage folder),
 # process (relaunch/exit), window-state (persist bounds), single-instance (focus the first launch).
 tauri-plugin-dialog = "2"

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import type { ConnectorCapabilities } from "@/env/Types";
+import type { ConnectorCapabilities } from "@/container-client/types/connection";
 import type { SortSpec } from "@/web-app/stores/sortStore";
 import { useSortStore } from "@/web-app/stores/sortStore";
 

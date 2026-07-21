@@ -10,4 +10,5 @@ export interface ToolCardProps {
   status: "running" | "complete" | "error";
   ok?: boolean;
   result?: unknown;
+  message?: string;
 }

@@ -2,36 +2,38 @@
 import { HTMLTable } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
-import type { Volume } from "@/env/Types";
+import type { EngineVolume } from "@/ai-system/core/types";
 
+import { AICardShell } from "./AICardShell";
 import type { ToolCardProps } from "./types";
 
-export const VolumesCard: React.FC<ToolCardProps> = ({ result }) => {
+export const VolumesCard: React.FC<ToolCardProps> = ({ title, result }) => {
   const { t } = useTranslation();
-  const items = (Array.isArray(result) ? result : []) as Volume[];
-  if (items.length === 0) {
-    return <div className="AICardEmpty">{t("No volumes.")}</div>;
-  }
+  const items = (Array.isArray(result) ? result : []) as EngineVolume[];
   return (
-    <div className="AICard">
-      <HTMLTable className="AICardTable" compact striped>
-        <thead>
-          <tr>
-            <th>{t("Name")}</th>
-            <th>{t("Driver")}</th>
-            <th>{t("Mountpoint")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((volume) => (
-            <tr key={volume.Name}>
-              <td className="AICardStrong">{volume.Name}</td>
-              <td className="AICardMuted">{volume.Driver || "—"}</td>
-              <td className="AICardMuted AICardMono">{volume.Mountpoint}</td>
+    <AICardShell title={title}>
+      {items.length === 0 ? (
+        <div className="AICardEmpty">{t("No volumes.")}</div>
+      ) : (
+        <HTMLTable className="AICardTable" compact striped>
+          <thead>
+            <tr>
+              <th>{t("Name")}</th>
+              <th>{t("Driver")}</th>
+              <th>{t("Mountpoint")}</th>
             </tr>
-          ))}
-        </tbody>
-      </HTMLTable>
-    </div>
+          </thead>
+          <tbody>
+            {items.map((volume) => (
+              <tr key={volume.Name}>
+                <td className="AICardStrong">{volume.Name}</td>
+                <td className="AICardMuted">{volume.Driver || "—"}</td>
+                <td className="AICardMuted AICardMono">{volume.Mountpoint}</td>
+              </tr>
+            ))}
+          </tbody>
+        </HTMLTable>
+      )}
+    </AICardShell>
   );
 };

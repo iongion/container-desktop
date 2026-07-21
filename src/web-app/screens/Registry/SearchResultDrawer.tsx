@@ -2,14 +2,14 @@ import { Button, ButtonGroup, Classes, DrawerSize, HTMLTable, Intent, ProgressBa
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { RegistrySearchResult } from "@/env/Types";
+import type { RegistrySearchResult } from "@/container-client/types/registry";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { CodeEditor } from "@/web-app/components/CodeEditor";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
 import { usePullFromRegistry } from "./queries";
 import "./SearchResultDrawer.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.registry");
 

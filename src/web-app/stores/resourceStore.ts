@@ -2,7 +2,12 @@ import { create } from "zustand";
 
 import { RESOURCE_DOMAINS, type ResourceDomain, type ResourceItemsByDomain } from "@/container-client/resourceDomains";
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { Container, ContainerImage, Network, Pod, Secret, Volume } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
+import type { ContainerImage } from "@/container-client/types/image";
+import type { Network } from "@/container-client/types/network";
+import type { Pod } from "@/container-client/types/pod";
+import type { Secret } from "@/container-client/types/secret";
+import type { Volume } from "@/container-client/types/volume";
 
 export type { ResourceDomain, ResourceItemsByDomain };
 // Re-exported so existing `@/web-app/stores/resourceStore` import sites keep resolving after the move

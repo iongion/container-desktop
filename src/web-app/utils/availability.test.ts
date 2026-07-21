@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { EngineConnectorAvailability } from "@/env/Types";
+import type { EngineConnectorAvailability } from "@/container-client/types/engine";
 
 import { getFirstUnavailableReason } from "./availability";
 

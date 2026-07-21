@@ -1,7 +1,7 @@
 // Renderer entry. A single window loads this bundle: the main app. (The tray is a native OS menu built in
 // the main process — there is no tray renderer.) Global CSS is imported here.
 
-import type { LoggerBackend } from "@/platform/logger";
+import type { LoggerBackend } from "@/logger";
 import { bootTimeline } from "./bootTimeline";
 import "./index.css";
 // Cascade order: universal → tokens (semantic palette + Blueprint bridge + shared structure)
@@ -48,6 +48,12 @@ async function boot() {
     loggerBackend = electronLogRendererBackend;
   } else {
     throw new Error("No supported desktop host runtime detected");
+  }
+  if (import.meta.env.DEV) {
+    // DEV-only: expose window.__assistantDemo.seed() to load a synthetic transcript so the assistant's
+    // rendering can be exercised without a live model. Dynamic import → tree-shaken from production.
+    const { installAssistantDemo } = await import("@/web-app/components/ai/assistantDemo");
+    installAssistantDemo();
   }
   const { renderApplication } = await import("./App.render");
   bootTimeline.mark("app-render-imported");

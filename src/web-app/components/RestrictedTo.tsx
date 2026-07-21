@@ -2,7 +2,7 @@ import { mdiApple, mdiLinux, mdiMicrosoftWindows } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngineHost } from "@/env/Types";
+import { ContainerEngineHost } from "@/container-client/types/engine";
 import "./RestrictedTo.css";
 
 interface RestrictedToProps {

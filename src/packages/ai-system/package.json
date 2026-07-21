@@ -1,0 +1,11 @@
+{
+  "name": "@container-desktop/ai-system",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@container-desktop/host-contract": "*",
+    "@container-desktop/template": "*",
+    "@container-desktop/utils": "*"
+  }
+}

@@ -7,7 +7,7 @@ import { type ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useRef } from "react";
 
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { AppTheme } from "@/web-app/App.types";
 import { useAppStore } from "@/web-app/stores/appStore";
 

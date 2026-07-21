@@ -15,7 +15,8 @@ import type React from "react";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Connector, ContainerEngineHost } from "@/env/Types";
+import type { Connector } from "@/container-client/types/connection";
+import type { ContainerEngineHost } from "@/container-client/types/engine";
 
 import { RestrictedTo } from "@/web-app/components/RestrictedTo";
 import "./EngineHostSelect.css";

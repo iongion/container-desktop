@@ -667,11 +667,20 @@ body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 85%, transparent);
   color: var(--app-intent-default-fg);
 }
-body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined):active,
-body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined).bp6-active {
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined):active {
   background-color: var(--app-intent-default-active);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border) 100%, transparent);
   color: var(--app-intent-default-fg);
+}
+/* Persistent selection is NOT a press. Sharing the :active tone made a chosen segment render darker than
+   its unchosen siblings, reading as recessed or disabled — backwards for the segmented view-mode switchers
+   that are the only solid buttons carrying this class (Tree|JSON, Containerfile|Compose, board|table).
+   The minimal/outlined groups below already lighten instead; this brings solid buttons in line, accent-marked
+   so the current mode is unmistakable on every engine theme. */
+body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined).bp6-active {
+  background-color: color-mix(in srgb, var(--app-accent) 22%, var(--app-intent-default-rest));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-accent) 55%, transparent);
+  color: var(--app-text);
 }
 body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined):disabled,
 body[data-engine] .bp6-button:not([class*="bp6-intent-"]):not(.bp6-minimal):not(.bp6-outlined).bp6-disabled {

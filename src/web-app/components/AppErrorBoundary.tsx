@@ -4,7 +4,7 @@ import { mdiEmoticonSad } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import React from "react";
 import i18n from "@/i18n";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.AppErrorBoundary");
 
@@ -51,36 +51,33 @@ export default class AppErrorBoundary extends React.Component<
 
   render(): any {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
+      // Full-window opaque fallback: covers the entire app (header, sidebar, content, console) so a crash
+      // never renders alongside live chrome. Both buttons hard-reload to reboot on a known-good screen.
       return (
-        <div className="AppContent">
-          <div className="AppContentDocument" data-error="yes">
-            <div className="AppScreen" data-pending="yes">
-              <div className="AppErrorBoundary">
-                <Callout
-                  className="AppErrorBoundaryCallout"
-                  title={this.props.title}
-                  icon={<ReactIcon.Icon path={mdiEmoticonSad} size={5} />}
-                >
-                  <h3>{this.props.message}</h3>
-                  <p>{this.props.suggestion}</p>
-                  <div className="AppErrorBoundaryDashboard">
-                    <Button
-                      variant="minimal"
-                      icon={IconNames.DASHBOARD}
-                      onClick={this.onGoToDashboardClick}
-                      text={this.props.dashboard ?? i18n.t("Go to Dashboard")}
-                    />
-                  </div>
-                  <Button
-                    onClick={this.onReconnectClick}
-                    icon={IconNames.RESOLVE}
-                    text={this.props.reconnect}
-                    intent={Intent.PRIMARY}
-                  />
-                </Callout>
+        <div className="AppErrorBoundaryOverlay">
+          <div className="AppErrorBoundary">
+            <Callout
+              className="AppErrorBoundaryCallout"
+              title={this.props.title}
+              icon={<ReactIcon.Icon path={mdiEmoticonSad} size={5} />}
+            >
+              <h3>{this.props.message}</h3>
+              <p>{this.props.suggestion}</p>
+              <div className="AppErrorBoundaryDashboard">
+                <Button
+                  variant="minimal"
+                  icon={IconNames.DASHBOARD}
+                  onClick={this.onGoToDashboardClick}
+                  text={this.props.dashboard ?? i18n.t("Go to Dashboard")}
+                />
               </div>
-            </div>
+              <Button
+                onClick={this.onReconnectClick}
+                icon={IconNames.RESOLVE}
+                text={this.props.reconnect}
+                intent={Intent.PRIMARY}
+              />
+            </Callout>
           </div>
         </div>
       );

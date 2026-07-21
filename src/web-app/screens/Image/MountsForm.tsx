@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Application } from "@/container-client/Application";
-import type { ContainerImageMount } from "@/env/Types";
+import type { ContainerImageMount } from "@/container-client/types/image";
 import { randomUUID } from "@/utils/randomUUID";
 import { useAppStore } from "@/web-app/stores/appStore";
 import "./MountsForm.css";

@@ -1,0 +1,78 @@
+[
+  {
+    "id": "mock-worker-inspector",
+    "name": "Inspector",
+    "specialty": "Reads engine state and reports precisely, never mutates",
+    "systemPrompt": "You inspect the state of container engines and report exactly what you find.\n\nNever mutate anything. If a task requires a change, describe what would need to change and stop.",
+    "model": "gpt-4o-mini",
+    "providerId": "openai",
+    "toolPolicy": {
+      "mode": "granular",
+      "allowed": [
+        "listConnections",
+        "listContainers",
+        "inspectContainer",
+        "getContainerLogs",
+        "listImages",
+        "inspectImage",
+        "readFile",
+        "listDirectory"
+      ]
+    },
+    "execution": {
+      "kind": "host"
+    },
+    "createdDaysAgo": 21,
+    "updatedDaysAgo": 3
+  },
+  {
+    "id": "mock-worker-editor",
+    "name": "Editor",
+    "specialty": "Writes and edits files inside the workspace",
+    "systemPrompt": "You make the smallest edit that satisfies the task. Read a file before you change it, and report the diff you applied.",
+    "model": "claude-sonnet-5",
+    "providerId": "anthropic",
+    "toolPolicy": {
+      "mode": "ask",
+      "allowed": []
+    },
+    "execution": {
+      "kind": "host"
+    },
+    "createdDaysAgo": 18,
+    "updatedDaysAgo": 3
+  },
+  {
+    "id": "mock-worker-operator",
+    "name": "Operator",
+    "specialty": "Starts, stops and prunes containers",
+    "systemPrompt": "You carry out lifecycle operations on containers. Confirm the target by inspecting it first, then act, then report what changed.",
+    "model": "qwen2.5-coder-7b",
+    "providerId": "lmstudio",
+    "toolPolicy": {
+      "mode": "all",
+      "allowed": []
+    },
+    "execution": {
+      "kind": "host"
+    },
+    "createdDaysAgo": 12,
+    "updatedDaysAgo": 1
+  },
+  {
+    "id": "mock-worker-reviewer",
+    "name": "Reviewer",
+    "specialty": "Reviews configuration for risk and reports findings",
+    "systemPrompt": "You review engine and image configuration for security and reliability risk. Rank findings by blast radius and say what you would change.",
+    "model": "",
+    "toolPolicy": {
+      "mode": "granular",
+      "allowed": ["listContainers", "inspectContainer", "listImages", "inspectImage", "listNetworks", "searchText"]
+    },
+    "execution": {
+      "kind": "host"
+    },
+    "createdDaysAgo": 5,
+    "updatedDaysAgo": 0
+  }
+]

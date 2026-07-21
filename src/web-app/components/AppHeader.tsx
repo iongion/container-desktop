@@ -16,10 +16,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import { OperatingSystem, type Program, type WindowAction } from "@/env/Types";
+import type { Program } from "@/container-client/types/engine";
+import { OperatingSystem, type WindowAction } from "@/container-client/types/os";
 import { WINDOW_CONTROLS } from "@/web-app/chrome/appChrome";
 import { aiNavScreens } from "@/web-app/screenVisibility";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
+import { useUIStore } from "@/web-app/stores/uiStore";
 import { CURRENT_ENVIRONMENT, PROJECT_NAME, PROJECT_VERSION } from "../Environment";
 import { pathTo } from "../Navigator";
 import type { AppScreen } from "../Types";
@@ -27,7 +29,7 @@ import { AppHeaderLogo } from "./AppHeaderLogo";
 import { ProvisionButton } from "./ProvisioningWizard/ProvisionButton";
 
 import "./AppHeader.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.AppHeader");
 
@@ -74,6 +76,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   // being disabled or appearing to do nothing.
   const wizardOpen = useProvisioningStore((s) => s.isOpen);
   const closeWizard = useProvisioningStore((s) => s.closeWizard);
+  const toggleAssistantConsole = useUIStore((s) => s.toggleAssistantConsole);
   const onWindowControlClick = useCallback((e) => {
     const action: WindowAction = e.currentTarget.getAttribute("data-action");
     const handler = WINDOW_ACTIONS_MAP[action];
@@ -105,18 +108,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   // AI navigation lives here (not the sidebar): a split button — the main button opens the Assistant,
   // the caret opens a menu of every AI screen. AI is always on, so it is always present.
   const aiScreens = aiNavScreens(screens ?? []);
-  const aiAssistant = aiScreens.find((s) => s.ID === "ai.assistant") ?? aiScreens[0];
   const aiActions =
-    aiScreens.length > 0 && aiAssistant ? (
+    aiScreens.length > 0 ? (
       <ButtonGroup variant="minimal" className="AppHeaderAIActions">
-        <AnchorButton
+        <Button
           className="AppHeaderActionButton"
           data-action="ai-assistant"
-          href={pathTo(aiAssistant.Route.Path)}
           icon={<ReactIcon.Icon className="ReactIcon" path={mdiRobot} size={0.75} />}
           title={t("AI Assistant")}
           aria-label={t("AI Assistant")}
-          onClick={wizardOpen ? closeWizard : undefined}
+          onClick={() => {
+            if (wizardOpen) {
+              closeWizard();
+            }
+            toggleAssistantConsole();
+          }}
         />
         <PopoverNext
           placement="bottom-end"

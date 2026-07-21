@@ -45,6 +45,7 @@ func main() {
 			application.NewService(&FsService{}),
 			application.NewService(&KeychainService{}),
 			application.NewService(&ExecService{}),
+			application.NewService(&WorkspaceService{}),
 			application.NewService(&ProxyService{}),
 			application.NewService(&ProcessService{}),
 			application.NewService(&BridgeService{}),

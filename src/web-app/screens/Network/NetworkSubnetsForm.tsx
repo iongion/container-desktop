@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import type { NetworkSubnet } from "@/env/Types";
+import type { NetworkSubnet } from "@/container-client/types/network";
 import { randomUUID } from "@/utils/randomUUID";
 
 import "./NetworkSubnetsForm.css";

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "1",
+    "domain": "podman",
+    "title": "Rootless socket unavailable",
+    "symptom": "Cannot connect to Podman socket",
+    "solution": "systemctl --user enable --now podman.socket",
+    "tags": ["socket", "rootless"]
+  },
+  {
+    "id": "2",
+    "domain": "docker",
+    "title": "Permission denied on socket",
+    "symptom": "permission denied while trying to connect",
+    "solution": "sudo usermod -aG docker $USER",
+    "tags": ["permission"]
+  }
+]

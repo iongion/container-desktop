@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import { systemNotifier } from "@/container-client/notifier";
-import type { SystemNotification } from "@/env/Types";
+import type { SystemNotification } from "@/container-client/types/os";
 import { randomUUID } from "@/utils/randomUUID";
 import type {
   ActivityEntry,

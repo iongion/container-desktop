@@ -5,8 +5,8 @@ import * as ReactIcon from "@mdi/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import type { PodmanMachine, PodmanMachineInspect } from "@/container-client/types/machine";
+import { createLogger } from "@/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
@@ -89,12 +89,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
             break;
           default:
             break;
-        }
-        if (confirm?.success) {
-          Notification.show({
-            message: t("Command completed"),
-            intent: Intent.SUCCESS,
-          });
         }
         if (action === "machine.remove") {
           goToScreen("/screens/machines");

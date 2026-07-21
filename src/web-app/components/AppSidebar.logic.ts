@@ -1,5 +1,5 @@
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { Connector, ConnectorCapabilities } from "@/env/Types";
+import type { Connector, ConnectorCapabilities } from "@/container-client/types/connection";
 
 function emptyCapabilities(): ConnectorCapabilities {
   return {

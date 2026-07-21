@@ -14,7 +14,7 @@ import { memo, useId, useState } from "react";
 import isEqual from "react-fast-compare";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
 import { useCreateSecret } from "./queries";

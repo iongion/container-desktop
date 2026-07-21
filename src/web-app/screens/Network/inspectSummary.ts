@@ -1,4 +1,4 @@
-import type { Network } from "@/env/Types";
+import type { Network } from "@/container-client/types/network";
 import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 import { inspectDate, shortId, yesNo } from "@/web-app/components/inspectSummary.helpers";

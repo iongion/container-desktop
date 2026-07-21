@@ -15,7 +15,7 @@
 //     Presentation attributes are the lowest-priority paint source, so app CSS overrides them when loaded,
 //     while at boot — before any app CSS — they are what render. One markup, correct in both worlds.
 
-import i18n from "../../i18n";
+import i18n from "../../packages/i18n/src/index";
 
 export interface WindowControl {
   // IPC channel sent on window.MessageBus — handled by registerAppControlIpc in the main process.

@@ -1,0 +1,59 @@
+.Board {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  /* stretch, not flex-start: lanes are equal height so an empty column still reads as a lane rather than a stub. */
+  align-items: stretch;
+  min-height: 0;
+  padding-top: 10px;
+  overflow-x: auto;
+}
+
+.BoardColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 220px;
+  max-width: 320px;
+  min-height: 0;
+  padding: 8px;
+  background: var(--app-group-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.BoardColumnHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 4px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.BoardColumnLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-muted);
+}
+
+.BoardColumnCount {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.BoardColumnBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+}

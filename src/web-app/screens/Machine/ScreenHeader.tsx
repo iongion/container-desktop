@@ -1,6 +1,6 @@
 import { type IconName, IconNames } from "@blueprintjs/icons";
 
-import type { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
+import type { PodmanMachine, PodmanMachineInspect } from "@/container-client/types/machine";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo } from "@/web-app/Navigator";
 

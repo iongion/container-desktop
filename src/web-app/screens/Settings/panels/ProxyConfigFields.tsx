@@ -1,7 +1,7 @@
 import { FormGroup, HTMLSelect, InputGroup, NumericInput, TextArea } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
-import type { ProxyConfig, ProxyProtocol } from "@/container-client/proxy";
+import type { ProxyConfig, ProxyProtocol } from "@/container-client/types/network";
 
 // The proxy endpoint + credentials + bypass field cluster, as a controlled component. Shared by the global
 // Settings → Network panel and the per-connection Proxy override section, so both edit the SAME ProxyConfig

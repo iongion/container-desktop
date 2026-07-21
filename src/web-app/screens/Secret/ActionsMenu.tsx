@@ -3,8 +3,8 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Secret } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import type { Secret } from "@/container-client/types/secret";
+import { createLogger } from "@/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
@@ -55,10 +55,6 @@ export const SecretActionsMenu: React.FC<SecretActionsMenuProps> = ({
           default:
             break;
         }
-        Notification.show({
-          message: t("Command completed"),
-          intent: Intent.SUCCESS,
-        });
         if (action === "secret.remove") {
           goToScreen("/screens/secrets");
         }

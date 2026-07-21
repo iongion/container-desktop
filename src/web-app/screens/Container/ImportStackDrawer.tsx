@@ -19,16 +19,11 @@ import { Application } from "@/container-client/Application";
 import { loadComposeProject } from "@/container-client/compose";
 import { detectPodPortConflicts } from "@/container-client/compose/translate";
 import type { ComposeProjectModel } from "@/container-client/compose/types";
-import { Environments } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import { Environments } from "@/container-client/types/os";
+import { createLogger } from "@/logger";
 import { extractApiErrorText } from "@/utils/apiError";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
-import {
-  ConnectionSelect,
-  isComposeConnection,
-  isDockerConnection,
-  isPodmanConnection,
-} from "@/web-app/components/ConnectionSelect";
+import { ConnectionSelect, isComposeConnection, isDockerConnection } from "@/web-app/components/ConnectionSelect";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
@@ -46,7 +41,6 @@ const DEV_COMPOSE_PATH = "./support/image-builders/compose.yaml";
 export interface ImportStackDrawerProps {
   connectionId: string;
   onConnectionChange: (id: string) => void;
-  initialText?: string;
   onClose: () => void;
 }
 
@@ -55,10 +49,10 @@ export interface ImportStackDrawerProps {
 // screen. This drawer is the one stack-specific write path (translate + libpod create); teardown lives on the
 // group header in the Containers list.
 export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
-  ({ connectionId, onConnectionChange, initialText, onClose }: ImportStackDrawerProps) => {
+  ({ connectionId, onConnectionChange, onClose }: ImportStackDrawerProps) => {
     const { t } = useTranslation();
     const formId = useId();
-    const [filePath, setFilePath] = useState(DEV_SAMPLE && !initialText ? DEV_COMPOSE_PATH : "");
+    const [filePath, setFilePath] = useState(DEV_SAMPLE ? DEV_COMPOSE_PATH : "");
     const [projectName, setProjectName] = useState("");
     const [podMode, setPodMode] = useState(false);
     const [model, setModel] = useState<ComposeProjectModel | null>(null);
@@ -82,16 +76,12 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
       }
     }, []);
 
-    // Seed the parse preview once: the AI generator's raw text ("Open in Stacks") wins; otherwise in
-    // development pre-fill the bundled sample compose file so the import path is one click away.
+    // Seed the parse preview once in development: pre-fill the bundled sample compose file so the import
+    // path is one click away.
     const [seeded, setSeeded] = useState(false);
-    if (!seeded && (initialText || DEV_SAMPLE)) {
+    if (!seeded && DEV_SAMPLE) {
       setSeeded(true);
-      if (initialText) {
-        void parseFrom({ text: initialText }, projectName);
-      } else {
-        void parseFrom({ path: DEV_COMPOSE_PATH }, projectName);
-      }
+      void parseFrom({ path: DEV_COMPOSE_PATH }, projectName);
     }
 
     const browse = useCallback(async () => {
@@ -122,11 +112,9 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
         setProjectName(next);
         if (filePath) {
           void parseFrom({ path: filePath }, next);
-        } else if (initialText) {
-          void parseFrom({ text: initialText }, next);
         }
       },
-      [filePath, initialText, parseFrom],
+      [filePath, parseFrom],
     );
 
     const onDeploy = useCallback(async () => {
@@ -204,32 +192,30 @@ export const ImportStackDrawer: React.FC<ImportStackDrawerProps> = memo(
             <ConnectionSelect
               value={connectionId}
               onChange={onConnectionChange}
-              filter={initialText ? isPodmanConnection : isComposeConnection}
+              filter={isComposeConnection}
               disabled={pending}
-              label={t(initialText ? "Podman engine" : "Container engine")}
+              label={t("Container engine")}
             />
             <div className="AppDataForm">
-              {!initialText && (
-                <FormGroup label={t("Compose file")} labelFor="composeFile">
-                  <InputGroup
-                    id="composeFile"
-                    fill
-                    value={filePath}
-                    placeholder={t("Select a docker-compose.yml")}
-                    disabled={pending}
-                    onValueChange={onFilePathChange}
-                    rightElement={
-                      <Button
-                        variant="minimal"
-                        icon={IconNames.DOCUMENT_OPEN}
-                        title={t("Choose a compose file")}
-                        onClick={browse}
-                        disabled={pending}
-                      />
-                    }
-                  />
-                </FormGroup>
-              )}
+              <FormGroup label={t("Compose file")} labelFor="composeFile">
+                <InputGroup
+                  id="composeFile"
+                  fill
+                  value={filePath}
+                  placeholder={t("Select a docker-compose.yml")}
+                  disabled={pending}
+                  onValueChange={onFilePathChange}
+                  rightElement={
+                    <Button
+                      variant="minimal"
+                      icon={IconNames.DOCUMENT_OPEN}
+                      title={t("Choose a compose file")}
+                      onClick={browse}
+                      disabled={pending}
+                    />
+                  }
+                />
+              </FormGroup>
               <FormGroup
                 label={t("Project name")}
                 labelInfo="(optional)"

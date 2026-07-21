@@ -1,7 +1,7 @@
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback } from "react";
 
-import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/env/Types";
+import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/container-client/types/swarm";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { connectedConnections, isDockerConnection } from "@/web-app/components/ConnectionSelect";

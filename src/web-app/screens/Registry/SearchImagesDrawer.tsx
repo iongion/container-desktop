@@ -12,7 +12,7 @@ import {
 import { IconNames } from "@blueprintjs/icons";
 import { useMemo, useState } from "react";
 
-import type { Registry, RegistrySearchResult } from "@/env/Types";
+import type { Registry, RegistrySearchResult } from "@/container-client/types/registry";
 import { t } from "@/i18n";
 import { useSearchRegistry } from "./queries";
 import { SearchResultDrawer } from "./SearchResultDrawer";

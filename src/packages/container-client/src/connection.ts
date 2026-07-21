@@ -1,0 +1,503 @@
+import type { Connector, EngineConnectorSettings } from "@/container-client/types/connection";
+import {
+  ContainerEngine,
+  ContainerEngineHost,
+  type ContainerEngineOption,
+  Presence,
+} from "@/container-client/types/engine";
+import { OperatingSystem } from "@/container-client/types/os";
+import i18n from "@/i18n";
+import { deepMerge } from "@/utils";
+import { randomUUID } from "@/utils/randomUUID";
+
+const NOT_CHECKED = i18n.t("Not checked");
+
+// Podman - common
+export const PODMAN_PROGRAM = "podman";
+export const DOCKER_PROGRAM = "docker";
+
+export const APPLE_PROGRAM = "container";
+export const SOCKTAINER_PROGRAM = "socktainer";
+
+// WSL - common
+export const WSL_PROGRAM = "wsl";
+export const WSL_VERSION = "2";
+
+// LIMA - common
+export const LIMA_PROGRAM = "limactl";
+export const LIMA_VERSION = "current";
+
+// Remote - common
+export const SSH_PROGRAM = "ssh";
+export const SSH_VERSION = "current";
+
+// Defaults
+export const DEFAULT_CONTAINER_RUNTIME = ContainerEngine.PODMAN;
+
+export const ContainerEngineOptions: ContainerEngineOption[] = [
+  {
+    engine: ContainerEngine.PODMAN,
+    label: i18n.t("Podman"),
+    present: Presence.UNKNOWN,
+  },
+  {
+    engine: ContainerEngine.DOCKER,
+    label: i18n.t("Docker"),
+    present: Presence.UNKNOWN,
+  },
+  {
+    engine: ContainerEngine.APPLE,
+    label: i18n.t("Container"),
+    present: Presence.UNKNOWN,
+  },
+];
+
+export const createConnectorId = (instance: string, host: ContainerEngineHost) => `host.${instance}.${host}`;
+
+export function createConnectorSettings({
+  osType,
+  host,
+  programName,
+  controllerName,
+  overrides,
+}: {
+  osType: OperatingSystem;
+  host: ContainerEngineHost;
+  programName: string;
+  controllerName?: string;
+  overrides?: Partial<EngineConnectorSettings>;
+}) {
+  const settings: EngineConnectorSettings = {
+    api: {
+      baseURL: "",
+      connection: {
+        uri: "",
+        relay: "",
+      },
+    },
+    program: {
+      name: programName,
+      path: "",
+      version: "",
+    },
+    rootfull: false,
+    mode: "mode.automatic",
+  };
+  if (programName.startsWith(PODMAN_PROGRAM)) {
+    settings.api.baseURL = "http://d";
+  } else if (programName.startsWith(DOCKER_PROGRAM) || programName.startsWith(APPLE_PROGRAM)) {
+    settings.api.baseURL = "http://localhost";
+  }
+  if (controllerName) {
+    settings.controller = {
+      name: controllerName,
+      path: "",
+      version: "",
+      scope: "",
+    };
+    if (overrides?.controller) {
+      settings.controller.name = overrides.controller.name || settings.controller.name;
+      settings.controller.path = overrides.controller.path || settings.controller.path;
+      settings.controller.version = overrides.controller.version || settings.controller.version;
+      settings.controller.scope = overrides.controller.scope || settings.controller.scope;
+    }
+  }
+  return settings;
+}
+
+export function getDefaultConnectors(osType: OperatingSystem) {
+  const connectors: Connector[] = [
+    // Podman
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_NATIVE,
+      id: createConnectorId("default", ContainerEngineHost.PODMAN_NATIVE),
+      label: i18n.t("Native"),
+      description: "",
+      notes: i18n.t("Podman native is only available on Linux"),
+      availability: {
+        enabled: osType === OperatingSystem.Linux,
+        api: false,
+        host: false,
+        program: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.PODMAN_NATIVE,
+        programName: PODMAN_PROGRAM,
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
+      id: createConnectorId("default", ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR),
+      label: i18n.t("Podman machine virtualization"),
+      description: i18n.t("Using podman machine virtualization"),
+      availability: {
+        enabled: true,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR,
+        programName: PODMAN_PROGRAM,
+        controllerName: PODMAN_PROGRAM,
+        overrides: {
+          controller: { name: PODMAN_PROGRAM, path: "", version: "" },
+        },
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+      id: createConnectorId("default", ContainerEngineHost.PODMAN_VIRTUALIZED_WSL),
+      label: i18n.t("Custom WSL distribution"),
+      description: "",
+      notes: i18n.t("Podman from WSL is only available on Windows"),
+      availability: {
+        enabled: osType === OperatingSystem.Windows,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+        programName: PODMAN_PROGRAM,
+        controllerName: WSL_PROGRAM,
+        overrides: {
+          controller: { name: WSL_PROGRAM, path: "", version: WSL_VERSION },
+        },
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+      id: createConnectorId("default", ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA),
+      label: i18n.t("Custom LIMA instance"),
+      description: "",
+      notes: i18n.t("Podman from LIMA is only available on MacOS"),
+      availability: {
+        enabled: osType === OperatingSystem.MacOS,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+        programName: PODMAN_PROGRAM,
+        controllerName: LIMA_PROGRAM,
+        overrides: {
+          controller: { name: LIMA_PROGRAM, path: "", version: LIMA_VERSION },
+        },
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_REMOTE,
+      id: createConnectorId("default", ContainerEngineHost.PODMAN_REMOTE),
+      label: i18n.t("Remote SSH connection"),
+      description: "",
+      notes: i18n.t("Remote SSH connection is not yet available"),
+      availability: {
+        enabled: true,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.PODMAN_REMOTE,
+        programName: PODMAN_PROGRAM,
+        controllerName: SSH_PROGRAM,
+        overrides: {
+          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION },
+        },
+      }),
+    },
+    // Docker
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_NATIVE,
+      id: createConnectorId("default", ContainerEngineHost.DOCKER_NATIVE),
+      label: i18n.t("Native"),
+      description: i18n.t("Docker native"),
+      notes: i18n.t("Docker native is only available on Linux"),
+      availability: {
+        enabled: osType === OperatingSystem.Linux,
+        api: false,
+        host: false,
+        program: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.DOCKER_NATIVE,
+        programName: DOCKER_PROGRAM,
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
+      id: createConnectorId("default", ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR),
+      label:
+        osType === OperatingSystem.MacOS ? i18n.t("Docker virtualization or COLIMA") : i18n.t("Docker virtualization"),
+      description: i18n.t("Using docker virtualization"),
+      availability: {
+        enabled: true,
+        api: false,
+        host: false,
+        program: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR,
+        programName: DOCKER_PROGRAM,
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
+      id: createConnectorId("default", ContainerEngineHost.DOCKER_VIRTUALIZED_WSL),
+      label: i18n.t("Custom WSL distribution"),
+      description: "",
+      notes: i18n.t("Docker from WSL is only available on Windows"),
+      availability: {
+        enabled: osType === OperatingSystem.Windows,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
+        programName: DOCKER_PROGRAM,
+        controllerName: WSL_PROGRAM,
+        overrides: {
+          controller: { name: WSL_PROGRAM, path: "", version: WSL_VERSION },
+        },
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
+      id: createConnectorId("default", ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA),
+      label: i18n.t("Custom LIMA instance"),
+      description: "",
+      notes: i18n.t("Docker from LIMA is only available on MacOS"),
+      availability: {
+        enabled: osType === OperatingSystem.MacOS,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
+        programName: DOCKER_PROGRAM,
+        controllerName: LIMA_PROGRAM,
+        overrides: {
+          controller: { name: LIMA_PROGRAM, path: "", version: LIMA_VERSION },
+        },
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_REMOTE,
+      id: createConnectorId("default", ContainerEngineHost.DOCKER_REMOTE),
+      label: i18n.t("Remote SSH connection"),
+      description: "",
+      notes: i18n.t("Remote SSH connection is not yet available"),
+      availability: {
+        enabled: true,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.DOCKER_REMOTE,
+        programName: DOCKER_PROGRAM,
+        controllerName: SSH_PROGRAM,
+        overrides: {
+          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION },
+        },
+      }),
+    },
+    // Apple
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_NATIVE,
+      id: createConnectorId("default", ContainerEngineHost.APPLE_NATIVE),
+      label: i18n.t("Native"),
+      description: "",
+      notes: i18n.t("Apple Container native is only available on macOS (Apple Silicon)"),
+      availability: {
+        enabled: osType === OperatingSystem.MacOS,
+        api: false,
+        host: false,
+        program: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.APPLE_NATIVE,
+        programName: APPLE_PROGRAM,
+      }),
+    },
+    {
+      name: "",
+      connectionId: "",
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_REMOTE,
+      id: createConnectorId("default", ContainerEngineHost.APPLE_REMOTE),
+      label: i18n.t("Remote SSH connection"),
+      description: "",
+      notes: "",
+      availability: {
+        enabled: true,
+        api: false,
+        host: false,
+        program: false,
+        controller: false,
+        report: {
+          host: NOT_CHECKED,
+          program: NOT_CHECKED,
+          api: NOT_CHECKED,
+          controller: NOT_CHECKED,
+        },
+      },
+      settings: createConnectorSettings({
+        osType,
+        host: ContainerEngineHost.APPLE_REMOTE,
+        programName: APPLE_PROGRAM,
+        controllerName: SSH_PROGRAM,
+        overrides: {
+          controller: { name: SSH_PROGRAM, path: "", version: SSH_VERSION },
+        },
+      }),
+    },
+  ];
+  return connectors;
+}
+
+export async function createConnectorBy(
+  osType: OperatingSystem,
+  engine: ContainerEngine = DEFAULT_CONTAINER_RUNTIME,
+  host?: ContainerEngineHost,
+  id?: string,
+) {
+  const canUseNativeEngine = osType === OperatingSystem.Linux;
+  let currentEngineHost: ContainerEngineHost = host!;
+  if (!currentEngineHost) {
+    if (engine === ContainerEngine.PODMAN) {
+      currentEngineHost = canUseNativeEngine
+        ? ContainerEngineHost.PODMAN_NATIVE
+        : ContainerEngineHost.PODMAN_VIRTUALIZED_VENDOR;
+    } else if (engine === ContainerEngine.DOCKER) {
+      currentEngineHost = canUseNativeEngine
+        ? ContainerEngineHost.DOCKER_NATIVE
+        : ContainerEngineHost.DOCKER_VIRTUALIZED_VENDOR;
+    } else if (engine === ContainerEngine.APPLE) {
+      currentEngineHost =
+        osType === OperatingSystem.MacOS ? ContainerEngineHost.APPLE_NATIVE : ContainerEngineHost.APPLE_REMOTE;
+    }
+  }
+  const connectors = getDefaultConnectors(osType);
+  const connector = connectors.find((it) => it.engine === engine && it.host === currentEngineHost)!;
+  const copyOf = JSON.parse(JSON.stringify(deepMerge<Connector>({}, { ...connector }))) as Connector;
+  copyOf.id = id || `host.${randomUUID()}.${connector.host}`;
+  return copyOf;
+}

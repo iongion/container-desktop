@@ -1,5 +1,5 @@
 import EventEmitter from "eventemitter3";
-import type { CommandExecutionResult } from "@/env/Types";
+import type { CommandExecutionResult } from "@/host-contract/exec";
 
 export interface RecordedCall {
   launcher: string;

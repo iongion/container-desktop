@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Network } from "@/env/Types";
+import type { Network } from "@/container-client/types/network";
 import i18n from "@/i18n";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";

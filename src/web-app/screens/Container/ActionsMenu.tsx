@@ -4,7 +4,7 @@ import { mdiConsole, mdiOpenInApp } from "@mdi/js";
 import * as ReactIcon from "@mdi/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 import { randomUUID } from "@/utils/randomUUID";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
@@ -21,7 +21,7 @@ import {
   useUnpauseContainer,
 } from "./queries";
 import "./ActionsMenu.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.container");
 
@@ -138,10 +138,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           });
         }
         if (success && successMessage) {
-          Notification.show({
-            message: successMessage,
-            intent: Intent.SUCCESS,
-          });
           await onReload?.();
         }
         if (action === "container.remove") {

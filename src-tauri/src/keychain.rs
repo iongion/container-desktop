@@ -157,8 +157,9 @@ pub async fn keychain_has(account: String) -> bool {
 }
 
 /// The plaintext secret for `account` (None if unset) — from the OS vault, else the degraded fallback.
-#[tauri::command]
-pub async fn keychain_get(account: String) -> Result<Option<String>, String> {
+/// Deliberately NOT a `#[tauri::command]`: the secret stays in this process, and the only caller is the native
+/// provider transport, which attaches it to the outbound request without the web view ever seeing it.
+pub(crate) async fn keychain_get(account: String) -> Result<Option<String>, String> {
     let account_for_vault = account.clone();
     let from_vault = tokio::task::spawn_blocking(move || -> Result<Option<String>, String> {
         let e = entry(KEYCHAIN_SERVICE, &account_for_vault)?;

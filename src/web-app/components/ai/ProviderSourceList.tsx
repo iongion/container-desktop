@@ -6,7 +6,7 @@
 import { Menu, MenuDivider, MenuItem } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
-import { compareProviderEntries, PROVIDER_CATALOG, type ProviderCatalogEntry } from "@/ai-system/core";
+import { compareProviderEntries, PROVIDER_CATALOG, type ProviderCatalogEntry } from "@/ai-system/core/providers";
 import { providerIcon } from "@/web-app/components/providerIcon";
 
 export interface ProviderSourceListProps {
@@ -23,14 +23,14 @@ export interface ProviderSourceListProps {
 export function ProviderSourceList({ activeId, onSelect, renderItemRight, filter }: ProviderSourceListProps) {
   const { t } = useTranslation();
   const q = (filter ?? "").trim().toLowerCase();
-  const matches = PROVIDER_CATALOG.filter((e) => !q || e.label.toLowerCase().includes(q));
+  const matches = PROVIDER_CATALOG.filter((entry) => !q || t(entry.labelKey).toLowerCase().includes(q));
   const local = matches.filter((e) => !e.cloud).sort(compareProviderEntries);
   const cloud = matches.filter((e) => e.cloud).sort(compareProviderEntries);
   const item = (entry: ProviderCatalogEntry) => (
     <MenuItem
       key={entry.id}
       icon={providerIcon(entry.id)}
-      text={entry.label}
+      text={t(entry.labelKey)}
       active={entry.id === activeId}
       shouldDismissPopover={false}
       labelElement={renderItemRight?.(entry)}

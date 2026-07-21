@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PodmanMachine } from "@/env/Types";
+import type { PodmanMachine } from "@/container-client/types/machine";
 import { machineCanStop } from "./bulkActions";
 
 // Stop is the only state-dependent bulk button for machines; it applies only to running machines.

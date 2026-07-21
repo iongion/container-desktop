@@ -6,7 +6,8 @@
 // (backend/latency/health) are NOT modelled here; the UI renders them as honest placeholders. The flattened
 // tree-item list per connection feeds `flattenConnectionGroups`. Pure → unit-tested.
 
-import type { Container, Volume } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
+import type { Volume } from "@/container-client/types/volume";
 import type { ConnectionGroup } from "@/web-app/components/groupedTable/flattenConnectionGroups";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import type { MergedResource } from "@/web-app/hooks/useMergedResources";

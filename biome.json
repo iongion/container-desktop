@@ -25,6 +25,7 @@
   "linter": {
     "enabled": true,
     "rules": {
+      "recommended": true,
       "complexity": {
         "noForEach": "off",
         "noImportantStyles": "off"
@@ -35,7 +36,6 @@
       "performance": {
         "noDelete": "off"
       },
-      "preset": "recommended",
       "style": {
         "noDescendingSpecificity": "off",
         "noNonNullAssertion": "off",

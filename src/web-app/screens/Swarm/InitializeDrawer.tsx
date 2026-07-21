@@ -16,7 +16,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-import type { HostAddress } from "@/env/Types";
+import type { HostAddress } from "@/container-client/types/swarm";
 import { extractApiErrorText } from "@/utils/apiError";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect, isDockerConnection } from "@/web-app/components/ConnectionSelect";

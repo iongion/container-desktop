@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/env/Types";
+import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/container-client/types/swarm";
 
 import { buildSwarmSummary } from "./inspectSummary";
 

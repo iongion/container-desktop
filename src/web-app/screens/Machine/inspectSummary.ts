@@ -1,6 +1,6 @@
 import prettyBytes from "pretty-bytes";
 
-import type { PodmanMachine, PodmanMachineInspect } from "@/env/Types";
+import type { PodmanMachine, PodmanMachineInspect } from "@/container-client/types/machine";
 import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 import { inspectDate, yesNo } from "@/web-app/components/inspectSummary.helpers";

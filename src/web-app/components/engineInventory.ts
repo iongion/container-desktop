@@ -5,7 +5,7 @@ import {
   resolveConnectionVersion,
 } from "@/container-client/connection-display";
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { Connection, Connector } from "@/env/Types";
+import type { Connection, Connector } from "@/container-client/types/connection";
 
 export interface EngineInventoryEntry {
   id: string;

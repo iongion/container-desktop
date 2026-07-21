@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { RegistryAuthInfo } from "@/env/Types";
+import type { RegistryAuthInfo } from "@/container-client/types/registry";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 

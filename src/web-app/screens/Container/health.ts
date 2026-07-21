@@ -4,7 +4,7 @@
 // SIGTERM) is neutral "off" grey, while any other non-zero exit is a crash/failure and reads red. Created/
 // paused are amber; unknown is grey. This is what makes "not running because it crashed" stand out.
 
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 
 export type StatusTone = "success" | "warning" | "danger" | "muted";
 

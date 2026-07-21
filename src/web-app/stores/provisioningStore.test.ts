@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-
+import { ContainerEngine, ContainerEngineHost } from "@/container-client/types/engine";
+import { OperatingSystem } from "@/container-client/types/os";
 import type { DetectionReport, ProvisionPlan, ProvisionTarget } from "@/container-provisioning/types";
-import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
 
 import { useProvisioningStore, WIZARD_STEPS } from "./provisioningStore";
 

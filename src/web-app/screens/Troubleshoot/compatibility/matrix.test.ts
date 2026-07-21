@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { ConnectorCapabilities } from "@/env/Types";
+import type { ConnectorCapabilities } from "@/container-client/types/connection";
 
 import { buildCompatibilityMatrix, sortVersionsDesc } from "./matrix";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Network } from "@/env/Types";
+import type { Network } from "@/container-client/types/network";
 
 import { buildNetworkSummary } from "./inspectSummary";
 

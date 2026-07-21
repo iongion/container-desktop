@@ -21,15 +21,21 @@ TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
 
 ## Layout
 
-- `src/web-app/` — React renderer: `App.tsx`, `stores/` (Zustand state),
-  `domain/` (TanStack Query client), `screens/`, `components/`, `hooks/`,
-  `Native.ts`, `Environment.ts`
-- `src/container-client/` — engine API clients/adapters · `src/utils/` · `src/env/`
-  (logging façade lives in `src/platform/logger/`)
-- `src/platform/` + `src-tauri/` + `src-wails/` — runtime ports: shared brokers/services live at
-  `src/platform/*`; `electron/`, `tauri/` and `wails/` (Go backend) align host, command,
-  exec, buses, tray, runtime, AI. Packaging/branding metadata is centralized in `support/app-metadata.cjs`.
-- `src/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/prompt/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
+- **`src/packages/*`** — the library packages: local yarn **workspaces** (root-only lockfile + hoisting),
+  each a proper npm layout (`<pkg>/package.json` + `<pkg>/src/…`). Acyclic DAG (a package's `package.json`
+  `dependencies` lists its real workspace siblings). Leaves: `utils`, `logger` (the logging façade — was
+  `platform/logger`), `i18n` (owns the translation JSONs), `host-contract` (AI-free host PORTS: `fs`, path,
+  capabilities, `exec`/`CommandExecutionResult`), `template` (prompt/markdown templates). Then `ai-system` (fully decoupled — the first
+  publish target), `container-client` (engine clients/adapters + **owns the domain types in `Types.ts`** — the
+  old `src/env/Types.ts` god-file was dissolved; there is NO `src/env`), `container-provisioning`, `platform`.
+  **No re-exports / barrels** — single origin per type, import from the defining module.
+- `src/web-app/` — the **application** (NOT a package): React renderer — `App.tsx`, `stores/` (Zustand),
+  `domain/` (TanStack Query), `screens/`, `components/`, `hooks/`, `Native.ts`, `Environment.ts`. Consumes the
+  packages via `@/…`. `src/resources/` (assets) + loose `*.d.ts` + `src/__tests__/` also stay at `src/` root.
+- `src/packages/platform/` + `src-tauri/` + `src-wails/` — runtime ports: shared brokers/services live at
+  `platform/src/*`; `electron/`, `tauri/` and `wails/` (Go backend) align host, command, exec, buses, tray,
+  runtime, AI. Packaging/branding metadata is centralized in `support/app-metadata.cjs`.
+- `src/packages/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
 - `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
   · `support/watch.mjs` (dev launcher) · **`support/cli/`** (the `yarn cli` build/dev/release
   tool, commander + tsx) · `Makefile`
@@ -37,9 +43,12 @@ TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
   compiled to the **generated `website/`** (never hand-edit `website/`; see Website below).
 - **`docs/`** — architecture docs (C4 diagrams) + contributor guides;
   start at `docs/README.md`.
-- Path alias **`@/* → src/*`** (e.g. `@/web-app/...`) plus **`@/cli/* → support/cli/*`** for the
-  tooling, defined in `tsconfig.json` `paths` + explicit `resolve.alias` in the common vite config
-  (and vitest). `@/cli` must precede `@` in the vite/vitest alias order (first-hit matching).
+- Path aliases: each package is **`@/<pkg> → src/packages/<pkg>/src`**; the app/assets keep **`@/web-app → src/web-app`**,
+  **`@/resources → src/resources`**, and **`@ → src`** (fallback); **`@/cli/* → support/cli/*`** for the tooling.
+  The vite/vitest map is a **single source in `support/aliases.mjs`** (`makeAliases`), imported by
+  `vite.config.common.mjs` + the vitest configs; `tsconfig.json` `paths` mirrors it by hand. **Specific `@/<pkg>`
+  entries MUST precede the generic `@` → src** (first-hit matching). Nothing imports by package NAME
+  (`@container-desktop/*`), so dev resolves alias→TS-source with **no build step** (hot reload intact).
 
 ## Commands
 
@@ -140,6 +149,11 @@ How you build here, **per change** — not an end-of-task afterthought:
   IIFEs); it **auto-discovers the port** from that handshake file, and `CDP_URL` overrides
   it. Multi-engine dev: `CONTAINER_DESKTOP_MOCK=1 yarn dev`
   boots Podman+Docker mocks, then drive with this. (See [memory: Verify Electron app via CDP].)
+- **NEVER GUESS ROUTES.** Every hash route you navigate to (or assert on) MUST come from the source —
+  a screen's `Screen.Route.Path` / its `Navigation.ts` constant (e.g. `BUILD_ROUTE`), a real `#/...`
+  href in the rendered DOM, or an id returned by the mock snapshot — never an invented path or a
+  fabricated entity id (`.../mock-c-1/inspect` is a guess, not a route). Guessing sends you to a dead
+  route, the screen never mounts, and you misread that as a broken feature. Grep the route first, then drive it.
 - **NEVER `xvfb-run` or spawn a second app instance to verify the UI.** When a dev app is already
   running (it usually is), **attach** to it via `support/cdp.mjs` on the auto-discovered CDP port — that
   is the required verification path. Do **not** use `xvfb-run`, `launchApp`, or `yarn test:ui` for local
@@ -200,8 +214,25 @@ How you build here, **per change** — not an end-of-task afterthought:
   (`support/cli/**/*.test.ts`, included in `yarn test:run`). CI
   gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
 - **UI changes:** verify live in the running app, not off static checks — see Development workflow.
-- **Logging:** use `@/platform/logger` (`createLogger`), never raw `console.*` (except the façade
+- **Logging:** use `@/logger` (`createLogger`), never raw `console.*` (except the façade
   sink + the pre-React fallback in `index.tsx`). Verbosity is controlled solely by log level.
+- **AI prompts & markdown live in templates, NEVER inlined.** Every model-facing prompt (system/agent,
+  generate, per-screen focus, …) AND any static markdown/prose block (incl. demo/example transcripts) is a
+  `.md` file under `src/resources/prompts/`, rendered via `renderPrompt` (nunjucks **browser** build
+  → node-free) or imported `?raw`. NEVER inline prompt/markdown prose in TS/TSX — add a `.md` there and import it.
+- **AI dependency direction — a review rule, NOT a suite test.** `@/ai-system/core/` stays dependency-free: no
+  imports of `@/platform`, `@/i18n`, `@/web-app`/`@/components`, the AI SDK (`ai` / `@ai-sdk/*`),
+  `@open-multi-agent/core`, `xstate`, `react`, `node:*`, `electron`/`@tauri`, or sibling
+  `@/ai-system/{adapters,runtime,host,ui}`. The package's layers are `core/` (pure protocol + policy) →
+  `adapters/` (impure infra) → `runtime/` (the assistant runtime: agent loops, OMA, toolsets), with `host/`
+  composing `core/` + `adapters/` only. **`core/` and `host/` MUST NOT import `runtime/`** — the engine factories
+  are injected into `createAISystem` precisely so `@open-multi-agent/core` never enters their graph. A separate
+  package used to enforce that; since the merge nothing does but review. No barrels / `index.ts` aggregators /
+  pass-through re-exports anywhere in `@/ai-system` — import from the defining module.
+  This is common sense; hold the line in review, don't encode it as a Vitest test.
+- **Shell port-module parity is a review rule, not a test.** Keep the Electron / Tauri / Wails port modules in
+  `src/platform/<shell>/` aligned (a capability added to one shell usually needs its peers) — verify it in review;
+  don't assert directory-listing parity in a Vitest test.
 
 ## UI conventions (renderer · Blueprint)
 
@@ -248,3 +279,15 @@ The user is a hands-on designer and corrects deviations fast — match these up 
 - Build/release automation must use lockfile-respecting installs
   (`yarn install --frozen-lockfile`) and pinned tool/action versions. Do not use
   `@latest` or floating GitHub Actions tags.
+
+## Code Review Standards
+
+After completing any implementation, review the code for:
+
+- Functions longer than 50 lines (likely doing too much) that are not react JSX
+- Logic duplicated more than twice (extract to utility)
+- Any `any` type usage in TypeScript (replace with real types)
+- Components with more than 3 props that could be grouped into an object
+- Missing error handling on async operations
+
+Run /simplify before presenting code to the user.

@@ -7,8 +7,8 @@
 import { useCallback, useMemo } from "react";
 import { useStoreWithEqualityFn } from "zustand/traditional";
 
-import type { ContainerEngine } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import type { ContainerEngine } from "@/container-client/types/engine";
+import { createLogger } from "@/logger";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 import { type ResourceDomain, type ResourceItemsByDomain, useResourceStore } from "@/web-app/stores/resourceStore";

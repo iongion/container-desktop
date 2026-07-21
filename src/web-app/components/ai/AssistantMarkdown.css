@@ -1,0 +1,121 @@
+/* Rich markdown body for assistant/user messages. Base rhythm comes from Blueprint's `bp6-running-text`;
+   we only tune sizes for chat density and add chrome for the fenced-code block (bar + copy + scroll cap). */
+.AssistantMarkdown.AssistantMarkdown {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--app-text);
+}
+.AssistantMarkdown > :first-child {
+  margin-top: 0;
+}
+.AssistantMarkdown > :last-child {
+  margin-bottom: 0;
+}
+.AssistantMarkdown p {
+  margin: 0 0 6px;
+}
+.AssistantMarkdown h1,
+.AssistantMarkdown h2,
+.AssistantMarkdown h3,
+.AssistantMarkdown h4,
+.AssistantMarkdown h5,
+.AssistantMarkdown h6 {
+  margin: 10px 0 5px;
+  line-height: 1.25;
+}
+.AssistantMarkdown h1 {
+  font-size: 17px;
+}
+.AssistantMarkdown h2 {
+  font-size: 15px;
+}
+.AssistantMarkdown h3 {
+  font-size: 14px;
+}
+.AssistantMarkdown h4,
+.AssistantMarkdown h5,
+.AssistantMarkdown h6 {
+  font-size: 13px;
+}
+.AssistantMarkdown ul,
+.AssistantMarkdown ol {
+  margin: 0 0 6px;
+  padding-left: 20px;
+}
+.AssistantMarkdown li {
+  margin: 1px 0;
+}
+.AssistantMarkdown a {
+  color: var(--app-accent-text);
+}
+
+/* Fenced code block: Blueprint `bp6-code-block` for the surface, wrapped with a language + copy bar and
+   capped so long output scrolls instead of stretching the transcript. */
+.AssistantCodeBlock {
+  margin: 6px 0;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.AssistantCodeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 24px;
+  padding: 1px 3px 1px 10px;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+.AssistantCodeLang {
+  font-family: var(--monospace-font);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+.AssistantCodePre.AssistantCodePre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px 10px;
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+  font-family: var(--monospace-font);
+  font-size: var(--monospace-font-size, 12px);
+  line-height: 1.5;
+  white-space: pre;
+}
+.AssistantCodePre::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.AssistantCodePre::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 5px;
+}
+.AssistantCodePre::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+}
+.AssistantCodePre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* GFM table: Blueprint `bp6-html-table` (bordered + striped + compact); scroll horizontally when wide. */
+.AssistantTableScroll {
+  margin: 6px 0;
+  overflow-x: auto;
+}
+.AssistantMarkdown .bp6-html-table {
+  font-size: 12.5px;
+}
+
+/* Blockquote rendered as a Blueprint Callout. */
+.AssistantMdCallout.AssistantMdCallout {
+  margin: 6px 0;
+}
+.AssistantMdCallout.AssistantMdCallout p {
+  margin: 0;
+}

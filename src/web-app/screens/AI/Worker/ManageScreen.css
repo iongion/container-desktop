@@ -1,0 +1,34 @@
+.AppDataTable[data-table="ai.workers"] th {
+  padding-left: var(--app-data-table-items-padding);
+  padding-right: var(--app-data-table-items-padding);
+}
+.AppDataTable[data-table="ai.workers"] th:first-child {
+  padding-left: 6px;
+}
+.AppDataTable[data-table="ai.workers"] th:nth-last-child(2) {
+  padding-left: initial;
+  min-width: 1px;
+}
+.AppDataTable[data-table="ai.workers"] tbody td:first-child {
+  width: 100%;
+  min-width: 180px;
+}
+
+/* The tool policy is the row's security-bearing fact, so it reads as a marker rather than plain text. */
+.WorkerPolicyTag {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  font-family: var(--monospace-font);
+  font-size: 10px;
+  color: var(--app-text-muted);
+}
+.WorkerPolicyTag[data-policy="all"] {
+  border-color: color-mix(in srgb, var(--app-intent-warning-rest) 45%, transparent);
+  color: var(--app-intent-warning-text);
+}
+.WorkerPolicyTag[data-policy="ask"] {
+  border-color: color-mix(in srgb, var(--app-accent) 45%, transparent);
+  color: var(--app-accent-text);
+}

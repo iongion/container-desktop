@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RemoteEnvConnection } from "@/container-client/remote-env";
-import { ContainerEngine, ContainerEngineHost, OperatingSystem } from "@/env/Types";
+import { ContainerEngine, ContainerEngineHost } from "@/container-client/types/engine";
+import { OperatingSystem } from "@/container-client/types/os";
 import { isConfigured, parseTestTargets, remoteEnvToTargets, selectTargets } from "./targets";
 
 const ENV: Record<string, string> = {

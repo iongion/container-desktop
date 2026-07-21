@@ -5,7 +5,7 @@ import {
 } from "@/container-client/connection-display";
 import { type ReachabilityTransport, resolveTransport } from "@/container-client/reachability/model";
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { Connection, Connector } from "@/env/Types";
+import type { Connection, Connector } from "@/container-client/types/connection";
 import { engineLabel } from "@/web-app/components/EngineCell";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 

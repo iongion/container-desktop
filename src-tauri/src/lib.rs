@@ -7,6 +7,7 @@ mod bridge;
 mod host;
 mod keychain;
 mod process;
+mod provider_transport;
 mod proxy;
 mod shell;
 mod spawn_hidden;
@@ -95,6 +96,8 @@ pub fn run() {
         .manage(proxy::ProxyState::default())
         // Live-process registry for ExecuteStreaming / ExecuteAsBackgroundService (kill by processId).
         .manage(process::ProcessState::default())
+        // Live-stream registry for the native AI provider transport (teardown by streamId).
+        .manage(provider_transport::ProviderTransportState::default())
         // Persistent SSH/WSL dial-stdio bridge registry (survives webview reloads; keyed per connection).
         .manage(bridge::BridgeState::default())
         // The single native tray icon (built on first tray_update from the webview's projected menu).
@@ -127,11 +130,23 @@ pub fn run() {
             host::fs_rename,
             host::command_execute,
             host::dns_lookup,
+            host::workspace_root,
+            host::workspace_read,
+            host::workspace_write,
+            host::workspace_edit,
+            host::workspace_list,
+            host::workspace_stat,
+            host::workspace_remove,
+            host::workspace_glob,
+            host::workspace_grep,
+            host::workspace_exec,
             ssh_config::get_ssh_config,
             proxy::proxy_request,
             proxy::proxy_request_stream,
             proxy::proxy_stream_destroy,
             proxy::proxy_test_connectivity,
+            provider_transport::provider_transport_request,
+            provider_transport::provider_transport_destroy,
             process::process_spawn,
             process::process_kill,
             bridge::proxy_bridge_stop,
@@ -144,7 +159,6 @@ pub fn run() {
             shell::logging_reveal,
             keychain::keychain_status,
             keychain::keychain_has,
-            keychain::keychain_get,
             keychain::keychain_set,
             keychain::keychain_clear,
             tray::tray_update,

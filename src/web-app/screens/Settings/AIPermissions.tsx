@@ -7,16 +7,26 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type AICommandRule, commandKey, type PermissionsList, type PermissionsSnapshot } from "@/ai-system/core";
+import {
+  commandKey,
+  type PermissionRule,
+  type PermissionsList,
+  type PermissionsSnapshot,
+} from "@/ai-system/core/permissions";
 import { Application } from "@/container-client/Application";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 
 import "./AIPermissions.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.settings");
 
-export const AIPermissions: React.FC = () => {
+export interface AIPermissionsProps {
+  webSearchEnabled: boolean;
+  webSearchAvailable: boolean;
+}
+
+export const AIPermissions: React.FC<AIPermissionsProps> = ({ webSearchEnabled, webSearchAvailable }) => {
   const { t } = useTranslation();
   const bridge: IAI | undefined = typeof window !== "undefined" ? window.AI : undefined;
   const [snap, setSnap] = useState<PermissionsSnapshot | null>(null);
@@ -37,7 +47,7 @@ export const AIPermissions: React.FC = () => {
   }, [load]);
 
   const removeRule = useCallback(
-    async (list: PermissionsList, rule: AICommandRule) => {
+    async (list: PermissionsList, rule: PermissionRule) => {
       if (!bridge) {
         return;
       }
@@ -56,7 +66,7 @@ export const AIPermissions: React.FC = () => {
     [bridge],
   );
 
-  const renderList = (list: PermissionsList, rules: AICommandRule[], emptyTitle: string, emptyHint: string) => (
+  const renderList = (list: PermissionsList, rules: PermissionRule[], emptyTitle: string, emptyHint: string) => (
     <div className="AIPermissionsListWrap">
       {rules.length === 0 ? (
         <div className="AIPermissionsEmpty">
@@ -73,7 +83,7 @@ export const AIPermissions: React.FC = () => {
               <ConfirmMenu
                 tag={rule}
                 title={t("Revoke")}
-                onConfirm={(r, confirmed) => confirmed && void removeRule(list, r as AICommandRule)}
+                onConfirm={(r, confirmed) => confirmed && void removeRule(list, r as PermissionRule)}
               />
             </li>
           ))}
@@ -82,12 +92,15 @@ export const AIPermissions: React.FC = () => {
     </div>
   );
 
-  const webStatus =
-    snap?.webSearch === "allow"
-      ? t("Always allowed")
-      : snap?.webSearch === "block"
-        ? t("Always blocked")
-        : t("Interactive approval");
+  const webStatus = !webSearchAvailable
+    ? t("Unavailable on this application runtime")
+    : !webSearchEnabled
+      ? t("Disabled in AI settings")
+      : snap?.webSearch === "allow"
+        ? t("Always allowed")
+        : snap?.webSearch === "block"
+          ? t("Always blocked")
+          : t("Interactive approval");
 
   return (
     <div className="AIPermissions" data-form="ai-permissions">
@@ -104,6 +117,7 @@ export const AIPermissions: React.FC = () => {
           <div className="AIPermissionsHeading">{t("Web search")}</div>
           <HTMLSelect
             fill
+            disabled={!webSearchEnabled || !webSearchAvailable}
             value={snap?.webSearch ?? ""}
             onChange={(e) => void setWeb((e.currentTarget.value || null) as "allow" | "block" | null)}
           >

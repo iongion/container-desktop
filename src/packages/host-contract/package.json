@@ -1,0 +1,6 @@
+{
+  "name": "@container-desktop/host-contract",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module"
+}

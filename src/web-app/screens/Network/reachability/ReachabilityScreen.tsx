@@ -23,7 +23,7 @@ import {
   type ReachabilityTone,
 } from "@/container-client/reachability/model";
 import { RESOURCE_SYNC } from "@/container-client/resourceSyncProtocol";
-import type { Container } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
 import i18n from "@/i18n";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { ChainPipe } from "@/web-app/components/ChainPipe/ChainPipe";

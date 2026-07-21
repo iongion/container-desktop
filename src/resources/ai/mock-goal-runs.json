@@ -1,0 +1,227 @@
+[
+  {
+    "runId": "mock-run-planning",
+    "goal": "Audit every running container for exposed ports and report the riskiest three.",
+    "phase": "planning",
+    "lastSeq": 2,
+    "tasks": [],
+    "approvals": [],
+    "synthesis": "",
+    "usage": { "inputTokens": 820, "outputTokens": 140 },
+    "planPending": false
+  },
+  {
+    "runId": "mock-run-awaiting",
+    "goal": "Migrate the legacy compose stack to podman pods.",
+    "phase": "awaiting-plan",
+    "lastSeq": 6,
+    "tasks": [
+      {
+        "id": "t1",
+        "title": "Inventory the compose services",
+        "description": "List every service in the compose stack with its image, ports and volumes.",
+        "dependsOn": [],
+        "agent": "Inspector",
+        "workerId": "mock-worker-inspector",
+        "status": "pending",
+        "output": ""
+      },
+      {
+        "id": "t2",
+        "title": "Draft the equivalent pod definitions",
+        "description": "Write pod specs that reproduce the inventory from t1.",
+        "dependsOn": ["t1"],
+        "agent": "Editor",
+        "workerId": "mock-worker-editor",
+        "status": "pending",
+        "output": ""
+      }
+    ],
+    "approvals": [],
+    "synthesis": "",
+    "usage": { "inputTokens": 4100, "outputTokens": 1180 },
+    "planPending": true
+  },
+  {
+    "runId": "mock-run-running",
+    "goal": "Rebuild every image that has no pinned base tag.",
+    "phase": "running",
+    "lastSeq": 41,
+    "tasks": [
+      {
+        "id": "t1",
+        "title": "Find images with a floating base tag",
+        "description": "Scan local images and report any whose base is latest or unpinned.",
+        "dependsOn": [],
+        "agent": "Inspector",
+        "workerId": "mock-worker-inspector",
+        "status": "complete",
+        "output": "4 images use a floating base: web:latest, api:latest, worker:latest, docs:latest."
+      },
+      {
+        "id": "t2",
+        "title": "Pin each Containerfile to a digest",
+        "description": "Rewrite the FROM line of each affected Containerfile to a digest.",
+        "dependsOn": ["t1"],
+        "agent": "Editor",
+        "workerId": "mock-worker-editor",
+        "status": "running",
+        "output": "Pinned web and api. Working through worker…"
+      },
+      {
+        "id": "t3",
+        "title": "Rebuild and verify",
+        "description": "Rebuild each pinned image and confirm it starts.",
+        "dependsOn": ["t2"],
+        "agent": "Operator",
+        "workerId": "mock-worker-operator",
+        "status": "pending",
+        "output": ""
+      }
+    ],
+    "approvals": [],
+    "synthesis": "",
+    "usage": { "inputTokens": 24800, "outputTokens": 6900 },
+    "planPending": false
+  },
+  {
+    "runId": "mock-run-approval",
+    "goal": "Reclaim disk by pruning dangling volumes on every connection.",
+    "phase": "running",
+    "lastSeq": 33,
+    "tasks": [
+      {
+        "id": "t1",
+        "title": "List dangling volumes",
+        "description": "Report every volume with no attached container.",
+        "dependsOn": [],
+        "agent": "Inspector",
+        "workerId": "mock-worker-inspector",
+        "status": "complete",
+        "output": "11 dangling volumes across podman and docker, 3.4 GB total."
+      },
+      {
+        "id": "t2",
+        "title": "Remove the dangling volumes",
+        "description": "Remove each volume reported by t1.",
+        "dependsOn": ["t1"],
+        "agent": "Operator",
+        "workerId": "mock-worker-operator",
+        "status": "awaiting-approval",
+        "output": ""
+      }
+    ],
+    "approvals": [
+      {
+        "approvalId": "mock-approval-1",
+        "taskId": "t2",
+        "toolCallId": "mock-call-1",
+        "tool": "removeVolume",
+        "title": "Remove volume",
+        "args": { "connectionId": "mock.podman.system", "id": "orphaned-cache-7f2a" },
+        "reason": "This tool changes engine state and needs your approval.",
+        "status": "pending"
+      }
+    ],
+    "synthesis": "",
+    "usage": { "inputTokens": 15200, "outputTokens": 3400 },
+    "planPending": false
+  },
+  {
+    "runId": "mock-run-done",
+    "goal": "Summarise which containers restarted in the last day and why.",
+    "phase": "done",
+    "lastSeq": 58,
+    "tasks": [
+      {
+        "id": "t1",
+        "title": "Collect restart counts",
+        "description": "Report the restart count of every container.",
+        "dependsOn": [],
+        "agent": "Inspector",
+        "workerId": "mock-worker-inspector",
+        "status": "complete",
+        "output": "Two containers restarted: api (6 times) and cache (2 times)."
+      },
+      {
+        "id": "t2",
+        "title": "Read the logs around each restart",
+        "description": "Pull logs for the restarting containers and identify the cause.",
+        "dependsOn": ["t1"],
+        "agent": "Reviewer",
+        "workerId": "mock-worker-reviewer",
+        "status": "complete",
+        "output": "api exits 137 (OOM). cache restarts on a failed health check after a slow start."
+      }
+    ],
+    "approvals": [],
+    "synthesis": "Two containers are unstable. `api` is being OOM-killed — it exits 137 under load and its memory limit is set to 256 MB; raise the limit or cap the worker pool. `cache` fails its health check during a slow cold start; its start period is shorter than the time it needs to warm up. Neither is a crash in your application code.",
+    "usage": { "inputTokens": 31400, "outputTokens": 8800 },
+    "planPending": false
+  },
+  {
+    "runId": "mock-run-failed",
+    "goal": "Sync the remote registry mirror and report what changed.",
+    "phase": "error",
+    "lastSeq": 12,
+    "tasks": [
+      {
+        "id": "t1",
+        "title": "Reach the mirror",
+        "description": "Confirm the registry mirror is reachable and authenticated.",
+        "dependsOn": [],
+        "agent": "Inspector",
+        "workerId": "mock-worker-inspector",
+        "status": "failed",
+        "output": "",
+        "error": "registry.example.com: connection refused"
+      },
+      {
+        "id": "t2",
+        "title": "Pull the changed tags",
+        "description": "Pull every tag that differs from the local copy.",
+        "dependsOn": ["t1"],
+        "agent": "Operator",
+        "workerId": "mock-worker-operator",
+        "status": "skipped",
+        "output": ""
+      }
+    ],
+    "approvals": [],
+    "synthesis": "",
+    "usage": { "inputTokens": 2100, "outputTokens": 480 },
+    "planPending": false
+  },
+  {
+    "runId": "mock-run-stopped",
+    "goal": "Rewrite every Containerfile to use multi-stage builds.",
+    "phase": "stopped",
+    "lastSeq": 19,
+    "tasks": [
+      {
+        "id": "t1",
+        "title": "Find single-stage Containerfiles",
+        "description": "List Containerfiles with only one FROM.",
+        "dependsOn": [],
+        "agent": "Inspector",
+        "workerId": "mock-worker-inspector",
+        "status": "complete",
+        "output": "6 Containerfiles are single-stage."
+      },
+      {
+        "id": "t2",
+        "title": "Rewrite each one",
+        "description": "Convert each file to a builder + runtime stage.",
+        "dependsOn": ["t1"],
+        "agent": "Editor",
+        "workerId": "mock-worker-editor",
+        "status": "skipped",
+        "output": ""
+      }
+    ],
+    "approvals": [],
+    "synthesis": "",
+    "usage": { "inputTokens": 5600, "outputTokens": 1300 },
+    "planPending": false
+  }
+]

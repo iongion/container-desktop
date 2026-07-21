@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 import type { SortSpec } from "@/web-app/stores/sortStore";
 
 import { groupContainersAcrossConnections, isContainerGroupDirectory, isInfraContainer } from "./grouping";

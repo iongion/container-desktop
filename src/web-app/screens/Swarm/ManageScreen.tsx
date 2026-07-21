@@ -18,7 +18,8 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SwarmAdapter } from "@/container-client/adapters/swarm";
-import type { Connector, SwarmConfig, SwarmNode, SwarmSecret, SwarmService, SwarmStack } from "@/env/Types";
+import type { Connector } from "@/container-client/types/connection";
+import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService, SwarmStack } from "@/container-client/types/swarm";
 import i18n from "@/i18n";
 import { extractApiErrorText } from "@/utils/apiError";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";

@@ -18,7 +18,7 @@ export default ({ mode, command }) => {
   config.build.target = `node${cache.node}`;
   config.build.lib = {
     name: "preload",
-    entry: "src/platform/electron/preload.ts",
+    entry: "src/packages/platform/src/electron/preload.ts",
     formats: [outputFormat]
   };
   config.build.rollupOptions.external = ["electron"];

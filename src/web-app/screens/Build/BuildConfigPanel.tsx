@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Application } from "@/container-client/Application";
 import { FEATURE_MATRIX } from "@/container-client/builder/featureMatrix";
 import type { BuildEngineKind, BuildSecret, ImageBuildOptions, NamedContext } from "@/container-client/builder/types";
-import { Environments } from "@/env/Types";
+import { Environments } from "@/container-client/types/os";
 import { CopyButton } from "@/web-app/components/CopyButton";
 import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 

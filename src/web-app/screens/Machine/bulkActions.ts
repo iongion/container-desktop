@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { PodmanMachine } from "@/env/Types";
+import type { PodmanMachine } from "@/container-client/types/machine";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import type { MergedResource } from "@/web-app/hooks/useMergedResources";

@@ -1,0 +1,39 @@
+[data-form="ai.goal.create"] .GoalCreateInput {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 90px;
+  font: inherit;
+  font-size: 13px;
+}
+
+[data-form="ai.goal.create"] .GoalCreateRoster {
+  padding: 10px 12px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+[data-form="ai.goal.create"] .GoalCreateRoster > h5 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-muted);
+}
+[data-form="ai.goal.create"] .GoalCreateNote {
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+[data-form="ai.goal.create"] .GoalCreateWorkerName {
+  font-weight: 600;
+}
+[data-form="ai.goal.create"] .GoalCreateWorkerSpecialty {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+[data-form="ai.goal.create"] .GoalCreateHint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--app-text-muted);
+}

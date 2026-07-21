@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTimeout } from "usehooks-ts";
 import i18n from "@/i18n";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { Notification } from "@/web-app/Notification";
 import type { AppScreen, AppScreenProps } from "@/web-app/Types";
 

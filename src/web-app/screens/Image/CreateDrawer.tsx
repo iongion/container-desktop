@@ -15,19 +15,19 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 // module
-import type { ContainerImage, ContainerImagePortMapping } from "@/env/Types";
-// project
-import { toPortMappings } from "@/utils";
+import type { ContainerImage, ContainerImagePortMapping } from "@/container-client/types/image";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";
 import { useCreateContainer } from "@/web-app/screens/Container/queries";
+// project
+import { toPortMappings } from "@/web-app/screens/Image/portMappings";
 import { createMount, type MountFormContainerImageMount, MountsForm } from "./MountsForm";
 import { PortMappingsForm } from "./PortMappingsForm";
 import { useImage } from "./queries";
 
 import "./CreateDrawer.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.image");
 

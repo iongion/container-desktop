@@ -1,8 +1,8 @@
 import Editor, { type OnMount, useMonaco } from "@monaco-editor/react";
-import type * as Monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+import type * as Monaco from "monaco-editor/editor/editor.api.js";
 import { useEffect, useRef, useState } from "react";
 
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { AppTheme } from "@/web-app/App.types";
 import { useAppStore } from "@/web-app/stores/appStore";
 

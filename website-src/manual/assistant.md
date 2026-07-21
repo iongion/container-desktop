@@ -10,7 +10,6 @@ sections:
   - { id: assistant-model, label: "Choose your model" }
   - { id: assistant-do, label: "What it can do" }
   - { id: assistant-privacy, label: "Privacy & permissions" }
-  - { id: assistant-generator, label: "Containerfile & Compose generator" }
 ---
 
 <section class="guide-sec" id="assistant-what">
@@ -19,7 +18,7 @@ sections:
 
 Container Desktop has a built-in **AI assistant** that understands your container setup and can inspect and operate it for you — in plain language. Ask *"why did my web container exit?"* or *"show me the running containers"* and it investigates and acts, right inside the app.
 
-Open it from the **AI menu** in the header (the chat button — the caret beside it lists the Assistant and the generator). It is **local-first**: point it at a model running on your own machine and nothing leaves the device.
+Open it from the **AI menu** in the header (the chat button). It is **local-first**: point it at a model running on your own machine and nothing leaves the device.
 
 </section>
 
@@ -69,13 +68,5 @@ A reject **never** runs. Review or revoke everything you've remembered — and t
 **Local-first and private by design.** Secrets (API keys, tokens) are **redacted** out of anything the model sees, and out of command output before it's read back. With a local model, your prompts and container details stay on your machine; a cloud model is only contacted after you've explicitly added its key.
 
 </div>
-
-</section>
-
-<section class="guide-sec" id="assistant-generator">
-
-### Containerfile &amp; Compose generator
-
-A second AI screen (the caret in the header AI menu) **drafts a Containerfile or a Compose file** from a short description and a starter template, streamed as it writes, ready to copy or save. Same model picker, same privacy rules.
 
 </section>

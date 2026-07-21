@@ -1,6 +1,6 @@
 // Single renderer startup timeline (t0 ≈ navigationStart, imported first thing by index.tsx).
-import { createLogger } from "@/platform/logger";
-import { createTimeline } from "@/platform/logger/timing";
+import { createLogger } from "@/logger";
+import { createTimeline } from "@/logger/timing";
 
 export const bootTimeline = createTimeline({ label: "startup.renderer" });
 export const bootLogger = createLogger("web.boot");

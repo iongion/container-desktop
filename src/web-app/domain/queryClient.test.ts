@@ -1,6 +1,13 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { removeConnectionQueries } from "./queryClient";
+import { removeConnectionQueries, shouldNotifyQueryError } from "./queryClient";
+
+describe("shouldNotifyQueryError", () => {
+  it("keeps an inline-owned query error out of the global notification channel", () => {
+    expect(shouldNotifyQueryError({ meta: { suppressGlobalError: true } })).toBe(false);
+    expect(shouldNotifyQueryError({ meta: undefined })).toBe(true);
+  });
+});
 
 describe("removeConnectionQueries", () => {
   it("removes only the target connection's cached resources, across every resource type", () => {

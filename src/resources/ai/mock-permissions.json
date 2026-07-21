@@ -1,0 +1,13 @@
+{
+  "allowed": [
+    { "program": "podman", "args": ["ps", "-a"] },
+    { "program": "podman", "args": ["images"] },
+    { "program": "podman", "args": ["logs", "web"] },
+    { "program": "docker", "args": ["compose", "up", "-d"] }
+  ],
+  "blocked": [
+    { "program": "docker", "args": ["system", "prune", "-f"] },
+    { "program": "podman", "args": ["rm", "-f", "web"] },
+    { "program": "docker", "args": ["volume", "rm", "data"] }
+  ]
+}

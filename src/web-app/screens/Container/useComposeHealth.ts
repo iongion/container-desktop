@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { ContainersAdapter } from "@/container-client/adapters/containers";
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { type MergedResource, mergedKey } from "@/web-app/hooks/useMergedResources";

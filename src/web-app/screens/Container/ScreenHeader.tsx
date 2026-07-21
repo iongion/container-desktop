@@ -1,7 +1,7 @@
 import { type IconName, IconNames } from "@blueprintjs/icons";
 import { useTranslation } from "react-i18next";
 
-import type { Container } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 

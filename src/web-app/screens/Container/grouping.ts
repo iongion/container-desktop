@@ -6,7 +6,7 @@
 
 import { IconNames } from "@blueprintjs/icons";
 
-import { type Container, ContainerStateList } from "@/env/Types";
+import { type Container, ContainerStateList } from "@/container-client/types/container";
 import { randomUUID } from "@/utils/randomUUID";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import type { SortSpec } from "@/web-app/stores/sortStore";

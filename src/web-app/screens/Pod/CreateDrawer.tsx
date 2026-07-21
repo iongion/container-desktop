@@ -12,7 +12,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useId, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect, isPodmanConnection } from "@/web-app/components/ConnectionSelect";
 import { useCreatePod } from "./queries";

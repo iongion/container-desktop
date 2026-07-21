@@ -1,5 +1,6 @@
 import { IconNames } from "@blueprintjs/icons";
-import { type Container, ContainerEngine } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
+import { ContainerEngine } from "@/container-client/types/engine";
 import i18n from "@/i18n";
 import { type AppBreadcrumb, tabbedCrumbs } from "@/web-app/components/AppBreadcrumbs";
 import type { ResourceSectionRailItem } from "@/web-app/components/ResourceSectionRail";

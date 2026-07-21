@@ -9,7 +9,7 @@ import {
   type CreateContainerOptions,
   type FetchContainerOptions,
 } from "@/container-client/adapters/containers";
-import type { Container } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";

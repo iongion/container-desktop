@@ -12,7 +12,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { memo, useCallback, useId, useState } from "react";
 import isEqual from "react-fast-compare";
 import { useTranslation } from "react-i18next";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 // project
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";

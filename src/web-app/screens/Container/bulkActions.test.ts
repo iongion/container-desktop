@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ContainerStateList } from "@/env/Types";
+import { ContainerStateList } from "@/container-client/types/container";
 import {
   containerCanPause,
   containerCanRemove,

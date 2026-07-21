@@ -2,7 +2,7 @@ import { HTMLTable } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { PodProcessReport } from "@/env/Types";
+import type { PodProcessReport } from "@/container-client/types/pod";
 import i18n from "@/i18n";
 import { CopyButton } from "@/web-app/components/CopyButton";
 import { ScreenLoader } from "@/web-app/components/ScreenLoader";

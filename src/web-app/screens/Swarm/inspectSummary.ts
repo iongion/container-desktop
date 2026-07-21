@@ -1,4 +1,4 @@
-import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/env/Types";
+import type { SwarmConfig, SwarmNode, SwarmSecret, SwarmService } from "@/container-client/types/swarm";
 import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 import { inspectDate, shortId } from "@/web-app/components/inspectSummary.helpers";

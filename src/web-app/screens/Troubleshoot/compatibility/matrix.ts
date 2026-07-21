@@ -7,8 +7,8 @@
 import semver from "semver";
 
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { ConnectorCapabilities } from "@/env/Types";
-import { ContainerEngine } from "@/env/Types";
+import type { ConnectorCapabilities } from "@/container-client/types/connection";
+import { ContainerEngine } from "@/container-client/types/engine";
 import i18n from "@/i18n";
 
 export type CellKind = "yes" | "partial" | "no" | "planned" | "value";

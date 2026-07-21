@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ContainerEngineHost } from "@/env/Types";
+import { ContainerEngineHost } from "@/container-client/types/engine";
 import { getBuildCrumbs, isBuildSupported, isRemoteBuildHost } from "./Navigation";
 
 describe("isBuildSupported", () => {

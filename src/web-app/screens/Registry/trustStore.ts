@@ -6,7 +6,7 @@
 
 import { create } from "zustand";
 
-import type { RegistryAuthInfo, RegistryTlsState } from "@/env/Types";
+import type { RegistryAuthInfo, RegistryTlsState } from "@/container-client/types/registry";
 
 export interface AddedRegistry {
   name: string;

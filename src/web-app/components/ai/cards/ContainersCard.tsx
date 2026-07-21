@@ -2,8 +2,9 @@
 import { HTMLTable, Intent, Tag } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
-import type { Container } from "@/env/Types";
+import type { EngineContainer } from "@/ai-system/core/types";
 
+import { AICardShell } from "./AICardShell";
 import type { ToolCardProps } from "./types";
 
 function stateIntent(state: string): Intent {
@@ -22,42 +23,45 @@ function stateIntent(state: string): Intent {
   }
 }
 
-export const ContainersCard: React.FC<ToolCardProps> = ({ result }) => {
+export const ContainersCard: React.FC<ToolCardProps> = ({ title, result }) => {
   const { t } = useTranslation();
-  const items = (Array.isArray(result) ? result : []) as Container[];
-  if (items.length === 0) {
-    return <div className="AICardEmpty">{t("No containers.")}</div>;
-  }
+  const items = (Array.isArray(result) ? result : []) as EngineContainer[];
   return (
-    <div className="AICard">
-      <HTMLTable className="AICardTable" compact striped>
-        <thead>
-          <tr>
-            <th>{t("Name")}</th>
-            <th>{t("Image")}</th>
-            <th>{t("State")}</th>
-            <th>{t("Status")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((c) => {
-            const name = c.Computed?.Name ?? c.Name ?? c.Names?.[0] ?? String(c.Id ?? "").slice(0, 12);
-            const state = String(c.Computed?.DecodedState ?? (typeof c.State === "string" ? c.State : c.Status) ?? "");
-            return (
-              <tr key={String(c.Id)}>
-                <td className="AICardStrong">{name}</td>
-                <td className="AICardMuted">{c.Image ?? c.ImageName}</td>
-                <td>
-                  <Tag minimal intent={stateIntent(state)}>
-                    {state}
-                  </Tag>
-                </td>
-                <td className="AICardMuted">{c.Status}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </HTMLTable>
-    </div>
+    <AICardShell title={title}>
+      {items.length === 0 ? (
+        <div className="AICardEmpty">{t("No containers.")}</div>
+      ) : (
+        <HTMLTable className="AICardTable" compact striped>
+          <thead>
+            <tr>
+              <th>{t("Name")}</th>
+              <th>{t("Image")}</th>
+              <th>{t("State")}</th>
+              <th>{t("Status")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((c) => {
+              const name = c.Computed?.Name ?? c.Name ?? c.Names?.[0] ?? String(c.Id ?? "").slice(0, 12);
+              const state = String(
+                c.Computed?.DecodedState ?? (typeof c.State === "string" ? c.State : c.Status) ?? "",
+              );
+              return (
+                <tr key={String(c.Id)}>
+                  <td className="AICardStrong">{name}</td>
+                  <td className="AICardMuted">{c.Image ?? c.ImageName}</td>
+                  <td>
+                    <Tag minimal intent={stateIntent(state)}>
+                      {state}
+                    </Tag>
+                  </td>
+                  <td className="AICardMuted">{c.Status}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </HTMLTable>
+      )}
+    </AICardShell>
   );
 };

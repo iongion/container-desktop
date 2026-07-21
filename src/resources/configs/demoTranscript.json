@@ -1,0 +1,204 @@
+[
+  {
+    "kind": "message",
+    "id": "d1",
+    "role": "user",
+    "content": "Which images are safe to remove? Also show my containers, images, networks, volumes and some logs.",
+    "delivery": "applied",
+    "status": "complete"
+  },
+  {
+    "kind": "tool",
+    "id": "d2",
+    "toolCallId": "demo-tool-2",
+    "tool": "listContainers",
+    "title": "List containers · System Docker",
+    "args": { "connection": "System Docker" },
+    "status": "complete",
+    "ok": true,
+    "result": [
+      {
+        "Id": "62fda4d3e0c4",
+        "Name": "shop-web-1",
+        "Image": "docker.io/library/nginx:1.27",
+        "State": "running",
+        "Status": "Up 3 days"
+      },
+      {
+        "Id": "ac46d99a513e",
+        "Name": "shop-web-2",
+        "Image": "docker.io/library/nginx:1.27",
+        "State": "created",
+        "Status": "Created"
+      },
+      {
+        "Id": "e7d6b39df95a",
+        "Name": "shop-cache-1",
+        "Image": "docker.io/library/redis:7",
+        "State": "exited",
+        "Status": "Exited (0) 2 days ago"
+      },
+      {
+        "Id": "fdddbebbd8ba",
+        "Name": "shop-db-1",
+        "Image": "docker.io/library/postgres:15",
+        "State": "paused",
+        "Status": "Paused"
+      }
+    ]
+  },
+  {
+    "kind": "tool",
+    "id": "d3",
+    "toolCallId": "demo-tool-3",
+    "tool": "listImages",
+    "title": "List images",
+    "args": {},
+    "status": "complete",
+    "ok": true,
+    "result": [
+      { "Id": "sha256:67239a", "Name": "app", "Tag": "latest", "Size": 144703488 },
+      { "Id": "sha256:b9d55b", "Name": "ghcr.io/btbn/ffmpeg-builds/base", "Tag": "latest", "Size": 5164698173 },
+      { "Id": "sha256:0e760c", "Name": "hello-world", "Tag": "latest", "Size": 26522 },
+      { "Id": "sha256:34166d", "Name": "", "Tag": "", "Size": 7210103070 }
+    ]
+  },
+  {
+    "kind": "message",
+    "id": "d4",
+    "role": "assistant",
+    "content": "@demo-assistant-message",
+    "delivery": "applied",
+    "status": "complete"
+  },
+  {
+    "kind": "tool",
+    "id": "d5",
+    "toolCallId": "demo-command-1",
+    "tool": "runCommand",
+    "title": "docker image prune",
+    "args": { "program": "docker", "args": ["image", "prune", "-a", "--filter", "until=240h"] },
+    "status": "complete",
+    "ok": true,
+    "result": {
+      "program": "docker",
+      "args": ["image", "prune", "-a", "--filter", "until=240h"],
+      "stdout": "Deleted Images:\nuntagged: node:20-alpine\ndeleted: sha256:9f2b3c…\n\nTotal reclaimed space: 1.2GB",
+      "stderr": "",
+      "code": 0,
+      "truncated": false
+    }
+  },
+  {
+    "kind": "tool",
+    "id": "d7",
+    "toolCallId": "demo-tool-7",
+    "tool": "getContainerLogs",
+    "title": "Get container logs",
+    "args": { "id": "62fda4d3e0c4" },
+    "status": "complete",
+    "ok": true,
+    "result": {
+      "id": "62fda4d3e0c4",
+      "logs": "2026-07-09T10:10:22Z [info] starting nginx worker processes\n2026-07-09T10:10:23Z [info] worker process 31 started\n2026-07-09T10:11:05Z [info] 172.18.0.4 GET / 200 2ms\n2026-07-09T10:12:41Z [info] 172.18.0.4 GET /assets/app.css 200 1ms\n2026-07-09T10:13:12Z [warn] upstream shop-api-1 temporarily unavailable, retrying\n2026-07-09T10:13:13Z [error] connect() failed (111: Connection refused) while connecting to upstream shop-api-1:3000\n2026-07-09T10:13:15Z [info] upstream shop-api-2 selected\n2026-07-09T10:14:02Z [info] 172.18.0.4 POST /api/checkout 200 41ms\n2026-07-09T10:15:20Z [info] 172.18.0.4 GET /api/orders 200 12ms\n2026-07-09T10:16:44Z [warn] slow upstream response 812ms path=/api/report\n2026-07-09T10:17:03Z [info] 172.18.0.4 GET /healthz 200 1ms\n2026-07-09T10:18:29Z [error] 172.18.0.4 GET /api/user/42 500 upstream sent invalid header\n2026-07-09T10:19:10Z [info] reloading configuration\n2026-07-09T10:19:11Z [info] worker process 31 exiting\n2026-07-09T10:19:11Z [info] worker process 58 started\n2026-07-09T10:20:00Z [info] 172.18.0.4 GET / 200 2ms"
+    }
+  },
+  {
+    "kind": "tool",
+    "id": "d8",
+    "toolCallId": "demo-tool-8",
+    "tool": "listNetworks",
+    "title": "List networks",
+    "args": {},
+    "status": "complete",
+    "ok": true,
+    "result": [
+      { "id": "n1", "name": "bridge", "driver": "bridge", "dns_enabled": false },
+      { "id": "n2", "name": "shop-net", "driver": "bridge", "dns_enabled": true }
+    ]
+  },
+  {
+    "kind": "tool",
+    "id": "d9",
+    "toolCallId": "demo-tool-9",
+    "tool": "listVolumes",
+    "title": "List volumes",
+    "args": {},
+    "status": "complete",
+    "ok": true,
+    "result": [
+      { "Name": "shop-db-data", "Driver": "local", "Mountpoint": "/var/lib/docker/volumes/shop-db-data/_data" },
+      { "Name": "cache", "Driver": "local", "Mountpoint": "/var/lib/docker/volumes/cache/_data" }
+    ]
+  },
+  {
+    "kind": "approval",
+    "id": "d10",
+    "approvalId": "approval-demo-1",
+    "toolCallId": "tool-demo-1",
+    "tool": "removeImage",
+    "args": { "id": "sha256:34166d" },
+    "reason": "Removing an image is destructive and cannot be undone.",
+    "status": "pending",
+    "title": "Remove dangling image sha256:34166d"
+  },
+  {
+    "kind": "tool",
+    "id": "d11",
+    "toolCallId": "demo-tool-11",
+    "tool": "restartContainer",
+    "title": "Restart shop-web-1",
+    "args": { "id": "62fda4d3e0c4" },
+    "status": "complete",
+    "ok": true,
+    "result": { "ok": true, "op": "restartContainer", "id": "62fda4d3e0c4" }
+  },
+  {
+    "kind": "tool",
+    "id": "d12",
+    "toolCallId": "demo-tool-12",
+    "tool": "listContainers",
+    "title": "List containers",
+    "args": {},
+    "status": "running"
+  },
+  {
+    "kind": "tool",
+    "id": "d13",
+    "toolCallId": "demo-tool-13",
+    "tool": "inspectRegistryTrust",
+    "title": "Inspect registry trust (generic JSON fallback)",
+    "args": { "registry": "docker.io" },
+    "status": "complete",
+    "ok": true,
+    "result": {
+      "engine": "docker",
+      "registry": "docker.io",
+      "trusted": true,
+      "mirrors": ["mirror.gcr.io"],
+      "policy": { "default": "insecureAcceptAnything" }
+    }
+  },
+  {
+    "kind": "denied",
+    "id": "d14",
+    "toolCallId": "tool-demo-denied",
+    "tool": "runCommand",
+    "title": "rm -rf /",
+    "reason": "Blocked by the safety policy."
+  },
+  {
+    "kind": "error",
+    "id": "d15",
+    "scope": "model",
+    "message": "The model connection was interrupted (ECONNRESET). Retry when ready."
+  },
+  {
+    "kind": "message",
+    "id": "d16",
+    "role": "assistant",
+    "content": "One more thing while I finish streaming",
+    "delivery": "applied",
+    "status": "streaming"
+  }
+]

@@ -1,13 +1,12 @@
 import { configDefaults, defineConfig } from "vitest/config";
+import { makeAliases } from "./support/aliases.mjs";
 
 // LIVE connectivity suite — runs against the owner's real machines (see src/__tests__/live). Kept in a
 // separate project so it never runs in the hermetic/CI run. Select targets with
 // CONTAINER_DESKTOP_TEST_TARGETS=<id,...>; unconfigured combos are skipped loudly.
 export default defineConfig({
   resolve: {
-    alias: {
-      "@": new URL("./src", import.meta.url).pathname,
-    },
+    alias: makeAliases(new URL(".", import.meta.url).pathname),
   },
   test: {
     include: ["src/**/*.live.test.{ts,tsx}"],

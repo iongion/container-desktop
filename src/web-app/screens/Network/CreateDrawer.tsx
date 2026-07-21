@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { useId, useMemo, useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import type { NetworkSubnet } from "@/env/Types";
+import type { NetworkSubnet } from "@/container-client/types/network";
 import { AppDrawer } from "@/web-app/components/AppDrawer";
 import { ConnectionSelect } from "@/web-app/components/ConnectionSelect";
 import { Notification } from "@/web-app/Notification";

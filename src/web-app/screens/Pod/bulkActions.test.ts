@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PodStatusList } from "@/env/Types";
+import { PodStatusList } from "@/container-client/types/pod";
 import { podCanPause, podCanRestart, podCanStart, podCanStop } from "./bulkActions";
 
 // Four fixed bulk buttons (Pause / Stop / Start / Restart) are always shown; only their enabled state

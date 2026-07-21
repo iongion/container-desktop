@@ -8,10 +8,10 @@ import { Button, PopoverNext } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import { DEFAULT_AI_SETTINGS, getProviderEntry } from "@/ai-system/core";
-import { buildModelTree, selectedPath } from "@/ai-system/ui/core/modelCatalog";
-import type { AISettings } from "@/env/Types";
+import { getProviderEntry } from "@/ai-system/core/providers";
+import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
+import type { AISettings } from "@/ai-system/core/types";
+import { buildModelTree, formatSelectedPath, selectedPath } from "@/ai-system/ui/core/modelCatalog";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 import { ModelNavigator, type ModelNavigatorHandle, type ModelPickerValue } from "./ai/ModelNavigator";
@@ -26,9 +26,10 @@ export type { ModelPickerValue };
 export interface ModelPickerProps {
   value: ModelPickerValue;
   onChange: (value: ModelPickerValue) => void;
+  disabled?: boolean;
 }
 
-export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange }) => {
+export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange, disabled }) => {
   const { t } = useTranslation();
   const ai: AISettings = useAppStore((state) => state.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
   const discovery = useModelDiscovery();
@@ -77,7 +78,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange }) => 
 
   const triggerLabel = useMemo(() => {
     const path = selectedPath(value.providerId, value.model);
-    return path.length > 0 ? path.join(" / ") : t("Select a model");
+    return path.length > 0 ? formatSelectedPath(path, !!value.model, (part) => t(part)) : t("Select a model");
   }, [value.providerId, value.model, t]);
 
   return (
@@ -94,6 +95,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange }) => 
       placement="bottom-start"
       usePortal
       hasBackdrop={false}
+      disabled={disabled}
       content={
         <div className="ModelPicker">
           <ModelNavigator
@@ -115,6 +117,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({ value, onChange }) => 
         endIcon={IconNames.CARET_UP}
         title={t("Inference source and model")}
         aria-label={t("Inference source and model")}
+        disabled={disabled}
       >
         <span className="ModelPickerTriggerLabel">{triggerLabel}</span>
       </Button>

@@ -1,16 +1,42 @@
 .AIComposer {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  padding: 4px;
+  border: none;
   border-radius: 4px;
   background: var(--code-bg, rgba(0, 0, 0, 0.18));
 }
+.AIComposerStatus {
+  position: absolute;
+  left: 4px;
+  bottom: calc(100% - 4px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100% - 8px);
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--app-border);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  pointer-events: none;
+}
 .AIComposerHint {
+  min-width: 0;
+  margin-left: 8px;
   font-size: 12px;
   opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.AIComposerHint:first-child {
+  margin-left: 0;
 }
 .AIComposerInput.AIComposerInput {
   border: none;
@@ -19,8 +45,11 @@
   resize: none;
   min-height: 44px;
   max-height: 200px;
-  padding: 2px 2px 0;
-  font-size: 13px;
+  padding: 4px;
+  font-size: 12px;
+  border-radius: 0;
+  outline: none;
+  border: 1px solid var(--app-border);
 }
 .AIComposerToolbar {
   display: flex;
@@ -33,16 +62,28 @@
 .AIComposerToolbar .AIComposerTool {
   font-size: 12px;
 }
+.AIComposerToolbar .AIComposerTool .bp6-button-text,
+.AIComposerToolbar .ModelPickerTriggerLabel {
+  color: var(--app-text-muted);
+}
+.AIComposerModeMenu .bp6-menu-item > .bp6-fill {
+  font-size: 12px;
+}
+.AIComposerModeMenu .bp6-menu-item-label {
+  margin-left: 30px;
+  font-size: 11px;
+}
 .AIComposerStopHint {
   font-size: 12px;
   color: var(--app-text-muted);
 }
-.AIComposerSend.AIComposerSend {
+.AIComposerAction.AIComposerAction {
   border-radius: 50%;
-  min-width: 28px;
-  min-height: 28px;
-  width: 28px;
-  height: 28px;
+  min-width: 24px;
+  min-height: 24px;
+  width: 24px;
+  height: 24px;
+  transform: scale(0.8);
   padding: 0;
   display: inline-flex;
   align-items: center;

@@ -3,7 +3,7 @@
 // default provider and the model is stored per-provider. Reads the store action directly (Zustand vanilla
 // access) so it can be called from event handlers/effects without prop-threading.
 
-import { DEFAULT_AI_SETTINGS } from "@/ai-system/core";
+import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 import type { ModelPickerValue } from "./ModelNavigator";

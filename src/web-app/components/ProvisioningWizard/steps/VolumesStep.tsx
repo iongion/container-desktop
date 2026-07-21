@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
+import type { ContainerEngine } from "@/container-client/types/engine";
+import type { OperatingSystem } from "@/container-client/types/os";
 import { resolveMountDecision } from "@/container-provisioning/decisionTable";
 import {
   addFolderChoice,
@@ -13,7 +15,6 @@ import {
   usernsFlag,
   volumePreview,
 } from "@/container-provisioning/volumes";
-import type { ContainerEngine, OperatingSystem } from "@/env/Types";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 
 function safeDecision(os: OperatingSystem, engine: ContainerEngine) {

@@ -3,7 +3,7 @@ import { installRealCommand } from "@/__tests__/setup/headless";
 import { createConnectorBy } from "@/container-client/connection";
 import { runSSHPreflight } from "@/container-client/diagnostics/ssh-preflight";
 import { createComposedHostClient } from "@/container-client/runtimes/registry";
-import { ContainerEngine, ContainerEngineHost } from "@/env/Types";
+import { ContainerEngine, ContainerEngineHost } from "@/container-client/types/engine";
 import { isConfigured, loadTestTargets, selectTargets, type TestTarget } from "./targets";
 
 // Real connectivity matrix against the owner's machines. Native hosts get a full /_ping + container

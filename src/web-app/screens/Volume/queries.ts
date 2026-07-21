@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { type CreateVolumeOptions, VolumesAdapter } from "@/container-client/adapters/volumes";
-import type { Volume } from "@/env/Types";
+import type { Volume } from "@/container-client/types/volume";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 

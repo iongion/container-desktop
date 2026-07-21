@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Secret } from "@/env/Types";
+import type { Secret } from "@/container-client/types/secret";
 
 import { buildSecretSummary } from "./inspectSummary";
 

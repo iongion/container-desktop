@@ -1,0 +1,218 @@
+// Synthetic connections injected when mock mode is on (see ./mode). They look like ordinary user-visible
+// connections so screenshots and UI tests exercise the real connection manager, but availability is forced
+// ready (mockAvailability) and every API/CLI call is answered from fixtures by MockCommand.
+
+import type { Connection, EngineConnectorSettings } from "@/container-client/types/connection";
+import {
+  ContainerEngine,
+  ContainerEngineHost,
+  type Controller,
+  type EngineConnectorAvailability,
+} from "@/container-client/types/engine";
+import { getMockEngines, mockEnvValue } from "./mode";
+
+export const MOCK_PODMAN_SYSTEM_ID = "mock.podman.system";
+export const MOCK_DOCKER_SYSTEM_ID = "mock.docker.system";
+export const MOCK_CONTAINER_SYSTEM_ID = "mock.container.system";
+
+const MOCK_PODMAN_VERSION = "5.3.1";
+const MOCK_DOCKER_VERSION = "27.3.1";
+const MOCK_APPLE_VERSION = "1.0.0";
+
+// Forced-ready availability — bypasses program/socket detection (which would fail with no real engine).
+export function mockAvailability(): EngineConnectorAvailability {
+  return {
+    enabled: true,
+    host: true,
+    api: true,
+    program: true,
+    controller: true,
+    report: {
+      host: "Mock host",
+      api: "Mock API",
+      program: "Mock program",
+      controller: "Mock controller",
+    },
+  };
+}
+
+interface MockConnectionOptions {
+  id: string;
+  name: string;
+  label: string;
+  description?: string;
+  engine: ContainerEngine;
+  host: ContainerEngineHost;
+  uri: string;
+  autoStart: boolean;
+  controller?: Controller;
+}
+
+function mockSettings(
+  engine: ContainerEngine,
+  uri: string,
+  autoStart: boolean,
+  controller?: Controller,
+): EngineConnectorSettings {
+  const isPodman = engine === ContainerEngine.PODMAN;
+  const isApple = engine === ContainerEngine.APPLE;
+  const programName = isPodman ? "podman" : isApple ? "container" : "docker";
+  return {
+    api: {
+      baseURL: isPodman ? "http://d" : "http://localhost",
+      connection: { uri, relay: "" },
+      autoStart,
+    },
+    program: {
+      name: programName,
+      path: isApple ? "/usr/local/bin/container" : `/usr/bin/${programName}`,
+      version: isPodman ? MOCK_PODMAN_VERSION : isApple ? MOCK_APPLE_VERSION : MOCK_DOCKER_VERSION,
+    },
+    controller,
+    rootfull: false,
+    mode: "mode.automatic",
+  };
+}
+
+function controller(name: string, scope: string, version = "current"): Controller {
+  return {
+    name,
+    path: `/usr/bin/${name}`,
+    version,
+    scope,
+  };
+}
+
+function mockConnection(opts: MockConnectionOptions): Connection {
+  return {
+    id: opts.id,
+    name: opts.name,
+    label: opts.label,
+    description: opts.description,
+    engine: opts.engine,
+    host: opts.host,
+    // Only the built-in "System <engine>" connections are read-only (system defaults, not editable). The
+    // remote SSH/WSL/LIMA samples are editable so the Connection Manager (and its edit form) can be exercised.
+    readonly: opts.name.startsWith("System"),
+    settings: mockSettings(opts.engine, opts.uri, opts.autoStart, opts.controller),
+  };
+}
+
+// The connection list surfaced everywhere in mock mode (boot, Connection Manager, tray).
+export function buildMockConnections(): Connection[] {
+  // Only the system connection(s) for the active mock engine(s) auto-start, so the app lands in the
+  // single-engine workspace for "podman"/"docker" and the merged/unified one for "unified" (see
+  // ./mode getMockEngines). The remote SSH/WSL/LIMA samples stay manual — they exist to populate the
+  // Connection Manager, not to connect at boot.
+  const engines = getMockEngines();
+  // Opt-in scoped build target: CONTAINER_DESKTOP_MOCK_SCOPED=wsl|lima auto-starts a WSL/LIMA sample so the
+  // Build Studio can exercise a scoped build in mock mode. The default mock is unchanged.
+  const scopedFlag = mockEnvValue("CONTAINER_DESKTOP_MOCK_SCOPED").toLowerCase();
+  const wslAuto = scopedFlag === "wsl";
+  const limaAuto = scopedFlag === "lima";
+  return [
+    mockConnection({
+      id: MOCK_PODMAN_SYSTEM_ID,
+      name: "System Podman",
+      label: "Local Podman",
+      engine: ContainerEngine.PODMAN,
+      // Native (local) transport so the Build Studio is reachable in mock mode — Build v1 is gated to native
+      // hosts (see screens/Build/Navigation isBuildSupported). The WSL/LIMA/SSH samples below still cover the
+      // virtualized and remote cases in the Connection Manager.
+      host: ContainerEngineHost.PODMAN_NATIVE,
+      uri: "unix:///run/user/1000/podman/podman.sock",
+      autoStart: engines.includes(ContainerEngine.PODMAN),
+    }),
+    mockConnection({
+      id: MOCK_DOCKER_SYSTEM_ID,
+      name: "System Docker",
+      label: "Local Docker",
+      engine: ContainerEngine.DOCKER,
+      // Native (local) transport so the Build Studio is reachable in mock mode (see the podman note above).
+      host: ContainerEngineHost.DOCKER_NATIVE,
+      uri: "unix:///var/run/docker.sock",
+      autoStart: engines.includes(ContainerEngine.DOCKER),
+    }),
+    // System connections list first, in engine order: Podman, Docker, Container (Apple).
+    mockConnection({
+      id: MOCK_CONTAINER_SYSTEM_ID,
+      name: "System Container",
+      label: "Container", // Apple Container
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_NATIVE,
+      uri: "/Users/demo/.socktainer/container.sock",
+      autoStart: engines.includes(ContainerEngine.APPLE),
+    }),
+    mockConnection({
+      id: "mock.podman.ssh",
+      name: "Podman SSH remote",
+      label: "Remote SSH connection",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_REMOTE,
+      uri: "ssh://demo@podman.example.test/run/user/1000/podman/podman.sock",
+      autoStart: false,
+      controller: controller("ssh", "podman-demo"),
+    }),
+    mockConnection({
+      id: "mock.docker.ssh",
+      name: "Docker SSH remote",
+      label: "Remote SSH connection",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_REMOTE,
+      uri: "ssh://demo@docker.example.test/var/run/docker.sock",
+      autoStart: false,
+      controller: controller("ssh", "docker-demo"),
+    }),
+    mockConnection({
+      id: "mock.podman.wsl",
+      name: "Podman WSL Ubuntu-24.04",
+      label: "Custom WSL distribution",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_VIRTUALIZED_WSL,
+      uri: "unix:///mnt/wsl/Ubuntu-24.04/run/user/1000/podman/podman.sock",
+      autoStart: wslAuto,
+      controller: controller("wsl", "Ubuntu-24.04", "2"),
+    }),
+    mockConnection({
+      id: "mock.docker.wsl",
+      name: "Docker WSL Ubuntu-24.04",
+      label: "Custom WSL distribution",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_VIRTUALIZED_WSL,
+      uri: "unix:///mnt/wsl/Ubuntu-24.04/var/run/docker.sock",
+      autoStart: false,
+      controller: controller("wsl", "Ubuntu-24.04", "2"),
+    }),
+    mockConnection({
+      id: "mock.podman.lima",
+      name: "Podman LIMA",
+      label: "Custom LIMA instance",
+      engine: ContainerEngine.PODMAN,
+      host: ContainerEngineHost.PODMAN_VIRTUALIZED_LIMA,
+      uri: "unix:///Users/demo/.lima/podman/sock/podman.sock",
+      autoStart: limaAuto,
+      controller: controller("limactl", "podman-lima"),
+    }),
+    mockConnection({
+      id: "mock.docker.lima",
+      name: "Docker LIMA",
+      label: "Custom LIMA instance",
+      engine: ContainerEngine.DOCKER,
+      host: ContainerEngineHost.DOCKER_VIRTUALIZED_LIMA,
+      uri: "unix:///Users/demo/.lima/docker/sock/docker.sock",
+      autoStart: false,
+      controller: controller("limactl", "docker-lima"),
+    }),
+    // Container SSH sample (the System Container connection is listed first, with the other system engines).
+    mockConnection({
+      id: "mock.container.ssh",
+      name: "Container SSH remote",
+      label: "Remote SSH connection",
+      engine: ContainerEngine.APPLE,
+      host: ContainerEngineHost.APPLE_REMOTE,
+      uri: "ssh://demo@container.example.test/Users/demo/.socktainer/container.sock",
+      autoStart: false,
+      controller: controller("ssh", "container-demo"),
+    }),
+  ];
+}

@@ -1,3 +1,5 @@
+import type { GlobalUserSettings, GlobalUserSettingsOptions } from "@/container-client/userSettings";
+import type { CommandExecutionResult } from "@/host-contract/exec";
 // web-app/stores/appStore.ts — bootstrap / lifecycle / connections / settings. `connections` (the
 // configured list) is distinct from `connectors` (the derived availability matrix).
 //
@@ -16,24 +18,20 @@ import {
   RESOURCE_SYNC,
   type ResourceConnectProgress,
 } from "@/container-client/resourceSyncProtocol";
-import {
-  type CommandExecutionResult,
-  type Connection,
-  type ConnectOptions,
-  type Connector,
-  type DisconnectOptions,
-  type EngineConnectorSettings,
-  type EngineUserSettingsOptions,
-  type FindProgramOptions,
-  type GenerateKubeOptions,
-  type GlobalUserSettings,
-  type GlobalUserSettingsOptions,
-  OperatingSystem,
-  type SystemNotification,
-} from "@/env/Types";
+import type {
+  Connection,
+  ConnectOptions,
+  Connector,
+  DisconnectOptions,
+  EngineConnectorSettings,
+  EngineUserSettingsOptions,
+} from "@/container-client/types/connection";
+import type { FindProgramOptions } from "@/container-client/types/host";
+import type { GenerateKubeOptions } from "@/container-client/types/machine";
+import { OperatingSystem, type SystemNotification } from "@/container-client/types/os";
 import { setCurrentLanguagePreference, t } from "@/i18n";
+import { createLogger } from "@/logger";
 import { registerHostRuntimeFromGlobals } from "@/platform/hostRuntimeFromGlobals";
-import { createLogger } from "@/platform/logger";
 import { deepMerge, isObject } from "@/utils";
 import { AppBootstrapPhase } from "@/web-app/App.types";
 import { bootTimeline, logBootSummary } from "@/web-app/bootTimeline";

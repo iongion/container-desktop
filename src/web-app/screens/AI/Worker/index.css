@@ -1,0 +1,100 @@
+/* The worker editor drawer. Panels follow the app idiom — a surface block on the screen background with a
+   hairline border — rather than a Blueprint Card. */
+
+[data-form="ai.worker.edit"] .WorkerEditorPanel {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+[data-form="ai.worker.edit"] .WorkerEditorPanel > h5 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-muted);
+}
+[data-form="ai.worker.edit"] .WorkerEditorPanel .bp6-form-group:last-child {
+  margin-bottom: 0;
+}
+[data-form="ai.worker.edit"] .workerSystemPrompt {
+  font-family: var(--monospace-font);
+  font-size: 11px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* The model picker trigger is a bare minimal button; inside a form it needs a field-shaped container so it
+   does not read as loose chrome. Inheriting greys it out rather than hiding it, so the worker's own model
+   stays visible while the run's model is in force. */
+.WorkerEditorPickerRow {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 3px 5px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+.WorkerEditorPickerRow[data-disabled="yes"] {
+  opacity: 0.5;
+}
+
+.WorkerEditorPolicy {
+  margin-bottom: 10px;
+}
+.WorkerEditorNote {
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+.WorkerEditorPanel .WorkerEditorNote:last-child {
+  margin-bottom: 0;
+}
+
+.WorkerEditorToolGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.WorkerEditorToolGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+.WorkerEditorToolGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--app-border);
+}
+.WorkerEditorToolGroupTitle {
+  font-size: 11px;
+  color: var(--app-text);
+}
+.WorkerEditorToolGroup .bp6-control.WorkerEditorTool {
+  margin-bottom: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.WorkerEditorToolName {
+  font-family: var(--monospace-font);
+  font-size: 11px;
+}
+.WorkerEditorToolGated {
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 20%, transparent);
+  color: var(--app-intent-warning-text);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

@@ -33,19 +33,18 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { DEFAULT_AI_SETTINGS, getProviderEntry } from "@/ai-system/core";
-import { buildModelTree, type ModelLeaf } from "@/ai-system/ui/core/modelCatalog";
-import type { AISettings } from "@/env/Types";
+import type { SubmitChatRequest } from "@/ai-system/core/chatEvents";
+import { getProviderEntry } from "@/ai-system/core/providers";
+import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
+import type { AISettings } from "@/ai-system/core/types";
+import { buildModelTree, type ModelLeaf, type SourceModelNotice } from "@/ai-system/ui/core/modelCatalog";
 import { pathTo } from "@/web-app/Navigator";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 import { ProviderSourceList } from "./ProviderSourceList";
 import { type ModelDiscovery, NO_KEY } from "./useModelDiscovery";
 
-export interface ModelPickerValue {
-  providerId: string;
-  model: string;
-}
+export type ModelPickerValue = Required<Pick<SubmitChatRequest, "providerId" | "model">>;
 
 export interface ModelNavigatorProps {
   value: ModelPickerValue;
@@ -141,6 +140,20 @@ function noticeMenu(text: string) {
   );
 }
 
+// Resolve the core-supplied semantic notice to prose at the UI edge, translating the provider label through t().
+function modelNoticeText(notice: SourceModelNotice | undefined, t: ReturnType<typeof useTranslation>["t"]): string {
+  switch (notice?.kind) {
+    case "server-idle":
+      return t("{{name}} is not serving a model — start its server with -m <model>.", {
+        name: t(notice.nameLabelKey),
+      });
+    case "no-models-local":
+      return t("No models found — is {{name}} running?", { name: t(notice.nameLabelKey) });
+    default:
+      return t("No models available.");
+  }
+}
+
 // The body of a source panel: spinner / no-key / error notice, OR a menu of either upstream-provider
 // drill rows (aggregator) or model leaves (flat / single).
 function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: PanelProps<object>["openPanel"] }) {
@@ -166,10 +179,12 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
       <NotConfigured
         icon={IconNames.KEY}
         title={t("API key required")}
-        description={t("Add an API key for {{name}} in AI settings to discover its models.", { name: entry.label })}
+        description={t("Add an API key for {{name}} in AI settings to discover its models.", {
+          name: t(entry.labelKey),
+        })}
       />
     ) : (
-      noticeMenu(t("Add an API key below to load {{name}} models.", { name: entry.label }))
+      noticeMenu(t("Add an API key below to load {{name}} models.", { name: t(entry.labelKey) }))
     );
   }
   if (error) {
@@ -178,10 +193,10 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
       <NotConfigured
         icon={IconNames.OFFLINE}
         title={t("Unavailable")}
-        description={t("Couldn't reach {{name}}. Check its server URL in AI settings.", { name: entry.label })}
+        description={t("Couldn't reach {{name}}. Check its server URL in AI settings.", { name: t(entry.labelKey) })}
       />
     ) : (
-      noticeMenu(t("Couldn't reach {{name}} — check its server URL below.", { name: entry.label }))
+      noticeMenu(t("Couldn't reach {{name}} — check its server URL below.", { name: t(entry.labelKey) }))
     );
   }
 
@@ -191,7 +206,7 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
     savedModel: ctx.ai.providers?.[sourceId]?.model ?? "",
   });
   if (tree.groups.length === 0) {
-    return noticeMenu(tree.notice ?? t("No models available."));
+    return noticeMenu(modelNoticeText(tree.notice, t));
   }
 
   if (tree.aggregator) {
@@ -207,12 +222,12 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
           groups.map((group) => (
             <MenuItem
               key={group.providerId}
-              text={group.label}
+              text={t(group.label)}
               shouldDismissPopover={false}
               labelElement={<Icon icon={IconNames.CHEVRON_RIGHT} />}
               onClick={() =>
                 openPanel({
-                  title: group.label,
+                  title: t(group.label),
                   props: { sourceId, providerKey: group.providerId },
                   renderPanel: ProviderModelsPanel,
                 })
@@ -240,6 +255,7 @@ function SourceBody({ sourceId, openPanel }: { sourceId: string; openPanel: Pane
 // root search wired to its filter. Clicking a source drills into it (openPanel). The SAME list backs the
 // Settings configurator — there it selects-to-configure instead of drilling.
 function SourcesPanel({ openPanel }: PanelProps<object>) {
+  const { t } = useTranslation();
   const ctx = usePicker();
   return (
     <div className="ModelNavigatorScroll">
@@ -248,7 +264,7 @@ function SourcesPanel({ openPanel }: PanelProps<object>) {
         filter={ctx.filter}
         renderItemRight={() => <Icon icon={IconNames.CHEVRON_RIGHT} />}
         onSelect={(entry) =>
-          openPanel({ title: entry.label, props: { sourceId: entry.id }, renderPanel: SourceContentPanel })
+          openPanel({ title: t(entry.labelKey), props: { sourceId: entry.id }, renderPanel: SourceContentPanel })
         }
       />
     </div>
@@ -352,9 +368,9 @@ export const ModelNavigator = forwardRef<ModelNavigatorHandle, ModelNavigatorPro
   const currentSourceId = topProps.sourceId ?? value.providerId;
 
   const headerTitle = topProps.providerKey
-    ? (getProviderEntry(topProps.providerKey)?.label ?? topProps.providerKey)
+    ? t(getProviderEntry(topProps.providerKey)?.labelKey ?? topProps.providerKey)
     : topProps.sourceId
-      ? (getProviderEntry(topProps.sourceId)?.label ?? topProps.sourceId)
+      ? t(getProviderEntry(topProps.sourceId)?.labelKey ?? topProps.sourceId)
       : t("Inference source");
 
   const ctxValue = useMemo<PickerContextValue>(
