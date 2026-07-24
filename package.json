@@ -190,7 +190,7 @@
     "mime-types": "3.0.2",
     "playwright-core": "1.61.1",
     "postcss": "8.5.16",
-    "svgo": "4.0.1",
+    "svgo": "4.0.2",
     "tar": "7.5.19",
     "tslib": "2.8.1",
     "tsx": "4.23.0",
