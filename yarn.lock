@@ -6220,15 +6220,10 @@ minimist@^1.2.5, minimist@^1.2.6, minimist@^1.2.8:
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.8.tgz#c1a464e7693302e082a075cee0c057741ac4772c"
   integrity sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
 
-"minipass@^5.0.0 || ^6.0.2 || ^7.0.0", minipass@^7.0.3, minipass@^7.0.4:
+"minipass@^5.0.0 || ^6.0.2 || ^7.0.0", minipass@^7.0.3, minipass@^7.0.4, minipass@^7.1.2:
   version "7.1.3"
   resolved "https://registry.yarnpkg.com/minipass/-/minipass-7.1.3.tgz#79389b4eb1bb2d003a9bba87d492f2bd37bdc65b"
   integrity sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==
-
-minipass@^7.1.2:
-  version "7.1.2"
-  resolved "https://registry.yarnpkg.com/minipass/-/minipass-7.1.2.tgz#93a9626ce5e5e66bd4db86849e7515e92340a707"
-  integrity sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==
 
 minizlib@^3.1.0:
   version "3.1.0"
@@ -7937,21 +7932,10 @@ tar-stream@^3.0.0, tar-stream@^3.1.5:
     fast-fifo "^1.2.0"
     streamx "^2.15.0"
 
-tar@7.5.19:
-  version "7.5.19"
-  resolved "https://registry.yarnpkg.com/tar/-/tar-7.5.19.tgz#d8915e6b717f8036a79d839ca9448198b002b0a7"
-  integrity sha512-4LeEWl96twnS2Q7Bz4MGqgazLqO+hJN63GZxXoIqh1T3VweYD997gbU1ItNsQafqqXTXd5WFyFdReLtwvRBNiw==
-  dependencies:
-    "@isaacs/fs-minipass" "^4.0.0"
-    chownr "^3.0.0"
-    minipass "^7.1.2"
-    minizlib "^3.1.0"
-    yallist "^5.0.0"
-
-tar@^7.5.4, tar@^7.5.7:
-  version "7.5.16"
-  resolved "https://registry.yarnpkg.com/tar/-/tar-7.5.16.tgz#f11e063afed4554f758049d082909e37d6b53ced"
-  integrity sha512-56adEpPMouktRlBLXiaYFFzZ/3+JXa8P9n7WbR+ibIjtviN55mEaOkiysCnPnWm+7kkui1Dn8J9l+g6zV8731w==
+tar@7.5.21, tar@^7.5.4, tar@^7.5.7:
+  version "7.5.21"
+  resolved "https://registry.yarnpkg.com/tar/-/tar-7.5.21.tgz#b3405af2eb493523ce4379f531e9ebda0601bc59"
+  integrity sha512-XdhtCvlMywwxpCW8YEq3lOXBJpUPTR2OHHcwLPO3HwsJqOHa2Ok/oJ7ruGzp+JrKoRPVCzJwAdEjqLW/vNRPHA==
   dependencies:
     "@isaacs/fs-minipass" "^4.0.0"
     chownr "^3.0.0"
