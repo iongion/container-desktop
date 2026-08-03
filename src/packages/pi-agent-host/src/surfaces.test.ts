@@ -92,7 +92,7 @@ describe("createSurfaceRegistry", () => {
   });
 
   it("survives a component whose handleInput throws and keeps the surface open", () => {
-    const { events, registry: r } = registry();
+    const { registry: r } = registry();
     const c = {
       render: () => ["still here"],
       handleInput: () => {

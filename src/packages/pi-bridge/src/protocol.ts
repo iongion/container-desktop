@@ -67,7 +67,9 @@ export type BridgeCommand =
   | { id: string; type: "host_response"; requestId: string; ok: boolean; value?: unknown; error?: string }
   | { id: string; type: "surface_input"; surfaceId: string; data: string }
   | { id: string; type: "surface_resize"; surfaceId: string; columns: number }
-  | { id: string; type: "set_theme"; palette: AppThemePalette };
+  // Partial on purpose: a token the webview could not resolve to a colour is left out, and the host
+  // fills it from the app's own defaults rather than the renderer inventing one.
+  | { id: string; type: "set_theme"; palette: Partial<AppThemePalette> };
 
 export type BridgeEvent =
   | { type: "ready"; protocolVersion: number; sessionId: string; cwd: string; model?: string }
