@@ -19,11 +19,55 @@ export type BridgeUiMethod =
 // declared now so container tools need no protocol bump when they land.
 export type BridgeHostMethod = BridgeUiMethod | "approval" | "engine_op";
 
+// Where a pi component is being rendered. Every slot is single-occupancy: opening a second surface for
+// the same slot replaces the first, so a plugin re-setting its footer never stacks two footers.
+export type SurfaceSlot =
+  | { kind: "tool"; toolCallId: string; slot: "call" | "result" }
+  | { kind: "custom"; surfaceId: string }
+  | { kind: "footer" }
+  | { kind: "header" }
+  | { kind: "widget"; widgetKey: string; placement?: "aboveEditor" | "belowEditor" };
+
+// The serializable part of pi's OverlayOptions. Its `visible` predicate and margins stay in the
+// container — the renderer floats a panel, it does not lay out a terminal screen.
+export interface SurfaceOverlayPlacement {
+  anchor?:
+    | "center"
+    | "top-left"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-right"
+    | "top-center"
+    | "bottom-center"
+    | "left-center"
+    | "right-center";
+  width?: number | string;
+  maxHeight?: number | string;
+}
+
+// The colours a pi theme is derived from, read off the app's `--app-*` tokens in the renderer. Sent
+// on connect and again whenever engine or light/dark mode changes them.
+export interface AppThemePalette {
+  chrome: string;
+  bg: string;
+  surface: string;
+  border: string;
+  text: string;
+  textMuted: string;
+  accent: string;
+  success: string;
+  warning: string;
+  error: string;
+}
+
 export type BridgeCommand =
   | { id: string; type: "hello"; token: string; protocolVersion: number }
   | { id: string; type: "prompt"; text: string; streamingBehavior?: "steer" | "followUp" }
   | { id: string; type: "abort" }
-  | { id: string; type: "host_response"; requestId: string; ok: boolean; value?: unknown; error?: string };
+  | { id: string; type: "host_response"; requestId: string; ok: boolean; value?: unknown; error?: string }
+  | { id: string; type: "surface_input"; surfaceId: string; data: string }
+  | { id: string; type: "surface_resize"; surfaceId: string; columns: number }
+  | { id: string; type: "set_theme"; palette: AppThemePalette };
 
 export type BridgeEvent =
   | { type: "ready"; protocolVersion: number; sessionId: string; cwd: string; model?: string }
@@ -41,6 +85,18 @@ export type BridgeEvent =
   | { type: "entry"; entryId: string; customType: string; data?: unknown }
   // No message id: pi's message_end carries none, and the transcript assigns its own item ids.
   | { type: "custom_message"; customType: string; content: string; details?: unknown }
+  // A pi component rendered to ANSI lines. Frames are whole renders, not deltas: a component
+  // re-renders wholesale and the arrays are a screenful at most.
+  | {
+      type: "surface_frame";
+      surfaceId: string;
+      slot: SurfaceSlot;
+      lines: string[];
+      focus: boolean;
+      overlay: boolean;
+      placement?: SurfaceOverlayPlacement;
+    }
+  | { type: "surface_closed"; surfaceId: string }
   | {
       type: "host_request";
       requestId: string;
@@ -49,7 +105,15 @@ export type BridgeEvent =
       timeoutMs?: number;
     };
 
-export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set(["hello", "prompt", "abort", "host_response"]);
+export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
+  "hello",
+  "prompt",
+  "abort",
+  "host_response",
+  "surface_input",
+  "surface_resize",
+  "set_theme",
+]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "ready",
@@ -65,6 +129,8 @@ export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "host_request",
   "entry",
   "custom_message",
+  "surface_frame",
+  "surface_closed",
 ]);
 
 export class BridgeProtocolError extends Error {

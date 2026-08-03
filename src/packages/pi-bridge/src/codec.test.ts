@@ -63,6 +63,63 @@ describe("pi-bridge codec", () => {
     expect(decoded).toEqual({ id: "c9", type: "host_response", requestId: "r1", ok: true, value: true });
   });
 
+  it("round-trips a surface frame with its slot and placement", () => {
+    const decoded = decodeEvent(
+      encodeEvent({
+        type: "surface_frame",
+        surfaceId: "surface-1",
+        slot: { kind: "tool", toolCallId: "t1", slot: "result" },
+        lines: ["\x1b[32mok\x1b[39m"],
+        focus: true,
+        overlay: true,
+        placement: { anchor: "top-center", width: "50%" },
+      }),
+    );
+    expect(decoded).toEqual({
+      type: "surface_frame",
+      surfaceId: "surface-1",
+      slot: { kind: "tool", toolCallId: "t1", slot: "result" },
+      lines: ["\x1b[32mok\x1b[39m"],
+      focus: true,
+      overlay: true,
+      placement: { anchor: "top-center", width: "50%" },
+    });
+  });
+
+  it("round-trips a surface_closed event", () => {
+    expect(decodeEvent(encodeEvent({ type: "surface_closed", surfaceId: "surface-1" }))).toEqual({
+      type: "surface_closed",
+      surfaceId: "surface-1",
+    });
+  });
+
+  it("round-trips surface input and resize commands", () => {
+    const input = encodeCommand({ id: "c1", type: "surface_input", surfaceId: "surface-1", data: "\x1b[A" });
+    expect(decodeCommand(input)).toEqual({ id: "c1", type: "surface_input", surfaceId: "surface-1", data: "\x1b[A" });
+    const resize = encodeCommand({ id: "c2", type: "surface_resize", surfaceId: "surface-1", columns: 96 });
+    expect(decodeCommand(resize)).toEqual({ id: "c2", type: "surface_resize", surfaceId: "surface-1", columns: 96 });
+  });
+
+  it("round-trips a set_theme command carrying the app palette", () => {
+    const palette = {
+      chrome: "#1b2027",
+      bg: "#22282f",
+      surface: "#2a313a",
+      border: "#39424d",
+      text: "#e8edf2",
+      textMuted: "#9aa5b1",
+      accent: "#14b8a6",
+      success: "#2ea043",
+      warning: "#d29922",
+      error: "#f85149",
+    };
+    expect(decodeCommand(encodeCommand({ id: "c3", type: "set_theme", palette }))).toEqual({
+      id: "c3",
+      type: "set_theme",
+      palette,
+    });
+  });
+
   it("no longer accepts the superseded ui_request event", () => {
     expect(() => decodeEvent(JSON.stringify({ type: "ui_request", requestId: "r1", method: "confirm" }))).toThrow(
       BridgeProtocolError,
