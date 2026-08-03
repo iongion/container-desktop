@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ControllerScopeType, type SSHHost } from "@/env/Types";
+import type { SSHHost } from "@/container-client/types/connection";
+import { ControllerScopeType } from "@/container-client/types/os";
 
 import { getScopeSelectItemKey } from "./ScopeSelect";
 

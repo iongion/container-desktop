@@ -1,6 +1,6 @@
 import { type IconName, IconNames } from "@blueprintjs/icons";
 
-import type { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/container-client/types/image";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { pathTo, useRouteSearch } from "@/web-app/Navigator";
 

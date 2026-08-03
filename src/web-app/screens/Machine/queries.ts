@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { CreateMachineOptions, PodmanMachine, PodmanMachineInspect } from "@/env/Types";
+import type { CreateMachineOptions, PodmanMachine, PodmanMachineInspect } from "@/container-client/types/machine";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 

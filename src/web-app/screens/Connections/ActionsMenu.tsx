@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Connection } from "@/env/Types";
+import type { Connection } from "@/container-client/types/connection";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ConnectIcon, DisconnectIcon } from "@/web-app/components/icons/ConnectionIcons";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
@@ -12,7 +12,7 @@ import { useAppStore } from "@/web-app/stores/appStore";
 import { useResourceStore } from "@/web-app/stores/resourceStore";
 
 import "./ActionsMenu.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { getConnectionUrl } from "./Navigation";
 
 const logger = createLogger("web.connections");
@@ -66,12 +66,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({ connection, onEdit }: 
             break;
           default:
             break;
-        }
-        if (confirm?.success) {
-          Notification.show({
-            message: t("Command completed"),
-            intent: Intent.SUCCESS,
-          });
         }
       } catch (error: any) {
         logger.error("Command execution failed", error);

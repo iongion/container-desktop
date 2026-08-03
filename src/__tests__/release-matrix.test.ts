@@ -87,7 +87,7 @@ describe("Tauri release matrix", () => {
     ]);
   });
 
-  it("wires CD to explicit Tauri package jobs instead of the Electron build/bundle path", () => {
+  it("wires CD to explicit Tauri package jobs", () => {
     const workflow = fs.readFileSync(path.join(projectRoot, ".github/workflows/CDPipeline.Tauri.yml"), "utf8");
 
     expect(workflow).toContain("- windows-arm");
@@ -100,6 +100,5 @@ describe("Tauri release matrix", () => {
     expect(workflow).toContain("yarn cli bundle");
     expect(workflow).not.toContain("yarn cli build");
     expect(workflow).not.toContain("uv run");
-    expect(workflow).not.toContain("electron-builder");
   });
 });

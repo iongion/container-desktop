@@ -1,6 +1,7 @@
 import prettyBytes from "pretty-bytes";
 
-import { ContainerEngine, type SystemInfo } from "@/env/Types";
+import { ContainerEngine } from "@/container-client/types/engine";
+import type { SystemInfo } from "@/container-client/types/system";
 import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 

@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
+import { Presence } from "@/container-client/types/engine";
 import { capabilitiesFor } from "@/container-provisioning/platform";
 import { PROBE_PROGRAMS } from "@/container-provisioning/provisioningService";
 import { preferredEngine } from "@/container-provisioning/targetDefaults";
 import type { DetectedProgram } from "@/container-provisioning/types";
-import { Presence } from "@/env/Types";
 import i18n from "@/i18n";
 import { engineLabel } from "@/web-app/components/EngineCell";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";

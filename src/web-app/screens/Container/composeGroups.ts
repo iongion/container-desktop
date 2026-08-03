@@ -4,7 +4,7 @@
 // are honored (docker-compose + podman-compose), same as the normalizer's grouping.
 
 import { COMPOSE_PROJECT_LABELS } from "@/container-client/compose/labels";
-import type { Container } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
 import type { ContainerGroup } from "@/web-app/Types";
 
 // The owning compose project name (either engine's label), or undefined if the container isn't in a stack.

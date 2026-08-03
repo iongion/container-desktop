@@ -1,0 +1,47 @@
+{
+  "connections": [{ "id": "podman", "name": "Podman", "engine": "podman", "running": true }],
+  "containers": [
+    {
+      "Id": "a1b2c3d4e5f6",
+      "Image": "docker.io/library/nginx:latest",
+      "Names": ["web"],
+      "Computed": { "Name": "web", "DecodedState": "running" },
+      "State": "running",
+      "Status": "Up 2 hours",
+      "Ports": {}
+    },
+    {
+      "Id": "f6e5d4c3b2a1",
+      "Image": "docker.io/library/redis:7",
+      "Names": ["cache"],
+      "Computed": { "Name": "cache", "DecodedState": "exited" },
+      "State": "exited",
+      "Status": "Exited (0) 5 minutes ago",
+      "Ports": {}
+    }
+  ],
+  "images": [
+    {
+      "Id": "sha256:1111",
+      "FullName": "docker.io/library/nginx:latest",
+      "Name": "nginx",
+      "Tag": "latest",
+      "Size": 142000000
+    },
+    {
+      "Id": "sha256:2222",
+      "FullName": "docker.io/library/redis:7",
+      "Name": "redis",
+      "Tag": "7",
+      "Size": 117000000
+    }
+  ],
+  "networks": [
+    { "id": "net0001", "name": "podman", "driver": "bridge", "dns_enabled": true },
+    { "id": "net0002", "name": "frontend", "driver": "bridge", "dns_enabled": true }
+  ],
+  "volumes": [
+    { "Name": "pgdata", "Driver": "local", "Mountpoint": "/var/lib/containers/storage/volumes/pgdata/_data" },
+    { "Name": "cache", "Driver": "local", "Mountpoint": "/var/lib/containers/storage/volumes/cache/_data" }
+  ]
+}

@@ -1,4 +1,4 @@
-import type { Container, ContainerState } from "@/env/Types";
+import type { Container, ContainerState } from "@/container-client/types/container";
 import { t } from "@/i18n";
 import type { InspectSummaryRow } from "@/web-app/components/InspectSummary";
 import { inspectDate, shortId } from "@/web-app/components/inspectSummary.helpers";

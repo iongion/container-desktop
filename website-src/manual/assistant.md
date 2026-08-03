@@ -9,8 +9,9 @@ sections:
   - { id: assistant-what, label: "What it is" }
   - { id: assistant-model, label: "Choose your model" }
   - { id: assistant-do, label: "What it can do" }
+  - { id: assistant-runs, label: "Runs & workers" }
+  - { id: assistant-runson, label: "Where a worker runs" }
   - { id: assistant-privacy, label: "Privacy & permissions" }
-  - { id: assistant-generator, label: "Containerfile & Compose generator" }
 ---
 
 <section class="guide-sec" id="assistant-what">
@@ -19,7 +20,7 @@ sections:
 
 Container Desktop has a built-in **AI assistant** that understands your container setup and can inspect and operate it for you — in plain language. Ask *"why did my web container exit?"* or *"show me the running containers"* and it investigates and acts, right inside the app.
 
-Open it from the **AI menu** in the header (the chat button — the caret beside it lists the Assistant and the generator). It is **local-first**: point it at a model running on your own machine and nothing leaves the device.
+Open it from the **AI menu** in the header (the chat button). It is **local-first**: point it at a model running on your own machine and nothing leaves the device.
 
 </section>
 
@@ -29,7 +30,7 @@ Open it from the **AI menu** in the header (the chat button — the caret beside
 
 Pick your inference **source → provider → model** from the selector in the message box. Two kinds of source are supported:
 
-- **Local (no API key, runs on your machine):** **LM Studio** and **llama.cpp**. Start the server, and the assistant lists its models — your prompts and container data never leave the device.
+- **Local (no API key, runs on your machine):** **LM Studio**, **Ollama** and **llama.cpp**. Start the server, and the assistant lists its models — your prompts and container data never leave the device.
 - **Cloud (needs an API key):** **OpenRouter**, **Anthropic**, **OpenAI**, **DeepSeek**, **GLM** and **MiniMax**. Add a key in **Settings → AI**; OpenRouter exposes many vendors' models behind one key.
 
 <div class="note info">
@@ -48,7 +49,34 @@ The assistant doesn't just chat — it calls **typed tools** and renders the res
 
 - **Look:** list and inspect **containers, images, networks and volumes**, read a container's **logs**, and check its **stats** — shown as sortable tables, a log viewer, and state badges. These read-only actions run freely.
 - **Act:** **start / stop / restart / pause / remove** a container, **pull** or **remove** an image, **remove** a network or volume. Every state-changing action **asks for your approval first** (see below).
+- **Files:** read, write and edit files, list a directory, search text, and run a command in a confined **workspace** — the same tools the chat and Team Run workers share.
 - **Escape hatch:** for anything the typed tools don't cover, it can run a host command in a **sandbox** (no shell, scrubbed environment, output capped) — also gated by your approval.
+
+</section>
+
+<section class="guide-sec" id="assistant-runs">
+
+### Runs & workers
+
+Beyond one-off chat, you can start a **Run** with a **Goal** — *"triage every stopped container and tell me why each one exited"* — and a coordinator plans the work before a Team of specialized **Workers** carries it out. Reach both from the **AI menu** in the header.
+
+- **Workers** are reusable agents you define once: a **name**, a **specialty** (what it's good at), an optional **avatar**, its own **model**, and a **toolset** you can narrow. A Team Run draws its roster from this library.
+- A **Team Run** turns its Goal into a **Plan** — a set of Tasks with dependencies — that you **approve** before anything runs. Independent Tasks run in parallel; each is assigned to the best-fit Worker; results are synthesized into one answer. You stay in control: approve the Plan, approve state-changing tool calls, and stop the Run at any time.
+
+</section>
+
+<section class="guide-sec" id="assistant-runson">
+
+### Where a worker runs
+
+Each worker chooses **where its file and command tools execute** — its *"Runs on"* target — so you can sandbox risky work away from your host, using the app's own connections and containers:
+
+- **Host** — directly on this machine (the default).
+- **A remote host** — over one of your **SSH** connections.
+- **A container** — inside an existing container on any connection.
+- **A sandbox** — a throwaway container the app creates for the run from an image you pick, and **removes when the run ends**.
+
+Container operations (list, inspect, start/stop, …) already follow the worker's connection; the *"Runs on"* target additionally decides where its files live and its commands run. Pick the connection with the same **connection selector** you use everywhere else in the app.
 
 </section>
 
@@ -69,13 +97,5 @@ A reject **never** runs. Review or revoke everything you've remembered — and t
 **Local-first and private by design.** Secrets (API keys, tokens) are **redacted** out of anything the model sees, and out of command output before it's read back. With a local model, your prompts and container details stay on your machine; a cloud model is only contacted after you've explicitly added its key.
 
 </div>
-
-</section>
-
-<section class="guide-sec" id="assistant-generator">
-
-### Containerfile &amp; Compose generator
-
-A second AI screen (the caret in the header AI menu) **drafts a Containerfile or a Compose file** from a short description and a starter template, streamed as it writes, ready to copy or save. Same model picker, same privacy rules.
 
 </section>

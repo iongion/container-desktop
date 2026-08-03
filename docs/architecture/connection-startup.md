@@ -42,7 +42,7 @@ sequenceDiagram
   participant UI as Renderer · appStore
   participant App as Application
   participant Host as HostClient
-  participant Cmd as Command · preload/Node
+  participant Cmd as Command · native (Rust/Go)
   participant Eng as Engine API
 
   User->>UI: launch
@@ -145,8 +145,8 @@ connected.
 ```mermaid
 sequenceDiagram
   participant Host as HostClient (SSH)
-  participant Cmd as Command · preload/Node
-  participant Bridge as ssh port-forward (Linux/macOS) · SSHStdioBridgeServer (Windows)
+  participant Cmd as Command · native (Rust/Go)
+  participant Bridge as ssh -NL port-forward (Linux/macOS) · dial-stdio named pipe (Windows)
   participant Remote as Remote host (sshd)
   participant Sock as Engine socket (remote)
 
@@ -172,7 +172,7 @@ that stdio stream; it no longer ships a byte-pump of its own. **No SSH server ru
 and host keys are verified** (the old `:20022` sshd / `InsecureIgnoreHostKey` design is gone).
 
 - **WSL (Windows)** — the app's `WSLRelayServer`
-  ([`exec/wsl-relay.ts`](../../src/platform/electron/exec/wsl-relay.ts)) listens on a Windows **named
+  (Rust `bridge.rs` / Go `bridge_service.go`) listens on a Windows **named
   pipe** and, per connection, runs `wsl.exe --distribution <d> --exec <engine> system dial-stdio`
   inside the distro: named pipe ↔ `wsl.exe` stdio ↔ engine socket. No TCP listener, no SSH, no
   daemon left in the distro.
@@ -181,7 +181,7 @@ and host keys are verified** (the old `:20022` sshd / `InsecureIgnoreHostKey` de
   with a structured pre-flight
   ([`ssh-preflight.ts`](../../src/container-client/diagnostics/ssh-preflight.ts)) that explains
   failures instead of hanging. On **Windows** the app's `SSHStdioBridgeServer`
-  ([`exec/ssh-stdio-bridge.ts`](../../src/platform/electron/exec/ssh-stdio-bridge.ts)) fronts a named
+  (Rust `bridge.rs` / Go `bridge_service.go`) fronts a named
   pipe and runs `<engine> system dial-stdio` on the remote over SSH, verifying `known_hosts`.
 
 ```mermaid
@@ -231,7 +231,7 @@ flowchart TB
 
 | Step | Function · file |
 | --- | --- |
-| Wait for preload | `waitForPreload` · [`Native.ts`](../../src/web-app/Native.ts) |
+| Wait for the host bridge | `waitForPreload` · [`Native.ts`](../../src/web-app/Native.ts) |
 | Renderer bootstrap | `initialize`, `startApplication` · [`appStore.ts`](../../src/web-app/stores/appStore.ts) |
 | Backend entry | `start`, `createConnectorContainerEngineHostClient` · [`Application.ts`](../../src/container-client/Application.ts) |
 | Compose client | `createComposedHostClient` · [`registry.ts`](../../src/container-client/runtimes/registry.ts) |

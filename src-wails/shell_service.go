@@ -43,7 +43,7 @@ func (s *ShellService) ToggleDevtools() {
 	}
 }
 
-// Relaunch restarts the app — start a fresh instance, then quit this one. The Wails analog of Electron's
+// Relaunch restarts the app — start a fresh instance, then quit this one. The Wails analog of Tauri's
 // app.relaunch() and Tauri's tauri-plugin-process relaunch (Wails v3 has no App.Restart()). Backs the renderer's
 // application.relaunch app-control channel + the recovery "Reload" choice. The successor is spawned only after
 // teardown (main.go, once app.Run returns) to avoid the single-instance handoff race — see relaunch.go.
@@ -107,7 +107,7 @@ func logFilePath() (string, error) {
 // Persistent file sink — the Wails analog of tauri-plugin-log's webview-target file. The renderer's
 // @/platform/logger façade forwards each already level-gated record here (wails/log/wailsLog.ts → logging_write),
 // and LogWrite appends it to the SAME file LoggingOpen/LoggingReveal reveal. Serialized (logMu) since concurrent
-// Call.ByName invocations run on separate goroutines; rotated at ~1 MiB to one .old file, like electron-log.
+// Call.ByName invocations run on separate goroutines; rotated at ~1 MiB to one .old file.
 const logMaxBytes = 1 << 20
 
 var logMu sync.Mutex
@@ -133,7 +133,7 @@ func appendLogLine(level, message string) {
 		return
 	}
 	if info, statErr := os.Stat(path); statErr == nil && info.Size() >= logMaxBytes {
-		_ = os.Rename(path, path+".old") // keep one previous file, like electron-log's .old rotation
+		_ = os.Rename(path, path+".old") // keep one previous file
 	}
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -147,7 +147,7 @@ func appendLogLine(level, message string) {
 	_, _ = file.WriteString("[" + time.Now().Format(time.RFC3339) + "] [" + level + "] " + message + "\n")
 }
 
-// LogApplyResult / LogOpResult mirror electronLogMain.ts return shapes.
+// LogApplyResult / LogOpResult mirror the shared loggingIpc return shapes.
 type LogApplyResult struct {
 	LogFile string `json:"logFile"`
 }

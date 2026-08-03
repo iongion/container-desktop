@@ -1,0 +1,60 @@
+name: CorePipeline
+
+# Gate for the polyglot connection core (core/) — the Rust reference implementation of the
+# connection specification. Deliberately SEPARATE from CIPipeline.yml: the app gate must not be
+# slowed down or destabilised by core work, and the two have no build steps in common.
+#
+# These are the same four checks `make test-core` runs locally, one step each so the failing one is
+# named in the UI. They are not a superset: the memory ceiling `make test-core` imposes needs cgroup
+# v2 delegation, which a runner does not have.
+on:
+  pull_request:
+    paths:
+      - "core/**"
+      - ".github/workflows/CorePipeline.yml"
+  push:
+    branches: [main]
+    paths:
+      - "core/**"
+      - ".github/workflows/CorePipeline.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: core/rust
+
+jobs:
+  core:
+    name: Core — fmt, clippy, tests, wasm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Use Rust
+        # Same rustup-based setup as CDPipeline.Tauri.yml rather than a third-party toolchain
+        # action — no floating action tag to pin. MSRV is declared in core/rust/Cargo.toml.
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Lint
+        # `--all-features` is right HERE and wrong for the test step: it drags the live suites in,
+        # and those contact real hosts. Linting them is exactly what should happen.
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Tests
+        run: cargo test --workspace
+      - name: The runtime compiles without a host
+        # NOT redundant with the workspace build: cargo unifies features across a workspace, so a host
+        # crate's `tokio/process` is switched on for `cdc-runtime` too and hides precisely the mistake
+        # this catches — a portable module reaching for a native facility.
+        run: |
+          cargo check --package cdc-runtime --no-default-features \
+            --target wasm32-unknown-unknown --target-dir target/wasm-gate --locked

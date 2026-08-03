@@ -1,10 +1,10 @@
-// resourceEvents — thin client over the main-owned data layer.
+// resourceEvents — thin client over the service-owned data layer.
 //
-// Main owns the engine `/events` stream and all list fetches; this module is the renderer-side seam the
-// screens call:
-//   - start()                 → begin mirroring main's pushed snapshots into resourceStore
-//   - refresh()/refreshMany()  → ask main to refresh a domain now (the post-mutation "refresh now" nudge)
-//   - stop()/stopAll()         → no-ops (main owns the connection/stream lifecycle)
+// The EngineDataService owns the engine `/events` stream and all list fetches; this module is the store-side
+// seam the screens call:
+//   - start()                 → begin mirroring the service's pushed snapshots into resourceStore
+//   - refresh()/refreshMany()  → ask the service to refresh a domain now (the post-mutation "refresh now" nudge)
+//   - stop()/stopAll()         → no-ops (the service owns the connection/stream lifecycle)
 //
 // The engine-event → domain mapping lives in resourceDomains; it is re-exported here for the importers
 // (and the test) that reference it from this module.

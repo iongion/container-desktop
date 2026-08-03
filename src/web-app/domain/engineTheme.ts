@@ -1,5 +1,7 @@
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import { type Connection, type Connector, ContainerEngine, type EngineThemePreference } from "@/env/Types";
+import type { Connection, Connector } from "@/container-client/types/connection";
+import { ContainerEngine } from "@/container-client/types/engine";
+import type { EngineThemePreference } from "@/container-client/types/os";
 
 export type ResolvedEngineTheme = "unified" | ContainerEngine.PODMAN | ContainerEngine.DOCKER | ContainerEngine.APPLE;
 

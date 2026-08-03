@@ -1,0 +1,262 @@
+.RunWaterfall {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.RunWaterfallBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  color: var(--app-text);
+  background: var(--app-surface);
+}
+
+.RunWaterfallCanvas {
+  container-type: inline-size;
+  width: 100%;
+  min-width: 460px;
+}
+
+.RunWaterfallCanvas > .bp6-tree {
+  width: 100%;
+}
+
+.RunWaterfallAxis {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  box-sizing: border-box;
+  width: clamp(200px, 38cqw, 320px);
+  margin-left: auto;
+  padding: 5px 4px 4px;
+  color: var(--app-text-muted);
+  background: var(--app-surface-strong);
+  border-left: 1px solid var(--app-border);
+  border-bottom: 1px solid var(--app-border);
+  font-family: var(--monospace-font);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.RunWaterfallAxis span:nth-child(2) {
+  text-align: center;
+}
+
+.RunWaterfallAxis span:last-child {
+  text-align: right;
+}
+
+.RunWaterfallBody .bp6-tree-node-content {
+  height: 34px;
+  padding-right: 0;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.RunWaterfall .RunWaterfallBody .bp6-tree-node-content:hover {
+  background-color: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
+}
+
+.RunWaterfall .RunWaterfallBody .bp6-tree-node-content:active {
+  background-color: color-mix(in srgb, var(--app-accent) 14%, var(--app-surface));
+}
+
+.RunWaterfall .RunWaterfallBody .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content {
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
+  color: var(--app-text);
+}
+
+body[data-engine] .RunWaterfall .RunWaterfallBody .bp6-tree .bp6-icon,
+body[data-engine] .RunWaterfall .RunWaterfallBody .bp6-tree .bp6-icon-standard,
+body[data-engine] .RunWaterfall .RunWaterfallBody .bp6-tree .bp6-icon-large {
+  color: var(--app-text-muted);
+}
+
+.RunWaterfall .RunWaterfallBody .bp6-tree-node:not(.bp6-disabled) .bp6-tree-node-caret:hover,
+.RunWaterfall .RunWaterfallBody .bp6-tree-node.bp6-tree-node-selected > .bp6-tree-node-content .bp6-icon {
+  color: var(--app-accent-text);
+}
+
+.RunWaterfallBody .bp6-tree-node-secondary-label {
+  box-sizing: border-box;
+  width: clamp(200px, 38cqw, 320px);
+  flex: 0 0 clamp(200px, 38cqw, 320px);
+  margin-left: 10px;
+}
+
+.RunWaterfallAttempt > .bp6-tree-node-content {
+  background: var(--app-surface-strong);
+  font-weight: 600;
+}
+
+.RunWaterfallAttemptLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.RunWaterfallAttemptLabel span {
+  font-family: var(--monospace-font);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.RunWaterfallAttemptDuration {
+  padding: 1px 5px;
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-text) 7%, transparent);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+
+.RunWaterfallBody .RunWaterfallLabel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 52px;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.RunWaterfallName {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.RunWaterfallBody .RunWaterfallMeta {
+  display: contents;
+}
+
+.RunWaterfallKindLabel,
+.RunWaterfallDuration {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.RunWaterfallKindLabel {
+  align-items: center;
+  text-align: center;
+}
+
+.RunWaterfallKindLabel {
+  padding: 1px 4px;
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-text) 7%, transparent);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.RunWaterfallDuration {
+  color: var(--app-text);
+  font-family: var(--monospace-font);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.RunWaterfallKind {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--app-text-muted);
+}
+
+.RunWaterfallKind[data-status="running"] {
+  background: var(--app-accent);
+}
+
+.RunWaterfallKind[data-status="ok"] {
+  background: var(--app-intent-success-rest);
+}
+
+.RunWaterfallKind[data-status="error"],
+.RunWaterfallKind[data-status="timeout"],
+.RunWaterfallKind[data-status="budget_exhausted"],
+.RunWaterfallKind[data-status="rejected"] {
+  background: var(--app-intent-danger-rest);
+}
+
+.RunWaterfallBarTrack {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: linear-gradient(
+    to right,
+    transparent 24.8%,
+    var(--app-border) 25%,
+    transparent 25.2%,
+    transparent 49.8%,
+    var(--app-border) 50%,
+    transparent 50.2%,
+    transparent 74.8%,
+    var(--app-border) 75%,
+    transparent 75.2%
+  );
+}
+
+.RunWaterfallBar {
+  position: absolute;
+  top: 1px;
+  height: 7px;
+  min-width: 1px;
+  border-radius: 4px;
+  background: var(--app-text-muted);
+}
+
+.RunWaterfallBar[data-status="running"] {
+  background: var(--app-accent);
+}
+
+.RunWaterfallBar[data-status="ok"] {
+  background: var(--app-intent-success-rest);
+}
+
+.RunWaterfallBar[data-status="error"],
+.RunWaterfallBar[data-status="timeout"],
+.RunWaterfallBar[data-status="budget_exhausted"],
+.RunWaterfallBar[data-status="rejected"] {
+  background: var(--app-intent-danger-rest);
+}
+
+.RunWaterfallBar[data-incomplete="yes"] {
+  width: 2px;
+  opacity: 0.8;
+}
+
+.RunWaterfallUnknown {
+  display: block;
+  width: 100%;
+  color: var(--app-text-muted);
+  font-family: var(--monospace-font);
+  text-align: center;
+}
+
+.RunViewMode {
+  border-left: 1px solid var(--app-border);
+  padding-left: 4px;
+}
+
+.RunWaterfallLoadMore {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  border-top: 1px solid var(--app-border);
+}

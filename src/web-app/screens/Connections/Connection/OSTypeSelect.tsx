@@ -3,7 +3,7 @@ import type React from "react";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { OperatingSystem } from "@/env/Types";
+import { OperatingSystem } from "@/container-client/types/os";
 import "./OSTypeSelect.css";
 
 // OSTypeSelect

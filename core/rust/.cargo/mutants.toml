@@ -1,0 +1,93 @@
+# Mutation testing (`cargo mutants`): the guard that a green suite is actually a suite.
+#
+# Line coverage says a line RAN; a surviving mutant says a line ran and nothing checked what it did.
+#
+# `cargo mutants` runs only the MUTATED PACKAGE's tests, so a crate whose tests live in a sibling
+# crate is measured as untested. Moving code between packages is what walks into that, and llvm-cov
+# will not tell you, because it is workspace-wide.
+exclude_globs = [
+  # The domain model: shapes and derives, with no behaviour to mutate.
+  #
+  # NAMED ONE AT A TIME rather than as `domain/types/**`, and the difference is the point. The
+  # wildcard was right while every module was a shape; `diagnostic.rs` has since grown a RULE — a
+  # code this build does not recognise is KEPT rather than refused — and a wildcard would have
+  # swallowed it silently. So the model is enumerated, and a type module added later is MEASURED until
+  # someone takes it out deliberately. That is the safe direction for the mistake to run in, and it is
+  # the same boundary `coverage-core`'s `--ignore-filename-regex` draws — the two lists must stay a
+  # pair, or moving a type across the boundary moves what is measured.
+  #
+  # **FOUR modules of the model are deliberately absent, all four for the same reason.** The resource
+  # slice put rules in three more places beside `diagnostic.rs`: `container.rs` decides which of the two
+  # `State` shapes answers and whether a container is running, `pod.rs` decides the same for a pod, and
+  # `types.rs` itself now carries `null_default` — the rule that a `null` where a collection was
+  # expected is the empty collection, which is what real podman and real Docker send. None is a shape.
+  "crates/cdc-runtime/src/domain/types/command_proxy_protocol.rs",
+  "crates/cdc-runtime/src/domain/types/connection.rs",
+  "crates/cdc-runtime/src/domain/types/engine.rs",
+  "crates/cdc-runtime/src/domain/types/host.rs",
+  "crates/cdc-runtime/src/domain/types/image.rs",
+  "crates/cdc-runtime/src/domain/types/machine.rs",
+  "crates/cdc-runtime/src/domain/types/network.rs",
+  "crates/cdc-runtime/src/domain/types/os.rs",
+  "crates/cdc-runtime/src/domain/types/registry.rs",
+  "crates/cdc-runtime/src/domain/types/resource_sync_protocol.rs",
+  "crates/cdc-runtime/src/domain/types/secret.rs",
+  "crates/cdc-runtime/src/domain/types/security.rs",
+  "crates/cdc-runtime/src/domain/types/swarm.rs",
+  "crates/cdc-runtime/src/domain/types/system.rs",
+  "crates/cdc-runtime/src/domain/types/user_settings.rs",
+  "crates/cdc-runtime/src/domain/types/volume.rs",
+]
+
+# Code behind `cfg(windows)` is PARSED here and never COMPILED here, so every mutant of it survives:
+# the mutation changes a token in a block this target drops, the suite passes unchanged, and the
+# result is reported MISSED. That is a property of the gate, not a hole in the tests — and the
+# temptation it creates is to widen the exclusion until real logic hides behind a `cfg`.
+#
+# So exactly ONE NAME is excluded for that reason, and only because it cannot be anything else: the
+# `CreateFileW` call itself. It now names that call in two crates — the engine dialer
+# (`cdc-runtime-host-native/src/http.rs`) and the client's local transport (`cdc-client/src/dial.rs`)
+# — which is the same syscall reached for the same reason, and the reason both are spelled this way:
+# the exclusion matches by NAME, so a platform arm sharing a name with a portable one would take the
+# portable one out of the gate with it. The DECISIONS around the call — that ERROR_PIPE_BUSY means
+# wait rather than fail — are pulled out to `http::is_pipe_busy` and to `dial::open_local`, which are
+# portable, tested and mutated like everything else. If this list ever grows, check first that what is
+# being added is I/O and not a rule.
+#
+# What covers the excluded function instead: `cargo check --target x86_64-pc-windows-gnu` (it
+# compiles) and a cross-built binary run against live engine pipes on `win11` (it works).
+#
+# **`<impl AsyncWrite for Wire>::poll_flush` USED TO BE HERE, IS NOT ANY MORE, AND IS NOW CAUGHT.** It
+# was excluded as an EQUIVALENT mutant, and the claim was true when it was written: `Wire` held three
+# streams — `TcpStream`, `UnixStream` and `DuplexStream` — and all three implement `poll_flush` as
+# `Poll::Ready(Ok(()))` in tokio 1.53.1, so the delegation and the mutant were the same behaviour.
+# `Wire::Secure` ended that. A `tokio_rustls::client::TlsStream` holds ciphertext of its own, and its
+# `poll_flush` is what pushes what a `poll_write` could not — so the mutant is no longer equivalent and
+# the exclusion had become a claim about a dependency that had stopped being true. **That is the shape
+# to watch for**: an equivalent-mutant exclusion is a statement about the types underneath, and adding a
+# variant to an enum is exactly what falsifies one silently. What kills it is
+# `dial::a_secure_wire_flushes_the_ciphertext_its_socket_would_not_take`, and what that test needed was
+# `SO_SNDBUF` and `SO_RCVBUF` on both ends: a socket with room in it takes every byte inside
+# `poll_write`, so no ordinary `wss://` test leaves anything behind for a flush to push. The remaining
+# two below are re-checked against the same rule every time this file is touched.
+#
+# The two entries below are the SAME kind of exception and are held to that standard — an
+# equivalent mutant is a claim about a dependency, so the dependency was read. `ChildStdio` delegates
+# both to `tokio::process::ChildStdin`, which is a pipe: its `poll_flush` and `poll_shutdown` are
+# `Poll::Ready(Ok(()))` in tokio 1.53.1, because a pipe holds no buffer of its own and closing the
+# handle is `Drop`'s job. So neither mutant changes behaviour and no test can tell them apart.
+# `poll_shutdown` has a second reason on top: `exchange` never calls it — this client does not
+# half-close after the request, exactly as it does not on a socket, where `Connection: close` means the
+# SERVER closes. Both stay because `AsyncWrite` requires them, and because the day a buffered stream
+# sits under this type the delegation is what makes it correct. `poll_write` is deliberately NOT here:
+# it carries the rule that turns `EPIPE` into the child's own explanation, and it is measured.
+exclude_re = [
+  "open_named_pipe",
+  "<impl AsyncWrite for ChildStdio>::poll_flush",
+  "<impl AsyncWrite for ChildStdio>::poll_shutdown",
+]
+
+# The suite is hermetic and finishes in seconds; a mutant that hangs is a mutant that removed a loop
+# bound, and it should be caught quickly rather than waited out.
+timeout_multiplier = 5.0
+minimum_test_timeout = 30

@@ -1,0 +1,62 @@
+[package]
+name = "cdc-client"
+version = "0.1.0"
+description = "A client of the connection server: the wire protocol, its three transports, and the engine API they carry."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# A client reading real resources off the real engine on this machine. Opt-in and never part of a
+# hermetic run: it starts an engine API service, and it is not reproducible on a machine with no engine.
+live-resources = []
+
+[dependencies]
+# The protocol, the session and the listener vocabulary. This crate consumes them and nothing else of
+# the server's — including when it runs that server in its own process.
+cdc-server.workspace = true
+# The domain types the frames CARRY, the two capability traits `session::Shared` is generic over, and
+# the `Http` capability the mux implements a `Forwarder` for.
+cdc-runtime.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+# `net` for the two dialled transports, `io-util` for the in-memory duplex the embedded one is,
+# `rt-multi-thread` because embedded mode spawns the session it talks to. Declared here rather than
+# relied on through `cdc-server`'s selection: a crate that compiles because a sibling asked for
+# something is a crate that breaks when the sibling stops.
+tokio = { workspace = true, features = ["net", "io-util", "rt-multi-thread"] }
+tokio-tungstenite.workspace = true
+# The other end of `cdc_server::listen::tls`.
+tokio-rustls.workspace = true
+# `--tls-ca`, which is the realistic case: a certificate the operator issued, which no root programme
+# has ever heard of.
+rustls-pemfile.workspace = true
+# And the case where they did not — verified against the roots this client carries rather than against
+# a platform store that answers differently on each OS.
+webpki-roots.workspace = true
+futures-util.workspace = true
+# The remote token, as a type that cannot be logged. `SecretString` rather than `listen::auth::Token`
+# because a client holds the secret to PRESENT it, where the server only ever compares.
+secrecy.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# The fixtures are `cdc-server`'s, reached with `#[path]` rather than copied: one settings document and
+# one fake server, or the two crates' idea of a connection drifts until a change passes here and fails
+# there.
+cdc-runtime-host-native.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+tokio-util.workspace = true
+tempfile.workspace = true
+# A certificate and a key for the `wss://` round trip, made when the test runs.
+rcgen.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+# Tests live in `tests/`, never in a `#[cfg(test)] mod tests`.
+test = false

@@ -8,7 +8,7 @@
 
 .AIPermissionsGrid {
   display: grid;
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   flex: 1 1 auto;
   min-height: 0;
@@ -42,25 +42,6 @@
   min-height: 16px;
   min-width: 16px;
   padding: 0 5px;
-}
-
-.AIPermissionsCol--web .bp6-html-select select {
-  font-size: 12px;
-}
-
-.AIPermissionsStatus {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  font-size: 11px;
-}
-
-.AIPermissionsStatusLabel {
-  color: var(--app-text-muted);
-}
-
-.AIPermissionsStatusValue {
-  color: var(--app-text);
 }
 
 .AIPermissionsListWrap {
@@ -104,6 +85,20 @@
   font-family: var(--monospace-font, monospace);
   font-size: 11px;
   color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AIPermissionsRule {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.AIPermissionsScope {
+  color: var(--app-text-muted);
+  font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

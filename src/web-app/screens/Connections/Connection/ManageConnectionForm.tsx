@@ -28,17 +28,11 @@ import { useTranslation } from "react-i18next";
 import { ContainerEngineOptions, createConnectorBy, type HostClientFacade } from "@/container-client";
 import { Application } from "@/container-client/Application";
 import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
-import {
-  type Connection,
-  type ConnectionProxyMode,
-  type ConnectionProxySettings,
-  type Connector,
-  ContainerEngine,
-  ContainerEngineHost,
-  type ControllerScope,
-  OperatingSystem,
-  type Program,
-} from "@/env/Types";
+import type { Connection, Connector } from "@/container-client/types/connection";
+import { ContainerEngine, ContainerEngineHost, type Program } from "@/container-client/types/engine";
+import type { ControllerScope } from "@/container-client/types/machine";
+import type { ConnectionProxyMode, ConnectionProxySettings } from "@/container-client/types/network";
+import { OperatingSystem } from "@/container-client/types/os";
 import { deepMerge, isEmpty } from "@/utils";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { Notification } from "@/web-app/Notification";
@@ -51,7 +45,7 @@ import { EngineSelect } from "./EngineSelect";
 import { OSTypeSelect } from "./OSTypeSelect";
 import { ScopeSelect } from "./ScopeSelect";
 import "./ManageConnectionForm.css";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.connections");
 

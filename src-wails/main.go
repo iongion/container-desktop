@@ -14,7 +14,7 @@ import (
 )
 
 // The shared renderer is built DIRECTLY into frontend/dist by `yarn wails:renderer` (Vite with
-// --outDir src-wails/frontend/dist — the identical bundle Electron/Tauri build, just emitted here
+// --outDir src-wails/frontend/dist — the identical bundle Tauri builds, just emitted here
 // instead of copied). go:embed cannot traverse ".." (and does not follow symlinks), so the bundle
 // must live inside this package; building it in place avoids a second copy of build/<version>. It is
 // served from the binary over AssetFileServerFS — mirroring Tauri's frontendDist.
@@ -27,7 +27,7 @@ var assets embed.FS
 var mainWindow *application.WebviewWindow
 
 // devMode enables the WebKitGTK inspector / WebView2 DevTools (and the WebDriver automation path)
-// outside production, matching the Electron/Tauri dev experience.
+// outside production, matching the Tauri dev experience.
 func devMode() bool {
 	return os.Getenv("ENVIRONMENT") != "production"
 }
@@ -45,7 +45,9 @@ func main() {
 			application.NewService(&FsService{}),
 			application.NewService(&KeychainService{}),
 			application.NewService(&ExecService{}),
+			application.NewService(&WorkspaceService{}),
 			application.NewService(&ProxyService{}),
+			application.NewService(newPublicWebFetchService(isPublicAddress)),
 			application.NewService(&ProcessService{}),
 			application.NewService(&BridgeService{}),
 			application.NewService(&ShellService{}),
@@ -68,7 +70,7 @@ func main() {
 	//
 	// Start HIDDEN and reveal only when the renderer signals ready (App.tsx AppBootstrapReadySignal →
 	// messageBus.showWindow → appWindow.Show()), exactly like Tauri (tauri.conf.json visible:false) and
-	// Electron (show-on-ready). Otherwise a frameless webview maps INSTANTLY as a blank window and the real
+	// show-on-ready. Otherwise a frameless webview maps INSTANTLY as a blank window and the real
 	// UI only paints ~0.7s later — the "slow startup" flash. The error path still reveals it (bridge.ts catch
 	// → Window.Show()) so a failed boot never leaves an invisible window.
 	windowOptions := application.WebviewWindowOptions{
@@ -84,7 +86,7 @@ func main() {
 		// Always the Wails origin — NEVER an external URL: the @wailsio/runtime JS↔Go transport is only wired
 		// on the Wails-served origin (loading http://localhost:3000 directly breaks Call.ByName). Hot-reload dev
 		// still works: `yarn wails:dev` sets FRONTEND_DEVSERVER_URL=http://localhost:3000 and the AssetServer
-		// (application_dev.go, //go:build !production) PROXIES to Vite — same :3000 server as Electron/Tauri,
+		// (application_dev.go, //go:build !production) PROXIES to Vite — the same :3000 server Tauri uses,
 		// but the window stays on the Wails origin. Production (-tags production) serves the embedded bundle.
 		URL: "/",
 		// App-owned detection marker: Wails v3's @wailsio/runtime no longer publishes window.wails,
@@ -140,7 +142,7 @@ func singleInstanceOptions() *application.SingleInstanceOptions {
 
 // installWindowBehaviours wires the two native window behaviours that mirror the Tauri shell:
 //   - Hide-to-tray: while the tray is up, the window's close button HIDES it (keeping the webview + the in-realm
-//     engine hub alive) instead of destroying it — Electron's default and src-tauri/src/lib.rs. It must be a
+//     engine hub alive) instead of destroying it — as src-tauri/src/lib.rs does. It must be a
 //     RegisterHook (not OnWindowEvent): a cancelled hook stops Wails' default destroy listener (HandleWindowEvent
 //     returns on a cancelled hook). A true quit (tray Quit → Application.Quit → impl.destroy) bypasses
 //     WindowClosing, so it is unaffected.

@@ -2,7 +2,7 @@
 // so the mapping — severity translation and the 0-based CfRange → 1-based Monaco line/column shift — is unit
 // testable without the editor. `import type` is erased at build time.
 
-import type * as Monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+import type * as Monaco from "monaco-editor/editor/editor.api.js";
 import type { LintFinding, LintSeverity } from "@/container-client/builder/types";
 
 // Monaco's MarkerSeverity enum values: Hint = 1, Info = 2, Warning = 4, Error = 8.

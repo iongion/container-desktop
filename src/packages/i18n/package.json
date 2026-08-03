@@ -1,0 +1,7 @@
+{
+  "name": "@container-desktop/i18n",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

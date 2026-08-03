@@ -1,0 +1,36 @@
+[package]
+name = "cdc-telemetry-host-native"
+version = "0.1.0"
+description = "Native trace export: OpenTelemetry over OTLP, for machines with a network."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+cdc-telemetry.workspace = true
+opentelemetry.workspace = true
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio"] }
+# The concrete exporter, which is the whole point of this crate: `http-proto` speaks OTLP/HTTP protobuf
+# to port 4318, the transport every collector accepts and the one that needs no gRPC stack. `trace`
+# only — this subsystem exports spans, and pulling metrics and logs in would be three protocols for one
+# consumer.
+opentelemetry-otlp = { version = "=0.32.0", default-features = false, features = ["http-proto", "reqwest-blocking-client", "trace"] }
+tracing.workspace = true
+tracing-opentelemetry.workspace = true
+tracing-subscriber = "=0.3.23"
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "net", "io-util", "rt-multi-thread", "time"] }
+# `testing` brings `InMemorySpanExporter`, which is how the RECORD-to-span mapping is asserted: the
+# status, the timestamps and the typed attribute values of the span that would have been serialised.
+# Reading them out of the protobuf on the wire would assert the same thing far less legibly, and a
+# mapping test that cannot see a value's TYPE is the one that misses `Int` exported as a string.
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "testing"] }
+
+[lints]
+workspace = true
+
+[lib]
+test = false

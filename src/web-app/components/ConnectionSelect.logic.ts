@@ -1,7 +1,8 @@
 // Pure helpers for ConnectionSelect — no React/DOM/CSS imports, so they are trivially unit-testable in any
 // environment. The component layer (ConnectionSelect.tsx) wires these to the stores.
 
-import { type Connection, ContainerEngine } from "@/env/Types";
+import type { Connection } from "@/container-client/types/connection";
+import { ContainerEngine } from "@/container-client/types/engine";
 
 // Minimal shape of a per-connection runtime entry (resourceStore.activeRuntime) this module needs.
 export interface ConnectionRuntimeLike {

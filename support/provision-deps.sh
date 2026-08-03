@@ -120,8 +120,9 @@ install_first_available() {
 #   2. Tauri native BUILD dependencies (GTK/WebKit/AppIndicator/Rsvg/OpenSSL headers) - required to
 #      compile. Installed via install_group so an unavailable name degrades to a warning per package
 #      instead of silently skipping the whole batch.
-#   3. e2e/WebDriver dependencies (WebKitWebDriver + Xvfb) - needed only to RUN the WebdriverIO
-#      capture/e2e suite, never to build. Always best-effort and separate from tier 2.
+#   3. e2e/WebDriver dependencies (WebKitWebDriver) - needed only to RUN the WebdriverIO
+#      capture/e2e suite, never to build. Always best-effort and separate from tier 2. No display
+#      server is installed; see install_tauri_test_deps.
 #   4. packaging tooling - the deb/rpm/AppImage/pacman targets need bsdtar (pacman writes .MTREE via
 #      `bsdtar --format=mtree`), rpmbuild (rpm) and fakeroot (deb/rpm staging). Best-effort.
 install_build_toolchain() {
@@ -193,19 +194,19 @@ install_wails_linux_deps() {
 # WebKitWebDriver), NOT to build the app. Kept separate and best-effort so a distro that lacks them
 # (or names them differently) can never block the build. The WebKitWebDriver package name varies by
 # release, so try the known candidates and install whichever exists. On Arch it ships inside
-# `webkit2gtk-4.1` (already installed as a build dep), so only Xvfb is added there.
+# `webkit2gtk-4.1`, already installed as a build dep, so there is nothing to add.
+#
+# No display server is installed. The specs and the screenshot capture need SOME display, and any
+# desktop session already provides one (`wdio.conf.js` uses the ambient DISPLAY / WAYLAND_DISPLAY). A
+# genuinely headless machine supplies its own — `Xvfb`, or a headless Wayland compositor such as
+# `cage` under `WLR_BACKEND=headless`. Pulling the whole Xorg chain in for everyone is not worth it.
 install_tauri_test_deps() {
   case "$PM" in
     apt)
       install_first_available "WebKitWebDriver" webkit2gtk-driver webkitgtk-webdriver
-      install_group "e2e display server" xvfb
       ;;
     dnf|yum)
       install_first_available "WebKitWebDriver" webkit2gtk-driver
-      install_group "e2e display server" xorg-x11-server-Xvfb
-      ;;
-    pacman)
-      install_group "e2e display server" xorg-server-xvfb
       ;;
   esac
 }

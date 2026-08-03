@@ -6,7 +6,7 @@ import { Application } from "@/container-client/Application";
 import { ProvisioningService } from "@/container-provisioning/provisioningService";
 import { preferredEngine, targetFor } from "@/container-provisioning/targetDefaults";
 import type { DetectedProgram, Overall } from "@/container-provisioning/types";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";
 
 const logger = createLogger("web.provisioning");

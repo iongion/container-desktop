@@ -5,41 +5,49 @@
 
 ## What this is
 
-Cross-platform **Electron desktop app** for managing container engines
+Cross-platform **desktop app** for managing container engines
 (Podman, Docker, and Apple Container — the last is **experimental**, macOS /
-Apple-silicon only) — local, remote over SSH, and WSL. All **Node / TypeScript**:
+Apple-silicon only) — local, remote over SSH, and WSL. A **TypeScript** renderer over a native backend:
 
-- **App** — Electron main + preload + React renderer
+- **App** — React renderer in a native webview, over a Tauri (Rust) or Wails (Go) backend
 - **Build/dev/release tooling** — a home-grown CLI (`yarn cli`, commander + tsx) in `support/cli/`
 
 ## Stack
 
-Electron 43 · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
+Tauri 2 (Rust) · Wails 3 (Go) · React 19 · Vite 8 (rolldown) · TypeScript 6 · Blueprint 6 (UI) ·
 Zustand (state) · TanStack Query + Router · @xterm/xterm 6 · bundled monaco · Biome (lint/format).
 Node **24.16.0** (`.nvmrc`), **yarn 1.x** (classic). Build/dev/release tooling is a home-grown
 TypeScript CLI (commander) run via **tsx**, in `support/cli/` — no Python.
 
 ## Layout
 
-- `src/web-app/` — React renderer: `App.tsx`, `stores/` (Zustand state),
-  `domain/` (TanStack Query client), `screens/`, `components/`, `hooks/`,
-  `Native.ts`, `Environment.ts`
-- `src/container-client/` — engine API clients/adapters · `src/utils/` · `src/env/`
-  (logging façade lives in `src/platform/logger/`)
-- `src/platform/` + `src-tauri/` + `src-wails/` — runtime ports: shared brokers/services live at
-  `src/platform/*`; `electron/`, `tauri/` and `wails/` (Go backend) align host, command,
-  exec, buses, tray, runtime, AI. Packaging/branding metadata is centralized in `support/app-metadata.cjs`.
-- `src/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/prompt/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
-- `vite.config.{common,main,preload,renderer}.mjs` · `electron-builder-config.cjs`
-  · `support/watch.mjs` (dev launcher) · **`support/cli/`** (the `yarn cli` build/dev/release
+- **`src/packages/*`** — the library packages: local yarn **workspaces** (root-only lockfile + hoisting),
+  each a proper npm layout (`<pkg>/package.json` + `<pkg>/src/…`). Acyclic DAG (a package's `package.json`
+  `dependencies` lists its real workspace siblings). Leaves: `utils`, `logger` (the logging façade — was
+  `platform/logger`), `i18n` (owns the translation JSONs), `host-contract` (AI-free host PORTS: `fs`, path,
+  capabilities, `exec`/`CommandExecutionResult`), `template` (prompt/markdown templates). Then `ai-system` (fully decoupled — the first
+  publish target), `container-client` (engine clients/adapters + **owns the domain types in `Types.ts`** — the
+  old `src/env/Types.ts` god-file was dissolved; there is NO `src/env`), `container-provisioning`, `platform`.
+  **No re-exports / barrels** — single origin per type, import from the defining module.
+- `src/web-app/` — the **application** (NOT a package): React renderer — `App.tsx`, `stores/` (Zustand),
+  `domain/` (TanStack Query), `screens/`, `components/`, `hooks/`, `Native.ts`, `Environment.ts`. Consumes the
+  packages via `@/…`. `src/resources/` (assets) + loose `*.d.ts` + `src/__tests__/` also stay at `src/` root.
+- `src/packages/platform/` + `src-tauri/` + `src-wails/` — runtime ports: shared brokers/services live at
+  `platform/src/*`; `tauri/` (Rust backend) and `wails/` (Go backend) align host, command, exec, buses, tray,
+  runtime, AI. Packaging/branding metadata is centralized in `support/app-metadata.cjs`.
+- `src/packages/ai-system/` — local-first AI assistant (hexagonal: core/host/runtimes/ui): local + cloud providers, permission-gated **typed container tools → generative-UI cards**; see [`docs/architecture/ai-subsystem.md`](docs/architecture/ai-subsystem.md).
+- `vite.config.{common,renderer}.mjs` · **`support/cli/`** (the `yarn cli` build/dev/release
   tool, commander + tsx) · `Makefile`
 - **`website-src/`** — Eleventy sources for the public site (container-desktop.com),
   compiled to the **generated `website/`** (never hand-edit `website/`; see Website below).
 - **`docs/`** — architecture docs (C4 diagrams) + contributor guides;
   start at `docs/README.md`.
-- Path alias **`@/* → src/*`** (e.g. `@/web-app/...`) plus **`@/cli/* → support/cli/*`** for the
-  tooling, defined in `tsconfig.json` `paths` + explicit `resolve.alias` in the common vite config
-  (and vitest). `@/cli` must precede `@` in the vite/vitest alias order (first-hit matching).
+- Path aliases: each package is **`@/<pkg> → src/packages/<pkg>/src`**; the app/assets keep **`@/web-app → src/web-app`**,
+  **`@/resources → src/resources`**, and **`@ → src`** (fallback); **`@/cli/* → support/cli/*`** for the tooling.
+  The vite/vitest map is a **single source in `support/aliases.mjs`** (`makeAliases`), imported by
+  `vite.config.common.mjs` + the vitest configs; `tsconfig.json` `paths` mirrors it by hand. **Specific `@/<pkg>`
+  entries MUST precede the generic `@` → src** (first-hit matching). Nothing imports by package NAME
+  (`@container-desktop/*`), so dev resolves alias→TS-source with **no build step** (hot reload intact).
 
 ## Commands
 
@@ -48,8 +56,8 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
 - Install: `yarn install --frozen-lockfile` (or `make prepare`)
 - **Verify — run all before claiming done:**
   `yarn check-types` (tsc — app + `support/cli`) · `yarn lint` (Biome; `yarn lint:check` = no-write, used in CI) ·
-  `yarn test:run` (Vitest, hermetic) · `yarn build` (main+preload+renderer)
-- Keep no node/electron/@tauri leaks in shared `src/` code.
+  `yarn test:run` (Vitest, hermetic) · `yarn build` (the renderer bundle)
+- Keep no node/@tauri/@wailsio leaks in shared `src/` code.
 - Dev (hot reload): `yarn dev` · Format: `yarn format`
 - Package: `yarn package:linux_x86` (also `mac_arm`/`win_x86`/`linux_arm`);
   full release: `yarn cli release`
@@ -57,8 +65,8 @@ Use the project Node first: `nvm use` (24.16.0). Package manager is **yarn**.
   `yarn cli publish-release --run-id <actions-run-id>` dry-run,
   then add `--perform`. The Microsoft Store wrapper is optional and can be
   copied into `release/container-desktop-installer.exe` when available.
-  `CDPipeline.Tauri.yml` (the default release pipeline; `CDPipeline.Electron.yml` /
-  `CDPipeline.Wails.yml` are the alternates) can also publish after all production
+  `CDPipeline.Tauri.yml` (the default release pipeline; `CDPipeline.Wails.yml` is the
+  alternate) can also publish after all production
   targets build; use its `replace-release` input to delete/recreate the same version cleanly.
 - **Build/dev/release CLI:** `yarn cli <command>` (commander + tsx; source in `support/cli/`) — the
   home-grown replacement for the old Python `invoke` tasks: `bundle`, `bump`, `sync-manifests`
@@ -77,30 +85,25 @@ How you build here, **per change** — not an end-of-task afterthought:
   grouping/flatten, reducers, stores. No production logic without a failing test first — tests
   added after prove nothing. **Never add component tests** for React components/screens/presentational
   UI; verify those live, don't fake them in jsdom.
-- **Verify every UI change in the running app, as you go.** Keep `CONTAINER_DESKTOP_MOCK=1 yarn
-  dev` hot-reloading and drive `support/cdp.mjs` (screenshot + `EVAL=` asserts) after each
-  change — never batch to the end. The renderer is the source of truth.
+- **Verify every UI change in the running app, as you go.** Keep `yarn dev:mock` hot-reloading and
+  drive it over WebDriver (`yarn test:e2e:tauri --spec …`, or a scratch spec) after each change —
+  never batch to the end. The renderer is the source of truth.
 - **Static checks close out, they aren't the loop.** `check-types`/`lint`/`test:run`/`build`
   never render the UI; run all four (Commands) only to finish, after the app confirms behavior.
 
 ## Build / runtime model — READ BEFORE TOUCHING THE BUILD
 
-- **Source is ESM/TypeScript, but main & preload are bundled to CommonJS (`.cjs`).**
-  Electron's API is only reachable via the CJS `require` hook here; ESM output
-  makes `import { app } from "electron"` fail to link. **Do not switch main/preload
-  to ESM output.** The **renderer stays ESM**.
-- `__dirname` is native in the CJS main/preload (the common config only maps it to
-  `import.meta.dirname` for ESM output).
-- **Preload** builds to `build/<version>/preload.cjs`; the renderer blocks on
-  `window.Preloaded`, exposed via `contextBridge` in `preload.ts`
-  (see `Native.ts:waitForPreload`).
+- **One bundle: the renderer.** `yarn build` emits `build/<version>/renderer.mjs` (ESM) and nothing
+  else — the native backend is compiled by `cargo` (Tauri) or `go` (Wails), not by vite.
+- **The renderer blocks on `window.Preloaded`** (`Native.ts:waitForPreload`), which each shell's host
+  bridge sets LAST, once its window.* globals are up — `platform/{tauri,wails}/bridge.ts`.
 - **Production requires `ENVIRONMENT=production`** (e.g.
-  `cross-env ENVIRONMENT=production yarn build`): emits the single-file
-  `build/<version>/{main.cjs,preload.cjs,renderer.mjs}` layout and loads the
-  packaged renderer over `file://`. `ssh2` is bundled by rolldown `ssr.noExternal`,
-  not ncc. Without production env the build defaults to development and tries the
-  dev-server URL → blank window when packaged.
-- Build target is `es2022`; the renderer uses top-level await — keep target ≥ es2022.
+  `cross-env ENVIRONMENT=production yarn build`) and loads the packaged renderer from the native
+  side. Without production env the build defaults to development and tries the dev-server URL →
+  blank window when packaged.
+- Build target is `es2022` (the renderer uses top-level await — keep it ≥ es2022); the browser
+  baseline is **`safari 17` + `chrome 120`** (`WEBVIEW_BUILD_TARGET` in `vite.config.common.mjs`),
+  the WebKitGTK/WebView2/WKWebView floor.
 
 ## Website (container-desktop.com) — `website/` IS GENERATED, NEVER EDIT IT
 
@@ -115,56 +118,52 @@ How you build here, **per change** — not an end-of-task afterthought:
   (`website-src/_data/`); never hand-edit a version in the output. The release flow
   (`make release` → `make build-assets`) rebuilds the website so links match the tag.
 
-## Dev launcher (`support/watch.mjs`) & debugging
+## Dev launcher & debugging
 
-- Starts the Vite renderer dev server + Electron, rebuilding/respawning on change.
-- **GPU flags are gated behind `CONTAINER_DESKTOP_HEADLESS`.** Normal `yarn dev`
-  uses safe GPU defaults. Do **not** re-add `--in-process-gpu` /
-  `--disable-features=VizDisplayCompositor` to the default path — they caused a GPU
-  crash-loop that froze the machine. Use `CONTAINER_DESKTOP_HEADLESS=1` only for CI/headless.
-- **Never set `ELECTRON_RUN_AS_NODE`** when launching the app — Electron then runs
-  as plain Node, the `electron` API is missing, and startup fails.
-- The renderer is exposed over **CDP on an auto-selected port**: `yarn dev` prefers
-  `9222` but **falls back to a free port if it's taken** (e.g. a podman rootless
-  port-forward squatting 9222) and writes the live endpoint to
-  `$TMPDIR/container-desktop-cdp.json` (also logged as `CDP endpoint: …`). **Don't assume
-  9222** — read that file. Force a port with `CONTAINER_DESKTOP_REMOTE_DEBUGGING_PORT`.
-  Bare `http://localhost:3000` won't work — it needs the preload bridge.
-- **`support/cdp.mjs`** is the headless CDP driver for verification/screenshots — it
-  **attaches** to the already-running dev app (never launches/closes it), settles through
-  reloads, prints a structured snapshot (theme/engine/route + per-connection counts &
-  runtime from `resource:get-snapshot`), and writes a PNG:
-  `node support/cdp.mjs /tmp/app.png '#/screens/containers'`. Env: `RELOAD=1` re-runs the
-  renderer bootstrap (initialize → connectAll); `EVAL='<expr>'` runs an expression in the
-  page and prints its JSON result (use `EVAL="$(cat file.js)"` for multi-line — incl. async
-  IIFEs); it **auto-discovers the port** from that handshake file, and `CDP_URL` overrides
-  it. Multi-engine dev: `CONTAINER_DESKTOP_MOCK=1 yarn dev`
-  boots Podman+Docker mocks, then drive with this. (See [memory: Verify Electron app via CDP].)
-- **NEVER `xvfb-run` or spawn a second app instance to verify the UI.** When a dev app is already
-  running (it usually is), **attach** to it via `support/cdp.mjs` on the auto-discovered CDP port — that
-  is the required verification path. Do **not** use `xvfb-run`, `launchApp`, or `yarn test:ui` for local
-  UI verification; the Electron/xvfb UI suite (`yarn test:ui`) is for CI only, never for iterating here.
-- **Tauri build has NO CDP** (WebKitGTK). Drive it over **W3C WebDriver** instead — the Tauri
-  equivalent of `support/cdp.mjs`: `yarn test:e2e:tauri` runs `webdriver/wdio.conf.js`
-  (WebdriverIO → `tauri-driver` → `WebKitWebDriver` → the app). Prereqs: `tauri-driver`
-  (`~/.cargo/bin`) + `webkitgtk-webdriver` (`/usr/bin/WebKitWebDriver`). The harness sets
-  `CONTAINER_DESKTOP_E2E=1`, which gates single-instance OFF (lib.rs) so it runs standalone
-  next to your dev app. Specs use `browser.execute`/`saveScreenshot`. **Caveat:** the debug
-  binary loads `devUrl` :3000 (needs a running vite / `yarn tauri:serve`); point at a
-  self-contained release binary via `CONTAINER_DESKTOP_E2E_APP`. **Paint caveat:** WebKitGTK
-  parks its compositor when idle, so a WebDriver screenshot can force a paint the live view
-  hadn't done — read the DOM to confirm data, use eyes/screenshots for paint.
+- **`yarn dev`** runs Tauri (`yarn dev:mock` adds the deterministic mock backend); `yarn wails:dev`
+  / `yarn wails:dev:mcp` run the Go shell. Both serve the SAME Vite renderer on :3000.
+- **There is no CDP** — the renderer runs in a native webview, not Chromium. Drive it over **W3C
+  WebDriver**: `yarn test:e2e:tauri` runs `webdriver/wdio.conf.js` (WebdriverIO → `tauri-driver` →
+  `WebKitWebDriver` → the app). Prereqs: `tauri-driver` (`~/.cargo/bin`) + `webkitgtk-webdriver`
+  (`/usr/bin/WebKitWebDriver`). The harness sets `CONTAINER_DESKTOP_E2E=1`, which gates
+  single-instance OFF (lib.rs) so it runs standalone next to your dev app. Specs use
+  `browser.execute`/`saveScreenshot`. **Caveat:** the debug binary loads `devUrl` :3000 (needs a
+  running vite / `yarn tauri:serve`); point at a self-contained release binary via
+  `CONTAINER_DESKTOP_E2E_APP`. **Paint caveat:** WebKitGTK parks its compositor when idle, so a
+  WebDriver screenshot can force a paint the live view hadn't done — read the DOM to confirm data,
+  use eyes/screenshots for paint.
+- **Per-scenario UI specs:** `test:e2e:tauri:mock:podman` / `:mock:docker` (inventory counts),
+  `test:e2e:tauri:swarm` / `:swarm:none` (swarm tabs vs the Initialize empty state).
+- **Real-engine specs** need a NON-mock app (`CONTAINER_DESKTOP_MOCK=`) and a configured target from
+  `src/__tests__/live/targets.env`: `test:e2e:tauri:connections` (the connectivity matrix),
+  `test:e2e:tauri:execution-targets` (off-host worker execution), `test:e2e:tauri:swarm:live`
+  (real Docker Swarm, against `support/swarm-sandbox.sh up` — NEVER your primary daemon). They
+  drive `window.__cdLiveProbe` / `window.__cdExecutionMatrixProbe`, DEV-gated seams that run the
+  SHIPPED ports inside the webview, so one probe covers both backends.
+- **The Wails shell has its own driver**, `support/wails-mcp.mjs` (MCP + X11 grab).
+- **NEVER GUESS ROUTES.** Every hash route you navigate to (or assert on) MUST come from the source —
+  a screen's `Screen.Route.Path` / its `Navigation.ts` constant (e.g. `BUILD_ROUTE`), a real `#/...`
+  href in the rendered DOM, or an id returned by the mock snapshot — never an invented path or a
+  fabricated entity id (`.../mock-c-1/inspect` is a guess, not a route). Guessing sends you to a dead
+  route, the screen never mounts, and you misread that as a broken feature. Grep the route first, then drive it.
+- **NEVER `xvfb-run` or spawn a second app instance to verify the UI.** Drive the running dev app
+  over WebDriver (above); that is the required verification path.
 - **Website capture (screenshots) runs on either shell.** `support/cli/media/screenshots.ts` drives a
-  `CaptureDriver` port with two adapters — Playwright/CDP (Electron) and WebdriverIO/WebDriver (Tauri,
-  reusing the `test:e2e:tauri` stack). Pick via **`CONTAINER_DESKTOP_CAPTURE_BACKEND=electron|tauri`**
-  (**default `tauri`**) or `--backend`; `yarn screenshots:electron` is the comparison shortcut. Both
-  backends write the same published `website-src/static/**` images — Tauri (WebKitGTK/WebDriver) is the
-  default producer, Electron (Playwright/CDP) the like-for-like comparison. The website **demo** is a
+  `CaptureDriver` port with two adapters — WebdriverIO/WebDriver (Tauri, reusing the `test:e2e:tauri`
+  stack) and MCP + X11 grab (Wails). Pick via **`CONTAINER_DESKTOP_CAPTURE_BACKEND=tauri|wails`**
+  (**default `tauri`**) or `--backend`. Both backends write the same published
+  `website-src/static/**` images — Tauri is the default producer, Wails the comparison. The website **demo** is a
   screenshot slideshow: `yarn screenshots` also writes the per-engine demo manifests
   (`demoManifest.ts` expands `demoScenario.json` → `/replays/<engine>.json`, paged by `demo-replay.js`).
   Tauri needs `CONTAINER_DESKTOP_MOCK=1 yarn tauri:serve` for the debug binary, or a release binary via
   `CONTAINER_DESKTOP_E2E_APP`.
-- Kill switch: `pkill -f support/watch.mjs; pkill -f dist/electron`. **Footgun:** never
+- **AI e2e flows (`support/e2e/ai/flows.mjs`) share ONE app session — isolate per flow or it's cross-flow
+  state, not an app bug.** An assistant turn from a prior flow may still be STREAMING when the next flow submits;
+  the interactive engine treats a submit into an active session as STEERING (it interrupts that turn), so a
+  gated-tool message can land in the previous chat and its approval card auto-resolves. Assistant flows must
+  `newAssistantChat()` (wait for idle — no `.AIComposerStop` — → New chat → wait transcript empty) before
+  submitting. A flow that passes in isolation but fails in the full suite is almost always this.
+- Kill switch: kill the `tauri dev` / `wails3 dev` process by PID. **Footgun:** never
   run `pkill -f <pattern>` from a one-liner whose own command text contains `<pattern>` —
   it matches and kills its own shell (silent exit 144). Kill by numeric PID instead.
 
@@ -200,8 +199,25 @@ How you build here, **per change** — not an end-of-task afterthought:
   (`support/cli/**/*.test.ts`, included in `yarn test:run`). CI
   gate: `.github/workflows/CIPipeline.yml`. Details: [`docs/testing.md`](docs/testing.md).
 - **UI changes:** verify live in the running app, not off static checks — see Development workflow.
-- **Logging:** use `@/platform/logger` (`createLogger`), never raw `console.*` (except the façade
+- **Logging:** use `@/logger` (`createLogger`), never raw `console.*` (except the façade
   sink + the pre-React fallback in `index.tsx`). Verbosity is controlled solely by log level.
+- **AI prompts & markdown live in templates, NEVER inlined.** Every model-facing prompt (system/agent,
+  generate, per-screen focus, …) AND any static markdown/prose block (incl. demo/example transcripts) is a
+  `.md` file under `src/resources/prompts/`, rendered via `renderPrompt` (nunjucks **browser** build
+  → node-free) or imported `?raw`. NEVER inline prompt/markdown prose in TS/TSX — add a `.md` there and import it.
+- **AI dependency direction — a review rule, NOT a suite test.** `@/ai-system/core/` stays dependency-free: no
+  imports of `@/platform`, `@/i18n`, `@/web-app`/`@/components`, the AI SDK (`ai` / `@ai-sdk/*`),
+  `@open-multi-agent/core`, `xstate`, `react`, `node:*`, `@tauri`/`@wailsio`, or sibling
+  `@/ai-system/{adapters,runtime,host,ui}`. The package's layers are `core/` (pure protocol + policy) →
+  `adapters/` (impure infra) → `runtime/` (the assistant runtime: agent loops, OMA, toolsets), with `host/`
+  composing `core/` + `adapters/` only. **`core/` and `host/` MUST NOT import `runtime/`** — the engine factories
+  are injected into `createAISystem` precisely so `@open-multi-agent/core` never enters their graph. A separate
+  package used to enforce that; since the merge nothing does but review. No barrels / `index.ts` aggregators /
+  pass-through re-exports anywhere in `@/ai-system` — import from the defining module.
+  This is common sense; hold the line in review, don't encode it as a Vitest test.
+- **Shell port-module parity is a review rule, not a test.** Keep the Tauri / Wails port modules in
+  `src/platform/<shell>/` aligned (a capability added to one shell usually needs its peers) — verify it in review;
+  don't assert directory-listing parity in a Vitest test.
 
 ## UI conventions (renderer · Blueprint)
 
@@ -248,3 +264,15 @@ The user is a hands-on designer and corrects deviations fast — match these up 
 - Build/release automation must use lockfile-respecting installs
   (`yarn install --frozen-lockfile`) and pinned tool/action versions. Do not use
   `@latest` or floating GitHub Actions tags.
+
+## Code Review Standards
+
+After completing any implementation, review the code for:
+
+- Functions longer than 50 lines (likely doing too much) that are not react JSX
+- Logic duplicated more than twice (extract to utility)
+- Any `any` type usage in TypeScript (replace with real types)
+- Components with more than 3 props that could be grouped into an object
+- Missing error handling on async operations
+
+Run /simplify before presenting code to the user.

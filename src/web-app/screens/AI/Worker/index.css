@@ -1,0 +1,422 @@
+/* The worker editor drawer. Panels follow the app idiom — a surface block on the screen background with a
+   hairline border — rather than a Blueprint Card. */
+
+[data-form="ai.worker.edit"] .WorkerEditorPanel {
+  padding: 10px 12px;
+  margin-bottom: 3px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.WorkerEditorDrawer .AppDataForm {
+  margin-top: 3px;
+}
+[data-form="ai.worker.edit"] .WorkerEditorPanel > h5 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-muted);
+}
+[data-form="ai.worker.edit"] .WorkerEditorPanel .bp6-form-group:last-child {
+  margin-bottom: 0;
+}
+[data-form="ai.worker.edit"] .workerSystemPrompt {
+  font-family: var(--monospace-font);
+  font-size: 11px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* The model picker trigger is a bare minimal button; inside a form it needs a field-shaped container so it
+   does not read as loose chrome. Inheriting greys it out rather than hiding it, so the worker's own model
+   stays visible while the run's model is in force. */
+.WorkerEditorPickerRow {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 3px 5px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+.WorkerEditorPickerRow[data-disabled="yes"] {
+  opacity: 0.5;
+}
+
+.WorkerEditorPolicy {
+  margin-bottom: 10px;
+}
+.WorkerEditorNote {
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+.WorkerEditorPanel .WorkerEditorNote:last-child {
+  margin-bottom: 0;
+}
+
+.WorkerEditorToolGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.WorkerEditorToolGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+.WorkerEditorToolGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--app-border);
+}
+.WorkerEditorToolGroupTitle {
+  font-size: 11px;
+  color: var(--app-text);
+}
+.WorkerEditorToolGroup .bp6-control.WorkerEditorTool {
+  margin-bottom: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.WorkerEditorToolName {
+  font-family: var(--monospace-font);
+  font-size: 11px;
+}
+.WorkerEditorToolGated {
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--app-intent-warning-rest) 20%, transparent);
+  color: var(--app-intent-warning-text);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.WorkerCredential {
+  position: relative;
+  overflow: visible;
+  container-type: inline-size;
+  margin-bottom: 3px;
+  background:
+    linear-gradient(112deg, color-mix(in srgb, var(--app-surface-strong) 34%, transparent), transparent 42%),
+    var(--app-surface);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 34%, var(--app-border));
+  border-radius: 10px;
+}
+
+.WorkerCredential::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  border-radius: 10px 0 0 10px;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--app-accent-fg) 65%, var(--app-accent)) 0 3px,
+    var(--app-accent) 3px 7px
+  );
+  content: "";
+}
+
+.WorkerCredential::after {
+  position: absolute;
+  right: 14px;
+  bottom: 38px;
+  width: 54px;
+  height: 54px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 8%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--app-accent) 3%, transparent),
+    0 0 0 12px color-mix(in srgb, var(--app-accent) 3%, transparent);
+  content: "";
+  pointer-events: none;
+}
+
+.WorkerDrawerCredentialTitle {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+}
+
+.WorkerDrawerCredentialTitle > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.WorkerDrawerCredentialKind {
+  flex: none;
+  padding-left: 10px;
+  border-left: 1px solid var(--app-border);
+  color: var(--app-accent-text);
+  font-family: var(--monospace-font);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.WorkerDrawerCredentialTitle .WorkerCredentialMark {
+  flex: none;
+  margin-left: auto;
+}
+
+.WorkerCredentialMark {
+  display: flex;
+  height: 11px;
+  align-items: end;
+  gap: 2px;
+}
+
+.WorkerCredentialMark i {
+  display: block;
+  width: 2px;
+  height: 6px;
+  background: color-mix(in srgb, var(--app-accent) 54%, transparent);
+}
+
+.WorkerCredentialMark i:nth-child(2),
+.WorkerCredentialMark i:nth-child(4) {
+  height: 11px;
+}
+
+.WorkerCredentialBody {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px 14px 11px;
+}
+
+.WorkerCredentialPortrait {
+  position: relative;
+  display: flex;
+  min-height: 96px;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--app-bg) 72%, var(--app-surface-strong));
+  border: 1px solid var(--app-border);
+  border-radius: 5px;
+}
+
+.WorkerAvatarChangeButton {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.WorkerAvatarChangeButton .WorkerAvatar {
+  width: 76px !important;
+  height: 76px !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-surface) 92%, transparent);
+}
+
+.WorkerAvatarEditCue {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  background: var(--app-accent);
+  border: 2px solid var(--app-surface);
+  border-radius: 50%;
+  color: var(--app-accent-fg);
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease;
+}
+
+.WorkerAvatarChangeButton:hover:not(:disabled) .WorkerAvatarEditCue {
+  transform: scale(1.08);
+  background: var(--app-accent-hover);
+}
+
+.WorkerAvatarChangeButton:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 4px;
+}
+
+.WorkerAvatarChangeButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.WorkerCredentialPortrait::before,
+.WorkerCredentialPortrait::after {
+  position: absolute;
+  left: 7px;
+  width: 12px;
+  height: 12px;
+  border-left: 1px solid color-mix(in srgb, var(--app-accent) 52%, transparent);
+  content: "";
+  pointer-events: none;
+}
+
+.WorkerCredentialPortrait::before {
+  top: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--app-accent) 52%, transparent);
+}
+
+.WorkerCredentialPortrait::after {
+  bottom: 7px;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-accent) 52%, transparent);
+}
+
+.WorkerCredentialFields {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+[data-form="ai.worker.edit"] .WorkerCredentialField.bp6-form-group {
+  min-width: 0;
+  margin: 0;
+}
+
+[data-form="ai.worker.edit"] .WorkerCredentialField .bp6-label {
+  margin-bottom: 3px;
+  color: var(--app-text-muted);
+  font-family: var(--monospace-font);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+[data-form="ai.worker.edit"] .WorkerCredentialField .bp6-text-muted {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+
+body .WorkerCredentialField .bp6-input {
+  height: 32px;
+  padding: 0 2px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-text-muted) 62%, transparent);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--app-text);
+  font-size: 14px;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+body .WorkerIdentityName .bp6-input {
+  font-family: "Montserrat", sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+body .WorkerCredentialField .bp6-input:hover:not(:disabled) {
+  border-bottom-color: var(--app-text-muted);
+}
+
+body .WorkerCredentialField .bp6-input:focus {
+  background: color-mix(in srgb, var(--app-accent) 5%, transparent);
+  border-bottom-color: var(--app-accent);
+  box-shadow: 0 1px 0 var(--app-accent);
+  outline: none;
+}
+
+body .WorkerCredentialField .bp6-input-group.bp6-intent-danger .bp6-input {
+  border-bottom-color: var(--app-intent-danger-rest);
+}
+
+.WorkerCredentialFooter {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 14px;
+  background: color-mix(in srgb, var(--app-bg) 34%, transparent);
+  border-top: 1px solid var(--app-border);
+  border-radius: 0 0 10px 10px;
+  color: var(--app-text-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.WorkerCredentialFooter .bp6-icon {
+  flex: none;
+  color: var(--app-accent-text);
+}
+
+.WorkerAvatarPicker {
+  width: 400px;
+  padding: 12px;
+}
+
+/* Embedded in a popover: cap the grid height so the whole popover never grows past the drawer, scrolling the
+   faces instead. The manage-drawer host leaves the grid uncapped (full-height). */
+.WorkerAvatarPicker .AvatarLibraryGrid {
+  max-height: 244px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.WorkerAvatarPickerFoot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+
+@container (max-width: 480px) {
+  .WorkerCredentialBody {
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .WorkerCredentialPortrait {
+    min-height: 82px;
+  }
+
+  .WorkerAvatarChangeButton {
+    width: 64px;
+    height: 64px;
+  }
+
+  .WorkerAvatarChangeButton .WorkerAvatar {
+    width: 64px !important;
+    height: 64px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .WorkerAvatarEditCue,
+  .WorkerCredentialField .bp6-input {
+    transition: none;
+  }
+}

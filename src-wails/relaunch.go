@@ -8,7 +8,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Process relaunch — the Wails analog of Electron's app.relaunch() and Tauri's tauri-plugin-process relaunch
+// Process relaunch — the Wails analog of Tauri's tauri-plugin-process relaunch
 // (a true process restart), which Wails v3 lacks (no App.Restart()). The renderer's shared recovery flow calls
 // relaunch() then exit(0), and the application.relaunch app-control channel calls relaunch(); both map to
 // ShellService.Relaunch → requestRelaunch here.
@@ -17,7 +17,7 @@ import (
 // forward-and-exit instead of taking over), we spawn the successor only AFTER this instance has fully stopped:
 // requestRelaunch just records intent + quits, and main() spawns the successor once app.Run() returns. The
 // successor is tagged with our PID and blocks at startup (awaitPredecessorExit) until we are gone — the same
-// "restart on exit" ordering Electron gives for free.
+// "restart on exit" ordering a supervisor would give for free.
 
 const relaunchWaitEnv = "CONTAINER_DESKTOP_RELAUNCH_WAIT"
 

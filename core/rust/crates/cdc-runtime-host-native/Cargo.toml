@@ -1,0 +1,58 @@
+[package]
+name = "cdc-runtime-host-native"
+version = "0.1.0"
+description = "Native host adapters for the connection runtime: processes, filesystem, ~/.ssh/config."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# The live suites spawn real processes and contact real hosts, so they are opt-in and never part of a
+# hermetic run. Neither is reproducible on a machine without the target.
+live-adapters = []
+live-macos = []
+live-smoke = []
+live-ssh = []
+# The swarm adapter against a real Docker Swarm. Needs `support/swarm-sandbox.sh up` — a throwaway
+# `docker:dind`, because this suite runs `swarm init`/`swarm leave` and would rewrite a real cluster.
+live-swarm = []
+# The stdio bridge into a WSL distribution. Windows-only and needs a distribution
+# with an engine in it, so it is opt-in like the other two — see `tests/live_wsl.rs`.
+live-wsl = []
+
+[dependencies]
+cdc-runtime.workspace = true
+async-trait.workspace = true
+fastrand.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
+# The native half of tokio. The runtime itself takes only `sync`/`macros`/`time`, which exist on every
+# target; `process`, `fs`, `io-util` and a multi-thread scheduler are what makes this crate native.
+# `net` is the engine API's, and for the UNIX-DOMAIN half of it only — a local socket, which is the
+# reason `Http` is a host capability and not a runtime one. No TCP is dialled anywhere in this crate.
+tokio = { workspace = true, features = ["process", "fs", "io-util", "net", "rt-multi-thread"] }
+tracing.workspace = true
+fs4.workspace = true
+tempfile.workspace = true
+ssh2-config.workspace = true
+
+# Windows has no process group to signal, so pulling the crate in there would be a dependency for code
+# that never compiles.
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+
+[dev-dependencies]
+async-trait.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+# The secrets test asserts that no argv reaches a log line, which needs a subscriber to capture.
+tracing-subscriber = "=0.3.23"
+
+[lints]
+workspace = true
+
+[lib]
+# Tests live in `tests/`, never in a `#[cfg(test)] mod tests`.
+test = false

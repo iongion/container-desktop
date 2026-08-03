@@ -135,7 +135,6 @@ dist
 src/__tests__/live/targets.env
 
 # Extras
-.electron-vendors.cache.json
 
 # Agent local overrides (personal, not shared)
 .claude/settings.local.json
@@ -151,3 +150,6 @@ src/__tests__/live/targets.env
 
 # WebDriver e2e screenshots/logs (generated)
 webdriver/artifacts/
+
+# e2e-isolated app data (never the release app's dir)
+webdriver/.e2e-user-data/

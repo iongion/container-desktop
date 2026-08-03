@@ -16,7 +16,7 @@ const pkg = {
 };
 
 describe("Tauri portable package parity", () => {
-  it("plans the Windows portable zip using Electron's public artifact name", () => {
+  it("plans the Windows portable zip using the public artifact name", () => {
     const plan = portable.createPortablePackagePlan({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -83,7 +83,7 @@ describe("Tauri portable package parity", () => {
     });
   });
 
-  it("plans Linux portable tarballs with Electron's arch tokens", () => {
+  it("plans Linux portable tarballs with the published arch tokens", () => {
     const x64 = portable.createPortablePackagePlan({
       projectRoot: "/repo",
       releaseDir: "/repo/release",

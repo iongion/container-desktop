@@ -15,6 +15,7 @@ import {
   type DrawerProps,
   Icon,
   type IconName,
+  type Intent,
   type MaybeElement,
 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
@@ -38,6 +39,7 @@ export interface AppDrawerProps {
   submitDisabled?: boolean;
   submitIcon?: IconName | MaybeElement;
   submitTitle?: string;
+  submitIntent?: Intent;
   size?: DrawerProps["size"];
   position?: DrawerProps["position"];
   hasBackdrop?: boolean;
@@ -56,6 +58,7 @@ export const AppDrawer: React.FC<AppDrawerProps> = ({
   submitDisabled,
   submitIcon,
   submitTitle,
+  submitIntent = "success",
   size,
   position,
   hasBackdrop = false,
@@ -86,7 +89,7 @@ export const AppDrawer: React.FC<AppDrawerProps> = ({
               type="submit"
               form={formId}
               icon={submitIcon ?? IconNames.FLOPPY_DISK}
-              intent="success"
+              intent={submitIntent}
               disabled={submitting || submitDisabled}
               loading={submitting}
               title={submitTitle ?? t("Save")}

@@ -13,6 +13,7 @@ interface ScreenProps extends AppScreenProps {}
 
 export const ID = "settings-settings";
 export const View = "user-settings";
+export const Path = `/screens/settings/${View}`;
 export const Title = i18n.t("Settings");
 
 export const Screen: AppScreen<ScreenProps> = () => {
@@ -26,7 +27,7 @@ export const Screen: AppScreen<ScreenProps> = () => {
 Screen.ID = ID;
 Screen.Title = Title;
 Screen.Route = {
-  Path: `/screens/settings/${View}`,
+  Path,
 };
 Screen.Metadata = {
   LeftIcon: IconNames.COG,

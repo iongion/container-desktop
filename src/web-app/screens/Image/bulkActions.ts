@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ImagesAdapter } from "@/container-client/adapters/images";
-import type { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/container-client/types/image";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";

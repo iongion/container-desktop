@@ -1,7 +1,8 @@
 import prettyBytes from "pretty-bytes";
 import { useTranslation } from "react-i18next";
 
-import type { PodmanMachine, SystemDf } from "@/env/Types";
+import type { PodmanMachine } from "@/container-client/types/machine";
+import type { SystemDf } from "@/container-client/types/system";
 import { buildMachineSummary } from "@/web-app/screens/Machine/inspectSummary";
 import { useMachinesList } from "@/web-app/screens/Machine/queries";
 

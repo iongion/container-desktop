@@ -2,7 +2,7 @@ import { H5 } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useEffect, useState } from "react";
 import { resolveTransport } from "@/container-client/reachability/model";
-import { OperatingSystem } from "@/env/Types";
+import { OperatingSystem } from "@/container-client/types/os";
 import i18n, { t } from "@/i18n";
 import { isEmpty } from "@/utils";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
@@ -46,7 +46,7 @@ const codeExample = `// This code example demonstrates how to connect to the con
 import axios from "axios"; // npm install axios
 import httpAdapter from "axios/lib/adapters/http.js";
 import http from "node:http";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 
 const logger = createLogger("web.connections");
 

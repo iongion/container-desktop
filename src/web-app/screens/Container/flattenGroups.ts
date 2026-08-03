@@ -3,7 +3,7 @@
 // first member of a multi-item group, then each member (omitted when the group is collapsed). This flat
 // list is what the windowing layer (useWindowedRows) measures and slices. Pure → unit-tested.
 
-import type { Container } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
 import type { MergedResource } from "@/web-app/hooks/useMergedResources";
 import type { ContainerGroup } from "@/web-app/Types";
 

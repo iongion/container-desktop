@@ -1,6 +1,6 @@
 // Decide whether xterm should use its WebGL addon or fall back to the built-in DOM renderer.
 //
-// The WebGL addon is a win ONLY on a hardware-accelerated GL stack (Electron/Chromium on a real GPU): it
+// The WebGL addon is a win ONLY on a hardware-accelerated GL stack (Chromium/WebView2 on a real GPU): it
 // offloads glyph rendering to the GPU. Under WebKitGTK (the Tauri webview) WebGL is frequently SOFTWARE-
 // rendered (Mesa llvmpipe / SwiftShader). There the addon is a net loss twice over: creating the GL context +
 // glyph atlas stalls the main thread at terminal mount (the "UI blocks when I open Logs" jank), and per-frame
@@ -9,7 +9,7 @@
 //
 // So gate on the ACTUAL renderer, not the runtime: enable WebGL only when a probe context reports a non-software
 // UNMASKED_RENDERER. Anything else — no context, masked renderer string, or a software renderer — falls back to
-// DOM. Capability-based ⇒ correct on every engine×runtime with no Electron regression, and WebGL stays OFF
+// DOM. Capability-based ⇒ correct on every engine×runtime, and WebGL stays OFF
 // precisely where it hurts. Falling back is always safe: the DOM renderer renders identical output.
 
 const SOFTWARE_RENDERER_MARKERS = [
@@ -69,7 +69,7 @@ function acquireGlProbe(): RendererProbe | null {
 // WebKitGTK (the Tauri webview) mishandles xterm's WebGL renderer two ways: a heavy synchronous stall at mount
 // (the Logs-nav jank), and — worse — its layered GL canvases don't repaint on programmatic writes until an OS
 // event, so streamed rows never appear on their own. Its DOM renderer has neither problem and is more than
-// enough for terminal/log volumes. So never use WebGL under Tauri; only Chromium/Electron (a hardware win) does.
+// enough for terminal/log volumes. So never use WebGL under WebKitGTK; only a Chromium-family webview benefits.
 function isTauriWebview(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -78,7 +78,7 @@ function isTauriWebview(): boolean {
   if (w.__TAURI_INTERNALS__ || w.__TAURI__) {
     return true;
   }
-  // Fallback: WebKitGTK/Safari carry AppleWebKit but not the Chrome UA token that Chromium/Electron do.
+  // Fallback: WebKitGTK/Safari carry AppleWebKit but not the Chrome UA token a Chromium-family webview does.
   return (
     typeof navigator !== "undefined" &&
     /\bAppleWebKit\//.test(navigator.userAgent) &&

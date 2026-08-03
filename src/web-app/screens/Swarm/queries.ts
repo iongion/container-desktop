@@ -14,7 +14,7 @@ import type {
   SwarmInitOptions,
   SwarmLeaveOptions,
   SwarmSecretCreateOptions,
-} from "@/env/Types";
+} from "@/container-client/types/swarm";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { liveQueryOptions } from "@/web-app/domain/queryClient";
 

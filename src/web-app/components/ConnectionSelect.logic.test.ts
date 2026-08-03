@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { type Connection, ContainerEngine } from "@/env/Types";
+import type { Connection } from "@/container-client/types/connection";
+import { ContainerEngine } from "@/container-client/types/engine";
 
 import {
   connectedConnections,

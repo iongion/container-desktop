@@ -9,7 +9,7 @@ import {
   type SecuritySignatureResult,
   summarizeSbomLicenses,
 } from "@/container-client/application/security";
-import type { SecurityReportResultGroup, SecurityVulnerability } from "@/env/Types";
+import type { SecurityReportResultGroup, SecurityVulnerability } from "@/container-client/types/security";
 import i18n from "@/i18n";
 import { CopyToClipboardInput } from "@/web-app/components/CopyToClipboardInput";
 import { ResourceSectionRail } from "@/web-app/components/ResourceSectionRail";

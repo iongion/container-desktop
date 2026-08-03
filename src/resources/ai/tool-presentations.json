@@ -1,0 +1,82 @@
+[
+  { "name": "listConnections", "titleKey": "List connections" },
+  { "name": "listContainers", "titleKey": "List containers" },
+  { "name": "inspectContainer", "titleKey": "Inspect container {{id}}", "argument": "id" },
+  { "name": "getContainerLogs", "titleKey": "Logs for {{id}}", "argument": "id" },
+  { "name": "getContainerStats", "titleKey": "Stats for {{id}}", "argument": "id" },
+  { "name": "listImages", "titleKey": "List images" },
+  { "name": "inspectImage", "titleKey": "Inspect image {{id}}", "argument": "id" },
+  { "name": "listNetworks", "titleKey": "List networks" },
+  { "name": "inspectNetwork", "titleKey": "Inspect network {{id}}", "argument": "id" },
+  { "name": "listVolumes", "titleKey": "List volumes" },
+  { "name": "inspectVolume", "titleKey": "Inspect volume {{id}}", "argument": "id" },
+  {
+    "name": "startContainer",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Start container",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "stopContainer",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Stop container",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "restartContainer",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Restart container",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "pauseContainer",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Pause container",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "unpauseContainer",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Unpause container",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "removeContainer",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Remove container",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "removeImage",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Remove image",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "removeNetwork",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Remove network",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "removeVolume",
+    "titleKey": "{{label}} {{id}}",
+    "labelKey": "Remove volume",
+    "argument": "id",
+    "showConnection": true
+  },
+  {
+    "name": "pullImage",
+    "titleKey": "Pull {{reference}}",
+    "argument": "reference",
+    "showConnection": true
+  }
+]

@@ -4,9 +4,10 @@ import { type ItemPredicate, type ItemRenderer, Select } from "@blueprintjs/sele
 import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ContainerEngine, type EngineThemePreference } from "@/env/Types";
+import { ContainerEngine } from "@/container-client/types/engine";
+import type { EngineThemePreference } from "@/container-client/types/os";
 import { LANGUAGE_OPTIONS, type LanguagePreference, normalizeLanguagePreference } from "@/i18n";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { useSetLocale } from "@/web-app/App.i18n";
 import { useAppStore } from "@/web-app/stores/appStore";
 

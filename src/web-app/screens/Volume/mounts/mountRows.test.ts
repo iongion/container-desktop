@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { Container, Volume } from "@/env/Types";
+import type { Container } from "@/container-client/types/container";
+import type { Volume } from "@/container-client/types/volume";
 import type { MergedResource } from "@/web-app/hooks/useMergedResources";
 
 import { buildMountGroups, type MountTreeItem, normalizeContainerMounts } from "./mountRows";

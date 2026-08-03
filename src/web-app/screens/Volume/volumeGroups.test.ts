@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Volume } from "@/env/Types";
+import type { Volume } from "@/container-client/types/volume";
 import type { MergedResource } from "@/web-app/hooks/useMergedResources";
 
 import { groupVolumesByConnection } from "./volumeGroups";

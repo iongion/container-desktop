@@ -1,0 +1,42 @@
+[package]
+name = "cdc-runtime"
+version = "0.1.0"
+description = "The container-desktop connection runtime: host-agnostic, and portable to wasm."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# No host is ever a feature: this crate has none, and a consumer picks one by depending on a host
+# crate.
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+percent-encoding.workspace = true
+base64.workspace = true
+# `sync`, `macros`, `time`, `rt` — the tokio features that exist on EVERY target, wasm32 included, so
+# `drive` can select over a step and an input anywhere. `process`, `fs`, `net` and the multi-thread
+# scheduler are a host's business and are not reachable from here.
+tokio = { workspace = true }
+
+[dev-dependencies]
+async-trait.workspace = true
+tempfile.workspace = true
+# `test-util` is what makes the drive loop's cancellation testable: `start_paused` gives the tests a
+# clock they control, so "an input arrived while a step was in flight" is a fact rather than a race, and
+# a 30-second back-off costs no real time. A dev-dependency only — it never reaches a build of the lib,
+# which is what the wasm gate checks.
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time", "test-util"] }
+
+[lints]
+workspace = true
+
+[lib]
+# Tests live in `tests/`, never in a `#[cfg(test)] mod tests`, so this crate has no unit tests and the
+# unit-test binary is always empty. It is still an instrumented copy of the whole crate, which
+# `llvm-cov` then counts as uncovered alongside the copy the integration tests exercise.
+test = false

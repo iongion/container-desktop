@@ -15,10 +15,10 @@
 //     Presentation attributes are the lowest-priority paint source, so app CSS overrides them when loaded,
 //     while at boot — before any app CSS — they are what render. One markup, correct in both worlds.
 
-import i18n from "../../i18n";
+import i18n from "../../packages/i18n/src/index";
 
 export interface WindowControl {
-  // IPC channel sent on window.MessageBus — handled by registerAppControlIpc in the main process.
+  // Channel sent on window.MessageBus — handled by registerAppControlIpc in the host bridge.
   action: "window.minimize" | "window.maximize" | "window.close";
   label: string;
   // @mdi/js glyph path (mdiWindowMinimize / mdiWindowMaximize / mdiWindowClose), inlined to stay dependency-free.
@@ -139,8 +139,8 @@ export const BOOT_CHROME_BODY = `
       </div>
     </div>`;
 
-// Boot script — keeps the frameless window controllable before <AppHeader> mounts. Reaches the SAME main IPC
-// channels the React header uses (preload exposes window.MessageBus before page scripts run). macOS gets the
+// Boot script — keeps the frameless window controllable before <AppHeader> mounts. Reaches the SAME MessageBus
+// channels the React header uses (the host bridge installs window.MessageBus first). macOS gets the
 // native traffic lights, so the custom set is hidden there. React removes #root — and this — once it mounts.
 export const BOOT_CHROME_SCRIPT = `(function () {
       try {

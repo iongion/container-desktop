@@ -380,12 +380,40 @@ body.bp6-dark .AppDataTable[data-windowed="true"] tbody tr[data-striped="true"] 
   color: var(--app-accent);
 }
 
+.AppErrorBoundaryOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--app-bg);
+}
+
 .AppErrorBoundaryCallout {
   text-align: center;
   padding: 15px !important;
   margin: 0;
   min-width: 380px;
   border-radius: 15px;
+}
+
+/* Global shortcuts dialog (Blueprint HotkeysDialog) follows the app chrome — neutral surfaces + accent-free
+   keys — rather than any feature palette, so it matches the current theme on every engine. */
+.bp6-hotkey-dialog {
+  background-color: var(--app-surface) !important;
+  color: var(--app-text);
+}
+.bp6-hotkey-dialog .bp6-heading,
+.bp6-hotkey-dialog .bp6-hotkey-label {
+  color: var(--app-text) !important;
+}
+.bp6-hotkey-dialog .bp6-key-combo .bp6-key {
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  box-shadow: none;
 }
 
 .bp6-disabled .AppFormFieldMeasureUnit {

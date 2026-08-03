@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { Connector } from "@/env/Types";
+import type { Connector } from "@/container-client/types/connection";
 import { resolveAvailabilityConnector } from "./AppSidebar.logic";
 
 const dockerRuntime = (id: string): ConnectionRuntimeInfo =>

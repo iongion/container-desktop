@@ -309,7 +309,7 @@ function parseArgs(argv) {
   return args;
 }
 
-// Load .env exactly like electron-builder-config.cjs so the Microsoft Store publisher identity
+// Load .env the same way the other packaging helpers do so the Microsoft Store publisher identity
 // (PUBLISHER / PUBLISHER_DISPLAY_NAME) is honored; without it the package family name is derived from
 // pkg.author and the Store rejects the upload ("Invalid package family name / publisher name"). Invoked
 // only from the CLI entrypoint so importing this module for unit tests never pulls a developer's local

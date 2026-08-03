@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Registry, RegistryTlsState } from "@/env/Types";
+import type { Registry, RegistryTlsState } from "@/container-client/types/registry";
 import {
   isPrivateRegistry,
   type RegistryRow,

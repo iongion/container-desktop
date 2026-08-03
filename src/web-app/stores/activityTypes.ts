@@ -5,7 +5,7 @@
 //   - "activity" tab      → kind ∈ {"api","cli","system"}
 //
 // Everything is normalized to primitives (date is epoch ms, never a Date) so that
-// CLI entries arriving over the contextBridge stay structured-cloneable and the whole
+// CLI entries arriving from the activity bus stay cheap to clone and the whole
 // list sorts cheaply by `date`.
 
 export type ActivityKind = "notification" | "api" | "cli" | "system";
@@ -69,9 +69,9 @@ export interface SystemEntry extends ActivityEntryBase {
 
 export type ActivityEntry = NotificationEntry | ApiEntry | CliEntry | SystemEntry;
 
-// Plain payload pushed across the contextBridge by the preload CLI wrapper. Kept loose and
-// self-contained (no imports) so the preload bundle never pulls in web-app code; the store
-// normalizes it into a CliEntry. Two phases share one `guid`: "pending" then "settled".
+// Plain payload pushed by the CLI activity wrapper. Kept loose and self-contained (no imports) so the
+// platform package never pulls in web-app code; the store normalizes it into a CliEntry. Two phases share
+// one `guid`: "pending" then "settled".
 export interface CliBusPayload {
   guid: string;
   date: number;

@@ -2,7 +2,7 @@
 // Kept separate from CodeEditorImpl so it is unit-testable without importing the heavy monaco bundle. The
 // `import type` is erased at build time, so this module pulls nothing into the main chunk.
 
-import type * as Monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+import type * as Monaco from "monaco-editor/editor/editor.api.js";
 
 export const MARKER_OWNER = "containerfile-linter";
 

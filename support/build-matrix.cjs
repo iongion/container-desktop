@@ -1,8 +1,8 @@
 // Single source of truth for what each platform actually builds and publishes.
 //
 // The release pipelines and website read this file, so they can never drift:
-//   - CDPipeline.Tauri.yml (default) resolves its matrix through `cdJobsForTarget`; CDPipeline.Electron.yml
-//     through `electronCdJobsForTarget` (ELECTRON_CD_JOBS); CDPipeline.Wails.yml through `wailsCdJobsForTarget`.
+//   - CDPipeline.Tauri.yml (default) resolves its matrix through `cdJobsForTarget`;
+//     CDPipeline.Wails.yml through `wailsCdJobsForTarget`.
 //   - website-src/_data/downloads.js renders its download cards from here.
 //   - src/__tests__/website-downloads.test.ts asserts the two stay identical.
 //
@@ -95,21 +95,6 @@ const CD_JOBS = [
     packageScript: "package:tauri:win_arm",
   },
 ];
-
-const ELECTRON_CD_JOBS = [
-  { target: "linux-x64", os: "ubuntu-latest", packageScript: "package:electron:linux_x86" },
-  { target: "linux-arm64", os: "ubuntu-24.04-arm", packageScript: "package:electron:linux_arm" },
-  { target: "macos-arm64", os: "macos-latest", packageScript: "package:electron:mac_arm" },
-  { target: "windows-x64", os: "windows-latest", packageScript: "package:electron:win_x64" },
-];
-
-function electronCdJobsForTarget(target) {
-  if (!target || target === "all") return ELECTRON_CD_JOBS;
-  if (["linux", "macos", "windows"].includes(target)) {
-    return ELECTRON_CD_JOBS.filter((job) => job.target.startsWith(`${target}-`));
-  }
-  return ELECTRON_CD_JOBS.filter((job) => job.target === target);
-}
 
 // Wails CI matrix — the source of truth for CDPipeline.Wails.yml (consumed via a setup job → fromJSON).
 // Additive and separate from CD_JOBS: Wails leans on Go cross-compilation, so ONE Linux runner cross-builds
@@ -248,7 +233,7 @@ const PLATFORMS = {
         runtime: RUNTIME.tauri,
         arch: { x64: "x64", arm64: "arm64" },
         public: false,
-        electron: false,
+        legacyTarget: false,
       },
       { target: "nsis", ext: "exe", runtime: RUNTIME.tauri, arch: { x64: "x64", arm64: "arm64" }, public: false },
       {
@@ -283,8 +268,8 @@ function assetName(platformKey, format, arch, version) {
   return PLATFORMS[platformKey].naming(format.arch[arch], version, format.ext);
 }
 
-function electronBuilderTargets(platformKey) {
-  return PLATFORMS[platformKey].formats.filter((format) => format.electron !== false).map((format) => format.target);
+function publicArtifactTargets(platformKey) {
+  return PLATFORMS[platformKey].formats.filter((format) => format.legacyTarget !== false).map((format) => format.target);
 }
 
 function packageScriptFor(platformKey, format, arch) {
@@ -467,7 +452,6 @@ function downloadModel(version, { microsoftStore } = {}) {
 module.exports = {
   ARCH,
   CD_JOBS,
-  ELECTRON_CD_JOBS,
   PLATFORMS,
   RUNTIME,
   WAILS_CD_JOBS,
@@ -476,8 +460,7 @@ module.exports = {
   assetName,
   cdJobsForTarget,
   downloadModel,
-  electronBuilderTargets,
-  electronCdJobsForTarget,
+  publicArtifactTargets,
   publicAssetNames,
   releaseArtifactEntries,
   wailsCdJobsForTarget,

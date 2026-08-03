@@ -3,6 +3,27 @@
 
 <head>
   <meta charset="utf-8" />
+  <!-- Defense-in-depth for the renderer. Assistant markdown already renders with raw HTML disabled, so this is a
+       second line rather than the only one. `unsafe-inline`/`unsafe-eval` are unavoidable here (the boot-chrome
+       script below is inline, Monaco compiles workers at runtime, and the Vite dev server evals for HMR), but the
+       policy still blocks the attacks that matter most for a desktop app: no script from a remote origin, no
+       object/embed, no base-URI hijack, and no form posting data anywhere. `connect-src` stays broad because the
+       user configures arbitrary provider endpoints, including loopback for local models, and it must also admit
+       Tauri's IPC/asset custom protocols. All three shells load THIS file, so the policy is declared once here
+       rather than per-shell (tauri.conf.json keeps `csp: null` so the two can never conflict). -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    base-uri 'self';
+    object-src 'none';
+    form-action 'none';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    font-src 'self' data:;
+    media-src 'self' data: blob:;
+    worker-src 'self' blob:;
+    connect-src 'self' https: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* wss: data: blob: ipc: asset: http://ipc.localhost http://asset.localhost;
+  " />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <meta name="description" content="<%- PROJECT_DESCRIPTION %>" />
   <link rel="manifest" href="<%- PUBLIC_URL %>/manifest.json?v=<%- PROJECT_VERSION %>" />

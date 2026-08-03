@@ -2,8 +2,8 @@ import { AnchorButton, Button, ButtonGroup, Intent, MenuItem } from "@blueprintj
 import { IconNames } from "@blueprintjs/icons";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ContainerImage } from "@/env/Types";
-import { createLogger } from "@/platform/logger";
+import type { ContainerImage } from "@/container-client/types/image";
+import { createLogger } from "@/logger";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
 import { ResourceListActions } from "@/web-app/components/ResourceListActions";
 import { goToScreen } from "@/web-app/Navigator";
@@ -64,10 +64,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
           default:
             break;
         }
-        Notification.show({
-          message: t("Command completed"),
-          intent: Intent.SUCCESS,
-        });
         if (action === "image.remove") {
           goToScreen("/screens/images");
         }

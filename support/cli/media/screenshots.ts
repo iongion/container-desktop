@@ -22,7 +22,7 @@ import {
 } from "./screenshots.manifest";
 
 // Regenerate the deterministic website screenshots by driving a mock app across the manifest, one
-// engine at a time. The recording backend (Electron over CDP, or Tauri over WebDriver) is chosen by
+// engine at a time. The recording backend (Tauri over WebDriver, or Wails over MCP) is chosen by
 // CONTAINER_DESKTOP_CAPTURE_BACKEND / --backend; the app lifecycle + page primitives live behind
 // CaptureBackend / CaptureDriver, so this file is pure orchestration.
 

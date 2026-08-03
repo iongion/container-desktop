@@ -32,7 +32,7 @@ export function NotificationCenterHost() {
     state.entries.reduce((total, entry) => (entry.kind === "notification" ? total : total + 1), 0),
   );
 
-  // Subscribe to the preload CLI bridge once the bridge is available (covers the case where
+  // Subscribe to the CLI activity bus once it is available (covers the case where
   // the store module evaluated before window.ActivityBus was exposed).
   useEffect(() => {
     ensureCliBusSubscribed();

@@ -1,6 +1,5 @@
-// The remote-connection data plane — the Rust side of the SSH/WSL dial-stdio bridges (ports
-// src/platform/node/exec/{ssh-transport,ssh-stdio-bridge,wsl-relay}.ts). Owned by Rust so a webview reload never
-// tears a live connection down.
+// The remote-connection data plane — the SSH/WSL dial-stdio bridges and `ssh -NL` tunnels. Owned by Rust so a
+// webview reload never tears a live connection down. src-wails/bridge_service.go is its Go twin.
 //
 // It is deliberately ENGINE-AGNOSTIC: the shared JS builders (buildSSHArgs / buildSSHTunnelArgs /
 // buildWSLDialStdioArgs) stay the single source of truth for the argv and hand this layer a BridgeSpec of just
@@ -61,7 +60,10 @@ pub struct BridgeState {
 /// shapes them into a __proxyError envelope.
 pub async fn ensure_bridge(spec: &BridgeSpec, state: &BridgeState) -> Result<String, String> {
     if spec.local_address.is_empty() {
-        return Err("bridge localAddress is empty (the remote connection has no local forward socket)".into());
+        return Err(
+            "bridge localAddress is empty (the remote connection has no local forward socket)"
+                .into(),
+        );
     }
     let mut bridges = state.bridges.lock().await;
     if bridges.contains_key(&spec.key) {
@@ -106,7 +108,8 @@ fn start_stdio_bridge(spec: &BridgeSpec) -> Result<BridgeEntry, String> {
     // A stale Unix socket from a crashed run makes bind() fail with EADDRINUSE — remove it first (a Windows
     // pipe path is not a filesystem entry, so this is unix-only).
     let _ = std::fs::remove_file(&spec.local_address);
-    let listener = tokio::net::UnixListener::bind(&spec.local_address).map_err(|e| e.to_string())?;
+    let listener =
+        tokio::net::UnixListener::bind(&spec.local_address).map_err(|e| e.to_string())?;
     let launcher = spec.launcher.clone();
     let argv = spec.argv.clone();
     let task = tokio::spawn(async move {
@@ -121,7 +124,10 @@ fn start_stdio_bridge(spec: &BridgeSpec) -> Result<BridgeEntry, String> {
             }
         }
     });
-    Ok(BridgeEntry { local_address: spec.local_address.clone(), kind: BridgeKind::Stdio(task) })
+    Ok(BridgeEntry {
+        local_address: spec.local_address.clone(),
+        kind: BridgeKind::Stdio(task),
+    })
 }
 
 // Windows: the local end is a named pipe (Windows Docker over SSH, and every WSL relay). Named pipes are
@@ -154,7 +160,9 @@ fn start_stdio_bridge(spec: &BridgeSpec) -> Result<BridgeEntry, String> {
             tokio::spawn(bridge_named_pipe_connection(connected, launcher, argv));
         }
     });
-    Ok(BridgeEntry { kind: BridgeKind::Stdio(task) })
+    Ok(BridgeEntry {
+        kind: BridgeKind::Stdio(task),
+    })
 }
 
 #[cfg(windows)]
@@ -202,7 +210,11 @@ async fn bridge_named_pipe_connection(
 // Per incoming local connection: spawn `launcher argv`, then pipe RAW bytes socket↔child-stdio in both
 // directions until each side hits EOF (mirrors Node's `.pipe()` half-close forwarding). Nothing is decoded.
 #[cfg(unix)]
-async fn bridge_unix_connection(stream: tokio::net::UnixStream, launcher: String, argv: Vec<String>) {
+async fn bridge_unix_connection(
+    stream: tokio::net::UnixStream,
+    launcher: String,
+    argv: Vec<String>,
+) {
     let spawned = tokio::process::Command::new(&launcher)
         .args(&argv)
         .stdin(Stdio::piped())

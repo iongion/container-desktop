@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { ConnectorCapabilities } from "@/env/Types";
+import type { ConnectorCapabilities } from "@/container-client/types/connection";
 
 import { buildCompatibilityMatrix, sortVersionsDesc } from "./matrix";
 
@@ -31,7 +31,9 @@ const dockerCaps = (): ConnectorCapabilities => ({
   extensions: {
     machines: false,
     kube: false,
-    contexts: false,
+    // Real since ADR-0016: docker lists and inspects contexts, and a connection pins the one it uses.
+    // The cell stays PARTIAL because switching the CLI's global selection is deliberately not offered.
+    contexts: true,
     swarm: true,
     builders: false,
     compose: true,

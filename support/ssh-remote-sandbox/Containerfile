@@ -1,0 +1,36 @@
+# Dev/test ONLY — the remote SSH engine host used to exercise remote (SSH) engine connections and the
+# agentic worker "Runs on" live matrix (src/__tests__/live/runs-on.live.test.ts) WITHOUT an external
+# machine. A docker-in-docker daemon reachable over SSH: `ssh … -- docker run/exec …` is a genuine,
+# throwaway REMOTE docker engine (remote-sandbox / remote-container targets), and plain `ssh … -- <shell>`
+# is the remote-shell target. NOT shipped. Mirrors the disposable-sandbox approach of support/swarm-sandbox.sh.
+ARG DIND_IMAGE=docker:dind
+FROM ${DIND_IMAGE}
+
+# openssh for the transport; coreutils/bash so the workspace's POSIX argv (stat -c "%s %Y %F", find,
+# grep -rnIE) behaves like a full host rather than busybox-only. StrictModes is off because the
+# authorized_keys file is bind-mounted from the host (host uid, not root) — safe for a localhost sandbox.
+#
+# Forwarding is enabled explicitly because Alpine's sshd_config ships `AllowTcpForwarding no`, which also
+# refuses the unix-socket channel `ssh -NL` needs — and this snippet is Included at the top of that file,
+# so the first value wins. Without it the remote answers "channel open failed: connect failed" while the
+# local end of the forward binds anyway, so a client sees a socket that exists and carries nothing: the
+# remote engine's API is unreachable through a tunnel that looks healthy. That is the data plane the
+# connection core's live suite exercises (core/rust/.../live_ssh.rs).
+RUN apk add --no-cache openssh-server coreutils bash \
+  && ssh-keygen -A \
+  && mkdir -p /root/.ssh && chmod 700 /root/.ssh \
+  && printf '%s\n' \
+       'PermitRootLogin prohibit-password' \
+       'PasswordAuthentication no' \
+       'PubkeyAuthentication yes' \
+       'StrictModes no' \
+       'AllowTcpForwarding yes' \
+       'AllowStreamLocalForwarding yes' \
+       'AuthorizedKeysFile /root/.ssh/authorized_keys' \
+     > /etc/ssh/sshd_config.d/cd-remote.conf
+
+COPY entrypoint.sh /usr/local/bin/cd-remote-entrypoint.sh
+RUN chmod +x /usr/local/bin/cd-remote-entrypoint.sh
+
+EXPOSE 22
+ENTRYPOINT ["/usr/local/bin/cd-remote-entrypoint.sh"]

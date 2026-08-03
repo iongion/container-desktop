@@ -4,13 +4,15 @@
 // `tray://action` with the clicked item's id back to the webview, which invokes the matching closure →
 // EngineDataService.performAction. The icon is the connected engine's brand mark (podman/docker/unified) in a
 // light/dark variant chosen from the OS theme so it contrasts with the tray/menu-bar background — parity with
-// Electron's TrayController. Rebuilds are driven + JSON-deduped on the JS side.
+// the shared TrayController. Rebuilds are driven + JSON-deduped on the JS side.
 
 use std::sync::Mutex;
 
 use serde::Deserialize;
 use tauri::image::Image;
-use tauri::menu::{IsMenuItem, Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+use tauri::menu::{
+    IsMenuItem, Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
+};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Emitter, Manager, Theme, Wry};
 
@@ -78,11 +80,12 @@ pub fn tray_update(
             }
         }
         None => {
-            let mut builder = TrayIconBuilder::new().menu(&menu).show_menu_on_left_click(true).on_menu_event(
-                |app: &AppHandle, event| {
+            let mut builder = TrayIconBuilder::new()
+                .menu(&menu)
+                .show_menu_on_left_click(true)
+                .on_menu_event(|app: &AppHandle, event| {
                     let _ = app.emit(TRAY_ACTION_EVENT, event.id.0.clone());
-                },
-            );
+                });
             if let Some(image) = tray_icon_image(&app, icon.as_deref()) {
                 builder = builder.icon(image);
             } else if let Some(default_icon) = app.default_window_icon() {
@@ -100,7 +103,7 @@ pub fn tray_update(
 }
 
 // Pick the tray icon: the connected engine's brand mark, in a light/dark variant matching the OS theme so it
-// contrasts with the tray/menu-bar background (parity with Electron's nativeTheme.shouldUseDarkColors gate).
+// contrasts with the tray/menu-bar background (gated on the OS dark-mode setting).
 // Icons are embedded at compile time (image-png feature); an unknown/absent engine falls back to unified.
 fn tray_icon_image(app: &AppHandle, engine: Option<&str>) -> Option<Image<'static>> {
     let dark = app
@@ -109,11 +112,19 @@ fn tray_icon_image(app: &AppHandle, engine: Option<&str>) -> Option<Image<'stati
         .map(|theme| theme == Theme::Dark)
         .unwrap_or(true);
     let bytes: &[u8] = match (dark, engine) {
-        (true, Some("docker")) => include_bytes!("../../src/resources/icons/trayIcon-dark-docker.png"),
-        (true, Some("podman")) => include_bytes!("../../src/resources/icons/trayIcon-dark-podman.png"),
+        (true, Some("docker")) => {
+            include_bytes!("../../src/resources/icons/trayIcon-dark-docker.png")
+        }
+        (true, Some("podman")) => {
+            include_bytes!("../../src/resources/icons/trayIcon-dark-podman.png")
+        }
         (true, _) => include_bytes!("../../src/resources/icons/trayIcon-dark-unified.png"),
-        (false, Some("docker")) => include_bytes!("../../src/resources/icons/trayIcon-light-docker.png"),
-        (false, Some("podman")) => include_bytes!("../../src/resources/icons/trayIcon-light-podman.png"),
+        (false, Some("docker")) => {
+            include_bytes!("../../src/resources/icons/trayIcon-light-docker.png")
+        }
+        (false, Some("podman")) => {
+            include_bytes!("../../src/resources/icons/trayIcon-light-podman.png")
+        }
         (false, _) => include_bytes!("../../src/resources/icons/trayIcon-light-unified.png"),
     };
     Image::from_bytes(bytes).ok()

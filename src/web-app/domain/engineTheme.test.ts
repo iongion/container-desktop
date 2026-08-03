@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import { type Connection, type Connector, ContainerEngine } from "@/env/Types";
+import type { Connection, Connector } from "@/container-client/types/connection";
+import { ContainerEngine } from "@/container-client/types/engine";
 import { resolveEngineTheme } from "./engineTheme";
 
 function runtime(engine: ContainerEngine, id: string = engine, running = true): ConnectionRuntimeInfo {

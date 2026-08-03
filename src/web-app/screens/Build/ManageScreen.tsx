@@ -7,7 +7,7 @@ import { Pane, SplitPane } from "react-split-pane";
 import { lint } from "@/container-client/builder/containerfile/lint";
 import { parse } from "@/container-client/builder/containerfile/parse";
 import type { BuildEngineKind, ImageBuildOptions } from "@/container-client/builder/types";
-import { ContainerEngine } from "@/env/Types";
+import { ContainerEngine } from "@/container-client/types/engine";
 import { AppScreenHeader } from "@/web-app/components/AppScreenHeader";
 import { ConnectionSelect, connectedConnections } from "@/web-app/components/ConnectionSelect";
 import { useRouteSearch } from "@/web-app/Navigator";

@@ -1,4 +1,4 @@
-import type { Volume } from "@/env/Types";
+import type { Volume } from "@/container-client/types/volume";
 import type { ConnectionGroup } from "@/web-app/components/groupedTable/flattenConnectionGroups";
 import { sortAlphaNum } from "@/web-app/domain/utils";
 import type { MergedResource } from "@/web-app/hooks/useMergedResources";

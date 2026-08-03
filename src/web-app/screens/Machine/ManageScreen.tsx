@@ -6,7 +6,8 @@ import prettyBytes from "pretty-bytes";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Connector, PodmanMachine } from "@/env/Types";
+import type { Connector } from "@/container-client/types/connection";
+import type { PodmanMachine } from "@/container-client/types/machine";
 import i18n from "@/i18n";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";

@@ -1,8 +1,8 @@
 # Overview — System Context & Containers (C4 L1 + L2)
 
-container-desktop is a cross-platform Electron desktop app for managing container
-engines (Podman, Docker, and Apple Container), whether they run locally, inside a
-VM, inside WSL, or on a remote host over SSH. This page is the big picture; [backend.md](backend.md)
+container-desktop is a cross-platform desktop app for managing container engines
+(Podman, Docker, and Apple Container), whether they run locally, inside a VM,
+inside WSL, or on a remote host over SSH. This page is the big picture; [backend.md](backend.md)
 and [frontend.md](frontend.md) zoom in.
 
 ## C4 L1 — System Context
@@ -13,7 +13,7 @@ Who uses the app and what it talks to.
 flowchart TB
   dev([Developer / Operator]):::person
 
-  cd[container-desktop<br/>Electron desktop app]:::system
+  cd[container-desktop<br/>desktop app]:::system
 
   podman[(Podman engine<br/>API socket)]:::external
   docker[(Docker engine<br/>API socket)]:::external
@@ -44,14 +44,17 @@ renders the results.
 
 ## C4 L2 — Containers (runnable pieces)
 
-The app is a Node/TypeScript Electron app (see [`CLAUDE.md`](../../CLAUDE.md) for
-the build model), with a TypeScript build CLI in `support/cli/` (not shown — it
+The app is a TypeScript renderer running in the OS's own **webview**, over a
+**native backend** — Rust ([Tauri](https://tauri.app)) or Go
+([Wails](https://wails.io)). Both ship; see [`CLAUDE.md`](../../CLAUDE.md) for the
+build model. A TypeScript build CLI lives in `support/cli/` (not shown — it
 builds, it doesn't run at app runtime).
 
-The interesting and slightly unusual part is **where the engine logic runs**: the
-`container-client` "backend" executes **in the renderer process**, not the main
-process. Privileged Node I/O is injected into it from the **preload** through
-Electron's `contextBridge`. The main process is the thin privileged shell.
+The interesting part is **where the engine logic runs**: there is exactly **one
+JavaScript realm**, the webview. The `container-client` "backend", the engine
+service that owns the connection, and the React UI all run in it side by side —
+no process boundary between them. Privileged I/O is the native backend's job, and
+the webview reaches it by `invoke` through the host bridge.
 
 ```mermaid
 flowchart TB
@@ -60,21 +63,23 @@ flowchart TB
   subgraph app[container-desktop]
     direction TB
 
-    main["Electron Main process<br/>(platform/electron/main.ts)<br/>window &amp; app lifecycle, terminal,<br/>file dialogs, owns userConfiguration"]:::container
-
-    subgraph rp[Renderer process]
+    subgraph realm[Webview realm — one JavaScript world]
       direction TB
-      web["Web-app world<br/>(web-app/ + container-client/)<br/>React UI + engine orchestration"]:::container
-      preload["Preload bridge — Node world<br/>(platform/electron/preload.ts,<br/>platform/electron/command.ts)<br/>Command · FS · Platform · Path · MessageBus"]:::container
+      web["React UI<br/>(web-app/)<br/>screens, stores, routing"]:::container
+      svc["Engine service + brokers<br/>(platform/*.ts + container-client/)<br/>connection, /events, resource lists"]:::container
+      bridge["Host bridge<br/>(platform/{tauri,wails}/bridge.ts)<br/>installs Command · FS · Platform · Path ·<br/>MessageBus · ResourceBus · AI"]:::container
     end
+
+    native["Native backend<br/>(src-tauri/ Rust · src-wails/ Go)<br/>window &amp; tray, terminal, dialogs, keychain,<br/>process spawn, engine HTTP, SSH/WSL bridges"]:::container
   end
 
   engines[(Container engine sockets:<br/>Podman / Docker / Apple Container · local · VM ·<br/>WSL · remote SSH)]:::external
 
   dev -->|interacts| web
-  web -->|"window.Command / FS / Platform / Path<br/>(contextBridge, in-process)"| preload
-  web -.->|"window.MessageBus (IPC):<br/>window, terminal, dialogs"| main
-  preload -->|"spawns CLIs, HTTP-over-socket, SSH;<br/>bridges via engine 'system dial-stdio'"| engines
+  web -->|"in-realm calls (MessageBus / ResourceBus)"| svc
+  svc -->|"window.Command / FS / Platform / Path"| bridge
+  bridge -->|"invoke (Tauri IPC / Wails Call.ByName)"| native
+  native -->|"spawns CLIs, HTTP-over-socket, SSH;<br/>bridges via engine 'system dial-stdio'"| engines
 
   classDef person fill:#08427b,color:#fff,stroke:#052e56;
   classDef container fill:#438dd5,color:#fff,stroke:#2e6295;
@@ -83,38 +88,47 @@ flowchart TB
 
 ### The pieces
 
-- **Electron Main process** — `src/platform/electron/main.ts`. Creates the
-  `BrowserWindow`, handles app/window lifecycle and a small set of IPC channels
-  (`window.*`, `application.*`, `openTerminal`, `openFileSelector`, `notify`), and
-  owns `userConfiguration` (settings persistence). It does **not** broker engine
-  calls.
-- **Renderer process** — one OS process, two JavaScript worlds kept apart by
-  `contextIsolation`:
-  - **Web-app world** — `src/web-app/` (React UI) plus the bundled
-    `src/container-client/` engine logic. This is where a connection is composed
-    and driven (see [backend.md](backend.md)). It has no direct Node access.
-  - **Preload bridge** — `src/platform/electron/preload.ts` exposes the real
-    Node-side primitives from `src/platform/electron/` via `contextBridge`:
-    `Command` (process spawn, `ProxyRequest` = HTTP over a unix socket / named
-    pipe, `StartSSHConnection`), `FS`, `Platform`, `Path`, and `MessageBus`.
-    Engine I/O physically happens here, in Node.
-- **Socket bridge (in-process)** — for hosts whose engine socket isn't locally reachable, the
-  preload runs an in-process Node bridge server that fronts a local pipe/socket and pumps bytes to
-  the engine's own `docker`/`podman system dial-stdio`. `WSLRelayServer`
-  ([`exec/wsl-relay.ts`](../../src/platform/electron/exec/wsl-relay.ts)) fronts a Windows named pipe and
-  runs `wsl.exe --exec … system dial-stdio` inside the distro (no SSH server in the distro);
-  `SSHStdioBridgeServer` ([`exec/ssh-stdio-bridge.ts`](../../src/platform/electron/exec/ssh-stdio-bridge.ts))
-  runs `system dial-stdio` on a **remote host over SSH**. Linux/macOS remote SSH can also use the
-  native `ssh` client's port forward. See [connection-startup.md](connection-startup.md).
+- **Webview realm** — one JavaScript world holding three collaborators:
+  - **React UI** — `src/web-app/` (screens, Zustand stores, TanStack Query/Router).
+  - **Engine service + brokers** — `EngineDataService` and `ResourceSyncBroker`
+    (`src/packages/platform/src/*.ts`) over the `container-client` engine layer.
+    The service is the single owner of the connection, the engine `/events`
+    stream and all list fetching (see [backend.md](backend.md)). Because there is
+    no process to cross, the brokers and their clients talk over an in-memory bus
+    ([`inRealmBus.ts`](../../src/packages/platform/src/inRealmBus.ts)) that the
+    bridge exposes as `window.MessageBus` / `window.ResourceBus`.
+  - **Host bridge** — [`platform/tauri/bridge.ts`](../../src/packages/platform/src/tauri/bridge.ts)
+    / [`platform/wails/bridge.ts`](../../src/packages/platform/src/wails/bridge.ts).
+    Installs the `window.*` globals the shared code reads ambiently — `Command`
+    (process spawn, `ProxyRequest` = HTTP over a unix socket / named pipe,
+    `StartSSHConnection`), `FS`, `Platform`, `Path`, `MessageBus`, the receive
+    buses, and `AI` — each backed by an `invoke` into native code. It sets
+    `window.Preloaded` **last**, which is the readiness flag the renderer blocks
+    on (`Native.ts:waitForPreload`).
+- **Native backend** — `src-tauri/` (Rust) and `src-wails/` (Go), at feature
+  parity. Owns the window and native tray menu, terminal launch, file dialogs,
+  the keychain, process spawn/streaming, the engine HTTP client, and the
+  remote-connection data plane. It does the privileged I/O the webview cannot.
+- **Socket bridge (native)** — for hosts whose engine socket isn't locally
+  reachable, the backend runs a local listener (unix socket, or a Windows named
+  pipe) and, per incoming connection, spawns the engine's own
+  `docker`/`podman system dial-stdio` — over `wsl.exe --exec` for a WSL distro
+  (no SSH server needed inside it) or over `ssh` for a remote host — shuttling
+  raw bytes both ways. Linux/macOS remote SSH can instead use a long-lived
+  `ssh -NL` port forward. Both kinds live in
+  [`bridge.rs`](../../src-tauri/src/bridge.rs) / [`bridge_service.go`](../../src-wails/bridge_service.go),
+  keyed and cached so a webview reload never tears a live connection down. See
+  [connection-startup.md](connection-startup.md).
 - **External engines** — Podman/Docker REST sockets, plus Apple Container's
   Docker-compatible socket exposed by **socktainer** (macOS/Apple-silicon),
   reachable directly (native), through a VM (machine/Lima), through WSL, or across SSH.
 
 ### Build/runtime note (don't relearn the hard way)
 
-Source is ESM/TypeScript, but **main and preload are bundled to CommonJS** —
-Electron's API only links via the CJS `require` hook — while the **renderer stays
-ESM**. Production needs `ENVIRONMENT=production`. Full details live in
+`yarn build` emits **one** bundle, the ESM renderer — the native side is compiled
+by `cargo` or `go`, not by vite. Production needs `ENVIRONMENT=production`. The
+renderer's browser baseline is the real webview floor (`safari 17` + `chrome 120`),
+not a bundled browser version. Full details live in
 [`CLAUDE.md`](../../CLAUDE.md) → *Build / runtime model*; they are not repeated
 here.
 
@@ -122,12 +136,14 @@ here.
 
 | Piece | Path |
 | --- | --- |
-| Main process | [`src/platform/electron/main.ts`](../../src/platform/electron/main.ts) |
-| Preload bridge | [`src/platform/electron/preload.ts`](../../src/platform/electron/preload.ts) |
-| Electron host ports | [`host.ts`](../../src/platform/electron/host.ts) |
-| Electron command facade | [`command.ts`](../../src/platform/electron/command.ts) + [`exec/`](../../src/platform/electron/exec/) |
-| IPC bus | [`messageBus.ts`](../../src/platform/electron/messageBus.ts) |
-| Engine logic (backend) | [`src/container-client/`](../../src/container-client/) |
+| Tauri backend (Rust) | [`src-tauri/src/`](../../src-tauri/src/) |
+| Wails backend (Go) | [`src-wails/`](../../src-wails/) |
+| Host bridges | [`tauri/bridge.ts`](../../src/packages/platform/src/tauri/bridge.ts) · [`wails/bridge.ts`](../../src/packages/platform/src/wails/bridge.ts) |
+| Host ports (OS / FS / path) | [`tauri/host.ts`](../../src/packages/platform/src/tauri/host.ts) · [`wails/host.ts`](../../src/packages/platform/src/wails/host.ts) |
+| Command facade | [`tauri/command.ts`](../../src/packages/platform/src/tauri/command.ts) + [`tauri/exec/`](../../src/packages/platform/src/tauri/exec/) |
+| In-realm bus | [`inRealmBus.ts`](../../src/packages/platform/src/inRealmBus.ts) |
+| Engine service | [`engineDataService.ts`](../../src/packages/platform/src/engineDataService.ts) |
+| Engine logic (backend) | [`src/packages/container-client/`](../../src/packages/container-client/) |
 | React renderer (frontend) | [`src/web-app/`](../../src/web-app/) |
 | Platform-port naming | [`platform-ports.md`](platform-ports.md) |
-| Socket bridge servers | [`exec/ssh-stdio-bridge.ts`](../../src/platform/electron/exec/ssh-stdio-bridge.ts) · [`exec/wsl-relay.ts`](../../src/platform/electron/exec/wsl-relay.ts) |
+| Socket bridge / tunnels | [`bridge.rs`](../../src-tauri/src/bridge.rs) · [`bridge_service.go`](../../src-wails/bridge_service.go) |

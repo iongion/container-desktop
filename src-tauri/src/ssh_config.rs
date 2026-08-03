@@ -1,9 +1,9 @@
 // The Rust side of Platform.getSSHConfig — parses ~/.ssh/config into the renderer's SSHHost[] so the SSH
-// controller-scope picker lists the user's configured hosts. A faithful port of the subset src/platform/node/node.ts
-// consumes from the `ssh-config` npm parser (which can't bundle into the webview — it pulls node:child_process /
-// node:os), so it lives here in the native I/O layer alongside FS/Command/proxy.
+// controller-scope picker lists the user's configured hosts. Parsing lives here in the native I/O layer alongside
+// FS/Command/proxy because no JS ssh-config parser bundles into the webview — they all pull node:child_process /
+// node:os. src-wails/ssh_config.go is its Go twin and must stay byte-faithful to it.
 //
-// Fidelity to node.ts getSSHConfig (do not "improve"):
+// The parsed subset is deliberately narrow (do not "improve" it):
 //   - only `Host` blocks are read; HostName / Port / User / IdentityFile via a case-insensitive FIRST match.
 //   - one SSHHost per CONCRETE host pattern — `*`, `!neg`, and any token containing `?`/`*` are dropped
 //     (concreteHostPatterns); a `Host *` block yields nothing.
@@ -54,7 +54,9 @@ fn concrete_host_patterns(value: &str) -> Vec<String> {
     value
         .split_whitespace()
         .map(|item| item.trim())
-        .filter(|item| !item.is_empty() && *item != "*" && !item.starts_with('!') && !item.contains(['?', '*']))
+        .filter(|item| {
+            !item.is_empty() && *item != "*" && !item.starts_with('!') && !item.contains(['?', '*'])
+        })
         .map(|item| item.to_string())
         .collect()
 }
@@ -105,7 +107,11 @@ fn flush_block(block: HostBlock, hosts: &mut Vec<SshHost>) {
             name: alias.clone(),
             host: alias.clone(),
             port,
-            host_name: if host_name.is_empty() { alias.clone() } else { host_name.clone() },
+            host_name: if host_name.is_empty() {
+                alias.clone()
+            } else {
+                host_name.clone()
+            },
             user: user.clone(),
             scope_type: "SSHConnection".into(),
             identity_file: identity_file.clone(),
@@ -132,7 +138,10 @@ pub fn parse_ssh_config(contents: &str) -> Vec<SshHost> {
                 if let Some(block) = current.take() {
                     flush_block(block, &mut hosts);
                 }
-                current = Some(HostBlock { patterns: value, ..Default::default() });
+                current = Some(HostBlock {
+                    patterns: value,
+                    ..Default::default()
+                });
             }
             // A Match block is not a Host — stop attributing directives to the previous Host.
             "match" => {
@@ -173,7 +182,7 @@ pub fn parse_ssh_config(contents: &str) -> Vec<SshHost> {
 /// getAvailableSSHConnections try/catch → []), so the SSH picker just shows no hosts rather than erroring.
 #[tauri::command]
 pub fn get_ssh_config() -> Vec<SshHost> {
-    let home = crate::host::get_home_dir();
+    let home = crate::host::platform::get_home_dir();
     if home.is_empty() {
         return Vec::new();
     }
@@ -224,11 +233,14 @@ mod tests {
 
     #[test]
     fn emits_one_host_per_concrete_pattern_dropping_globs() {
-        let hosts = parse_ssh_config("Host foo bar *.example !nope\n  HostName shared\n  Port 42\n");
+        let hosts =
+            parse_ssh_config("Host foo bar *.example !nope\n  HostName shared\n  Port 42\n");
         let names: Vec<&str> = hosts.iter().map(|h| h.name.as_str()).collect();
         assert_eq!(names, vec!["foo", "bar"]); // *.example (glob) and !nope (negation) dropped
-        // both concrete aliases share the block's settings
-        assert!(hosts.iter().all(|h| h.host_name == "shared" && h.port == 42));
+                                               // both concrete aliases share the block's settings
+        assert!(hosts
+            .iter()
+            .all(|h| h.host_name == "shared" && h.port == 42));
     }
 
     #[test]
@@ -251,14 +263,17 @@ mod tests {
 
     #[test]
     fn first_value_wins_and_quotes_are_stripped() {
-        let hosts = parse_ssh_config("Host q\n  IdentityFile \"~/.ssh/key one\"\n  HostName a\n  HostName b\n");
+        let hosts = parse_ssh_config(
+            "Host q\n  IdentityFile \"~/.ssh/key one\"\n  HostName a\n  HostName b\n",
+        );
         assert_eq!(hosts[0].identity_file, "~/.ssh/key one");
         assert_eq!(hosts[0].host_name, "a"); // first HostName wins
     }
 
     #[test]
     fn directives_under_match_are_not_attributed_to_prior_host() {
-        let hosts = parse_ssh_config("Host h\n  HostName real\nMatch host *\n  User should-be-ignored\n");
+        let hosts =
+            parse_ssh_config("Host h\n  HostName real\nMatch host *\n  User should-be-ignored\n");
         assert_eq!(hosts.len(), 1);
         assert_eq!(hosts[0].host_name, "real");
         assert_eq!(hosts[0].user, ""); // the Match block's User is not h's

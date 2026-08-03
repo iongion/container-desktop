@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SecretsAdapter } from "@/container-client/adapters/secrets";
-import type { Secret } from "@/env/Types";
+import type { Secret } from "@/container-client/types/secret";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";

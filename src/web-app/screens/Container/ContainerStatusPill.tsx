@@ -1,4 +1,4 @@
-import type { Container, ContainerState } from "@/env/Types";
+import type { Container, ContainerState } from "@/container-client/types/container";
 import { t } from "@/i18n";
 import { StatePill } from "@/web-app/components/StatePill";
 import { StatusDot } from "@/web-app/components/StatusDot";

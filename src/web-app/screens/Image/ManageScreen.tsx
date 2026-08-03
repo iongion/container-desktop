@@ -6,7 +6,7 @@ import prettyBytes from "pretty-bytes";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/container-client/types/image";
 import i18n from "@/i18n";
 import { AppDataTableLink } from "@/web-app/components/AppDataTableLink";
 import { AppLabel } from "@/web-app/components/AppLabel";

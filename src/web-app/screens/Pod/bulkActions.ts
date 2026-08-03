@@ -12,7 +12,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PodsAdapter } from "@/container-client/adapters/pods";
-import { type Pod, PodStatusList } from "@/env/Types";
+import { type Pod, PodStatusList } from "@/container-client/types/pod";
 import type { BulkAction } from "@/web-app/components/Bulk";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { getConnectedConnectionIds, type MergedResource } from "@/web-app/hooks/useMergedResources";

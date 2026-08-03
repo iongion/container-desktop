@@ -1,33 +1,29 @@
 import path from "node:path";
 import { PROJECT_HOME } from "@/cli/lib/paths";
-import { electronBackend } from "../backends/electronBackend";
 import type { CaptureBackend, CaptureBackendKind } from "./types";
 
 // Backend selection + output. The recording backend is chosen by CONTAINER_DESKTOP_CAPTURE_BACKEND
-// (electron | tauri | wails, default tauri) and can be overridden per-run with --backend. ALL backends write
-// the same published website assets — the Tauri (WebKitGTK/WebDriver) shell is the default producer, with
-// Electron (Playwright/CDP) and Wails (MCP + X11 grab) available for a like-for-like comparison via --backend.
+// (tauri | wails, default tauri) and can be overridden per-run with --backend. Both backends write the same
+// published website assets — Tauri (WebKitGTK/WebDriver) is the default producer, Wails (MCP + X11 grab) the
+// like-for-like comparison.
 
 export function resolveCaptureBackend(override?: string): CaptureBackendKind {
   const raw = (override || process.env.CONTAINER_DESKTOP_CAPTURE_BACKEND || "tauri").toLowerCase();
-  if (raw !== "electron" && raw !== "tauri" && raw !== "wails") {
-    throw new Error(`Unknown capture backend: ${raw} (expected "electron", "tauri" or "wails")`);
+  if (raw !== "tauri" && raw !== "wails") {
+    throw new Error(`Unknown capture backend: ${raw} (expected "tauri" or "wails")`);
   }
   return raw;
 }
 
 export async function createBackend(kind: CaptureBackendKind): Promise<CaptureBackend> {
-  if (kind === "tauri") {
-    // Lazy so the electron path never loads WebdriverIO (and so a missing tauri toolchain only bites Tauri runs).
-    const { tauriBackend } = await import("../backends/tauriBackend");
-    return tauriBackend;
-  }
   if (kind === "wails") {
-    // Lazy so the electron/tauri paths never touch the MCP client / X11 capture deps.
+    // Lazy so the Tauri path never touches the MCP client / X11 capture deps.
     const { wailsBackend } = await import("../backends/wailsBackend");
     return wailsBackend;
   }
-  return electronBackend;
+  // Lazy so a missing tauri toolchain only bites Tauri runs.
+  const { tauriBackend } = await import("../backends/tauriBackend");
+  return tauriBackend;
 }
 
 // Screenshots root: <root>/<engine>/<file>. Both backends write the published website images.

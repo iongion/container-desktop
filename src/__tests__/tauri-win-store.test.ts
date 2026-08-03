@@ -19,7 +19,7 @@ const pkg = {
 };
 
 describe("Tauri Windows Store packaging", () => {
-  it("keeps the Tauri Store identity aligned with Electron AppX identity", () => {
+  it("keeps the Tauri Store identity aligned with the published AppX identity", () => {
     const plan = store.createStorePackagePlan({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -65,7 +65,7 @@ describe("Tauri Windows Store packaging", () => {
     }
   });
 
-  it("keeps the Windows Store package revision at zero like electron-builder AppX", () => {
+  it("keeps the Windows Store package revision at zero", () => {
     const plan = store.createStorePackagePlan({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -80,7 +80,7 @@ describe("Tauri Windows Store packaging", () => {
     expect(plan.manifest).toContain('Version="5.3.18.0"');
   });
 
-  it("defaults direct Tauri Store plans to AppX for Electron artifact parity", () => {
+  it("defaults direct Tauri Store plans to AppX", () => {
     const plan = store.createStorePackagePlan({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -94,7 +94,7 @@ describe("Tauri Windows Store packaging", () => {
     expect(plan.manifestPath).toBe("/repo/release/tauri-win-store/x64/AppxManifest.xml");
   });
 
-  it("generates a full-trust Windows Desktop manifest with the same capabilities and tiles Electron adds", () => {
+  it("generates a full-trust Windows Desktop manifest with the expected capabilities and tiles", () => {
     const manifest = store.createStoreManifest({
       pkg,
       arch: "x64",
@@ -117,7 +117,7 @@ describe("Tauri Windows Store packaging", () => {
     expect(manifest).toMatch(/<rescap:Capability Name="runFullTrust" ?\/>/);
   });
 
-  it("stages the Tauri executable and Microsoft Store icons from the Electron AppX branding set", () => {
+  it("stages the Tauri executable and Microsoft Store icons from the AppX branding set", () => {
     const plan = store.createStorePackagePlan({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -210,7 +210,7 @@ describe("Tauri Windows Store packaging", () => {
     );
   });
 
-  it("exposes explicit Tauri Store package scripts with AppX as the Electron-parity default", () => {
+  it("exposes explicit Tauri Store package scripts with AppX as the default", () => {
     expect(rootPkg.scripts["package:tauri:win_store"]).toBe("yarn package:tauri:win_store:appx");
     expect(rootPkg.scripts["package:tauri:win_store:msix"]).toContain("node support/tauri-win-store.cjs pack");
     expect(rootPkg.scripts["package:tauri:win_store:msix"]).toContain("--format msix");

@@ -1,7 +1,7 @@
 import type { Box, CaptureDriver } from "./drivers/types";
 
 // Screen-driving actions shared by the screenshot + demo capture scripts. Written against CaptureDriver
-// (not a raw Playwright page) so a single action layer drives either shell — Electron over CDP or Tauri
+// (not a raw driver page) so a single action layer drives either shell — Wails over MCP or Tauri
 // over WebDriver. DOM reads/writes stay inside evaluate() (identical page-side JS on both); only pointer,
 // screenshot and injection go through backend-specific primitives.
 

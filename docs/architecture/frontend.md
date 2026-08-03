@@ -35,7 +35,7 @@ flowchart TB
   end
 
   backend["container-client (backend)<br/>Application / HostClient"]:::external
-  bus["window.MessageBus · window.Command<br/>(preload bridge)"]:::external
+  bus["window.MessageBus · window.Command<br/>(host bridge)"]:::external
 
   user --> boot --> providers --> layout --> screens
   boot --> appStore
@@ -69,8 +69,8 @@ each one concern:
 | Store            | Holds                                                                                                                                                                                                                                                                                                                                      |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `appStore`       | bootstrap `phase`, `connectors` (availability matrix), `connections` (configured list), `currentConnector`, `userSettings`; the `initialize` / `startApplication` / connection-CRUD actions                                                                                                                                                |
-| `resourceEvents` | a thin client over the **main-owned** data layer: `start()` begins mirroring main's pushes; `refresh()/refreshMany()` send a "refresh now" nudge to main. The engine `/events` stream + list fetching run in the **main process** (see [backend.md](backend.md#main-owned-data-layer))                                                                                                                                                |
-| `resourceMirror` | applies the **main process's** pushed `ResourceSyncSnapshot`s into `resourceStore` (started by `resourceEvents.start()`) — same store, same screens (the seam). See [backend.md](backend.md#main-owned-data-layer) |
+| `resourceEvents` | a thin client over the **service-owned** data layer: `start()` begins mirroring the service's pushes; `refresh()/refreshMany()` send a "refresh now" nudge. The engine `/events` stream + list fetching are owned by `EngineDataService` (see [backend.md](backend.md#service-owned-data-layer))                                                                                                                                                |
+| `resourceMirror` | applies the service's pushed `ResourceSyncSnapshot`s into `resourceStore` (started by `resourceEvents.start()`) — same store, same screens (the seam). See [backend.md](backend.md#service-owned-data-layer) |
 | `resourceStore`  | per-connection snapshots of containers/images/pods/volumes/networks/secrets (items, loading, lastError, eventsConnected)                                                                                                                                                                                                                   |
 | `sortStore`      | sort specs, persisted to localStorage                                                                                                                                                                                                                                                                                                      |
 | `uiStore`        | ephemeral per-screen UI (search, selection, overlays); reset on connection switch                                                                                                                                                                                                                                                          |
@@ -85,13 +85,13 @@ pauses the interval while the page is hidden. Screen-level `queries.ts` hooks ca
 and, on mutation, invalidate the cache and nudge `resourceEvents` to resync.
 
 **Native bridge** — [`Native.ts`](../../src/web-app/Native.ts) +
-`Application.getInstance()`. `waitForPreload()` blocks until the preload has
+`Application.getInstance()`. `waitForPreload()` blocks until the host bridge has
 exposed `window.Preloaded`; after that the renderer can construct the
 `Application` singleton (which captures `window.MessageBus`) and call the backend.
-This is the single seam between UI and engine logic. The `Application`/`HostClient` is composed in the
-renderer (for typing + per-engine normalizers), but its engine HTTP (`Command.ProxyRequest`) is forwarded to
-the **main process**, so the renderer never opens its own connection — the app and tray share one (see
-[backend.md](backend.md#main-owned-data-layer)).
+This is the single seam between UI and engine logic. The `Application`/`HostClient` is composed here (for
+typing + per-engine normalizers), but its engine HTTP (`Command.ProxyRequest`) resolves in the **native
+backend**, so the webview never opens its own socket — the app and tray share one connection (see
+[backend.md](backend.md#service-owned-data-layer)).
 
 ## Screens
 
@@ -126,8 +126,8 @@ A few features span the whole app rather than a single screen:
   a right-side drawer opened from the footer bell. `Notification.show()` toasts are teed into
   the in-renderer `systemNotifier` bus; on top of that, every engine **API** call (intercepted
   in [`Api.clients.ts`](../../src/container-client/Api.clients.ts)) and every **CLI** invocation
-  (captured by [`activityBus.ts`](../../src/platform/activityBus.ts) and
-  bridged over `contextBridge`) is recorded. A capped, **in-memory, non-persisted** Zustand
+  (captured by [`activityBus.ts`](../../src/packages/platform/src/activityBus.ts), which the host
+  bridge wraps `window.Command` with) is recorded. A capped, **in-memory, non-persisted** Zustand
   store ([`activityStore.ts`](../../src/web-app/stores/activityStore.ts)) feeds two filterable,
   date-ordered tabs (Notifications · Activity); activity rows show status/duration and expand to
   a copy-as-cURL / copy-command view — doubling as a live learning log of how the engine is driven.

@@ -15,14 +15,9 @@ import type React from "react";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  type ControllerScope,
-  ControllerScopeType,
-  type LIMAInstance,
-  type PodmanMachine,
-  type SSHHost,
-  type WSLDistribution,
-} from "@/env/Types";
+import type { SSHHost } from "@/container-client/types/connection";
+import type { ControllerScope, LIMAInstance, PodmanMachine, WSLDistribution } from "@/container-client/types/machine";
+import { ControllerScopeType } from "@/container-client/types/os";
 import i18n from "@/i18n";
 
 import "./ScopeSelect.css";

@@ -4,7 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Application } from "@/container-client/Application";
 import { type FetchImageOptions, ImagesAdapter, type PushImageOptions } from "@/container-client/adapters/images";
-import type { ContainerImage } from "@/env/Types";
+import type { ContainerImage } from "@/container-client/types/image";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";
 

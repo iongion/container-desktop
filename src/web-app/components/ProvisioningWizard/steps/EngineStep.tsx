@@ -1,10 +1,9 @@
 import { Callout } from "@blueprintjs/core";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-
+import { ContainerEngine } from "@/container-client/types/engine";
 import { capabilitiesFor, WIZARD_ENGINES } from "@/container-provisioning/platform";
 import { preferredEngine, targetFor } from "@/container-provisioning/targetDefaults";
-import { ContainerEngine } from "@/env/Types";
 import i18n from "@/i18n";
 import { engineLabel } from "@/web-app/components/EngineCell";
 import { useProvisioningStore } from "@/web-app/stores/provisioningStore";

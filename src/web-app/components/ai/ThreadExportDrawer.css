@@ -1,0 +1,30 @@
+.ThreadExportDrawer .bp6-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ThreadExportSummary {
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.ThreadExportSummary > div {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.35fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.ThreadExportSummary span {
+  color: var(--app-text-muted);
+}
+
+.ThreadExportSummary strong {
+  overflow: hidden;
+  color: var(--app-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

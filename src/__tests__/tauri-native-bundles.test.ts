@@ -55,7 +55,7 @@ function loadNativeBundleInternals() {
 const linuxOnly = process.platform === "linux" ? it : it.skip;
 
 describe("Tauri native bundle parity", () => {
-  it("collects Linux deb/rpm/AppImage into Electron's canonical artifact names", () => {
+  it("collects Linux deb/rpm/AppImage into the canonical artifact names", () => {
     const plans = nativeBundles.createNativeBundlePlans({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -78,7 +78,7 @@ describe("Tauri native bundle parity", () => {
     ]);
   });
 
-  it("collects macOS dmg and Windows NSIS exe into Electron's canonical artifact names", () => {
+  it("collects macOS dmg and Windows NSIS exe into the canonical artifact names", () => {
     const dmg = nativeBundles.createNativeBundlePlans({
       projectRoot: "/repo",
       releaseDir: "/repo/release",
@@ -202,7 +202,7 @@ describe("Tauri native bundle parity", () => {
     }
   });
 
-  it("exposes aggregate Tauri package scripts for every Electron artifact family", () => {
+  it("exposes aggregate Tauri package scripts for every artifact family", () => {
     expect(rootPkg.scripts["package:tauri:linux_x86"]).toContain("support/tauri-native-bundles.cjs collect");
     expect(rootPkg.scripts["package:tauri:linux_arm"]).toContain("support/tauri-native-bundles.cjs collect");
     expect(rootPkg.scripts["package:tauri:mac_arm"]).toContain("support/tauri-native-bundles.cjs collect");

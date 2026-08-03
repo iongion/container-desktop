@@ -11,7 +11,7 @@ import {
   createEJSContext,
   ENVIRONMENT,
   getCommonViteConfig,
-  getElectronVendorsCache,
+  WEBVIEW_BUILD_TARGET,
   PROJECT_HOME,
   sourceEnv,
   sourcemap,
@@ -31,6 +31,26 @@ export function popperCoreShim() {
     resolveId(source) {
       return source === "@popperjs/core" ? shim : null;
     },
+  };
+}
+
+// @open-multi-agent/core (the goal/chat orchestrator) eagerly imports a few `node:` built-ins on its runTeam
+// import graph. Only `node:crypto` is actually CALLED at runtime on our path (pure id-generation for trace/run
+// ids) — we shim it to Web Crypto, which exists in every webview (WebKitGTK, WebView2, WKWebView).
+// `child_process` (OMA's default-deny bash/grep) and `node:fs`/`node:path` (OMA's built-in filesystem tools) are
+// NEVER called: we inject our own host-driven customTools (which forward to the IFileSystem/IPath/exec host ports
+// → Tauri/Wails), so OMA's node built-ins only need to link, not run. These are `resolve.alias` entries
+// (not a resolveId plugin) because Vite's esbuild dep-optimizer honors aliases but not rollup resolveId hooks, so
+// aliases are the only form that shims a PRE-BUNDLED dependency in dev AND the production build. Renderer-only —
+// this map is merged into the renderer config's resolve, never the main/preload CJS build. Vendor LLM SDKs stay
+// out of the bundle because we inject AgentConfig.adapter, bypassing OMA's dynamic createAdapter import().
+export function omaWebviewNodeAliases() {
+  const shim = (name) => path.resolve(PROJECT_HOME, `src/packages/ai-system/src/runtime/omaShim/${name}.ts`);
+  const childProcessShim = shim("childProcess");
+  return {
+    "node:crypto": shim("crypto"),
+    child_process: childProcessShim,
+    "node:child_process": childProcessShim,
   };
 }
 
@@ -81,7 +101,6 @@ export function docsServer() {
 export const createConfig = ({ mode, command, host, port }) => {
   // Bootstrap
   sourceEnv(ENVIRONMENT);
-  const cache = getElectronVendorsCache();
   console.debug({ PROJECT_HOME, command, host, port });
   console.debug(`Website running at http://${host === "0.0.0.0" ? "localhost" : host}:${port}/website/index.html`);
   // Bootstrap
@@ -91,6 +110,10 @@ export const createConfig = ({ mode, command, host, port }) => {
   const viteConfig = getCommonViteConfig({
     mode,
     command,
+    // Renderer-only: shim the node built-ins OMA touches to browser-safe modules (merged with the @/… alias map).
+    resolve: {
+      alias: omaWebviewNodeAliases(),
+    },
     // app specific
     // outputName: APP_MAIN,
     plugins: [
@@ -103,7 +126,7 @@ export const createConfig = ({ mode, command, host, port }) => {
     ],
     publicDir: "./public",
     build: {
-      target: `chrome${cache.chrome}`,
+      target: WEBVIEW_BUILD_TARGET,
       sourcemap: sourcemap,
       emptyOutDir: false,
     },
@@ -114,7 +137,7 @@ export const createConfig = ({ mode, command, host, port }) => {
       // Pre-bundle the heavy, lazy-loaded deps at dev-server startup. Otherwise the first visit to a screen that
       // dynamically imports them (Terminal/Logs → xterm; editors → monaco) makes Vite discover + re-optimize
       // them mid-session, which 504s the in-flight dynamic import ("Outdated Optimize Dep") and trips the error
-      // boundary. Build mode ignores optimizeDeps, so this is dev-server only (Electron dev + Tauri dev alike).
+      // boundary. Build mode ignores optimizeDeps, so this is dev-server only (Tauri dev + Wails dev alike).
       include: [
         "@xterm/xterm",
         "@xterm/addon-fit",
@@ -170,7 +193,6 @@ export default ({ mode, command }) => {
       },
     },
   };
-  config.build.rollupOptions.external = ["electron"];
   // Renderer-only: enable code-splitting so React.lazy() emits real chunks (Monaco ~10 MB / xterm load
   // on demand) instead of inlining everything into renderer.mjs and parsing it before first paint.
   // main/preload stay single-file CJS (their common-config `codeSplitting:false` is untouched). The

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Application } from "@/container-client/Application";
-import { normalizeProxyConfig, type ProxyConfig, type ProxyMode, validateProxy } from "@/container-client/proxy";
+import { normalizeProxyConfig, validateProxy } from "@/container-client/proxy";
+import type { ProxyConfig, ProxyMode } from "@/container-client/types/network";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { saveProxyAfterReachabilityTest } from "./networkProxyActions";

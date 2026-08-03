@@ -1,11 +1,11 @@
-// Renderer-side mirror of the main-owned data layer. Main owns the engine `/events` stream and list
-// fetches; this pulls the first snapshot and applies every pushed ResourceSyncSnapshot into the SAME
+// Store-side mirror of the service-owned data layer. The EngineDataService owns the engine `/events` stream
+// and list fetches; this pulls the first snapshot and applies every pushed ResourceSyncSnapshot into the SAME
 // Zustand resourceStore the screens already read — so screens don't change (the seam). It is started from
 // resourceEvents.start() during app bootstrap.
 
 import type { ResourceDomain } from "@/container-client/resourceDomains";
 import { RESOURCE_SYNC, type ResourceSyncSnapshot } from "@/container-client/resourceSyncProtocol";
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { queryClient, removeConnectionQueries } from "@/web-app/domain/queryClient";
 
 import { useAppStore } from "./appStore";

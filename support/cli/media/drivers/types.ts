@@ -1,5 +1,5 @@
 // Backend-agnostic capture driver: the minimal page-automation surface the screenshot capture implements
-// on both shells — Playwright/CDP (Electron, Chromium) and WebdriverIO/W3C-WebDriver (Tauri, WebKitGTK).
+// on both shells — WebdriverIO/W3C-WebDriver (Tauri, WebKitGTK) and MCP + X11 grab (Wails).
 // The screenshot orchestration (screenshotActions.ts) is written against this port so a single action
 // layer drives either shell; the backend is chosen by CONTAINER_DESKTOP_CAPTURE_BACKEND
 // (see ./backend). DOM logic stays inside evaluate() — identical page-side JS on both engines — leaving
@@ -58,11 +58,11 @@ export interface LaunchOptions {
   mode: string;
   // "screenshots" | "demo" — scopes the per-run mock user-data dir so the two capture kinds never collide.
   label: string;
-  // Electron: the CDP port to launch/attach on. Tauri drives WebDriver on a fixed port and ignores this.
+  // Legacy knob: Tauri drives WebDriver on a fixed port and ignores this.
   port: number;
 }
 
-export type CaptureBackendKind = "electron" | "tauri" | "wails";
+export type CaptureBackendKind = "tauri" | "wails";
 
 export interface CaptureBackend {
   readonly kind: CaptureBackendKind;

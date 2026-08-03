@@ -1,0 +1,10 @@
+{
+  "name": "@container-desktop/container-provisioning",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@container-desktop/container-client": "*",
+    "@container-desktop/logger": "*"
+  }
+}

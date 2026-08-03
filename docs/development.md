@@ -30,19 +30,13 @@ Installs with the lockfile respected — don't use floating installs.
 ## Run (hot reload)
 
 ```bash
-yarn dev          # cross-env ENVIRONMENT=development node support/watch.mjs
+yarn dev          # Tauri (Rust) — the default shell
+yarn dev:mock     # …with the deterministic mock backend, no engine required
+yarn wails:dev    # the Wails (Go) shell; yarn wails:dev:mcp adds the MCP driver
 ```
 
-`support/watch.mjs` starts the Vite renderer dev server and Electron, rebuilding
-and respawning on change. Kill switch:
-
-```bash
-pkill -f support/watch.mjs; pkill -f dist/electron
-```
-
-> Don't set `ELECTRON_RUN_AS_NODE` (Electron then runs as plain Node and the
-> `electron` API vanishes). GPU flags are gated behind `CONTAINER_DESKTOP_HEADLESS`
-> — leave the default path alone; it avoided a GPU crash-loop.
+Both shells serve the SAME Vite renderer on :3000 and rebuild on change. Kill either by PID —
+never `pkill -f <pattern>` from a one-liner containing that pattern, or it matches its own shell.
 
 ## Verify — run all four before claiming done
 
@@ -50,29 +44,29 @@ pkill -f support/watch.mjs; pkill -f dist/electron
 yarn check-types   # tsc
 yarn lint          # Biome (auto-fixes); yarn lint:check = no writes (CI); yarn format to format only
 yarn test:run      # Vitest (hermetic) — see testing.md
-yarn build         # main + preload + renderer
+yarn build         # the renderer bundle
 ```
 
 These four are the gate CI enforces
 ([`CIPipeline.yml`](../.github/workflows/CIPipeline.yml); `check-types`/`lint:check`/`test:run`
 also cover the `support/cli/` tooling). For the test model — the headless harness and the `fakeCommand` recording fake
-that let the connection layer run without Electron — see [testing.md](testing.md). Also verify
-behaviour over CDP: the renderer is exposed at `--remote-debugging-port=9222`, so you can
-attach a Playwright client via `--cdp-endpoint http://localhost:9222` to drive the real app
-(navigating bare `http://localhost:3000` won't work — it needs the preload bridge).
+that let the connection layer run without a shell — see [testing.md](testing.md). Also verify
+behaviour in the real app: a native webview has no CDP, so drive it over **W3C WebDriver**
+(`yarn test:e2e:tauri`). Navigating bare `http://localhost:3000` in a browser won't work — it needs
+the shell's host bridge.
 
 ## Build & package
 
 ```bash
 yarn build                       # production bundles (ENVIRONMENT=production implied)
-yarn package:linux_x86           # also: mac_arm · win_x86 · linux_arm  (electron-builder)
+yarn package:linux_x86           # also: mac_arm · win_x86 · linux_arm  (Tauri bundles)
 yarn cli release                 # full release: build + bundle with production settings
 ```
 
 > **Production needs `ENVIRONMENT=production`** (the `build:*` scripts set it). Without
 > it the build defaults to development and a packaged app shows a blank window. See
-> [`CLAUDE.md`](../CLAUDE.md) → *Build / runtime model* for why main/preload are CJS
-> while the renderer stays ESM.
+> [`CLAUDE.md`](../CLAUDE.md) → *Build / runtime model* for the single-bundle layout and
+> the webview browser baseline.
 
 **Website:** `yarn build:website` (preview `yarn dev:website`). Never hand-edit the
 generated `website/` — edit `website-src/` (see `CLAUDE.md` → *Website*).

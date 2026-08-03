@@ -4,7 +4,8 @@
 // (e.g. `const Command: ICommand = ...` with no import) keep resolving unchanged, while the port has one
 // concrete, checkable source of truth.
 
-import type { IAI as _IAI, IAIBus as _IAIBus } from "@/ai-system/core";
+import type { IAI as _IAI, IAIBus as _IAIBus } from "@/ai-system/host/aiClientBridge";
+import type { SSHHost as _SSHHost } from "@/container-client/Types";
 import type {
   IActivityBus as _IActivityBus,
   ICommand as _ICommand,
@@ -14,7 +15,6 @@ import type {
   IPlatform as _IPlatform,
   IResourceBus as _IResourceBus,
   ITrayBus as _ITrayBus,
-  SSHHost as _SSHHost,
   StreamHandle as _StreamHandle,
 } from "@/platform/contract";
 

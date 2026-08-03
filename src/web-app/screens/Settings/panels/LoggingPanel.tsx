@@ -2,20 +2,20 @@ import { Button, ButtonGroup, Checkbox, FormGroup, HTMLSelect, InputGroup, Inten
 import { IconNames } from "@blueprintjs/icons";
 import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { Application } from "@/container-client/Application";
-import type { GlobalUserSettingsOptions, LoggingFileSettings } from "@/env/Types";
+import type { GlobalUserSettingsOptions } from "@/container-client/userSettings";
+import type { LoggingFileSettings } from "@/logger/loggingSettings";
 import {
   LOGGING_FILE_MAX_FILES,
   LOGGING_FILE_MAX_SIZE_MB,
   normalizeLoggingFileSettings,
-} from "@/platform/logger/loggingSettings";
+} from "@/logger/loggingSettings";
 import { LOGGING_LEVELS } from "@/web-app/Environment";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
 
 // Logging: verbosity level + opt-in LOCAL file logging (rotated, size-capped, NEVER uploaded). The log
-// file is owned by the main process; this panel persists the policy and nudges main to apply/open it. The
+// file is owned by the native backend; this panel persists the policy and nudges it to apply/open the file. The
 // file controls are always visible but disabled until "Write logs to a file" is ticked.
 export const LoggingPanel: React.FC = () => {
   const { t } = useTranslation();

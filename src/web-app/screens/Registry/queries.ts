@@ -5,7 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { RegistriesAdapter } from "@/container-client/adapters/registries";
-import type { Registry, RegistryPullOptions, RegistrySearchOptions } from "@/env/Types";
+import type { Registry, RegistryPullOptions, RegistrySearchOptions } from "@/container-client/types/registry";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { imageKeys } from "@/web-app/screens/Image/queries";
 import { resourceEvents } from "@/web-app/stores/resourceEvents";

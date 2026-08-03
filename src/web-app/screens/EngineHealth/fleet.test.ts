@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ConnectionRuntimeInfo } from "@/container-client/resourceSyncProtocol";
-import type { Connection } from "@/env/Types";
+import type { Connection } from "@/container-client/types/connection";
 
 import { buildFleet, describeTransport, summarizeFleet } from "./fleet";
 

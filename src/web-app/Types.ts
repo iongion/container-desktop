@@ -1,7 +1,11 @@
 import type { IconName } from "@blueprintjs/icons";
 import type React from "react";
 
-import type { Connector, Container, ContainerImage, ContainerStateList, PodmanMachine, Volume } from "@/env/Types";
+import type { Connector } from "@/container-client/types/connection";
+import type { Container, ContainerStateList } from "@/container-client/types/container";
+import type { ContainerImage } from "@/container-client/types/image";
+import type { PodmanMachine } from "@/container-client/types/machine";
+import type { Volume } from "@/container-client/types/volume";
 
 export interface Domain {
   containers: Container[];
@@ -25,6 +29,8 @@ export interface AppScreenMetadata {
   RightIcon: any;
   // Sidebar hover tooltip (defaults to the Title when absent).
   Tooltip: string;
+  // Marks a sidebar entry for the attention/warning tint, so a cross-cutting hub stands out from the engine screens.
+  SidebarHighlight: boolean;
   RequiresProvisioning: boolean;
   RequiresConnection: boolean;
   // AI screens opt in with this flag. They are hidden from the sidebar and surfaced in

@@ -1,0 +1,159 @@
+.WorkspaceChangesDrawer .bp6-dialog-body {
+  gap: 10px;
+}
+
+.WorkspaceChangesFacts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin-top: 0 !important;
+}
+
+.WorkspaceChangesFacts > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+}
+
+.WorkspaceChangesFacts > div > span {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.WorkspaceChangesFacts code {
+  overflow: hidden;
+  color: var(--app-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.WorkspaceChangeList {
+  overflow: auto;
+  max-height: calc(100vh - 230px);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.WorkspaceChangeRow {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.WorkspaceChangeRow:last-child {
+  border-bottom: 0;
+}
+
+.WorkspaceChangePath {
+  min-width: 0;
+}
+
+.WorkspaceChangePath code,
+.WorkspaceChangePath span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.WorkspaceChangePath span {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.WorkspaceChangeTags {
+  display: flex;
+  gap: 4px;
+}
+
+.WorkspaceDiff {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.WorkspaceDiffSection,
+.WorkspaceDiffUntracked {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+
+.WorkspaceDiffSection h5,
+.WorkspaceDiffUntracked h5 {
+  margin: 0;
+}
+
+.WorkspaceDiffEditor {
+  height: min(240px, 32vh);
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.WorkspaceDiffUntracked {
+  padding: 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.WorkspaceDiffUntracked code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.WorkspaceDiffUntracked span,
+.WorkspaceChangesEmptySection {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.WorkspaceChangesCard {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 20px minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  text-align: left;
+}
+
+.WorkspaceChangesCard:hover,
+.WorkspaceChangesCard:focus-visible {
+  border-color: var(--app-accent);
+  background: var(--app-surface-strong);
+}
+
+.WorkspaceChangesCard:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 1px;
+}
+
+.WorkspaceChangesCardBody {
+  min-width: 0;
+}
+
+.WorkspaceChangesCardBody strong,
+.WorkspaceChangesCardBody span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.WorkspaceChangesCardBody span {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}

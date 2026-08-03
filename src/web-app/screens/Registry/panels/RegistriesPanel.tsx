@@ -3,7 +3,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { mdiCubeUnfolded } from "@mdi/js";
 import { useCallback, useMemo, useState } from "react";
 
-import type { Registry, RegistryAuthInfo, RegistryTlsState } from "@/env/Types";
+import type { Registry, RegistryAuthInfo, RegistryTlsState } from "@/container-client/types/registry";
 import { t } from "@/i18n";
 import { AppLabel } from "@/web-app/components/AppLabel";
 import { ConfirmMenu } from "@/web-app/components/ConfirmMenu";
@@ -33,7 +33,7 @@ import { TrustPill, type TrustPillTone } from "./TrustPill";
 // Registries category — GLOBAL, cloning the Containers list's grouped table exactly (same structure: ONE
 // .AppDataTable[data-windowed] filling the area with a sticky header, .AppDataTableGroupRow groups, tree-link
 // child rows, sortable headers, striped rows) — only the data differs. Login/add/remove run through the
-// client trust store until the registries.conf/auth.json backends wire in (handover Steps 3-4).
+// client trust store until the registries.conf/auth.json backends wire in.
 
 const TLS_PILL: Record<RegistryTlsState, { tone: TrustPillTone; icon: IconName; label: string }> = {
   verify: { tone: "ok", icon: IconNames.SMALL_TICK, label: "verify" },

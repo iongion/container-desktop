@@ -7,7 +7,7 @@ import { type ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
 
 import { useEffect, useRef } from "react";
 
-import { createLogger } from "@/platform/logger";
+import { createLogger } from "@/logger";
 import { AppTheme } from "@/web-app/App.types";
 import { useAppStore } from "@/web-app/stores/appStore";
 
@@ -185,7 +185,7 @@ const TerminalImpl: React.FC<TerminalProps> = ({ value, writeMode = "append", on
       }
       return true;
     });
-    // Load the WebGL addon ONLY on a hardware-accelerated GL stack (Electron/Chromium). Under WebKitGTK's
+    // Load the WebGL addon ONLY on a hardware-accelerated GL stack (Chromium/WebView2). Under WebKitGTK's
     // software GL it stalls at mount (the "UI blocks when I open Logs" jank) and renders no faster, so fall
     // back to xterm's built-in DOM renderer instead (capability-gated in terminalRenderer.ts).
     if (preferWebglRenderer()) {

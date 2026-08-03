@@ -1,6 +1,5 @@
-// Single source of truth for app branding + packaging metadata, shared by ALL THREE desktop backends
+// Single source of truth for app branding + packaging metadata, shared by BOTH desktop backends
 // so nothing can drift:
-//   • electron-builder-config.cjs         — require() directly (raw Node)
 //   • support/cli/lib/wails-package.ts     — require() via createRequire (tsx)
 //   • src-tauri/tauri.conf.json            — a DERIVED file, kept in sync by `yarn cli sync-manifests`,
 //                                            which writes productName / identifier / window title from here
@@ -12,7 +11,7 @@
 // source dir + per-target icon filenames, the .desktop entry text, and the Linux runtime dependencies.
 //
 // Mirrors the build-matrix.cjs / release-artifacts.cjs pattern: plain CommonJS, so both the
-// electron-builder .cjs config and the tsx-run TypeScript tooling consume it unchanged.
+// the .cjs packaging helpers and the tsx-run TypeScript tooling consume it unchanged.
 
 const pkg = require("../package.json"); // support/ sits one level under the repo root
 
@@ -27,7 +26,7 @@ const license = pkg.license; // MIT
 const version = pkg.version; // convenience re-export; package.json stays the source (see sync-manifests)
 const homepage = "https://container-desktop.com";
 
-// `Copyright (c) <year> <author>` — the caller passes the year (electron uses dayjs).
+// `Copyright (c) <year> <author>` — the caller passes the year.
 function copyright(year) {
   return `Copyright (c) ${year} ${author}`;
 }
@@ -35,7 +34,6 @@ function copyright(year) {
 // Reverse-DNS-ish identifiers differ per backend + store and MUST stay stable — changing one breaks
 // update channels / Store identity. Defined ONCE here so every consumer reads the same literal.
 const identifiers = {
-  electronAppId: "container-desktop.iongion.github.io", // electron-builder appId
   windowsIdentity: "IonutStoica.ContainerDesktop", // appx identityName + applicationId
   tauri: "com.iongion.container-desktop.tauri", // tauri.conf.json identifier
   wails: "com.iongion.container-desktop.wails", // wails macOS bundle id (future)
@@ -51,7 +49,7 @@ const categories = {
 const icons = {
   dir: "src/resources/icons",
   png: "appIcon.png",
-  linux: "appIcon-unified.png", // electron linux + wails .desktop icon
+  linux: "appIcon-unified.png", // linux + wails .desktop icon
   mac: "appIcon.icns",
   win: "icon.ico",
 };
