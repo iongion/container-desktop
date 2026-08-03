@@ -9,6 +9,7 @@
     "@container-desktop/pi-bridge": "*",
     "@container-desktop/utils": "*",
     "@earendil-works/pi-coding-agent": "0.83.0",
+    "@earendil-works/pi-tui": "0.83.0",
     "ws": "8.18.3"
   }
 }

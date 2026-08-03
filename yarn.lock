@@ -864,7 +864,7 @@
   optionalDependencies:
     "@mariozechner/clipboard" "0.3.9"
 
-"@earendil-works/pi-tui@^0.83.0":
+"@earendil-works/pi-tui@0.83.0", "@earendil-works/pi-tui@^0.83.0":
   version "0.83.0"
   resolved "https://registry.yarnpkg.com/@earendil-works/pi-tui/-/pi-tui-0.83.0.tgz#1ea3dcf055c92ffab14211a5d08426d2ddb49b45"
   integrity sha512-IoYrb0rORjELmEpNtoCA/U8je3KopMkRAVJRdSzvXRvgb+Huo1gNh8Q5CSZvNOiYtDxJdj2tYZZHZ4B3+IN3hA==
