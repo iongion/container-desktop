@@ -35,9 +35,6 @@ import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as AIAssistantScreen } from "@/web-app/screens/AI/AssistantScreen";
 import { Screen as AICodingAgentScreen } from "@/web-app/screens/AI/CodingAgentScreen";
-import { Screen as AIRunsScreen } from "@/web-app/screens/AI/Run/ManageScreen";
-import { Screen as AIRunScreen } from "@/web-app/screens/AI/Run/RunScreen";
-import { Screen as AIWorkersScreen } from "@/web-app/screens/AI/Worker/ManageScreen";
 import { Screen as BuildScreen } from "@/web-app/screens/Build/ManageScreen";
 import { Screen as ConnectionInfoScreen } from "@/web-app/screens/Connections/ConnectionInfoScreen";
 import { Screen as ConnectionsScreen } from "@/web-app/screens/Connections/ManageScreen";
@@ -86,9 +83,6 @@ const Screens = [
   DashboardScreen,
   AIAssistantScreen,
   AICodingAgentScreen,
-  AIRunsScreen,
-  AIRunScreen,
-  AIWorkersScreen,
   ContainersScreen,
   ContainerLogsScreen,
   ContainerInspectScreen,

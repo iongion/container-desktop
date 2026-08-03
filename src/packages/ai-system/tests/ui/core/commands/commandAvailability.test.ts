@@ -81,7 +81,6 @@ describe("planCommandExecution", () => {
       reasonKey: "Wait for the active turn to finish",
     });
     expect(planCommandExecution(command("thread.copy"), activeContext)).toEqual({ kind: "execute" });
-    expect(planCommandExecution(command("run.stop"), activeContext)).toEqual({ kind: "execute" });
   });
 
   it("opens Thread compaction only for an idle Thread", () => {

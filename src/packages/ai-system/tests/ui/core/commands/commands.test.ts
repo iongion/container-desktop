@@ -61,23 +61,13 @@ describe("assistant command registry", () => {
       "access.set",
       "reasoning.set",
       "permissions.open",
-      "worker.list",
-      "worker.show",
-      "worker.create",
-      "run.start",
-      "run.list",
-      "run.show",
-      "run.stop",
     ]);
     const names = BUILTIN_ASSISTANT_COMMANDS.flatMap((command) => [command.path, ...command.aliases]);
     expect(new Set(names).size).toBe(names.length);
   });
 
   it("derives bypass tiers and reserved names from one registry", () => {
-    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byBypassTier.always.map(({ id }) => id)).toEqual([
-      "thread.stop",
-      "run.stop",
-    ]);
+    expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byBypassTier.always.map(({ id }) => id)).toEqual(["thread.stop"]);
     expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byBypassTier["immediate-ui"].map(({ id }) => id)).toEqual([
       "help",
       "skills.open",
@@ -100,11 +90,6 @@ describe("assistant command registry", () => {
       "access.set",
       "reasoning.set",
       "permissions.open",
-      "worker.list",
-      "worker.show",
-      "worker.create",
-      "run.list",
-      "run.show",
     ]);
     expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.reservedNames).toContain("/clear");
     expect(BUILTIN_ASSISTANT_COMMAND_REGISTRY.byName["/resume"]?.id).toBe("thread.list");
@@ -268,21 +253,6 @@ describe("parseAssistantInput", () => {
   });
 
   it("parses native application routes and their compatibility aliases", () => {
-    expect(parseAssistantInput("/worker open Inspector", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "worker.show",
-      args: ["Inspector"],
-    });
-    expect(parseAssistantInput("/plan Audit all images", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "run.start",
-      args: ["Audit all images"],
-    });
-    expect(parseAssistantInput("/run stop run-1", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
-      kind: "command",
-      id: "run.stop",
-      args: ["run-1"],
-    });
     expect(parseAssistantInput("/remember Prefer typed ports", BUILTIN_ASSISTANT_COMMAND_REGISTRY)).toMatchObject({
       kind: "command",
       id: "memory.add",

@@ -34,10 +34,3 @@ Registry revision: `builtin-v8`
 | `/access` | `/security` | Choose the Assistant access profile | [observe\|workspace\|operator] | `immediate-ui` | `thread-idle-only` | `none` |
 | `/reasoning` | `/effort`, `/thinking`, `/think` | Choose the Thread reasoning level | [default\|low\|medium\|high] | `immediate-ui` | `thread-idle-only` | `none` |
 | `/permissions` | — | Open AI permissions settings | — | `immediate-ui` | `always` | `none` |
-| `/worker list` | `/workers`, `/agents` | Open the Worker library | — | `immediate-ui` | `always` | `none` |
-| `/worker show` | `/worker open` | Find a Worker | <id-or-name> | `immediate-ui` | `always` | `none` |
-| `/worker create` | — | Create a Worker | — | `immediate-ui` | `always` | `none` |
-| `/run start` | `/plan` | Start a Team Run | <goal> | `queued` | `idle` | `none` |
-| `/run list` | — | Open Runs | — | `immediate-ui` | `always` | `none` |
-| `/run show` | — | Open an exact Run | <id-or-goal> | `immediate-ui` | `always` | `none` |
-| `/run stop` | — | Stop an exact Run | <id-or-goal> | `always` | `always` | `required` |

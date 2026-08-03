@@ -59,13 +59,6 @@ const BUILTIN_COMMAND_ICONS: Record<BuiltinAssistantCommandId, IconName> = {
   "access.set": IconNames.EYE_OPEN,
   "reasoning.set": IconNames.LIGHTBULB,
   "permissions.open": IconNames.SHIELD,
-  "worker.list": IconNames.PEOPLE,
-  "worker.show": IconNames.SEARCH,
-  "worker.create": IconNames.NEW_PERSON,
-  "run.start": IconNames.PLAY,
-  "run.list": IconNames.LIST,
-  "run.show": IconNames.SEARCH,
-  "run.stop": IconNames.STOP,
 };
 
 function commandIcon(command: AssistantCommandDefinition): IconName {

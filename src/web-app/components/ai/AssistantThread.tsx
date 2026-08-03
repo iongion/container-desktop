@@ -10,18 +10,15 @@ import { useTranslation } from "react-i18next";
 import { type AccessProfileId, isAccessProfileId } from "@/ai-system/core/accessProfiles";
 import type { AIPermissionMode } from "@/ai-system/core/permissions";
 import { isReasoningLevel, type ReasoningLevel } from "@/ai-system/core/reasoning";
-import type { RunView } from "@/ai-system/core/runEvents";
 import { DEFAULT_AI_SETTINGS } from "@/ai-system/core/settings";
 import { latestAssistantResponse } from "@/ai-system/core/threadExport";
 import type { ThreadConfigurationPatch } from "@/ai-system/core/threads";
 import type { AISettings } from "@/ai-system/core/types";
-import type { WorkerDefinition } from "@/ai-system/core/workers";
 import type {
   AssistantCommandExecutionResult,
   AssistantCommandSurface,
   BuiltinAssistantCommandId,
 } from "@/ai-system/ui/core/commands/commandTypes";
-import { isRunActive } from "@/ai-system/ui/core/stores/runClient";
 import { resolveScreenPrompt } from "@/template/screenPrompts";
 import { AIComposer, type ParsedAssistantCommand } from "@/web-app/components/AIComposer";
 import { AssistantContextDrawer, type AssistantContextSection } from "@/web-app/components/ai/AssistantContextDrawer";
@@ -38,14 +35,6 @@ import { resolveThreadReference } from "@/web-app/components/ai/threadHistory";
 import { WorkspaceChangesDrawer, type WorkspaceChangesView } from "@/web-app/components/ai/WorkspaceChangesDrawer";
 import { useAssistantSkills } from "@/web-app/hooks/useAssistantSkills";
 import { Notification } from "@/web-app/Notification";
-import { CreateDrawer as RunCreateDrawer } from "@/web-app/screens/AI/Run";
-import { getRunsUrl, getRunUrl } from "@/web-app/screens/AI/Run/Navigation";
-import { useRunClient } from "@/web-app/screens/AI/Run/runClientInstance";
-import { resolveRunReference } from "@/web-app/screens/AI/Run/runReference";
-import { StopDrawer as RunStopDrawer } from "@/web-app/screens/AI/Run/StopDrawer";
-import { CreateDrawer as WorkerCreateDrawer } from "@/web-app/screens/AI/Worker";
-import { getWorkersUrl } from "@/web-app/screens/AI/Worker/Navigation";
-import { resolveWorkerReference } from "@/web-app/screens/AI/Worker/workerReference";
 import { getSettingsUrl } from "@/web-app/screens/Settings/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
 import { useUIStore } from "@/web-app/stores/uiStore";
@@ -81,7 +70,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const resolveApproval = useAIStore((s) => s.resolveApproval);
   const cancel = useAIStore((s) => s.cancel);
   const setAssistantConsoleOpen = useUIStore((s) => s.setAssistantConsoleOpen);
-  const { runClient, state: runState } = useRunClient();
   const {
     snapshot: skillSnapshot,
     registry: skillRegistry,
@@ -132,9 +120,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   }>();
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [workspaceChangesView, setWorkspaceChangesView] = useState<WorkspaceChangesView>();
-  const [workerEditor, setWorkerEditor] = useState<WorkerDefinition | null>();
-  const [runGoal, setRunGoal] = useState<string>();
-  const [runToStop, setRunToStop] = useState<RunView>();
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -211,11 +196,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       window.location.href = href;
     },
     [setAssistantConsoleOpen, surface],
-  );
-
-  const runs = useMemo(
-    () => runState.order.map((runId) => runState.runs[runId]).filter((run): run is RunView => !!run),
-    [runState.order, runState.runs],
   );
 
   const executeCommand = useCallback(
@@ -349,46 +329,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           navigate(getSettingsUrl("ai"));
           return undefined;
         },
-        "worker.list": () => {
-          useUIStore.getState().setSearch("ai.workers", "");
-          navigate(getWorkersUrl());
-        },
-        "worker.show": async (command) => {
-          const reference = command.args[0] ?? "";
-          const resolved = resolveWorkerReference((await window.AI.listWorkers()).workers, reference);
-          if (resolved.kind === "resolved") setWorkerEditor(resolved.worker);
-          else {
-            useUIStore.getState().setSearch("ai.workers", reference);
-            navigate(getWorkersUrl());
-          }
-        },
-        "worker.create": () => {
-          setWorkerEditor(null);
-          return undefined;
-        },
-        "run.start": (command) => {
-          setRunGoal(command.args[0] ?? "");
-          return undefined;
-        },
-        "run.list": () => {
-          useUIStore.getState().setSearch("ai.runs", "");
-          navigate(getRunsUrl());
-        },
-        "run.show": (command) => {
-          const reference = command.args[0] ?? "";
-          const resolved = resolveRunReference(runs, reference);
-          if (resolved.kind === "resolved") navigate(getRunUrl(resolved.run.runId));
-          else {
-            useUIStore.getState().setSearch("ai.runs", reference);
-            navigate(getRunsUrl());
-          }
-        },
-        "run.stop": (command) => {
-          const resolved = resolveRunReference(runs, command.args[0] ?? "");
-          if (resolved.kind !== "resolved") throw new Error(t("Run ID or Goal is not unique"));
-          if (!isRunActive(resolved.run)) throw new Error(t("Run is not active"));
-          setRunToStop(resolved.run);
-        },
       };
       return handlers[parsed.command.handlerId](parsed);
     },
@@ -401,7 +341,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       openThreadHistory,
       reloadSkills,
       renameThread,
-      runs,
       setActiveThread,
       t,
       threads,
@@ -548,26 +487,6 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       ) : null}
       {workspaceChangesView ? (
         <WorkspaceChangesDrawer initialView={workspaceChangesView} onClose={() => setWorkspaceChangesView(undefined)} />
-      ) : null}
-      {workerEditor !== undefined ? (
-        <WorkerCreateDrawer worker={workerEditor ?? undefined} onClose={() => setWorkerEditor(undefined)} />
-      ) : null}
-      {runGoal !== undefined ? (
-        <RunCreateDrawer
-          initialGoal={runGoal}
-          onClose={() => setRunGoal(undefined)}
-          onStarted={(runId) => {
-            setRunGoal(undefined);
-            navigate(getRunUrl(runId));
-          }}
-        />
-      ) : null}
-      {runToStop ? (
-        <RunStopDrawer
-          run={runToStop}
-          onClose={() => setRunToStop(undefined)}
-          onStop={(runId) => runClient.stop(runId)}
-        />
       ) : null}
     </div>
   );

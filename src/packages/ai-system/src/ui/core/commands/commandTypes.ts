@@ -29,14 +29,7 @@ export type BuiltinAssistantCommandId =
   | "model.open"
   | "access.set"
   | "reasoning.set"
-  | "permissions.open"
-  | "worker.list"
-  | "worker.show"
-  | "worker.create"
-  | "run.start"
-  | "run.list"
-  | "run.show"
-  | "run.stop";
+  | "permissions.open";
 
 export type AssistantCommandId = string;
 

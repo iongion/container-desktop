@@ -1,7 +1,6 @@
 import { AISettingsForm } from "./AISettingsForm";
 import { AirGapPolicyPanel } from "./panels/AirGapPolicyPanel";
 import { AppearancePanel } from "./panels/AppearancePanel";
-import { AvatarLibraryPanel } from "./panels/AvatarLibraryPanel";
 import { ConfigPanel } from "./panels/ConfigPanel";
 import { LoggingPanel } from "./panels/LoggingPanel";
 import { NetworkPanel } from "./panels/NetworkPanel";
@@ -11,7 +10,6 @@ import { StartupPanel } from "./panels/StartupPanel";
 // from the pure model so that model stays framework-free and unit-testable; this file is the React seam.
 export const SETTINGS_PANELS: Record<string, React.FC> = {
   appearance: AppearancePanel,
-  avatars: AvatarLibraryPanel,
   startup: StartupPanel,
   network: NetworkPanel,
   policy: AirGapPolicyPanel,
