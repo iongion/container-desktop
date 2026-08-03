@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildUpstreamRequest, type GatewayConfig, isAuthorized } from "@/pi-agent-host/gateway";
+import {
+  buildDownstreamHeaders,
+  buildUpstreamRequest,
+  type GatewayConfig,
+  isAuthorized,
+} from "@/pi-agent-host/gateway";
 
 const config: GatewayConfig = {
   upstreamBaseUrl: "https://openrouter.ai/api/v1",
@@ -47,6 +52,28 @@ describe("buildUpstreamRequest", () => {
       { ...config, upstreamBaseUrl: "https://openrouter.ai/api/v1/" },
     );
     expect(built.url).toBe("https://openrouter.ai/api/v1/models");
+  });
+});
+
+describe("buildDownstreamHeaders", () => {
+  it("drops content-encoding, because fetch already decoded the body", () => {
+    // Echoing gzip while writing plain bytes makes the client abort mid-response with "terminated".
+    const headers = buildDownstreamHeaders({ "content-encoding": "gzip", "content-type": "application/json" });
+    expect(headers["content-encoding"]).toBeUndefined();
+    expect(headers["content-type"]).toBe("application/json");
+  });
+
+  it("drops length and chunking headers that describe the encoded bytes", () => {
+    const headers = buildDownstreamHeaders({
+      "content-length": "1234",
+      "transfer-encoding": "chunked",
+      connection: "keep-alive",
+    });
+    expect(headers).toEqual({});
+  });
+
+  it("keeps the streaming content type SSE responses rely on", () => {
+    expect(buildDownstreamHeaders({ "content-type": "text/event-stream" })["content-type"]).toBe("text/event-stream");
   });
 });
 

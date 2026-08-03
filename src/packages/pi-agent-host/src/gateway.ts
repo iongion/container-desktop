@@ -21,6 +21,25 @@ const STRIPPED_HEADERS: ReadonlySet<string> = new Set([
   "content-length",
 ]);
 
+// Response headers that must NOT be copied downstream. `fetch` has already decoded the body, so echoing
+// the upstream `content-encoding` (or a length/chunking header describing the encoded bytes) makes the
+// client try to gunzip plain text and abort the connection.
+const STRIPPED_RESPONSE_HEADERS: ReadonlySet<string> = new Set([
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
+  "connection",
+  "keep-alive",
+]);
+
+export function buildDownstreamHeaders(upstream: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(upstream)) {
+    if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) headers[key.toLowerCase()] = value;
+  }
+  return headers;
+}
+
 export interface GatewayConfig {
   upstreamBaseUrl: string;
   apiKey: string;
@@ -70,7 +89,7 @@ export async function startGateway(config: GatewayConfig, port: number): Promise
         body: hasBody ? (Readable.toWeb(request) as ReadableStream) : undefined,
         ...(hasBody ? { duplex: "half" } : {}),
       } as RequestInit);
-      response.writeHead(upstream.status, Object.fromEntries(upstream.headers.entries()));
+      response.writeHead(upstream.status, buildDownstreamHeaders(Object.fromEntries(upstream.headers.entries())));
       if (upstream.body) {
         for await (const chunk of upstream.body as unknown as AsyncIterable<Uint8Array>) response.write(chunk);
       }

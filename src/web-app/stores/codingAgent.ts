@@ -62,6 +62,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   async start(options) {
     set({ status: "starting", startLog: [], items: [], error: undefined });
     const suffix = randomUUID().slice(0, 8);
+    const host = await resolveConnectionHost(options.connectionId);
+    if (!host) {
+      set({ status: "error", error: `no engine host for connection ${options.connectionId}` });
+      return;
+    }
     const spec: PiAgentSessionSpec = {
       imageTag: agentImageTag(options.appVersion),
       workspacePath: options.workspacePath,
@@ -76,10 +81,11 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       modelId: options.modelId,
       egress: options.egress ?? true,
       scope: options.scope,
+      // Podman maps the invoking user to container root under rootless mode, so the agent user needs an
+      // explicit mapping or the bind-mounted workspace is effectively read-only. Docker has no keep-id.
+      userMapping: host.PROGRAM === "podman" ? { kind: "keep-id" } : { kind: "none" },
     };
     try {
-      const host = await resolveConnectionHost(options.connectionId);
-      if (!host) throw new Error(`no engine host for connection ${options.connectionId}`);
       set((state) => ({ startLog: [...state.startLog, `starting ${spec.agentContainerName}`] }));
       await startPiAgentSession(host, spec, (contents) => writePrivateEnvFile(`${suffix}.env`, contents));
 

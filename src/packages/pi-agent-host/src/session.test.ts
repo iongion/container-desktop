@@ -51,6 +51,7 @@ describe("createPiSession", () => {
       cwd,
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
       gatewayUrl: "http://gateway.invalid:8788/v1",
+      gatewayToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
       streamOverride: cannedStream as never,

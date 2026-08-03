@@ -40,6 +40,7 @@ async function runAgent(): Promise<void> {
       cwd: process.env.CD_WORKSPACE ?? "/workspace",
       agentDir: process.env.CD_AGENT_DIR ?? "/home/agent/.pi/agent",
       gatewayUrl: required("CD_GATEWAY_URL"),
+      gatewayToken: token,
       modelId: required("CD_MODEL_ID"),
       emit: (event) => attached?.emit(event),
     })

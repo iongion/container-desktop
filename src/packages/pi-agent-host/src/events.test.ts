@@ -38,6 +38,24 @@ describe("mapAgentEvent", () => {
     ).toEqual([{ type: "assistant_end", text: "one two", stopReason: "stop" }]);
   });
 
+  it("surfaces an errored assistant message instead of a silent empty reply", () => {
+    expect(
+      mapAgentEvent({
+        type: "message_end",
+        message: { role: "assistant", content: [], stopReason: "error", errorMessage: "402 insufficient credits" },
+      }),
+    ).toEqual([
+      { type: "error", message: "402 insufficient credits" },
+      { type: "assistant_end", text: "", stopReason: "error" },
+    ]);
+  });
+
+  it("falls back to a generic message when an errored turn carries no error text", () => {
+    expect(
+      mapAgentEvent({ type: "message_end", message: { role: "assistant", content: [], stopReason: "error" } })[0],
+    ).toEqual({ type: "error", message: "the model returned an error" });
+  });
+
   it("ignores a user message_end", () => {
     expect(mapAgentEvent({ type: "message_end", message: { role: "user", content: [] } })).toEqual([]);
   });

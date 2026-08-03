@@ -6,6 +6,9 @@ const logger = createLogger("ai.piAgentContainer");
 const AGENT_DIR_IN_IMAGE = "/home/agent/.pi/agent";
 const BRIDGE_PORT_IN_IMAGE = 8787;
 const GATEWAY_PORT_IN_IMAGE = 8788;
+// The uid/gid of the `agent` user baked into the image. Rootless podman maps the invoking host user to
+// container root, so without a mapping the agent user cannot write to the bind-mounted workspace.
+const AGENT_UID_IN_IMAGE = 1001;
 
 export interface PiAgentSessionSpec {
   imageTag: string;
@@ -24,6 +27,29 @@ export interface PiAgentSessionSpec {
   modelId: string;
   egress: boolean;
   scope?: string;
+  // How to map the container's agent user onto the host user so workspace writes land with the right
+  // ownership. Podman rootless uses keep-id; Docker needs an explicit --user, which requires knowing the
+  // host uid/gid.
+  userMapping: { kind: "keep-id" } | { kind: "user"; uid: number; gid: number } | { kind: "none" };
+}
+
+// Podman's `:U` chowns the volume's content to the mapped container user. Without it a plugin volume
+// created under a previous mapping stays owned by the old uid and pi cannot write its session files —
+// which surfaces as EACCES on the first turn, not at startup. Docker has no equivalent option.
+export function pluginVolumeMount(spec: PiAgentSessionSpec, agentDir: string): string {
+  const suffix = spec.userMapping.kind === "keep-id" ? ":U" : "";
+  return `${spec.pluginVolumeName}:${agentDir}${suffix}`;
+}
+
+export function userMappingArgv(mapping: PiAgentSessionSpec["userMapping"]): string[] {
+  switch (mapping.kind) {
+    case "keep-id":
+      return ["--userns", `keep-id:uid=${AGENT_UID_IN_IMAGE},gid=${AGENT_UID_IN_IMAGE}`];
+    case "user":
+      return ["--user", `${mapping.uid}:${mapping.gid}`];
+    case "none":
+      return [];
+  }
 }
 
 export interface PiAgentSessionContainers {
@@ -44,9 +70,10 @@ export function agentRunArgv(spec: PiAgentSessionSpec, guestWorkspacePath: strin
     "--volume",
     `${guestWorkspacePath}:/workspace`,
     "--volume",
-    `${spec.pluginVolumeName}:${AGENT_DIR_IN_IMAGE}`,
+    pluginVolumeMount(spec, AGENT_DIR_IN_IMAGE),
     "--env-file",
     envFilePath,
+    ...userMappingArgv(spec.userMapping),
     ...(spec.egress ? [] : ["--internal"]),
     spec.imageTag,
     "--mode",

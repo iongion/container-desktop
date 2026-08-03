@@ -14,7 +14,7 @@ export interface PiContentBlock {
 export interface PiAgentEvent {
   type: string;
   assistantMessageEvent?: { type: string; delta?: string; content?: string };
-  message?: { role: string; content?: PiContentBlock[]; stopReason?: string };
+  message?: { role: string; content?: PiContentBlock[]; stopReason?: string; errorMessage?: string };
   toolCallId?: string;
   toolName?: string;
   args?: unknown;
@@ -43,7 +43,17 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
     case "message_end": {
       const message = event.message;
       if (message?.role !== "assistant") return [];
-      return [{ type: "assistant_end", text: textOf(message.content), stopReason: message.stopReason ?? "stop" }];
+      const text = textOf(message.content);
+      // A provider failure arrives as a finished assistant message with stopReason "error" — not as a
+      // thrown prompt. Mapping it to assistant_end alone renders as a silent empty reply, which is
+      // indistinguishable from a hung UI, so surface the error too.
+      if (message.stopReason === "error" || (message.errorMessage && !text)) {
+        return [
+          { type: "error", message: message.errorMessage ?? "the model returned an error" },
+          { type: "assistant_end", text, stopReason: "error" },
+        ];
+      }
+      return [{ type: "assistant_end", text, stopReason: message.stopReason ?? "stop" }];
     }
     case "tool_execution_start":
       return [

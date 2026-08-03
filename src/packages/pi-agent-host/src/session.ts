@@ -26,13 +26,16 @@ export interface CreatePiSessionOptions {
   cwd: string;
   agentDir: string;
   gatewayUrl: string;
+  // The shared secret between the agent and gateway containers. pi sends it as the provider's bearer
+  // token, which is exactly what the gateway authorizes on — the real provider key never comes here.
+  gatewayToken: string;
   modelId: string;
   emit: (event: BridgeEvent) => void;
   streamOverride?: PiStreamFn;
 }
 
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
-  const { cwd, agentDir, gatewayUrl, modelId, emit, streamOverride } = options;
+  const { cwd, agentDir, gatewayUrl, gatewayToken, modelId, emit, streamOverride } = options;
 
   // The inline extension registers the gateway provider. Its registration is queued by the extension
   // runtime and flushed by createAgentSessionServices — the low-level createAgentSession does NOT flush
@@ -43,9 +46,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
       pi.registerProvider(GATEWAY_PROVIDER_ID, {
         // baseUrl is required: the provider composer validates it when defining custom models.
         baseUrl: gatewayUrl,
-        // A placeholder, not a credential. The real key lives in the gateway container; this only has to
-        // be non-empty so pi's key-existence check passes.
-        apiKey: "gateway",
+        apiKey: gatewayToken,
         api: "openai-completions",
         ...(streamOverride ? { streamSimple: streamOverride as never } : {}),
         models: [
@@ -72,7 +73,7 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     settingsManager,
     resourceLoaderOptions: { extensionFactories: [gatewayExtension] },
   });
-  await services.modelRuntime.setRuntimeApiKey(GATEWAY_PROVIDER_ID, "gateway", { allowNetwork: false });
+  await services.modelRuntime.setRuntimeApiKey(GATEWAY_PROVIDER_ID, gatewayToken, { allowNetwork: false });
 
   const model = services.modelRuntime.getModel(GATEWAY_PROVIDER_ID, modelId);
   if (!model) {

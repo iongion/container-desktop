@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PiAgentSessionSpec } from "@/ai-system/adapters/piAgentContainer";
-import { agentRunArgv, gatewayRunArgv, startPiAgentSession } from "@/ai-system/adapters/piAgentContainer";
+import {
+  agentRunArgv,
+  gatewayRunArgv,
+  pluginVolumeMount,
+  startPiAgentSession,
+  userMappingArgv,
+} from "@/ai-system/adapters/piAgentContainer";
 
 const spec: PiAgentSessionSpec = {
   imageTag: "container-desktop/pi-agent:6.1.0",
@@ -15,6 +21,7 @@ const spec: PiAgentSessionSpec = {
   upstreamApiKey: "sk-real-secret",
   modelId: "some/model",
   egress: true,
+  userMapping: { kind: "keep-id" },
 };
 
 function fakeHost(overrides: Record<string, unknown> = {}) {
@@ -48,7 +55,7 @@ describe("agentRunArgv", () => {
   });
 
   it("mounts the plugin volume at the pi agent dir", () => {
-    expect(agentRunArgv(spec, "/w", "/tmp/env")).toContain("cd-agent-plugins:/home/agent/.pi/agent");
+    expect(agentRunArgv(spec, "/w", "/tmp/env")).toContain("cd-agent-plugins:/home/agent/.pi/agent:U");
   });
 
   it("passes secrets through an env file and never through argv", () => {
@@ -58,8 +65,38 @@ describe("agentRunArgv", () => {
     expect(argv.join(" ")).not.toContain("tok");
   });
 
+  it("carries the user mapping so workspace writes reach the host", () => {
+    expect(agentRunArgv(spec, "/w", "/tmp/env").join(" ")).toContain("keep-id:uid=1001,gid=1001");
+  });
+
   it("drops networking except the gateway when egress is off", () => {
     expect(agentRunArgv({ ...spec, egress: false }, "/w", "/tmp/env")).toContain("--internal");
+  });
+});
+
+describe("pluginVolumeMount", () => {
+  it("chowns the volume under podman so a volume from a previous mapping still works", () => {
+    expect(pluginVolumeMount(spec, "/home/agent/.pi/agent")).toBe("cd-agent-plugins:/home/agent/.pi/agent:U");
+  });
+
+  it("omits :U where the engine does not support it", () => {
+    expect(pluginVolumeMount({ ...spec, userMapping: { kind: "none" } }, "/agent")).toBe("cd-agent-plugins:/agent");
+  });
+});
+
+describe("userMappingArgv", () => {
+  it("maps the host user onto the image's agent uid under rootless podman", () => {
+    // Without this, rootless podman maps the host user to container root and the agent user (1001)
+    // cannot write to the bind-mounted workspace — the mount is read-only in practice.
+    expect(userMappingArgv({ kind: "keep-id" })).toEqual(["--userns", "keep-id:uid=1001,gid=1001"]);
+  });
+
+  it("passes an explicit user for engines without keep-id", () => {
+    expect(userMappingArgv({ kind: "user", uid: 1000, gid: 1000 })).toEqual(["--user", "1000:1000"]);
+  });
+
+  it("adds nothing when no mapping is wanted", () => {
+    expect(userMappingArgv({ kind: "none" })).toEqual([]);
   });
 });
 
