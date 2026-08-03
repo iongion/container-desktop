@@ -1,107 +1,80 @@
-// React hook bindings over the vanilla AI store (ui/core/stores/aiStore.ts). Thin wrapper.
-// Self-initializing: the vanilla store is lazily created with window.AI/AIBus on first access. The
-// diagnostics bundle (engine/activity/errors + a live resource summary) is collected here, where the
-// renderer's app/activity/resource stores are reachable, and injected into the store.
+// React hook bindings over the AI thread state the assistant UI consumes. The producer is now the pi
+// session (useCodingAgentStore) rather than the OMA thread client: a pi session is one conversation, so it
+// surfaces as exactly one thread. The AIState shape is unchanged, which is what lets the whole assistant UI
+// — markdown, tool cards, timeline, drawers — keep working without component edits.
 
-import { useStore } from "zustand";
+import { useMemo } from "react";
 
-import { AI_CHANNELS } from "@/ai-system/core/channels";
-import type { ThreadEventEnvelope, ThreadView } from "@/ai-system/core/threadEvents";
-import type { DiagnosticsBundle } from "@/ai-system/core/types";
-import { buildResourceContext, type ConnectionResourceSummary } from "@/ai-system/ui/core/resourceContext";
-import { buildScreenContext } from "@/ai-system/ui/core/screenContext";
-import { type AIState, type AIStore, createAIStore } from "@/ai-system/ui/core/stores/aiStore";
-import { ContainerStateList } from "@/container-client/types/container";
+import { piSessionSummary, piSessionUnavailable } from "@/ai-system/core/piAIState";
+import type { ThreadView } from "@/ai-system/core/threadEvents";
+import type { AIState } from "@/ai-system/ui/core/stores/aiStore";
 import { createLogger } from "@/logger";
-import { resolveScreenPrompt } from "@/template/screenPrompts";
-import { useActivityStore } from "@/web-app/stores/activityStore";
-import { useAppStore } from "@/web-app/stores/appStore";
-import { useResourceStore } from "@/web-app/stores/resourceStore";
-import { useUIStore } from "@/web-app/stores/uiStore";
+import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
-// Best-effort live context the renderer owns; main-side tools gather more during the run. Folds the
-// engine/connection/activity/error signal with a compact summary of every open connection's resources.
-function collectBundle(): DiagnosticsBundle {
-  const app = useAppStore.getState();
-  const conn = app.currentConnector as any;
-  const entries = (useActivityStore.getState().entries ?? []) as any[];
-  const errors = entries
-    .filter((e) => e?.severity === "error" || e?.status === "failure")
-    .slice(0, 12)
-    .map((e) => `${e.kind}: ${e.title ?? e.message ?? ""}`)
-    .join("\n");
-  const activity = entries
-    .slice(0, 20)
-    .map((e) => `${e.kind}/${e.severity ?? ""}: ${e.title ?? e.message ?? ""}`)
-    .join("\n");
+const logger = createLogger("ai.store");
 
-  const res = useResourceStore.getState();
-  const summaries: ConnectionResourceSummary[] = (res.activeRuntime ?? []).map((rt: any) => {
-    const snap = res.byConnection[rt.id];
-    const containers = snap?.containers.items ?? [];
-    return {
-      name: rt.name,
-      engine: rt.engine,
-      connected: rt.running,
-      containers: containers.length,
-      running: containers.filter((c: any) => c.Computed?.DecodedState === ContainerStateList.RUNNING).length,
-      images: snap?.images.items.length ?? 0,
-      pods: snap?.pods.items.length ?? 0,
-      volumes: snap?.volumes.items.length ?? 0,
-      networks: snap?.networks.items.length ?? 0,
-      secrets: snap?.secrets.items.length ?? 0,
+// Capabilities the assistant UI exposes that the pi bridge does not carry yet. They reject by name so a
+// drawer shows a real message; each is claimed by a later phase (session list, fork/tree, compact, export).
+const PENDING: Array<keyof AIState> = [
+  "newThread",
+  "renameThread",
+  "configureThread",
+  "previewThreadBranch",
+  "branchThread",
+  "previewThreadCompaction",
+  "compactThread",
+  "refreshSnapshot",
+  "resolveApproval",
+  "deleteThread",
+];
+
+function pendingActions(): Partial<AIState> {
+  const actions: Record<string, unknown> = {};
+  for (const name of PENDING) {
+    actions[name] = () => {
+      const error = piSessionUnavailable(String(name));
+      logger.warn(error.message);
+      return Promise.reject(error);
     };
-  });
-  const resources = buildResourceContext(summaries) || undefined;
-
-  // What the user is currently looking at (screen id/title). The per-screen focus guidance is folded in by
-  // the console/registry in a later step; here we attach at least the screen identity every turn.
-  const screenMeta = useUIStore.getState().currentScreen;
-  const screen =
-    buildScreenContext({
-      id: screenMeta.id,
-      title: screenMeta.title,
-      focus: resolveScreenPrompt(screenMeta.id).focus,
-    }) || undefined;
-
-  return {
-    os: String(app.osType ?? ""),
-    engine: conn?.engine ? String(conn.engine) : undefined,
-    connection: conn ? `${conn.name ?? conn.id ?? ""} (host: ${conn.host ?? "?"})` : undefined,
-    screen,
-    activity: activity || undefined,
-    errors: errors || undefined,
-    resources,
-  };
-}
-
-let _store: AIStore | null = null;
-const ACTIVE_THREAD_KEY = "container-desktop:ai:active-thread";
-
-function getStore(): AIStore {
-  if (!_store) {
-    _store = createAIStore({
-      getAI: () => window.AI,
-      log: { error: (...args: any[]) => createLogger("ai.store").error(...args) },
-      collectBundle,
-      subscribeEvents: (listener) =>
-        window.AIBus.subscribe(AI_CHANNELS.threadEvent, (event: ThreadEventEnvelope) => listener(event)),
-      loadSelectedThreadId: () => localStorage.getItem(ACTIVE_THREAD_KEY),
-      saveSelectedThreadId: (threadId) => {
-        if (threadId) localStorage.setItem(ACTIVE_THREAD_KEY, threadId);
-        else localStorage.removeItem(ACTIVE_THREAD_KEY);
-      },
-    });
   }
-  return _store;
+  return actions as Partial<AIState>;
 }
 
-// React hook over the vanilla store. Non-React callers may read the projection, but only actor events may mutate it.
-export function useAIStore<T>(selector: (state: AIState) => T): T {
-  return useStore(getStore(), selector);
+function deriveState(view: ThreadView, status: string, modelId: string, startedAt: number): AIState {
+  const summary = piSessionSummary({ view, modelId, startedAt });
+  return {
+    lifecycle: status === "idle" ? "hydrating" : "ready",
+    threads: [summary],
+    activeThreadId: summary.id,
+    views: { [summary.id]: view },
+    recoveryErrors: {},
+    deletingThreads: new Set<string>(),
+    setActiveThread: () => undefined,
+    submitMessage: async (text: string) => {
+      await useCodingAgentStore.getState().submit(text);
+      return undefined;
+    },
+    applyThreadEvent: () => undefined,
+    cancel: async () => {
+      await useCodingAgentStore.getState().stop();
+    },
+    ...pendingActions(),
+  } as AIState;
 }
-useAIStore.getState = () => getStore().getState();
+
+export function useAIStore<T>(selector: (state: AIState) => T): T {
+  const view = useCodingAgentStore((state) => state.view);
+  const status = useCodingAgentStore((state) => state.status);
+  const modelId = useCodingAgentStore((state) => state.spec?.modelId ?? "pi");
+  const state = useMemo(() => deriveState(view, status, modelId, 0), [view, status, modelId]);
+  return selector(state);
+}
+
+useAIStore.getState = (): AIState => {
+  const { view, status, spec } = useCodingAgentStore.getState();
+  return deriveState(view, status, spec?.modelId ?? "pi", 0);
+};
 
 export function replaceAIViewForDev(threadId: string, view: ThreadView): void {
-  getStore().replaceViewForDev(threadId, view);
+  useCodingAgentStore.setState({ view: { ...view, threadId } });
 }
