@@ -38,6 +38,7 @@ import type {
 } from "@/ai-system/core/threads";
 import type { ToolArtifactRecord } from "@/ai-system/core/toolArtifacts";
 import type { WorkspaceChangeSnapshot, WorkspaceDiff } from "@/ai-system/core/workspaceChanges";
+import type { EngineOpResult } from "@/pi-bridge/protocol";
 
 export interface IAI {
   status: () => Promise<AIStatus>;
@@ -74,6 +75,13 @@ export interface IAI {
   importProjectMemory: (content: string) => Promise<ProjectContextSnapshot>;
   listModels: (providerId?: string, requestId?: string) => Promise<ModelsListResult>;
   cancelModelList: (requestId: string) => Promise<{ ok: true }>;
+  // One container-engine operation on the coding agent's behalf. Answers with a result rather than throwing:
+  // the caller is settling a request a containerized agent is blocked on.
+  runEngineOp: (request: {
+    op: string;
+    args?: Record<string, unknown>;
+    defaultConnectionId?: string;
+  }) => Promise<EngineOpResult>;
   listPermissions: () => Promise<PermissionsSnapshot>;
   addPermission: (list: PermissionsList, rule: PermissionRule) => Promise<PermissionsSnapshot>;
   removePermission: (list: PermissionsList, key: string) => Promise<PermissionsSnapshot>;
@@ -139,6 +147,7 @@ export function createAIClient(transport: AIClientTransport) {
     listModels: (providerId, requestId = crypto.randomUUID()) =>
       invoke(AI_CHANNELS.modelsList, { providerId, requestId }),
     cancelModelList: (requestId) => invoke(AI_CHANNELS.modelsCancel, { requestId }),
+    runEngineOp: (request) => invoke(AI_CHANNELS.engineOp, request),
     // The user-managed allow/reject record — managed from Settings → AI permissions.
     listPermissions: () => invoke(AI_CHANNELS.permissionsList),
     addPermission: (list, rule) => invoke(AI_CHANNELS.permissionsAdd, { list, rule }),

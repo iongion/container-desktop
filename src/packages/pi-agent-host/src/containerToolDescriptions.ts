@@ -1,0 +1,14 @@
+// The container-entry loader for the container tools' model-facing prose. Parallel to
+// `template/templateRegistry.vite.ts`: one module per bundler that knows how to read a prompt resource, so the
+// prose stays in markdown and no other module has to care how it arrived.
+//
+// esbuild inlines the markdown as text (`loader: { ".md": "text" }` in support/cli/lib/agent-image.ts). Only the
+// container entry imports this — vite and vitest resolve `.md` with the `?raw` suffix instead, so keeping it out
+// of `session.ts` is what lets the session stay unit-testable.
+
+import descriptionsMarkdown from "@/resources/prompts/agent-tool-descriptions.md";
+import { parseMarkdownSections } from "@/template/markdownSections";
+
+export function containerToolDescriptions(): Readonly<Record<string, string>> {
+  return parseMarkdownSections(descriptionsMarkdown);
+}

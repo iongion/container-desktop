@@ -29,10 +29,15 @@ export async function bundleAgentHost(options: { root: string; outDir: string })
     target: "node24",
     format: "esm",
     external: ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai", "@earendil-works/pi-tui", "jiti", "ws"],
+    // The container tools' descriptions are model-facing prose kept in markdown; esbuild inlines it as a string,
+    // which is this bundler's equivalent of the renderer's `?raw` suffix.
+    loader: { ".md": "text" },
     alias: {
       "@/pi-agent-host": path.join(options.root, "src/packages/pi-agent-host/src"),
       "@/pi-bridge": path.join(options.root, "src/packages/pi-bridge/src"),
       "@/logger": path.join(options.root, "src/packages/logger/src"),
+      "@/template": path.join(options.root, "src/packages/template/src"),
+      "@/resources": path.join(options.root, "src/resources"),
     },
   });
   await cp(path.join(options.root, "support/agent-image/Dockerfile"), path.join(options.outDir, "Dockerfile"));

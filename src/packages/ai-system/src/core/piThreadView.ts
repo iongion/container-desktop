@@ -201,8 +201,17 @@ export function projectPiThreadView(view: ThreadView, event: PiThreadViewEvent):
       // Only the approval gate belongs in the transcript. Dialogs and chrome are session UI the store holds
       // outside the timeline, so a status update never reads as something the model said.
       const outcome = classifyHostRequest(event);
-      if (outcome.kind !== "approval") return next;
-      const { requestId, toolName, args } = outcome.request;
+      // A container operation the app performs itself needs the same card as a tool pi would run: it is a
+      // mutation on the user's real engine either way, and the store only projects the ones it decided to ask
+      // about, so an ungated read never reaches here.
+      const asked =
+        outcome.kind === "approval"
+          ? outcome.request
+          : outcome.kind === "engine-op"
+            ? { requestId: outcome.request.requestId, toolName: outcome.request.op, args: outcome.request.args }
+            : undefined;
+      if (!asked) return next;
+      const { requestId, toolName, args } = asked;
       const toolCallId = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : requestId;
       return {
         ...next,

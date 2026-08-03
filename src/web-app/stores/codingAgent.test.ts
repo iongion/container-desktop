@@ -43,8 +43,29 @@ function attachFakeClient() {
     view: emptyPiThreadView("pi-session"),
     chrome: emptyCodingAgentChrome(),
     pendingDialog: undefined,
+    pendingEngineOps: {},
   });
   return { client, responses };
+}
+
+// The container toolset executes through window.AI.runEngineOp, where engineOps is bound to the live engine
+// service. The hermetic suite has no webview, so the bridge is installed per test.
+const emptyPermissions = (): PermissionsSnapshot => ({
+  version: "2.0.0",
+  allowed: [],
+  blocked: [],
+  status: "ok",
+  path: "/tmp/p.json",
+});
+
+function withEngineOps(answer: unknown, snapshot: PermissionsSnapshot = emptyPermissions()) {
+  const bridge = {
+    runEngineOp: vi.fn(async () => answer),
+    listPermissions: vi.fn(async () => snapshot),
+    addPermission: vi.fn(async () => snapshot),
+  };
+  (globalThis as { window?: unknown }).window = { AI: bridge };
+  return bridge;
 }
 
 const hostRequest = (method: string, payload: Record<string, unknown>, requestId = "r1"): HostRequestEvent =>
@@ -238,5 +259,114 @@ describe("useCodingAgentStore host requests", () => {
   it("does nothing when a response arrives with no live session", async () => {
     useCodingAgentStore.setState({ client: undefined });
     await expect(useCodingAgentStore.getState().respondToRequest("r1", { ok: true })).resolves.toBeUndefined();
+  });
+});
+
+describe("useCodingAgentStore container operations", () => {
+  beforeEach(() => {
+    setPermissionMode("ask");
+  });
+
+  afterEach(() => {
+    delete (globalThis as { window?: unknown }).window;
+  });
+
+  const engineOp = (op: string, args: Record<string, unknown> = {}, requestId = "r1") =>
+    hostRequest("engine_op", { op, args }, requestId);
+
+  it("performs a container read straight away, with no card", async () => {
+    const bridge = withEngineOps({ ok: true, value: [{ Id: "c1" }] });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("listContainers"));
+    expect(bridge.runEngineOp).toHaveBeenCalledWith({
+      op: "listContainers",
+      args: {},
+      defaultConnectionId: "podman-1",
+    });
+    expect(useCodingAgentStore.getState().view.timeline).toEqual([]);
+    expect(responses).toEqual([
+      { requestId: "r1", response: { ok: true, value: { ok: true, value: [{ Id: "c1" }] } } },
+    ]);
+  });
+
+  it("asks before a container mutation and answers nothing until the user decides", async () => {
+    const bridge = withEngineOps({ ok: true, value: true });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("removeContainer", { id: "c1" }));
+    expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({
+      kind: "approval",
+      approvalId: "r1",
+      tool: "removeContainer",
+      status: "pending",
+    });
+    expect(bridge.runEngineOp).not.toHaveBeenCalled();
+    expect(responses).toEqual([]);
+  });
+
+  // The app performs these itself, so approving has to RUN the operation. Answering `{ allow: true }` — what a pi
+  // tool gets — would leave the agent waiting for a result nobody would produce.
+  it("runs the held operation when the user approves, and answers with the engine's result", async () => {
+    const bridge = withEngineOps({ ok: true, value: true });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("removeContainer", { id: "c1" }));
+    await useCodingAgentStore.getState().resolveApproval("r1", "allow");
+    expect(bridge.runEngineOp).toHaveBeenCalledWith({
+      op: "removeContainer",
+      args: { id: "c1" },
+      defaultConnectionId: "podman-1",
+    });
+    expect(responses[0].response).toEqual({ ok: true, value: { ok: true, value: true } });
+    expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({ status: "allowed" });
+    expect(useCodingAgentStore.getState().pendingEngineOps).toEqual({});
+  });
+
+  it("refuses the operation when the user rejects it, and stops the agent", async () => {
+    const bridge = withEngineOps({ ok: true, value: true });
+    const { client, responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("removeVolume", { id: "v1" }));
+    await useCodingAgentStore.getState().resolveApproval("r1", "reject");
+    expect(bridge.runEngineOp).not.toHaveBeenCalled();
+    expect(responses[0].response).toMatchObject({ ok: true, value: { ok: false } });
+    expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({ status: "rejected" });
+    expect(client.abort).toHaveBeenCalled();
+    expect(useCodingAgentStore.getState().pendingEngineOps).toEqual({});
+  });
+
+  it("hands the engine's own failure back to the model rather than a broken response", async () => {
+    withEngineOps({ ok: false, error: 'Connection "gone" is not running.' });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("listImages"));
+    expect(responses[0].response).toEqual({
+      ok: true,
+      value: { ok: false, error: 'Connection "gone" is not running.' },
+    });
+  });
+
+  it("answers with a reason when the AI bridge is unavailable", async () => {
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("listContainers"));
+    expect(responses[0].response).toMatchObject({ ok: true, value: { ok: false } });
+  });
+
+  it("ignores an engine op naming something that is not a container operation", async () => {
+    const bridge = withEngineOps({ ok: true, value: true });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("bash", { command: "rm -rf /" }));
+    expect(bridge.runEngineOp).not.toHaveBeenCalled();
+    expect(responses).toEqual([]);
+    expect(useCodingAgentStore.getState().view.timeline).toEqual([]);
+  });
+
+  it("blocks a remembered rejection without asking again, and shows why", async () => {
+    setPermissionMode("remember");
+    const rule = toolRule(piPermissionContext({ workspacePath: "/work", connectionId: "podman-1" }), "removeImage", {
+      id: "i1",
+    });
+    const bridge = withEngineOps({ ok: true, value: true }, { ...emptyPermissions(), blocked: [rule] });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().handleHostRequest(engineOp("removeImage", { id: "i1" }));
+    expect(bridge.runEngineOp).not.toHaveBeenCalled();
+    expect(responses[0].response).toMatchObject({ ok: true, value: { ok: false } });
+    expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({ status: "rejected" });
   });
 });

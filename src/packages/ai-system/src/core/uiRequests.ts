@@ -5,6 +5,8 @@
 
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 
+import { parseEngineOpRequest } from "./engineOpDispatch";
+
 export type HostRequestEvent = Extract<BridgeEvent, { type: "host_request" }>;
 
 export type PendingUiRequestMethod = "select" | "confirm" | "input" | "editor";
@@ -39,9 +41,18 @@ export interface PendingApprovalRequest {
   args: unknown;
 }
 
+// A container operation the agent wants the app to perform on its behalf: pi runs in a container and cannot
+// reach the engine ports, so the toolset executes here and the answer travels back over the same request.
+export interface PendingEngineOpRequest {
+  requestId: string;
+  op: string;
+  args: Record<string, unknown>;
+}
+
 export type HostRequestOutcome =
   | { kind: "dialog"; request: PendingUiRequest }
   | { kind: "approval"; request: PendingApprovalRequest }
+  | { kind: "engine-op"; request: PendingEngineOpRequest }
   | { kind: "chrome"; patch: ChromePatch }
   | { kind: "ignored" };
 
@@ -89,6 +100,11 @@ export function classifyHostRequest(event: HostRequestEvent): HostRequestOutcome
       const toolName = text(event.payload, "toolName");
       if (!toolName) return { kind: "ignored" };
       return { kind: "approval", request: { requestId: event.requestId, toolName, args: event.payload.args } };
+    }
+    case "engine_op": {
+      const parsed = parseEngineOpRequest(event.payload);
+      if (!parsed) return { kind: "ignored" };
+      return { kind: "engine-op", request: { requestId: event.requestId, op: parsed.op, args: parsed.args ?? {} } };
     }
     case "setStatus": {
       const key = text(event.payload, "statusKey");

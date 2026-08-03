@@ -19,6 +19,19 @@ export type BridgeUiMethod =
 // declared now so container tools need no protocol bump when they land.
 export type BridgeHostMethod = BridgeUiMethod | "approval" | "engine_op";
 
+// What an `engine_op` host request carries. One method for the whole container toolset rather than a protocol
+// member per operation: the op name is the app's own container tool name, so the cards, presentations and
+// descriptions the app already owns keep working untouched.
+export interface EngineOpRequest {
+  op: string;
+  args?: Record<string, unknown>;
+}
+
+// The answer, as a value rather than a thrown error: `hostRpc.request` resolves to its fallback instead of
+// rejecting, so a lost socket has to arrive as an explicit failure. The tool throws on it, which is how pi
+// marks a result `isError`.
+export type EngineOpResult = { ok: true; value?: unknown } | { ok: false; error: string };
+
 // Where a pi component is being rendered. Every slot is single-occupancy: opening a second surface for
 // the same slot replaces the first, so a plugin re-setting its footer never stacks two footers.
 export type SurfaceSlot =

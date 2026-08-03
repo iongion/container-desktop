@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extension components render in the app: custom dialogs, tool renderers, footers, headers, widgets and editors, with keyboard input
 - Extension output follows the app's own theme, per engine and per light or dark mode
 - Remembered tool decisions are now saved from the approval card, scoped to the workspace and connection
+- The coding agent can work with your containers again — list, inspect, read logs and stats, start, stop, remove, and pull images — across every connection
+- Container reads run unattended; every container change asks first, naming the entity and the connection it would act on
 - Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
 - Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily
 - Manage image registries per connection — sign in, add or remove them, and set certificates and a proxy for each engine

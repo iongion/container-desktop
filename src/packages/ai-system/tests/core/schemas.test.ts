@@ -115,6 +115,7 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.avatarsRemove]: { id: "avatar-1" },
       [AI_CHANNELS.modelsList]: { providerId: "openai", requestId: "request-1" },
       [AI_CHANNELS.modelsCancel]: { requestId: "request-1" },
+      [AI_CHANNELS.engineOp]: { op: "listContainers", args: { connectionId: "podman-1" } },
       [AI_CHANNELS.permissionsList]: undefined,
       [AI_CHANNELS.permissionsAdd]: {
         list: "allowed",
@@ -381,6 +382,7 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.avatarsRemove]: { avatars: [] },
       [AI_CHANNELS.modelsList]: { models: [{ id: "model-1" }] },
       [AI_CHANNELS.modelsCancel]: { ok: true },
+      [AI_CHANNELS.engineOp]: { ok: true, value: [{ Id: "c1" }] },
       [AI_CHANNELS.permissionsList]: {
         version: "2.0.0",
         allowed: [],

@@ -6,6 +6,27 @@ const request = (method: string, payload: Record<string, unknown>) =>
   ({ type: "host_request", requestId: "r1", method, payload }) as never;
 
 describe("classifyHostRequest", () => {
+  it("classifies an engine op with its operation and arguments", () => {
+    expect(classifyHostRequest(request("engine_op", { op: "removeContainer", args: { id: "c1" } }))).toEqual({
+      kind: "engine-op",
+      request: { requestId: "r1", op: "removeContainer", args: { id: "c1" } },
+    });
+  });
+
+  it("treats an engine op with no arguments as an empty argument set", () => {
+    expect(classifyHostRequest(request("engine_op", { op: "listContainers" }))).toEqual({
+      kind: "engine-op",
+      request: { requestId: "r1", op: "listContainers", args: {} },
+    });
+  });
+
+  it("ignores an engine op naming something that is not a container operation", () => {
+    expect(classifyHostRequest(request("engine_op", { op: "bash", args: { command: "ls" } }))).toEqual({
+      kind: "ignored",
+    });
+    expect(classifyHostRequest(request("engine_op", {}))).toEqual({ kind: "ignored" });
+  });
+
   it("classifies confirm as a blocking dialog", () => {
     expect(classifyHostRequest(request("confirm", { title: "Allow?", message: "why" }))).toEqual({
       kind: "dialog",

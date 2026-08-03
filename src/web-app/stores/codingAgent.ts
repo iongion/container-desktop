@@ -24,7 +24,7 @@ import type { ThreadView } from "@/ai-system/core/threadEvents";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
 import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
-import type { BridgeEvent, ContributedResources } from "@/pi-bridge/protocol";
+import type { BridgeEvent, ContributedResources, EngineOpResult } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { Notification } from "@/web-app/Notification";
@@ -112,6 +112,23 @@ async function stopAfterRejection(client: PiBridgeClient | undefined): Promise<v
   }
 }
 
+// Perform one container operation for the agent, through the AI bridge — which is where engineOps is bound to the
+// live engine service. Never throws: the container is blocked on this answer, so a failure has to come back as a
+// reason the model can act on.
+async function performEngineOp(
+  request: { op: string; args: Record<string, unknown> },
+  defaultConnectionId?: string,
+): Promise<EngineOpResult> {
+  const bridge = typeof window !== "undefined" ? window.AI : undefined;
+  if (!bridge) return { ok: false, error: "the app's AI bridge is unavailable" };
+  try {
+    return await bridge.runEngineOp({ op: request.op, args: request.args, defaultConnectionId });
+  } catch (error) {
+    logger.error("a container operation failed", request.op, error);
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
 // A rule needs the session's workspace and connection to be scoped, so there is nothing to remember before a
 // session exists.
 function approvalRule(
@@ -171,6 +188,9 @@ export interface CodingAgentState {
   // The one blocking dialog an extension is waiting on. pi's dialogs are modal by nature — the agent is
   // parked until answered — so a single slot is the honest model.
   pendingDialog?: PendingUiRequest;
+  // Container operations whose approval card is still on screen. Unlike a pi tool — which pi runs once the gate
+  // says yes — the app performs these itself, so the request has to be held until the user answers.
+  pendingEngineOps: Record<string, { op: string; args: Record<string, unknown> }>;
   // What the loaded plugins contribute, for the composer's slash-command palette. Read once the session is
   // ready and again whenever the installed set changes.
   resources: ContributedResources;
@@ -179,6 +199,9 @@ export interface CodingAgentState {
   stop(): Promise<void>;
   applyBridgeEvent(event: BridgeEvent): void;
   handleHostRequest(event: HostRequestEvent): Promise<void>;
+  // Perform a container operation and answer the container with the result. Public because approving a held
+  // operation runs it, and the WebDriver spec drives it the same way the approval card does.
+  runEngineOp(requestId: string, request: { op: string; args: Record<string, unknown> }): Promise<void>;
   respondToRequest(requestId: string, response: HostResponsePayload): Promise<void>;
   resolveApproval(approvalId: string, decision: "allow" | "reject"): Promise<void>;
   sendSurfaceInput(surfaceId: string, data: string): Promise<void>;
@@ -215,6 +238,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   chrome: emptyCodingAgentChrome(),
   surfaces: noSurfaces(),
   resources: noContributedResources(),
+  pendingEngineOps: {},
 
   async start(options) {
     set({
@@ -225,6 +249,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       surfaces: noSurfaces(),
       resources: noContributedResources(),
       pendingDialog: undefined,
+      pendingEngineOps: {},
       error: undefined,
     });
     const suffix = randomUUID().slice(0, 8);
@@ -297,6 +322,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       surfaces: noSurfaces(),
       resources: noContributedResources(),
       pendingDialog: undefined,
+      pendingEngineOps: {},
     });
   },
 
@@ -377,9 +403,47 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
         }
         return;
       }
+      case "engine-op": {
+        const { op, args, requestId } = outcome.request;
+        const mode = permissionMode();
+        const rule = approvalRule(get(), op, args);
+        const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
+        // The same decision path as a pi tool call: reads run unattended, mutations ask. There is no second gate.
+        const action = decidePiToolCall({ toolName: op, mode, cached });
+        if (action === "run") {
+          await get().runEngineOp(requestId, { op, args });
+          return;
+        }
+        set((state) => ({ view: projectPiThreadView(state.view, event) }));
+        if (action === "reject") {
+          await get().respondToRequest(requestId, {
+            ok: true,
+            value: { ok: false, error: "blocked by a remembered decision" } satisfies EngineOpResult,
+          });
+          set((state) => ({
+            view: projectPiThreadView(state.view, { type: "approval_settled", requestId, allowed: false }),
+          }));
+          await stopAfterRejection(get().client);
+          return;
+        }
+        // Held until the user answers: unlike a pi tool, nothing runs this but the app itself.
+        set((state) => ({ pendingEngineOps: { ...state.pendingEngineOps, [requestId]: { op, args } } }));
+        return;
+      }
       default:
         logger.debug("ignoring an unsupported host request", event.method);
     }
+  },
+
+  async runEngineOp(requestId, request) {
+    const result = await performEngineOp(request, get().connectionId);
+    set((state) => {
+      if (!state.pendingEngineOps[requestId]) return {};
+      const { [requestId]: _done, ...rest } = state.pendingEngineOps;
+      return { pendingEngineOps: rest };
+    });
+    // The envelope always succeeds — a failed operation is a value the model reads, not a broken response.
+    await get().respondToRequest(requestId, { ok: true, value: result });
   },
 
   async respondToRequest(requestId, response) {
@@ -391,10 +455,27 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
 
   async resolveApproval(approvalId, decision) {
     const allow = decision === "allow";
-    await get().respondToRequest(approvalId, {
-      ok: true,
-      value: allow ? { allow: true } : { allow: false, reason: "rejected by the user" },
-    });
+    // A held container operation is performed by the app, so approving it means running it now and answering with
+    // what the engine said. Answering `{ allow: true }` would leave the agent waiting for a result nobody produces.
+    const held = get().pendingEngineOps[approvalId];
+    if (held) {
+      if (allow) await get().runEngineOp(approvalId, held);
+      else {
+        await get().respondToRequest(approvalId, {
+          ok: true,
+          value: { ok: false, error: "rejected by the user" } satisfies EngineOpResult,
+        });
+        set((state) => {
+          const { [approvalId]: _rejected, ...rest } = state.pendingEngineOps;
+          return { pendingEngineOps: rest };
+        });
+      }
+    } else {
+      await get().respondToRequest(approvalId, {
+        ok: true,
+        value: allow ? { allow: true } : { allow: false, reason: "rejected by the user" },
+      });
+    }
     set((state) => ({
       view: projectPiThreadView(state.view, { type: "approval_settled", requestId: approvalId, allowed: allow }),
     }));

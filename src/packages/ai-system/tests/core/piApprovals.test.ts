@@ -14,6 +14,44 @@ describe("isPiToolGated", () => {
   it("gates a tool it has never heard of", () => {
     expect(isPiToolGated("deploy_to_prod")).toBe(true);
   });
+
+  // The container toolset arrives over the bridge as ordinary tool calls, so without this the gate would put an
+  // approval card in front of every `listContainers` — and none in front of `removeContainer`, since the pi
+  // built-in list knows neither name.
+  it("leaves the container reads ungated", () => {
+    for (const tool of [
+      "listConnections",
+      "listContainers",
+      "inspectContainer",
+      "getContainerLogs",
+      "getContainerStats",
+      "listImages",
+      "inspectImage",
+      "listNetworks",
+      "inspectNetwork",
+      "listVolumes",
+      "inspectVolume",
+    ]) {
+      expect(isPiToolGated(tool)).toBe(false);
+    }
+  });
+
+  it("gates every container mutation", () => {
+    for (const tool of [
+      "startContainer",
+      "stopContainer",
+      "restartContainer",
+      "pauseContainer",
+      "unpauseContainer",
+      "removeContainer",
+      "removeImage",
+      "removeNetwork",
+      "removeVolume",
+      "pullImage",
+    ]) {
+      expect(isPiToolGated(tool)).toBe(true);
+    }
+  });
 });
 
 describe("decidePiToolCall", () => {
@@ -54,6 +92,17 @@ describe("piApprovalSummary", () => {
 
   it("falls back to the tool name when the arguments say nothing useful", () => {
     expect(piApprovalSummary("deploy", { region: "eu" })).toBe("deploy");
+  });
+
+  it("names the entity a container mutation would act on, and where", () => {
+    expect(piApprovalSummary("removeContainer", { id: "c1", connectionId: "podman-dev" })).toBe("c1 on podman-dev");
+    expect(piApprovalSummary("pullImage", { reference: "nginx:latest", connectionId: "docker-1" })).toBe(
+      "nginx:latest on docker-1",
+    );
+  });
+
+  it("omits the connection when the call did not name one", () => {
+    expect(piApprovalSummary("stopContainer", { id: "c1" })).toBe("c1");
   });
 
   it("keeps a long command inside the timeline item's limit", () => {

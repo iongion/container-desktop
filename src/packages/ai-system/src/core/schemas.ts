@@ -48,6 +48,9 @@ const MAX_PROVIDER_CHARS = 64;
 const MAX_MODEL_CHARS = 512;
 const MAX_TITLE_CHARS = 256;
 const MAX_PERMISSION_KEY_CHARS = 8_192;
+// An engine failure message is the engine's own text, which the model reads to decide what to do next. Long
+// enough to keep a CLI error intact, short enough that a runaway one cannot flood a tool result.
+const MAX_ENGINE_OP_ERROR_CHARS = 4_096;
 const MAX_CREDENTIAL_CHARS = 16_384;
 
 const id = z.string().trim().min(1).max(MAX_ID_CHARS);
@@ -452,6 +455,25 @@ export const projectContextSnapshotSchema = z.discriminatedUnion("state", [
     .strict(),
 ]);
 
+// One container operation the agent asked the app to run. The op name is validated against the real container
+// tool list by the dispatcher, so this only has to bound the strings; `args` stays open because twenty-one
+// operations take twenty-one argument shapes and restating them here would be a second source of truth.
+const engineOpRequest = z
+  .object({
+    op: z.string().min(1).max(MAX_TITLE_CHARS),
+    args: z.record(z.string(), z.unknown()).optional(),
+    // The connection the asking session runs on, used only when the operation did not name one.
+    defaultConnectionId: z.string().max(MAX_ID_CHARS).optional(),
+  })
+  .strict();
+
+// Answered as a value, not by throwing: a blocked agent is waiting on this, so a failure has to come back as a
+// reason it can act on rather than a rejected invoke the renderer would have to translate.
+const engineOpResult = z.union([
+  z.object({ ok: z.literal(true), value: z.unknown().optional() }).strict(),
+  z.object({ ok: z.literal(false), error: z.string().max(MAX_ENGINE_OP_ERROR_CHARS) }).strict(),
+]);
+
 export const invokeSchemas = {
   [AI_CHANNELS.status]: empty,
   [AI_CHANNELS.diagnostics]: z.object({ providerId: optionalProvider }).strict(),
@@ -541,6 +563,7 @@ export const invokeSchemas = {
   [AI_CHANNELS.avatarsRemove]: removeAvatarRequest,
   [AI_CHANNELS.modelsList]: z.object({ providerId: optionalProvider, requestId: id }).strict(),
   [AI_CHANNELS.modelsCancel]: z.object({ requestId: id }).strict(),
+  [AI_CHANNELS.engineOp]: engineOpRequest,
   [AI_CHANNELS.permissionsList]: empty,
   [AI_CHANNELS.permissionsAdd]: z.object({ list: permissionsList, rule: permissionRule }).strict(),
   [AI_CHANNELS.permissionsRemove]: z
@@ -1354,6 +1377,7 @@ export const responseSchemas = {
     .object({ models: z.array(z.object({ id: z.string().trim().min(1).max(MAX_MODEL_CHARS) }).strict()).max(10_000) })
     .strict(),
   [AI_CHANNELS.modelsCancel]: ok,
+  [AI_CHANNELS.engineOp]: engineOpResult,
   [AI_CHANNELS.permissionsList]: permissionsSnapshot,
   [AI_CHANNELS.permissionsAdd]: permissionsSnapshot,
   [AI_CHANNELS.permissionsRemove]: permissionsSnapshot,

@@ -9,6 +9,7 @@ import {
   type AIStatus,
 } from "@/ai-system/core/channels";
 import type { AIRecordedError } from "@/ai-system/core/diagnostics";
+import { dispatchEngineOp } from "@/ai-system/core/engineOpDispatch";
 import { describeError } from "@/ai-system/core/errors";
 import type { PermissionsStoreLike } from "@/ai-system/core/permissions";
 import type { AIKeyStore, ExecutionSelectorFactory, KnowledgeBankLike, SandboxRunner } from "@/ai-system/core/ports";
@@ -323,6 +324,17 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     );
     onInvoke(AI_CHANNELS.modelsCancel, (event, request) =>
       guarded(event, () => models.cancel(event, request.requestId)),
+    );
+    // The coding agent's container toolset lands here. dispatchEngineOp answers with a reason instead of
+    // throwing, so an unbound port or a dead connection reaches the agent as a tool error it can act on.
+    onInvoke(AI_CHANNELS.engineOp, (event, request) =>
+      guarded(event, () =>
+        dispatchEngineOp(
+          deps.engineOps,
+          { op: request.op, args: request.args },
+          { connectionId: request.defaultConnectionId },
+        ),
+      ),
     );
     onInvoke(AI_CHANNELS.permissionsList, (event) =>
       guarded(event, () => requirePermissions(deps.permissionsStore).load()),

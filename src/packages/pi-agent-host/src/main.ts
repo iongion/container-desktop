@@ -1,6 +1,7 @@
 import { WebSocketServer } from "ws";
 
 import { createLogger } from "@/logger";
+import { containerToolDescriptions } from "@/pi-agent-host/containerToolDescriptions";
 import { startGateway } from "@/pi-agent-host/gateway";
 import { attachBridgeConnection } from "@/pi-agent-host/server";
 import { createPiSession } from "@/pi-agent-host/session";
@@ -43,6 +44,7 @@ async function runAgent(): Promise<void> {
       gatewayToken: token,
       modelId: required("CD_MODEL_ID"),
       emit: (event) => attached?.emit(event),
+      containerToolDescriptions: containerToolDescriptions(),
     })
       .then(async (session) => {
         attached = attachBridgeConnection(

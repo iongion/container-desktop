@@ -11,6 +11,7 @@ import {
 import { getKeybindings } from "@earendil-works/pi-tui";
 
 import { createLogger } from "@/logger";
+import { createContainerToolsExtension } from "@/pi-agent-host/containerTools";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
 import { GuiTui } from "@/pi-agent-host/guiTui";
 import { createHostRpc } from "@/pi-agent-host/hostRpc";
@@ -56,6 +57,10 @@ export interface CreatePiSessionOptions {
   // Inline extensions loaded alongside the gateway and the permission gate. The hermetic suite drives
   // the UI surface through one instead of putting a plugin file in the mounted volume.
   extraExtensions?: InlineExtension[];
+  // Model-facing prose for the container toolset, keyed by tool name. Required rather than defaulted: the loader
+  // that reads it is bundler-specific (containerToolDescriptions.ts), and a session that quietly registered no
+  // container tools would look like an agent that simply chose not to use them.
+  containerToolDescriptions: Readonly<Record<string, string>>;
 }
 
 export async function createPiSession(options: CreatePiSessionOptions): Promise<BridgeSessionHandle> {
@@ -99,7 +104,14 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     agentDir,
     settingsManager,
     resourceLoaderOptions: {
-      extensionFactories: [gatewayExtension, createPermissionGateExtension(rpc), ...(options.extraExtensions ?? [])],
+      extensionFactories: [
+        gatewayExtension,
+        createPermissionGateExtension(rpc),
+        // The container toolset. It registers tools only — each call still passes the permission gate above,
+        // because the gate handles every tool_call regardless of who registered the tool.
+        createContainerToolsExtension({ rpc, descriptions: options.containerToolDescriptions }),
+        ...(options.extraExtensions ?? []),
+      ],
     },
   });
   await services.modelRuntime.setRuntimeApiKey(GATEWAY_PROVIDER_ID, gatewayToken, { allowNetwork: false });

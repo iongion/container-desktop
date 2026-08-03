@@ -4,8 +4,13 @@ import { join } from "node:path";
 import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
+import { CONTAINER_TOOL_NAMES } from "@/ai-system/core/toolNames";
 import { createPiSession } from "@/pi-agent-host/session";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
+
+// The real loader reads these out of a prompt resource that only esbuild inlines, so the session takes them as an
+// argument and the suite supplies its own.
+const CONTAINER_TOOL_DESCRIPTIONS = Object.fromEntries(CONTAINER_TOOL_NAMES.map((name) => [name, `does ${name}`]));
 
 // The smallest real extension: one session_start handler, which is where a plugin first gets a ui context.
 const onSessionStart = (name: string, run: (ctx: ExtensionContext) => void): InlineExtension => ({
@@ -60,6 +65,7 @@ describe("createPiSession", () => {
       cwd,
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
       gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
       gatewayToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
@@ -83,6 +89,7 @@ describe("createPiSession", () => {
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
       gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
       gatewayToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),
@@ -108,6 +115,7 @@ describe("createPiSession", () => {
       cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
       agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
       gatewayUrl: "http://gateway.invalid:8788/v1",
+      containerToolDescriptions: CONTAINER_TOOL_DESCRIPTIONS,
       gatewayToken: "tok",
       modelId: "canned",
       emit: (event) => events.push(event),

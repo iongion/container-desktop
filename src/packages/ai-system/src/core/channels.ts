@@ -67,6 +67,9 @@ export const AI_CHANNELS = {
   skillsSetProjectTrust: "ai:skills:project-trust",
   skillsInvoke: "ai:skills:invoke",
   skillsChanged: "ai:skills:changed",
+  // One container-engine operation, performed on the agent's behalf. The coding agent runs inside a container
+  // and cannot reach the engine ports, so its container toolset executes here, where engineOps is bound.
+  engineOp: "ai:engine:op", // invoke({ op, args?, defaultConnectionId? }) → EngineOpResult
   // The knowledge bank has no renderer surface — the agent searches it main-side (see tools.ts).
 } as const;
 
