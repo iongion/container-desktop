@@ -27,6 +27,13 @@ import { AssistantSkillsDrawer } from "@/web-app/components/ai/AssistantSkillsDr
 import { type AssistantTimelineContext, AssistantTimelineItem } from "@/web-app/components/ai/AssistantTimelineItem";
 import { ExtensionDialog } from "@/web-app/components/ai/ExtensionDialog";
 import { ExtensionStatusStrip, ExtensionWidgetStrip } from "@/web-app/components/ai/ExtensionWidgetStrip";
+import {
+  PluginChromeSurface,
+  PluginEditorSurface,
+  PluginFocusSurface,
+  PluginWidgetSurfaces,
+  usePiThemeSync,
+} from "@/web-app/components/ai/PluginSurfaces";
 import type { ProjectContextRequest } from "@/web-app/components/ai/ProjectContextPanel";
 import { ThinkingStatus } from "@/web-app/components/ai/ThinkingStatus";
 import { ThreadBranchDrawer, type ThreadBranchSource } from "@/web-app/components/ai/ThreadBranchDrawer";
@@ -77,6 +84,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const extensionChrome = useCodingAgentStore((s) => s.chrome);
   const pendingDialog = useCodingAgentStore((s) => s.pendingDialog);
   const respondToRequest = useCodingAgentStore((s) => s.respondToRequest);
+  usePiThemeSync();
   const setAssistantConsoleOpen = useUIStore((s) => s.setAssistantConsoleOpen);
   const {
     snapshot: skillSnapshot,
@@ -404,7 +412,9 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           },
         }}
       />
+      <PluginChromeSurface slot="header" />
       <div className="AssistantScroll">
+        <PluginFocusSurface variant="overlay" />
         <div className="AssistantTranscript" ref={scrollRef} onScroll={onScroll}>
           {recoveryError ? <Callout intent={Intent.DANGER}>{recoveryError}</Callout> : null}
           {items.length === 0 ? (
@@ -443,8 +453,12 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       </div>
 
       <div className="AssistantComposerDock">
+        <PluginChromeSurface slot="footer" />
         <ExtensionStatusStrip statuses={extensionChrome.statuses} />
         <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="aboveEditor" />
+        <PluginWidgetSurfaces placement="aboveEditor" />
+        <PluginFocusSurface variant="inline" />
+        <PluginEditorSurface />
         {pendingDialog ? <ExtensionDialog request={pendingDialog} onRespond={respondToRequest} /> : null}
         <AIComposer
           placeholder={composerPlaceholder ?? t("Message the assistant… (Enter to send, Shift+Enter for newline)")}
@@ -464,6 +478,7 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
           draft={extensionChrome.editorDraft}
         />
         <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="belowEditor" />
+        <PluginWidgetSurfaces placement="belowEditor" />
       </div>
       {exportOpen && activeThread && view ? (
         <ThreadExportDrawer thread={activeThread} view={view} onClose={() => setExportOpen(false)} />

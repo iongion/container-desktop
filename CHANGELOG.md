@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The coding agent's tool calls read as cards: shell output, file contents, a real diff of every edit, and directory or search results
 - A tool card names the file it touched and says whether it was read or written, and notes when output was truncated
 - Data an extension publishes for the app now appears in the conversation as its own labelled, inspectable card
+- Extension components render in the app: custom dialogs, tool renderers, footers, headers, widgets and editors, with keyboard input
+- Extension output follows the app's own theme, per engine and per light or dark mode
 - Remembered tool decisions are now saved from the approval card, scoped to the workspace and connection
 - Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
 - Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily

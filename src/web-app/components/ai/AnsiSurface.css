@@ -1,0 +1,82 @@
+.AnsiSurface {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 3px;
+  outline: none;
+}
+.AnsiSurface .xterm {
+  padding: 0;
+}
+.AnsiSurface .xterm-viewport {
+  overflow: hidden;
+  background-color: transparent;
+}
+.AnsiSurface--focused {
+  box-shadow: 0 0 0 1px var(--app-accent);
+}
+
+.AnsiSurfacePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background-color: var(--app-surface);
+}
+.AnsiSurfacePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.AnsiSurfaceOverlay {
+  position: absolute;
+  z-index: 21;
+  max-width: 90%;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+}
+.AnsiSurfaceOverlay--center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.AnsiSurfaceOverlay--top-left {
+  top: 8px;
+  left: 8px;
+}
+.AnsiSurfaceOverlay--top-right {
+  top: 8px;
+  right: 8px;
+}
+.AnsiSurfaceOverlay--bottom-left {
+  bottom: 8px;
+  left: 8px;
+}
+.AnsiSurfaceOverlay--bottom-right {
+  bottom: 8px;
+  right: 8px;
+}
+.AnsiSurfaceOverlay--top-center {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.AnsiSurfaceOverlay--bottom-center {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.AnsiSurfaceOverlay--left-center {
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+}
+.AnsiSurfaceOverlay--right-center {
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+}

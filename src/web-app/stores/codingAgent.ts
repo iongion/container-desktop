@@ -29,6 +29,8 @@ import { randomUUID } from "@/utils/randomUUID";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { Notification } from "@/web-app/Notification";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { applySurfaceEvent, type CodingAgentSurfaces, noSurfaces } from "@/web-app/stores/codingAgentSurfaces";
+import { readAppPiThemePalette } from "@/web-app/themes/appPiTheme";
 
 const logger = createLogger("web-app.codingAgent");
 
@@ -163,6 +165,9 @@ export interface CodingAgentState {
   connectionId?: string;
   client?: PiBridgeClient;
   chrome: CodingAgentChrome;
+  // pi components, painted as ANSI line frames. Separate from the chrome because they are drawn, not
+  // described: the app has no say in what a plugin's component looks like, only where it goes.
+  surfaces: CodingAgentSurfaces;
   // The one blocking dialog an extension is waiting on. pi's dialogs are modal by nature — the agent is
   // parked until answered — so a single slot is the honest model.
   pendingDialog?: PendingUiRequest;
@@ -173,6 +178,11 @@ export interface CodingAgentState {
   handleHostRequest(event: HostRequestEvent): Promise<void>;
   respondToRequest(requestId: string, response: HostResponsePayload): Promise<void>;
   resolveApproval(approvalId: string, decision: "allow" | "reject"): Promise<void>;
+  sendSurfaceInput(surfaceId: string, data: string): Promise<void>;
+  reportSurfaceWidth(surfaceId: string, columns: number): Promise<void>;
+  // Re-read the app's tokens and tell the container. Called on connect and whenever the engine or the
+  // light/dark mode repaints them, so plugin output never sits in a theme the app has moved off.
+  publishTheme(): Promise<void>;
 }
 
 // The published port is picked per session. A collision surfaces as an engine error on run, which the
@@ -195,6 +205,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   view: emptyPiThreadView("pi-session"),
   startLog: [],
   chrome: emptyCodingAgentChrome(),
+  surfaces: noSurfaces(),
 
   async start(options) {
     set({
@@ -202,6 +213,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       startLog: [],
       view: emptyPiThreadView("pi-session"),
       chrome: emptyCodingAgentChrome(),
+      surfaces: noSurfaces(),
       pendingDialog: undefined,
       error: undefined,
     });
@@ -237,6 +249,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       client.onEvent((event) => get().applyBridgeEvent(event));
       await client.connect();
       set({ client, spec, connectionId: options.connectionId });
+      // Before the first plugin component can render: a component that draws once with pi's built-in
+      // palette and only then hears about the app's would flash the wrong colours.
+      await get().publishTheme();
     } catch (error) {
       logger.error("coding agent start failed", error);
       set((state) => ({
@@ -269,6 +284,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       spec: undefined,
       connectionId: undefined,
       chrome: emptyCodingAgentChrome(),
+      surfaces: noSurfaces(),
       pendingDialog: undefined,
     });
   },
@@ -280,6 +296,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     // whether the container gets an answer without ever bothering the user.
     if (event.type === "host_request") {
       void get().handleHostRequest(event);
+      return;
+    }
+    // A surface frame is a paint, not transcript content: it replaces what that component last drew and
+    // must never append an item to the thread.
+    if (event.type === "surface_frame" || event.type === "surface_closed") {
+      set((state) => ({ surfaces: applySurfaceEvent(state.surfaces, event) }));
       return;
     }
     set((state) => ({ view: projectPiThreadView(state.view, event) }));
@@ -347,6 +369,25 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     if (!allow) await stopAfterRejection(get().client);
     if (permissionMode() !== "remember") return;
     await rememberVerdict(get(), approvalId, allow);
+  },
+
+  async sendSurfaceInput(surfaceId, data) {
+    await get().client?.surfaceInput(surfaceId, data);
+  },
+
+  async reportSurfaceWidth(surfaceId, columns) {
+    await get().client?.surfaceResize(surfaceId, columns);
+  },
+
+  async publishTheme() {
+    const { client } = get();
+    if (!client) return;
+    try {
+      await client.setTheme(readAppPiThemePalette());
+    } catch (error) {
+      // A theme the container never heard about only costs fidelity, so this must not fail a session.
+      logger.warn("unable to publish the app theme to the agent", error);
+    }
   },
 }));
 

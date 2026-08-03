@@ -1,6 +1,6 @@
 import { createLogger } from "@/logger";
 import { decodeEvent, encodeCommand } from "@/pi-bridge/codec";
-import { type BridgeEvent, PI_BRIDGE_PROTOCOL_VERSION } from "@/pi-bridge/protocol";
+import { type AppThemePalette, type BridgeEvent, PI_BRIDGE_PROTOCOL_VERSION } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 
 const logger = createLogger("ai.piBridgeClient");
@@ -28,6 +28,11 @@ export interface PiBridgeClient {
   // Answers one host_request. The container correlates by requestId, so a late answer is dropped rather
   // than resolving whatever request came next.
   respond(requestId: string, response: HostResponsePayload): Promise<void>;
+  // One keystroke for a pi component, already encoded as the terminal bytes pi's key parser reads.
+  surfaceInput(surfaceId: string, data: string): Promise<void>;
+  surfaceResize(surfaceId: string, columns: number): Promise<void>;
+  // The app's `--app-*` colours, so the container can derive a pi theme that matches the running app.
+  setTheme(palette: Partial<AppThemePalette>): Promise<void>;
   onEvent(listener: (event: BridgeEvent) => void): () => void;
   close(): void;
 }
@@ -128,6 +133,15 @@ export function createPiBridgeClient(options: {
     },
     async respond(requestId: string, response: HostResponsePayload): Promise<void> {
       socket?.send(encodeCommand({ id: randomUUID(), type: "host_response", requestId, ...response }));
+    },
+    async surfaceInput(surfaceId: string, data: string): Promise<void> {
+      socket?.send(encodeCommand({ id: randomUUID(), type: "surface_input", surfaceId, data }));
+    },
+    async surfaceResize(surfaceId: string, columns: number): Promise<void> {
+      socket?.send(encodeCommand({ id: randomUUID(), type: "surface_resize", surfaceId, columns }));
+    },
+    async setTheme(palette: Partial<AppThemePalette>): Promise<void> {
+      socket?.send(encodeCommand({ id: randomUUID(), type: "set_theme", palette }));
     },
     onEvent(listener) {
       listeners.add(listener);

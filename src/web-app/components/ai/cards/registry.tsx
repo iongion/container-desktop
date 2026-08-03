@@ -11,7 +11,10 @@ import { type PiCardKind, piCardResult, resolvePiCardKind } from "@/ai-system/co
 import { redactPayload } from "@/ai-system/core/redact";
 import { type ContainerToolName, isContainerToolName } from "@/ai-system/core/toolNames";
 import { isWorkspaceToolName, type WorkspaceToolName } from "@/ai-system/core/workspaceToolNames";
+import { PluginToolSurface } from "@/web-app/components/ai/PluginSurfaces";
 import { ToolArtifactDrawer } from "@/web-app/components/ai/ToolArtifactDrawer";
+import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
+import { toolSurface } from "@/web-app/stores/codingAgentSurfaces";
 import { ActionResultCard } from "./ActionResultCard";
 import { AICardShell } from "./AICardShell";
 import { ContainersCard } from "./ContainersCard";
@@ -88,7 +91,8 @@ const GenericToolCard: React.FC<ToolCardProps> = ({ title, result }) => (
 export const ToolCard: React.FC<ToolCardProps> = (props) => {
   const { t } = useTranslation();
   const [artifactOpen, setArtifactOpen] = useState(false);
-  const { tool, title, status, ok, result, message, artifact, threadId } = props;
+  const surfaces = useCodingAgentStore((state) => state.surfaces);
+  const { tool, title, status, ok, result, message, artifact, threadId, toolCallId } = props;
   const artifactAction =
     artifact && threadId ? (
       <Button
@@ -108,6 +112,20 @@ export const ToolCard: React.FC<ToolCardProps> = (props) => {
         onClose={() => setArtifactOpen(false)}
       />
     ) : null;
+
+  // A pi tool that ships `renderCall` / `renderResult` draws its own row, framing included — that is pi's
+  // `renderShell: "self"` contract. The card becomes the place it is painted and adds nothing of its own.
+  const callSurface = toolCallId ? toolSurface(surfaces, toolCallId, "call") : undefined;
+  const resultSurface = toolCallId ? toolSurface(surfaces, toolCallId, "result") : undefined;
+  if (callSurface || resultSurface) {
+    return (
+      <div className="AICard AICard--plugin">
+        {callSurface ? <PluginToolSurface surface={callSurface} /> : null}
+        {status === "running" && !resultSurface ? <Spinner size={12} /> : null}
+        {resultSurface ? <PluginToolSurface surface={resultSurface} /> : null}
+      </div>
+    );
+  }
 
   if (status === "running") {
     return (

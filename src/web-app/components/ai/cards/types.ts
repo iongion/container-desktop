@@ -8,6 +8,9 @@ import type { ToolArtifactReference } from "@/ai-system/core/toolArtifacts";
 export interface ToolCardProps {
   tool: string;
   title: string;
+  // pi's id for this execution. A plugin tool that renders itself is matched to its surface by this, so a
+  // card only ever paints the component belonging to its own call.
+  toolCallId?: string;
   args: Record<string, unknown>;
   status: "running" | "complete" | "error";
   ok?: boolean;
