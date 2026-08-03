@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The assistant runs on the containerized pi session instead of the in-app OMA engine
 - pi extensions can ask you things through native dialogs, and show status entries and widgets around the composer
 - Every tool the coding agent runs passes your permission settings first; a rejection blocks the call inside pi
+- The coding agent's tool calls read as cards: shell output, file contents, a real diff of every edit, and directory or search results
+- A tool card names the file it touched and says whether it was read or written, and notes when output was truncated
 - Remembered tool decisions are now saved from the approval card, scoped to the workspace and connection
 - Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
 - Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily

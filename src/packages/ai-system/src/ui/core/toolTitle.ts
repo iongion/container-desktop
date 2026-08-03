@@ -1,3 +1,4 @@
+import { piToolSummary, resolvePiCardKind } from "@/ai-system/core/piToolCards";
 import { getContainerToolPresentation, type ToolPresentation } from "@/ai-system/core/toolNames";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -26,6 +27,9 @@ function renderTitle(spec: ToolPresentation, args: Record<string, unknown>, t: T
 
 export function toolTitle(tool: string, args: Record<string, unknown>, t: Translate, fallback = tool): string {
   if (tool === "runCommand") return commandTitle(args, t);
+  // pi's built-ins are named for what they do ("bash", "read"), so the title is the call itself — the command
+  // or the path — and stays untranslated for the same reason a shell command is.
+  if (resolvePiCardKind(tool)) return piToolSummary(tool, args);
   const spec = getContainerToolPresentation(tool) ?? OTHER_TOOLS[tool];
   return spec ? renderTitle(spec, args, t) : fallback;
 }

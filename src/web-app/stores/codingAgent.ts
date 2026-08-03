@@ -169,6 +169,7 @@ export interface CodingAgentState {
   start(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
   stop(): Promise<void>;
+  applyBridgeEvent(event: BridgeEvent): void;
   handleHostRequest(event: HostRequestEvent): Promise<void>;
   respondToRequest(requestId: string, response: HostResponsePayload): Promise<void>;
   resolveApproval(approvalId: string, decision: "allow" | "reject"): Promise<void>;
@@ -233,16 +234,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       await startPiAgentSession(host, spec, (contents) => writePrivateEnvFile(`${suffix}.env`, contents));
 
       const client = createPiBridgeClient({ url: `ws://127.0.0.1:${spec.hostPort}/`, token: spec.bridgeToken });
-      client.onEvent((event) => {
-        // A host request is a question, not transcript content: the handler decides what it becomes, and
-        // whether the container gets an answer without ever bothering the user.
-        if (event.type === "host_request") {
-          void get().handleHostRequest(event);
-          return;
-        }
-        set((state) => ({ view: projectPiThreadView(state.view, event) }));
-        if (event.type === "ready") set({ status: "ready" });
-      });
+      client.onEvent((event) => get().applyBridgeEvent(event));
       await client.connect();
       set({ client, spec, connectionId: options.connectionId });
     } catch (error) {
@@ -279,6 +271,19 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       chrome: emptyCodingAgentChrome(),
       pendingDialog: undefined,
     });
+  },
+
+  // Every bridge event lands here, whether the socket delivered it or a WebDriver spec pushed it, so the
+  // transcript a test sees is projected by exactly the code the session uses.
+  applyBridgeEvent(event) {
+    // A host request is a question, not transcript content: the handler decides what it becomes, and
+    // whether the container gets an answer without ever bothering the user.
+    if (event.type === "host_request") {
+      void get().handleHostRequest(event);
+      return;
+    }
+    set((state) => ({ view: projectPiThreadView(state.view, event) }));
+    if (event.type === "ready") set({ status: "ready" });
   },
 
   async handleHostRequest(event) {

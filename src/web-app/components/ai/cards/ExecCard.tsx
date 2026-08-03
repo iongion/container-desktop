@@ -8,7 +8,7 @@ import { CopyButton } from "@/web-app/components/CopyButton";
 import { AICardShell } from "./AICardShell";
 import type { ToolCardProps } from "./types";
 
-export const ExecCard: React.FC<ToolCardProps> = ({ result }) => {
+export const ExecCard: React.FC<ToolCardProps> = ({ title, result }) => {
   const { t } = useTranslation();
   const data = (result ?? {}) as {
     program?: string;
@@ -24,13 +24,17 @@ export const ExecCard: React.FC<ToolCardProps> = ({ result }) => {
     .replace(/\n+$/, "");
 
   return (
-    <AICardShell title={command || t("Command")} icon={IconNames.CONSOLE}>
+    <AICardShell title={title || command || t("Command")} icon={IconNames.CONSOLE}>
       <div className="AICardExecMeta">
         <span className="AICardExecMono">$ {command}</span>
         <span className="AICardSpacer" />
-        <span>
-          {t("exit")} {data.code ?? "?"}
-        </span>
+        {/* pi's bash reports no exit code — a non-zero exit arrives as an error instead — so the chip is shown
+            only by a tool that actually returns one. */}
+        {typeof data.code === "number" ? (
+          <span>
+            {t("exit")} {data.code}
+          </span>
+        ) : null}
       </div>
       <div className="AICardLogsWrap">
         <span className="AICardLogsCopy">

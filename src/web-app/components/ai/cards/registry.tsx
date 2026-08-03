@@ -7,6 +7,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeError } from "@/ai-system/core/errors";
+import { type PiCardKind, piCardResult, resolvePiCardKind } from "@/ai-system/core/piToolCards";
 import { redactPayload } from "@/ai-system/core/redact";
 import { type ContainerToolName, isContainerToolName } from "@/ai-system/core/toolNames";
 import { isWorkspaceToolName, type WorkspaceToolName } from "@/ai-system/core/workspaceToolNames";
@@ -44,6 +45,16 @@ const TOOL_CARDS: Partial<Record<ContainerToolName, React.FC<ToolCardProps>>> = 
   removeNetwork: ActionResultCard,
   removeVolume: ActionResultCard,
   pullImage: ActionResultCard,
+};
+
+// pi's built-ins reuse the same cards as the app's own workspace tools — the shapes match once
+// `piCardResult` rebuilds them, because pi returns its payload as text with only truncation flags in `details`.
+const PI_CARDS: Readonly<Record<PiCardKind, React.FC<ToolCardProps>>> = {
+  exec: ExecCard,
+  file: FileCard,
+  diff: DiffCard,
+  listing: ListingCard,
+  search: SearchCard,
 };
 
 // Workspace tools route to a parallel map (their names aren't ContainerToolNames, so the container map never sees
@@ -130,6 +141,14 @@ export const ToolCard: React.FC<ToolCardProps> = (props) => {
         {artifactDrawer}
       </>
     );
+  }
+
+  // A pi tool's payload is its result TEXT, so the card reads a result rebuilt from (args, text, details)
+  // rather than the thin `details` the bridge delivered.
+  const piKind = resolvePiCardKind(tool);
+  if (piKind) {
+    const PiCard = PI_CARDS[piKind];
+    return <PiCard {...props} result={piCardResult(tool, props.args, message ?? "", result)} />;
   }
 
   const Card =

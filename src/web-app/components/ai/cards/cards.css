@@ -247,3 +247,26 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.AICardNotice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 11.5px;
+}
+
+.AICardDiffHunk {
+  display: block;
+}
+
+.AICardDiffNum {
+  display: inline-block;
+  width: 3.5ch;
+  margin-right: 4px;
+  text-align: right;
+  color: var(--app-text-muted);
+  user-select: none;
+}

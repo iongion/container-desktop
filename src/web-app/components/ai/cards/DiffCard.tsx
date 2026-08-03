@@ -1,8 +1,11 @@
-// Generative-UI card for editFile — a unified diff of the edit's before/after, computed in the renderer with
-// jsdiff. Long unchanged runs are folded to a few lines of context so a small edit to a big file stays scannable.
+// Generative-UI card for an edit. Two sources, one look: pi's `edit` returns a ready unified patch in
+// `details.patch`, which is rendered with both line-number gutters; the app's own editFile returns before/after
+// text, diffed here with jsdiff and folded so a small edit to a big file stays scannable.
 import { IconNames } from "@blueprintjs/icons";
 import { diffLines } from "diff";
 import { useTranslation } from "react-i18next";
+
+import { parseUnifiedPatch } from "@/ai-system/core/unifiedPatch";
 
 import { AICardShell } from "./AICardShell";
 import type { ToolCardProps } from "./types";
@@ -22,9 +25,48 @@ function partLines(value: string): string[] {
   return lines;
 }
 
-export const DiffCard: React.FC<ToolCardProps> = ({ result }) => {
+// A patch already says which side each line belongs to and what it is numbered, so it renders directly —
+// reconstructing before/after just to re-diff it would throw the real line numbers away.
+const PatchBody: React.FC<{ patch: string }> = ({ patch }) => {
+  const { hunks } = parseUnifiedPatch(patch);
+  return (
+    <div className="AICardDiff">
+      {hunks.map((hunk) => (
+        <div key={hunk.header} className="AICardDiffHunk">
+          <span className="AICardDiffLine AICardDiffLine--meta">{hunk.header}</span>
+          {hunk.lines.map((line) => (
+            // Within a hunk a line is identified by the side it is numbered on: added lines have distinct new
+            // numbers, removed lines distinct old ones, context lines both.
+            <span
+              key={`${hunk.header}-${line.kind}-${line.oldLine ?? ""}-${line.newLine ?? ""}`}
+              className={`AICardDiffLine ${
+                line.kind === "added" ? "AICardDiffLine--add" : line.kind === "removed" ? "AICardDiffLine--del" : ""
+              }`}
+            >
+              <span className="AICardDiffNum">{line.oldLine ?? ""}</span>
+              <span className="AICardDiffNum">{line.newLine ?? ""}</span>
+              {line.kind === "added" ? "+" : line.kind === "removed" ? "-" : " "} {line.text}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const DiffCard: React.FC<ToolCardProps> = ({ title, result }) => {
   const { t } = useTranslation();
-  const data = (result ?? {}) as { path?: string; before?: string; after?: string };
+  const data = (result ?? {}) as { path?: string; before?: string; after?: string; patch?: string };
+
+  if (data.patch) {
+    const { added, removed, path: patchPath } = parseUnifiedPatch(data.patch);
+    const heading = title || data.path || patchPath || t("Edit");
+    return (
+      <AICardShell title={added || removed ? `${heading} · +${added}/−${removed}` : heading} icon={IconNames.EDIT}>
+        <PatchBody patch={data.patch} />
+      </AICardShell>
+    );
+  }
   const rows: DiffRow[] = [];
   let added = 0;
   let removed = 0;
@@ -49,11 +91,11 @@ export const DiffCard: React.FC<ToolCardProps> = ({ result }) => {
     }
   }
 
-  const path = data.path ? String(data.path) : t("Edit");
-  const title = added || removed ? `${path} · +${added}/−${removed}` : path;
+  const path = title || (data.path ? String(data.path) : t("Edit"));
+  const heading = added || removed ? `${path} · +${added}/−${removed}` : path;
 
   return (
-    <AICardShell title={title} icon={IconNames.EDIT}>
+    <AICardShell title={heading} icon={IconNames.EDIT}>
       <div className="AICardDiff">
         {rows.map((row) => (
           <span key={row.key} className={`AICardDiffLine ${row.cls}`}>
