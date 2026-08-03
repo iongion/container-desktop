@@ -72,6 +72,17 @@ const exportWorkspaceChanges = z
   })
   .strict();
 
+// Data a plugin published. `data` is the plugin's own payload, so it is exported as-is after redaction —
+// dropping it would make an export of a plugin-driven session silently incomplete.
+const exportData = z
+  .object({
+    kind: z.literal("data"),
+    customType: z.string(),
+    data: z.unknown().optional(),
+    text: z.string().optional(),
+  })
+  .strict();
+
 export const threadExportSchema = z
   .object({
     version: z.literal(THREAD_EXPORT_VERSION),
@@ -94,6 +105,7 @@ export const threadExportSchema = z
           exportDenied,
           exportError,
           exportWorkspaceChanges,
+          exportData,
         ]),
       )
       .max(MAX_THREAD_TIMELINE_ITEMS),
@@ -154,6 +166,13 @@ function sanitizeEntry(view: ThreadView, item: ThreadTimelineItem, index: number
         updated: item.updated,
         contentChanged: item.contentChanged,
         truncated: item.truncated,
+      });
+    case "data":
+      return redactPayload({
+        kind: item.kind,
+        customType: item.customType,
+        ...(item.data === undefined ? {} : { data: item.data }),
+        ...(item.text === undefined ? {} : { text: item.text }),
       });
   }
 }

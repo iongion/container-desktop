@@ -14,7 +14,18 @@ export interface PiContentBlock {
 export interface PiAgentEvent {
   type: string;
   assistantMessageEvent?: { type: string; delta?: string; content?: string };
-  message?: { role: string; content?: PiContentBlock[]; stopReason?: string; errorMessage?: string };
+  // A custom message (pi.sendMessage) has role "custom" and carries its own type, arbitrary details, and
+  // content that pi's type allows to be a plain string as well as blocks.
+  message?: {
+    role: string;
+    content?: PiContentBlock[] | string;
+    stopReason?: string;
+    errorMessage?: string;
+    customType?: string;
+    details?: unknown;
+    display?: boolean;
+  };
+  entry?: { id?: string; type?: string; customType?: string; data?: unknown };
   toolCallId?: string;
   toolName?: string;
   args?: unknown;
@@ -23,8 +34,9 @@ export interface PiAgentEvent {
   result?: { content?: PiContentBlock[]; details?: unknown };
 }
 
-function textOf(content: PiContentBlock[] | undefined): string {
+function textOf(content: PiContentBlock[] | string | undefined): string {
   if (!content) return "";
+  if (typeof content === "string") return content;
   return content
     .filter((block) => block.type === "text")
     .map((block) => block.text ?? "")
@@ -42,6 +54,20 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
     }
     case "message_end": {
       const message = event.message;
+      // A plugin's own message. It is labelled by its customType, which is what picks its card, so a message
+      // without one carries nothing renderable. `display: false` means the plugin is feeding the model, not
+      // the user, so showing it would put context in the transcript the plugin asked to keep out of it.
+      if (message?.role === "custom") {
+        if (!message.customType || message.display === false) return [];
+        return [
+          {
+            type: "custom_message",
+            customType: message.customType,
+            content: textOf(message.content),
+            details: message.details,
+          },
+        ];
+      }
       if (message?.role !== "assistant") return [];
       const text = textOf(message.content);
       // An abort is the user stopping the agent — pressing Stop, or rejecting a tool call. pi reports it as
@@ -78,6 +104,14 @@ export function mapAgentEvent(event: PiAgentEvent): BridgeEvent[] {
           details: event.result?.details,
         },
       ];
+    // pi.appendEntry writes a custom session entry AND emits this, so the GUI sees plugin data without
+    // polling the session. Only custom entries carry a customType; the rest is pi's own bookkeeping.
+    case "entry_appended": {
+      const entry = event.entry;
+      if (!entry?.customType) return [];
+      return [{ type: "entry", entryId: entry.id ?? "", customType: entry.customType, data: entry.data }];
+    }
+
     case "turn_end":
       return [{ type: "turn_end" }];
     case "agent_settled":

@@ -7,6 +7,7 @@ import { threadTimelineMessageContent } from "@/ai-system/core/threadReducer";
 import type { ThreadSummary } from "@/ai-system/core/threads";
 import { toolTitle } from "@/ai-system/ui/core/toolTitle";
 import { AssistantMarkdown } from "@/web-app/components/ai/AssistantMarkdown";
+import { DataCard } from "@/web-app/components/ai/cards/DataCard";
 import { ToolCard } from "@/web-app/components/ai/cards/registry";
 import type { ThreadBranchSource } from "@/web-app/components/ai/ThreadBranchDrawer";
 import { WorkspaceChangesCard } from "@/web-app/components/ai/WorkspaceChangesDrawer";
@@ -133,6 +134,8 @@ export function AssistantTimelineItem({ item, timelineIndex, context }: Assistan
       return <Callout intent={Intent.DANGER}>{item.message}</Callout>;
     case "workspace-changes":
       return <WorkspaceChangesCard summary={item} onOpen={context.onOpenWorkspaceChanges} />;
+    case "data":
+      return <DataCard customType={item.customType} data={item.data} text={item.text} />;
     case "tool":
       if (item.tool === "runCommand") {
         const result = item.result as

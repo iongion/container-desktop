@@ -40,6 +40,16 @@ async function hostRequest(method, payload, requestId = "r1") {
   );
 }
 
+// One screenshot per WebDriver session is the ceiling here: saveScreenshot forces a paint WebKitGTK had
+// parked, and the command after a second one hangs and takes the session with it. The DOM assertions below
+// are the actual verification, so images are opt-in via PI_SHOTS=<n> (n = how many to allow, default 0).
+let shotsLeft = Number(process.env.PI_SHOTS ?? 0);
+async function shot(path) {
+  if (shotsLeft <= 0) return;
+  shotsLeft -= 1;
+  await browser.saveScreenshot(path);
+}
+
 describe("pi extension UI", () => {
   it("renders status entries and widget strips around the composer", async () => {
     await openAssistant();
@@ -50,7 +60,7 @@ describe("pi extension UI", () => {
     await $(".ExtensionStatusStrip").waitForExist({ timeout: 15000, timeoutMsg: "the status strip never rendered" });
     await $(".ExtensionWidgetStrip--aboveEditor").waitForExist({ timeout: 15000, timeoutMsg: "no widget above" });
     await $(".ExtensionWidgetStrip--belowEditor").waitForExist({ timeout: 15000, timeoutMsg: "no widget below" });
-    await browser.saveScreenshot("/tmp/ext-ui-chrome.png");
+    await shot("/tmp/ext-ui-chrome.png");
 
     const statusText = await $(".ExtensionStatusStrip").getText();
     assert.ok(statusText.includes("running"), `the status text is missing: ${statusText}`);
@@ -69,7 +79,7 @@ describe("pi extension UI", () => {
     await $(".ExtensionDialog").waitForExist({ timeout: 15000, timeoutMsg: "the select dialog never rendered" });
     const options = await $$(".ExtensionDialogOption");
     assert.equal(options.length, 2, "both choices should be offered");
-    await browser.saveScreenshot("/tmp/ext-ui-select.png");
+    await shot("/tmp/ext-ui-select.png");
 
     await options[1].click();
     await $(".ExtensionDialog").waitForExist({ reverse: true, timeout: 15000, timeoutMsg: "the dialog never closed" });
@@ -82,13 +92,13 @@ describe("pi extension UI", () => {
     const confirmText = await $(".ExtensionDialog").getText();
     assert.ok(confirmText.includes("you picked beta"), `the confirm message is missing: ${confirmText}`);
     assert.ok(/YES/i.test(confirmText) && /NO/i.test(confirmText), `confirm needs yes and no: ${confirmText}`);
-    await browser.saveScreenshot("/tmp/ext-ui-confirm.png");
+    await shot("/tmp/ext-ui-confirm.png");
     await $(".ExtensionDialogActions button").click();
     await $(".ExtensionDialog").waitForExist({ reverse: true, timeout: 15000, timeoutMsg: "confirm never closed" });
 
     await hostRequest("input", { title: "Your name", placeholder: "type here" }, "r2");
     await $(".ExtensionDialog input").waitForExist({ timeout: 15000, timeoutMsg: "the input dialog never rendered" });
-    await browser.saveScreenshot("/tmp/ext-ui-input.png");
+    await shot("/tmp/ext-ui-input.png");
   });
 
   it("shows a gated tool call as an approval card and records the rejection", async () => {
@@ -97,7 +107,7 @@ describe("pi extension UI", () => {
     await $(".AssistantApproval").waitForExist({ timeout: 15000, timeoutMsg: "the approval card never rendered" });
     const card = await $(".AssistantApproval").getText();
     assert.ok(card.includes("rm -rf build"), `the card must show what would run: ${card}`);
-    await browser.saveScreenshot("/tmp/ext-ui-approval.png");
+    await shot("/tmp/ext-ui-approval.png");
 
     const buttons = await $$(".AssistantApprovalActions button");
     assert.equal(buttons.length, 2, "the card offers allow and reject");
@@ -116,7 +126,7 @@ describe("pi extension UI", () => {
     }));
     assert.equal(settled.status, "rejected", "the store must record the rejection");
     assert.ok(/Declined/.test(settled.text), `a rejected call must read as declined: ${settled.text}`);
-    await browser.saveScreenshot("/tmp/ext-ui-approval-declined.png");
+    await shot("/tmp/ext-ui-approval-declined.png");
   });
 
   it("lets an extension replace the composer draft", async () => {
@@ -126,6 +136,6 @@ describe("pi extension UI", () => {
       async () => (await $(".AIComposerInput").getValue()) === "seeded by the extension",
       { timeout: 15000, timeoutMsg: "the composer draft was never replaced", interval: 300 },
     );
-    await browser.saveScreenshot("/tmp/ext-ui-editor-text.png");
+    await shot("/tmp/ext-ui-editor-text.png");
   });
 });

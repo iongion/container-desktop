@@ -161,6 +161,30 @@ describe("projectPiThreadView", () => {
     expect(view.phase).toBe("idle");
   });
 
+  // A plugin's own payloads. They are transcript content, not model output, so they become their own item
+  // kind rather than being folded into an assistant message.
+  it("appends a data item for a plugin entry", () => {
+    const view = project([{ type: "entry", entryId: "e2", customType: "my-plugin:card", data: { status: "ok" } }]);
+    expect(view.timeline[0]).toMatchObject({ kind: "data", customType: "my-plugin:card", data: { status: "ok" } });
+    expect(() => threadViewSchema.parse(view)).not.toThrow();
+  });
+
+  it("appends a data item for a custom message and keeps its text", () => {
+    const view = project([{ type: "custom_message", customType: "my-plugin", content: "status", details: { n: 1 } }]);
+    expect(view.timeline[0]).toMatchObject({ kind: "data", customType: "my-plugin", text: "status", data: { n: 1 } });
+    expect(() => threadViewSchema.parse(view)).not.toThrow();
+  });
+
+  it("does not disturb a streaming assistant message when plugin data arrives mid-turn", () => {
+    const view = project([
+      { type: "assistant_delta", text: "thinking" },
+      { type: "entry", entryId: "e9", customType: "probe", data: { tick: 1 } },
+    ]);
+    expect(view.timeline.map((item) => item.kind)).toEqual(["message", "data"]);
+    expect(view.streamingAssistant?.content).toBe("thinking");
+    expect(view.phase).toBe("model");
+  });
+
   it("ignores a settle for an approval it never saw", () => {
     const view = projectPiThreadView(emptyPiThreadView("t1"), {
       type: "approval_settled",

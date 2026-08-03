@@ -36,6 +36,11 @@ export type BridgeEvent =
   | { type: "turn_end" }
   | { type: "idle" }
   | { type: "error"; message: string }
+  // What a plugin publishes for the GUI to render: `pi.appendEntry(customType, data)` becomes an `entry`,
+  // and `pi.sendMessage({ customType, content, details })` a `custom_message`.
+  | { type: "entry"; entryId: string; customType: string; data?: unknown }
+  // No message id: pi's message_end carries none, and the transcript assigns its own item ids.
+  | { type: "custom_message"; customType: string; content: string; details?: unknown }
   | {
       type: "host_request";
       requestId: string;
@@ -58,6 +63,8 @@ export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "idle",
   "error",
   "host_request",
+  "entry",
+  "custom_message",
 ]);
 
 export class BridgeProtocolError extends Error {

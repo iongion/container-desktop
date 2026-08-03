@@ -736,6 +736,18 @@ const timelineItem = z.discriminatedUnion("kind", [
       ...workspaceChangeSummarySchema.shape,
     })
     .strict(),
+  // Data a plugin published for the GUI: `pi.appendEntry` or a custom `pi.sendMessage`. The customType is
+  // the card key, and `data` is the plugin's own payload — unknown by design, rendered as inspectable JSON
+  // until a card claims that type.
+  z
+    .object({
+      kind: z.literal("data"),
+      id,
+      customType: z.string().min(1).max(MAX_TITLE_CHARS),
+      data: z.unknown().optional(),
+      text: z.string().max(MAX_AI_TEXT_CHARS).optional(),
+    })
+    .strict(),
 ]);
 export const threadView = z
   .object({

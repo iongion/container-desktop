@@ -61,6 +61,12 @@ const CASES = [
   },
 ];
 
+// What a plugin publishes for the GUI, as the two bridge events the container emits for it.
+const PLUGIN_DATA = [
+  { type: "entry", entryId: "e2", customType: "probe:card", data: { status: "done", counts: [1, 2, 3] } },
+  { type: "custom_message", customType: "probe:msg", content: "from a plugin", details: { ok: true } },
+];
+
 let cards = [];
 
 // Find the one card whose title matches, so an assertion never depends on transcript order.
@@ -109,6 +115,11 @@ describe("pi tool cards", () => {
       store.applyBridgeEvent({ type: "idle" });
     }, CASES);
 
+    await browser.execute((entries) => {
+      const store = window.__cdCodingAgentStore.getState();
+      for (const entry of entries) store.applyBridgeEvent(entry);
+    }, PLUGIN_DATA);
+
     await $(".AICard").waitForExist({ timeout: 20000, timeoutMsg: "no card ever rendered" });
 
     // Cards open collapsed, so Blueprint has not mounted their bodies yet. Clicking through the DOM rather
@@ -145,8 +156,21 @@ describe("pi tool cards", () => {
     await browser.saveScreenshot(process.env.PI_CARDS_SHOT ?? "/tmp/pi-cards-top.png");
   });
 
-  it("renders one card per tool call", () => {
-    assert.equal(cards.length, CASES.length, `expected ${CASES.length} cards, got ${cards.length}`);
+  it("renders one card per tool call and per plugin payload", () => {
+    const expected = CASES.length + PLUGIN_DATA.length;
+    assert.equal(cards.length, expected, `expected ${expected} cards, got ${cards.length}`);
+  });
+
+  it("renders a plugin's appended entry as an inspectable data card", () => {
+    const entry = card("probe:card");
+    assert.ok(entry.text.includes("counts"), `the plugin's own payload must be inspectable: ${entry.text}`);
+    assert.ok(entry.text.includes("done"), `the payload values must render: ${entry.text}`);
+  });
+
+  it("renders a plugin's custom message with its text above its details", () => {
+    const message = card("probe:msg");
+    assert.ok(message.text.includes("from a plugin"), `the message text must render: ${message.text}`);
+    assert.ok(message.text.includes("\"ok\""), `its details must render too: ${message.text}`);
   });
 
   it("renders bash as an exec card with its command, and no invented exit code", () => {

@@ -115,4 +115,55 @@ describe("mapAgentEvent", () => {
   it("returns no events for anything unmapped", () => {
     expect(mapAgentEvent({ type: "queue_update" })).toEqual([]);
   });
+
+  // What a plugin publishes for the GUI. pi.appendEntry emits a first-class `entry_appended` session event
+  // carrying a CustomEntry, so no session polling is needed to see it.
+  it("maps a plugin's appended entry to an entry event", () => {
+    expect(
+      mapAgentEvent({
+        type: "entry_appended",
+        entry: { id: "e2", type: "custom", customType: "my-plugin:card", data: { status: "ok" } },
+      }),
+    ).toEqual([{ type: "entry", entryId: "e2", customType: "my-plugin:card", data: { status: "ok" } }]);
+  });
+
+  it("ignores an appended entry that carries no customType, which is pi's own bookkeeping", () => {
+    expect(mapAgentEvent({ type: "entry_appended", entry: { id: "e3", type: "message" } })).toEqual([]);
+  });
+
+  // pi.sendMessage produces a message with role "custom", and the agent loop emits message_end for it.
+  it("maps a custom message to a custom_message event", () => {
+    expect(
+      mapAgentEvent({
+        type: "message_end",
+        message: {
+          role: "custom",
+          customType: "my-plugin",
+          content: [{ type: "text", text: "status" }],
+          details: { n: 1 },
+        },
+      }),
+    ).toEqual([{ type: "custom_message", customType: "my-plugin", content: "status", details: { n: 1 } }]);
+  });
+
+  it("accepts a custom message whose content is a plain string, which pi's type allows", () => {
+    expect(
+      mapAgentEvent({ type: "message_end", message: { role: "custom", customType: "p", content: "just text" } }),
+    ).toEqual([{ type: "custom_message", customType: "p", content: "just text", details: undefined }]);
+  });
+
+  it("drops a custom message with no customType rather than emitting an unlabelled card", () => {
+    expect(mapAgentEvent({ type: "message_end", message: { role: "custom", content: "x" } })).toEqual([]);
+  });
+
+  // display:false is a plugin feeding the model, not the user — putting it in the transcript would show
+  // context the plugin asked to keep out of it.
+  it("drops a custom message the plugin marked as not for display", () => {
+    expect(
+      mapAgentEvent({
+        type: "message_end",
+        message: { role: "custom", customType: "p", content: "x", display: false },
+      }),
+    ).toEqual([]);
+  });
 });

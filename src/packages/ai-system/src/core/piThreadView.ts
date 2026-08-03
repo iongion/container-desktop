@@ -157,6 +157,32 @@ export function projectPiThreadView(view: ThreadView, event: PiThreadViewEvent):
         })),
       };
 
+    // Plugin-published data. It is content the plugin chose to show, so it lands in the timeline as its own
+    // kind — never merged into the streaming assistant message, which would read as something the model said.
+    case "entry":
+      return {
+        ...next,
+        timeline: [
+          ...view.timeline,
+          { kind: "data", id: randomUUID(), customType: event.customType, data: event.data },
+        ],
+      };
+
+    case "custom_message":
+      return {
+        ...next,
+        timeline: [
+          ...view.timeline,
+          {
+            kind: "data",
+            id: randomUUID(),
+            customType: event.customType,
+            data: event.details,
+            text: event.content || undefined,
+          },
+        ],
+      };
+
     case "error":
       return {
         ...next,
