@@ -100,6 +100,7 @@
     "test:e2e:tauri:pi:extension-ui": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/extension-ui.e2e.js",
     "test:e2e:tauri:pi:cards": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-tool-cards.e2e.js",
     "test:e2e:tauri:pi:surfaces": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-surfaces.e2e.js",
+    "test:e2e:tauri:pi:plugins": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-plugins.e2e.js",
     "test:e2e:tauri:pi:extension:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-extension-live.e2e.js",
     "test:e2e:tauri:pi:gate:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-gate-live.e2e.js",
     "test:e2e:tauri:pi:data:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-plugin-data-live.e2e.js"

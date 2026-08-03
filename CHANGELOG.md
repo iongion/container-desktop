@@ -69,6 +69,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Point the assistant at a project folder so it can read, search, edit and run things there, always asking before it changes anything
 - The assistant shows file reads, edits, searches, listings and command output as rich cards instead of raw text
 - Ollama joins the local inference sources you can pick a model from
+- A Plugins screen: install pi plugins from npm or git, then update, disable, re-enable or remove them
+- Each plugin row lists what it contributes — commands, skills and prompt templates — and whether it is enabled and on disk
+- Installing states plainly that the plugin's code will run inside the agent container, and a source with shell characters is refused
+- Disabling a plugin keeps it installed, so switching it back on costs no download
+- Installed plugins persist across sessions, and a fresh install takes effect without restarting the agent
+- Plugin commands, skills and prompt templates appear in the composer's slash-command palette, labelled with the plugin they came from
 
 ### Changed
 
@@ -110,6 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Rejecting a tool call now stops the coding agent, instead of it asking again for the same command every second
 - A coding agent session no longer fails to start while the agent container is still opening its port
+- The agent container no longer fails to start because one of pi's packages was missing from the image
+- The AI section tabs no longer link to two screens that no longer exist
 - Stopping a turn reads as stopped, not as a model error
 - A container the engine reports with no name at all is no longer listed and grouped as "undefined"
 - Container ports, container statistics and a container's health block are now typed the way both engines really answer them, so nothing reads a field that is not there

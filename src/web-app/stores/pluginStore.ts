@@ -109,6 +109,12 @@ export const usePluginStore = create<PluginState>()((set, get) => ({
   },
 }));
 
+// DEV-only handle for the WebDriver spec, mirroring installCodingAgentProbe: the spec seeds a stand-in bridge
+// client and drives this store, so the table's rendering is asserted without installing real packages.
+export function installPluginStoreProbe(): void {
+  (globalThis as { __cdPluginStore?: typeof usePluginStore }).__cdPluginStore = usePluginStore;
+}
+
 // Shared shape of a mutation: hold busy, surface a failure as text rather than a throw into a click handler,
 // then let pi reload and refetch.
 async function run(

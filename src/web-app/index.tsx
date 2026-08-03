@@ -56,6 +56,10 @@ async function boot() {
     // starting a real container session.
     const { installCodingAgentProbe } = await import("@/web-app/stores/codingAgent");
     installCodingAgentProbe();
+    // DEV-only: window.__cdPluginStore, so the Plugins spec can render a table of plugins against a stand-in
+    // bridge client instead of installing real packages into a real container.
+    const { installPluginStoreProbe } = await import("@/web-app/stores/pluginStore");
+    installPluginStoreProbe();
   }
   const { renderApplication } = await import("./App.render");
   bootTimeline.mark("app-render-imported");
