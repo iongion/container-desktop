@@ -4,8 +4,6 @@ import type { AIKeyStore, ConnectionExecHost } from "@/ai-system/core/ports";
 import type { AISettings, EngineOps, ProviderTransport } from "@/ai-system/core/types";
 import type { AIBroker } from "@/ai-system/host/broker";
 import { createAISystem } from "@/ai-system/host/createAISystem";
-import { compactOmaThreadContext, createOmaAgentSession } from "@/ai-system/runtime/omaAgentSession";
-import { createOmaTeamRun } from "@/ai-system/runtime/omaTeamRun";
 import type { DnsResolve, ExecuteIsolated, HostEnv } from "@/host-contract/capabilities";
 import type { IFileDiscoverySystem, IPath } from "@/host-contract/fs";
 import type { IWorkspaceAccess } from "@/host-contract/workspaceAccess";
@@ -62,8 +60,6 @@ function routeByAuthScheme(native: ProviderTransport, webview: ProviderTransport
 export async function createWebviewAISystem<TEvent = unknown>(deps: WebviewAISystemDeps<TEvent>): Promise<AIBroker> {
   // Dev-only, DCE'd from production: under CONTAINER_DESKTOP_MOCK, drive the open-multi-agent engine with a scripted
   // adapter; otherwise the real provider-backed OMA engine. Both run in the webview realm.
-  const mockEngine =
-    deps.mock && import.meta.env.ENVIRONMENT !== "production" ? await import("@/ai-system/testing/omaMocks") : null;
 
   // Run-scoped execution selector: a worker's off-host "Runs on"
   // target resolves to its own backend through the connection-exec capability. Under CONTAINER_DESKTOP_MOCK the
@@ -173,9 +169,6 @@ export async function createWebviewAISystem<TEvent = unknown>(deps: WebviewAISys
       path: deps.path,
       sandboxCwd: deps.userDataDir,
       getAISettings: deps.getAISettings,
-      createAgentSession: mockEngine?.createMockOmaAgentSession ?? createOmaAgentSession,
-      compactThreadContext: mockEngine?.compactMockThreadContext ?? compactOmaThreadContext,
-      createTeamRun: mockEngine?.createMockOmaTeamRun ?? createOmaTeamRun,
       onInvoke: deps.onInvoke,
       send: deps.send,
       senderId: deps.senderId,

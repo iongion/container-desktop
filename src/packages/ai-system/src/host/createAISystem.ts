@@ -73,12 +73,11 @@ export interface AISystemDeps<TEvent = unknown> {
   // Run-scoped factory that builds a worker's execution backend from its target (host/remote/container/sandbox).
   // Absent ⇒ every team-run worker falls back to the run-level engineOps/workspaceAccess (host), the pre-Runs-on behaviour.
   createExecutionSelector?: ExecutionSelectorFactory;
-  // Engine factory, injected by the shell composition root (→ @/ai-system/runtime). REQUIRED: core/ and host/
-  // carry no engine of their own since the AI-SDK/robot3 one was retired, so a shell must supply it. The
-  // injection is what keeps @open-multi-agent/core out of this layer's dependency graph — do not import runtime/
-  // from here to shorten the wiring.
-  createAgentSession: CreateAgentSession;
-  compactThreadContext: CompactThreadContext;
+  // Engine factory, injected by the shell composition root. OPTIONAL since the assistant moved into the
+  // container: the pi session drives the transcript from the renderer, so a shell that offers only the
+  // containerized agent supplies neither. The broker already rejects thread work when they are absent.
+  createAgentSession?: CreateAgentSession;
+  compactThreadContext?: CompactThreadContext;
   // Team-run driver. Optional because a shell may legitimately not offer Runs; when absent the
   // host rejects a run start with a clear error rather than falling back to anything.
   createTeamRun?: CreateTeamRun;
