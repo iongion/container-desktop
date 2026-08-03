@@ -1,0 +1,99 @@
+.CodingAgentScreen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.CodingAgentScreen .CodingAgentBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+
+.CodingAgentScreen .CodingAgentStatus {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.CodingAgentScreen .CodingAgentStatus[data-status="ready"] {
+  color: var(--app-accent);
+}
+
+.CodingAgentScreen .CodingAgentStartLog {
+  margin: 0;
+  padding: 8px;
+  max-height: 160px;
+  overflow: auto;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  color: var(--app-text-muted);
+  white-space: pre-wrap;
+}
+
+.CodingAgentScreen .CodingAgentTranscript {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+  background: var(--app-bg);
+}
+
+.CodingAgentScreen .CodingAgentMessage {
+  white-space: pre-wrap;
+  color: var(--app-text);
+}
+
+.CodingAgentScreen .CodingAgentMessage--user {
+  color: var(--app-text-muted);
+}
+
+.CodingAgentScreen .CodingAgentTool {
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  background: var(--app-surface);
+  overflow: hidden;
+}
+
+.CodingAgentScreen .CodingAgentToolName {
+  padding: 4px 8px;
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.CodingAgentScreen .CodingAgentToolOutput {
+  margin: 0;
+  padding: 8px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: var(--app-text);
+}
+
+.CodingAgentScreen .CodingAgentTool[data-state="error"] {
+  border-color: var(--app-danger, var(--app-border));
+}
+
+.CodingAgentScreen .CodingAgentError {
+  padding: 6px 8px;
+  border: 1px solid var(--app-danger, var(--app-border));
+  border-radius: 3px;
+  color: var(--app-danger, var(--app-text));
+}
+
+.CodingAgentScreen .CodingAgentComposer {
+  min-height: 72px;
+  resize: vertical;
+}

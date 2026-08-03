@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Coding Agent screen: pi runs inside a container, streamed into the app over a token-authenticated bridge
+- `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
+- Provider credentials stay in a separate gateway container; the agent container never receives a key
 - AI workers can wear an avatar — pick a built-in face or upload your own, shown across the workers list, cards and Runs
 - The Workers screen has a cards view, now the default, alongside the table
 - Reach the AI area from a highlighted "Runs" entry in the sidebar; a single button opens the Assistant

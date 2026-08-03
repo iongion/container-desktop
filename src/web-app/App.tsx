@@ -34,6 +34,7 @@ import { CURRENT_ENVIRONMENT } from "@/web-app/Environment";
 import { waitForPreload } from "@/web-app/Native";
 import { pathTo } from "@/web-app/Navigator";
 import { Screen as AIAssistantScreen } from "@/web-app/screens/AI/AssistantScreen";
+import { Screen as AICodingAgentScreen } from "@/web-app/screens/AI/CodingAgentScreen";
 import { Screen as AIRunsScreen } from "@/web-app/screens/AI/Run/ManageScreen";
 import { Screen as AIRunScreen } from "@/web-app/screens/AI/Run/RunScreen";
 import { Screen as AIWorkersScreen } from "@/web-app/screens/AI/Worker/ManageScreen";
@@ -84,6 +85,7 @@ const logger = createLogger("web.app");
 const Screens = [
   DashboardScreen,
   AIAssistantScreen,
+  AICodingAgentScreen,
   AIRunsScreen,
   AIRunScreen,
   AIWorkersScreen,
