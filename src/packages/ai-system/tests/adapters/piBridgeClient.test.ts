@@ -92,4 +92,31 @@ describe("createPiBridgeClient", () => {
     expect(promptFrame).toMatchObject({ type: "prompt", text: "hello" });
     expect(typeof promptFrame.id).toBe("string");
   });
+
+  it("answers a host request with a host_response carrying the same request id", async () => {
+    const { socket, sent } = fakeSocket();
+    const client = createPiBridgeClient({ url: "ws://127.0.0.1:1/", token: "tok", socketFactory: () => socket });
+    const connected = client.connect();
+    socket.onopen?.();
+    socket.onmessage?.({ data: READY });
+    await connected;
+    await client.respond("r1", { ok: true, value: { allow: true } });
+    expect(JSON.parse(sent.at(-1) as string)).toMatchObject({
+      type: "host_response",
+      requestId: "r1",
+      ok: true,
+      value: { allow: true },
+    });
+  });
+
+  it("carries a refusal reason back to the container", async () => {
+    const { socket, sent } = fakeSocket();
+    const client = createPiBridgeClient({ url: "ws://127.0.0.1:1/", token: "tok", socketFactory: () => socket });
+    const connected = client.connect();
+    socket.onopen?.();
+    socket.onmessage?.({ data: READY });
+    await connected;
+    await client.respond("r2", { ok: false, error: "dismissed" });
+    expect(JSON.parse(sent.at(-1) as string)).toMatchObject({ type: "host_response", ok: false, error: "dismissed" });
+  });
 });

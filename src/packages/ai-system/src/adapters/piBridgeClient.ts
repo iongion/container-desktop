@@ -15,10 +15,19 @@ export interface WebSocketLike {
   onerror: ((error: unknown) => void) | null;
 }
 
+export interface HostResponsePayload {
+  ok: boolean;
+  value?: unknown;
+  error?: string;
+}
+
 export interface PiBridgeClient {
   connect(): Promise<void>;
   prompt(text: string): Promise<void>;
   abort(): Promise<void>;
+  // Answers one host_request. The container correlates by requestId, so a late answer is dropped rather
+  // than resolving whatever request came next.
+  respond(requestId: string, response: HostResponsePayload): Promise<void>;
   onEvent(listener: (event: BridgeEvent) => void): () => void;
   close(): void;
 }
@@ -88,6 +97,9 @@ export function createPiBridgeClient(options: {
     },
     async abort(): Promise<void> {
       socket?.send(encodeCommand({ id: randomUUID(), type: "abort" }));
+    },
+    async respond(requestId: string, response: HostResponsePayload): Promise<void> {
+      socket?.send(encodeCommand({ id: randomUUID(), type: "host_response", requestId, ...response }));
     },
     onEvent(listener) {
       listeners.add(listener);

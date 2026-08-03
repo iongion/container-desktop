@@ -59,6 +59,7 @@ export const AI_CHANNELS = {
   modelsCancel: "ai:models:cancel",
   // The user-managed allow/reject record (a dedicated versioned file; broker-owned writes).
   permissionsList: "ai:permissions:list", // invoke() → PermissionsSnapshot
+  permissionsAdd: "ai:permissions:add", // invoke({ list, rule }) → PermissionsSnapshot
   permissionsRemove: "ai:permissions:remove", // invoke({ list, key }) → PermissionsSnapshot
   skillsSnapshot: "ai:skills:snapshot",
   skillsReload: "ai:skills:reload",

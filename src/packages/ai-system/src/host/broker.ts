@@ -327,6 +327,9 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
     onInvoke(AI_CHANNELS.permissionsList, (event) =>
       guarded(event, () => requirePermissions(deps.permissionsStore).load()),
     );
+    onInvoke(AI_CHANNELS.permissionsAdd, (event, request) =>
+      guarded(event, () => requirePermissions(deps.permissionsStore).addCommand(request.list, request.rule)),
+    );
     onInvoke(AI_CHANNELS.permissionsRemove, (event, request) =>
       guarded(event, () => requirePermissions(deps.permissionsStore).removeCommand(request.list, request.key)),
     );

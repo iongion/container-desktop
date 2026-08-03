@@ -2,15 +2,22 @@
 // assistant UI — markdown, tool cards, approvals, thinking — render pi output with no component changes:
 // the vocabulary stays the app's, only the producer changes from the OMA engine to the pi bridge.
 
+import { piApprovalSummary } from "@/ai-system/core/piApprovals";
 import type { ThreadView } from "@/ai-system/core/threadEvents";
+import { classifyHostRequest } from "@/ai-system/core/uiRequests";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 
 type TimelineItem = ThreadView["timeline"][number];
 
 // A user turn has no bridge event of its own — the app knows what it submitted — so the store injects one
-// through this projector to keep every timeline mutation in a single tested place.
-export type PiThreadViewEvent = BridgeEvent | { type: "user_message"; text: string };
+// through this projector to keep every timeline mutation in a single tested place. `approval_settled` is the
+// same idea for the answer the user gave a gated tool call: the container is told over the bridge, the
+// transcript is told through here.
+export type PiThreadViewEvent =
+  | BridgeEvent
+  | { type: "user_message"; text: string }
+  | { type: "approval_settled"; requestId: string; allowed: boolean };
 
 export function emptyPiThreadView(threadId: string): ThreadView {
   return { threadId, phase: "idle", lastSeq: 0, timeline: [] };
@@ -154,6 +161,44 @@ export function projectPiThreadView(view: ThreadView, event: PiThreadViewEvent):
 
     case "idle":
       return { ...next, phase: "idle", streamingAssistant: undefined };
+
+    case "host_request": {
+      // Only the approval gate belongs in the transcript. Dialogs and chrome are session UI the store holds
+      // outside the timeline, so a status update never reads as something the model said.
+      const outcome = classifyHostRequest(event);
+      if (outcome.kind !== "approval") return next;
+      const { requestId, toolName, args } = outcome.request;
+      const toolCallId = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : requestId;
+      return {
+        ...next,
+        phase: "awaiting-approval",
+        timeline: [
+          ...view.timeline,
+          {
+            kind: "approval",
+            id: randomUUID(),
+            approvalId: requestId,
+            toolCallId,
+            tool: toolName,
+            title: toolName,
+            args: (args ?? {}) as Record<string, unknown>,
+            reason: piApprovalSummary(toolName, args),
+            status: "pending",
+          },
+        ],
+      };
+    }
+
+    case "approval_settled": {
+      const settled = view.timeline.map((item) =>
+        item.kind === "approval" && item.approvalId === event.requestId
+          ? { ...item, status: event.allowed ? ("allowed" as const) : ("rejected" as const) }
+          : item,
+      );
+      // The agent resumes the moment the answer is given: it is back to running a tool, not waiting on one.
+      const phase = view.phase === "awaiting-approval" ? "tool" : view.phase;
+      return { ...next, phase, timeline: settled };
+    }
 
     default:
       return next;

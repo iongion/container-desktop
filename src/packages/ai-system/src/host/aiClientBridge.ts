@@ -13,7 +13,7 @@ import {
   type AIStatus,
   type ModelsListResult,
 } from "@/ai-system/core/channels";
-import type { PermissionsList, PermissionsSnapshot } from "@/ai-system/core/permissions";
+import type { PermissionRule, PermissionsList, PermissionsSnapshot } from "@/ai-system/core/permissions";
 import type { ProjectContextSnapshot } from "@/ai-system/core/projectContext";
 import { validateAIInvokeResponse, validateAIPushPayload } from "@/ai-system/core/schemas";
 import type { ResolveSkillInvocationRequest, SkillHostSnapshot } from "@/ai-system/core/skills";
@@ -75,6 +75,7 @@ export interface IAI {
   listModels: (providerId?: string, requestId?: string) => Promise<ModelsListResult>;
   cancelModelList: (requestId: string) => Promise<{ ok: true }>;
   listPermissions: () => Promise<PermissionsSnapshot>;
+  addPermission: (list: PermissionsList, rule: PermissionRule) => Promise<PermissionsSnapshot>;
   removePermission: (list: PermissionsList, key: string) => Promise<PermissionsSnapshot>;
   getSkills: () => Promise<SkillHostSnapshot>;
   reloadSkills: () => Promise<SkillHostSnapshot>;
@@ -140,6 +141,7 @@ export function createAIClient(transport: AIClientTransport) {
     cancelModelList: (requestId) => invoke(AI_CHANNELS.modelsCancel, { requestId }),
     // The user-managed allow/reject record — managed from Settings → AI permissions.
     listPermissions: () => invoke(AI_CHANNELS.permissionsList),
+    addPermission: (list, rule) => invoke(AI_CHANNELS.permissionsAdd, { list, rule }),
     removePermission: (list, key) => invoke(AI_CHANNELS.permissionsRemove, { list, key }),
     getSkills: () => invoke(AI_CHANNELS.skillsSnapshot),
     reloadSkills: () => invoke(AI_CHANNELS.skillsReload),

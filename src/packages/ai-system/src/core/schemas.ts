@@ -114,6 +114,30 @@ export const resolveThreadApprovalRequest = z
   .strict();
 export const permissionsList = z.enum(["allowed", "blocked"]);
 
+// One remembered allow/reject, scoped to a workspace, target, authority subject, typed operation, normalized
+// arguments and trust epoch. Declared up here because the invoke registry below validates it on the wire.
+export const permissionRule = z
+  .object({
+    workspaceId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+    targetId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+    subject: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("access-profile"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
+      z.object({ kind: z.literal("worker"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
+      z.object({ kind: z.literal("server"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
+    ]),
+    operation: z
+      .object({
+        kind: z.literal("tool"),
+        id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+        serverId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS).optional(),
+      })
+      .strict(),
+    normalizedArgs: z.string().max(MAX_PERMISSION_KEY_CHARS),
+    contentTrustEpoch: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
+    addedAt: z.string().max(64).optional(),
+  })
+  .strict();
+
 // Team run. `model` drives the worker agents; `coordinatorModel` optionally points decomposition + synthesis at a
 // cheaper model (the coordinator reasons over task titles, not tool output, so it rarely needs the frontier model).
 // `maxTokens`/`maxTasks` are the user-facing cost caps — absent ⇒ the DEFAULT_RUN_* ceilings in limits.
@@ -518,6 +542,7 @@ export const invokeSchemas = {
   [AI_CHANNELS.modelsList]: z.object({ providerId: optionalProvider, requestId: id }).strict(),
   [AI_CHANNELS.modelsCancel]: z.object({ requestId: id }).strict(),
   [AI_CHANNELS.permissionsList]: empty,
+  [AI_CHANNELS.permissionsAdd]: z.object({ list: permissionsList, rule: permissionRule }).strict(),
   [AI_CHANNELS.permissionsRemove]: z
     .object({ list: permissionsList, key: z.string().max(MAX_PERMISSION_KEY_CHARS) })
     .strict(),
@@ -943,27 +968,6 @@ const threadCompactionExecutionResultSchema = z
   .object({ thread: threadSummarySchema, view: threadView, compaction: threadCompactionSchema })
   .strict();
 
-export const permissionRule = z
-  .object({
-    workspaceId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-    targetId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-    subject: z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("access-profile"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
-      z.object({ kind: z.literal("worker"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
-      z.object({ kind: z.literal("server"), id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS) }).strict(),
-    ]),
-    operation: z
-      .object({
-        kind: z.literal("tool"),
-        id: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-        serverId: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS).optional(),
-      })
-      .strict(),
-    normalizedArgs: z.string().max(MAX_PERMISSION_KEY_CHARS),
-    contentTrustEpoch: z.string().min(1).max(MAX_PERMISSION_KEY_CHARS),
-    addedAt: z.string().max(64).optional(),
-  })
-  .strict();
 export const permissionsSnapshot = z
   .object({
     version: z.string().max(64),
@@ -1339,6 +1343,7 @@ export const responseSchemas = {
     .strict(),
   [AI_CHANNELS.modelsCancel]: ok,
   [AI_CHANNELS.permissionsList]: permissionsSnapshot,
+  [AI_CHANNELS.permissionsAdd]: permissionsSnapshot,
   [AI_CHANNELS.permissionsRemove]: permissionsSnapshot,
   [AI_CHANNELS.skillsSnapshot]: skillHostSnapshot,
   [AI_CHANNELS.skillsReload]: skillHostSnapshot,

@@ -94,4 +94,62 @@ describe("projectPiThreadView", () => {
   it("keeps an empty view schema-valid", () => {
     expect(() => threadViewSchema.parse(emptyPiThreadView("t1"))).not.toThrow();
   });
+
+  it("appends a pending approval card for a gated tool call and settles it in place", () => {
+    const pending = projectPiThreadView(emptyPiThreadView("t1"), {
+      type: "host_request",
+      requestId: "r1",
+      method: "approval",
+      payload: { toolName: "bash", toolCallId: "tc1", args: { command: "rm -rf build" } },
+    });
+    expect(pending.timeline[0]).toMatchObject({
+      kind: "approval",
+      approvalId: "r1",
+      tool: "bash",
+      status: "pending",
+      reason: "rm -rf build",
+    });
+    expect(pending.phase).toBe("awaiting-approval");
+    expect(() => threadViewSchema.parse(pending)).not.toThrow();
+
+    const settled = projectPiThreadView(pending, { type: "approval_settled", requestId: "r1", allowed: false });
+    expect(settled.timeline[0]).toMatchObject({ kind: "approval", status: "rejected" });
+    expect(settled.phase).toBe("tool");
+  });
+
+  it("marks an allowed approval allowed and leaves other cards alone", () => {
+    const view = project([
+      {
+        type: "host_request",
+        requestId: "r1",
+        method: "approval",
+        payload: { toolName: "bash", toolCallId: "tc1", args: { command: "ls" } },
+      },
+      {
+        type: "host_request",
+        requestId: "r2",
+        method: "approval",
+        payload: { toolName: "write", toolCallId: "tc2", args: { path: "a.ts" } },
+      },
+    ]);
+    const settled = projectPiThreadView(view, { type: "approval_settled", requestId: "r2", allowed: true });
+    expect(settled.timeline.map((item) => item.kind === "approval" && item.status)).toEqual(["pending", "allowed"]);
+  });
+
+  it("ignores a host_request that is not an approval, so chrome never enters the transcript", () => {
+    const view = project([
+      { type: "host_request", requestId: "r1", method: "setStatus", payload: { statusKey: "k", statusText: "busy" } },
+      { type: "host_request", requestId: "r2", method: "confirm", payload: { title: "Allow?" } },
+    ]);
+    expect(view.timeline).toEqual([]);
+  });
+
+  it("ignores a settle for an approval it never saw", () => {
+    const view = projectPiThreadView(emptyPiThreadView("t1"), {
+      type: "approval_settled",
+      requestId: "ghost",
+      allowed: true,
+    });
+    expect(view.timeline).toEqual([]);
+  });
 });

@@ -80,6 +80,9 @@ export interface AIComposerProps {
   showPermissionMode?: boolean;
   threadBindings?: AssistantThreadBindings;
   commands?: AIComposerCommands;
+  // A draft an extension pushed in (pi's setEditorText). The seq is what makes it applicable twice: setting
+  // the same text again is a new instruction, not a no-op.
+  draft?: { text: string; seq: number };
 }
 
 export const AIComposer: React.FC<AIComposerProps> = ({
@@ -92,6 +95,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   showPermissionMode,
   threadBindings,
   commands,
+  draft: injectedDraft,
 }) => {
   const { t } = useTranslation();
   const ai: AISettings = useAppStore((state) => state.userSettings.ai) ?? DEFAULT_AI_SETTINGS;
@@ -190,6 +194,14 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       current.providerId === next.providerId && current.model === next.model ? current : next,
     );
   }, [active, ai.defaultProvider, ai.providers, threadBindings?.providerId, threadBindings?.model]);
+
+  // An extension replacing the composer text. The store hands over a fresh object per push — its `seq` is what
+  // keeps two identical texts distinct — so applying on identity lands both without reverting live typing.
+  useEffect(() => {
+    if (!injectedDraft) return;
+    setDraft(injectedDraft.text);
+    setHistoryIndex(null);
+  }, [injectedDraft]);
 
   useEffect(() => {
     const entry = queuedCommands[0];

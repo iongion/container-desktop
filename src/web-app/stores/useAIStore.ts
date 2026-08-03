@@ -24,7 +24,6 @@ const PENDING: Array<keyof AIState> = [
   "previewThreadCompaction",
   "compactThread",
   "refreshSnapshot",
-  "resolveApproval",
   "deleteThread",
 ];
 
@@ -57,6 +56,11 @@ function deriveState(view: ThreadView, status: string, modelId: string, startedA
     applyThreadEvent: () => undefined,
     cancel: async () => {
       await useCodingAgentStore.getState().stop();
+    },
+    // The approvalId is the container's requestId, so the card answers the exact tool call that is parked.
+    resolveApproval: async (approvalId: string, decision: "allow" | "reject") => {
+      await useCodingAgentStore.getState().resolveApproval(approvalId, decision);
+      return undefined;
     },
     ...pendingActions(),
   } as AIState;

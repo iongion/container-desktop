@@ -25,6 +25,8 @@ import { AssistantContextDrawer, type AssistantContextSection } from "@/web-app/
 import { AssistantDiagnosticsDrawer } from "@/web-app/components/ai/AssistantDiagnosticsDrawer";
 import { AssistantSkillsDrawer } from "@/web-app/components/ai/AssistantSkillsDrawer";
 import { type AssistantTimelineContext, AssistantTimelineItem } from "@/web-app/components/ai/AssistantTimelineItem";
+import { ExtensionDialog } from "@/web-app/components/ai/ExtensionDialog";
+import { ExtensionStatusStrip, ExtensionWidgetStrip } from "@/web-app/components/ai/ExtensionWidgetStrip";
 import type { ProjectContextRequest } from "@/web-app/components/ai/ProjectContextPanel";
 import { ThinkingStatus } from "@/web-app/components/ai/ThinkingStatus";
 import { ThreadBranchDrawer, type ThreadBranchSource } from "@/web-app/components/ai/ThreadBranchDrawer";
@@ -37,6 +39,7 @@ import { useAssistantSkills } from "@/web-app/hooks/useAssistantSkills";
 import { Notification } from "@/web-app/Notification";
 import { getSettingsUrl } from "@/web-app/screens/Settings/Navigation";
 import { useAppStore } from "@/web-app/stores/appStore";
+import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 import { useUIStore } from "@/web-app/stores/uiStore";
 import { useAIStore } from "@/web-app/stores/useAIStore";
 
@@ -69,6 +72,11 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
   const setActiveThread = useAIStore((s) => s.setActiveThread);
   const resolveApproval = useAIStore((s) => s.resolveApproval);
   const cancel = useAIStore((s) => s.cancel);
+  // Extension chrome and dialogs are pi-session state with no place in the neutral ThreadView, and since the
+  // Assistant surface IS the pi session they are read from its store directly rather than widening AIState.
+  const extensionChrome = useCodingAgentStore((s) => s.chrome);
+  const pendingDialog = useCodingAgentStore((s) => s.pendingDialog);
+  const respondToRequest = useCodingAgentStore((s) => s.respondToRequest);
   const setAssistantConsoleOpen = useUIStore((s) => s.setAssistantConsoleOpen);
   const {
     snapshot: skillSnapshot,
@@ -435,6 +443,9 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
       </div>
 
       <div className="AssistantComposerDock">
+        <ExtensionStatusStrip statuses={extensionChrome.statuses} />
+        <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="aboveEditor" />
+        {pendingDialog ? <ExtensionDialog request={pendingDialog} onRespond={respondToRequest} /> : null}
         <AIComposer
           placeholder={composerPlaceholder ?? t("Message the assistant… (Enter to send, Shift+Enter for newline)")}
           phase={composerPhase}
@@ -450,7 +461,9 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
             onChange: onThreadConfigurationChange,
           }}
           commands={composerCommands}
+          draft={extensionChrome.editorDraft}
         />
+        <ExtensionWidgetStrip widgets={extensionChrome.widgets} placement="belowEditor" />
       </div>
       {exportOpen && activeThread && view ? (
         <ThreadExportDrawer thread={activeThread} view={view} onClose={() => setExportOpen(false)} />

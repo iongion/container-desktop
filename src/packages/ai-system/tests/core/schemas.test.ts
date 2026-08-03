@@ -116,6 +116,17 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.modelsList]: { providerId: "openai", requestId: "request-1" },
       [AI_CHANNELS.modelsCancel]: { requestId: "request-1" },
       [AI_CHANNELS.permissionsList]: undefined,
+      [AI_CHANNELS.permissionsAdd]: {
+        list: "allowed",
+        rule: {
+          workspaceId: "/work",
+          targetId: "podman-1",
+          subject: { kind: "access-profile", id: "pi-coding-agent" },
+          operation: { kind: "tool", id: "bash" },
+          normalizedArgs: '{"command":"ls"}',
+          contentTrustEpoch: "pi",
+        },
+      },
       [AI_CHANNELS.permissionsRemove]: { list: "allowed", key: "rule" },
       [AI_CHANNELS.skillsSnapshot]: undefined,
       [AI_CHANNELS.skillsReload]: undefined,
@@ -371,6 +382,13 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.modelsList]: { models: [{ id: "model-1" }] },
       [AI_CHANNELS.modelsCancel]: { ok: true },
       [AI_CHANNELS.permissionsList]: {
+        version: "2.0.0",
+        allowed: [],
+        blocked: [],
+        status: "ok",
+        path: "/tmp/permissions.json",
+      },
+      [AI_CHANNELS.permissionsAdd]: {
         version: "2.0.0",
         allowed: [],
         blocked: [],
