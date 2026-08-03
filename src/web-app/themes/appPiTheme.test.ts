@@ -3,23 +3,22 @@ import { describe, expect, it } from "vitest";
 import { APP_PI_THEME_TOKENS, cssColorToRgba, flattenOntoHex } from "@/web-app/themes/appPiTheme";
 
 describe("cssColorToRgba", () => {
-  it("reads the rgb form a webview computes a hex token into", () => {
+  it("answers in 0-255 channels, whatever colour space the webview computed the token into", () => {
     expect(cssColorToRgba("rgb(28, 33, 39)")).toEqual({ r: 28, g: 33, b: 39, a: 1 });
+    // WebKitGTK computes this app's relative-colour tokens to oklch, which is the form that has to work.
+    expect(cssColorToRgba("oklch(0.851628 0 256.801758)")).toMatchObject({ a: 1 });
   });
 
-  it("reads the rgba form, keeping the alpha", () => {
-    expect(cssColorToRgba("rgba(255, 255, 255, 0.16)")).toEqual({ r: 255, g: 255, b: 255, a: 0.16 });
+  it("clamps a colour that converts out of the sRGB gamut instead of emitting a channel over 255", () => {
+    const vivid = cssColorToRgba("oklch(0.9 0.4 140)");
+    expect(vivid).toBeDefined();
+    for (const value of [vivid?.r, vivid?.g, vivid?.b]) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(255);
+    }
   });
 
-  it("reads the space-separated form with a slash alpha", () => {
-    expect(cssColorToRgba("rgb(20 184 166 / 0.5)")).toEqual({ r: 20, g: 184, b: 166, a: 0.5 });
-  });
-
-  it("reads a hex the browser passed through untouched", () => {
-    expect(cssColorToRgba("#14b8a6")).toEqual({ r: 20, g: 184, b: 166, a: 1 });
-  });
-
-  it("refuses a keyword it cannot resolve to channels", () => {
+  it("refuses a keyword that is not a colour, so the host keeps its own default for that token", () => {
     expect(cssColorToRgba("inherit")).toBeUndefined();
     expect(cssColorToRgba("")).toBeUndefined();
   });

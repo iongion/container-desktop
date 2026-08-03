@@ -62,7 +62,11 @@ export const PluginWidgetSurfaces: React.FC<{ placement: "aboveEditor" | "belowE
   return (
     <div className="ExtensionWidgetStrip">
       {widgets.map((surface) => (
-        <PluginSurface key={surface.surfaceId} surface={surface} />
+        // The same panel the footer and a line widget get: a component widget is chrome, and chrome that
+        // sits on the bare background next to bordered chrome reads as a rendering glitch.
+        <div key={surface.surfaceId} className="AnsiSurfacePanel AnsiSurfacePanel--widget">
+          <PluginSurface surface={surface} />
+        </div>
       ))}
     </div>
   );

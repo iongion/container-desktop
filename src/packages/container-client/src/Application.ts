@@ -361,7 +361,7 @@ export class Application {
       engineTheme: normalizeEngineThemePreference(await this.userConfiguration.getKey<string>("engineTheme", "auto")),
       showEngineColumn: await this.userConfiguration.getKey("showEngineColumn", false),
       groupByConnection: await this.userConfiguration.getKey("groupByConnection", true),
-      expandSidebar: await this.userConfiguration.getKey("expandSidebar", true),
+      expandSidebar: await this.userConfiguration.getKey("expandSidebar", false),
       startApi: await this.userConfiguration.getKey("startApi", false),
       minimizeToSystemTray: await this.userConfiguration.getKey("minimizeToSystemTray", false),
       checkLatestVersion: await this.userConfiguration.getKey("checkLatestVersion", false),

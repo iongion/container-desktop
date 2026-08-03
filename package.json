@@ -99,6 +99,7 @@
     "test:e2e:tauri:swarm:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/swarm.e2e.js",
     "test:e2e:tauri:pi:extension-ui": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/extension-ui.e2e.js",
     "test:e2e:tauri:pi:cards": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-tool-cards.e2e.js",
+    "test:e2e:tauri:pi:surfaces": "wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-surfaces.e2e.js",
     "test:e2e:tauri:pi:extension:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-extension-live.e2e.js",
     "test:e2e:tauri:pi:gate:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-gate-live.e2e.js",
     "test:e2e:tauri:pi:data:live": "cross-env CONTAINER_DESKTOP_MOCK= wdio run webdriver/wdio.conf.js --spec webdriver/specs/pi-plugin-data-live.e2e.js"
@@ -136,6 +137,7 @@
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "axios": "1.18.1",
+    "culori": "4.0.2",
     "dayjs": "1.11.21",
     "deepmerge": "4.3.1",
     "diff": "9.0.0",
@@ -174,6 +176,7 @@
     "@faker-js/faker": "10.5.0",
     "@tanstack/react-query-devtools": "5.101.4",
     "@tauri-apps/cli": "2.11.4",
+    "@types/culori": "4.0.1",
     "@types/node": "26.1.1",
     "@types/nunjucks": "3.2.6",
     "@types/react": "19.2.17",

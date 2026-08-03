@@ -1,4 +1,11 @@
+import { converter, parse } from "culori";
+
 import type { AppThemePalette } from "@/pi-bridge/protocol";
+
+const toSrgb = (value: string) => {
+  const parsed = parse(value);
+  return parsed ? converter("rgb")(parsed) : undefined;
+};
 
 export interface Rgba {
   r: number;
@@ -29,7 +36,9 @@ export function readAppPiThemePalette(root?: HTMLElement): Partial<AppThemePalet
   const host = root ?? document.body;
   const probe = document.createElement("span");
   probe.setAttribute("aria-hidden", "true");
-  probe.style.display = "none";
+  // Rendered but invisible, NOT `display: none`: WebKit does not resolve a colour for an element that is
+  // not in the layout tree, so a hidden probe answers with nothing and the whole palette comes back empty.
+  probe.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none";
   host.appendChild(probe);
   try {
     const background = flattenOntoHex(resolveToken(probe, APP_PI_THEME_TOKENS.bg) ?? OPAQUE_BLACK, "#000000");
@@ -54,23 +63,27 @@ function resolveToken(probe: HTMLElement, token: string): Rgba | undefined {
   return cssColorToRgba(getComputedStyle(probe).color);
 }
 
+// Parsing is culori's job, not ours. This app's themes are built from relative colours
+// (`oklch(from #4b5563 …)`) and WebKitGTK computes them to `oklch()`, so reading its own tokens would
+// otherwise mean reimplementing colour science — culori handles oklch, `color(srgb …)`, lab, hsl, hex,
+// rgb/rgba and named colours, and converts them all to sRGB with no DOM involved.
 export function cssColorToRgba(value: string): Rgba | undefined {
   const text = value.trim();
   if (!text) return undefined;
-  const hex = /^#([0-9a-f]{6})$/i.exec(text);
-  if (hex) {
-    const int = Number.parseInt(hex[1], 16);
-    return { r: (int >> 16) & 0xff, g: (int >> 8) & 0xff, b: int & 0xff, a: 1 };
-  }
-  const rgb = /^rgba?\(([^)]+)\)$/i.exec(text);
-  if (!rgb) return undefined;
-  const parts = rgb[1]
-    .split(/[\s,/]+/)
-    .filter(Boolean)
-    .map(Number);
-  if (parts.length < 3 || parts.slice(0, 3).some(Number.isNaN)) return undefined;
-  const alpha = parts.length > 3 && !Number.isNaN(parts[3]) ? parts[3] : 1;
-  return { r: parts[0], g: parts[1], b: parts[2], a: alpha };
+  const parsed = toSrgb(text);
+  if (!parsed) return undefined;
+  return {
+    r: channel(parsed.r),
+    g: channel(parsed.g),
+    b: channel(parsed.b),
+    a: parsed.alpha ?? 1,
+  };
+}
+
+// culori works in 0..1 channels and does not clamp an out-of-gamut conversion, which oklch produces
+// readily; a CSS colour is 0..255 bytes.
+function channel(value: number): number {
+  return Math.round(Math.min(1, Math.max(0, value)) * 255);
 }
 
 // pi needs an opaque hex per token, but `--app-border` is a translucent hairline. Compositing it over
