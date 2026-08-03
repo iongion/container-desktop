@@ -29,6 +29,12 @@ export interface SurfaceRegistry {
   close(surfaceId: string): void;
   closeSlot(slot: SurfaceSlot): void;
   closeAll(): void;
+  // A component asked its TUI to repaint, so every open surface is re-rendered: pi's TUI owns one screen
+  // and has no way to say which of our slots the request came from.
+  rerenderAll(): void;
+  resizeAll(columns: number): void;
+  // Drops each component's cached styling, then re-renders — what a theme change needs.
+  invalidateAll(): void;
   focusedSurfaceId(): string | undefined;
   surfaceIdForSlot(slot: SurfaceSlot): string | undefined;
 }
@@ -159,6 +165,32 @@ export function createSurfaceRegistry(options: {
 
     closeAll() {
       for (const surface of [...surfaces.values()]) destroy(surface);
+    },
+
+    rerenderAll() {
+      for (const surface of [...surfaces.values()]) emitFrame(surface);
+    },
+
+    resizeAll(columns) {
+      const width = Number.isFinite(columns) ? Math.max(1, Math.floor(columns)) : undefined;
+      if (width === undefined) return;
+      for (const surface of [...surfaces.values()]) {
+        if (surface.columns === width) continue;
+        surface.columns = width;
+        surface.component.invalidate?.();
+        emitFrame(surface);
+      }
+    },
+
+    invalidateAll() {
+      for (const surface of [...surfaces.values()]) {
+        try {
+          surface.component.invalidate?.();
+        } catch (error) {
+          logger.error("surface invalidate threw", error);
+        }
+        emitFrame(surface);
+      }
     },
 
     focusedSurfaceId() {

@@ -1,6 +1,11 @@
 import type { HostResponse } from "@/pi-agent-host/hostRpc";
 import { decodeCommand, encodeEvent } from "@/pi-bridge/codec";
-import { type BridgeCommand, type BridgeEvent, PI_BRIDGE_PROTOCOL_VERSION } from "@/pi-bridge/protocol";
+import {
+  type AppThemePalette,
+  type BridgeCommand,
+  type BridgeEvent,
+  PI_BRIDGE_PROTOCOL_VERSION,
+} from "@/pi-bridge/protocol";
 
 export interface BridgeConnection {
   send(frame: string): void;
@@ -14,6 +19,9 @@ export interface BridgeSessionHandle {
   prompt(text: string, streamingBehavior?: "steer" | "followUp"): Promise<void>;
   abort(): Promise<void>;
   settleHostResponse(requestId: string, response: HostResponse): void;
+  surfaceInput(surfaceId: string, data: string): void;
+  surfaceResize(surfaceId: string, columns: number): void;
+  setThemePalette(palette: Partial<AppThemePalette>): void;
 }
 
 export interface AttachedBridgeConnection {
@@ -71,6 +79,15 @@ export function attachBridgeConnection(
           value: command.value,
           error: command.error,
         });
+        return;
+      case "surface_input":
+        session.surfaceInput(command.surfaceId, command.data);
+        return;
+      case "surface_resize":
+        session.surfaceResize(command.surfaceId, command.columns);
+        return;
+      case "set_theme":
+        session.setThemePalette(command.palette);
         return;
       case "hello":
         return;

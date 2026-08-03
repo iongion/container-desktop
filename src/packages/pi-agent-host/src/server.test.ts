@@ -13,6 +13,9 @@ function harness(token = "tok") {
     prompt: vi.fn(async () => {}),
     abort: vi.fn(async () => {}),
     settleHostResponse: vi.fn(),
+    surfaceInput: vi.fn(),
+    surfaceResize: vi.fn(),
+    setThemePalette: vi.fn(),
   };
   const attached = attachBridgeConnection(
     {

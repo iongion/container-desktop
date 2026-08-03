@@ -26,6 +26,9 @@ export type SurfaceSlot =
   | { kind: "custom"; surfaceId: string }
   | { kind: "footer" }
   | { kind: "header" }
+  // A plugin's replacement for the composer. It takes the keyboard while it is open, so the renderer
+  // shows it in the composer's place rather than alongside it.
+  | { kind: "editor" }
   | { kind: "widget"; widgetKey: string; placement?: "aboveEditor" | "belowEditor" };
 
 // The serializable part of pi's OverlayOptions. Its `visible` predicate and margins stay in the

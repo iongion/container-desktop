@@ -1,10 +1,19 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ExtensionContext, InlineExtension } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
 import { createPiSession } from "@/pi-agent-host/session";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
+
+// The smallest real extension: one session_start handler, which is where a plugin first gets a ui context.
+const onSessionStart = (name: string, run: (ctx: ExtensionContext) => void): InlineExtension => ({
+  name,
+  factory: (pi) => {
+    pi.on("session_start", (_event, ctx) => run(ctx));
+  },
+});
 
 // A canned provider stream: no network, no key, deterministic deltas. This is what makes the whole
 // session wiring testable in the hermetic suite. Every event carries `partial` and `done` carries the
@@ -65,5 +74,56 @@ describe("createPiSession", () => {
     expect(events.some((event) => event.type === "idle")).toBe(true);
     expect(session.cwd).toBe(cwd);
     expect(session.sessionId.length).toBeGreaterThan(0);
+  });
+
+  it("runs extensions in tui mode, so a plugin component reaches the bridge as a surface frame", async () => {
+    const events: BridgeEvent[] = [];
+    const seen: { mode?: string } = {};
+    const session = await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      gatewayToken: "tok",
+      modelId: "canned",
+      emit: (event) => events.push(event),
+      streamOverride: cannedStream as never,
+      extraExtensions: [
+        onSessionStart("surface-probe", (ctx) => {
+          seen.mode = ctx.mode;
+          ctx.ui.setHeader(() => ({ render: () => ["probe header"], invalidate: () => {} }));
+        }),
+      ],
+    });
+
+    await session.prompt("say hello");
+
+    expect(seen.mode).toBe("tui");
+    const frame = events.find((event) => event.type === "surface_frame");
+    expect(frame).toMatchObject({ lines: ["probe header"], slot: { kind: "header" } });
+  });
+
+  it("repaints open surfaces when the app sends a new theme palette", async () => {
+    const events: BridgeEvent[] = [];
+    const session = await createPiSession({
+      cwd: mkdtempSync(join(tmpdir(), "cd-pi-session-")),
+      agentDir: mkdtempSync(join(tmpdir(), "cd-pi-agentdir-")),
+      gatewayUrl: "http://gateway.invalid:8788/v1",
+      gatewayToken: "tok",
+      modelId: "canned",
+      emit: (event) => events.push(event),
+      streamOverride: cannedStream as never,
+      extraExtensions: [
+        onSessionStart("theme-probe", (ctx) => {
+          ctx.ui.setHeader(() => ({ render: () => [ctx.ui.theme.fg("accent", "x")], invalidate: () => {} }));
+        }),
+      ],
+    });
+
+    await session.prompt("say hello");
+    session.setThemePalette({ accent: "#ff0000" });
+
+    const frames = events.filter((event) => event.type === "surface_frame");
+    const accent = (frames.at(-1) as { lines: string[] }).lines[0];
+    expect(accent).toBe("\x1b[38;2;255;0;0mx\x1b[39m");
   });
 });
