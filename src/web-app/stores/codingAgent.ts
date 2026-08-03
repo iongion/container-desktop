@@ -22,6 +22,7 @@ import { decidePiToolCall, piPermissionContext } from "@/ai-system/core/piApprov
 import { emptyPiThreadView, projectPiThreadView } from "@/ai-system/core/piThreadView";
 import type { ThreadView } from "@/ai-system/core/threadEvents";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
+import { isMockMode } from "@/container-client/mock/mode";
 import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
 import type { BridgeEvent, ContributedResources, EngineOpResult } from "@/pi-bridge/protocol";
@@ -161,6 +162,25 @@ async function rememberVerdict(state: CodingAgentState, approvalId: string, allo
   }
 }
 
+// One skill invocation, resolved and rendered host-side by the broker. The transcript shows the command the
+// user typed; the model receives the whole rendered body.
+export interface SkillSubmission {
+  prompt: string;
+  displayContent: string;
+  // The skill's declared `allowed-tools`. Enforced here rather than inside pi: the app already answers every
+  // tool call, so the narrowing lands at the boundary that can actually refuse one.
+  allowedTools?: string[];
+  // The skill came from a source the user has not vouched for, so its instructions are untrusted content for
+  // the duration of the turn.
+  initialTaint?: boolean;
+}
+
+// What a skill narrowed the turn to, held only while that turn runs.
+export interface ActiveSkillScope {
+  allowedTools?: Set<string>;
+  tainted: boolean;
+}
+
 export interface StartCodingAgentOptions {
   connectionId: string;
   workspacePath: string;
@@ -194,8 +214,11 @@ export interface CodingAgentState {
   // What the loaded plugins contribute, for the composer's slash-command palette. Read once the session is
   // ready and again whenever the installed set changes.
   resources: ContributedResources;
+  // The narrowing the running skill asked for, cleared when its turn ends.
+  activeSkill?: ActiveSkillScope;
   start(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
+  submitSkill(input: SkillSubmission): Promise<void>;
   stop(): Promise<void>;
   applyBridgeEvent(event: BridgeEvent): void;
   handleHostRequest(event: HostRequestEvent): Promise<void>;
@@ -210,6 +233,9 @@ export interface CodingAgentState {
   // light/dark mode repaints them, so plugin output never sits in a theme the app has moved off.
   publishTheme(): Promise<void>;
   refreshResources(): Promise<void>;
+  // Read back the file pi wrote when it truncated a tool's output. It lives inside the agent container, so the
+  // card cannot open it — only the host on the other end of the bridge can.
+  readToolOutput(path: string): Promise<{ text: string; truncated: boolean }>;
 }
 
 export function noContributedResources(): ContributedResources {
@@ -250,9 +276,25 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       resources: noContributedResources(),
       pendingDialog: undefined,
       pendingEngineOps: {},
+      activeSkill: undefined,
       error: undefined,
     });
     const suffix = randomUUID().slice(0, 8);
+    // Mock mode has no engine to run a container on, so the far end of the socket is scripted instead. Only
+    // the transport is replaced: the renderer runs its production path over the same bridge events. The import
+    // is dynamic and DEV-gated, so a production build never links the mock graph.
+    if (isMockMode() && import.meta.env.ENVIRONMENT !== "production") {
+      const { createMockPiBridgeClient } = await import("@/ai-system/testing/mockPiBridge");
+      const client = createMockPiBridgeClient();
+      client.onEvent((event) => get().applyBridgeEvent(event));
+      set({
+        client,
+        connectionId: options.connectionId,
+        spec: { workspacePath: options.workspacePath, modelId: options.modelId } as PiAgentSessionSpec,
+      });
+      await client.connect();
+      return;
+    }
     const host = await resolveConnectionHost(options.connectionId);
     if (!host) {
       set({ status: "error", error: `no engine host for connection ${options.connectionId}` });
@@ -306,10 +348,24 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     await client.prompt(text);
   },
 
+  async submitSkill(input) {
+    const { client } = get();
+    if (!client) return;
+    set((state) => ({
+      view: projectPiThreadView(state.view, { type: "user_message", text: input.displayContent }),
+      activeSkill: {
+        allowedTools: input.allowedTools ? new Set(input.allowedTools) : undefined,
+        tainted: !!input.initialTaint,
+      },
+    }));
+    await client.prompt(input.prompt);
+  },
+
   async stop() {
     const { client, spec, connectionId } = get();
     client?.close();
-    if (spec && connectionId) {
+    // A mock session has no containers to tear down — its spec carries only the workspace and the model.
+    if (spec?.agentContainerName && connectionId) {
       const host = await resolveConnectionHost(connectionId);
       if (host) await stopPiAgentSession(host, spec);
     }
@@ -323,6 +379,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       resources: noContributedResources(),
       pendingDialog: undefined,
       pendingEngineOps: {},
+      activeSkill: undefined,
     });
   },
 
@@ -349,6 +406,9 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
     }
     if (event.type === "plugin_progress") return;
     set((state) => ({ view: projectPiThreadView(state.view, event) }));
+    // A skill narrows only the turn it started. Lifting it here rather than on the next submit keeps a
+    // follow-up prompt from inheriting a restriction the user never asked for.
+    if (event.type === "turn_end" || event.type === "idle") set({ activeSkill: undefined });
     if (event.type === "ready") {
       set({ status: "ready" });
       void get().refreshResources();
@@ -380,11 +440,21 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       }
       case "approval": {
         const { toolName, args, requestId } = outcome.request;
+        const skill = get().activeSkill;
+        if (skill?.allowedTools && !skill.allowedTools.has(toolName)) {
+          // A declared narrowing, not a user's "no": the model is told exactly why and can pick another tool,
+          // so this does not abort the turn the way a rejection does.
+          await get().respondToRequest(requestId, {
+            ok: true,
+            value: { allow: false, reason: `${toolName} is not among this skill's allowed tools` },
+          });
+          return;
+        }
         const mode = permissionMode();
         // Only "remember" consults the cache, so the other modes never pay for a broker round-trip.
         const rule = approvalRule(get(), toolName, args);
         const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
-        const action = decidePiToolCall({ toolName, mode, cached, boundary: "tool-call" });
+        const action = decidePiToolCall({ toolName, mode, cached, boundary: "tool-call", tainted: skill?.tainted });
         if (action === "run") {
           await get().respondToRequest(requestId, { ok: true, value: { allow: true } });
           return;
@@ -405,12 +475,20 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       }
       case "engine-op": {
         const { op, args, requestId } = outcome.request;
+        const skill = get().activeSkill;
+        if (skill?.allowedTools && !skill.allowedTools.has(op)) {
+          await get().respondToRequest(requestId, {
+            ok: true,
+            value: { ok: false, error: `${op} is not among this skill's allowed tools` } satisfies EngineOpResult,
+          });
+          return;
+        }
         const mode = permissionMode();
         const rule = approvalRule(get(), op, args);
         const cached = mode === "remember" && rule ? await rememberedVerdict(rule) : undefined;
         // The same decision path as a pi tool call: reads run unattended, mutations ask. This is the boundary that
         // decides for a container operation — the app performs it, so the pre-call gate deferred to here.
-        const action = decidePiToolCall({ toolName: op, mode, cached, boundary: "engine-op" });
+        const action = decidePiToolCall({ toolName: op, mode, cached, boundary: "engine-op", tainted: skill?.tainted });
         if (action === "run") {
           await get().runEngineOp(requestId, { op, args });
           return;
@@ -491,6 +569,12 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
 
   async reportSurfaceWidth(surfaceId, columns) {
     await get().client?.surfaceResize(surfaceId, columns);
+  },
+
+  async readToolOutput(path) {
+    const { client } = get();
+    if (!client) throw new Error("the coding agent session is not running");
+    return client.readToolOutput(path);
   },
 
   async publishTheme() {

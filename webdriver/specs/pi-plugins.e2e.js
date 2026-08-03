@@ -38,6 +38,18 @@ describe("pi plugins screen", () => {
       timeoutMsg: "the Plugins screen never mounted",
     });
 
+    // The mock app boots WITH a scripted session, so "no session" is now something to arrange rather than
+    // assume. Drop the client before reading the empty state — this is the screen a user sees before any
+    // session has reported a plugin.
+    await browser.execute(() => {
+      window.__cdCodingAgentStore.setState({ client: undefined, status: "idle" });
+      window.__cdPluginStore.setState({ rows: [], updatable: [] });
+    });
+    await browser.waitUntil(
+      async () => (await browser.execute(() => document.querySelectorAll('[data-table="ai-plugins"] tbody tr').length)) === 0,
+      { timeout: 5000, timeoutMsg: "the plugin table never emptied after the session was dropped" },
+    );
+
     empty = await browser.execute(() => ({
       nonIdeal: document.querySelector(".bp6-non-ideal-state-visual") !== null,
       title: document.querySelector(".bp6-non-ideal-state .bp6-heading")?.textContent ?? "",

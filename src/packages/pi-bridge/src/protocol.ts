@@ -128,7 +128,11 @@ export type BridgeCommand =
   | { id: string; type: "plugins_check_updates" }
   | { id: string; type: "plugins_set_enabled"; source: string; enabled: boolean; scope: PluginScope }
   | { id: string; type: "resources_list" }
-  | { id: string; type: "session_reload" };
+  | { id: string; type: "session_reload" }
+  // Read back the file pi wrote when it truncated a tool's output. The path travels from the tool result's
+  // `details.fullOutputPath` and is inside the agent container, so only the host can open it. The host checks
+  // the path against pi's own output-file shape before reading — a tool result is not a trusted source.
+  | { id: string; type: "read_tool_output"; path: string };
 
 // pi's ProgressEvent, split the way it reads: `action` is what is being done, `phase` how far along it is.
 export type PluginProgressAction = "install" | "remove" | "update" | "clone" | "pull";
@@ -199,6 +203,7 @@ export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set([
   "plugins_set_enabled",
   "resources_list",
   "session_reload",
+  "read_tool_output",
 ]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([

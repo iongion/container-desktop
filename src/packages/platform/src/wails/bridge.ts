@@ -279,8 +279,6 @@ export async function installWailsHostBridge(): Promise<void> {
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK" })) ?? "";
     // Expose the Runs-at-scale knob to the webview realm (no `process` here) so readMockScaleSpec seeds the
     // scaled run set under Wails too, mirroring the Tauri bridge. Absent ⇒ "" ⇒ no scaled seed (the default).
-    target.CONTAINER_DESKTOP_MOCK_SCALE =
-      (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SCALE" })) ?? "";
     target.CONTAINER_DESKTOP_MOCK_SWARM =
       (await invoke<string | null>("get_env_var", { name: "CONTAINER_DESKTOP_MOCK_SWARM" })) ?? "";
     // CURRENT_DARWIN_MAJOR (uname-derived natively) so macOS Apple-Container network gating

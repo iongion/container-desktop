@@ -98,13 +98,10 @@ export const config = {
     // Run standalone next to the developer's app (see the single-instance note above). Inherited by
     // tauri-driver → WebKitWebDriver → the app.
     process.env.CONTAINER_DESKTOP_E2E = "1";
-    // The AI specs (ai-flows, workspace-access) require the mock app — the renderer reads CONTAINER_DESKTOP_MOCK
-    // from the APP's process env via the Tauri bridge, so it must be set HERE (on the wdio process that spawns the
-    // app), not merely on the Vite dev server. CONTAINER_DESKTOP_MOCK_SCALE seeds the Runs-at-scale set the
-    // goalsList flow asserts (bridged into the webview realm since there is no `process` there). Preserve any
-    // caller override so a non-mock run stays possible.
+    // The AI specs require the mock app — the renderer reads CONTAINER_DESKTOP_MOCK from the APP's process env
+    // via the Tauri bridge, so it must be set HERE (on the wdio process that spawns the app), not merely on the
+    // Vite dev server. Preserve any caller override so a non-mock run stays possible.
     process.env.CONTAINER_DESKTOP_MOCK ??= "1";
-    process.env.CONTAINER_DESKTOP_MOCK_SCALE ??= "goals:300,tasks:32";
     // Isolate ALL app state (settings, logs, workspace fixtures) in a throwaway dir so the e2e app never touches
     // the developer's daily release-app data. get_user_data_path honors this override on every shell (the Tauri
     // Rust path has no `-dev` suffix of its own, so without this the debug binary would

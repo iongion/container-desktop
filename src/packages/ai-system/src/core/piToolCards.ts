@@ -30,6 +30,9 @@ export interface PiExecCardResult {
   args: string[];
   stdout: string;
   code: undefined;
+  // pi truncates a noisy command and writes the whole thing to a file INSIDE the container, naming it in
+  // `details.fullOutputPath`. Carried through so the card can offer to read it back over the bridge.
+  fullOutputPath?: string;
 }
 
 export interface PiFileCardResult {
@@ -218,13 +221,16 @@ export function piCardResult(
 
   switch (kind) {
     // The command's own output, notice included: for a terminal block a truncation warning is part of what ran.
-    case "exec":
+    case "exec": {
+      const fullOutputPath = detailString(details, "fullOutputPath");
       return {
         program: stringArg(args, "command") ?? "",
         args: [],
         stdout: text.replace(/\s+$/, ""),
         code: undefined,
+        ...(fullOutputPath ? { fullOutputPath } : {}),
       };
+    }
 
     case "file": {
       // pi answers a write with a byte count, so the content shown is the content asked for.

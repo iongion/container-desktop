@@ -88,31 +88,6 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.projectMemoryRemove]: { id: "memory-1" },
       [AI_CHANNELS.projectMemoryClear]: undefined,
       [AI_CHANNELS.projectMemoryImport]: JSON.stringify({ version: 1, entries: [] }),
-      [AI_CHANNELS.runStart]: { runId: "run-1", goal: "audit my containers" },
-      [AI_CHANNELS.runApprovePlan]: { runId: "run-1", decision: "allow" },
-      [AI_CHANNELS.runApproveTool]: { runId: "run-1", approvalId: "approval-1", decision: "allow" },
-      [AI_CHANNELS.runCancel]: { runId: "run-1" },
-      [AI_CHANNELS.runSnapshot]: { runId: "run-1" },
-      [AI_CHANNELS.runList]: undefined,
-      [AI_CHANNELS.workersList]: undefined,
-      [AI_CHANNELS.workersSave]: {
-        worker: {
-          id: "worker-1",
-          name: "Auditor",
-          specialty: "reads container state and reports risks",
-          systemPrompt: "You audit running containers.",
-          toolPolicy: { mode: "granular", allowed: ["listContainers"] },
-          execution: { kind: "host" },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      },
-      [AI_CHANNELS.workersRemove]: { id: "worker-1" },
-      [AI_CHANNELS.avatarsList]: undefined,
-      [AI_CHANNELS.avatarsSave]: {
-        avatar: { id: "avatar-1", name: "Scout", dataUrl: "data:image/webp;base64,AAAA", createdAt: 1 },
-      },
-      [AI_CHANNELS.avatarsRemove]: { id: "avatar-1" },
       [AI_CHANNELS.modelsList]: { providerId: "openai", requestId: "request-1" },
       [AI_CHANNELS.modelsCancel]: { requestId: "request-1" },
       [AI_CHANNELS.engineOp]: { op: "listContainers", args: { connectionId: "podman-1" } },
@@ -138,7 +113,6 @@ describe("AI protocol boundary validation", () => {
         trusted: true,
       },
       [AI_CHANNELS.skillsInvoke]: {
-        threadId: "thread-1",
         skillId: "skill:user:review",
         expectedFingerprint: "a".repeat(64),
         arguments: "src",
@@ -152,12 +126,6 @@ describe("AI protocol boundary validation", () => {
 
   it("rejects malformed, oversized, and extra invoke fields", () => {
     expect(() => validateAIInvokeRequest(AI_CHANNELS.threadStop, { threadId: "", extra: true })).toThrow();
-    expect(() =>
-      validateAIInvokeRequest(AI_CHANNELS.runStart, {
-        runId: "run-1",
-        goal: "x".repeat(8_001),
-      }),
-    ).toThrow();
     expect(() => validateAIInvokeRequest(AI_CHANNELS.permissionsList, {})).toThrow();
   });
 
@@ -178,17 +146,7 @@ describe("AI protocol boundary validation", () => {
       seq: 1,
       event: { type: "task-stopped" },
     };
-    const goal = {
-      version: 1,
-      runId: "run-1",
-      seq: 1,
-      event: {
-        type: "plan-ready",
-        tasks: [{ id: "t1", title: "Survey", description: "look around", dependsOn: [], agent: "scout" }],
-      },
-    };
     expect(validateAIPushPayload(AI_CHANNELS.threadEvent, chat)).toEqual(chat);
-    expect(validateAIPushPayload(AI_CHANNELS.runEvent, goal)).toEqual(goal);
     expect(
       validateAIPushPayload(AI_CHANNELS.skillsChanged, {
         revision: "1",
@@ -202,7 +160,6 @@ describe("AI protocol boundary validation", () => {
       skills: [],
       diagnostics: [],
     });
-    expect(() => validateAIPushPayload(AI_CHANNELS.runEvent, { ...goal, event: { type: "plan-ready" } })).toThrow();
     expect(() => validateAIPushPayload(AI_CHANNELS.threadEvent, { ...chat, seq: -1 })).toThrow();
   });
 
@@ -338,48 +295,6 @@ describe("AI protocol boundary validation", () => {
       [AI_CHANNELS.projectMemoryRemove]: readyProjectContext,
       [AI_CHANNELS.projectMemoryClear]: readyProjectContext,
       [AI_CHANNELS.projectMemoryImport]: readyProjectContext,
-      [AI_CHANNELS.runStart]: { accepted: true, runId: "run-1", phase: "planning" },
-      [AI_CHANNELS.runApprovePlan]: { accepted: true, phase: "running" },
-      [AI_CHANNELS.runApproveTool]: { accepted: true, phase: "running" },
-      [AI_CHANNELS.runCancel]: { ok: true },
-      [AI_CHANNELS.runSnapshot]: null,
-      [AI_CHANNELS.runList]: { runs: [] },
-      [AI_CHANNELS.workersList]: {
-        workers: [
-          {
-            id: "worker-1",
-            name: "Auditor",
-            specialty: "reads container state and reports risks",
-            systemPrompt: "You audit running containers.",
-            toolPolicy: { mode: "granular", allowed: ["listContainers"] },
-            execution: { kind: "host" },
-            createdAt: 1,
-            updatedAt: 1,
-          },
-        ],
-      },
-      [AI_CHANNELS.workersSave]: {
-        workers: [
-          {
-            id: "worker-1",
-            name: "Auditor",
-            specialty: "reads container state and reports risks",
-            systemPrompt: "You audit running containers.",
-            toolPolicy: { mode: "granular", allowed: ["listContainers"] },
-            execution: { kind: "host" },
-            createdAt: 1,
-            updatedAt: 1,
-          },
-        ],
-      },
-      [AI_CHANNELS.workersRemove]: { workers: [] },
-      [AI_CHANNELS.avatarsList]: {
-        avatars: [{ id: "avatar-1", name: "Scout", dataUrl: "data:image/webp;base64,AAAA", createdAt: 1 }],
-      },
-      [AI_CHANNELS.avatarsSave]: {
-        avatars: [{ id: "avatar-1", name: "Scout", dataUrl: "data:image/webp;base64,AAAA", createdAt: 1 }],
-      },
-      [AI_CHANNELS.avatarsRemove]: { avatars: [] },
       [AI_CHANNELS.modelsList]: { models: [{ id: "model-1" }] },
       [AI_CHANNELS.modelsCancel]: { ok: true },
       [AI_CHANNELS.engineOp]: { ok: true, value: [{ Id: "c1" }] },
@@ -429,11 +344,15 @@ describe("AI protocol boundary validation", () => {
         diagnostics: [],
       },
       [AI_CHANNELS.skillsInvoke]: {
-        accepted: true,
-        threadId: "thread-1",
-        taskId: "task-1",
-        mode: "started",
-        phase: "model",
+        prompt: "the rendered skill body",
+        displayContent: "/skill:user:review src",
+        skill: {
+          skillId: "skill:user:review",
+          command: "/skill:user:review",
+          source: "user",
+          fingerprint: "a".repeat(64),
+        },
+        allowedTools: ["read"],
       },
     };
 

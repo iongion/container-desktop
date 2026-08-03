@@ -9,23 +9,8 @@ import {
 } from "./channels";
 import type { EffectiveContextSectionKind, EffectiveContextSourceKind } from "./context";
 import {
-  MAX_ACTIVE_RUNS,
-  MAX_AVATAR_DATA_URL_BYTES,
-  MAX_AVATAR_NAME_CHARS,
-  MAX_AVATARS,
   MAX_DIAGNOSTICS_BUNDLE_CHARS,
-  MAX_GOAL_CHARS,
   MAX_RETAINED_THREADS,
-  MAX_RUN_SPAN_BATCH,
-  MAX_RUN_SPAN_BYTES,
-  MAX_RUN_SPANS,
-  MAX_RUN_SYNTHESIS_CHARS,
-  MAX_RUN_TASK_DESCRIPTION_CHARS,
-  MAX_RUN_TASK_OUTPUT_CHARS,
-  MAX_RUN_TASK_TOOL_RESULTS,
-  MAX_RUN_TASKS,
-  MAX_RUN_TOKEN_BUDGET,
-  MAX_RUN_WORKERS,
   MAX_THREAD_COMPACTION_INSTRUCTIONS_CHARS,
   MAX_THREAD_COMPACTION_SUMMARY_CHARS,
   MAX_THREAD_COMPACTIONS,
@@ -62,7 +47,6 @@ const optionalProvider = provider.optional();
 const model = z.string().max(MAX_MODEL_CHARS).optional();
 const empty = z.undefined();
 const threadId = z.object({ threadId: id }).strict();
-const runRef = z.object({ runId: id }).strict();
 
 export const diagnosticsBundle = z
   .object({
@@ -141,31 +125,8 @@ export const permissionRule = z
   })
   .strict();
 
-// Team run. `model` drives the worker agents; `coordinatorModel` optionally points decomposition + synthesis at a
-// cheaper model (the coordinator reasons over task titles, not tool output, so it rarely needs the frontier model).
-// `maxTokens`/`maxTasks` are the user-facing cost caps — absent ⇒ the DEFAULT_RUN_* ceilings in limits.
-export const startRunRequest = z
-  .object({
-    runId: id,
-    goal: z.string().trim().min(1, "AI: goal is empty").max(MAX_GOAL_CHARS, "AI: goal is too long"),
-    providerId: optionalProvider,
-    model,
-    coordinatorModel: model,
-    maxTokens: z.number().int().positive().max(MAX_RUN_TOKEN_BUDGET).optional(),
-    maxTasks: z.number().int().positive().max(MAX_RUN_TASKS).optional(),
-    // Ids into the workers library. The host resolves them to definitions; absent/empty ⇒ every task runs
-    // on the run defaults, which is the pre-workers behaviour.
-    workerIds: z.array(id).max(MAX_RUN_WORKERS).optional(),
-  })
-  .strict();
-
-export const resolveRunPlanRequest = z.object({ runId: id, decision: approvalDecision }).strict();
-export const resolveRunToolRequest = z.object({ runId: id, approvalId: id, decision: approvalDecision }).strict();
-
-// The workers library
-// A worker is a reusable agent definition the coordinator may assign to a plan task: its own model, system
-// prompt and tool policy. Definitions are USER-AUTHORED and live host-side; a run references them by id only
-// (see startRunRequest.workerIds), so nothing renderer-side can inject a policy into a run.
+// A worker's stored shape. The library that edited these is gone, but the record still types the execution
+// target an off-host workspace is resolved from, and the tool-policy vocabulary the permission policy reads.
 export const workerToolPolicyMode = z.enum(["all", "ask", "granular"]);
 
 // Where a worker's tools execute. The union grows by adding members; a stored {kind:"host"} record is unaffected.
@@ -300,32 +261,6 @@ export const workerDefinition = z
 export const workerFileSchema = z
   .object({ version: z.literal(1), workers: z.array(workerDefinition).max(MAX_WORKERS) })
   .strict();
-
-export const saveWorkerRequest = z.object({ worker: workerDefinition }).strict();
-export const removeWorkerRequest = z.object({ id }).strict();
-export const workersResult = z.object({ workers: z.array(workerDefinition).max(MAX_WORKERS) }).strict();
-
-// The avatar library — custom uploaded faces (presets are shipped assets, never stored). dataUrl is a downscaled
-// inline image; the regex + byte cap are the trust boundary that keeps an arbitrary/oversized string out of the file.
-export const avatarRecord = z
-  .object({
-    id,
-    name: z.string().trim().min(1, "AI: an avatar needs a name").max(MAX_AVATAR_NAME_CHARS),
-    dataUrl: z
-      .string()
-      .max(MAX_AVATAR_DATA_URL_BYTES, "AI: the avatar image is too large")
-      .regex(/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/, "AI: unsupported avatar image"),
-    createdAt: z.number().int().nonnegative(),
-  })
-  .strict();
-
-export const avatarFileSchema = z
-  .object({ version: z.literal(1), avatars: z.array(avatarRecord).max(MAX_AVATARS) })
-  .strict();
-
-export const saveAvatarRequest = z.object({ avatar: avatarRecord }).strict();
-export const removeAvatarRequest = z.object({ id }).strict();
-export const avatarsResult = z.object({ avatars: z.array(avatarRecord).max(MAX_AVATARS) }).strict();
 
 const skillFingerprint = z.string().regex(/^[a-f0-9]{64}$/u);
 const skillSource = z.discriminatedUnion("kind", [
@@ -549,18 +484,6 @@ export const invokeSchemas = {
   [AI_CHANNELS.projectMemoryRemove]: z.object({ id }).strict(),
   [AI_CHANNELS.projectMemoryClear]: empty,
   [AI_CHANNELS.projectMemoryImport]: z.string().max(PROJECT_CONTEXT_LIMITS.storeBytes),
-  [AI_CHANNELS.runStart]: startRunRequest,
-  [AI_CHANNELS.runCancel]: runRef,
-  [AI_CHANNELS.runApprovePlan]: resolveRunPlanRequest,
-  [AI_CHANNELS.runApproveTool]: resolveRunToolRequest,
-  [AI_CHANNELS.runSnapshot]: runRef,
-  [AI_CHANNELS.runList]: empty,
-  [AI_CHANNELS.workersList]: empty,
-  [AI_CHANNELS.workersSave]: saveWorkerRequest,
-  [AI_CHANNELS.workersRemove]: removeWorkerRequest,
-  [AI_CHANNELS.avatarsList]: empty,
-  [AI_CHANNELS.avatarsSave]: saveAvatarRequest,
-  [AI_CHANNELS.avatarsRemove]: removeAvatarRequest,
   [AI_CHANNELS.modelsList]: z.object({ providerId: optionalProvider, requestId: id }).strict(),
   [AI_CHANNELS.modelsCancel]: z.object({ requestId: id }).strict(),
   [AI_CHANNELS.engineOp]: engineOpRequest,
@@ -577,7 +500,6 @@ export const invokeSchemas = {
     .strict(),
   [AI_CHANNELS.skillsInvoke]: z
     .object({
-      threadId: id,
       skillId: id,
       expectedFingerprint: skillFingerprint,
       arguments: z.string().max(SKILL_LIMITS.argumentBytes),
@@ -1024,246 +946,26 @@ export const submitThreadResult = z
   .strict();
 export const resolveThreadApprovalResult = z.object({ accepted: z.boolean(), phase: threadPhase }).strict();
 
-// Run projection. Where chat folds into a linear timeline, a Run folds into a task DAG: `dependsOn` carries
-// the edges, and the renderer lays the graph out from them. Task output is the per-agent transcript, kept on the
-// task rather than in a parallel structure so one seq-ordered event stream drives the whole view.
-export const runPhase = z.enum([
-  "idle",
-  "planning",
-  "awaiting-plan",
-  "running",
-  "synthesizing",
-  "cancelling",
-  "stopped",
-  "done",
-  "error",
-]);
-// "awaiting-approval" is a VIEW-only status: the scheduler still counts the task as running (its worker is
-// in-flight, holding a concurrency slot), but the DAG shows it blocked so the user can see what to act on.
-const runTaskStatus = z.enum(["pending", "running", "awaiting-approval", "complete", "failed", "skipped"]);
-const runErrorScope = z.enum(["start", "plan", "task", "synthesis", "run"]);
-const runMoney = z.object({ amount: z.number().nonnegative(), currency: z.string().trim().min(1).max(16) }).strict();
-// BOTH runTask and runTaskView carry `workerId`, and they must change together. The reducer spreads a plan task
-// straight into the view ({...task, status, output}), and the push-validation failure at the client bridge is
-// swallowed by design — so a workerId present on one schema and absent from the other would silently drop
-// `plan-ready` and leave the screen stuck in "planning" with no error anywhere.
-const runTask = z
+// A resolved skill, rendered but not yet sent. The host owns resolution — the trust check, the fingerprint
+// match and the prompt template — and the renderer owns submission, because the agent lives on the pi bridge
+// rather than behind this broker.
+export const skillInvocationResult = z
   .object({
-    id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    description: z.string().max(MAX_RUN_TASK_DESCRIPTION_CHARS),
-    dependsOn: z.array(id).max(MAX_RUN_TASKS),
-    agent: z.string().max(MAX_TITLE_CHARS),
-    // Set when the run supplied a roster: which library worker carries this task out.
-    workerId: id.optional(),
+    prompt: z.string().max(SKILL_LIMITS.renderedPromptBytes),
+    displayContent: z.string().max(MAX_TITLE_CHARS),
+    skill: z
+      .object({
+        skillId: id,
+        command: z.string().max(MAX_TITLE_CHARS),
+        source: z.enum(["bundled", "user", "project"]),
+        fingerprint: skillFingerprint,
+      })
+      .strict(),
+    // The skill's declared `allowed-tools`, absent when it declared none.
+    allowedTools: z.array(z.string().trim().min(1).max(MAX_TITLE_CHARS)).max(MAX_WORKER_ALLOWED_TOOLS).optional(),
+    // The source is not one the user has vouched for, so its instructions are untrusted for the turn.
+    initialTaint: z.boolean().optional(),
   })
-  .strict();
-const runTaskView = z
-  .object({
-    id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    description: z.string().max(MAX_RUN_TASK_DESCRIPTION_CHARS),
-    dependsOn: z.array(id).max(MAX_RUN_TASKS),
-    agent: z.string().max(MAX_TITLE_CHARS),
-    workerId: id.optional(),
-    status: runTaskStatus,
-    output: z.string().max(MAX_RUN_TASK_OUTPUT_CHARS),
-    error: z.string().max(MAX_AI_TEXT_CHARS).optional(),
-    // The model that ACTUALLY ran this task (resolved per-worker at dispatch, folded from the task-started event).
-    // Only on the VIEW — the plan task (runTask) has no model, it is chosen when the task is dispatched. Absent
-    // until the task starts; the UI-level multi-inference proof asserts ≥2 distinct values across completed tasks.
-    model,
-    provider: z.string().max(MAX_TITLE_CHARS).optional(),
-    inputTokens: z.number().int().nonnegative().optional(),
-    outputTokens: z.number().int().nonnegative().optional(),
-    cost: runMoney.optional(),
-    startedAt: z.number().int().nonnegative().optional(),
-    endedAt: z.number().int().nonnegative().optional(),
-    durationMs: z.number().nonnegative().optional(),
-    toolCalls: z.number().int().nonnegative().optional(),
-    toolResults: z
-      .array(
-        z
-          .object({
-            toolCallId: id,
-            tool: id,
-            title: z.string().max(MAX_TITLE_CHARS),
-            args,
-            ok: z.boolean(),
-            result: z.unknown(),
-          })
-          .strict(),
-      )
-      .max(MAX_RUN_TASK_TOOL_RESULTS)
-      .optional(),
-    retries: z.number().int().nonnegative().optional(),
-  })
-  .strict();
-// Cumulative run totals, not per-turn deltas — the reducer replaces rather than accumulates, so a dropped or
-// replayed usage event can never double-count the budget the cost cap is enforced against.
-const runUsage = z
-  .object({ inputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative() })
-  .strict();
-const runSpanStatus = z.enum([
-  "running",
-  "ok",
-  "error",
-  "cancelled",
-  "timeout",
-  "budget_exhausted",
-  "rejected",
-  "skipped",
-  "unknown",
-]);
-const runSpanView = z
-  .object({
-    key: id,
-    traceId: id,
-    spanId: id,
-    parentKey: id.optional(),
-    attempt: z.number().int().positive(),
-    kind: z.string().trim().min(1).max(64),
-    name: z.string().trim().min(1).max(MAX_TITLE_CHARS),
-    status: runSpanStatus,
-    incomplete: z.boolean(),
-    startUnixMs: z.number().int().nonnegative().optional(),
-    endUnixMs: z.number().int().nonnegative().optional(),
-    durationMs: z.number().nonnegative().optional(),
-    agent: z.string().max(MAX_TITLE_CHARS).optional(),
-    taskId: id.optional(),
-    taskTitle: z.string().max(MAX_TITLE_CHARS).optional(),
-    model,
-    provider: z.string().max(MAX_TITLE_CHARS).optional(),
-    tool: id.optional(),
-    phase: z.string().max(64).optional(),
-    inputTokens: z.number().int().nonnegative().optional(),
-    outputTokens: z.number().int().nonnegative().optional(),
-    cost: runMoney.optional(),
-    retries: z.number().int().nonnegative().optional(),
-    error: z.string().max(MAX_AI_TEXT_CHARS).optional(),
-  })
-  .strict();
-const runSpanUpdate = z.object({ type: z.enum(["open", "close"]), span: runSpanView }).strict();
-// Workers run in parallel, so several can be blocked on a tool approval at once — hence a LIST, not a single
-// pending approval the way the linear chat timeline can assume.
-const runApproval = z
-  .object({
-    approvalId: id,
-    taskId: id,
-    toolCallId: id,
-    tool: id,
-    title: z.string().max(MAX_TITLE_CHARS),
-    args,
-    reason: z.string().max(MAX_AI_TEXT_CHARS),
-    status: z.enum(["pending", "allowed", "rejected"]),
-  })
-  .strict();
-
-export const runView = z
-  .object({
-    runId: id,
-    goal: z.string().max(MAX_GOAL_CHARS),
-    phase: runPhase,
-    lastSeq: z.number().int().nonnegative(),
-    tasks: z.array(runTaskView).max(MAX_RUN_TASKS),
-    spans: z.array(runSpanView).max(MAX_RUN_SPANS),
-    spanBytes: z.number().int().nonnegative().max(MAX_RUN_SPAN_BYTES).optional(),
-    droppedSpanRecords: z.number().int().nonnegative().optional(),
-    approvals: z.array(runApproval).max(MAX_RUN_TASKS),
-    synthesis: z.string().max(MAX_RUN_SYNTHESIS_CHARS),
-    usage: runUsage,
-    // The run's token budget (the cap `usage` is spent against). Threaded from the run's settings via the usage
-    // event so the UI can render "spent / cap"; absent until the first usage event, then exact.
-    maxTokens: z.number().int().positive().max(MAX_RUN_TOKEN_BUDGET).optional(),
-    // The run-level failure (planning/synthesis/transport), so the error screen can say WHY it failed and offer a
-    // way out — a task-scoped fault is recorded on the task instead. Set when phase becomes "error".
-    error: z
-      .object({ scope: runErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) })
-      .strict()
-      .optional(),
-    planPending: z.boolean(),
-  })
-  .strict();
-
-export const startRunResult = z.object({ accepted: z.literal(true), runId: id, phase: runPhase }).strict();
-export const resolveRunPlanResult = z.object({ accepted: z.boolean(), phase: runPhase }).strict();
-
-export const runEvent = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("phase-changed"), phase: runPhase }).strict(),
-  z.object({ type: z.literal("plan-ready"), tasks: z.array(runTask).max(MAX_RUN_TASKS) }).strict(),
-  z.object({ type: z.literal("plan-resolved"), decision: approvalDecision }).strict(),
-  z.object({ type: z.literal("task-started"), taskId: id, model }).strict(),
-  z.object({ type: z.literal("task-delta"), taskId: id, text: z.string().max(MAX_RUN_TASK_OUTPUT_CHARS) }).strict(),
-  z.object({ type: z.literal("task-completed"), taskId: id }).strict(),
-  z.object({ type: z.literal("task-failed"), taskId: id, message: z.string().max(MAX_AI_TEXT_CHARS) }).strict(),
-  z.object({ type: z.literal("task-skipped"), taskId: id, reason: z.string().max(MAX_AI_TEXT_CHARS) }).strict(),
-  z
-    .object({
-      type: z.literal("task-metrics"),
-      taskId: id,
-      model,
-      provider: z.string().max(MAX_TITLE_CHARS).optional(),
-      inputTokens: z.number().int().nonnegative().optional(),
-      outputTokens: z.number().int().nonnegative().optional(),
-      cost: runMoney.optional(),
-      startedAt: z.number().int().nonnegative().optional(),
-      endedAt: z.number().int().nonnegative().optional(),
-      durationMs: z.number().nonnegative().optional(),
-      toolCalls: z.number().int().nonnegative().optional(),
-      retries: z.number().int().nonnegative().optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal("span-open"), span: runSpanView }).strict(),
-  z.object({ type: z.literal("span-close"), span: runSpanView }).strict(),
-  z
-    .object({
-      type: z.literal("span-batch"),
-      updates: z.array(runSpanUpdate).max(MAX_RUN_SPAN_BATCH),
-      dropped: z.number().int().nonnegative().optional(),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal("task-tool-result"),
-      taskId: id,
-      toolCallId: id,
-      tool: id,
-      title: z.string().max(MAX_TITLE_CHARS),
-      args,
-      ok: z.boolean(),
-      result: z.unknown(),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal("tool-approval-request"),
-      approvalId: id,
-      taskId: id,
-      toolCallId: id,
-      tool: id,
-      title: z.string().max(MAX_TITLE_CHARS),
-      args,
-      reason: z.string().max(MAX_AI_TEXT_CHARS),
-    })
-    .strict(),
-  z.object({ type: z.literal("tool-approval-resolved"), approvalId: id, decision: approvalDecision }).strict(),
-  z.object({ type: z.literal("synthesis-delta"), text: z.string().max(MAX_RUN_SYNTHESIS_CHARS) }).strict(),
-  z
-    .object({
-      type: z.literal("usage"),
-      inputTokens: z.number().int().nonnegative(),
-      outputTokens: z.number().int().nonnegative(),
-      // The run's token budget, carried on the usage stream so the view can render "spent / cap".
-      maxTokens: z.number().int().positive().max(MAX_RUN_TOKEN_BUDGET).optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal("run-complete"), finishReason: z.string().max(MAX_TITLE_CHARS) }).strict(),
-  z.object({ type: z.literal("run-stopped") }).strict(),
-  z.object({ type: z.literal("error"), scope: runErrorScope, message: z.string().max(MAX_AI_TEXT_CHARS) }).strict(),
-]);
-
-export const runEventEnvelope = z
-  .object({ version: z.literal(1), runId: id, seq: z.number().int().nonnegative(), event: runEvent })
   .strict();
 
 export const responseSchemas = {
@@ -1361,18 +1063,6 @@ export const responseSchemas = {
   [AI_CHANNELS.projectMemoryRemove]: projectContextSnapshotSchema,
   [AI_CHANNELS.projectMemoryClear]: projectContextSnapshotSchema,
   [AI_CHANNELS.projectMemoryImport]: projectContextSnapshotSchema,
-  [AI_CHANNELS.runStart]: startRunResult,
-  [AI_CHANNELS.runCancel]: ok,
-  [AI_CHANNELS.runApprovePlan]: resolveRunPlanResult,
-  [AI_CHANNELS.runApproveTool]: resolveRunPlanResult,
-  [AI_CHANNELS.runSnapshot]: runView.nullable(),
-  [AI_CHANNELS.runList]: z.object({ runs: z.array(runView).max(MAX_ACTIVE_RUNS) }).strict(),
-  [AI_CHANNELS.workersList]: workersResult,
-  [AI_CHANNELS.workersSave]: workersResult,
-  [AI_CHANNELS.workersRemove]: workersResult,
-  [AI_CHANNELS.avatarsList]: avatarsResult,
-  [AI_CHANNELS.avatarsSave]: avatarsResult,
-  [AI_CHANNELS.avatarsRemove]: avatarsResult,
   [AI_CHANNELS.modelsList]: z
     .object({ models: z.array(z.object({ id: z.string().trim().min(1).max(MAX_MODEL_CHARS) }).strict()).max(10_000) })
     .strict(),
@@ -1385,7 +1075,7 @@ export const responseSchemas = {
   [AI_CHANNELS.skillsReload]: skillHostSnapshot,
   [AI_CHANNELS.skillsSetProjectSource]: skillHostSnapshot,
   [AI_CHANNELS.skillsSetProjectTrust]: skillHostSnapshot,
-  [AI_CHANNELS.skillsInvoke]: submitThreadResult,
+  [AI_CHANNELS.skillsInvoke]: skillInvocationResult,
 } satisfies Record<AIInvokeChannel, z.ZodType>;
 
 export const threadEvent = z.discriminatedUnion("type", [
@@ -1489,7 +1179,6 @@ export const threadEventEnvelope = z
 
 export const pushSchemas = {
   [AI_CHANNELS.threadEvent]: threadEventEnvelope,
-  [AI_CHANNELS.runEvent]: runEventEnvelope,
   [AI_CHANNELS.skillsChanged]: skillHostSnapshot,
 } satisfies Record<AIPushChannel, z.ZodType>;
 

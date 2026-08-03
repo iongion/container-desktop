@@ -384,36 +384,21 @@ export function createAIBroker<TEvent = unknown>(deps: AIBrokerDeps<TEvent>): AI
         if (new TextEncoder().encode(prompt).byteLength > SKILL_LIMITS.renderedPromptBytes) {
           throw new Error("AI: rendered skill prompt is too large");
         }
-        const createdAt = Date.now();
-        const id = randomUUID();
-        const displayContent = `${resolved.descriptor.command}${resolved.arguments ? ` ${resolved.arguments}` : ""}`;
-        return threadHost.submit(
-          event,
-          { threadId: request.threadId, message: { id, content: displayContent, createdAt }, history: [] },
-          {
-            message: {
-              id,
-              content: prompt,
-              displayContent,
-              createdAt,
-              skill: {
-                skillId: resolved.descriptor.id,
-                command: resolved.descriptor.command,
-                source: resolved.descriptor.source.kind,
-                fingerprint: resolved.descriptor.fingerprint,
-              },
-            },
-            ...(resolved.manifest.allowedTools ? { allowedTools: new Set(resolved.manifest.allowedTools) } : {}),
-            ...(resolved.initialTaint ? { initialTaint: true } : {}),
-            contextSources: [
-              {
-                kind: "skill",
-                trust: resolved.descriptor.source.kind === "bundled" ? "application" : resolved.descriptor.source.kind,
-                characters: prompt.length,
-              },
-            ],
+        // Resolved and rendered, not submitted: the agent runs on the pi bridge, so the renderer is what owns
+        // the turn. Everything security-relevant — the fingerprint match, the project-trust check, the tool
+        // narrowing and the taint verdict — is decided HERE and travels with the prompt.
+        return {
+          prompt,
+          displayContent: `${resolved.descriptor.command}${resolved.arguments ? ` ${resolved.arguments}` : ""}`,
+          skill: {
+            skillId: resolved.descriptor.id,
+            command: resolved.descriptor.command,
+            source: resolved.descriptor.source.kind,
+            fingerprint: resolved.descriptor.fingerprint,
           },
-        );
+          ...(resolved.manifest.allowedTools ? { allowedTools: [...resolved.manifest.allowedTools] } : {}),
+          ...(resolved.initialTaint ? { initialTaint: true } : {}),
+        };
       }),
     );
   };

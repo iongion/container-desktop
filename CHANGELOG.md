@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A truncated command's full output can be opened from its card — the agent writes it inside the container, the app reads it back
+- The assistant now answers, runs tools and asks for approval in demo mode, with no container engine present
 - Coding Agent screen: pi runs inside a container, streamed into the app over a token-authenticated bridge
 - `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
 - Provider credentials stay in a separate gateway container; the agent container never receives a key
@@ -116,6 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Running a skill from the composer or the skills drawer works again — it had stopped reaching the agent after the move into a container, and a skill's declared tool list is now enforced for the turn it runs
 - Rejecting a tool call now stops the coding agent, instead of it asking again for the same command every second
 - A container change the coding agent asks for is now approved once, not twice — the same removal no longer raises a second identical card after you have already allowed it
 - An approval card for a container change now names the connection it will act on even when the agent did not name one, so it is clear which engine is about to lose a container

@@ -1,5 +1,6 @@
 import type { HostResponse } from "@/pi-agent-host/hostRpc";
 import type { PluginService } from "@/pi-agent-host/plugins";
+import { readToolOutput } from "@/pi-agent-host/toolOutput";
 import { decodeCommand, encodeEvent } from "@/pi-bridge/codec";
 import {
   type AppThemePalette,
@@ -125,6 +126,8 @@ export function attachBridgeConnection(
       case "session_reload":
         await session.reload();
         return;
+      case "read_tool_output":
+        return readToolOutput(command.path);
       case "hello":
         return;
     }

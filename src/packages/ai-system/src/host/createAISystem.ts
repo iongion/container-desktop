@@ -91,7 +91,6 @@ export async function createAISystem<TEvent = unknown>(
   const threadsPath = await deps.path.join(deps.userDataDir, "ai-threads.json");
   const legacyThreadsPath = await deps.path.join(deps.userDataDir, "ai-conversations.json");
   const toolArtifactsPath = await deps.path.join(deps.userDataDir, "ai-tool-artifacts.json");
-  const _workersPath = await deps.path.join(deps.userDataDir, "ai-workers.json");
   const skillTrustPath = await deps.path.join(deps.userDataDir, "ai-skill-trust.json");
   const projectContextPath = await deps.path.join(deps.userDataDir, "ai-project-context.json");
   const userSkillsRoot = await deps.path.join(deps.userDataDir, "ai-skills");

@@ -228,13 +228,14 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
         return undefined;
       }
       if (parsed.command.kind === "skill") {
-        if (!activeThreadId) throw new Error(t("Start or select a Thread first"));
-        await window.AI.invokeSkill({
-          threadId: activeThreadId,
+        // The broker resolves and renders it — trust check, fingerprint match, tool narrowing — and the pi
+        // session runs it. The transcript shows the command; the model receives the rendered body.
+        const invocation = await window.AI.invokeSkill({
           skillId: parsed.command.skillId,
           expectedFingerprint: parsed.command.source.fingerprint,
           arguments: parsed.rawArguments,
         });
+        await useCodingAgentStore.getState().submitSkill(invocation);
         return undefined;
       }
       type Handler = (

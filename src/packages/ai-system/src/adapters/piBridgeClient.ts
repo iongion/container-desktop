@@ -51,6 +51,9 @@ export interface PiBridgeClient {
   setPluginEnabled(source: string, enabled: boolean, scope: PluginScope): Promise<void>;
   listResources(): Promise<ContributedResources>;
   reloadSession(): Promise<void>;
+  // Read back a truncated tool's full output. The path comes from the tool result's `details.fullOutputPath`
+  // and names a file inside the agent container, which only the host can open.
+  readToolOutput(path: string): Promise<{ text: string; truncated: boolean }>;
   onEvent(listener: (event: BridgeEvent) => void): () => void;
   close(): void;
 }
@@ -231,6 +234,9 @@ export function createPiBridgeClient(options: {
     },
     reloadSession(): Promise<void> {
       return request({ id: randomUUID(), type: "session_reload" }, MUTATION_TIMEOUT_MS);
+    },
+    readToolOutput(path: string): Promise<{ text: string; truncated: boolean }> {
+      return request({ id: randomUUID(), type: "read_tool_output", path }, READ_TIMEOUT_MS);
     },
     onEvent(listener) {
       listeners.add(listener);

@@ -396,3 +396,78 @@ describe("useCodingAgentStore container operations", () => {
     expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({ status: "rejected" });
   });
 });
+
+describe("useCodingAgentStore skill invocation", () => {
+  beforeEach(() => {
+    setPermissionMode("ask");
+    useCodingAgentStore.setState({ activeSkill: undefined });
+  });
+
+  afterEach(() => {
+    delete (globalThis as { window?: unknown }).window;
+  });
+
+  it("shows the command in the transcript but sends the rendered prompt to the container", async () => {
+    const { client } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .submitSkill({ prompt: "the whole skill body", displayContent: "/review src/app.ts" });
+    expect(useCodingAgentStore.getState().view.timeline[0]).toMatchObject({
+      kind: "message",
+      role: "user",
+      content: "/review src/app.ts",
+    });
+    expect(client.prompt).toHaveBeenCalledWith("the whole skill body");
+  });
+
+  it("blocks a tool the skill did not allow, without raising a card", async () => {
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .submitSkill({ prompt: "body", displayContent: "/review", allowedTools: ["read"] });
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "ls" } }));
+    expect(useCodingAgentStore.getState().view.timeline).toHaveLength(1);
+    expect(responses[0].response).toMatchObject({ ok: true, value: { allow: false } });
+  });
+
+  it("still runs a tool the skill allowed", async () => {
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .submitSkill({ prompt: "body", displayContent: "/review", allowedTools: ["read"] });
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "read", args: { path: "a.ts" } }));
+    expect(responses[0].response).toEqual({ ok: true, value: { allow: true } });
+  });
+
+  it("lifts the skill's restrictions once the turn ends", async () => {
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore
+      .getState()
+      .submitSkill({ prompt: "body", displayContent: "/review", allowedTools: ["read"] });
+    useCodingAgentStore.getState().applyBridgeEvent({ type: "turn_end" });
+    expect(useCodingAgentStore.getState().activeSkill).toBeUndefined();
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "grep", args: { pattern: "x" } }));
+    expect(responses[0].response).toEqual({ ok: true, value: { allow: true } });
+  });
+
+  it("asks again for a remembered allow when the skill came from an untrusted source", async () => {
+    setPermissionMode("remember");
+    const rule = toolRule(piPermissionContext({ workspacePath: "/work", connectionId: "podman-1" }), "bash", {
+      command: "ls",
+    });
+    withAIBridge({ ...emptyPermissions(), allowed: [rule] });
+    const { responses } = attachFakeClient();
+    await useCodingAgentStore.getState().submitSkill({ prompt: "body", displayContent: "/review", initialTaint: true });
+    await useCodingAgentStore
+      .getState()
+      .handleHostRequest(hostRequest("approval", { toolName: "bash", args: { command: "ls" } }));
+    expect(responses).toEqual([]);
+    expect(useCodingAgentStore.getState().view.timeline[1]).toMatchObject({ kind: "approval", status: "pending" });
+  });
+});

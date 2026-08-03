@@ -1,622 +1,460 @@
 # AI subsystem
 
-A **local-first** AI assistant for your container engines. It has grown from a single Thread into three
-surfaces that share one broker, one permission model, and one provider stack:
+Container Desktop is a **GUI for a [pi](https://github.com/earendil-works/pi) coding agent**. pi is consumed as
+a library, its terminal UI is replaced by the app's React UI, and the agent itself runs **inside a container on
+one of your engine connections** — not in the webview, not in a host sidecar.
 
-- **Assistant** — an always-agentic thread that inspects and operates your engines through typed
-  tools, gated by a permission mode you choose.
-- **Runs** — give a goal, get a **plan**, and a roster of specialized **workers** carries it out as a
-  dependency-ordered multi-agent run, projected live as a task-graph canvas + span waterfall with native
-  token/cost telemetry.
-- **Workers** — a reusable library of specialized agents (model · specialty · avatar · toolset · **where
-  they run**) that Team Runs draw their roster from.
+Three worlds, two of them containers:
 
-It is an expert in the Podman, Docker and Apple Container engines across local, SSH-remote, WSL and
-Lima/Colima access.
+| World | What runs there | Trust |
+| ----- | --------------- | ----- |
+| **Renderer** (webview) | the transcript, cards, dialogs, ANSI surfaces, the composer; the AI broker; the engine ports | explicitly trusted — there is no process boundary inside it |
+| **Agent container** (`cd-agent-<id>`) | the pi session, its plugins and their code, the app's `pi-agent-host` entry | untrusted enough that the provider key never enters it |
+| **Gateway container** (`cd-gateway-<id>`) | an authenticating reverse proxy that holds the provider key | holds the credential; plugin code cannot reach it |
 
-**There is no process boundary to lean on.** Both shells are single-realm: the broker, the engines and the
-run loops all execute inside the **webview realm**, which is therefore explicitly trusted. The renderer does
-not gate anything — the broker does — but broker and renderer share one realm, so this is a weaker isolation
-story than a two-process split, and the tool-permission model below is what actually holds the line.
+Tool execution is **consent, not a sandbox** — but the blast radius is a disposable container with one host
+folder bind-mounted, which is why the permission policy here is looser than the app's host-side floor
+(see [The permission model](#the-permission-model)). Once data reaches the configured provider the app cannot
+contain it; the provider is the user's choice and the allow/reject record is the auditable half.
 
-**Provider keys and HTTP differ per shell, and the difference is a real security difference:**
-
-| Shell | Provider transport | Where the key lives |
-| ----- | ------------------ | ------------------- |
-| **Tauri** | native, in Rust ([`provider_transport.rs`](../../src-tauri/src/provider_transport.rs)) — the webview names a provider and endpoint, Rust streams the response back over a `Channel` | resolved from the OS keychain **in Rust** and attached there, so the plaintext key **never enters the JavaScript realm** |
-| **Wails** | the webview's standard `fetch` ([`fetchProviderTransport.ts`](../../src/packages/platform/src/providerTransport/fetchProviderTransport.ts)) | read from the keychain into the webview realm, so it depends on provider CORS and streaming compatibility |
-
-Bringing Wails up to the Rust model means adding a Go provider-transport service; until then, treat Tauri as
-the shell with the stronger key-handling guarantee. The tool-permission model applies on both regardless.
-
-Tool execution is **consent, not a sandbox.** Once data reaches the configured provider — or if a local
-model is compromised before it is run — the app cannot truly contain it. The selected provider configuration
-determines that destination; the auditable, user-managed allow/reject record separately controls what tools
-may run.
-
-## Architecture: ports & adapters
-
-The subsystem is a self-contained workspace package at **`src/packages/ai-system/src/`**, layered so the core
-logic is runtime-agnostic and unit-testable without a shell or the AI SDK. Layers contract through **ports**
-(neutral interfaces in `core/`), not imports. There are **no barrels / index aggregators / re-exports** — every
-type has a single origin and is imported from its defining module.
-
-| Layer | Path | May import | Responsibility |
-| ----- | ---- | ---------- | -------------- |
-| **core** | `core/` | nothing impure (no `node:*`, `@tauri`/`@wailsio`, react, AI SDK, OMA, sibling layers) | pure protocol, domain types, permission policy, command floor, plan/run reducers, channel + Zod schemas |
-| **adapters** | `adapters/` | `core/` + impure infra | file stores, language-model construction, provider fetch, model discovery, sandbox exec, web search |
-| **host** | `host/` | `core/` + `adapters/` (never `runtime/`) | the broker + sub-hosts that compose stores and injected engines |
-| **runtime** | `runtime/` | `core/` + the AI SDK + `@open-multi-agent/core` | OMA Agent Session/Team Run engines, provider adapter, tool bridge/gate, plan validation, webview shims, cost estimators, toolsets |
-| **ui** | `ui/core/` | `core/` | renderer-side Zustand stores + view logic (framework-agnostic; React bindings live in `web-app`) |
-| **testing** | `testing/` | everything (dev/test only) | scripted mocks for `CONTAINER_DESKTOP_MOCK=1` |
-
-**Dependency direction is a review rule (see [`CLAUDE.md`](../../CLAUDE.md)):** `core/` and `host/` MUST NOT
-import `runtime/`. The engine factories (`createAgentSession`, `createTeamRun`) are **injected** into
-`createAISystem` precisely so `@open-multi-agent/core` never enters the `core`/`host` graph.
+## Shape
 
 ```mermaid
 flowchart TB
-  subgraph ui[ui/ — renderer-side, framework-agnostic + React bindings in web-app]
-    react["web-app hooks + screens<br/>Assistant · Runs · Workers · Avatars"]:::component
-    stores["ui/core/stores<br/>aiStore (Threads) · runClient (Runs)"]:::component
+  subgraph renderer["Renderer — Tauri/Wails webview (no Node)"]
+    ui["Assistant · Coding Agent · Plugins<br/>transcript · cards · dialogs · ANSI surfaces"]:::component
+    store["stores/codingAgent.ts<br/>session · bridge client · projected ThreadView"]:::component
+    broker["ai-system host/broker<br/>keys · permissions · models · skills · project context · engine_op"]:::component
+    ops["platform/engineOpsAdapter<br/>EngineOps over EngineDataService"]:::component
   end
-  subgraph mid[host/ + core/ — no shell, no AI-SDK, no OMA, no node:*]
-    broker["host/broker<br/>router · sub-hosts · CRUD"]:::component
-    core["core/<br/>pure domain · ports · permission policy · floor · reducers · schemas"]:::component
+  subgraph agent["Container: cd-agent-* (the app's pi-agent-host)"]
+    host["WebSocket bridge server"]:::component
+    pi["pi AgentSession<br/>+ 3 inline extensions"]:::component
+    vol[("cd-agent-plugins volume<br/>~/.pi/agent")]:::external
+    ws[("/workspace — host bind-mount")]:::external
   end
-  subgraph rt[runtime/ + adapters/ — the impl]
-    engines["runtime/<br/>omaAgentSessionRuntime · omaTeamRun · OMA adapter · tool bridge/gate · plan · cost · shims · toolsets"]:::component
-    adapters["adapters/<br/>file stores · languageModel · providerFetch · discovery · sandbox · webSearch"]:::component
-  end
-  subgraph shell["platform/{tauri,wails} + platform/*.ts — the wiring"]
-    wiring["webviewAISystem.ts + aiSystem.ts + capabilities/<br/>composition root · engineOps · execution selector"]:::component
-  end
+  gw["Container: cd-gateway-*<br/>holds the provider key"]:::container
+  prov[(Provider — cloud or local)]:::external
 
-  react --> stores
-  stores -.->|window.AI / window.AIBus| wiring
-  broker -->|depends on| core
-  broker -->|uses| adapters
-  engines -.->|implement injected engine ports| core
-  broker -.->|injected engine factories| engines
-  wiring -->|assembles| broker
+  ui --> store
+  store -.->|"commands — ws://127.0.0.1:port"| host
+  host -.->|"events + host_request"| store
+  host --> pi
+  pi --- vol
+  pi --- ws
+  store --> broker --> ops
+  pi -.->|"inference, bearer = bridge token"| gw
+  gw -.->|"bearer = the real key"| prov
 
   classDef component fill:#85bbf0,color:#000,stroke:#5d82a8;
+  classDef container fill:#438dd5,color:#fff,stroke:#2e6295;
+  classDef external fill:#8a8a8a,color:#fff,stroke:#5e5e5e;
 ```
 
-`core/` defines the neutral ports — `EngineOps`, `IWorkspaceAccess`, `ConnectionExecHost`,
-`ExecutionSelector`, `CreateAgentSession`, `CreateTeamRun`, `PermissionsStoreLike`, the store ports — plus the
-**pure permission policy** (`permissions.ts`) and the **command floor** (`commandFloor.ts`). `host/broker.ts`
-validates senders, registers channel handlers, and fans out into the sub-hosts. The shared
-`platform/webviewAISystem.ts` is the composition root: it assembles the broker (or scripted mocks) and injects
-the shell surface (in-realm transport, keychain, app paths, sender guard, engine factories, execution
-selector). Each shell's `platform/{tauri,wails}/aiSystem.ts` supplies only what is genuinely its own — most
-notably Tauri's native provider transport.
+**Why a WebSocket.** pi's client layer is transport-neutral and node-free, and a webview speaks WebSocket on
+WebKitGTK and WebView2 alike. The agent listens on a loopback-published port with a per-session bearer token,
+so the app only performs operations it already has: build, run with `-p 127.0.0.1:<port>`, mount, rm. The
+alternative — framed JSONL over `exec -i` — would need bidirectional streaming stdio into a container on every
+shell, which the host contract does not expose. pi's own experimental `pi-server` wire format is not adopted:
+it carries no extension UI, and extension UI plus render frames is most of what this bridge is for.
 
-## createAISystem — the composition root
+## Packages and layering
 
-`createAISystem` (`host/createAISystem.ts`) resolves the user-data JSON store paths
-(`ai-permissions.json`, `ai-knowledge.json`, `ai-threads.json`, `ai-workers.json`, `ai-avatars.json`),
-builds the file-backed stores, and assembles one `AIBroker` over injected dependencies. The broker fans out:
+| Package | Runs in | Contains |
+| ------- | ------- | -------- |
+| **`@/pi-bridge`** | both | the wire contract only — `protocol.ts` (version 1, commands, events, host methods), `codec.ts`, `image.ts` (`agentImageTag`). No Node, no DOM, so both ends import the same types |
+| **`@/pi-agent-host`** | the container (Node 24) | the bridge server, the pi session and its three inline extensions, the virtual terminal + surface registry, the plugin service, the gateway. **Excluded from the renderer graph** — bundled separately by esbuild into the image |
+| **`@/ai-system`** | the renderer | `core/` (pure protocol + policy) → `adapters/` (impure infra) → `host/` (the broker), plus `ui/core/` (framework-free view logic) and `testing/` |
 
-Thread persistence is schema v5 (`view.threadId`, access profile, reasoning level, checkpoints, compactions).
-On first read, `threadFileStore` falls back to the legacy `ai-conversations.json` file and `parseThreadFile`
-migrates older records in memory. The next Thread mutation writes v5 to `ai-threads.json`; the legacy file is
-retained as a recovery copy.
+`@/ai-system/core/` stays dependency-free: no `@/platform`, `@/i18n`, `@/web-app`, `react`, `node:*`,
+`@tauri`/`@wailsio`, and no sibling layer. **The agent engine is not in this package** — it is the pi bridge,
+which is what keeps any agent library out of `core`'s graph. There are **no barrels or pass-through
+re-exports** anywhere; every type has one origin. This is a review rule, not a Vitest test.
 
-- **Assistant Threads** → `createThreadHost` — always agentic; Threads are **durable** through
-  `threadRepository` (`ai-threads.json`).
-- **Runs** → `createRunHost` — a goal → plan → multi-worker run; runs are **deliberately ephemeral**
-  (no disk record).
-- **Workers / Avatars** → `createWorkerHost` / `createAvatarHost` — thin read-modify-write CRUD mirrors over
-  their file stores. Definitions carry a tool policy and an execution target, so **writes go through the
-  broker** and are never renderer-writable.
-- **Model discovery** → `createModelDiscoveryHost`.
+The old `runtime/` layer (the OMA agent-session and team-run engines, the plan validator, the tool bridge and
+the webview shims) was deleted with the OMA engine and has no successor inside the package.
 
-The engine factories are injected: `createAgentSession` (the live Thread engine) is **required**; `createTeamRun`
-(the Team Run engine) is optional — a shell that omits it makes the Run host reject a start with a clear
-error rather than falling back to anything. `CONTAINER_DESKTOP_MOCK=1` swaps real streamers/stores for
-scripted mocks; the mock import is gated on a build-time constant so a production build statically drops it.
+## The bridge protocol
 
-## The runtime engines (OMA)
+One version constant (`PI_BRIDGE_PROTOCOL_VERSION = 1`) and three directions.
 
-The old AI-SDK/robot3/XState session machine and the interim app-owned loops are **retired**. Both engines run
-through **`@open-multi-agent/core`** (OMA). The app never consumes OMA's free-function API — it drives an
-`OpenMultiAgent` **instance** it constructs itself and injects an app-owned `LLMAdapter`, so OMA owns the
-agent/tool turn loop and the app owns everything at the boundary (history, events, approval, telemetry).
+**Renderer → container** (`BridgeCommand`): `hello` (token + version), `prompt` (with pi's `steer` /
+`followUp` streaming behavior), `abort`, `host_response`, `surface_input` / `surface_resize`, `set_theme`,
+the plugin verbs (`plugins_list` / `_install` / `_remove` / `_update` / `_check_updates` / `_set_enabled`),
+`resources_list`, `session_reload`, and `read_tool_output` (below).
 
-- **Provider bridge** — `runtime/omaAdapter.ts` `createOmaAdapter(resolved, providerFetch)` returns an
-  `LLMAdapter` backed by `new AISdkAdapter(createLanguageModel(...))` (from the `@open-multi-agent/core/ai-sdk`
-  subpath). Its `chat()` drives the AI-SDK adapter's **streaming** path, forwarding `text` deltas to an
-  `onToken` callback for immediate UI tokens and capturing the terminal `LLMResponse` OMA's loop expects. The
-  real key stays at the host boundary; the adapter is rebuilt per turn so a mid-thread model/provider
-  switch takes effect.
-- **Agent Session** — `runtime/omaAgentSessionRuntime.ts` (`makeCreateOmaAgentSession` → the injected `CreateAgentSession`;
-  `runtime/omaAgentSession.ts` binds the default) implements `AgentSessionPort` over a per-segment
-  `OpenMultiAgent` instance and its `runAgent` runner (single-agent path, `parallelToolCalls: false`,
-  `MAX_TURNS = 8`). The app retains durable structured history (`modelHistory: LLMMessage[]`), sequenced
-  `ThreadEvent`s folded through `reduceThreadEvent`, approval policy, and partial-output-preserving **steering**
-  (two abort controllers — one for the whole task, one for a single model segment — plus a pending-input queue
-  that folds queued text into the next tool result or drains it as the next prompt).
-- **Team Run orchestrator** — `runtime/omaTeamRun.ts` (`makeCreateOmaTeamRun` → the injected `CreateTeamRun`;
-  `createOmaTeamRun` binds the default) implements `TeamRunPort` over an `OpenMultiAgent` instance,
-  mapping the roster to `createTeam(...)` `agents` and driving `runTeam(...)` with the coordinator passed
-  separately: **decompose → app plan approval → dependency-aware worker dispatch → synthesis**. OMA owns
-  scheduling and `maxConcurrency` (`DEFAULT_RUN_MAX_CONCURRENCY = 3`) and enforces `maxTokenBudget`; the app
-  projects progress/spans through OMA's `onPlanReady`/`onProgress`/`TraceSink` callbacks, gates tools, and
-  resolves per-worker providers/execution targets. `forceOmaCoordinator` pads a short goal past OMA's
-  simple-goal short-circuit so the multi-agent coordinator always runs.
-- **Plan validation** — `runtime/omaPlan.ts` `validateOmaPlan(tasks, maxTasks, workerIds)` is the gate on the
-  coordinator's proposed plan: non-empty, within `maxTasks`, unique ids + titles, every `workerId` known, every
-  `dependsOn` resolvable, **no dependency cycle** (DFS), and a final `runEvent` schema check. It returns the
-  first human-readable error or `null`.
-- **Tool bridge** — `runtime/omaTools.ts` adapts the app's `Toolset` to OMA: `buildCustomTools` maps each spec
-  to an OMA `defineTool` (carrying the real Zod schema on `llmInputSchema` to bypass OMA's bundled Zod-3
-  converter — the app owns Zod 4); `makeOmaToolGate` implements OMA's `ToolCallGate` (`onToolCall`) applying the
-  permission policy, command floor, cached verdicts and injection-taint; `buildOmaWorkerToolset` merges +
-  filters a worker's toolset; `createOmaToolCallSideChannel` correlates OMA tool-use blocks to stable UI
-  `toolCallId`s.
-- **Webview shims** (`runtime/omaShim/`) — OMA's root module links Node-only integrations even when every agent
-  uses the injected AI-SDK adapter, so the renderer/WebKitGTK bundle would otherwise pull in `node:*` and a
-  second provider SDK stack. Four shims keep it linkable and node-free, failing loudly if a node-only path is
-  actually hit: `childProcess.ts` (`spawn` always throws — OMA's built-in process tools are default-deny; the
-  app injects host-driven tools instead), `crypto.ts` (browser-safe `randomUUID`/`randomBytes` for trace/task
-  ids; `createHash` throws — only OMA's file-backed stores use it), `optionalProviders.ts` (OMA's bundled
-  OpenAI/Azure/Anthropic/Google/Bedrock adapters stubbed to throw on construction). The WebKitGTK smoke target
-  under `tests/runtime/omaShim/` proves OMA's real orchestrator runs in the webview.
-- **Tool guidance** — `runtime/toolGuidance.ts` renders the model-facing catalogue from the filtered `Toolset`
-  actually registered for an Agent Session or Worker. Prompts cannot advertise tools unavailable to that execution target
-  or worker policy.
+**Container → renderer** (`BridgeEvent`): `ready`, `response` (settles a command), the turn stream
+(`assistant_delta` / `assistant_end` / `tool_start` / `tool_update` / `tool_end` / `turn_end` / `idle` /
+`error`), plugin data (`entry` from `appendEntry`, `custom_message` from `sendMessage`), rendering
+(`surface_frame` / `surface_closed`), plugin management (`plugin_progress`, `plugins_changed`), and
+`host_request`.
 
-## Telemetry & cost (native OMA observability)
+**Container → renderer → container** (`host_request` / `host_response`): the reverse call. Its `method` is one
+of nine extension-UI members (`select` · `confirm` · `input` · `editor` · `notify` · `setStatus` ·
+`setWidget` · `setTitle` · `setEditorText`) plus **`approval`** (the permission gate) and **`engine_op`** (one
+container operation). `hostRpc` **resolves to a fallback rather than rejecting**, so silence arrives as an
+explicit refusal instead of a hung agent.
 
-A Team Run projects OMA's native observability into the `RunView` as a **span tree + rolled-up metrics**, and
-prices token usage through an application-owned cost table. Agent Sessions retain spans in memory but do **not**
-estimate cost.
+`classifyHostRequest` (`core/uiRequests.ts`) is the pure routing table: dialog · approval · engine-op · chrome
+· ignored. An unknown method degrades to *ignored*, so a plugin written against a newer host cannot crash the
+renderer.
 
-**Span projection.** `core/spanEvents.ts` `spanToRunEvents(record, options?)` maps each OTel-like OMA trace
-record to `span-open`/`span-close` events plus optional per-task `task-metrics`. Only a **fixed attribute
-whitelist** crosses (model, provider, agent, task id/title, tool, phase, token counts, retries, explicit
-`oma.cost.*`) — read via typed `textAttribute`/`numberAttribute` guards. `runtime/omaTeamRun.ts` batches span
-updates into `span-batch` events (flushed at `MAX_RUN_SPAN_BATCH = 64` or on a microtask); unbatched `usage`
-and `task-metrics` emit directly. `core/runReducer.ts` folds them: spans upsert with running byte accounting
-and are dropped past `MAX_RUN_SPANS = 20_000` or `MAX_RUN_SPAN_BYTES = 8 MiB`, incrementing
-`droppedSpanRecords`; the Waterfall view pages at 500 rows and shows the omitted count. Cumulative `usage`
-(input/output tokens) is **replaced, not accumulated**, so a dropped or replayed event never double-counts the
-budget the token cap is enforced against.
+**Reading a truncated output.** pi caps a noisy command's output and writes the whole thing to a file *inside
+the container*, naming it in the tool result's `details.fullOutputPath` — a path the card cannot open.
+`read_tool_output` is that read. The path arrives from a tool result, which a plugin can author, so
+`toolOutput.ts` checks it against the exact shape pi's own bash executor produces
+(`<tmpdir>/pi-bash-<id>.log`, flat, no traversal) and refuses anything else rather than opening it. The read
+returns the **tail**, capped at 2 MiB: a truncated command's interesting part is where it stopped.
 
-**Cost.** `core/cost.ts` is the pure protocol: `Money`, `TokenUsage`, `ProviderCostEstimator`, and a
-`CostRegistry` that dispatches `estimate(provider, usage, { model })` to a per-provider estimator and validates
-the result (finite, non-negative, non-blank currency). `runtime/cost/*` supply the estimators over an
-**application-owned static price table** (`defaultCostRegistry.ts`) keyed by **exact model id** — Anthropic,
-OpenAI-compatible and OpenRouter map to their price sub-tables; the three local providers
-(`lmstudio`/`llamacpp`/`ollama`) map to a zero-cost estimator; unlisted models stay unpriced by design.
-`defaultCostRegistry` wires provider id → estimator. A Team Run uses cost twice: OMA's own `estimateCost` hook
-(`makeEstimateCost`) for **budget enforcement**, and the trace-sink `estimateCost` for the **view-facing**
-per-span `Money` (computed only on span close, only when tokens + model are present, priced by the agent's
-configured provider). Mixed currencies never blend — `addMoney` replaces on a currency mismatch, and
-`totalRunCost` yields `undefined` if a run spans more than one currency. The `RunStatStrip` surfaces the
-run's status, duration, input/output tokens, total cost, and distinct worker/model/provider counts.
+## Starting a session
 
-## The three surfaces
+`useCodingAgentStore.start()` (`web-app/stores/codingAgent.ts`) drives `startPiAgentSession`
+(`adapters/piAgentContainer.ts`) against the connection's `HostClientFacade`:
 
-### Assistant
+1. create a session-scoped network (`cd-agent-net-<id>`; a pre-existing one is not an error);
+2. write the **gateway** env file — upstream base URL, **the provider key**, the bridge token — and run
+   `<image> --mode gateway` on that network;
+3. write the **agent** env file — deliberately *without* the key: bridge token and port, the gateway URL, the
+   model id, `/workspace`, the agent dir — and run `<image> --mode agent` with
+   `--publish 127.0.0.1:<port>:8787`, the workspace bind-mount, and the plugin volume;
+4. connect the WebSocket client and publish the app's theme palette **before** the first plugin frame, so no
+   component paints in pi's colours and then flashes to the app's.
 
-The always-agentic thread. `submit` builds an `AgentExecutionDeps` bundle (sandbox runner, knowledge
-bank, web search, `engineOps`, `workspaceAccess`) and drives a `CreateAgentSession`. Each app-global
-thread owns one process-lifetime session; authorized windows attach as observers and receive the same
-sequenced events. Durable metadata + redacted timeline + canonical model history live in
-`ai-threads.json` via `threadRepository` (private temp-file + atomic rename, serialized). On
-restart, in-flight messages/tools/approvals normalize to a stopped/rejected terminal projection — nothing
-resumes automatically.
+Env files are written privately under `~/.local/share/container-desktop/agent/`, never passed in argv.
+A **scoped** engine (WSL, Lima, a podman machine) runs every command through the scope wrapper, and the
+workspace path is translated with `resolveGuestPath` before it is mounted.
 
-### Runs
+**User mapping.** Rootless podman maps the invoking user to container root, so the image's `agent` user
+(uid 1001) needs `--userns keep-id:uid=1001,gid=1001` or the bind-mounted workspace is effectively read-only;
+Docker gets no mapping. The plugin volume mount adds podman's `:U` under keep-id, without which a volume
+created under an earlier mapping stays owned by the old uid and pi fails with EACCES on the *first turn*,
+not at startup.
 
-A Team Run's lifecycle (phases in `core/schemas.ts` `runPhase`): **idle → planning → awaiting-plan → running
-→ synthesizing → (cancelling) → done / stopped / error**. `runHost.start` resolves the roster host-side into
-`ResolvedWorker[]` — each worker gets its own provider access, bound fetch, allowed-tool set, floor scope, and
-**execution backend** (see [Execution targets](#execution-targets-runs-on)) — then `createTeamRun` drives it.
-OMA owns decomposition and scheduling/concurrency; the app validates the coordinator's proposed plan in
-`runtime/omaPlan.ts` (`validateOmaPlan` — id/title uniqueness, resolvable `dependsOn`, worker binding, DFS
-cycle check, final schema check) before surfacing the plan-approval gate. The projection fold (`reduceRunEvent`,
-plus `runTaskWaves` for the graph layout) is pure in `core/runReducer.ts`. Runs are ephemeral: they live in
-host memory for their duration and are not persisted.
+**Ports.** `pickHostPort()` is `41000 + random(4000)` with no retry — probing from the renderer was judged
+worse. A collision surfaces as `failed to bind host port … address already in use` in the start log.
 
-### Workers & Avatars
+**Egress** is on by default (a coding agent needs package managers); `egress: false` adds `--internal`, leaving
+only the gateway reachable.
 
-A **worker** (`core/schemas.ts` `workerDefinition`) is `{ id, name, avatarId?, specialty, systemPrompt,
-providerId?, model?, toolPolicy{mode, allowed[]}, execution, timestamps }`. `specialty` is what the
-coordinator reads when it assigns roster members to plan tasks. The tool policy mode is `all` · `ask` ·
-`granular` (an allowlist); it is authoritative for that worker but can never bypass the floor or overturn a
-remembered block. Workers persist to `ai-workers.json` (`adapters/workerFileStore.ts`).
+## The agent container
 
-**Avatars** (`core/avatars.ts`, `core/avatarPresets.ts`) give workers a face: ten shipped presets (fixed
-vivid palette, never stored) plus custom uploaded images (`avatarRecord` = id · name · byte-capped data URL),
-persisted to `ai-avatars.json`. `resolveAvatar` picks preset → custom image → generated monogram.
+`pi-agent-host/src/main.ts` starts a `WebSocketServer` on `0.0.0.0:8787` and builds one pi session per connection,
+queueing frames that arrive while it is still starting. `createPiSession` (`session.ts`) assembles pi's
+`createAgentSessionServices` with **three inline extensions**:
 
-## Toolsets — two families
+- **the gateway provider** — `registerProvider("container-desktop-gateway", { baseUrl: <gateway>, apiKey:
+  <bridge token>, api: "openai-completions", models: [<the one model>] })`. pi therefore never reads
+  `~/.pi/auth.json` and never learns a real key. Registration is queued by the extension runtime and flushed
+  by `createAgentSessionServices`, which is why services are built here rather than calling the low-level
+  `createAgentSession`;
+- **the permission gate** — `pi.on("tool_call", …)` asks the app for a verdict on **every** tool call and
+  blocks on the answer. An unreachable app is not consent: it fails closed with the reason;
+- **the container toolset** — 21 tools that call back over `engine_op`.
 
-Every tool family implements the engine-neutral `Toolset` interface (`runtime/tools/toolset.ts`:
-`{ defs, has, gated, title, validate, run }`). There are two:
+Settings and packages are file-backed at the mounted agent dir, so `pi install` survives a session and an
+image rebuild. `projectTrusted` stays false, so pi refuses project-scoped package storage and nothing is
+written into the user's workspace. **pi owns session persistence** (its own JSONL entry tree); the GUI
+transcript is a projection of the event stream, which is why the app has no thread store of its own on this
+path.
 
-- **Container tools** (over `EngineOps`) — `runtime/tools/containerToolset.ts`. The typed container
-  operations: `listContainers` / `inspectContainer` / `getContainerLogs` / `getContainerStats`, the same
-  list/inspect for images, networks and volumes, and the gated mutations (`startContainer` / `stopContainer`
-  / `restartContainer` / `pauseContainer` / `unpauseContainer` / `removeContainer`, `pullImage` /
-  `removeImage`, `removeNetwork` / `removeVolume`). Names in `core/toolNames.ts`. They reach the real engines
-  through the **`EngineOps` port**, implemented over the live `EngineDataService` in
-  `platform/src/engineOpsAdapter.ts` — the same host clients + container-client adapters the rest of the app
-  uses.
-- **Workspace tools** (over `IWorkspaceAccess`) — `runtime/tools/workspaceToolset.ts`. File + exec on a
-  confined workspace: reads `readFile` / `listDirectory` / `statPath` / `findFiles` / `searchText`, mutations
-  `writeFile` / `editFile` / `removePath` / `execCommand`. Names in `core/workspaceToolNames.ts`.
+`initTheme()` is called for a narrow reason: pi's own components read a module-global theme that *throws*
+until initialised, so a plugin building a `Markdown` or `SelectList` would crash on first render.
 
-`mergeToolsets` and `filterToolset` (in `toolset.ts`) combine and allowlist them. The goal orchestrator's
-`buildToolset` picks a worker's execution backend, merges container + workspace toolsets from it (skipping any
-absent part), then applies `filterToolset` when the worker's policy is `granular`. The interactive engine does
-the same merge minus per-worker filtering. `core/workerTools.ts` (`WORKER_TOOL_CATALOGUE`) exposes each tool's
-gated-ness to the editor UI without importing the specs.
+**The gateway** (`gateway.ts`) is the same image with `--mode gateway`. It authorizes on
+`Authorization: Bearer <bridge token>`, strips the caller's credentials and every hop-by-hop header, substitutes
+the real key, and forwards. Response `content-encoding`/`content-length`/`transfer-encoding` are dropped —
+`fetch` already decoded the body, so echoing them makes the client try to gunzip plain text. An upstream
+failure answers **502 without echoing the error**, which would contain the signed request headers.
 
-## Execution targets ("Runs on")
+This is a practical reading of "keys never enter the container": the key lives in *a* container, just not one
+plugin code can reach — no shared filesystem, no exec, no env. Host-local models keep working because the
+gateway can forward to `host.containers.internal`.
 
-A worker chooses **where its tools run** — not always the local host. This is the "Runs on" control in the
-worker editor, and it covers four kinds (`core/schemas.ts` `workerExecutionTarget`, a discriminated union):
+## Container tools and `engine_op`
 
-| Kind | Shape | Where the worker's file + exec tools act |
-| ---- | ----- | ---------------------------------------- |
-| **host** | `{ kind: "host" }` | the local host (fast `node:fs` workspace) — the default |
-| **remote** | `{ kind: "remote", connectionId }` | a remote host reached over the connection (SSH `*_REMOTE`) |
-| **container** | `{ kind: "container", connectionId, containerId }` | inside an existing container on that connection |
-| **sandbox** | `{ kind: "sandbox", connectionId, image }` | a throwaway container created for the run and removed after |
+pi runs in a container and cannot reach the engine ports, so the app's container toolset is registered
+*inside* pi as thin callers and executed *by the app*.
 
-There are two execution surfaces, and only one needed retargeting:
+- **In the container** — `containerToolCatalogue.ts` declares one descriptor per operation with its TypeBox
+  parameter schema; `containerTools.ts` registers them and turns each call into one `engine_op` request
+  (10-minute timeout, so a mutation can wait on a human). Model-facing prose lives in
+  `src/resources/prompts/agent-tool-descriptions.md` and is injected, not imported, keeping markdown out of the
+  unit-test graph. The tool names are **the app's own** container tool names, so a container tool arrives in the
+  GUI already understood by the cards, the titles and the permission gating.
+- **In the app** — `core/engineOpDispatch.ts` validates the name against `CONTAINER_TOOL_NAMES` (never
+  reflected off the port, so `constructor` and friends are undispatchable), fills in the session's connection
+  when the model omitted one, and calls the `EngineOps` port. `listConnections` is deliberately unscoped —
+  its whole purpose is telling the model which *other* connections exist. It **never throws**: a blocked agent
+  is waiting on this answer, so a failure is a value the model can act on.
 
-1. **Container-API ops** (`EngineOps`) were already multi-connection — a worker's are scoped to its
-   `connectionId`.
-2. **Workspace ops** (`IWorkspaceAccess`: file + `exec`) were host-locked. They are now retargetable: the
-   host keeps the fast local `node:fs` workspace; every other target routes file operations through the
-   target's exec primitive (`cat` / `tee` / `find` / `grep` / `stat` / `rm` / `mkdir`), confined to an
-   isolated directory on the target.
+`EngineOps` is implemented by `platform/src/engineOpsAdapter.ts` over the live `EngineDataService` — the same
+host clients the rest of the app uses.
 
-**Resolution and lifecycle.** At run start `runHost.start` builds a run-scoped `ExecutionSelector`
-(`createExecutionSelector(runId)`) and, per worker, calls `selector.select(worker.execution)` →
-`ResolvedExecution { engineOps?, workspaceAccess?, floorScope, dispose }`. Results are memoized by
-`executionTargetKey` (one backend per distinct target). The resolved backend is layered onto the
-`ResolvedWorker`, and the orchestrator uses it. Run disposal tears down every backend once — which **removes
-any sandbox container** (labelled `container-desktop.ai.sandbox=<runId>`). A resolve failure at run start
-disposes anything already created and **rejects the run with a clear message — never a silent host fallback**.
+The 21 operations: `listConnections`; list + inspect for containers, images, networks and volumes;
+`getContainerLogs`, `getContainerStats`; and the gated mutations `startContainer` / `stopContainer` /
+`restartContainer` / `pauseContainer` / `unpauseContainer` / `removeContainer`, `removeImage`, `removeNetwork`,
+`removeVolume`, `pullImage`.
 
-The ports live in `core/ports.ts` (`ConnectionExecHost`, `ResolvedExecution`, `ExecutionSelector`,
-`ExecutionSelectorFactory`); the implementations are shell-neutral, in
-`platform/src/capabilities/{connectionExec,execWorkspaceAccess,executionSelector}.ts`.
-`connectionExec.ts` implements `ConnectionExecHost` over `EngineDataService.getHost` — so a **remote
-container** needs no fifth kind (it is simply a container/sandbox whose connection is an SSH one).
+## The permission model
 
-**Target-aware floor.** The safety floor scope follows the target (`floorScopeFor`): `strict` (host, remote) ·
-`container` · **`sandbox`** relaxes the destructive-program denylist (the blast radius is a throwaway
-container), while the structural rules (shell-metacharacters, `..`, args-array-only, valid program token)
-hold in **every** scope.
+One decision function for both boundaries, and a global mode the user picks
+(`AISettings.permissionMode`, default **always ask**):
 
-**v1 limitations (intentional, documented).** Tauri/Wails run the AI in the webview realm with no Node, so
-they omit `createExecutionSelector` and their workers run **host-only** — the documented fallback. Sandboxes
-are created eagerly at run start for every sandbox-target roster worker (even if the plan never uses them).
-File ops assume a POSIX-ish target (busybox/coreutils). `execCommand` runs in the target's default cwd
-(a sandbox pins `/workspace`; an existing-container / remote uses the container/SSH default dir).
+| Mode | Behaviour |
+| ---- | --------- |
+| **`ask`** — always ask | every gated call raises a card; the record is neither read nor written |
+| **`remember`** — ask and remember | a card only if not already decided; a remembered allow runs silently, a remembered block is rejected **visibly**, and a fresh decision is persisted |
+| **`allow`** — always allow | no prompt, no record (an explicit max-trust opt-in) |
 
-## The permission system
+`decidePiToolCall` (`core/piApprovals.ts`) classifies the tool, then defers to the same `resolveToolAction`
+the rest of the app uses. pi's read-only built-ins (`read`, `grep`, `find`, `ls`) run unattended; everything
+else — the mutating built-ins, plugin tools, MCP tools — is gated, so a tool nobody has classified is *asked*
+about rather than run. The container tools take their read/mutation split from `WORKER_TOOL_CATALOGUE`, so a
+tool re-gated in one place cannot stay ungated in the other.
 
-Access and approval are separate authorities:
+**Two boundaries, one card.** pi asks for a verdict on *every* tool call, so a container mutation arrives
+twice: once as the pre-call `approval`, once as the `engine_op` the app performs itself. Only the second can
+hold the request and run it, so the **pre-call gate defers for container tools** (`boundary: "tool-call"`
+returns `run`) and the `engine-op` boundary decides. Gating at the pre-call boundary instead would also be
+unsound: any extension can call `engine_op` without registering a tool at all.
 
-- A Thread's durable **access profile** decides which tools OMA can see.
-- The app-global **permission mode** decides whether each visible gated call runs, asks, or rejects.
-- The target-aware **floor** rejects structurally unsafe execution.
-- A scoped allow/reject **record** can reuse an exact prior decision.
+**The floor is deliberately not applied here.** `commandFloor.ts` assumes an args *array* and treats a shell
+metacharacter as injection intent — but pi's `bash` takes a shell string, where a pipe is the tool working as
+designed. Its program denylist is about blast radius on a real machine, and this agent is a disposable
+container with one folder mounted: the same reasoning the floor's own `sandbox` scope already encodes.
 
-The profile filter is applied before tool definitions and tool guidance reach OMA. A prompt cannot invoke a
-tool that its Thread profile does not expose:
+**A rejection stops the agent.** Answering "no" and nothing else makes the model retry the same command
+immediately — measured against a real model, one "no" became an approval card per second. `resolveApproval`
+therefore also calls `client.abort()`, so one "no" means stop and the user can steer.
 
-| Profile | Effective capability |
-| ------- | -------------------- |
-| **Observe** | Read-only container and workspace inspection |
-| **Workspace** | Read-only container inspection plus workspace reads and mutations |
-| **Operator** | Every tool available on the bound execution target |
+**What a card says.** `piApprovalSummary` shows the shell command, the path, or — for a container mutation —
+the entity **and the connection it lands on**, filling in the session's connection when the model omitted it.
+Only the *text* resolves: the call's `args` stay exactly as the agent sent them, because they are also the
+identity a remembered decision is keyed on.
 
-Gated tools are typed container mutations plus workspace mutations (`writeFile` / `editFile` / `removePath` /
-`execCommand`) and generic command/network operations when present. Reads run without an approval prompt only
-after they survive the profile, target, Worker-policy, and availability filters.
+**The record.** Remembered decisions live in the version-2 `userData/ai-permissions.json`, owned by the broker
+(private temp-file + atomic rename; a block beats an allow; a corrupt or wrong-version file fails closed to
+"nothing remembered", which means asking). `piPermissionContext` scopes every pi rule to the **workspace
+path** and the **engine connection** — never the per-session container names, which carry a random suffix —
+under the subject `pi-coding-agent`. Managed from **Settings → AI permissions**.
 
-The three modes (a global preference in `AISettings.permissionMode`, default **always ask**):
+## Extension UI — three tiers
 
-- **Always ask** — every gated call surfaces an approval card; the remembered record is ignored and nothing
-  is persisted.
-- **Ask and remember** — a call surfaces a card **only if not already decided**; a remembered allow runs
-  silently, a remembered block is rejected silently, and a fresh decision is **persisted** so that exact
-  command never asks again.
-- **Always allow** — no prompt, no record, **no floor**: anything runs (the most dangerous mode, an explicit
-  max-trust opt-in).
+The agent host binds its own `ExtensionUIContext` and reports **`mode: "tui"`**, which obliges real component
+rendering; claiming it before T3 existed would have made plugins take a rich path the GUI could not serve.
 
-The whole decision is one pure function, `resolveToolAction({ mode, floorBlocked, cached, tainted })`:
+**T1 — dialogs and chrome to native.** `select` / `confirm` / `input` / `editor` become blocking
+request/response pairs that preserve pi's timeout and dismissal semantics; `confirm` renders as `ConfirmMenu`,
+per the app's UI conventions, never a dialog. `notify` becomes a toast, `setStatus` a footer strip, `setWidget`
+a strip above or below the composer, `setTitle` the session title, `setEditorText` a composer draft delivered
+as `{ text, seq }` so the same text set twice still applies twice. One pending dialog at a time — pi's dialogs
+are modal by nature, and the agent is parked until answered.
 
-```mermaid
-flowchart TD
-  call["candidate tool call"] --> access{visible in access profile<br/>and target?}
-  access -->|no| hidden["NOT REGISTERED"]:::rej
-  access -->|yes| mode{permission mode}
-  mode -->|always allow| runX["RUN — floor bypassed"]:::run
-  mode -->|always ask| fA{floor blocked?}
-  mode -->|ask &amp; remember| fR{floor blocked?}
-  fA -->|yes| rej1["REJECT"]:::rej
-  fA -->|no| ask1["ASK — surface approval card"]:::ask
-  fR -->|yes| rej2["REJECT"]:::rej
-  fR -->|no| cv{remembered verdict?}
-  cv -->|allow| tnt{turn tainted?}
-  cv -->|block| rej3["REJECT"]:::rej
-  cv -->|not yet decided| askp["ASK — then persist the choice"]:::ask
-  tnt -->|no| run2["RUN"]:::run
-  tnt -->|yes| askt["ASK once — untrusted content ingested"]:::ask
+**T2 — structured data to native cards.** A tool result is rendered by a typed card, not raw JSON
+(`web-app/components/ai/cards/registry.tsx`):
 
-  classDef run fill:#2d8a4e,color:#fff,stroke:#1c5a32;
-  classDef ask fill:#b8860b,color:#fff,stroke:#7a5a07;
-  classDef rej fill:#a82a2a,color:#fff,stroke:#6d1c1c;
-```
+| Source | Card |
+| ------ | ---- |
+| container reads | `ContainersCard` · `ImagesCard` · `NetworksCard` · `VolumesCard` · `LogViewerCard` |
+| container mutations | `ActionResultCard` |
+| pi's built-ins | `bash` → `ExecCard`, `read`/`write` → `FileCard`, `edit` → `DiffCard`, `ls` → `ListingCard`, `grep`/`find` → `SearchCard` |
+| anything else | a redacted-JSON fallback, with the plugin's own T3 surface as the card body |
 
-A **worker** additionally carries its own `toolPolicy` mode (`all` / `ask` / `granular`), applied by
-`resolveWorkerToolAction`: it decides which tools the worker may reach and whether to ask, but it can never
-bypass the floor or overturn a remembered block.
+pi's built-ins return their payload as **text**; their `details` carry only truncation flags. `core/piToolCards.ts`
+is the single place that knows those text formats and rebuilds a card result from `(args, text, details)`.
+`edit` is the one rich exception (`diff` / `patch` / `firstChangedLine`) and therefore the only diff source;
+`bash` reports **no exit code** — a non-zero exit throws and arrives as an error ending "Command exited with
+code N".
 
-### The floor
+**T3 — components to ANSI surfaces.** A `VirtualTerminal` implements pi's `Terminal` interface, `GuiTui extends
+TUI` and overrides `requestRender` so a component asking to repaint re-renders its own surface, and the surface
+registry emits whole-render `surface_frame` events. The renderer paints them into xterm instances
+(`components/ai/AnsiSurface.tsx`, `PluginSurfaces.tsx`), keyed by slot: per-tool call/result rows,
+`ctx.ui.custom()` focus surfaces (overlay placement honoured as a floating panel), footer, header, composer
+replacement, and widgets. Every slot is single-occupancy, so a plugin re-setting its footer never stacks two.
+A pi theme is derived from the app's `--app-*` tokens (`web-app/themes/appPiTheme.ts` → `piTheme.ts`) and
+re-published whenever engine or light/dark mode changes them.
 
-`isFloorBlocked(command, scope)` is the only catastrophic check, enforced in **always ask** + **ask and
-remember** and bypassed in **always allow**. It blocks a hardcoded denylist of destructive / privileged /
-shell / network programs (`rm`, `sudo`, `ssh`, `bash`, `curl`, …), any shell metacharacter in an argument, an
-invalid program token, or a `..` path-traversal segment. The **sandbox** scope lifts only the program
-denylist (the target is a throwaway container); every structural rule still applies in every scope. `{` and
-`}` are allowed (engine `--format '{{json .}}'` Go templates are inert without a shell); every other
-metacharacter is rejected.
+## Plugin management
 
-### The record
+The **Plugins** screen is a face on pi's own package manager: the container resolves and installs, the screen
+shows what it reports. `plugins_install` / `_remove` / `_update` / `_check_updates` / `_set_enabled` map onto a
+`DefaultPackageManager` over the same settings and agent dir, with its progress callback streamed as
+`plugin_progress` so an npm or git wait is legible. A change emits payload-free `plugins_changed` — the GUI
+refetches rather than patching a row and drifting from what pi actually has. `resources_list` reports what the
+loaded packages contribute (extensions, commands, skills, prompts), which is what fills the composer's
+slash-command palette. `core/pluginCatalog.ts` turns pi's `ConfiguredPackage` entries into table rows;
+`web-app/stores/pluginStore.ts` holds them.
 
-Remembered decisions live in the version-2 `userData/ai-permissions.json`, owned by the broker. Every rule is
-bound to:
+Only **user** scope is offered. Project scope is moot while nothing in the UI chooses a workspace.
 
-- workspace identity;
-- execution target;
-- authority subject (Assistant access profile, Worker, or future server);
-- typed tool and optional server id;
-- stable normalized arguments;
-- content-trust epoch.
+## What the broker still owns
 
-`permissionKey` serializes that complete decision scope; `toolRule` and `toolKey` construct typed-tool rules.
-A decision made for one project, target, profile, Worker, argument set, or trust epoch cannot authorize
-another. A block beats an allow for the same key. Legacy v1 files, corrupt data, unreadable files, and
-wrong-version files fail closed with an empty record and force prompting rather than silently dropping a deny.
-The file is managed from **Settings → AI permissions**. Mutations are serialized and written through a private
-temporary file plus atomic rename, so memory changes only after persistence succeeds.
+`createAISystem` (`host/createAISystem.ts`) resolves the user-data JSON store paths, builds the file-backed
+stores, and registers one `AIBroker` over the shell's transport. Every `ai:*` handler is sender-guarded, its
+request validated against the Zod schema in `core/schemas.ts`, and its response validated again by
+`host/aiClientBridge.ts` — one client bridge, reused by both shells over an in-realm bus.
 
-### Resolve, persist, resume
+| Group | Channels | State |
+| ----- | -------- | ----- |
+| status / diagnostics | `ai:status`, `ai:diagnostics` | live |
+| provider keys | `ai:key:{has,set,clear}` | live |
+| model discovery | `ai:models:{list,cancel}` | live |
+| the permission record | `ai:permissions:{list,add,remove}` | live |
+| container operations | `ai:engine:op` | live — the agent's `engine_op` lands here |
+| skills | `ai:skills:*` | live |
+| project context | `ai:project-context:*` | live |
+| workspace changes | `ai:changes:{status,diff}` | live |
+| threads | `ai:thread:*`, `ai:tool-artifact:get` | **orphaned** — no shell injects `createAgentSession`, so `submit` answers "the assistant is not available", and nothing writes a tool artifact on the pi path |
 
-An approval that needs a person becomes an approval request the renderer resolves by id. In ask-and-remember
-the engine **persists the verdict before it resumes**; if persistence fails, it fails closed and the tool does
-not run. An allowed tool then executes once through its normal path — there is no broker re-execution.
+**Invoking a skill spans both worlds.** `ai:skills:invoke` **resolves and renders**, it does not submit: the
+host does the fingerprint match, the project-trust check, the prompt render and the size cap, then answers with
+`{ prompt, displayContent, skill, allowedTools?, initialTaint? }`. The renderer submits that through
+`useCodingAgentStore.submitSkill`, which shows the command in the transcript, sends the body to the model, and
+holds the skill's narrowing for the turn: a tool outside `allowedTools` is refused with a reason (the model can
+adapt — this is a declared narrowing, not a user's "no", so it does not abort the turn), and `initialTaint`
+suppresses remembered allows so the user sees what an unvouched-for skill asked for. The narrowing lifts on
+`turn_end`.
 
-## Security model
+**Execution targets.** `platform/src/capabilities/{connectionExec,execWorkspaceAccess,executionSelector}.ts`
+still implement the host / remote / container / sandbox backends and are injected into the broker, but nothing
+consumes them since the worker library was deleted; they survive as a capability plus the mock-only
+`__aiOffHostProbe` seam that `webdriver/specs/off-host-exec.e2e.js` drives.
 
-Every `ai:*` handler is wrapped by the broker, and the checks run **in order**. They execute in the explicitly
-trusted single webview realm — the renderer does not gate, the broker does, but both share that realm. Treat
-this as consent enforcement with an audit record, not as process isolation.
+## Providers
 
-1. **Sender** — only an authorized app window may reach any handler. Thread identity is app-global and
-   independent from sender identity: authorized windows attach as observers, receive the same sequenced
-   events, and may route commands to that thread.
-2. **Provider destination** — selecting a catalog provider or saving a custom endpoint is the explicit choice
-   of where chat and model-discovery requests go. Provider IDs/models are validated, endpoint URLs must use
-   HTTP(S) without embedded credentials, credential injection is bound to the configured origin, requests are
-   bounded/cancellable, and missing required credentials fail before transport.
-3. **Redaction** — `redactPayload`/`redactText` strip provider-key prefixes, bearer tokens, JWTs, URL creds,
-   and secret-looking env assignments from everything sent to a provider **and** from every command output
-   before it re-enters the model.
-4. **Keys** — never in `user-settings.json`; `safeStorage`-encrypted in `ai-credentials.json` (mode 0600). On
-   Linux `safeStorage` can degrade to `basic_text` (not real encryption) — the store detects it, the UI
-   warns, and storing a cloud key then requires explicit opt-in.
-5. **Permission mode + floor** — the gate above decides run/ask/reject. The mode is read per task; a fresh
-   approval in "remember" mode persists its fully scoped verdict before execution resumes. Assistant calls
-   use an access-profile subject; Team Run calls use the assigned Worker subject.
-6. **Structural execution safety (every mode).** Independent of the permission decision, a command that runs
-   goes through the sandbox: the tool API exposes only `{ program, args }` (a `.strict()` schema rejects a
-   smuggled shell/cwd/env/wrapper); the sandbox builds the process options itself — fixed cwd, a **scrubbed
-   allowlist env** (not the parent's), hard timeout, **no shell** — and spawns an **args array**. Output is
-   capped and redacted. Web search is SSRF-guarded (blocks reserved/private/loopback/link-local resolved IPs,
-   re-checks redirects, restricts the fetch to its fixed origin) and its query is redacted before egress. In
-   "always allow" the floor is skipped, but all of this structural safety still applies.
+`resolveProvider` (pure, `core/providers.ts`) decides id/kind/baseURL/model/requiresKey/discovery. The catalog
+(`resources/ai/provider-catalog.json`) ships **nine**:
 
-## Provider model
+- **Local, no key** — LM Studio, Ollama, llama.cpp (loopback base URLs).
+- **Cloud, needs a key** — Anthropic, OpenAI, DeepSeek, GLM (Zhipu), MiniMax, and OpenRouter (an aggregator;
+  aggregated model ids split by `parseAggregatedModelId`).
 
-One abstraction covers everything via the AI SDK. `resolveProvider` (pure, `core/providers.ts`) decides
-id/kind/baseURL/model/requiresKey/discovery; `createLanguageModel` (`adapters/languageModel.ts`) turns that
-into a `LanguageModel` backed by the shell-specific fetch adapter — Anthropic uses `@ai-sdk/anthropic`, OpenAI
-`@ai-sdk/openai`, everything else `@ai-sdk/openai-compatible` (just a different `baseURL`). The real key is
-injected inside the provider-fetch seam (`adapters/providerFetch.ts`); the SDK only ever sees a placeholder
-header.
-
-The provider catalog (`resources/ai/provider-catalog.json`) ships **nine** providers:
-
-- **Local (no key):** **LM Studio**, **Ollama**, **llama.cpp** — loopback base URLs.
-- **Cloud (needs a key):** **Anthropic**, **OpenAI**, **DeepSeek**, **GLM** (Zhipu), **MiniMax**, and
-  **OpenRouter** (aggregator — many vendors behind one key, aggregated model ids split by
-  `parseAggregatedModelId`).
-
-Model discovery (`adapters/localModels.ts` `listModels`) is provider-specific and bounded: OpenAI-compatible
-endpoints paginate with `after`; Anthropic uses its `anthropic-version` header and `after_id`; a single-model
-server may fall back to its explicitly saved model; a manual provider performs no discovery request. The
+**Inference** does not go through the AI SDK on this path: the renderer hands `start()` an upstream base URL,
+a key and a model id, and everything after that is the gateway. `adapters/languageModel.ts` still exists but
+has no caller. **Discovery** is live and provider-specific: `adapters/localModels.ts` `listModels` paginates
+OpenAI-compatible endpoints with `after`, uses Anthropic's `anthropic-version` + `after_id`, falls back to an
+explicitly saved model for a single-model server, and performs no request at all for a manual provider. The
 renderer cache is TanStack Query, keyed by provider id + normalized endpoint + auth metadata + a non-secret
 credential revision.
 
-Reasoning is provider/model capability, not a generic text option. Provider-catalog metadata identifies model
-prefixes that expose effort control. A Thread durably stores `default` / `low` / `medium` / `high`; the host
-validates the override against its durable provider/model pair and translates supported non-default levels to
-OMA `thinking`. Unsupported combinations stay at `default` and never send an invented provider option.
+Keys never live in `user-settings.json`. They are keychain-backed per shell, and the two shells differ in a way
+that is a real security difference:
 
-## Typed transport protocol
+| Shell | Provider transport | Where the key is resolved |
+| ----- | ------------------ | ------------------------- |
+| **Tauri** | native, in Rust ([`provider_transport.rs`](../../src-tauri/src/provider_transport.rs)) | in Rust — the plaintext key never enters the JavaScript realm |
+| **Wails** | the webview's `fetch` ([`fetchProviderTransport.ts`](../../src/packages/platform/src/providerTransport/fetchProviderTransport.ts)) | in the webview realm, so it depends on provider CORS and streaming |
 
-`core/channels.ts` is the single request/response/push channel map — **Threads** (submit/list/create/configure/
-resolve/snapshot/dispose/cancel + `threadEvent` push), **runs** (start/cancel/approve-plan/approve-tool/snapshot/
-list + `runEvent` push), **workers** (list/save/remove), **avatars** (list/save/remove), **models**
-(list/cancel), **permissions** (list/remove), **keys** (has/set/clear), **status**. `threadConfigure` is the
-durable idle-only path for access and reasoning changes; an active Agent Session or compaction rejects the
-mutation. Only `threadEvent` and `runEvent` are push channels. Request/response types **derive from the Zod
-schemas** in `core/schemas.ts` (one source of truth). The broker validates every invoke request, the client
-bridge (`host/aiClientBridge.ts`) validates every response, and the bus validates every push envelope before
-it reaches a reducer. Both shells reuse that one bridge over an in-realm bus — there is no per-shell client to
-keep in sync.
+Both send the key onward to the gateway container when a session starts, so the difference is about the
+discovery/diagnostics path, not the session.
 
-## Renderer binding
+`redactPayload` / `redactText` strip provider-key prefixes, bearer tokens, JWTs, URL credentials and
+secret-looking env assignments from what is displayed and stored. Web search, when a shell can pin a
+destination, is SSRF-guarded (reserved/private/loopback/link-local IPs blocked, redirects re-checked, the fetch
+restricted to its fixed origin).
 
-The renderer is Zustand, split by surface:
+## Screens and navigation
 
-- **Threads** — `ui/core/stores/aiStore.ts` wraps a pure-reducer runtime (`threadClientRuntime.ts` — a FIFO
-  non-reentrant dispatcher over `threadClientReducer.ts`) and correlates commands to Promises. It owns
-  hydration, lossless snapshot recovery, tombstones, and the Thread list; `useAIStore((s) => s.x)` is its
-  read-only React projection. There is **no XState** — ordering is guaranteed by the FIFO dispatcher.
-- **Runs** — `ui/core/stores/runClient.ts` is a plain closure store: a multi-run record keyed by `runId`,
-  a per-run epoch guard, snapshot-channel gap recovery, and `reattach()` to re-hydrate host-held runs after a
-  reload.
+AI is **always on** — `Metadata.RequiresAI` is a surfacing tag, never an access gate.
 
-The store-adjacent view logic is pure and unit-tested, framework-free in `ui/core/`: `screenContext.ts` +
-`resourceContext.ts` (the compact model-facing "current screen"/resource summaries), `modelChoice.ts` /
-`modelCatalog.ts` / `modelDiscovery.ts` (the composer's model-picker logic), `commandHistory.ts`, and
-`toolTitle.ts` (tool → human title).
+| Screen | `Screen.ID` | Route | Surfacing |
+| ------ | ----------- | ----- | --------- |
+| Assistant | `ai.assistant` | `/screens/ai/assistant` | `RequiresAI`, `ExcludeFromSidebar` |
+| Coding Agent | `ai.codingAgent` | `/screens/ai/coding-agent` | `RequiresAI`, `ExcludeFromSidebar` |
+| Plugins | `ai.plugins` | `/screens/ai/plugins` | `RequiresAI`, `ExcludeFromSidebar` |
 
-**Generative-UI cards** — a tool result is rendered by a typed card, not raw JSON. `components/ai/cards/`
-`registry.tsx` (`ToolCard`) owns the shared running/error states and dispatches by tool name: container tools →
-`ContainersCard` / `ImagesCard` / `NetworksCard` / `VolumesCard` / `LogViewerCard`, all gated mutations →
-`ActionResultCard`; workspace tools → `FileCard` (read/write) / `DiffCard` (`editFile`) / `ListingCard` /
-`SearchCard` (`findFiles`+`searchText`) / `ExecCard`. Anything unmapped falls back to a redacted-JSON
-`GenericToolCard`. The same `ToolCard` renders inside `TaskEvidencePanel` for each Run Task's tool results.
+All three are reached from the header AI button and cross-link through the AI section tab bar
+(`screens/AI/ScreenHeader.tsx`); build hrefs only with `getAIScreenUrl` (`screens/AI/Navigation.ts`).
 
-## Screen gating & navigation
+**Assistant** is the rich surface: `components/ai/AssistantThread.tsx` renders the transcript (prose, tool
+cards, approval cards, ANSI surfaces), the composer with its command palette and history, and the drawers —
+context, diagnostics, skills, project context, workspace changes, branch, compaction, export. The same
+component backs the summonable **quake console** (`AssistantConsole/`, portaled to `<body>`, mod+backtick),
+so work is continuous across surfaces.
 
-AI is **always on** — `Metadata.RequiresAI` is a surfacing tag, never an access gate (`screenVisibility.ts`:
-`visibleSidebarScreens` filters on `ExcludeFromSidebar`, `aiNavScreens` on `RequiresAI`). The routes and their
-metadata:
+**Coding Agent** is the session's own minimal surface: status, start log, a plain transcript and a composer.
 
-| Screen | `Screen.ID` | `Screen.Route.Path` | Surfacing |
-| ------ | ----------- | ------------------- | --------- |
-| Assistant (full page) | `ai.assistant` | `/screens/ai/assistant` | `RequiresAI`, `ExcludeFromSidebar` |
-| Runs (list) | `ai.runs` | `/screens/ai/runs` | `RequiresAI`, **in sidebar** (`SidebarHighlight`) |
-| Team Run (detail) | `ai.run` | `/screens/ai/run/$runId` | `ExcludeFromSidebar`, **not** `RequiresAI` (needs a run id) |
-| Workers (library) | `ai.workers` | `/screens/ai/workers` | `RequiresAI`, `ExcludeFromSidebar` |
-
-Navigation is: the header carries a **single AI button** (`data-action="ai-assistant"`) that toggles the
-summonable Assistant console — it does **not** navigate. **Runs** is the AI hub's own highlighted **sidebar
-entry**; **Workers** and the **Team Run detail** are reached from there via the AI **section tab bar**
-(`ScreenHeader.tsx` `ScreenHeaderSectionsTabBar` — a Runs tab, lit for both `ai.runs` and `ai.run`, and a
-Workers tab). Build hrefs only through `Run/Navigation.ts` / `Worker/Navigation.ts` (`getRunsUrl`,
-`getRunUrl`, `getWorkersUrl`); `Run/index.tsx` + `Worker/index.tsx` are barrels (`ActionsMenu` /
-`CreateDrawer` / `Navigation`) and register no screen — the list screens are the `ManageScreen.tsx` files.
-
-The **Assistant console** (`web-app/components/ai/AssistantConsole/`) is a single app-wide host portaled to
-`<body>` so it overlays the full app width. Its primary form is a bottom *quake* drawer opened with the quake
-shortcut (mod + backtick) or the header button and dismissed with Escape (when idle). It renders the **same**
-`<AssistantThread>` as the full-page Assistant against one `useAIStore` Thread, so work is continuous
-across surfaces.
-
-### The Team Run screen
-
-`Run/RunScreen.tsx` attaches to a Run started elsewhere (it never creates one) and renders the Run projection
-over a resizable split workspace: a **view switch** between an interactive DAG canvas and a span waterfall on
-the left, the selected task's evidence on the right, and the synthesis "Answer" below when present. A header
-token-usage `ProgressBar` (spent / budget) plus Stop, the plan-approval gate, and any pending tool-approval
-prompts sit above it.
-
-- **`RunGraphCanvas`** — the task DAG as a **React Flow** (`@xyflow/react`) canvas: `task` nodes (the task
-  card with `WorkerAvatar` + status) and `waveLabel` nodes, laid out by `runGraphLayout.ts` (column per
-  dependency wave), edges from `dagEdges.ts` (one bezier per real in-plan dependency). Pan/zoom/fit + click-to-
-  select; nodes are non-draggable. This replaced the hand-rolled SVG overlay that stayed blank until first
-  interaction.
-- **`WaterfallView`** — the alternate span timeline: a Blueprint `Tree` grouped by attempt, each span a
-  positioned timing bar, paged at `WATERFALL_PAGE_SIZE = 500` and surfacing `droppedSpanRecords`. Layout is
-  pure in `waterfallLayout.ts` (`buildWaterfall`/`limitWaterfall`, breaking parent cycles).
-- **`RunStatStrip`** — the run-level stat row (status, duration, tokens, cost, distinct worker/model/provider
-  counts); math in `runStats.ts`.
-- **`TaskEvidencePanel`** — the selected task's Output (markdown + each `toolResults` entry as a `ToolCard`),
-  Details (`PropertyValueTable` of model/provider/tokens/cost/timing/retries), and Raw (`{ task, spans }`) tabs.
-
-`runBoard.ts` maps a run's phase to the Runs-list board column and counts settled tasks for progress.
-
-## Prompt templates
-
-Every model-facing prompt and static markdown block is a `.md` file under `src/resources/prompts/`, rendered
-through `renderPrompt` (Nunjucks **browser** build → node-free) or imported `?raw` — **never inlined in TS**.
-The agent prompt renders a **Current screen** block from a compact model-facing summary of the screen the user
-is on, plus that screen's *focus* guidance from a per-screen prompt registry (keyed by screen id, with domain
-bases → sub-screen overrides → generic fallback).
+`web-app/stores/useAIStore.ts` is the adapter that lets the whole Assistant UI keep working unchanged: it
+derives the old `AIState` shape from the pi session (one pi session = exactly one thread). Capabilities the
+bridge does not carry yet — new/rename/configure/branch/compact/delete/refresh — **reject by name** rather
+than silently doing nothing, so a drawer shows a real message.
 
 ## Mock mode
 
-When `CONTAINER_DESKTOP_MOCK=1`, `testing/aiMocks.ts` supplies a spec-v3 streaming language model plus fixture
-`EngineOps`, sandbox, knowledge, web, model catalog, and in-memory seeded permission / worker / avatar /
-Run stores; `testing/omaMocks.ts` supplies scripted OMA adapters. The mock emits real model text/tool-call
-chunks, so the production OMA runners, event stream, approval, steering, queuing, and cards all run unchanged.
-The mock composition uses the in-memory `VirtualEngineHost` execution selector, keeping worker target
-routing hermetic while exercising the same selection boundary.
+`CONTAINER_DESKTOP_MOCK=1` swaps the broker's real stores and streamers for `testing/aiMocks.ts`: fixture
+`EngineOps`, sandbox, knowledge, model catalog, web searcher, an every-provider-configured key store, and an
+**in-memory seeded** permission store (so Settings → AI permissions is exercisable without disk writes). The
+mock import is gated on a build-time constant, so a production build statically drops the whole module graph.
+
+The session itself is mocked at the **socket**, not above it: `testing/mockPiBridge.ts` implements the same
+`PiBridgeClient` and speaks the same `BridgeEvent`s, so the renderer runs its production path — projection,
+cards, the approval gate, surfaces — with no engine, no container and no model. `start()` takes that branch
+under `CONTAINER_DESKTOP_MOCK` and skips the container pair entirely; the renderer bootstrap starts one so the
+Assistant is usable on a machine with no engine at all. Its trigger phrases are the app's long-standing ones
+("restart the web container", "restart web and cache", "remove … container", "simulate an error"), and its
+container reads answer from the fixture `EngineOps` through the real `engine_op` path. A spec that wants one
+exact frame still pushes it through the DEV-only `window.__cdCodingAgentStore` seam.
+
+## Building the agent image
+
+`yarn cli agent-image [--engine podman|docker]` bundles `pi-agent-host` with esbuild into
+`build/agent-image/host.mjs`, copies `support/agent-image/Dockerfile` beside it, and builds
+`container-desktop/pi-agent:<version>`. pi and its friends stay **external** — pi loads extensions through jiti
+at runtime, so they must resolve from the image's own `node_modules`. Markdown is loaded as text, the
+bundler's equivalent of the renderer's `?raw`.
+
+The tag is unqualified: podman displays local images with a `localhost/` prefix and docker leaves them bare, so
+probe with the short name. **An image built for one engine does not exist for the other.**
+
+## Testing
+
+- **Pure logic, TDD** — the bridge codec, `piThreadView` projection, `piToolCards` rebuilds, `piApprovals`,
+  `uiRequests` routing, `engineOpDispatch`, `pluginCatalog`, permissions, the command floor, redaction,
+  providers, settings — hermetic in Vitest, no mocks of what the repo does not own.
+- **Container-side, TDD** — every `pi-agent-host` module has a spec: session, host RPC, permission gate,
+  container tools + catalogue, surfaces, tool surfaces, virtual terminal, UI context, plugins, resources,
+  gateway, events, theme.
+- **Never component tests** for React screens — UI is verified live.
+- **UI over WebDriver** (`webdriver/specs/`, mock app): `extension-ui` (T1) · `pi-tool-cards` (T2) ·
+  `pi-surfaces` (T3) · `pi-plugins` (management) · `pi-container-tools` (the toolset over a driven bridge).
+- **Real containers, no app** — `support/pi-plugins-probe.mjs` and `support/pi-bridge-probe.mjs` run the built
+  image directly.
+- **Real model, real engine** — `yarn test:e2e:tauri:pi:container:live` drives a non-mock app and a real
+  OpenRouter model through the container toolset, creating and removing its own throwaway container.
+
+See [`../testing.md`](../testing.md) for how to run each of these.
 
 ## Source map
 
 | Path | Role |
 | ---- | ---- |
-| `core/accessProfiles.ts`, `core/reasoning.ts` | pre-OMA Assistant tool filters + provider/model reasoning capability |
-| `core/permissions.ts` | permission modes, scoped rule/key construction, `resolveToolAction`/`resolveWorkerToolAction`, cached verdict, injection-taint |
-| `core/commandFloor.ts` | the catastrophic floor + `FloorScope` (strict/container/sandbox) |
-| `core/workers.ts`, `core/avatars.ts`, `core/avatarPresets.ts` | worker helpers (`workerAllowedTools`, `floorScopeFor`, `executionTargetKey`), avatar resolution + shipped presets |
-| `core/runReducer.ts`, `core/runEvents.ts` | run projection fold (spans/usage/metrics + byte accounting) + `runTaskWaves` layout, run event types |
-| `core/spanEvents.ts`, `core/cost.ts` | OMA trace-record → `RunView` span projection + attribute whitelist; `Money`/`CostRegistry`/`ProviderCostEstimator` cost protocol |
-| `core/{threadEvents,threadReducer,threads}.ts` | Thread event types + limits, the Thread-event reducer, Thread-view helpers |
-| `core/ports.ts`, `core/types.ts` | engine/exec/workspace/store ports, shared domain types, `ResolvedWorker` |
-| `core/{channels,schemas}.ts` | typed invoke/push channel map + authoritative Zod schemas (protocol source of truth) |
-| `core/{providers,redact,limits,settings}.ts`, `core/{toolNames,workspaceToolNames,workerTools}.ts` | provider resolution, redaction, ceilings, settings, tool-name unions + gated catalogue |
-| `adapters/{languageModel,providerFetch,localModels}.ts` | model construction, credential-stripping transport, bounded discovery |
-| `adapters/{sandbox,webSearch}.ts` | scrubbed-env args-array exec, SSRF-guarded search |
-| `adapters/{threadFileStore,workerFileStore,avatarFileStore,permissionsStoreCore,knowledgeFileStorage}.ts` | private temp-file/atomic-rename stores |
-| `host/createAISystem.ts`, `host/broker.ts` | composition root + router / sub-host fan-out |
-| `host/{threadHost,runHost,workerHost,avatarHost,modelDiscoveryHost,threadRepository,knowledgeBank}.ts` | the surfaces' hosts + durable thread coordination |
-| `host/aiClientBridge.ts` | the typed `window.AI` client + bus bridge (response/push validation) |
-| `runtime/{omaAgentSessionRuntime,omaAgentSessionTools,omaTeamRun}.ts` | OMA-backed Agent Session + its approval/tool controller; Team Run engine (drive an `OpenMultiAgent` instance) |
-| `runtime/{omaAdapter,omaAgentSession,toolGuidance}.ts` | AI-SDK provider bridge, injected Agent Session wiring, runtime-derived tool guidance |
-| `runtime/{omaPlan,omaTools}.ts` | plan validation (`validateOmaPlan`), OMA tool bridge/gate (`buildCustomTools`, `makeOmaToolGate`, side-channel) |
-| `runtime/omaShim/{childProcess,crypto,optionalProviders}.ts` | webview-safe shims for OMA's node-only links |
-| `runtime/cost/defaultCostRegistry.ts` | application-owned static pricing + per-provider estimators |
-| `runtime/tools/{toolset,containerToolset,workspaceToolset,containerToolSpecs,workspaceToolSpecs}.ts` | the two tool families + specs + combinators |
-| `ui/core/stores/{aiStore,threadClientReducer,threadClientRequests,threadClientRequestResults,threadClientRuntime,runClient}.ts` | renderer Thread state reduction, host-request effects/results, runtime/store + Runs multi-run store |
-| `ui/core/{screenContext,resourceContext,modelChoice,modelCatalog,modelDiscovery,submissionHistory,toolTitle}.ts`, `ui/core/commands/*` | pure view logic: context summaries, model picker, command registry/parser/scheduling, prompt recall, tool titles |
-| `testing/{aiMocks,omaMocks}.ts` | scripted mocks for `CONTAINER_DESKTOP_MOCK=1` |
+| `pi-bridge/src/protocol.ts` | the wire contract — commands, events, host methods, surface slots, theme palette |
+| `pi-bridge/src/{codec,image}.ts` | frame encode/decode; the agent image tag |
+| `pi-agent-host/src/{main,server}.ts` | the container entry (agent or gateway) and the bridge connection |
+| `pi-agent-host/src/session.ts` | the pi session — provider, extensions, TUI, surfaces, resources |
+| `pi-agent-host/src/{permissionGate,containerTools,containerToolCatalogue}.ts` | the three inline extensions' substance |
+| `pi-agent-host/src/{hostRpc,events}.ts` | reverse-call correlation with fallbacks; pi event → bridge event |
+| `pi-agent-host/src/{guiTui,virtualTerminal,surfaces,toolSurfaces,uiContext,piTheme}.ts` | T1 + T3: the extension UI context and ANSI rendering |
+| `pi-agent-host/src/{plugins,resources,gateway}.ts` | package management, contributed resources, the credential proxy |
+| `pi-agent-host/src/toolOutput.ts` | reading back a truncated tool's full output, path-validated against pi's own shape |
+| `ai-system/testing/{aiMocks,mockPiBridge}.ts` | the fixture broker deps; the scripted stand-in for the in-container session |
+| `ai-system/adapters/{piAgentContainer,piBridgeClient}.ts` | the container pair's lifecycle; the WebSocket client |
+| `ai-system/core/{piThreadView,piToolCards,piApprovals,piAIState,uiRequests,engineOpDispatch}.ts` | pure projection, card resolution, policy, routing, dispatch |
+| `ai-system/core/{permissions,commandFloor}.ts` | modes, scoped rule/key construction, `resolveToolAction`; the floor (host-side only) |
+| `ai-system/core/{channels,schemas}.ts` | the typed invoke/push map and its authoritative Zod schemas |
+| `ai-system/core/{providers,redact,limits,settings,toolNames}.ts` | provider resolution, redaction, ceilings, settings, tool-name unions |
+| `ai-system/adapters/{localModels,providerFetch}.ts` | bounded discovery; credential-stripping transport |
+| `ai-system/adapters/*FileStore.ts`, `permissionsStoreCore.ts` | private temp-file / atomic-rename stores |
+| `ai-system/host/{createAISystem,broker,aiClientBridge}.ts` | composition root, router, the one `window.AI` client |
+| `ai-system/host/{skillHost,projectContextHost,modelDiscoveryHost,diagnosticsHost,knowledgeBank}.ts` | the live sub-hosts |
+| `ai-system/host/{threadHost,threadRepository,toolArtifactRepository}.ts` | the orphaned thread path (no engine injected) |
+| `web-app/stores/{codingAgent,codingAgentSurfaces,pluginStore}.ts` | the session, its ANSI surfaces, the plugin table |
+| `web-app/stores/useAIStore.ts` | pi session → the Assistant UI's `AIState` shape |
+| `web-app/screens/AI/{AssistantScreen,CodingAgentScreen,ScreenHeader,Navigation}.tsx` | the surfaces and their tab bar |
+| `web-app/screens/AI/Plugins/` | the Plugins sub-screen |
+| `web-app/components/ai/` | transcript, composer chrome, dialogs, ANSI surfaces, drawers, the card registry |
+| `web-app/themes/appPiTheme.ts` | `--app-*` tokens → the palette the container derives a pi theme from |
 | `platform/src/engineOpsAdapter.ts` | the `EngineOps` port over the live `EngineDataService` |
-| `platform/webviewAISystem.ts` | the shared composition root (assemble broker / mocks; wire `engineOps`, execution selector) |
-| `platform/{tauri,wails}/aiSystem.ts` · `aiSystemHost.ts` | the per-shell wiring — Tauri adds the native provider transport |
-| `platform/capabilities/{connectionExec,execWorkspaceAccess,executionSelector}.ts` | connection/container exec, off-host workspace, per-run execution selector |
-| `platform/{tauri,wails}/capabilities/{workspaceAccess,executeIsolated,keychain,dns}.ts` | local workspace, isolated exec, keychain, DNS — per shell |
-| `ai-system/host/aiClientBridge.ts` | the one `window.AI` / `window.AIBus` mapping both shells reuse |
-| `web-app/screens/AI/{AssistantScreen,ScreenHeader}.tsx` | full-page Assistant + the AI section tab bar |
-| `web-app/screens/AI/Run/{ManageScreen,RunScreen,CreateDrawer}.tsx` | Runs list, Run detail, start-a-Run drawer |
-| `web-app/screens/AI/Run/{RunGraphCanvas,WaterfallView,RunStatStrip,TaskEvidencePanel}.tsx` | run-detail views: React-Flow DAG canvas, span waterfall, stat strip, per-task evidence |
-| `web-app/screens/AI/Run/{runBoard,runGraphLayout,dagEdges,waterfallLayout,runStats}.ts` | pure run-view logic (board columns, graph layout, edges, waterfall layout, cost/duration stats) |
-| `web-app/screens/AI/Worker/{ManageScreen,CreateDrawer,WorkerModelPicker,executionTargetLabel}.tsx` | Workers library + editor + "Runs on" label |
-| `web-app/components/ai/cards/` | the generative-UI card registry + cards (container + workspace + generic fallback) |
-
-## Testing strategy
-
-- **Pure logic, TDD** — access profiles, reasoning capability, scoped permissions (every effects cell),
-  `commandFloor` (every scope), `workers`,
-  `runReducer`, `spanEvents`/`cost` (attribute whitelist, price math, currency handling), `providers`,
-  `redact`, `settings`, the Thread-event reducer — real behavior, no mocks, hermetic in Vitest.
-- **Renderer view logic, TDD** — the Run-screen pure helpers (`runBoard`, `runGraphLayout`, `dagEdges`,
-  `waterfallLayout`, `runStats`, `executionTargetLabel`) and `omaShim/crypto` under Vitest.
-- **DI for host-coupled pieces** — stores/keychain use fakes; `broker`/`runHost`/`avatarHost` test channel
-  routing, roster resolution, execution-backend disposal, validation/redaction, and snapshots.
-- **Runtime, TDD** — the OMA Agent Session and Team Run engines through their ports (steering, tool
-  boundaries, approval, DAG scheduling, plan validation, span/cost projection), the toolsets, the sandbox
-  floor, and the renderer stores.
-- **Adapters, TDD** — `connectionExec`, `execWorkspaceAccess`, `executionSelector`, `languageModel`,
-  `localModels`, `providerFetch`, the file stores.
-- **Live / CDP** — the Assistant, Runs, Workers, the permission dropdown + approval cards, and Settings → AI
-  permissions are verified via the standard CDP smoke against the running dev build.
-- **Real-world targets** — the execution-target matrix (host / sandbox / container / remote) is exercised
-  against live engines; see [`../testing-runs-on.md`](../testing-runs-on.md).
+| `platform/src/webviewAISystem.ts`, `platform/src/{tauri,wails}/aiSystem.ts` | the shared composition root and each shell's additions |
+| `support/agent-image/Dockerfile`, `support/cli/lib/agent-image.ts` | the image and how it is bundled and built |

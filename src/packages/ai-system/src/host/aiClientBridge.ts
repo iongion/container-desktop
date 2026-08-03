@@ -89,7 +89,11 @@ export interface IAI {
   reloadSkills: () => Promise<SkillHostSnapshot>;
   setProjectSkillsEnabled: (enabled: boolean) => Promise<SkillHostSnapshot>;
   setProjectSkillTrust: (skillId: string, expectedFingerprint: string, trusted: boolean) => Promise<SkillHostSnapshot>;
-  invokeSkill: (request: ResolveSkillInvocationRequest & { threadId: string }) => Promise<SubmitThreadResult>;
+  // Resolves and renders the skill; the caller submits the prompt to the pi session. The result type derives
+  // from the channel schema, so it cannot drift from what the broker actually answers.
+  invokeSkill: (
+    request: ResolveSkillInvocationRequest,
+  ) => Promise<AIInvokeResponse<(typeof AI_CHANNELS)["skillsInvoke"]>>;
   // The workers library. Every mutation answers with the whole library, so the renderer never merges by hand.
   // The avatar library — custom uploaded faces. Every mutation answers with the whole library, like workers.
 }
@@ -168,11 +172,7 @@ export interface AIBusTransport {
 }
 
 export function createAIBus(transport: AIBusTransport) {
-  const SUBSCRIBABLE = new Set<AIPushChannel>([
-    AI_CHANNELS.threadEvent,
-    AI_CHANNELS.runEvent,
-    AI_CHANNELS.skillsChanged,
-  ]);
+  const SUBSCRIBABLE = new Set<AIPushChannel>([AI_CHANNELS.threadEvent, AI_CHANNELS.skillsChanged]);
   return {
     subscribe(channel, callback) {
       if (!SUBSCRIBABLE.has(channel)) {

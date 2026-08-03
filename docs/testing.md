@@ -48,27 +48,23 @@ It implements **every** `ICommand` member (availability/tunnel paths call
 and `ProxyRequest` returns `200`/`"OK"` by default. Shape per-call results to simulate failures
 (`{ success: false, stderr }`).
 
-### Live suite (real engines)
+### The real-machine target registry
 
-`*.live.test.ts` files are excluded from the hermetic run and drive a **real** engine/VM;
-[`installRealCommand()`](../src/__tests__/setup/headless.ts) wires the real Node executor for them.
+Every real-engine and real-model check now runs on WebDriver against the shipped shell (below), so the
+node-level live project ([`vitest.live.config.mts`](../vitest.live.config.mts), `yarn test:live`) is **empty** —
+it stays as the home for a future `*.live.test.ts`, and passes with no tests rather than failing.
 
-Config: [`vitest.live.config.mts`](../vitest.live.config.mts) (node env, 60s timeouts). Select machines
-via the `CDT_TARGET_*` registry — copy [`src/__tests__/live/targets.example.env`](../src/__tests__/live/targets.example.env)
-to `targets.env` (gitignored) and set `CONTAINER_DESKTOP_TEST_TARGETS=<id>`.
+What survives, and what the WebDriver live specs read, is the machine registry: copy
+[`src/__tests__/live/targets.example.env`](../src/__tests__/live/targets.example.env) to `targets.env`
+(gitignored), fill in the `CDT_TARGET_*` entries, and select with `CONTAINER_DESKTOP_TEST_TARGETS=<id>`.
+`tsx src/__tests__/live/printTargets.ts` lists what is configured.
 
-```bash
-yarn test:live                                         # every ENABLED target
-CONTAINER_DESKTOP_TEST_TARGETS=swarm yarn test:live    # just the swarm target
-```
-
-**Docker Swarm** (`swarm.live.test.ts`) runs against a **disposable local sandbox**, never your primary
-daemon — swarm is Docker-only (not Podman/Apple). Bring one up, point the `swarm` target's
-`_DOCKER_SOCKET` at it, run, tear down:
+**Docker Swarm** runs against a **disposable local sandbox**, never your primary daemon — swarm is Docker-only
+(not Podman/Apple). Bring one up, point the `swarm` target's `_DOCKER_SOCKET` at it, run the UI spec, tear down:
 
 ```bash
 support/swarm-sandbox.sh up          # single-node (docker:dind); or `up-multi` for node ops
-CONTAINER_DESKTOP_TEST_TARGETS=swarm yarn test:live
+yarn test:e2e:tauri:swarm:live
 support/swarm-sandbox.sh down
 ```
 
@@ -88,73 +84,96 @@ yarn test:e2e:tauri:swarm:none    # the Initialize Swarm empty state
 ```
 
 Real-engine specs need a NON-mock app (`CONTAINER_DESKTOP_MOCK=`) and a configured target in
-`src/__tests__/live/targets.env`. They drive `window.__cdLiveProbe` /
-`window.__cdExecutionMatrixProbe` — DEV-gated seams that run the SHIPPED ports inside the webview, so
-one probe covers both backends:
+`src/__tests__/live/targets.env`. They drive `window.__cdLiveProbe` — a DEV-gated seam that runs the SHIPPED
+ports inside the webview, so one probe covers both backends:
 
 ```bash
 yarn test:e2e:tauri:connections         # the connectivity matrix
-yarn test:e2e:tauri:execution-targets   # off-host worker execution
 yarn test:e2e:tauri:swarm:live          # real Docker Swarm (use support/swarm-sandbox.sh up)
 ```
 
-## AI subsystem (two lenses)
+Off-host execution (`webdriver/specs/off-host-exec.e2e.js`) runs on the **mock** app instead: the
+`__aiOffHostProbe` seam resolves a sandbox target and round-trips a file through the container-routed
+workspace, proving the real execution selector works inside the WebKitGTK realm. It has no dedicated script —
+run it with `yarn test:e2e:tauri --spec webdriver/specs/off-host-exec.e2e.js`.
 
-The agentic AI subsystem (`@/ai-system`: Assistant chat + Runs multi-agent DAG + Workers with container
-"Runs on" execution) is covered by **two complementary lenses** that test the SAME behaviors:
+## AI subsystem
 
-- **Mock lens** — deterministic, hermetic, CI-capable. The scripted `omaMocks` brain + the seeded
-  `createMockTeamRuns`/`createMockWorkerStore` fixtures drive scale, both approval branches, and every task
-  state without a network. This is what the unit suite and the mock UI flows run.
-- **Live lens** — the REAL model/agent path against **OpenRouter free models only**, run by hand, **never in
-  CI**, skipped loud when the key is absent.
+The assistant is a **pi coding agent running in a container** (see
+[`architecture/ai-subsystem.md`](architecture/ai-subsystem.md)), so its coverage is in four bands: units on
+both sides of the bridge, UI specs driven through the bridge, probes against a real container, and real-model
+runs.
 
-### Mock lens — scale + UI branches
+### Units (hermetic, CI)
 
-Drive the running mock app (`yarn dev:mock`) over WebDriver. The Runs UI is stressed at scale
-with an env knob — synthetic runs are appended to the baked fixtures:
+Both halves are ordinary Vitest and run in `yarn test:run`:
 
-```bash
-CONTAINER_DESKTOP_MOCK_SCALE="runs:300,tasks:100" yarn dev:mock
-```
+- **Renderer side** — the bridge codec, the transcript projection (`piThreadView`), card resolution
+  (`piToolCards`), the permission policy (`piApprovals`, `permissions`, `commandFloor`), host-request routing
+  (`uiRequests`), `engineOpDispatch`, `pluginCatalog`, providers, redaction, the stores.
+- **Container side** — every `pi-agent-host` module: session, host RPC, permission gate, container tools and
+  their catalogue, surfaces, tool surfaces, virtual terminal, UI context, plugins, resources, gateway, events,
+  theme.
 
-`runs:N` seeds N finished/active Runs for the list; `tasks:N` seeds one plan-gate run (`scale-plan`, clamped
-to `MAX_RUN_TASKS`) plus a mixed-state twin (`scale-graph`) whose tasks span every `RunTaskStatus`. Counts are
-schema-valid so they survive the client-bridge validation.
+### UI specs — the mock app over WebDriver
 
-The **AI e2e flows** ([`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)) drive the real running app
-through a backend-agnostic `AiE2eDriver` (WebdriverIO on Tauri, MCP on Wails) and assert
-**both branches** of each gate — chat echo/reply, run plan Approve **and** Reject, tool approval Allow **and**
-Reject, task-node output vs the "Waiting…" placeholder, Stop, and the Workers library round-trip:
-
-```bash
-yarn dev:mock        # in one shell
-yarn test:e2e:ai     # attaches to that app (never launches a second one)
-```
-
-The mutating flows each **create their own run** (re-runnable); read-only checks reuse the always-present baked
-`mock-run-*` fixtures. Those baked runs are interactive: a seed run emits granular events on approve/reject/stop
-(`aiMocks.ts` `attachEmit` → the run host's per-run broadcast), so gate actions reflect in the live UI exactly
-like a real run.
-
-### Live lens — real OpenRouter inference
-
-[`src/__tests__/live/ai-agent.live.test.ts`](../src/__tests__/live/ai-agent.live.test.ts) exercises the real
-provider stack (`createLanguageModel` → `AISdkAdapter` → open-multi-agent) against OpenRouter: a real assistant
-turn streams per free model, and a **multi-inference** Team Run puts two workers on two DIFFERENT free models —
-proven by a recording `providerFetch` that captures the `model` of every request body (routing is asserted, not
-the noisy free-tier output).
+The mock app boots a **scripted pi session** (`testing/mockPiBridge.ts`): the same `PiBridgeClient` the real
+session uses, speaking the same bridge events, with no engine, no container and no model. So the Assistant
+answers, renders cards and raises approval prompts through its production path. Specs that want a specific
+frame still push it through the DEV-only `window.__cdCodingAgentStore` seam. Start `yarn dev:mock` in one
+shell, then:
 
 ```bash
-# key in .env.development.local (gitignored):  OPENROUTER_API_KEY=sk-or-...
-yarn test:ai:live
+yarn test:e2e:tauri:pi:extension-ui     # T1 — native dialogs, chrome, widgets       (5)
+yarn test:e2e:tauri:pi:cards            # T2 — tool results as typed cards           (12)
+yarn test:e2e:tauri:pi:surfaces         # T3 — pi components as ANSI surfaces        (10)
+yarn test:e2e:tauri:pi:plugins          # plugin install / enable / update / remove  (8)
+yarn test:e2e:tauri:pi:container-tools  # the container toolset over a driven bridge (9)
+yarn test:e2e:ai                        # the assistant flows, against the scripted session
 ```
 
-Skips loud when `OPENROUTER_API_KEY` is unset. The shared free-model roster lives in
-[`testing/agents.ts`](../src/packages/ai-system/src/testing/agents.ts) (`OPENROUTER_FREE_MODELS`) — **verify the
-ids before a run** (`curl -s https://openrouter.ai/api/v1/models`, filter `:free`); the free roster shifts
-weekly. The free tier is rate-limited (~20/min, 50/day unfunded), so the arms run sequentially with a courtesy
-delay and treat a refusal/rate-limit as skipped, not failed.
+The **AI flows** ([`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)) drive the running app through a
+backend-agnostic `AiE2eDriver` and assert both branches of each gate — chat echo and reply, Enter-to-send, the
+slash-command palette under a real keyboard, the context and diagnostics drawers, the Project Memory review
+gate, and tool approval **Allow** and **Reject** including two gated calls in one turn. A flow that cannot run
+for an environmental reason reports **SKIP**, not a pass: the skill-discovery flow does that when the app
+binary predates `fs_list_directory`, because the skill source then reads as unreadable.
+
+**Keyboard caveat (WebKitGTK):** a synthetic keystroke run loses a REPEATED character — `…1785799812784`
+arrives as `…178579812784`. Any flow whose assertion is the text it typed must avoid adjacent repeats in its
+marker; the loss is mid-string, so retyping a tail cannot repair it.
+
+### Real containers, no app
+
+The image itself is verified without the GUI — build it, then run a probe against a real container:
+
+```bash
+yarn cli agent-image --engine podman   # or --engine docker; per-engine, not shared
+node support/pi-plugins-probe.mjs      # plugin management in a real container
+node support/pi-bridge-probe.mjs       # the bridge + data path in a real container
+```
+
+### Real model, real engine
+
+Run by hand, **never in CI**, needs `OPENROUTER_API_KEY` and a NON-mock app. These use the main worktree's
+prebuilt debug binary via `CONTAINER_DESKTOP_E2E_APP` and need Vite serving the renderer from the worktree
+under test.
+
+```bash
+CD_LIVE_ENGINE=docker \
+CONTAINER_DESKTOP_E2E_APP=<repo>/src-tauri/target/debug/container-desktop \
+  yarn test:e2e:tauri:pi:container:live   # a real model drives the container toolset end to end
+```
+
+It creates its own throwaway container so the destructive half is proven without touching anything of yours,
+and refuses to approve a card aimed at anything else. Overrides: `CD_LIVE_MODEL` (default
+`inclusionai/ling-3.0-flash:free`), `CD_LIVE_ENGINE`, `CD_LIVE_VICTIM`, `CD_LIVE_VICTIM_IMAGE`,
+`CD_LIVE_WORKSPACE`, `CD_LIVE_APP_VERSION`. The sibling live specs are `pi:extension:live`, `pi:gate:live` and
+`pi:data:live` (the last is a known failure — it wedges on a WebDriver command at the 180s cap; the container
+half it covers is verified by `support/pi-bridge-probe.mjs` instead).
+
+**Verify the free-model id before a run** (`curl -s https://openrouter.ai/api/v1/models`, filter `:free`) — the
+free roster shifts weekly, and the tier is rate-limited (~20/min, 50/day unfunded).
 
 ## Build tooling (`support/cli/`)
 
@@ -183,7 +202,7 @@ yarn test:run      # includes support/cli/**/*.test.ts
 | Headless globals / live opt-in | [`src/__tests__/setup/headless.ts`](../src/__tests__/setup/headless.ts)       |
 | Recording `Command` fake       | [`src/__tests__/setup/fakeCommand.ts`](../src/__tests__/setup/fakeCommand.ts) |
 | Vitest config                  | [`vitest.config.mts`](../vitest.config.mts)                                   |
-| AI e2e flows (both branches)   | [`support/e2e/ai/flows.mjs`](../support/e2e/ai/flows.mjs)                     |
-| Live AI (OpenRouter)           | [`src/__tests__/live/ai-agent.live.test.ts`](../src/__tests__/live/ai-agent.live.test.ts) |
-| Shared worker/model fixtures   | [`src/packages/ai-system/src/testing/agents.ts`](../src/packages/ai-system/src/testing/agents.ts) |
-| Run scale seeders              | [`src/packages/ai-system/src/testing/scaleRuns.ts`](../src/packages/ai-system/src/testing/scaleRuns.ts) |
+| AI UI specs (pi bridge)        | [`webdriver/specs/`](../webdriver/specs) — `extension-ui`, `pi-tool-cards`, `pi-surfaces`, `pi-plugins`, `pi-container-tools` |
+| Live AI (real model + engine)  | [`webdriver/specs/pi-container-live.e2e.js`](../webdriver/specs/pi-container-live.e2e.js) |
+| Real-container probes          | [`support/pi-plugins-probe.mjs`](../support/pi-plugins-probe.mjs) · [`support/pi-bridge-probe.mjs`](../support/pi-bridge-probe.mjs) |
+| AI mock fixtures               | [`src/packages/ai-system/src/testing/aiMocks.ts`](../src/packages/ai-system/src/testing/aiMocks.ts) |

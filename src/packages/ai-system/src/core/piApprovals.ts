@@ -43,10 +43,13 @@ export function decidePiToolCall(input: {
   mode: AIPermissionMode;
   cached?: CachedVerdict;
   boundary?: PiToolCallBoundary;
+  // The turn is running instructions the app did not author — a skill from an untrusted project source. A
+  // remembered allow is not honoured while it is set, so the user sees the call the skill body asked for.
+  tainted?: boolean;
 }): ToolAction {
   if (input.boundary === "tool-call" && CONTAINER_TOOL_GATING.has(input.toolName)) return "run";
   if (!isPiToolGated(input.toolName)) return "run";
-  return resolveToolAction({ mode: input.mode, floorBlocked: false, cached: input.cached });
+  return resolveToolAction({ mode: input.mode, floorBlocked: false, cached: input.cached, tainted: input.tainted });
 }
 
 function argText(args: unknown, key: string): string | undefined {
