@@ -143,7 +143,6 @@ export const createConfig = ({ mode, command, host, port }) => {
         "@xterm/addon-fit",
         "@xterm/addon-search",
         "@xterm/addon-unicode11",
-        "@xterm/addon-web-links",
         "@xterm/addon-webgl",
         "@monaco-editor/react",
         "monaco-editor",

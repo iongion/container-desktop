@@ -58,13 +58,10 @@ function routeByAuthScheme(native: ProviderTransport, webview: ProviderTransport
 }
 
 export async function createWebviewAISystem<TEvent = unknown>(deps: WebviewAISystemDeps<TEvent>): Promise<AIBroker> {
-  // Dev-only, DCE'd from production: under CONTAINER_DESKTOP_MOCK, drive the open-multi-agent engine with a scripted
-  // adapter; otherwise the real provider-backed OMA engine. Both run in the webview realm.
-
-  // Run-scoped execution selector: a worker's off-host "Runs on"
-  // target resolves to its own backend through the connection-exec capability. Under CONTAINER_DESKTOP_MOCK the
-  // in-memory VirtualEngineHost stands in for a real engine so mock Team Run workers genuinely resolve/run on their
-  // sandbox/container/remote target. Absent connectionExec (and not mock) ⇒ no selector, host-only fallback.
+  // Run-scoped execution selector: an off-host "Runs on" target resolves to its own backend through the
+  // connection-exec capability. Under CONTAINER_DESKTOP_MOCK the in-memory VirtualEngineHost stands in for a real
+  // engine so the off-host probe below genuinely resolves/runs on its sandbox/container/remote target. Absent
+  // connectionExec (and not mock) ⇒ no selector, host-only fallback.
   const mockVirtualHost =
     deps.mock && import.meta.env.ENVIRONMENT !== "production"
       ? (await import("@/ai-system/testing/virtualEngineHost")).createVirtualEngineHost()

@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Eleven unused libraries are gone from the app, including the retired multi-agent engine — a smaller install and a faster build
 - Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh
 - Resource actions no longer show a success toast — only failures notify, keeping routine start, stop and remove quiet
 - Engine health moves runtime details into its header and lets networking use the full width

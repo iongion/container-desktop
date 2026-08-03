@@ -206,15 +206,13 @@ How you build here, **per change** — not an end-of-task afterthought:
   `.md` file under `src/resources/prompts/`, rendered via `renderPrompt` (nunjucks **browser** build
   → node-free) or imported `?raw`. NEVER inline prompt/markdown prose in TS/TSX — add a `.md` there and import it.
 - **AI dependency direction — a review rule, NOT a suite test.** `@/ai-system/core/` stays dependency-free: no
-  imports of `@/platform`, `@/i18n`, `@/web-app`/`@/components`, the AI SDK (`ai` / `@ai-sdk/*`),
-  `@open-multi-agent/core`, `xstate`, `react`, `node:*`, `@tauri`/`@wailsio`, or sibling
-  `@/ai-system/{adapters,runtime,host,ui}`. The package's layers are `core/` (pure protocol + policy) →
-  `adapters/` (impure infra) → `runtime/` (the assistant runtime: agent loops, OMA, toolsets), with `host/`
-  composing `core/` + `adapters/` only. **`core/` and `host/` MUST NOT import `runtime/`** — the engine factories
-  are injected into `createAISystem` precisely so `@open-multi-agent/core` never enters their graph. A separate
-  package used to enforce that; since the merge nothing does but review. No barrels / `index.ts` aggregators /
-  pass-through re-exports anywhere in `@/ai-system` — import from the defining module.
-  This is common sense; hold the line in review, don't encode it as a Vitest test.
+  imports of `@/platform`, `@/i18n`, `@/web-app`/`@/components`, the AI SDK (`ai` / `@ai-sdk/*`), `react`,
+  `node:*`, `@tauri`/`@wailsio`, or sibling `@/ai-system/{adapters,host,ui}`. The package's layers are `core/`
+  (pure protocol + policy) → `adapters/` (impure infra) → `host/`, which composes `core/` + `adapters/` only.
+  The agent engine is **not** in this package: the assistant runs on the pi bridge (`@/pi-bridge` protocol +
+  `@/pi-agent-host` in the container), injected into `createAISystem`, so no agent library enters `core`'s
+  graph. No barrels / `index.ts` aggregators / pass-through re-exports anywhere in `@/ai-system` — import from
+  the defining module. This is common sense; hold the line in review, don't encode it as a Vitest test.
 - **Shell port-module parity is a review rule, not a test.** Keep the Tauri / Wails port modules in
   `src/platform/<shell>/` aligned (a capability added to one shell usually needs its peers) — verify it in review;
   don't assert directory-listing parity in a Vitest test.
