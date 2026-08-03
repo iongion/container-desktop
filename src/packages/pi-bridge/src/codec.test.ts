@@ -142,7 +142,13 @@ describe("pi-bridge codec", () => {
       enabled: false,
       scope: "project",
     });
-    for (const type of ["plugins_list", "plugins_update", "plugins_check_updates", "resources_list", "session_reload"]) {
+    for (const type of [
+      "plugins_list",
+      "plugins_update",
+      "plugins_check_updates",
+      "resources_list",
+      "session_reload",
+    ]) {
       expect(decodeCommand(JSON.stringify({ id: "c3", type }))).toMatchObject({ type });
     }
   });

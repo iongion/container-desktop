@@ -216,6 +216,17 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
 
   const executeCommand = useCallback(
     async (parsed: ParsedAssistantCommand): Promise<AssistantCommandExecutionResult> => {
+      // A plugin's command, skill or prompt template belongs to the pi session, not the app's skill host:
+      // there is nothing here to resolve it against. pi expands it itself when the prompt arrives, so the
+      // canonical text is simply sent.
+      if (parsed.command.kind === "skill" && parsed.command.source.kind === "plugin-skill") {
+        const text = `${parsed.command.path}${parsed.rawArguments ? ` ${parsed.rawArguments}` : ""}`;
+        await submitMessage(text, {
+          providerId: ai.defaultProvider,
+          model: ai.providers?.[ai.defaultProvider]?.model ?? "",
+        });
+        return undefined;
+      }
       if (parsed.command.kind === "skill") {
         if (!activeThreadId) throw new Error(t("Start or select a Thread first"));
         await window.AI.invokeSkill({
@@ -351,8 +362,10 @@ export const AssistantThread: React.FC<AssistantThreadProps> = ({
     [
       activeThreadId,
       activeThread,
+      ai,
       cancel,
       navigate,
+      submitMessage,
       newThread,
       openThreadHistory,
       reloadSkills,

@@ -215,7 +215,10 @@ export function createPiBridgeClient(options: {
     },
     updatePlugins(source?: string): Promise<void> {
       const id = randomUUID();
-      return request(source ? { id, type: "plugins_update", source } : { id, type: "plugins_update" }, MUTATION_TIMEOUT_MS);
+      return request(
+        source ? { id, type: "plugins_update", source } : { id, type: "plugins_update" },
+        MUTATION_TIMEOUT_MS,
+      );
     },
     checkPluginUpdates(): Promise<string[]> {
       return request({ id: randomUUID(), type: "plugins_check_updates" }, MUTATION_TIMEOUT_MS);

@@ -3,8 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AI_CHANNELS } from "@/ai-system/core/channels";
 import { describeError } from "@/ai-system/core/errors";
 import type { SkillHostSnapshot } from "@/ai-system/core/skills";
+import { pluginCommandsFromResources } from "@/ai-system/ui/core/commands/pluginCommands";
 import { createSkillCommandRegistry } from "@/ai-system/ui/core/commands/skillCommands";
 import { createLogger } from "@/logger";
+import { useCodingAgentStore } from "@/web-app/stores/codingAgent";
 
 const logger = createLogger("web.ai.skills");
 const EMPTY_SNAPSHOT: SkillHostSnapshot = {
@@ -22,6 +24,9 @@ export function useAssistantSkills() {
   const [snapshot, setSnapshot] = useState<SkillHostSnapshot>(EMPTY_SNAPSHOT);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  // The session's plugins contribute commands too, and they change when one is installed or disabled.
+  const resources = useCodingAgentStore((state) => state.resources);
+  const pluginCommands = useMemo(() => pluginCommandsFromResources(resources), [resources]);
 
   useEffect(() => {
     let mounted = true;
@@ -64,7 +69,7 @@ export function useAssistantSkills() {
 
   return {
     snapshot,
-    registry: useMemo(() => createSkillCommandRegistry(snapshot), [snapshot]),
+    registry: useMemo(() => createSkillCommandRegistry(snapshot, pluginCommands), [snapshot, pluginCommands]),
     loading,
     error,
     reload: useCallback(() => mutate(() => window.AI.reloadSkills()), [mutate]),

@@ -203,7 +203,9 @@ describe("createPiBridgeClient", () => {
     const { socket, sent, client } = await connectedClient();
     const payload = client.listPlugins();
     const configured = [{ source: "npm:@foo/bar", scope: "user" as const, filtered: false }];
-    socket.onmessage?.({ data: encodeEvent({ type: "response", id: lastId(sent), success: true, result: { configured } }) });
+    socket.onmessage?.({
+      data: encodeEvent({ type: "response", id: lastId(sent), success: true, result: { configured } }),
+    });
     await expect(payload).resolves.toEqual({ configured });
   });
 
@@ -249,7 +251,11 @@ describe("createPiBridgeClient", () => {
   });
 
   it("refuses a request before the bridge is connected", async () => {
-    const client = createPiBridgeClient({ url: "ws://127.0.0.1:1/", token: "tok", socketFactory: () => fakeSocket().socket });
+    const client = createPiBridgeClient({
+      url: "ws://127.0.0.1:1/",
+      token: "tok",
+      socketFactory: () => fakeSocket().socket,
+    });
     await expect(client.listPlugins()).rejects.toThrow(/not connected/i);
   });
 });

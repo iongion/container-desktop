@@ -65,9 +65,16 @@ export function skillCommandsFromSnapshot(snapshot: SkillHostSnapshot): Assistan
   return snapshot.skills.filter((skill) => skill.enabled && skill.trusted).map(skillCommand);
 }
 
-export function createSkillCommandRegistry(snapshot: SkillHostSnapshot) {
-  return createAssistantCommandRegistry(`builtin-v2+skills:${snapshot.revision}`, [
+// The plugin commands come from the running pi session rather than the host's skill store, so they are passed
+// in instead of read here. The revision carries their count: adding or removing a plugin has to invalidate the
+// registry, or the palette keeps offering commands the session no longer has.
+export function createSkillCommandRegistry(
+  snapshot: SkillHostSnapshot,
+  pluginCommands: readonly AssistantSkillCommandDefinition[] = [],
+) {
+  return createAssistantCommandRegistry(`builtin-v2+skills:${snapshot.revision}+plugins:${pluginCommands.length}`, [
     BUILTIN_ASSISTANT_COMMANDS,
     skillCommandsFromSnapshot(snapshot),
+    pluginCommands,
   ]);
 }

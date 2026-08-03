@@ -24,7 +24,7 @@ import type { ThreadView } from "@/ai-system/core/threadEvents";
 import { type ChromePatch, classifyHostRequest, type PendingUiRequest } from "@/ai-system/core/uiRequests";
 import { createLogger } from "@/logger";
 import { agentImageTag } from "@/pi-bridge/image";
-import type { BridgeEvent } from "@/pi-bridge/protocol";
+import type { BridgeEvent, ContributedResources } from "@/pi-bridge/protocol";
 import { randomUUID } from "@/utils/randomUUID";
 import { resolveConnectionHost } from "@/web-app/domain/engineHost";
 import { Notification } from "@/web-app/Notification";
@@ -171,6 +171,9 @@ export interface CodingAgentState {
   // The one blocking dialog an extension is waiting on. pi's dialogs are modal by nature — the agent is
   // parked until answered — so a single slot is the honest model.
   pendingDialog?: PendingUiRequest;
+  // What the loaded plugins contribute, for the composer's slash-command palette. Read once the session is
+  // ready and again whenever the installed set changes.
+  resources: ContributedResources;
   start(options: StartCodingAgentOptions): Promise<void>;
   submit(text: string): Promise<void>;
   stop(): Promise<void>;
@@ -183,6 +186,11 @@ export interface CodingAgentState {
   // Re-read the app's tokens and tell the container. Called on connect and whenever the engine or the
   // light/dark mode repaints them, so plugin output never sits in a theme the app has moved off.
   publishTheme(): Promise<void>;
+  refreshResources(): Promise<void>;
+}
+
+export function noContributedResources(): ContributedResources {
+  return { extensions: [], commands: [], skills: [], prompts: [] };
 }
 
 // The published port is picked per session. A collision surfaces as an engine error on run, which the
@@ -206,6 +214,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
   startLog: [],
   chrome: emptyCodingAgentChrome(),
   surfaces: noSurfaces(),
+  resources: noContributedResources(),
 
   async start(options) {
     set({
@@ -214,6 +223,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       view: emptyPiThreadView("pi-session"),
       chrome: emptyCodingAgentChrome(),
       surfaces: noSurfaces(),
+      resources: noContributedResources(),
       pendingDialog: undefined,
       error: undefined,
     });
@@ -285,6 +295,7 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       connectionId: undefined,
       chrome: emptyCodingAgentChrome(),
       surfaces: noSurfaces(),
+      resources: noContributedResources(),
       pendingDialog: undefined,
     });
   },
@@ -304,8 +315,29 @@ export const useCodingAgentStore = create<CodingAgentState>()((set, get) => ({
       set((state) => ({ surfaces: applySurfaceEvent(state.surfaces, event) }));
       return;
     }
+    // The installed set changed under us, so the palette's commands are stale. The Plugins screen keeps its
+    // own subscription for the table; this is only about what the composer offers.
+    if (event.type === "plugins_changed") {
+      void get().refreshResources();
+      return;
+    }
+    if (event.type === "plugin_progress") return;
     set((state) => ({ view: projectPiThreadView(state.view, event) }));
-    if (event.type === "ready") set({ status: "ready" });
+    if (event.type === "ready") {
+      set({ status: "ready" });
+      void get().refreshResources();
+    }
+  },
+
+  async refreshResources() {
+    const { client } = get();
+    if (!client) return;
+    try {
+      set({ resources: await client.listResources() });
+    } catch (error) {
+      // An empty palette is a lesser failure than a broken session, so this stays a warning.
+      logger.warn("unable to read the plugin resources", error);
+    }
   },
 
   async handleHostRequest(event) {
