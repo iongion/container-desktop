@@ -1,3 +1,4 @@
+import type { HostResponse } from "@/pi-agent-host/hostRpc";
 import { decodeCommand, encodeEvent } from "@/pi-bridge/codec";
 import { type BridgeCommand, type BridgeEvent, PI_BRIDGE_PROTOCOL_VERSION } from "@/pi-bridge/protocol";
 
@@ -12,7 +13,7 @@ export interface BridgeSessionHandle {
   model?: string;
   prompt(text: string, streamingBehavior?: "steer" | "followUp"): Promise<void>;
   abort(): Promise<void>;
-  resolveUi(requestId: string, response: { value?: string; confirmed?: boolean; cancelled?: boolean }): void;
+  settleHostResponse(requestId: string, response: HostResponse): void;
 }
 
 export interface AttachedBridgeConnection {
@@ -64,11 +65,11 @@ export function attachBridgeConnection(
       case "abort":
         await session.abort();
         return;
-      case "ui_response":
-        session.resolveUi(command.requestId, {
+      case "host_response":
+        session.settleHostResponse(command.requestId, {
+          ok: command.ok,
           value: command.value,
-          confirmed: command.confirmed,
-          cancelled: command.cancelled,
+          error: command.error,
         });
         return;
       case "hello":

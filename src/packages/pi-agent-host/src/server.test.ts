@@ -12,7 +12,7 @@ function harness(token = "tok") {
     model: "test/model",
     prompt: vi.fn(async () => {}),
     abort: vi.fn(async () => {}),
-    resolveUi: vi.fn(),
+    settleHostResponse: vi.fn(),
   };
   const attached = attachBridgeConnection(
     {
@@ -77,6 +77,15 @@ describe("attachBridgeConnection", () => {
     const h = harness();
     await h.attached.handleFrame("{not json");
     expect(parsed(h.sent)[0].type).toBe("error");
+  });
+
+  it("routes a host_response to the session handle", async () => {
+    const h = harness();
+    await h.attached.handleFrame(encodeCommand({ id: "c1", type: "hello", token: "tok", protocolVersion: 1 }));
+    await h.attached.handleFrame(
+      encodeCommand({ id: "c2", type: "host_response", requestId: "r1", ok: true, value: "yes" }),
+    );
+    expect(h.session.settleHostResponse).toHaveBeenCalledWith("r1", { ok: true, value: "yes", error: undefined });
   });
 
   it("emit() only reaches the client after the handshake", async () => {

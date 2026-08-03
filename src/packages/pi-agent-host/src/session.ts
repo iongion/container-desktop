@@ -9,7 +9,10 @@ import {
 
 import { createLogger } from "@/logger";
 import { mapAgentEvent, type PiAgentEvent } from "@/pi-agent-host/events";
+import { createHostRpc } from "@/pi-agent-host/hostRpc";
+import { createPermissionGateExtension } from "@/pi-agent-host/permissionGate";
 import type { BridgeSessionHandle } from "@/pi-agent-host/server";
+import { createGuiUiContext } from "@/pi-agent-host/uiContext";
 import type { BridgeEvent } from "@/pi-bridge/protocol";
 
 const logger = createLogger("pi-agent-host.session");
@@ -64,6 +67,8 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     },
   };
 
+  const rpc = createHostRpc(emit);
+
   // In-memory settings: the agent container has no user settings file to honour, and this keeps the
   // session from writing one into the mounted plugin volume.
   const settingsManager = SettingsManager.inMemory({});
@@ -71,7 +76,9 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     cwd,
     agentDir,
     settingsManager,
-    resourceLoaderOptions: { extensionFactories: [gatewayExtension] },
+    resourceLoaderOptions: {
+      extensionFactories: [gatewayExtension, createPermissionGateExtension(rpc)],
+    },
   });
   await services.modelRuntime.setRuntimeApiKey(GATEWAY_PROVIDER_ID, gatewayToken, { allowNetwork: false });
 
@@ -89,6 +96,10 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
   session.subscribe((event) => {
     for (const mapped of mapAgentEvent(event as unknown as PiAgentEvent)) emit(mapped);
   });
+
+  // `rpc` is the mode the extensions see: the GUI answers dialogs but renders no ANSI components, which is
+  // exactly pi's documented RPC degradation. Phase 5's pi-tui surfaces are what earn `tui`.
+  await session.bindExtensions({ uiContext: createGuiUiContext(rpc), mode: "rpc" });
 
   return {
     sessionId: session.sessionId,
@@ -108,8 +119,6 @@ export async function createPiSession(options: CreatePiSessionOptions): Promise<
     async abort() {
       await session.abort();
     },
-    resolveUi() {
-      // Extension UI arrives in a later phase; there are no outstanding requests to resolve yet.
-    },
+    settleHostResponse: rpc.settle,
   };
 }

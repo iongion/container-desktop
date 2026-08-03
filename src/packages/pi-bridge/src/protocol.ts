@@ -15,11 +15,15 @@ export type BridgeUiMethod =
   | "setTitle"
   | "setEditorText";
 
+// Everything the container can ask the app for. `approval` is the permission gate; `engine_op` is
+// declared now so container tools need no protocol bump when they land.
+export type BridgeHostMethod = BridgeUiMethod | "approval" | "engine_op";
+
 export type BridgeCommand =
   | { id: string; type: "hello"; token: string; protocolVersion: number }
   | { id: string; type: "prompt"; text: string; streamingBehavior?: "steer" | "followUp" }
   | { id: string; type: "abort" }
-  | { id: string; type: "ui_response"; requestId: string; value?: string; confirmed?: boolean; cancelled?: boolean };
+  | { id: string; type: "host_response"; requestId: string; ok: boolean; value?: unknown; error?: string };
 
 export type BridgeEvent =
   | { type: "ready"; protocolVersion: number; sessionId: string; cwd: string; model?: string }
@@ -32,9 +36,15 @@ export type BridgeEvent =
   | { type: "turn_end" }
   | { type: "idle" }
   | { type: "error"; message: string }
-  | { type: "ui_request"; requestId: string; method: BridgeUiMethod; payload: Record<string, unknown> };
+  | {
+      type: "host_request";
+      requestId: string;
+      method: BridgeHostMethod;
+      payload: Record<string, unknown>;
+      timeoutMs?: number;
+    };
 
-export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set(["hello", "prompt", "abort", "ui_response"]);
+export const BRIDGE_COMMAND_TYPES: ReadonlySet<string> = new Set(["hello", "prompt", "abort", "host_response"]);
 
 export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "ready",
@@ -47,7 +57,7 @@ export const BRIDGE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "turn_end",
   "idle",
   "error",
-  "ui_request",
+  "host_request",
 ]);
 
 export class BridgeProtocolError extends Error {

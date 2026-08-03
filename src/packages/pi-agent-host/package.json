@@ -5,6 +5,9 @@
   "type": "module",
   "main": "./src/main.ts",
   "dependencies": {
+    "@container-desktop/logger": "*",
+    "@container-desktop/pi-bridge": "*",
+    "@container-desktop/utils": "*",
     "@earendil-works/pi-coding-agent": "0.83.0",
     "ws": "8.18.3"
   }

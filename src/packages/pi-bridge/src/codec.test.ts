@@ -42,4 +42,30 @@ describe("pi-bridge codec", () => {
   it("rejects malformed JSON", () => {
     expect(() => decodeEvent("{not json")).toThrow(BridgeProtocolError);
   });
+
+  it("round-trips a host_request event", () => {
+    const decoded = decodeEvent(
+      encodeEvent({
+        type: "host_request",
+        requestId: "r1",
+        method: "confirm",
+        payload: { title: "Allow?", message: "rm -rf build" },
+        timeoutMs: 30000,
+      }),
+    );
+    expect(decoded).toMatchObject({ type: "host_request", requestId: "r1", method: "confirm" });
+  });
+
+  it("round-trips a host_response command", () => {
+    const decoded = decodeCommand(
+      encodeCommand({ id: "c9", type: "host_response", requestId: "r1", ok: true, value: true }),
+    );
+    expect(decoded).toEqual({ id: "c9", type: "host_response", requestId: "r1", ok: true, value: true });
+  });
+
+  it("no longer accepts the superseded ui_request event", () => {
+    expect(() => decodeEvent(JSON.stringify({ type: "ui_request", requestId: "r1", method: "confirm" }))).toThrow(
+      BridgeProtocolError,
+    );
+  });
 });
