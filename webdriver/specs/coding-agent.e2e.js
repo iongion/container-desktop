@@ -11,10 +11,10 @@ async function navigate(route) {
   await browser.execute((hash) => {
     window.location.hash = hash;
   }, route);
-  await browser.waitUntil(
-    async () => browser.execute(() => Boolean(document.querySelector('[data-screen="ai.codingAgent"]'))),
-    { timeout: 45000, interval: 500, timeoutMsg: `the Coding Agent screen never mounted at ${route}` },
-  );
+  await $('[data-screen="ai.codingAgent"]').waitForExist({
+    timeout: 45000,
+    timeoutMsg: `the Coding Agent screen never mounted at ${route}`,
+  });
 }
 
 describe("Coding Agent screen", () => {

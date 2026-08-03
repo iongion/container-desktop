@@ -5,10 +5,9 @@ describe("Assistant surface on the pi session", () => {
     await browser.execute(() => {
       window.location.hash = "#/screens/ai/assistant";
     });
-    await browser.waitUntil(
-      async () => browser.execute(() => Boolean(document.querySelector('[data-screen="ai.assistant"]'))),
-      { timeout: 45000, interval: 500, timeoutMsg: "the Assistant screen never mounted" },
-    );
+    // Element waits, not browser.execute polling: script evaluation under WebKitWebDriver is unreliable
+    // right after navigation, and a failing evaluation looks identical to "not mounted yet".
+    await $('[data-screen="ai.assistant"]').waitForExist({ timeout: 45000, timeoutMsg: "the Assistant screen never mounted" });
     assert.equal(await $(".AIComposerInput").isExisting(), true, "the assistant composer is missing");
 
     await browser.execute(() => {

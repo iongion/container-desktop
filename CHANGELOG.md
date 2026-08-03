@@ -12,10 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coding Agent screen: pi runs inside a container, streamed into the app over a token-authenticated bridge
 - `yarn cli agent-image` builds the local pi agent image from the shipped Dockerfile
 - Provider credentials stay in a separate gateway container; the agent container never receives a key
-- AI workers can wear an avatar — pick a built-in face or upload your own, shown across the workers list, cards and Runs
-- The Workers screen has a cards view, now the default, alongside the table
-- Reach the AI area from a highlighted "Runs" entry in the sidebar; a single button opens the Assistant
-- The goal task graph is an interactive canvas — pan, zoom and reset the view, with curved dependency links drawn between tasks
+- The assistant runs on the containerized pi session instead of the in-app OMA engine
 - Group any resource list by its connection, or turn grouping off to see one merged, sorted list across all engines
 - Inspect screens can show raw configuration as an expandable tree or as plain JSON, whichever reads more easily
 - Manage image registries per connection — sign in, add or remove them, and set certificates and a proxy for each engine
@@ -63,21 +60,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Providers without model discovery can use a manually entered model
 - Point the assistant at a project folder so it can read, search, edit and run things there, always asking before it changes anything
 - The assistant shows file reads, edits, searches, listings and command output as rich cards instead of raw text
-- A new Runs screen: describe an outcome, review the plan the Assistant proposes, then watch a Team work through it in parallel
-- Runs show the task graph, each agent's live transcript, a token budget you set up front, and the final answer
-- Runs add a timing waterfall, per-task runtime evidence, and run-wide duration, usage and cost statistics
-- Assistant and Team Run agents now use Open Multi Agent orchestration while retaining app-native approvals and tools
-- Agents pause for your approval before anything that changes your system, and only the agent that asked waits
-- Run several goals at once and follow them from the Runs list, as a board grouped by stage or as a sortable table
-- A workers library: define reusable agents with their own model, instructions and tool permissions, and hand a goal a team drawn from it
-- Choose per worker whether it may use every tool, must ask you before each one, or is limited to tools you tick individually
-- Choose where each worker runs — this host, a remote host over SSH, inside an existing container, or a throwaway sandbox created for the run and removed after
 - Ollama joins the local inference sources you can pick a model from
 
 ### Changed
 
-- A Run's plan actions sit in the panel header, and rejecting a plan now asks you to confirm first
-- Each task in a Run's graph shows its worker's avatar in a leading column
 - Container and pod lists no longer refetch on every health-check probe — only real lifecycle events and health-status changes trigger a refresh
 - Resource actions no longer show a success toast — only failures notify, keeping routine start, stop and remove quiet
 - Engine health moves runtime details into its header and lets networking use the full width
